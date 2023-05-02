@@ -1,4 +1,3 @@
-# from __future__ import absolute_import
 import os
 import sys
 import django.core.management as management
@@ -53,7 +52,9 @@ class ManagementUtility(management.ManagementUtility):
         elif self.argv[1:] in (["--help"], ["-h"]):
             sys.stdout.write(self.main_help_text() + "\n")
         else:
-            self.fetch_command(subcommand).run_from_argv(self.argv)
+            from metrics_utility.management.commands.host_metric import Command
+            Command().run_from_argv(self.argv)
+            # self.fetch_command(subcommand).run_from_argv(self.argv)
 
     def fetch_command(self, subcommand):
         module = import_module(f"metrics_utility.management.commands.{subcommand}")

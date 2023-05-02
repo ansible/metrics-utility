@@ -1,18 +1,16 @@
 import datetime
 import sys
 
-from django.db import connection
+from django.core.exceptions import FieldDoesNotExist
 from metrics_utility.base_command import BaseCommand
+from awx.main.models.inventory import HostMetric
 
-CSV_PREFERRED_ROW_COUNT = 500000
-BATCH_LIMIT = 10000
+BATCH_LIMIT = 1000
 
 
 class HostMetricExporter:
-    def __init__(self, since=None, sql_filter=None, limit=BATCH_LIMIT,
-                 rows_per_file=CSV_PREFERRED_ROW_COUNT):
+    def __init__(self, since=None, sql_filter=None, limit=BATCH_LIMIT):
         self.limit = limit
-        self.rows_per_file = rows_per_file
         self.since = since
         self.sql_filter = sql_filter or {}
 
@@ -20,22 +18,25 @@ class HostMetricExporter:
         pass
 
     def to_csv(self, target="stdout"):
-        with connection.cursor() as cursor:
-            offset, new_offset = -1, 0
-            write_headers = True
+        cols = self._get_existing_columns()
+        self._write_line(cols, target)
 
-            while offset != new_offset:
-                offset = new_offset
-                if write_headers:
-                    self._write_line(self._columns(), target)
-                    write_headers = False
+        offset, new_offset = -1, 0
 
-                sql, sql_filter = self._query(self.limit, offset)
-                cursor.execute(sql, sql_filter)
+        while offset != new_offset:
+            offset = new_offset
 
-                for row in cursor.fetchall():
-                    new_offset += 1
-                    self._write_line(row, target)
+            host_metrics = HostMetric.objects.filter(**self.sql_filter)\
+                                     .values(*cols).order_by('last_automation')[offset:offset + self.limit]
+
+            for host_metric in list(host_metrics):
+                new_offset += 1
+                self._write_line(host_metric.values())
+
+    @staticmethod
+    def _columns():
+        return 'hostname', 'first_automation', 'last_automation', 'automated_counter', \
+            'deleted_counter', 'last_deleted', 'deleted'
 
     @staticmethod
     def _write_line(row, target="stdout"):
@@ -43,25 +44,15 @@ class HostMetricExporter:
             sys.stdout.write(",".join([str(s) for s in row]))
             sys.stdout.write("\n")
 
-    def _query(self, limit=BATCH_LIMIT, offset=0):
-        sql_args = []
-
-        sql = f"SELECT {', '.join(self._columns())} FROM main_hostmetric"
-        if self.sql_filter.get('last_automation', None):
-            sql += " WHERE last_automation >= %s"
-            sql_args.append(self.sql_filter['last_automation'])
-        sql += " ORDER BY last_automation"
-        sql += " LIMIT %s OFFSET %s;"
-
-        # sql_args.append(self.order_by)
-        sql_args.append(limit)
-        sql_args.append(offset)
-
-        return sql, sql_args
-
-    @staticmethod
-    def _columns():
-        return 'hostname', 'first_automation', 'last_automation'
+    def _get_existing_columns(self):
+        existing = []
+        for col in self._columns():
+            try:
+                HostMetric._meta.get_field(col)
+                existing.append(col)
+            except FieldDoesNotExist:
+                pass
+        return existing
 
 
 class Command(BaseCommand):
@@ -69,7 +60,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--since', type=datetime.datetime.fromisoformat, help='Start Date in ISO format YYYY-MM-DD')
-        # parser.add_argument('--rows_per_file', type=int, help=f'Split rows in chunks of {CSV_PREFERRED_ROW_COUNT}')
 
     def handle(self, *args, **options):
         since = options.get('since')
@@ -78,7 +68,7 @@ class Command(BaseCommand):
         if since is not None:
             if since.tzinfo is None:
                 since = since.replace(tzinfo=datetime.timezone.utc)
-            sql_filter = {'since': since}
+            sql_filter = {'last_automation__gte': since}
 
         HostMetricExporter(since=since, sql_filter=sql_filter).to_csv()
 
