@@ -15,8 +15,8 @@ Install as a root user:
 cd ~
 git clone https://github.com/ansible/metrics-utility.git
 
-# Activate Controller's Python virtual environment
-. /var/lib/awx/venv/bin/activate
+# Activate Automation Controller's Python virtual environment
+. /var/lib/awx/venv/awx/bin/activate
 
 # Install the utility
 cd metrics-utility
