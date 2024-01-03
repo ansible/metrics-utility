@@ -39,10 +39,10 @@ class Collector(base.Collector):
         if not self.is_enabled():
             return None
 
-        with self._pg_advisory_lock("gather_analytics_lock", wait=False) as acquired:
+        with self._pg_advisory_lock("gather_automation_controller_billing_lock", wait=False) as acquired:
             if not acquired:
                 self.logger.log(
-                    self.log_level, "Not gathering analytics, another task holds lock"
+                    self.log_level, "Not gathering Automation Controller billing data, another task holds lock"
                 )
                 return None
 
