@@ -5,18 +5,15 @@ import platform
 import distro
 
 from django.db import connection
-from django.db.models import Count, Min
 from django.conf import settings
-from django.contrib.sessions.models import Session
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 
 from awx.conf.license import get_license
-from awx.main.utils import get_awx_version, camelcase_to_underscore, datetime_hook
-from awx.main import models
+from awx.main.utils import get_awx_version, datetime_hook
+# TODO: enhance the CsvFIleSplitter base class and use that
 from insights_analytics_collector import register #, CsvFileSplitter
 from metrics_utility.automation_controller_billing.csv_file_splitter import CsvFileSplitter
-from awx.main.scheduler.task_manager_models import TaskManagerModels
 
 """
 This module is used to define metrics collected by
@@ -71,7 +68,7 @@ def four_hour_slicing(key, last_gather, **kwargs):
         yield (start, end)
         start = end
 
-@register('automation_controller_billing_config', '1.0', description=_('General platform configuration.'), config=True)
+@register('config', '1.0', description=_('General platform configuration.'), config=True)
 def config(since, **kwargs):
     license_info = get_license()
     install_type = 'traditional'
@@ -132,7 +129,7 @@ def _copy_table(table, query, path):
     return file.file_list()
 
 
-@register('automation_controller_billing_job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=trivial_slicing)
+@register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=trivial_slicing)
 def unified_jobs_table(since, full_path, until, **kwargs):
     # TODO: controler needs to have a unique index on (main_jobhostsummary.modified, main_jobhostsummary.id)
     query = '''

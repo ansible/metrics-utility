@@ -23,15 +23,13 @@ class CsvFileSplitter(BaseCsvFileSplitter):
         self.counter = 0
         self.cycle_file()
 
-    # TODO: make this configurable in the base class, that we might want file splitter
-    # to return empty csv file
+    # TODO: make this configurable in the base class, that want file splitter
+    # to return empty csv file, in case where we always need to send a payload,
+    # to verify payload is being sent periodically.
     def file_list(self):
         """Returns list of written files"""
         self.currentfile.close()
-        # Check for an empty dump
-        # if len(self.header) + 1 == self.counter:
-        #     os.remove(self.files[-1])
-        #     self.files = self.files[:-1]
+
         # If we only have one file, remove the suffix
         if len(self.files) == 1:
             filename = self.files.pop()

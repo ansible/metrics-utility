@@ -2,17 +2,17 @@ import contextlib
 import json
 import logging
 from django.conf import settings
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
-from rest_framework.exceptions import PermissionDenied
 
 import insights_analytics_collector as base
 
-from awx.conf.license import get_license
-from awx.main.models import Job
-from awx.main.access import access_registry
+# from django.core.serializers.json import DjangoJSONEncoder
+# from awx.conf.license import get_license
+# from awx.main.models import Job
+# from awx.main.access import access_registry
+# from rest_framework.exceptions import PermissionDenied
 from metrics_utility.automation_controller_billing.package import Package
-from awx.main.utils import datetime_hook
+# from awx.main.utils import datetime_hook
 from awx.main.utils.pglock import advisory_lock
 
 logger = logging.getLogger('awx.main.analytics')
@@ -26,7 +26,8 @@ class Collector(base.Collector):
             collector_module = collectors
         super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module, logger=logger)
 
-    ######### should be in super class
+    # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
+    # this method from superclass
     def gather(self, dest=None, subset=None, since=None, until=None):
         """Entry point for gathering
 
@@ -63,10 +64,9 @@ class Collector(base.Collector):
 
             return self.all_tar_paths()
 
-    ########
-
     def _is_valid_license(self):
         # TODO: which license to check? Any license will do?
+        #
         # try:
         #     if get_license().get('license_type', 'UNLICENSED') == 'open':
         #         return False
@@ -78,12 +78,14 @@ class Collector(base.Collector):
 
     def _is_shipping_configured(self):
         if self.is_shipping_enabled():
-            if not settings.INSIGHTS_TRACKING_STATE:
-                logger.log(self.log_level, "Insights for Ansible Automation Platform not enabled. " "Use --dry-run to gather locally without sending.")
-                return False
+            # TODO: should this be enable only with certain SKUs? or the check will be higher above
+            # when integrating to Controller?
 
             if not (settings.AUTOMATION_ANALYTICS_URL and settings.REDHAT_USERNAME and settings.REDHAT_PASSWORD):
-                logger.log(self.log_level, "Not gathering analytics, configuration is invalid. " "Use --dry-run to gather locally without sending.")
+                logger.log(self.log_level, "Not gathering Automation Controller billing data, configuration "\
+                                           "is invalid. Set 'Red Hat customer username/password' under "\
+                                           "'Miscellaneous System' settings in your Automation Controller. Or use "\
+                                           "--dry-run to gather locally without sending.")
                 return False
 
         return True
@@ -106,6 +108,7 @@ class Collector(base.Collector):
 
     def _last_gathering(self):
         # TODO: fill in later, when integrated with consumption based billing in Controller
+
         # return settings.AUTOMATION_ANALYTICS_LAST_GATHER
         return {}
 
@@ -122,6 +125,7 @@ class Collector(base.Collector):
 
     def _save_last_gathered_entries(self, last_gathered_entries):
         # TODO: fill in later, when integrated with consumption based billing in Controller
+
         # settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
         pass
 
