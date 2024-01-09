@@ -131,7 +131,7 @@ def _copy_table(table, query, path):
 
 @register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=trivial_slicing)
 def unified_jobs_table(since, full_path, until, **kwargs):
-    # TODO: controler needs to have a unique index on (main_jobhostsummary.modified, main_jobhostsummary.id)
+    # TODO: controler needs to have an index on main_jobhostsummary.modified
     query = '''
         (SELECT main_jobhostsummary.id,
                 main_jobhostsummary.created,
@@ -169,7 +169,7 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                 -- get organization name from main_organization
                 LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
                 WHERE (main_jobhostsummary.modified >= '{0}' AND main_jobhostsummary.modified <= '{1}')
-                ORDER BY main_jobhostsummary.id ASC)
+                ORDER BY main_jobhostsummary.modified ASC)
         '''.format(
             since.isoformat(), until.isoformat()
     )
