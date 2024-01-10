@@ -121,15 +121,31 @@ def config(since, **kwargs):
         'external_logger_type': getattr(settings, 'LOG_AGGREGATOR_TYPE', None),
     }
 
+
 def _copy_table(table, query, path):
     file_path = os.path.join(path, table + '_table.csv')
     file = CsvFileSplitter(filespec=file_path)
+
     with connection.cursor() as cursor:
-        with cursor.copy(query) as copy:
-            while data := copy.read():
-                byte_data = bytes(data)
-                file.write(byte_data.decode())
+        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
+            _copy_table_aap_2_4_and_below(cursor, query, file)
+        else:
+            _copy_table_aap_2_5_and_above(cursor, query, file)
+
     return file.file_list()
+
+
+def _copy_table_aap_2_4_and_below(cursor, query, file):
+    # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
+    cursor.copy_expert(query, file)
+
+
+def _copy_table_aap_2_5_and_above(cursor, query, file):
+    # Automation Controller 4.5 and above use psycopg3 with .copy() method
+    with cursor.copy(query) as copy:
+        while data := copy.read():
+            byte_data = bytes(data)
+            file.write(byte_data.decode())
 
 
 @register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=trivial_slicing)
