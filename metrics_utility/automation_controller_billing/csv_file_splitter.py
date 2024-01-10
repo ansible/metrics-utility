@@ -12,17 +12,6 @@ class CsvFileSplitter(BaseCsvFileSplitter):
     :param max_file_size: determined by decorated function's attribute "max_data_size"
     """
 
-    def __init__(
-        self, filespec=None, max_file_size=Package.MAX_DATA_SIZE, *args, **kwargs
-    ):
-        self.max_file_size = max_file_size
-        self.filespec = filespec
-        self.files = []
-        self.currentfile = None
-        self.header = None
-        self.counter = 0
-        self.cycle_file()
-
     # TODO: make this configurable in the base class, that want file splitter
     # to return empty csv file, in case where we always need to send a payload,
     # to verify payload is being sent periodically.

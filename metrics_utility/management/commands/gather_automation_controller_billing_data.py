@@ -26,13 +26,13 @@ class Command(BaseCommand):
         parser.add_argument('--since',
                             dest='since',
                             action='store',
-                            help='Start date for collection (e.g. --since=2023-12-20), or dynamic '\
+                            help='Start date for collection including (e.g. --since=2023-12-20), or dynamic '\
                                  'format <X>d marking X days ago (e.g. collecting yesterday woul be '\
                                  '--since=2d --until=1d)')
         parser.add_argument('--until',
                             dest='until',
                             action='store',
-                            help='End date for collection (e.g. --since=2023-12-21), or dynamic '\
+                            help='End date for collection excluding (e.g. --since=2023-12-21), or dynamic '\
                                  'format <X>d marking X days ago (e.g. collecting yesterday woul be '\
                                  '--since=2d --until=1d)')
 

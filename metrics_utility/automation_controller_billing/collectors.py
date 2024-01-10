@@ -35,38 +35,41 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 
 def trivial_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
-    if since is not None:
-        return [(since, until)]
 
-    from awx.conf.models import Setting
+    return [(since, until)]
+    # TODO: load last collected timestamp once we support that path
+    # if since is not None:
+    #     return [(since, until)]
 
-    horizon = until - timedelta(weeks=4)
-    last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-    last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-    last_entry = max(last_entries.get(key) or last_gather, horizon)
-    return [(last_entry, until)]
+    # from awx.conf.models import Setting
+
+    # horizon = until - timedelta(weeks=4)
+    # last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+    # last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+    # last_entry = max(last_entries.get(key) or last_gather, horizon)
+    # return [(last_entry, until)]
 
 # TODO: implement daily slicing for billing collection?
-def four_hour_slicing(key, last_gather, **kwargs):
-    since, until = kwargs.get('since', None), kwargs.get('until', now())
-    if since is not None:
-        last_entry = since
-    else:
-        from awx.conf.models import Setting
+# def four_hour_slicing(key, last_gather, **kwargs):
+#     since, until = kwargs.get('since', None), kwargs.get('until', now())
+#     if since is not None:
+#         last_entry = since
+#     else:
+#         from awx.conf.models import Setting
 
-        horizon = until - timedelta(weeks=4)
-        last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-        last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-        try:
-            last_entry = max(last_entries.get(key) or last_gather, horizon)
-        except TypeError:  # last_entries has a stale non-datetime entry for this collector
-            last_entry = max(last_gather, horizon)
+#         horizon = until - timedelta(weeks=4)
+#         last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+#         last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+#         try:
+#             last_entry = max(last_entries.get(key) or last_gather, horizon)
+#         except TypeError:  # last_entries has a stale non-datetime entry for this collector
+#             last_entry = max(last_gather, horizon)
 
-    start, end = last_entry, None
-    while start < until:
-        end = min(start + timedelta(hours=4), until)
-        yield (start, end)
-        start = end
+#     start, end = last_entry, None
+#     while start < until:
+#         end = min(start + timedelta(hours=4), until)
+#         yield (start, end)
+#         start = end
 
 @register('config', '1.0', description=_('General platform configuration.'), config=True)
 def config(since, **kwargs):
@@ -148,14 +151,14 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                 main_jobhostsummary.failed,
                 main_jobhostsummary.ignored,
                 main_jobhostsummary.rescued,
-                main_jobhostsummary.job_id AS job_source_id,
-                main_unifiedjob.unified_job_template_id AS template_source_id,
-                main_unifiedjob.name AS template_name,
-                main_inventory.id AS inventory_source_id,
+                main_jobhostsummary.job_id AS job_remote_id,
+                main_unifiedjob.unified_job_template_id AS job_template_remote_id,
+                main_unifiedjob.name AS job_template_name,
+                main_inventory.id AS inventory_remote_id,
                 main_inventory.name AS inventory_name,
-                main_organization.id AS organization_source_id,
+                main_organization.id AS organization_remote_id,
                 main_organization.name AS organization_name,
-                main_unifiedjobtemplate_project.id AS project_source_id,
+                main_unifiedjobtemplate_project.id AS project_remote_id,
                 main_unifiedjobtemplate_project.name AS project_name
                 FROM main_jobhostsummary
                 -- connect to main_job, that has connections into inventory and project
