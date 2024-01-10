@@ -73,7 +73,6 @@ class Command(BaseCommand):
         if until and until.tzinfo is None:
             until = until.replace(tzinfo=timezone.utc)
 
-        print(since, until)
         if since is None or until is None:
             self.logger.error('Both --since and --until arguments must be passed')
             return
