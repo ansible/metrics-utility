@@ -53,9 +53,12 @@ class Command(BaseCommand):
 
         # Process since argument
         since = None
-        if opt_since.endswith('d'):
+        if opt_since and opt_since.endswith('d'):
             days_ago = int(opt_since[0:-1])
             since = (datetime.datetime.now() - datetime.timedelta(days=days_ago-1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        elif opt_since and opt_since.endswith('m'):
+            minutes_ago = int(opt_since[0:-1])
+            since = (datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago))
         else:
             since = parser.parse(opt_since) if opt_since else None
         # Add default utc timezone
@@ -64,18 +67,17 @@ class Command(BaseCommand):
 
         # Process until argument
         until = None
-        if opt_until.endswith('d'):
+        if opt_until and opt_until.endswith('d'):
             days_ago = int(opt_until[0:-1])
             until = (datetime.datetime.now() - datetime.timedelta(days=days_ago-1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        elif opt_until and opt_until.endswith('m'):
+            minutes_ago = int(opt_until[0:-1])
+            until = (datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago))
         else:
             until = parser.parse(opt_until) if opt_until else None
         # Add default utc timezone
         if until and until.tzinfo is None:
             until = until.replace(tzinfo=timezone.utc)
-
-        if since is None or until is None:
-            self.logger.error('Both --since and --until arguments must be passed')
-            return
 
         if opt_ship and opt_dry_run:
             self.logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')

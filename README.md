@@ -67,3 +67,12 @@ Gather and ship billing data to console.redhat.com for a dynamic datetime range:
 # This will collect and ship data for yesterday, interval <2 days ago, 1 day ago>
 metrics-utility gather_automation_controller_billing_data --ship --since=2d --until=1d
 ```
+
+Gather and ship billing data to console.redhat.com with automatically collecting gap, by storing a last collected
+timestamp and always collecting from that last succesfully collected timestamp. To be on the safe side, we can
+collect interval <last_collected_timestamp_or_4_weeks_back, 10_minutes_ago> to give all records time to insert.
+```
+# You need to set 'Red Hat customer username/password' under Automation Controller 'Miscellaneous System' settings
+# This will collect and ship data for interval <last_collected_timestamp_or_4_weeks_back, 10_minutes_ago>
+metrics-utility gather_automation_controller_billing_data --ship --until=10m
+```
