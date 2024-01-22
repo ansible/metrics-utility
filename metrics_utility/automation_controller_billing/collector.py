@@ -6,13 +6,13 @@ from django.db import connection
 
 import insights_analytics_collector as base
 
-# from django.core.serializers.json import DjangoJSONEncoder
+from django.core.serializers.json import DjangoJSONEncoder
 # from awx.conf.license import get_license
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
 from metrics_utility.automation_controller_billing.package import Package
-# from awx.main.utils import datetime_hook
+from awx.main.utils import datetime_hook
 from awx.main.utils.pglock import advisory_lock
 
 logger = logging.getLogger('awx.main.analytics')
@@ -107,44 +107,33 @@ class Collector(base.Collector):
             yield lock
 
     def _last_gathering(self):
-        # TODO: fill in later, when integrated with consumption based billing in Controller
-
-        # return settings.AUTOMATION_ANALYTICS_LAST_GATHER
-        return {}
+        # Not needed in this implementation, but we need to define an abstract method
+        pass
 
     def _load_last_gathered_entries(self):
-        # TODO: fill in later, when integrated with consumption based billing in Controller
+        # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
+        # We can safely do this, by making sure we use the same lock as Analytics, before we persist
+        # these settings.
+        from awx.conf.models import Setting
 
-        # from awx.conf.models import Setting
+        last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+        last_gathered_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+        return last_gathered_entries
 
-        # last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-        # last_gathered_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-        # return last_gathered_entries
-
-        return {}
+    def _gather_finalize(self):
+        """Persisting timestamps (manual/schedule mode only)"""
+        if self.is_shipping_enabled():
+            # We need to wait on analytics lock, to update the last collected timestamp settings
+            # so we don't clash with analytics job collection.
+            with self._pg_advisory_lock("gather_analytics_lock", wait=True) as acquired:
+                # We need to load fresh settings again as we're obtaning the lock, since
+                # Analytics job could have changed this on the background and we'd be resetting
+                # the Analytics values here.
+                self._load_last_gathered_entries()
+                self._update_last_gathered_entries()
 
     def _save_last_gathered_entries(self, last_gathered_entries):
-        # TODO: fill in later, when integrated with consumption based billing in Controller
-
-        # settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
-        pass
-
-    def _save_last_gather(self):
-        # TODO: fill in later, when integrated with consumption based billing in Controller
-        # from awx.main.signals import disable_activity_stream
-
-        # with disable_activity_stream():
-        #     if not settings.AUTOMATION_ANALYTICS_LAST_GATHER or self.gather_until > settings.AUTOMATION_ANALYTICS_LAST_GATHER:
-        #         # `AUTOMATION_ANALYTICS_LAST_GATHER` is set whether collection succeeds or fails;
-        #         # if collection fails because of a persistent, underlying issue and we do not set last_gather,
-        #         # we risk the collectors hitting an increasingly greater workload while the underlying issue
-        #         # remains unresolved. Put simply, if collection fails, we just move on.
-
-        #         # All that said, `AUTOMATION_ANALYTICS_LAST_GATHER` plays a much smaller role in determining
-        #         # what is actually collected than it used to; collectors now mostly rely on their respective entry
-        #         # under `last_entries` to determine what should be collected.
-        #         settings.AUTOMATION_ANALYTICS_LAST_GATHER = self.gather_until
-        pass
+        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
 
     @staticmethod
     def _package_class():

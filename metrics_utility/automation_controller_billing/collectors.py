@@ -33,21 +33,21 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 """
 
 
-def trivial_slicing(key, last_gather, **kwargs):
+def trivial_slicing(key, _, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
+    if since is not None:
+        return [(since, until)]
 
-    return [(since, until)]
-    # TODO: load last collected timestamp once we support that path
-    # if since is not None:
-    #     return [(since, until)]
+    from awx.conf.models import Setting
 
-    # from awx.conf.models import Setting
-
-    # horizon = until - timedelta(weeks=4)
-    # last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-    # last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-    # last_entry = max(last_entries.get(key) or last_gather, horizon)
-    # return [(last_entry, until)]
+    horizon = until - timedelta(weeks=4)
+    last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+    last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+    if last_entries.get(key):
+        last_entry = max(last_entries.get(key), horizon)
+    else:
+        last_entry = horizon
+    return [(last_entry, until)]
 
 # TODO: implement daily slicing for billing collection?
 # def four_hour_slicing(key, last_gather, **kwargs):
@@ -149,7 +149,7 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
 
 
 @register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=trivial_slicing)
-def unified_jobs_table(since, full_path, until, **kwargs):
+def job_host_summary_table(since, full_path, until, **kwargs):
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     query = '''
         (SELECT main_jobhostsummary.id,
