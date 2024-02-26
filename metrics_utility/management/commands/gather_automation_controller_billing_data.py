@@ -1,4 +1,5 @@
 import logging
+import os
 
 import datetime
 from metrics_utility.automation_controller_billing.collector import Collector
@@ -23,6 +24,7 @@ class Command(BaseCommand):
                             dest='ship',
                             action='store_true',
                             help='Enable shipping of billing metrics to the console.redhat.com')
+
         parser.add_argument('--since',
                             dest='since',
                             action='store',
@@ -51,6 +53,44 @@ class Command(BaseCommand):
         opt_since = options.get('since') or None
         opt_until = options.get('until') or None
 
+        since, until = self._handle_interval(opt_since, opt_until)
+
+        ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
+        billing_provider_params = self._handle_ship_target(ship_target)
+
+        if opt_ship and opt_dry_run:
+            self.logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
+            return
+
+        collector = Collector(collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN)
+
+        tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params)
+        if tgzfiles:
+            for tgz in tgzfiles:
+                self.logger.info(tgz)
+        else:
+            self.logger.error('No analytics collected')
+
+    def _handle_ship_target(self, ship_target):
+        if ship_target == "crc":
+            return self._handle_crc_ship_target()
+
+    def _handle_crc_ship_target(self):
+        billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
+
+        billing_provider_params = {"billing_provider": billing_provider}
+        if billing_provider == "aws":
+            billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', None)
+            if not billing_account_id:
+                raise Exception("Env var: METRICS_UTILITY_BILLING_ACCOUNT_ID, containing "\
+                                " AWS 12 digit customer id needs to be provided.")
+            billing_provider_params["billing_account_id"] = billing_account_id
+        else:
+            raise Exception("Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are"\
+                            " ['aws'].")
+        return billing_provider_params
+
+    def _handle_interval(self, opt_since, opt_until):
         # Process since argument
         since = None
         if opt_since and opt_since.endswith('d'):
@@ -79,15 +119,6 @@ class Command(BaseCommand):
         if until and until.tzinfo is None:
             until = until.replace(tzinfo=timezone.utc)
 
-        if opt_ship and opt_dry_run:
-            self.logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
-            return
+        return since, until
 
-        collector = Collector(collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN)
 
-        tgzfiles = collector.gather(since=since, until=until)
-        if tgzfiles:
-            for tgz in tgzfiles:
-                self.logger.info(tgz)
-        else:
-            self.logger.error('No analytics collected')

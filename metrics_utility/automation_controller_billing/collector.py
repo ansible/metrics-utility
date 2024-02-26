@@ -28,7 +28,8 @@ class Collector(base.Collector):
 
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
-    def gather(self, dest=None, subset=None, since=None, until=None):
+    # TODO: extract to superclass ability to push extra params into config.json
+    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
@@ -53,6 +54,12 @@ class Collector(base.Collector):
                 return None
 
             self._gather_json_collections()
+            # Extend the config collection to contain billing specific info:
+            config_collection = self.collections['config']
+            data = json.loads(config_collection.data)
+            data['billing_provider_params'] = billing_provider_params
+            config_collection._save_gathering(data)
+            # End of extension
 
             self._gather_csv_collections()
 

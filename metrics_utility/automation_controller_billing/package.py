@@ -32,4 +32,3 @@ class Package(base.Package):
 
         # TODO: allow to use certificate based auth based on Controller config
         return self.SHIPPING_AUTH_USERPASS
-
