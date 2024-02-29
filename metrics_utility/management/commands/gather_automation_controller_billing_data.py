@@ -2,6 +2,7 @@ import logging
 import os
 
 import datetime
+from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.automation_controller_billing.collector import Collector
 from dateutil import parser
 from django.core.management.base import BaseCommand
@@ -62,7 +63,8 @@ class Command(BaseCommand):
             self.logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
             return
 
-        collector = Collector(collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN)
+        collector = Collector(collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN,
+                              ship_target=ship_target, billing_provider_params=billing_provider_params)
 
         tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params)
         if tgzfiles:
@@ -74,6 +76,12 @@ class Command(BaseCommand):
     def _handle_ship_target(self, ship_target):
         if ship_target == "crc":
             return self._handle_crc_ship_target()
+        elif ship_target == "directory":
+            return self._handle_directory_ship_target()
+        else:
+            raise BadShipTarget("Unexpected value for METRICS_UTILITY_SHIP_TARGET env var"\
+                                ", allowed values are [crc, directory]")
+
 
     def _handle_crc_ship_target(self):
         billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
@@ -82,13 +90,25 @@ class Command(BaseCommand):
         if billing_provider == "aws":
             billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', None)
             if not billing_account_id:
-                raise Exception("Env var: METRICS_UTILITY_BILLING_ACCOUNT_ID, containing "\
-                                " AWS 12 digit customer id needs to be provided.")
+                raise MissingRequiredEnvVar(
+                    "Env var: METRICS_UTILITY_BILLING_ACCOUNT_ID, containing "\
+                    " AWS 12 digit customer id needs to be provided.")
             billing_provider_params["billing_account_id"] = billing_account_id
         else:
-            raise Exception("Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are"\
-                            " ['aws'].")
+            raise MissingRequiredEnvVar(
+                "Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are"\
+                " [aws].")
         return billing_provider_params
+
+    def _handle_directory_ship_target(self):
+        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
+
+        if not ship_path:
+            raise MissingRequiredEnvVar(
+                "Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination for the built reports")
+
+        return {"ship_path": ship_path}
+
 
     def _handle_interval(self, opt_since, opt_until):
         # Process since argument

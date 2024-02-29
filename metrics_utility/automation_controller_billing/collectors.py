@@ -32,44 +32,34 @@ functions - like those that return metadata about playbook runs, may return
 data _since_ the last report date - i.e., new data in the last 24 hours)
 """
 
-
-def trivial_slicing(key, _, **kwargs):
+def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
     if since is not None:
-        return [(since, until)]
-
-    from awx.conf.models import Setting
-
-    horizon = until - timedelta(weeks=4)
-    last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-    last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-    if last_entries.get(key):
-        last_entry = max(last_entries.get(key), horizon)
+        last_entry = since
     else:
-        last_entry = horizon
-    return [(last_entry, until)]
+        from awx.conf.models import Setting
 
-# TODO: implement daily slicing for billing collection?
-# def four_hour_slicing(key, last_gather, **kwargs):
-#     since, until = kwargs.get('since', None), kwargs.get('until', now())
-#     if since is not None:
-#         last_entry = since
-#     else:
-#         from awx.conf.models import Setting
+        horizon = until - timedelta(weeks=4)
+        last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+        last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+        try:
+            last_entry = max(last_entries.get(key) or last_gather, horizon)
+        except TypeError:  # last_entries has a stale non-datetime entry for this collector
+            last_entry = max(last_gather, horizon)
 
-#         horizon = until - timedelta(weeks=4)
-#         last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-#         last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-#         try:
-#             last_entry = max(last_entries.get(key) or last_gather, horizon)
-#         except TypeError:  # last_entries has a stale non-datetime entry for this collector
-#             last_entry = max(last_gather, horizon)
+    start, end = last_entry, None
+    start_beginning_of_next_day = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
 
-#     start, end = last_entry, None
-#     while start < until:
-#         end = min(start + timedelta(hours=4), until)
-#         yield (start, end)
-#         start = end
+    # If the date range is over one day, we want first interval to contain the rest of the day
+    # then we'll cycle by full days
+    if until > start_beginning_of_next_day:
+        yield (start, start_beginning_of_next_day)
+        start = start_beginning_of_next_day
+
+    while start < until:
+        end = min(start + timedelta(days=1), until)
+        yield (start, end)
+        start = end
 
 @register('config', '1.0', description=_('General platform configuration.'), config=True)
 def config(since, **kwargs):
@@ -150,7 +140,7 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
             file.write(byte_data.decode())
 
 
-@register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=trivial_slicing)
+@register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     query = '''
@@ -189,9 +179,9 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                 LEFT JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
                 -- get organization name from main_organization
                 LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
-                WHERE (main_jobhostsummary.modified >= '{0}' AND main_jobhostsummary.modified <= '{1}')
+                WHERE (main_jobhostsummary.modified >= '{0}' AND main_jobhostsummary.modified < '{1}')
                 ORDER BY main_jobhostsummary.modified ASC)
         '''.format(
             since.isoformat(), until.isoformat()
     )
-    return _copy_table(table='unified_jobs', query=f"COPY {query} TO STDOUT WITH CSV HEADER", path=full_path)
+    return _copy_table(table='main_jobhostsummary', query=f"COPY {query} TO STDOUT WITH CSV HEADER", path=full_path)
