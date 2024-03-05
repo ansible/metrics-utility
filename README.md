@@ -30,49 +30,61 @@ which metrics-utility
 mv /var/lib/awx/venv/awx/bin/metrics-utility /usr/bin/
 ```
 
-## Available commands
+## Available functionality
 
-### host_metric
 
-Outputs the Host Metrics available in the Controller.
+### Local data gathering and CCSP report generation
 
-```shell
-metrics-utility host_metric [--since=2023-06-01]
-# since - optional - Start Date in ISO format YYYY-MM-DD
+This set of commands will be periodically storing data and generating CCSP reports at the beginning of each month.
+Run this command as a cronjob.
+
+
+Example with local directory storage:
+```
+# Set needed ENV VARs for data gathering
+export METRICS_UTILITY_SHIP_TARGET=directory
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_REPORT_TYPE=CCSP
+export METRICS_UTILITY_PRICE_PER_NODE=11 # in USD
+export METRICS_UTILITY_REPORT_SKU=MCT3752MO
+export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+export METRICS_UTILITY_REPORT_H1_HEADING="CCSP Reporting <Company>: ANSIBLE Consumption"
+export METRICS_UTILITY_REPORT_COMPANY_NAME="Company Name"
+export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
+export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
+export METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER="BUSINESS LEADER"
+export METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER="PROCUREMENT LEADER"
+
+# Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
+metrics-utility gather_automation_controller_billing_data --ship --until=10m
+
+# Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
+metrics-utility build_report
+
 ```
 
+### Pushing data periodically into console.redhat.com
 
-### gather_automation_controller_billing_data
+This command will push new data into console.redhat.com, it automatically stores the last collected interval and will collect
+up to 4 week long gap. The --until option collects the data until 10 minutes ago, to give time for fresh data to be inserted
+into the Controller's database. Run this command as a cronjob.
+```
+export METRICS_UTILITY_SHIP_TARGET=crc
+export METRICS_UTILITY_SERVICE_ACCOUNT_NAME=<service account name>
+export METRICS_UTILITY_SERVICE_ACCOUNT_SECRET=<service account secret>
 
-Gather Controller billing data
+# AWS specific params
+export METRICS_UTILITY_BILLING_PROVIDER=aws
+export METRICS_UTILITY_BILLING_ACCOUNT_ID="<AWS 12 digit customer id>"
+export METRICS_UTILITY_RED_HAT_ORG_ID="<Red Had org id tied to the AWS billing account>"
 
+metrics-utility gather_automation_controller_billing_data --ship --until=10m
+```
 
-Gather data for a specific datetime frame and just store them under /tmp for review:
-
+You can inspect the data sent with --dry-run attribute and provide your own interval with --since and --until:
 ```
 # This will collect whole day of 2023-12-21
 metrics-utility gather_automation_controller_billing_data --dry-run --since=2023-12-21 --until=2023-12-22
-```
-
-Gather and ship billing data to console.redhat.com for a specific datetime frame:
-```
-# You need to set 'Red Hat customer username/password' under Automation Controller 'Miscellaneous System' settings
-# This will collect and ship whole day of 2023-12-21
-metrics-utility gather_automation_controller_billing_data --ship --since=2023-12-21 --until=2023-12-22
-```
-
-Gather and ship billing data to console.redhat.com for a dynamic datetime range:
-```
-# You need to set 'Red Hat customer username/password' under Automation Controller 'Miscellaneous System' settings
-# This will collect and ship data for yesterday, interval <2 days ago, 1 day ago>
-metrics-utility gather_automation_controller_billing_data --ship --since=2d --until=1d
-```
-
-Gather and ship billing data to console.redhat.com with automatically collecting gap, by storing a last collected
-timestamp and always collecting from that last succesfully collected timestamp. To be on the safe side, we can
-collect interval <last_collected_timestamp_or_4_weeks_back, 10_minutes_ago> to give all records time to insert.
-```
-# You need to set 'Red Hat customer username/password' under Automation Controller 'Miscellaneous System' settings
-# This will collect and ship data for interval <last_collected_timestamp_or_4_weeks_back, 10_minutes_ago>
-metrics-utility gather_automation_controller_billing_data --ship --until=10m
 ```
