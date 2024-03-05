@@ -11,8 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
-from metrics_utility.automation_controller_billing.package_crc import PackageCRC
-from metrics_utility.automation_controller_billing.package_directory import PackageDirectory
+from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
 
 from awx.main.utils import datetime_hook
 from awx.main.utils.pglock import advisory_lock
@@ -154,7 +153,4 @@ class Collector(base.Collector):
         settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
 
     def _package_class(self):
-        if self.ship_target == "crc":
-            return PackageCRC
-        elif self.ship_target == "directory":
-            return PackageDirectory
+        return PackageFactory(ship_target=self.ship_target).create()

@@ -6,3 +6,8 @@ class BadShipTarget(Exception):
 class MissingRequiredEnvVar(Exception):
     def __init__(self, message):
         self.name = message
+
+
+class BadRequiredEnvVar(Exception):
+    def __init__(self, message):
+        self.name = message

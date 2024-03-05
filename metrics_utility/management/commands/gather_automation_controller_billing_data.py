@@ -105,7 +105,8 @@ class Command(BaseCommand):
 
         if not ship_path:
             raise MissingRequiredEnvVar(
-                "Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination for the built reports")
+                "Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination "\
+                "for the generated data")
 
         return {"ship_path": ship_path}
 

@@ -28,7 +28,7 @@ class PackageCRC(base.Package):
     def shipping_auth_mode(self):
         # TODO make this as a configuration so we can use this for local testing,
         # for now, uncomment when testin locally in docker
-        return self.SHIPPING_AUTH_IDENTITY
+        # return self.SHIPPING_AUTH_IDENTITY
 
         # TODO: allow to use certificate based auth based on Controller config
         return self.SHIPPING_AUTH_USERPASS

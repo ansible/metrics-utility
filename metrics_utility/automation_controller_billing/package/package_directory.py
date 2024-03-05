@@ -44,7 +44,6 @@ class PackageDirectory(base.Package):
 
         return os.path.join(base_path, path, filename)
 
-
     def ship(self):
         """
         Ship gathered metrics to the Directory
