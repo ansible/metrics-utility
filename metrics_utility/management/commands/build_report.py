@@ -71,6 +71,9 @@ class Command(BaseCommand):
             extra_params=extra_params).create()
 
         report_dataframe = dataframe_engine.build_dataframe()
+        if report_dataframe is None or report_dataframe.empty:
+            self.logger.info(f"No billing data for month: {opt_month}")
+            return
 
         report_engine = ReportFactory(report_period=opt_month,
                                       report_dataframe=report_dataframe,
@@ -78,6 +81,8 @@ class Command(BaseCommand):
                                       extra_params=extra_params).create()
         report_spreadsheet = report_engine.build_spreadsheet()
         report_spreadsheet.save(report_spreadsheet_destination_path)
+
+        self.logger.info(f"Report generated into: {report_spreadsheet_destination_path}")
 
     def _handle_ship_target(self, ship_target):
         if ship_target == "directory":
