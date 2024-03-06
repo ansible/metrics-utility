@@ -141,6 +141,13 @@ class DataframeSummarizedByOrgAndHost():
 
         return df.astype(types)
 
+    def summarize_merged_dataframes(self, df, columns):
+        for col in columns:
+            df[col] = df[[f"{col}_x", f"{col}_y"]].sum(axis=1)
+            del df[f"{col}_x"]
+            del df[f"{col}_y"]
+        return df
+
     @staticmethod
     def unique_index_columns():
         return ['organization_name', 'host_name']
