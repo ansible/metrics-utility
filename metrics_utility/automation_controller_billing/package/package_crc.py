@@ -5,7 +5,7 @@ from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
 
 
-class Package(base.Package):
+class PackageCRC(base.Package):
     CERT_PATH = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
     PAYLOAD_CONTENT_TYPE = "application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz"
 
@@ -32,4 +32,3 @@ class Package(base.Package):
 
         # TODO: allow to use certificate based auth based on Controller config
         return self.SHIPPING_AUTH_USERPASS
-

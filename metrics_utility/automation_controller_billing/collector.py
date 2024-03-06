@@ -11,24 +11,31 @@ from django.core.serializers.json import DjangoJSONEncoder
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
-from metrics_utility.automation_controller_billing.package import Package
+from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+
 from awx.main.utils import datetime_hook
 from awx.main.utils.pglock import advisory_lock
 
-logger = logging.getLogger('awx.main.analytics')
+logger = logging.getLogger('metrics_utility.collector')
 
 
 class Collector(base.Collector):
-    def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None):
+    def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None,
+                 ship_target=None, billing_provider_params=None):
         from metrics_utility.automation_controller_billing import collectors
 
         if collector_module is None:
             collector_module = collectors
+
+        self.ship_target = ship_target
+        self.billing_provider_params = billing_provider_params
+
         super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module, logger=logger)
 
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
-    def gather(self, dest=None, subset=None, since=None, until=None):
+    # TODO: extract to superclass ability to push extra params into config.json
+    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
@@ -53,6 +60,12 @@ class Collector(base.Collector):
                 return None
 
             self._gather_json_collections()
+            # Extend the config collection to contain billing specific info:
+            config_collection = self.collections['config']
+            data = json.loads(config_collection.data)
+            data['billing_provider_params'] = billing_provider_params
+            config_collection._save_gathering(data)
+            # End of extension
 
             self._gather_csv_collections()
 
@@ -78,15 +91,19 @@ class Collector(base.Collector):
 
     def _is_shipping_configured(self):
         if self.is_shipping_enabled():
-            # TODO: should this be enable only with certain SKUs? or the check will be higher above
-            # when integrating to Controller?
+            if self.ship_target == "crc":
+                # TODO: should this be enable only with certain SKUs? or the check will be higher above
+                # when integrating to Controller?
 
-            if not (settings.AUTOMATION_ANALYTICS_URL and settings.REDHAT_USERNAME and settings.REDHAT_PASSWORD):
-                logger.log(self.log_level, "Not gathering Automation Controller billing data, configuration "\
-                                           "is invalid. Set 'Red Hat customer username/password' under "\
-                                           "'Miscellaneous System' settings in your Automation Controller. Or use "\
-                                           "--dry-run to gather locally without sending.")
-                return False
+                if not (settings.AUTOMATION_ANALYTICS_URL and settings.REDHAT_USERNAME and settings.REDHAT_PASSWORD):
+                    logger.log(self.log_level, "Not gathering Automation Controller billing data, configuration "\
+                                            "is invalid. Set 'Red Hat customer username/password' under "\
+                                            "'Miscellaneous System' settings in your Automation Controller. Or use "\
+                                            "--dry-run to gather locally without sending.")
+                    return False
+            elif self.ship_target == "directory":
+                # TODO add checks here
+                pass
 
         return True
 
@@ -135,6 +152,5 @@ class Collector(base.Collector):
     def _save_last_gathered_entries(self, last_gathered_entries):
         settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
 
-    @staticmethod
-    def _package_class():
-        return Package
+    def _package_class(self):
+        return PackageFactory(ship_target=self.ship_target).create()
