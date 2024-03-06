@@ -31,6 +31,11 @@ class Command(BaseCommand):
                             help='Month the report will be generated for, with format YYYY-MM. '\
                                  'If this params isn\'t provided, previou month report will be'\
                                  'generated if it doesn\'t exists already.')
+        parser.add_argument('--force',
+                            dest='force',
+                            action='store_true',
+                            help='With this option, the existing reports will be overwritten if '\
+                                 'running this command again.')
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
@@ -45,6 +50,7 @@ class Command(BaseCommand):
 
         opt_month = options.get('month') or None
         opt_month, month = self._handle_month(opt_month)
+        opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_ship_target(ship_target)
@@ -56,7 +62,7 @@ class Command(BaseCommand):
             extractor.get_report_path(month),
             f"{extra_params['report_type']}-{opt_month}.xlsx")
 
-        if os.path.exists(report_spreadsheet_destination_path):
+        if os.path.exists(report_spreadsheet_destination_path) and not opt_force:
             # If the monthly report already exists, skip the generation
             self.logger.info("Skipping report generation, report: "\
                              f"{report_spreadsheet_destination_path} already exists")
