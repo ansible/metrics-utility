@@ -85,6 +85,7 @@ class Command(BaseCommand):
 
     def _handle_crc_ship_target(self):
         billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
+        red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID', None)
 
         billing_provider_params = {"billing_provider": billing_provider}
         if billing_provider == "aws":
@@ -98,6 +99,10 @@ class Command(BaseCommand):
             raise MissingRequiredEnvVar(
                 "Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are"\
                 " [aws].")
+
+        if red_hat_org_id:
+            billing_provider_params["red_hat_org_id"] = red_hat_org_id
+
         return billing_provider_params
 
     def _handle_directory_ship_target(self):
