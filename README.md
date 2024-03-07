@@ -72,7 +72,7 @@ up to 4 week long gap. The --until option collects the data until 10 minutes ago
 into the Controller's database. Run this command as a cronjob.
 ```
 export METRICS_UTILITY_SHIP_TARGET=crc
-export METRICS_UTILITY_SERVICE_ACCOUNT_NAME=<service account name>
+export METRICS_UTILITY_SERVICE_ACCOUNT_ID=<service account name>
 export METRICS_UTILITY_SERVICE_ACCOUNT_SECRET=<service account secret>
 
 # AWS specific params
