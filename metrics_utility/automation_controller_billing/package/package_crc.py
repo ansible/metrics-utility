@@ -1,13 +1,14 @@
 import os
 import requests
 import json
+import logging
 
 import insights_analytics_collector as base
 
 from awx.main.utils import get_awx_http_client_headers
+from metrics_utility.exceptions import FailedToUploadPayload
 
 from django.conf import settings
-
 
 class PackageCRC(base.Package):
     CERT_PATH = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
@@ -52,18 +53,19 @@ class PackageCRC(base.Package):
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             if not self.get_ingress_url():
-                self.logger.error("AUTOMATION_ANALYTICS_URL is not set")
+                self.logger.error("METRICS_UTILITY_CRC_INGRESS_URL is not set")
                 return False
+
             if not self.get_sso_url():
-                self.logger.error("AUTOMATION_ANALYTICS_URL is not set")
+                self.logger.error("METRICS_UTILITY_CRC_SSO_URL is not set")
                 return False
 
             if not self._get_rh_user():
-                self.logger.error("REDHAT_USERNAME is not set")
+                self.logger.error("METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set")
                 return False
 
             if not self._get_rh_password():
-                self.logger.error("REDHAT_PASSWORD is not set")
+                self.logger.error("METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set")
                 return False
         return True
 
@@ -119,12 +121,11 @@ class PackageCRC(base.Package):
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
-            self.logger.error(
+            raise FailedToUploadPayload(
                 "Upload failed with status {}, {}".format(
                     response.status_code, response.text
                 )
             )
-            return False
 
         return True
 
