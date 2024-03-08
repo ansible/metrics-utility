@@ -109,7 +109,7 @@ def config(since, **kwargs):
         'logging_aggregators': settings.LOG_AGGREGATOR_LOGGERS,
         'external_logger_enabled': settings.LOG_AGGREGATOR_ENABLED,
         'external_logger_type': getattr(settings, 'LOG_AGGREGATOR_TYPE', None),
-        'metrics_utility_version': "0.0.4", # TODO read from setup.cfg
+        'metrics_utility_version': "0.0.5", # TODO read from setup.cfg
         'billing_provider_params': {} # Is being overwritten in collector.gather by set ENV VARS
     }
 

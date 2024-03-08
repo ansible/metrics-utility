@@ -21,3 +21,8 @@
 - adding METRICS_UTILITY_SHIP_TARGET="directory", so the billing data
   will be stored in a provided directory in daily partitions
 - adding build_report command that can build .xlsx reports locally
+
+## 0.0.5
+
+- adding proxy support for gather_automation_controller_billing_data command
+- adding crc service account support for gather_automation_controller_billing_data command

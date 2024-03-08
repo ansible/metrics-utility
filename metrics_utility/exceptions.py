@@ -11,3 +11,8 @@ class MissingRequiredEnvVar(Exception):
 class BadRequiredEnvVar(Exception):
     def __init__(self, message):
         self.name = message
+
+
+class FailedToUploadPayload(Exception):
+    def __init__(self, message):
+        self.name = message

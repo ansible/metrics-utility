@@ -4,7 +4,6 @@ import os
 import tarfile
 import tempfile
 
-# import pyarrow.parquet as pq
 import pandas as pd
 
 

@@ -2,7 +2,8 @@ import logging
 import os
 
 import datetime
-from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar, FailedToUploadPayload,\
+    BadRequiredEnvVar
 from metrics_utility.automation_controller_billing.collector import Collector
 from dateutil import parser
 from django.core.management.base import BaseCommand
@@ -48,6 +49,16 @@ class Command(BaseCommand):
         self.logger.propagate = False
 
     def handle(self, *args, **options):
+        try:
+            self._handle(self, *args, **options)
+        except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload) as e:
+            self.logger.error(e.name)
+            exit(0)
+        except Exception as e:
+            self.logger.exception(e)
+            exit(0)
+
+    def _handle(self, *args, **options):
         self.init_logging()
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
@@ -85,6 +96,7 @@ class Command(BaseCommand):
 
     def _handle_crc_ship_target(self):
         billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
+        red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID', None)
 
         billing_provider_params = {"billing_provider": billing_provider}
         if billing_provider == "aws":
@@ -98,6 +110,10 @@ class Command(BaseCommand):
             raise MissingRequiredEnvVar(
                 "Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are"\
                 " [aws].")
+
+        if red_hat_org_id:
+            billing_provider_params["red_hat_org_id"] = red_hat_org_id
+
         return billing_provider_params
 
     def _handle_directory_ship_target(self):
