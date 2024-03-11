@@ -40,7 +40,7 @@ class PackageDirectory(base.Package):
         month = timestamp.strftime("%m")
         day = timestamp.strftime("%d")
 
-        path = f"report_data/year={year}/month={month}/day={day}"
+        path = f"data/{year}/{month}/{day}"
 
         return os.path.join(base_path, path, filename)
 

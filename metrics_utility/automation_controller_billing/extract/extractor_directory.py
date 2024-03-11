@@ -20,13 +20,13 @@ class ExtractorDirectory():
         self.logger = logger
 
     def _get_path_prefix(self, date):
-        path_prefix = f"{self.path}/report_data"
+        path_prefix = f"{self.path}/data"
 
         year = date.strftime("%Y")
         month = date.strftime("%m")
         day = date.strftime("%d")
 
-        path = f"{path_prefix}/year={year}/month={month}/day={day}"
+        path = f"{path_prefix}/{year}/{month}/{day}"
 
         return path
 
@@ -36,7 +36,7 @@ class ExtractorDirectory():
         year = date.strftime("%Y")
         month = date.strftime("%m")
 
-        path = f"{path_prefix}/year={year}/month={month}"
+        path = f"{path_prefix}/{year}/{month}"
 
         return path
 

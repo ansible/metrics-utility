@@ -67,9 +67,6 @@ class Command(BaseCommand):
             self.logger.info("Skipping report generation, report: "\
                              f"{report_spreadsheet_destination_path} already exists")
             return
-        else:
-            # otherwise create the dir structure for the final report
-            os.makedirs(os.path.dirname(report_spreadsheet_destination_path), exist_ok=True)
 
         dataframe_engine = DataframeEngineFactory(
             extractor=extractor,
@@ -80,6 +77,9 @@ class Command(BaseCommand):
         if report_dataframe is None or report_dataframe.empty:
             self.logger.info(f"No billing data for month: {opt_month}")
             return
+
+        # Create the dir structure for the final report
+        os.makedirs(os.path.dirname(report_spreadsheet_destination_path), exist_ok=True)
 
         report_engine = ReportFactory(report_period=opt_month,
                                       report_dataframe=report_dataframe,
