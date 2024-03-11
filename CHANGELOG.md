@@ -26,3 +26,7 @@
 
 - adding proxy support for gather_automation_controller_billing_data command
 - adding crc service account support for gather_automation_controller_billing_data command
+
+## 0.1.0
+
+- change local storage schema from year={year}/month={month}/day={day} to /{year}/{month}/{day}
