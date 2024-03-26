@@ -90,20 +90,7 @@ class Collector(base.Collector):
         return True
 
     def _is_shipping_configured(self):
-        if self.is_shipping_enabled():
-            if self.ship_target == "crc":
-                # TODO: should this be enable only with certain SKUs? or the check will be higher above
-                # when integrating to Controller?
-
-                if not (settings.AUTOMATION_ANALYTICS_URL and settings.REDHAT_USERNAME and settings.REDHAT_PASSWORD):
-                    logger.log(self.log_level, "Not gathering Automation Controller billing data, configuration "\
-                                            "is invalid. Set 'Red Hat customer username/password' under "\
-                                            "'Miscellaneous System' settings in your Automation Controller. Or use "\
-                                            "--dry-run to gather locally without sending.")
-                    return False
-            elif self.ship_target == "directory":
-                # TODO add checks here
-                pass
+        # This check is already done in each Package class
 
         return True
 
