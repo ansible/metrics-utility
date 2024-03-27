@@ -109,16 +109,19 @@ def config(since, **kwargs):
         'logging_aggregators': settings.LOG_AGGREGATOR_LOGGERS,
         'external_logger_enabled': settings.LOG_AGGREGATOR_ENABLED,
         'external_logger_type': getattr(settings, 'LOG_AGGREGATOR_TYPE', None),
-        'metrics_utility_version': "0.1.0", # TODO read from setup.cfg
+        'metrics_utility_version': "0.2.0", # TODO read from setup.cfg
         'billing_provider_params': {} # Is being overwritten in collector.gather by set ENV VARS
     }
 
 
-def _copy_table(table, query, path):
+def _copy_table(table, query, path, prepend_query=None):
     file_path = os.path.join(path, table + '_table.csv')
     file = CsvFileSplitter(filespec=file_path)
 
     with connection.cursor() as cursor:
+        if prepend_query:
+            cursor.execute(prepend_query)
+
         if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
             _copy_table_aap_2_4_and_below(cursor, query, file)
         else:
@@ -140,15 +143,59 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
             file.write(byte_data.decode())
 
 
-@register('job_host_summary', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
+@register('job_host_summary', '1.1', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
     # TODO: controler needs to have an index on main_jobhostsummary.modified
+    prepend_query = '''
+        -- Define function for parsing field out of yaml encoded as text
+        CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
+            str text,
+            field text
+        )
+        RETURNS text AS
+        $$
+        DECLARE
+            line_re text;
+            field_re text;
+        BEGIN
+            field_re := ' *[:=] *(.+?) *$';
+            line_re := '(?n)^' || field || field_re;
+            RETURN trim(both '"' from substring(str from line_re) );
+        END;
+        $$
+        LANGUAGE plpgsql;
+
+        -- Define function to check if field is a valid json
+        CREATE OR REPLACE FUNCTION metrics_utility_is_valid_json(p_json text)
+            returns boolean
+        AS
+        $$
+        BEGIN
+            RETURN (p_json::json is not null);
+        EXCEPTION
+            WHEN others THEN
+                RETURN false;
+        END;
+        $$
+        LANGUAGE plpgsql;
+    '''
+
     query = '''
         (SELECT main_jobhostsummary.id,
                 main_jobhostsummary.created,
                 main_jobhostsummary.modified,
                 main_jobhostsummary.host_name,
-                -- main_jobhostsummary.host_id,
+                main_jobhostsummary.host_id as host_remote_id,
+                CASE
+                    WHEN (metrics_utility_is_valid_json(main_host.variables))
+                        THEN main_host.variables::jsonb->>'ansible_host'
+                    ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_host' )
+                END AS ansible_host_variable,
+                CASE
+                    WHEN (metrics_utility_is_valid_json(main_host.variables))
+                        THEN main_host.variables::jsonb->>'ansible_connection'
+                    ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
+                END AS ansible_connection_variable,
                 -- main_jobhostsummary.constructed_host_id,
                 main_jobhostsummary.changed,
                 main_jobhostsummary.dark,
@@ -179,9 +226,15 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                 LEFT JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
                 -- get organization name from main_organization
                 LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
+                -- get variables from main_host
+                LEFT JOIN main_host ON main_host.id = main_jobhostsummary.host_id
                 WHERE (main_jobhostsummary.modified >= '{0}' AND main_jobhostsummary.modified < '{1}')
                 ORDER BY main_jobhostsummary.modified ASC)
         '''.format(
             since.isoformat(), until.isoformat()
     )
-    return _copy_table(table='main_jobhostsummary', query=f"COPY {query} TO STDOUT WITH CSV HEADER", path=full_path)
+
+    return _copy_table(table='main_jobhostsummary',
+                       query=f"COPY {query} TO STDOUT WITH CSV HEADER",
+                       path=full_path,
+                       prepend_query=prepend_query)
