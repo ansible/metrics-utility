@@ -30,3 +30,8 @@
 ## 0.1.0
 
 - change local storage schema from year={year}/month={month}/day={day} to /{year}/{month}/{day}
+
+## 0.2.0
+
+- Take ansible_host and ansible_connection from host variables, use ansible_host instead
+  of host_name if it's present for the CCSP(and other) reports

@@ -81,6 +81,12 @@ class DataframeSummarizedByOrgAndHost():
 
                 billing_data['organization_name'] = billing_data.organization_name.fillna("__ORGANIZATION NAME MISSING__")
 
+                if 'ansible_host_variable' in billing_data.columns:
+                    # Replace missing ansible_host_variable with host name
+                    billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
+                    # And use the new ansible_host_variable instead of host_name, since
+                    # what is in ansible_host_variable should be the actual host we count
+                    billing_data['host_name'] = billing_data['ansible_host_variable']
                 ################################
                 # Do the aggregation
                 ################################
