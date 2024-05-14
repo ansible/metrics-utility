@@ -111,7 +111,7 @@ class Command(BaseCommand):
         if not report_type:
             raise MissingRequiredEnvVar(
                 "Missing required env variable METRICS_UTILITY_REPORT_TYPE.")
-        elif report_type not in ["CCSP"]:
+        elif report_type not in ["CCSP", "CCSPv2"]:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
                 " valies are: [CCSP]")
@@ -126,6 +126,7 @@ class Command(BaseCommand):
                 "report_company_name": os.getenv('METRICS_UTILITY_REPORT_COMPANY_NAME', ""),
                 "report_email": os.getenv('METRICS_UTILITY_REPORT_EMAIL', ""),
                 "report_rhn_login": os.getenv('METRICS_UTILITY_REPORT_RHN_LOGIN', ""),
+                "report_po_number": os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ""),
                 "report_company_business_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ""),
                 "report_company_procurement_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ""),
                 }

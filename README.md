@@ -39,7 +39,7 @@ This set of commands will be periodically storing data and generating CCSP repor
 Run this command as a cronjob.
 
 
-Example with local directory storage:
+Example with local directory storage CCSP type:
 ```
 # Set needed ENV VARs for data gathering
 export METRICS_UTILITY_SHIP_TARGET=directory
@@ -56,6 +56,30 @@ export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
 export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER="BUSINESS LEADER"
 export METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER="PROCUREMENT LEADER"
+
+# Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
+metrics-utility gather_automation_controller_billing_data --ship --until=10m
+
+# Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
+metrics-utility build_report
+
+
+Example with local directory storage CCSPv2 type:
+```
+# Set needed ENV VARs for data gathering
+export METRICS_UTILITY_SHIP_TARGET=directory
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_REPORT_TYPE=CCSPv2
+export METRICS_UTILITY_PRICE_PER_NODE=11 # in USD
+export METRICS_UTILITY_REPORT_SKU=MCT3752MO
+export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+export METRICS_UTILITY_REPORT_H1_HEADING="CCSP NA Direct Reporting Template"
+export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
+export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
+export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
+export METRICS_UTILITY_REPORT_PO_NUMBER="123"
 
 # Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
 metrics-utility gather_automation_controller_billing_data --ship --until=10m
