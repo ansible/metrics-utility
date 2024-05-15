@@ -80,6 +80,8 @@ export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
 export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
 export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_PO_NUMBER="123"
+export METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME="Customer A"
+
 
 # Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
 metrics-utility gather_automation_controller_billing_data --ship --until=10m

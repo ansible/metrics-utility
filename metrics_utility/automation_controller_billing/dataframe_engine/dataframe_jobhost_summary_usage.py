@@ -40,7 +40,7 @@ def list_dates(start_date, end_date, granularity):
 
     return dates_arr
 
-class DataframeSummarizedByOrgAndHost():
+class DataframeJobhostSummaryUsage():
     LOG_PREFIX = "[AAPBillingReport] "
 
     def __init__(self, extractor, month, extra_params):
@@ -49,8 +49,6 @@ class DataframeSummarizedByOrgAndHost():
         self.extractor = extractor
         self.month = month
         self.extra_params = extra_params
-
-        self.price_per_node = extra_params['price_per_node']
 
     @staticmethod
     def get_logger():
@@ -79,20 +77,30 @@ class DataframeSummarizedByOrgAndHost():
                 if billing_data.empty:
                     continue
 
-                billing_data['organization_name'] = billing_data.organization_name.fillna("__ORGANIZATION NAME MISSING__")
+                billing_data['organization_name'] = billing_data.organization_name.fillna("No organization name")
+                billing_data['install_uuid'] = data['config']['install_uuid']
 
+                # Store the original host name for mapping purposes
+                billing_data['original_host_name'] = billing_data['host_name']
                 if 'ansible_host_variable' in billing_data.columns:
                     # Replace missing ansible_host_variable with host name
                     billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
                     # And use the new ansible_host_variable instead of host_name, since
                     # what is in ansible_host_variable should be the actual host we count
                     billing_data['host_name'] = billing_data['ansible_host_variable']
+
+                # Sumarize all task counts into 1 col
+                def sum_columns(row):
+                    return sum([row[i] for i in ['dark', 'failures', 'ok', 'skipped', 'ignored',  'rescued']])
+                billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
+
                 ################################
                 # Do the aggregation
                 ################################
                 billing_data_group = billing_data.groupby(
                     self.unique_index_columns(), dropna=False
                 ).agg(
+                    task_runs=('task_runs', 'sum'),
                     host_runs=('host_name', 'count'))
 
                 # Tweak types to match the table
@@ -121,21 +129,7 @@ class DataframeSummarizedByOrgAndHost():
         if billing_data_monthly_rollup is None:
             return None
 
-        ccsp_report = billing_data_monthly_rollup.reset_index().groupby(
-            'organization_name', dropna=False).agg(
-                quantity_consumed=('host_name', 'nunique'))
-        ccsp_report['mark_x'] = ''
-        ccsp_report['unit_price'] = round(self.price_per_node, 2)
-        ccsp_report['extended_unit_price'] = round((ccsp_report['quantity_consumed'] * ccsp_report['unit_price']), 2)
-
-        # order the columns right
-        ccsp_report = ccsp_report.reset_index()
-        ccsp_report = ccsp_report.reindex(columns=['organization_name',
-                                                   'mark_x',
-                                                   'quantity_consumed',
-                                                   'unit_price',
-                                                   'extended_unit_price'])
-        return ccsp_report
+        return billing_data_monthly_rollup.reset_index()
 
     def cast_dataframe(self, df, types):
         levels = []
@@ -156,12 +150,12 @@ class DataframeSummarizedByOrgAndHost():
 
     @staticmethod
     def unique_index_columns():
-        return ['organization_name', 'host_name']
+        return ['organization_name', 'host_name', 'original_host_name', 'install_uuid', 'job_remote_id']
 
     @staticmethod
     def data_columns():
-        return ['host_runs']
+        return ['host_runs', 'task_runs']
 
     @staticmethod
     def cast_types():
-        return {'host_runs': int}
+        return {'task_runs': int, 'host_runs': int}

@@ -17,10 +17,6 @@ class ReportCCSP:
     def __init__(self, dataframe, report_period, extra_params):
         # Create the workbook and worksheet
         self.wb = Workbook()
-        self.wb.remove(self.wb.active)
-        self.wb.create_sheet(title="Summary")
-
-        self.ws = self.wb.active
 
         self.dataframe = dataframe
         self.report_period = report_period
@@ -87,20 +83,28 @@ class ReportCCSP:
         self.config['column_widths'] = default_column_widths
 
     def build_spreadsheet(self):
+        # Create the workbook and worksheets
+        self.wb.remove(self.wb.active) # delete the default sheet
+        self.wb.create_sheet(title="Usage Reporting")
+        self.wb.create_sheet(title="Usage by collections")
+        self.wb.create_sheet(title="Usage by roles")
+        self.wb.create_sheet(title="Usage by modules")
+
+        # First sheet with billing
+        ws = self.wb.worksheets[0]
+
         self._init_dimensions()
-        current_row = self._build_heading_h1(1)
-        current_row = self._build_header(current_row)
-        current_row = self._build_heading_h2(current_row)
-        current_row = self._build_sku_description(current_row)
-        current_row = self._build_data_section(current_row)
+        current_row = self._build_heading_h1(1, ws)
+        current_row = self._build_header(current_row, ws)
+        current_row = self._build_heading_h2(current_row, ws)
+        current_row = self._build_sku_description(current_row, ws)
+        current_row = self._build_data_section(current_row, ws, self.dataframe[0])
 
         return self.wb
-
 
     def _init_dimensions(self):
         for key, value in self.config['column_widths'].items():
             self.ws.column_dimensions[get_column_letter(key)].width = value
-
 
     def _build_heading_h1(self, current_row):
         # Merge cells and insert the h1 heading
@@ -231,6 +235,21 @@ class ReportCCSP:
                                         color=self.BLACK_COLOR_HEX),
                                bottom=Side(border_style='dotted',
                                            color=self.BLACK_COLOR_HEX))
+
+        ccsp_report = dataframe.reset_index().groupby(
+            'organization_name', dropna=False).agg(
+                quantity_consumed=('host_name', 'nunique'))
+        ccsp_report['mark_x'] = ''
+        ccsp_report['unit_price'] = round(self.price_per_node, 2)
+        ccsp_report['extended_unit_price'] = round((ccsp_report['quantity_consumed'] * ccsp_report['unit_price']), 2)
+
+        # order the columns right
+        ccsp_report = ccsp_report.reset_index()
+        ccsp_report = ccsp_report.reindex(columns=['organization_name',
+                                                   'mark_x',
+                                                   'quantity_consumed',
+                                                   'unit_price',
+                                                   'extended_unit_price'])
 
         # Rename the columns based on the template
         ccsp_report_dataframe = self.dataframe.rename(

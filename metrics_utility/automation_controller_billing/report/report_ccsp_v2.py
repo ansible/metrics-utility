@@ -1,34 +1,32 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
+from metrics_utility.automation_controller_billing.report.base import Base
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+import pandas as pd
 import time
 
-class ReportCCSPv2:
-    BLACK_COLOR_HEX = "00000000"
-    WHITE_COLOR_HEX = "00FFFFFF"
-    BLUE_COLOR_HEX = "000000FF"
-    RED_COLOR_HEX = "FF0000"
-    LIGHT_BLUE_COLOR_HEX = "d4eaf3"
-    GREEN_COLOR_HEX = "92d050"
-    FONT = "Arial"
-    PRICE_FORMAT = '$#,##0.00'
+class ReportCCSPv2(Base):
+    # BLACK_COLOR_HEX = "00000000"
+    # WHITE_COLOR_HEX = "00FFFFFF"
+    # BLUE_COLOR_HEX = "000000FF"
+    # RED_COLOR_HEX = "FF0000"
+    # LIGHT_BLUE_COLOR_HEX = "d4eaf3"
+    # GREEN_COLOR_HEX = "92d050"
+    # FONT = "Arial"
+    # PRICE_FORMAT = '$#,##0.00'
 
     def __init__(self, dataframe, report_period, extra_params):
-        # Create the workbook and worksheet
         self.wb = Workbook()
-        self.wb.remove(self.wb.active)
-        self.wb.create_sheet(title="Summary")
-
-        self.ws = self.wb.active
 
         self.dataframe = dataframe
         self.report_period = report_period
         self.extra_params = extra_params
+        self.price_per_node = extra_params['price_per_node']
 
         self.config = {
             'sku': extra_params['report_sku'],
@@ -81,32 +79,197 @@ class ReportCCSPv2:
             7: 20
         }
 
+        default_data_column_widths = {
+            1: 40,
+            2: 20,
+            3: 20,
+            4: 20,
+            5: 20,
+            6: 20,
+            7: 20
+        }
+
         self.config['sku_description'] = default_sku_description
         self.config['column_widths'] = default_column_widths
+        self.config['data_column_widths'] = default_data_column_widths
 
     def build_spreadsheet(self):
-        self._init_dimensions()
-        current_row = self._build_heading_h1(1)
-        current_row = self._build_header(current_row)
-        current_row = self._build_po_number(current_row)
-        current_row = self._build_updated_timestamp(current_row)
+        # Fix host names in the event data, to take in account the variables
+        job_host_sumary_dataframe = self.dataframe[0]
+        events_dataframe = self.dataframe[1]
+        events_dataframe = self._fix_event_host_names(job_host_sumary_dataframe, events_dataframe)
 
-        # current_row = self._build_sku_description(current_row)
-        current_row = self._build_data_section(current_row)
+        # Create the workbook and worksheets
+        self.wb.remove(self.wb.active) # delete the default sheet
+        self.wb.create_sheet(title="Usage Reporting")
+        self.wb.create_sheet(title="Managed nodes")
+        self.wb.create_sheet(title="Usage by organization")
+        self.wb.create_sheet(title="Usage by collections")
+        self.wb.create_sheet(title="Usage by roles")
+        self.wb.create_sheet(title="Usage by modules")
+
+        # First sheet with billing
+        ws = self.wb.worksheets[0]
+
+        self._init_dimensions(ws)
+        current_row = self._build_heading_h1(1, ws)
+        current_row = self._build_header(current_row, ws)
+        current_row = self._build_po_number(current_row, ws)
+        current_row = self._build_updated_timestamp(current_row, ws)
+        current_row = self._build_data_section(current_row, ws, job_host_sumary_dataframe)
+
+        # Sheet with list of managed nodes
+        ws = self.wb.worksheets[1]
+        current_row = self._build_data_section_usage_by_node(1, ws, job_host_sumary_dataframe)
+
+        # Sheet with usage by org
+        ws = self.wb.worksheets[2]
+        current_row = self._build_data_section_usage_by_org(1, ws, job_host_sumary_dataframe)
+
+        if events_dataframe is not None:
+            # Sheet with usage by collections
+            ws = self.wb.worksheets[3]
+            current_row = self._build_data_section_usage_by_collections(1, ws, events_dataframe)
+
+            # Sheet with usage by collections
+            ws = self.wb.worksheets[4]
+            current_row = self._build_data_section_usage_by_roles(1, ws, events_dataframe)
+
+            # Sheet with usage by collections
+            ws = self.wb.worksheets[5]
+            current_row = self._build_data_section_usage_by_modules(1, ws, events_dataframe)
 
         return self.wb
 
+    def _build_data_section_usage_by_node(self, current_row, ws, dataframe):
+        for key, value in self.config['data_column_widths'].items():
+            ws.column_dimensions[get_column_letter(key)].width = value
 
-    def _init_dimensions(self):
+        header_font = Font(name=self.FONT,
+                           size=10,
+                           color=self.BLACK_COLOR_HEX,
+                           bold=True)
+        value_font = Font(name=self.FONT,
+                          size=10,
+                          color=self.BLACK_COLOR_HEX)
+
+        # Rename the columns based on the template
+        ccsp_report_dataframe = (
+            dataframe.groupby('host_name', dropna=False)
+            .agg(
+                organizations=('organization_name', 'nunique'),
+                host_runs=('host_name', 'count'),
+                task_runs=('task_runs', 'sum')
+            )
+        )
+        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
+            columns=[
+                'host_name',
+                'organizations',
+                'host_runs',
+                'task_runs'
+            ]
+        )
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(
+            columns={
+                "host_name": "Host name",
+                "organizations": "Automated by\norganizations",
+                "host_runs": "Non-unique managed\nnodes automated",
+                "task_runs": "Number of task\nruns",
+            }
+        )
+
+        row_counter = 0
+        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+
+            row_counter += 1
+
+        return current_row + row_counter
+
+    def _build_data_section_usage_by_org(self, current_row, ws, dataframe):
+        for key, value in self.config['data_column_widths'].items():
+            ws.column_dimensions[get_column_letter(key)].width = value
+
+        header_font = Font(name=self.FONT,
+                           size=10,
+                           color=self.BLACK_COLOR_HEX,
+                           bold=True)
+        value_font = Font(name=self.FONT,
+                          size=10,
+                          color=self.BLACK_COLOR_HEX)
+
+        # Rename the columns based on the template
+        ccsp_report_dataframe = (
+            dataframe.groupby('organization_name', dropna=False)
+            .agg(
+                host_runs_unique=('host_name', 'nunique'),
+                host_runs=('host_name', 'count'),
+                task_runs=('task_runs', 'sum')
+            )
+        )
+        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
+            columns=[
+                'organization_name',
+                'host_runs_unique',
+                'host_runs',
+                'task_runs'
+            ]
+        )
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(
+            columns={
+                "organization_name": "Organization name",
+                "host_runs_unique": "Unique managed nodes\nautomated",
+                "host_runs": "Non-unique managed\nnodes automated",
+                "task_runs": "Number of task\nruns",
+            }
+        )
+
+        row_counter = 0
+        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+
+            row_counter += 1
+
+        return current_row + row_counter
+
+    def _init_dimensions(self, ws):
         for key, value in self.config['column_widths'].items():
-            self.ws.column_dimensions[get_column_letter(key)].width = value
+            ws.column_dimensions[get_column_letter(key)].width = value
 
-
-    def _build_heading_h1(self, current_row):
+    def _build_heading_h1(self, current_row, ws):
         # Merge cells and insert the h1 heading
-        self.ws.merge_cells(start_row=current_row, start_column=1,
+        ws.merge_cells(start_row=current_row, start_column=1,
                             end_row=current_row, end_column=2)
-        h1_heading_cell = self.ws.cell(row=current_row, column=1)
+        h1_heading_cell = ws.cell(row=current_row, column=1)
         h1_heading_cell.value = self.config['h1_heading']['value']
 
         # h1_heading_cell.fill = PatternFill("solid", fgColor=self.BLACK_COLOR_HEX)
@@ -120,28 +283,28 @@ class ReportCCSPv2:
         current_row += 1
         return current_row
 
-    def _build_updated_timestamp(self, current_row):
-        cell = self.ws.cell(row=1, column=5)
+    def _build_updated_timestamp(self, current_row, ws):
+        cell = ws.cell(row=1, column=5)
         cell.value = f"Updated: {time.strftime('%b %d, %Y')}"
 
         return current_row
 
-    def _build_po_number(self, current_row):
+    def _build_po_number(self, current_row, ws):
         # Add the h2 heading payment heading
         green_background = PatternFill("solid", fgColor=self.GREEN_COLOR_HEX)
 
         # PO number heading and value with green background
-        cell = self.ws.cell(row=5, column=4)
+        cell = ws.cell(row=5, column=4)
         cell.value = self.config['po_number']['label']
         cell.fill = green_background
 
-        cell = self.ws.cell(row=5, column=5)
+        cell = ws.cell(row=5, column=5)
         cell.value = self.config['po_number']['value']
         cell.fill = green_background
 
         return current_row
 
-    def _build_header(self, current_row):
+    def _build_header(self, current_row, ws):
         # Insert the header
         for header_row in self.config['header']:
             header_label_font = Font(name=self.FONT,
@@ -151,11 +314,11 @@ class ReportCCSPv2:
                                      size=12,
                                      color=self.BLACK_COLOR_HEX)
 
-            cell = self.ws.cell(row=current_row, column=1)
+            cell = ws.cell(row=current_row, column=1)
             cell.value = header_row['label']
             cell.font = header_label_font
 
-            cell = self.ws.cell(row=current_row, column=2)
+            cell = ws.cell(row=current_row, column=2)
             if header_row['label'] == "Report Period (YYYY-MM)":
                 # Insert dynamic report period into the specific header column
                 cell.fill = PatternFill("solid", fgColor=self.GREEN_COLOR_HEX)
@@ -168,7 +331,7 @@ class ReportCCSPv2:
 
         return current_row
 
-    def _build_sku_description(self, current_row):
+    def _build_sku_description(self, current_row, ws):
         # Insert the header
         row_counter = 0
         for header_row in self.config['sku_description']:
@@ -191,7 +354,7 @@ class ReportCCSPv2:
             for col_value in header_row:
                 col_counter += 1
 
-                cell = self.ws.cell(row=current_row + row_counter, column=col_counter)
+                cell = ws.cell(row=current_row + row_counter, column=col_counter)
                 cell.value = col_value
 
                 if row_counter == 0:
@@ -209,7 +372,7 @@ class ReportCCSPv2:
 
         return current_row
 
-    def _build_data_section(self, current_row):
+    def _build_data_section(self, current_row, ws, dataframe):
         header_font = Font(name=self.FONT,
                            size=10,
                            color=self.BLACK_COLOR_HEX,
@@ -227,9 +390,39 @@ class ReportCCSPv2:
                                bottom=Side(border_style='dotted',
                                            color=self.BLACK_COLOR_HEX))
 
+        ccsp_report = {}
+        quantity_consumed = dataframe["host_name"].nunique()
+        if quantity_consumed > 0:
+            # COmpute the unique hostnam count that are in the df index
+            ccsp_report["end_user_company_name"] = self.extra_params['report_end_user_company_name']
+            ccsp_report["quantity_consumed"] = quantity_consumed
+            ccsp_report['mark_x'] = ''
+            ccsp_report['sku_number'] = self.extra_params['report_sku']
+            ccsp_report['sku_description'] = self.extra_params['report_sku_description']
+            ccsp_report['notes'] = ''
+
+            ccsp_report['unit_price'] = round(self.price_per_node, 2)
+            ccsp_report['extended_unit_price'] = round((ccsp_report['quantity_consumed'] * ccsp_report['unit_price']), 2)
+            ccsp_report = pd.DataFrame([ccsp_report])
+
+            # order the columns right
+            ccsp_report = ccsp_report.reset_index()
+            ccsp_report = ccsp_report.reindex(columns=['end_user_company_name',
+                                                       'mark_x',
+                                                       'sku_number',
+                                                       'quantity_consumed',
+                                                       'sku_description',
+                                                       'unit_price',
+                                                       'extended_unit_price',
+                                                       'notes'])
+
+        else:
+            # Generate empty df if there were no billing data
+            ccsp_report = pd.DataFrame([ccsp_report])
+
         # Rename the columns based on the template
-        ccsp_report_dataframe = self.dataframe.rename(
-            columns={"organization_name": "End User Company Name",
+        ccsp_report_dataframe = ccsp_report.rename(
+            columns={"end_user_company_name": "End User Company Name",
                      "mark_x": "Enter 'X' to indicate\nInteral Usage",
                      "sku_number": "SKU Number",
                      "quantity_consumed": "Quantity",
@@ -244,11 +437,11 @@ class ReportCCSPv2:
         for r_idx, row in enumerate(rows, current_row):
             if row_counter > 0:
                 # Set bigger height of the data columns
-                rd = self.ws.row_dimensions[r_idx]
+                rd = ws.row_dimensions[r_idx]
                 rd.height = 25
 
             for c_idx, value in enumerate(row, 1):
-                cell = self.ws.cell(row=r_idx, column=c_idx)
+                cell = ws.cell(row=r_idx, column=c_idx)
                 cell.value = value
                 cell.border = dotted_border
                 if row_counter == 0:
@@ -265,8 +458,8 @@ class ReportCCSPv2:
                     if c_idx == 7:
                         # Override the value of the extended price (number of nodes X unitp rice)
                         # Multiply columns 3x4 instead of inserting the price per org
-                        cell_m_1 = self.ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
-                        cell_m_2 = self.ws.cell(row=r_idx, column=6).column_letter + str(r_idx)
+                        cell_m_1 = ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
+                        cell_m_2 = ws.cell(row=r_idx, column=6).column_letter + str(r_idx)
                         cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
 
             row_counter += 1
@@ -275,12 +468,12 @@ class ReportCCSPv2:
         for r_counter in range(20):
             # Set bigger height of the data columns
             r_idx = current_row + row_counter
-            rd = self.ws.row_dimensions[r_idx]
+            rd = ws.row_dimensions[r_idx]
             rd.height = 25
 
             for c_counter in range(8):
                 c_idx = c_counter + 1
-                cell = self.ws.cell(row=r_idx, column=c_idx)
+                cell = ws.cell(row=r_idx, column=c_idx)
                 cell.border = dotted_border
                 cell.font = value_font
 
@@ -292,8 +485,8 @@ class ReportCCSPv2:
                 if c_idx == 7:
                     # Override the value of the extended price (number of nodes X unitp rice)
                     # Multiply columns 3x4 instead of inserting the price per org
-                    cell_m_1 = self.ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
-                    cell_m_2 = self.ws.cell(row=r_idx, column=6).column_letter + str(r_idx)
+                    cell_m_1 = ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
+                    cell_m_2 = ws.cell(row=r_idx, column=6).column_letter + str(r_idx)
                     cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
 
             row_counter += 1
@@ -304,12 +497,12 @@ class ReportCCSPv2:
             last_row = current_row + row_counter - 1
 
             # Sum description
-            cell = self.ws.cell(row=2, column=6)
+            cell = ws.cell(row=2, column=6)
             cell.value = "Grand total"
             cell.fill = PatternFill("solid", fgColor=self.LIGHT_BLUE_COLOR_HEX)
 
             # Sum value
-            cell = self.ws.cell(row=2, column=7)
+            cell = ws.cell(row=2, column=7)
             cell_sum_start = cell.column_letter + str(first_row)
             cell_sum_end = cell.column_letter + str(last_row)
             cell.value = '=SUM({0}:{1})'.format(cell_sum_start, cell_sum_end)

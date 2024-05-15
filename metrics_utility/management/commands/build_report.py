@@ -68,13 +68,12 @@ class Command(BaseCommand):
                              f"{report_spreadsheet_destination_path} already exists")
             return
 
-        dataframe_engine = DataframeEngineFactory(
+        report_dataframe = DataframeEngineFactory(
             extractor=extractor,
             month=month,
             extra_params=extra_params).create()
 
-        report_dataframe = dataframe_engine.build_dataframe()
-        if report_dataframe is None or report_dataframe.empty:
+        if report_dataframe[0] is None or report_dataframe[0].empty:
             self.logger.info(f"No billing data for month: {opt_month}")
             return
 
@@ -129,6 +128,7 @@ class Command(BaseCommand):
                 "report_po_number": os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ""),
                 "report_company_business_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ""),
                 "report_company_procurement_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ""),
+                "report_end_user_company_name": os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ""),
                 }
 
     def _handle_month(self, month):

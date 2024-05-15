@@ -65,9 +65,19 @@ class ExtractorDirectory():
                     # # chunk is a DataFrame. To "process" the rows in the chunk:
                     # for index, row in chunk.iterrows():
                     #     print(row)
-                    job_host_summary = pd.read_csv(os.path.join(temp_dir, 'job_host_summary.csv'))
 
-                    yield {'job_host_summary': job_host_summary,
+                    if os.path.exists(os.path.join(temp_dir, 'job_host_summary.csv')):
+                        job_host_summary = pd.read_csv(os.path.join(temp_dir, 'job_host_summary.csv'))
+                    else:
+                        job_host_summary = pd.DataFrame([{}])
+
+                    if os.path.exists(os.path.join(temp_dir, 'main_jobevent.csv')):
+                        main_jobevent = pd.read_csv(os.path.join(temp_dir, 'main_jobevent.csv'))
+                    else:
+                        main_jobevent = pd.DataFrame([{}])
+
+                    yield {'main_jobevent': main_jobevent,
+                           'job_host_summary': job_host_summary,
                            'config': config}
 
                 except Exception as e:
@@ -103,7 +113,7 @@ class ExtractorDirectory():
             paths = [os.path.join(prefix, f) for f in os.listdir(prefix) if os.path.isfile(os.path.join(prefix, f))]
         except FileNotFoundError as e:
             paths = []
-
+                
         return paths
 
     def mapping(self, normalized_table, id_column="id", value_column="value"):
