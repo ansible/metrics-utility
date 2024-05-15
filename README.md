@@ -81,6 +81,9 @@ export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
 export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_PO_NUMBER="123"
 export METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME="Customer A"
+export METRICS_UTILITY_REPORT_END_USER_CITY="Springfield"
+export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
+export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
 
 
 # Gather and store the data in provided SHIP_PATH directory under ./report_data subdir

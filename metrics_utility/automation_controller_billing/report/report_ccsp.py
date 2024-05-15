@@ -1,12 +1,13 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
+from metrics_utility.automation_controller_billing.report.base import Base
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-class ReportCCSP:
+class ReportCCSP(Base):
     BLACK_COLOR_HEX = "00000000"
     WHITE_COLOR_HEX = "00FFFFFF"
     BLUE_COLOR_HEX = "000000FF"
@@ -21,6 +22,7 @@ class ReportCCSP:
         self.dataframe = dataframe
         self.report_period = report_period
         self.extra_params = extra_params
+        self.price_per_node = extra_params['price_per_node']
 
         self.config = {
             'sku': extra_params['report_sku'],
@@ -79,13 +81,29 @@ class ReportCCSP:
             5: 15,
         }
 
+        default_data_column_widths = {
+            1: 40,
+            2: 20,
+            3: 20,
+            4: 20,
+            5: 20,
+            6: 20,
+            7: 20
+        }
+
         self.config['sku_description'] = default_sku_description
         self.config['column_widths'] = default_column_widths
+        self.config['data_column_widths'] = default_data_column_widths
 
     def build_spreadsheet(self):
+        job_host_sumary_dataframe = self.dataframe[0]
+        events_dataframe = self.dataframe[1]
+        events_dataframe = self._fix_event_host_names(job_host_sumary_dataframe, events_dataframe)
+
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
         self.wb.create_sheet(title="Usage Reporting")
+        self.wb.create_sheet(title="Managed nodes")
         self.wb.create_sheet(title="Usage by collections")
         self.wb.create_sheet(title="Usage by roles")
         self.wb.create_sheet(title="Usage by modules")
@@ -93,24 +111,41 @@ class ReportCCSP:
         # First sheet with billing
         ws = self.wb.worksheets[0]
 
-        self._init_dimensions()
+        self._init_dimensions(ws)
         current_row = self._build_heading_h1(1, ws)
         current_row = self._build_header(current_row, ws)
         current_row = self._build_heading_h2(current_row, ws)
         current_row = self._build_sku_description(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, self.dataframe[0])
+        current_row = self._build_data_section(current_row, ws, job_host_sumary_dataframe)
+
+        # Sheet with list of managed nodes
+        ws = self.wb.worksheets[1]
+        current_row = self._build_data_section_usage_by_node(1, ws, job_host_sumary_dataframe)
+
+        if events_dataframe is not None:
+        # Sheet with usage by collections
+            ws = self.wb.worksheets[2]
+            current_row = self._build_data_section_usage_by_collections(1, ws, events_dataframe)
+
+            # Sheet with usage by collections
+            ws = self.wb.worksheets[3]
+            current_row = self._build_data_section_usage_by_roles(1, ws, events_dataframe)
+
+            # Sheet with usage by collections
+            ws = self.wb.worksheets[4]
+            current_row = self._build_data_section_usage_by_modules(1, ws, events_dataframe)
 
         return self.wb
 
-    def _init_dimensions(self):
+    def _init_dimensions(self, ws):
         for key, value in self.config['column_widths'].items():
-            self.ws.column_dimensions[get_column_letter(key)].width = value
+            ws.column_dimensions[get_column_letter(key)].width = value
 
-    def _build_heading_h1(self, current_row):
+    def _build_heading_h1(self, current_row, ws):
         # Merge cells and insert the h1 heading
-        self.ws.merge_cells(start_row=current_row, start_column=1,
+        ws.merge_cells(start_row=current_row, start_column=1,
                             end_row=current_row, end_column=2)
-        h1_heading_cell = self.ws.cell(row=current_row, column=1)
+        h1_heading_cell = ws.cell(row=current_row, column=1)
         h1_heading_cell.value = self.config['h1_heading']['value']
 
         h1_heading_cell.fill = PatternFill("solid", fgColor=self.BLACK_COLOR_HEX)
@@ -123,26 +158,26 @@ class ReportCCSP:
         current_row += 1
         return current_row
 
-    def _build_heading_h2(self, current_row):
+    def _build_heading_h2(self, current_row, ws):
         # Add the h2 heading payment heading
         black_background = PatternFill("solid", fgColor=self.BLACK_COLOR_HEX)
         green_background = PatternFill("solid", fgColor=self.GREEN_COLOR_HEX)
 
         # black background row
-        self.ws.cell(row=current_row, column=1).fill = black_background
-        self.ws.cell(row=current_row, column=2).fill = black_background
+        ws.cell(row=current_row, column=1).fill = black_background
+        ws.cell(row=current_row, column=2).fill = black_background
         current_row += 1
 
         # h2 heading with green background
-        cell = self.ws.cell(row=current_row, column=1)
+        cell = ws.cell(row=current_row, column=1)
         cell.value = self.config['h2_heading']['value']
         cell.fill = green_background
-        self.ws.cell(row=current_row, column=2).fill = green_background
+        ws.cell(row=current_row, column=2).fill = green_background
         current_row += 1
 
         # black background row
-        self.ws.cell(row=current_row, column=1).fill = black_background
-        self.ws.cell(row=current_row, column=2).fill = black_background
+        ws.cell(row=current_row, column=1).fill = black_background
+        ws.cell(row=current_row, column=2).fill = black_background
         current_row += 1
 
         # make extra blank 2 rows
@@ -150,7 +185,7 @@ class ReportCCSP:
 
         return current_row
 
-    def _build_header(self, current_row):
+    def _build_header(self, current_row, ws):
         # Insert the header
         for header_row in self.config['header']:
             header_label_font = Font(name=self.FONT,
@@ -161,12 +196,12 @@ class ReportCCSP:
                                      color=self.BLACK_COLOR_HEX)
             header_label_fill = PatternFill("solid", fgColor=self.BLUE_COLOR_HEX)
 
-            cell = self.ws.cell(row=current_row, column=1)
+            cell = ws.cell(row=current_row, column=1)
             cell.value = header_row['label']
             cell.font = header_label_font
             cell.fill = header_label_fill
 
-            cell = self.ws.cell(row=current_row, column=2)
+            cell = ws.cell(row=current_row, column=2)
             if header_row['label'] == "Report Period (YYYY-MM)":
                 # Insert dynamic report period into the specific header column
                 cell.value = self.report_period
@@ -177,7 +212,7 @@ class ReportCCSP:
 
         return current_row
 
-    def _build_sku_description(self, current_row):
+    def _build_sku_description(self, current_row, ws):
         # Insert the header
         row_counter = 0
         for header_row in self.config['sku_description']:
@@ -200,7 +235,7 @@ class ReportCCSP:
             for col_value in header_row:
                 col_counter += 1
 
-                cell = self.ws.cell(row=current_row + row_counter, column=col_counter)
+                cell = ws.cell(row=current_row + row_counter, column=col_counter)
                 cell.value = col_value
 
                 if row_counter == 0:
@@ -218,7 +253,7 @@ class ReportCCSP:
 
         return current_row
 
-    def _build_data_section(self, current_row):
+    def _build_data_section(self, current_row, ws, dataframe):
         header_font = Font(name=self.FONT,
                            size=10,
                            color=self.BLACK_COLOR_HEX,
@@ -252,7 +287,7 @@ class ReportCCSP:
                                                    'extended_unit_price'])
 
         # Rename the columns based on the template
-        ccsp_report_dataframe = self.dataframe.rename(
+        ccsp_report_dataframe = ccsp_report.rename(
             columns={"organization_name": "Organization name (i.e. company name)",
                      "mark_x": "Please Mark With An 'X' If The Usage Is Internal. \nOtherwise Leave Blank",
                      "quantity_consumed": "Red Hat SKU\n Quantity Consumed",
@@ -264,7 +299,7 @@ class ReportCCSP:
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
         for r_idx, row in enumerate(rows, current_row):
             for c_idx, value in enumerate(row, 1):
-                cell = self.ws.cell(row=r_idx, column=c_idx)
+                cell = ws.cell(row=r_idx, column=c_idx)
                 cell.value = value
                 cell.border = dotted_border
                 if row_counter == 0:
@@ -279,8 +314,8 @@ class ReportCCSP:
                     if c_idx == 5:
                         # Override the value of the extended price (number of nodes X unitp rice)
                         # Multiply columns 3x4 instead of inserting the price per org
-                        cell_m_1 = self.ws.cell(row=r_idx, column=3).column_letter + str(r_idx)
-                        cell_m_2 = self.ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
+                        cell_m_1 = ws.cell(row=r_idx, column=3).column_letter + str(r_idx)
+                        cell_m_2 = ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
                         cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
 
             row_counter += 1
@@ -292,11 +327,11 @@ class ReportCCSP:
             sum_row = current_row + row_counter
 
             # Sum description
-            cell = self.ws.cell(row=sum_row, column=1)
+            cell = ws.cell(row=sum_row, column=1)
             cell.value = "Sum of monthly payment"
 
             # Sum value
-            cell = self.ws.cell(row=sum_row, column=5)
+            cell = ws.cell(row=sum_row, column=5)
             cell_sum_start = cell.column_letter + str(first_row)
             cell_sum_end = cell.column_letter + str(last_row)
             cell.value = '=SUM({0}:{1})'.format(cell_sum_start, cell_sum_end)

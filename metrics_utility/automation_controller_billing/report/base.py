@@ -41,6 +41,66 @@ class Base:
 
         return destination_dataframe
 
+    def _build_data_section_usage_by_node(self, current_row, ws, dataframe):
+        for key, value in self.config['data_column_widths'].items():
+            ws.column_dimensions[get_column_letter(key)].width = value
+
+        header_font = Font(name=self.FONT,
+                           size=10,
+                           color=self.BLACK_COLOR_HEX,
+                           bold=True)
+        value_font = Font(name=self.FONT,
+                          size=10,
+                          color=self.BLACK_COLOR_HEX)
+
+        # Rename the columns based on the template
+        ccsp_report_dataframe = (
+            dataframe.groupby('host_name', dropna=False)
+            .agg(
+                organizations=('organization_name', 'nunique'),
+                host_runs=('host_name', 'count'),
+                task_runs=('task_runs', 'sum')
+            )
+        )
+        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
+            columns=[
+                'host_name',
+                'organizations',
+                'host_runs',
+                'task_runs'
+            ]
+        )
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(
+            columns={
+                "host_name": "Host name",
+                "organizations": "Automated by\norganizations",
+                "host_runs": "Non-unique managed\nnodes automated",
+                "task_runs": "Number of task\nruns",
+            }
+        )
+
+        row_counter = 0
+        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+
+            row_counter += 1
+
+        return current_row + row_counter
+
     def _build_data_section_usage_by_collections(self, current_row, ws, dataframe):
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value

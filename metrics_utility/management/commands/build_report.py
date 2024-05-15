@@ -129,6 +129,9 @@ class Command(BaseCommand):
                 "report_company_business_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ""),
                 "report_company_procurement_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ""),
                 "report_end_user_company_name": os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ""),
+                "report_end_user_company_city": os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ""),
+                "report_end_user_company_state": os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ""),
+                "report_end_user_company_country": os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ""),
                 }
 
     def _handle_month(self, month):

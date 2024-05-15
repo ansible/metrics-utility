@@ -74,9 +74,13 @@ class ReportCCSPv2(Base):
             2: 20,
             3: 15,
             4: 15,
-            5: 30,
+            5: 15,
             6: 20,
-            7: 20
+            7: 15,
+            8: 30,
+            9: 20,
+            10: 20,
+            11: 20
         }
 
         default_data_column_widths = {
@@ -140,66 +144,6 @@ class ReportCCSPv2(Base):
             current_row = self._build_data_section_usage_by_modules(1, ws, events_dataframe)
 
         return self.wb
-
-    def _build_data_section_usage_by_node(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
-
-        # Rename the columns based on the template
-        ccsp_report_dataframe = (
-            dataframe.groupby('host_name', dropna=False)
-            .agg(
-                organizations=('organization_name', 'nunique'),
-                host_runs=('host_name', 'count'),
-                task_runs=('task_runs', 'sum')
-            )
-        )
-        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=[
-                'host_name',
-                'organizations',
-                'host_runs',
-                'task_runs'
-            ]
-        )
-
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                "host_name": "Host name",
-                "organizations": "Automated by\norganizations",
-                "host_runs": "Non-unique managed\nnodes automated",
-                "task_runs": "Number of task\nruns",
-            }
-        )
-
-        row_counter = 0
-        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
-        for r_idx, row in enumerate(rows, current_row):
-            for c_idx, value in enumerate(row, 1):
-                cell = ws.cell(row=r_idx, column=c_idx)
-                cell.value = value
-
-                if row_counter == 0:
-                    # set header style
-                    cell.font = header_font
-                    rd = ws.row_dimensions[r_idx]
-                    rd.height = 25
-                else:
-                    # set value style
-                    cell.font = value_font
-
-            row_counter += 1
-
-        return current_row + row_counter
 
     def _build_data_section_usage_by_org(self, current_row, ws, dataframe):
         for key, value in self.config['data_column_widths'].items():
@@ -284,7 +228,7 @@ class ReportCCSPv2(Base):
         return current_row
 
     def _build_updated_timestamp(self, current_row, ws):
-        cell = ws.cell(row=1, column=5)
+        cell = ws.cell(row=1, column=8)
         cell.value = f"Updated: {time.strftime('%b %d, %Y')}"
 
         return current_row
@@ -294,11 +238,11 @@ class ReportCCSPv2(Base):
         green_background = PatternFill("solid", fgColor=self.GREEN_COLOR_HEX)
 
         # PO number heading and value with green background
-        cell = ws.cell(row=5, column=4)
+        cell = ws.cell(row=4, column=5)
         cell.value = self.config['po_number']['label']
         cell.fill = green_background
 
-        cell = ws.cell(row=5, column=5)
+        cell = ws.cell(row=4, column=6)
         cell.value = self.config['po_number']['value']
         cell.fill = green_background
 
@@ -381,20 +325,35 @@ class ReportCCSPv2(Base):
                           size=10,
                           color=self.BLACK_COLOR_HEX)
 
-        dotted_border = Border(left=Side(border_style='dotted',
-                                         color=self.BLACK_COLOR_HEX),
-                               right=Side(border_style='dotted',
-                                          color=self.BLACK_COLOR_HEX),
-                               top=Side(border_style='dotted',
-                                        color=self.BLACK_COLOR_HEX),
-                               bottom=Side(border_style='dotted',
-                                           color=self.BLACK_COLOR_HEX))
+        dotted_border = Border(
+            left=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+            right=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+            top=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+            bottom=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+        )
+
+        second_line_dotted_border = Border(
+            left=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+            right=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+            bottom=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
+        )
+
+        header_border = Border(
+            left=Side(border_style='medium', color=self.BLACK_COLOR_HEX),
+            right=Side(border_style='medium', color=self.BLACK_COLOR_HEX),
+            top=Side(border_style='medium', color=self.BLACK_COLOR_HEX),
+            bottom=Side(border_style='medium', color=self.BLACK_COLOR_HEX),
+        )
 
         ccsp_report = {}
         quantity_consumed = dataframe["host_name"].nunique()
         if quantity_consumed > 0:
             # COmpute the unique hostnam count that are in the df index
             ccsp_report["end_user_company_name"] = self.extra_params['report_end_user_company_name']
+            ccsp_report["end_user_company_city"] = self.extra_params['report_end_user_company_city']
+            ccsp_report["end_user_company_state"] = self.extra_params['report_end_user_company_state']
+            ccsp_report["end_user_company_country"] = self.extra_params['report_end_user_company_country']
+
             ccsp_report["quantity_consumed"] = quantity_consumed
             ccsp_report['mark_x'] = ''
             ccsp_report['sku_number'] = self.extra_params['report_sku']
@@ -409,6 +368,9 @@ class ReportCCSPv2(Base):
             ccsp_report = ccsp_report.reset_index()
             ccsp_report = ccsp_report.reindex(columns=['end_user_company_name',
                                                        'mark_x',
+                                                       'end_user_company_city',
+                                                       'end_user_company_state',
+                                                       'end_user_company_country',
                                                        'sku_number',
                                                        'quantity_consumed',
                                                        'sku_description',
@@ -424,6 +386,9 @@ class ReportCCSPv2(Base):
         ccsp_report_dataframe = ccsp_report.rename(
             columns={"end_user_company_name": "End User Company Name",
                      "mark_x": "Enter 'X' to indicate\nInteral Usage",
+                     "end_user_company_city": "End User\nCity",
+                     "end_user_company_state": "End User\nState/Prov",
+                     "end_user_company_country": "Country Where\nSKU Consumed",
                      "sku_number": "SKU Number",
                      "quantity_consumed": "Quantity",
                      "sku_description": "SKU Description",
@@ -435,7 +400,10 @@ class ReportCCSPv2(Base):
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
         for r_idx, row in enumerate(rows, current_row):
-            if row_counter > 0:
+            if row_counter == 0:
+                rd = ws.row_dimensions[r_idx]
+                rd.height = 35
+            elif row_counter >= 1:
                 # Set bigger height of the data columns
                 rd = ws.row_dimensions[r_idx]
                 rd.height = 25
@@ -443,50 +411,59 @@ class ReportCCSPv2(Base):
             for c_idx, value in enumerate(row, 1):
                 cell = ws.cell(row=r_idx, column=c_idx)
                 cell.value = value
-                cell.border = dotted_border
+
                 if row_counter == 0:
                     # set header style
                     cell.font = header_font
+                    cell.border = header_border
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
                 else:
-                    # set value style
-                    cell.font = value_font
-                    if c_idx >= 5 and c_idx <= 7:
+                    if row_counter == 1:
+                        # set value style
+                        cell.font = value_font
+                        cell.border = second_line_dotted_border
+                    else:
+                        # set value style
+                        cell.font = value_font
+                        cell.border = dotted_border
+
+                    if c_idx >= 8 and c_idx <= 11:
                         cell.fill = PatternFill("solid", fgColor=self.LIGHT_BLUE_COLOR_HEX)
-                    if c_idx >= 6 and c_idx <= 7:
+                    if c_idx >= 9 and c_idx <= 10:
                         # Format all price cols
                         cell.number_format = self.PRICE_FORMAT
-                    if c_idx == 7:
+                    if c_idx == 10:
                         # Override the value of the extended price (number of nodes X unitp rice)
                         # Multiply columns 3x4 instead of inserting the price per org
-                        cell_m_1 = ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
-                        cell_m_2 = ws.cell(row=r_idx, column=6).column_letter + str(r_idx)
+                        cell_m_1 = ws.cell(row=r_idx, column=7).column_letter + str(r_idx)
+                        cell_m_2 = ws.cell(row=r_idx, column=9).column_letter + str(r_idx)
                         cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
 
             row_counter += 1
 
-        # Generate 20 more blank rows at the end
-        for r_counter in range(20):
+        # Generate 5 more blank rows at the end
+        for r_counter in range(5):
             # Set bigger height of the data columns
             r_idx = current_row + row_counter
             rd = ws.row_dimensions[r_idx]
             rd.height = 25
 
-            for c_counter in range(8):
+            for c_counter in range(11):
                 c_idx = c_counter + 1
                 cell = ws.cell(row=r_idx, column=c_idx)
                 cell.border = dotted_border
                 cell.font = value_font
 
-                if c_idx >= 5 and c_idx <= 7:
+                if c_idx >= 8 and c_idx <= 11:
                     cell.fill = PatternFill("solid", fgColor=self.LIGHT_BLUE_COLOR_HEX)
-                if c_idx >= 6 and c_idx <= 7:
+                if c_idx >= 9 and c_idx <= 10:
                     # Format all price cols
                     cell.number_format = self.PRICE_FORMAT
-                if c_idx == 7:
+                if c_idx == 10:
                     # Override the value of the extended price (number of nodes X unitp rice)
                     # Multiply columns 3x4 instead of inserting the price per org
-                    cell_m_1 = ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
-                    cell_m_2 = ws.cell(row=r_idx, column=6).column_letter + str(r_idx)
+                    cell_m_1 = ws.cell(row=r_idx, column=7).column_letter + str(r_idx)
+                    cell_m_2 = ws.cell(row=r_idx, column=9).column_letter + str(r_idx)
                     cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
 
             row_counter += 1
@@ -497,12 +474,12 @@ class ReportCCSPv2(Base):
             last_row = current_row + row_counter - 1
 
             # Sum description
-            cell = ws.cell(row=2, column=6)
+            cell = ws.cell(row=2, column=9)
             cell.value = "Grand total"
             cell.fill = PatternFill("solid", fgColor=self.LIGHT_BLUE_COLOR_HEX)
 
             # Sum value
-            cell = ws.cell(row=2, column=7)
+            cell = ws.cell(row=2, column=10)
             cell_sum_start = cell.column_letter + str(first_row)
             cell_sum_end = cell.column_letter + str(last_row)
             cell.value = '=SUM({0}:{1})'.format(cell_sum_start, cell_sum_end)

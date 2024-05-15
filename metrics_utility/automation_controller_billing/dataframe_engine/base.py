@@ -49,8 +49,6 @@ class Base:
         self.month = month
         self.extra_params = extra_params
 
-        self.price_per_node = extra_params['price_per_node']
-
     def build_dataframe(self):
         pass
 
