@@ -10,9 +10,8 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base \
 logger = logging.getLogger(__name__)
 
 #######################################
-# Code for build the dataframe report
+# Code for building of the dataframe report based on Event table
 ######################################
-
 
 class DataframeContentUsage(Base):
     LOG_PREFIX = "[AAPBillingReport] "
@@ -110,13 +109,7 @@ class DataframeContentUsage(Base):
         if content_explorer_rollup is None:
             return None
 
-        # order the columns right
-        ccsp_report = content_explorer_rollup.reset_index()
-
-        ccsp_report = ccsp_report.reindex(columns=[
-            'host_name', 'module_name', 'collection_name', 'role_name', 'install_uuid',
-            'job_remote_id', 'task_runs', 'duration', ])
-        return ccsp_report
+        return content_explorer_rollup.reset_index()
 
     @staticmethod
     def collection_regexp():

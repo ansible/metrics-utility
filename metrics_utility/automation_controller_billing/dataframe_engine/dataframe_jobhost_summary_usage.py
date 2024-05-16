@@ -9,7 +9,7 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base \
 logger = logging.getLogger(__name__)
 
 #######################################
-# Code for build the dataframe report
+# Code for building of the dataframe report based on JobhostSummary table
 ######################################
 
 class DataframeJobhostSummaryUsage(Base):

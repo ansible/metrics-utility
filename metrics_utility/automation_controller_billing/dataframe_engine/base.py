@@ -4,9 +4,6 @@ from dateutil.relativedelta import relativedelta
 
 logger = logging.getLogger(__name__)
 
-#######################################
-# Code for build the dataframe report and pushing it back to S3
-######################################
 
 def granularity_cast(date, granularity):
     if granularity == "monthly":
