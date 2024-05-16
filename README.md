@@ -47,7 +47,7 @@ export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data
 
 # Set extra ENV VARs for report generation purposes
 export METRICS_UTILITY_REPORT_TYPE=CCSP
-export METRICS_UTILITY_PRICE_PER_NODE=11 # in USD
+export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
 export METRICS_UTILITY_REPORT_SKU=MCT3752MO
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 export METRICS_UTILITY_REPORT_H1_HEADING="CCSP Reporting <Company>: ANSIBLE Consumption"
@@ -72,7 +72,7 @@ export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data
 
 # Set extra ENV VARs for report generation purposes
 export METRICS_UTILITY_REPORT_TYPE=CCSPv2
-export METRICS_UTILITY_PRICE_PER_NODE=11 # in USD
+export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
 export METRICS_UTILITY_REPORT_SKU=MCT3752MO
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 export METRICS_UTILITY_REPORT_H1_HEADING="CCSP NA Direct Reporting Template"

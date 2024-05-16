@@ -32,6 +32,11 @@ functions - like those that return metadata about playbook runs, may return
 data _since_ the last report date - i.e., new data in the last 24 hours)
 """
 
+
+def optional_collectors():
+    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
+
+
 def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
     if since is not None:
@@ -243,6 +248,9 @@ def job_host_summary_table(since, full_path, until, **kwargs):
 
 @register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_table(since, full_path, until, **kwargs):
+    if 'main_jobevent' not in optional_collectors():
+        return None
+
     tbl = 'main_jobevent'
     event_data = fr"replace({tbl}.event_data, '\u', '\u005cu')::jsonb"
 

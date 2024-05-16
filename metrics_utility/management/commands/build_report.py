@@ -100,7 +100,7 @@ class Command(BaseCommand):
     def _handle_extra_params(self):
         ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-        price_per_node = int(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
+        price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
         if not ship_path:
             raise MissingRequiredEnvVar(

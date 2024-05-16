@@ -6,7 +6,9 @@ from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+import os
 import pandas as pd
+
 
 class Base:
     BLACK_COLOR_HEX = "00000000"
@@ -17,6 +19,13 @@ class Base:
     GREEN_COLOR_HEX = "92d050"
     FONT = "Arial"
     PRICE_FORMAT = '$#,##0.00'
+
+    @staticmethod
+    def optional_report_sheets():
+        return os.environ.get(
+            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
+            'managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'\
+            'usage_by_modules').split(",")
 
     def _fix_event_host_names(self, mapping_dataframe, destination_dataframe):
         if destination_dataframe is None:
