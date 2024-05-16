@@ -55,8 +55,15 @@ class ExtractorDirectory():
             with tempfile.TemporaryDirectory(prefix="automation_controller_billing_data_") as temp_dir:
                 try:
                     tar = tarfile.open(path)
-                    tar.extractall(path=temp_dir, filter='data', members=self.tarball_sanitize_members(tar))
-                    tar.close()
+
+                    try:
+                        # The filter param is available in Python 3.9.17
+                        tar.extractall(path=temp_dir, filter='data', members=self.tarball_sanitize_members(tar))
+                    except TypeError:
+                        # Trying without filter for older python versions
+                        tar.extractall(path=temp_dir, members=self.tarball_sanitize_members(tar))
+                    finally:
+                        tar.close()
 
                     config = self.load_config(os.path.join(temp_dir, 'config.json'))
 
@@ -113,7 +120,7 @@ class ExtractorDirectory():
             paths = [os.path.join(prefix, f) for f in os.listdir(prefix) if os.path.isfile(os.path.join(prefix, f))]
         except FileNotFoundError as e:
             paths = []
-                
+
         return paths
 
     def mapping(self, normalized_table, id_column="id", value_column="value"):
