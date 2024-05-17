@@ -35,3 +35,10 @@
 
 - Take ansible_host and ansible_connection from host variables, use ansible_host instead
   of host_name if it's present for the CCSP(and other) reports
+
+## 0.3.0
+
+- Adding CCSPv2 reports
+- Both CCSP and CCSPv2 reports are getting extra sheets with additional usage stats
+- Fix tar.extractall call on older python version missing a filter arg
+- Fix return codes
