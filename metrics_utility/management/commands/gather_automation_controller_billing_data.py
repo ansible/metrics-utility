@@ -3,7 +3,7 @@ import os
 
 import datetime
 from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar, FailedToUploadPayload,\
-    BadRequiredEnvVar
+    BadRequiredEnvVar, NoAnalyticsCollected
 from metrics_utility.automation_controller_billing.collector import Collector
 from dateutil import parser
 from django.core.management.base import BaseCommand
@@ -51,12 +51,13 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             self._handle(self, *args, **options)
+            exit(0)
         except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload) as e:
             self.logger.error(e.name)
-            exit(0)
+            exit(1)
         except Exception as e:
             self.logger.exception(e)
-            exit(0)
+            exit(1)
 
     def _handle(self, *args, **options):
         self.init_logging()
@@ -83,6 +84,7 @@ class Command(BaseCommand):
                 self.logger.info(tgz)
         else:
             self.logger.error('No analytics collected')
+            raise NoAnalyticsCollected('No analytics collected')
 
     def _handle_ship_target(self, ship_target):
         if ship_target == "crc":
@@ -92,7 +94,6 @@ class Command(BaseCommand):
         else:
             raise BadShipTarget("Unexpected value for METRICS_UTILITY_SHIP_TARGET env var"\
                                 ", allowed values are [crc, directory]")
-
 
     def _handle_crc_ship_target(self):
         billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
@@ -126,7 +127,6 @@ class Command(BaseCommand):
 
         return {"ship_path": ship_path}
 
-
     def _handle_interval(self, opt_since, opt_until):
         # Process since argument
         since = None
@@ -157,5 +157,3 @@ class Command(BaseCommand):
             until = until.replace(tzinfo=timezone.utc)
 
         return since, until
-
-
