@@ -3,59 +3,17 @@ import datetime
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
+from metrics_utility.automation_controller_billing.dataframe_engine.base \
+    import Base, list_dates
+
 logger = logging.getLogger(__name__)
 
 #######################################
-# Code for build the dataframe report and pushing it back to S3
+# Code for building of the dataframe report based on JobhostSummary table
 ######################################
 
-def granularity_cast(date, granularity):
-    if granularity == "monthly":
-        return date.replace(day=1)
-    elif granularity == "yearly":
-        return date.replace(month=1, day=1)
-    else:
-        return date
-
-
-def list_dates(start_date, end_date, granularity):
-    # Given start date and end date, return list of dates in the given granularity
-    # e.g. for daily it is a list of days withing the interval, for monthly it is a
-    # list of months withing the interval, etc.
-    start_date = granularity_cast(start_date, granularity)
-    end_date = granularity_cast(end_date, granularity)
-
-    dates_arr = []
-    while start_date < end_date:
-        dates_arr.append(start_date)
-
-        if granularity == "monthly":
-            start_date += relativedelta(months=+1)
-        elif granularity == "yearly":
-            start_date += relativedelta(years=+1)
-        else:
-            start_date += datetime.timedelta(days=1)
-
-    dates_arr.append(end_date)
-
-    return dates_arr
-
-class DataframeSummarizedByOrgAndHost():
+class DataframeJobhostSummaryUsage(Base):
     LOG_PREFIX = "[AAPBillingReport] "
-
-    def __init__(self, extractor, month, extra_params):
-        self.logger = logger
-
-        self.extractor = extractor
-        self.month = month
-        self.extra_params = extra_params
-
-        self.price_per_node = extra_params['price_per_node']
-
-    @staticmethod
-    def get_logger():
-        return logging.getLogger(__name__)
-
 
     def build_dataframe(self):
         # A daily rollup dataframe
@@ -79,20 +37,30 @@ class DataframeSummarizedByOrgAndHost():
                 if billing_data.empty:
                     continue
 
-                billing_data['organization_name'] = billing_data.organization_name.fillna("__ORGANIZATION NAME MISSING__")
+                billing_data['organization_name'] = billing_data.organization_name.fillna("No organization name")
+                billing_data['install_uuid'] = data['config']['install_uuid']
 
+                # Store the original host name for mapping purposes
+                billing_data['original_host_name'] = billing_data['host_name']
                 if 'ansible_host_variable' in billing_data.columns:
                     # Replace missing ansible_host_variable with host name
                     billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
                     # And use the new ansible_host_variable instead of host_name, since
                     # what is in ansible_host_variable should be the actual host we count
                     billing_data['host_name'] = billing_data['ansible_host_variable']
+
+                # Sumarize all task counts into 1 col
+                def sum_columns(row):
+                    return sum([row[i] for i in ['dark', 'failures', 'ok', 'skipped', 'ignored',  'rescued']])
+                billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
+
                 ################################
                 # Do the aggregation
                 ################################
                 billing_data_group = billing_data.groupby(
                     self.unique_index_columns(), dropna=False
                 ).agg(
+                    task_runs=('task_runs', 'sum'),
                     host_runs=('host_name', 'count'))
 
                 # Tweak types to match the table
@@ -121,47 +89,16 @@ class DataframeSummarizedByOrgAndHost():
         if billing_data_monthly_rollup is None:
             return None
 
-        ccsp_report = billing_data_monthly_rollup.reset_index().groupby(
-            'organization_name', dropna=False).agg(
-                quantity_consumed=('host_name', 'nunique'))
-        ccsp_report['mark_x'] = ''
-        ccsp_report['unit_price'] = round(self.price_per_node, 2)
-        ccsp_report['extended_unit_price'] = round((ccsp_report['quantity_consumed'] * ccsp_report['unit_price']), 2)
-
-        # order the columns right
-        ccsp_report = ccsp_report.reset_index()
-        ccsp_report = ccsp_report.reindex(columns=['organization_name',
-                                                   'mark_x',
-                                                   'quantity_consumed',
-                                                   'unit_price',
-                                                   'extended_unit_price'])
-        return ccsp_report
-
-    def cast_dataframe(self, df, types):
-        levels = []
-        for index, level in enumerate(df.index.levels):
-            casted_level = df.index.levels[index].astype(object)
-            levels.append(casted_level)
-
-        df.index = df.index.set_levels(levels)
-
-        return df.astype(types)
-
-    def summarize_merged_dataframes(self, df, columns):
-        for col in columns:
-            df[col] = df[[f"{col}_x", f"{col}_y"]].sum(axis=1)
-            del df[f"{col}_x"]
-            del df[f"{col}_y"]
-        return df
+        return billing_data_monthly_rollup.reset_index()
 
     @staticmethod
     def unique_index_columns():
-        return ['organization_name', 'host_name']
+        return ['organization_name', 'host_name', 'original_host_name', 'install_uuid', 'job_remote_id']
 
     @staticmethod
     def data_columns():
-        return ['host_runs']
+        return ['host_runs', 'task_runs']
 
     @staticmethod
     def cast_types():
-        return {'host_runs': int}
+        return {'task_runs': int, 'host_runs': int}

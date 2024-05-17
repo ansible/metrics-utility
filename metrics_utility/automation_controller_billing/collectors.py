@@ -32,6 +32,11 @@ functions - like those that return metadata about playbook runs, may return
 data _since_ the last report date - i.e., new data in the last 24 hours)
 """
 
+
+def optional_collectors():
+    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
+
+
 def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
     if since is not None:
@@ -109,7 +114,7 @@ def config(since, **kwargs):
         'logging_aggregators': settings.LOG_AGGREGATOR_LOGGERS,
         'external_logger_enabled': settings.LOG_AGGREGATOR_ENABLED,
         'external_logger_type': getattr(settings, 'LOG_AGGREGATOR_TYPE', None),
-        'metrics_utility_version': "0.2.0", # TODO read from setup.cfg
+        'metrics_utility_version': "0.3.0", # TODO read from setup.cfg
         'billing_provider_params': {} # Is being overwritten in collector.gather by set ENV VARS
     }
 
@@ -143,7 +148,7 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
             file.write(byte_data.decode())
 
 
-@register('job_host_summary', '1.1', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
+@register('job_host_summary', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     prepend_query = '''
@@ -206,6 +211,7 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                 main_jobhostsummary.failed,
                 main_jobhostsummary.ignored,
                 main_jobhostsummary.rescued,
+                main_unifiedjob.created AS job_created,
                 main_jobhostsummary.job_id AS job_remote_id,
                 main_unifiedjob.unified_job_template_id AS job_template_remote_id,
                 main_unifiedjob.name AS job_template_name,
@@ -238,3 +244,62 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                        query=f"COPY {query} TO STDOUT WITH CSV HEADER",
                        path=full_path,
                        prepend_query=prepend_query)
+
+
+@register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
+def main_jobevent_table(since, full_path, until, **kwargs):
+    if 'main_jobevent' not in optional_collectors():
+        return None
+
+    tbl = 'main_jobevent'
+    event_data = fr"replace({tbl}.event_data, '\u', '\u005cu')::jsonb"
+
+    query = f'''
+        WITH job_scope AS (
+            SELECT main_jobhostsummary.id AS main_jobhostsummary_id,
+                   main_jobhostsummary.created AS main_jobhostsummary_created,
+                   main_jobhostsummary.modified AS main_jobhostsummary_modified,
+                   main_unifiedjob.created AS job_created,
+                   main_jobhostsummary.job_id AS job_id,
+                   main_jobhostsummary.host_name
+            FROM main_jobhostsummary
+            JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
+            WHERE (main_jobhostsummary.modified >= '{since.isoformat()}' AND main_jobhostsummary.modified < '{until.isoformat()}')
+        )
+        SELECT
+            job_scope.main_jobhostsummary_id,
+            job_scope.main_jobhostsummary_created,
+            {tbl}.id,
+            {tbl}.created,
+            {tbl}.modified,
+            {tbl}.job_created as job_created,
+            {tbl}.event,
+            ({event_data}->>'task_action')::TEXT AS task_action,
+            ({event_data}->>'resolved_action')::TEXT AS resolved_action,
+            ({event_data}->>'resolved_role')::TEXT AS resolved_role,
+            ({event_data}->>'duration')::TEXT AS duration,
+            {tbl}.failed,
+            {tbl}.changed,
+            {tbl}.playbook,
+            {tbl}.play,
+            {tbl}.task,
+            {tbl}.role,
+            {tbl}.job_id as job_remote_id,
+            {tbl}.host_id as host_remote_id,
+            {tbl}.host_name
+
+        FROM {tbl}
+        JOIN job_scope ON job_scope.job_created = {tbl}.job_created AND job_scope.job_id={tbl}.job_id AND job_scope.host_name={tbl}.host_name
+        WHERE {tbl}.event IN ('runner_on_ok',
+                              'runner_on_failed',
+                              'runner_on_unreachable',
+                              'runner_on_skipped',
+                              'runner_retry',
+                              'runner_on_async_ok',
+                              'runner_item_on_ok',
+                              'runner_item_on_failed',
+                              'runner_item_on_skipped')
+        '''
+    return _copy_table(table=tbl,
+                       query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
+                       path=full_path)

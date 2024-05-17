@@ -1,5 +1,8 @@
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_summarized_by_org_and_host \
-    import DataframeSummarizedByOrgAndHost
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_jobhost_summary_usage \
+    import DataframeJobhostSummaryUsage
+
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage \
+    import DataframeContentUsage
 
 class Factory:
     def __init__(self, extractor, month, extra_params):
@@ -11,11 +14,24 @@ class Factory:
 
     def create(self):
         if self.report_type == "CCSP":
-            return self._get_dataframe_summarized_by_org_and_host()
+            return (self._get_dataframe_jobhost_summary_usage().build_dataframe(),
+                    self._get_dataframe_content_usage().build_dataframe())
+        elif self.report_type == "CCSPv2":
+            return (self._get_dataframe_jobhost_summary_usage().build_dataframe(),
+                    self._get_dataframe_content_usage().build_dataframe())
 
-    def _get_dataframe_summarized_by_org_and_host(self):
+
+    def _get_dataframe_jobhost_summary_usage(self):
         # Return default S3 loader
-        return DataframeSummarizedByOrgAndHost(
+        return DataframeJobhostSummaryUsage(
+            extractor=self.extractor,
+            month=self.month,
+            extra_params=self.extra_params)
+
+    def _get_dataframe_content_usage(self):
+        # Return default S3 loader
+        return DataframeContentUsage(
+        # return DataframeSummarizedByOrgAndHostv2(
             extractor=self.extractor,
             month=self.month,
             extra_params=self.extra_params)

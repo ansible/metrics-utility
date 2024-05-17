@@ -68,13 +68,12 @@ class Command(BaseCommand):
                              f"{report_spreadsheet_destination_path} already exists")
             return
 
-        dataframe_engine = DataframeEngineFactory(
+        report_dataframe = DataframeEngineFactory(
             extractor=extractor,
             month=month,
             extra_params=extra_params).create()
 
-        report_dataframe = dataframe_engine.build_dataframe()
-        if report_dataframe is None or report_dataframe.empty:
+        if report_dataframe[0] is None or report_dataframe[0].empty:
             self.logger.info(f"No billing data for month: {opt_month}")
             return
 
@@ -101,7 +100,7 @@ class Command(BaseCommand):
     def _handle_extra_params(self):
         ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-        price_per_node = int(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
+        price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
         if not ship_path:
             raise MissingRequiredEnvVar(
@@ -111,7 +110,7 @@ class Command(BaseCommand):
         if not report_type:
             raise MissingRequiredEnvVar(
                 "Missing required env variable METRICS_UTILITY_REPORT_TYPE.")
-        elif report_type not in ["CCSP"]:
+        elif report_type not in ["CCSP", "CCSPv2"]:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
                 " valies are: [CCSP]")
@@ -126,8 +125,13 @@ class Command(BaseCommand):
                 "report_company_name": os.getenv('METRICS_UTILITY_REPORT_COMPANY_NAME', ""),
                 "report_email": os.getenv('METRICS_UTILITY_REPORT_EMAIL', ""),
                 "report_rhn_login": os.getenv('METRICS_UTILITY_REPORT_RHN_LOGIN', ""),
+                "report_po_number": os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ""),
                 "report_company_business_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ""),
                 "report_company_procurement_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ""),
+                "report_end_user_company_name": os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ""),
+                "report_end_user_company_city": os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ""),
+                "report_end_user_company_state": os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ""),
+                "report_end_user_company_country": os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ""),
                 }
 
     def _handle_month(self, month):
