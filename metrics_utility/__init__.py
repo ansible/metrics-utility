@@ -16,7 +16,7 @@ def manage():
         spec = importlib.util.find_spec('awx')
         if spec is None:
             sys.stderr.write(f"Automation Controller modules not found in {awx_path}\n")
-            exit(-1)
+            exit(1)
 
     from awx import prepare_env
     import django

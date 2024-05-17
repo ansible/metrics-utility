@@ -16,3 +16,8 @@ class BadRequiredEnvVar(Exception):
 class FailedToUploadPayload(Exception):
     def __init__(self, message):
         self.name = message
+
+
+class NoAnalyticsCollected(Exception):
+    def __init__(self, message):
+        self.name = message

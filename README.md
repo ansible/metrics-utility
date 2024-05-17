@@ -39,7 +39,8 @@ This set of commands will be periodically storing data and generating CCSP repor
 Run this command as a cronjob.
 
 
-Example with local directory storage CCSP type:
+#### Example with local directory storage CCSP type
+
 ```
 # Set needed ENV VARs for data gathering
 export METRICS_UTILITY_SHIP_TARGET=directory
@@ -62,9 +63,11 @@ metrics-utility gather_automation_controller_billing_data --ship --until=10m
 
 # Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
 metrics-utility build_report
+```
 
 
-Example with local directory storage CCSPv2 type:
+#### Example with local directory storage CCSPv2 type
+
 ```
 # Set needed ENV VARs for data gathering
 export METRICS_UTILITY_SHIP_TARGET=directory
@@ -85,13 +88,11 @@ export METRICS_UTILITY_REPORT_END_USER_CITY="Springfield"
 export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
 export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
 
-
 # Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
 metrics-utility gather_automation_controller_billing_data --ship --until=10m
 
 # Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
 metrics-utility build_report
-
 ```
 
 ### Pushing data periodically into console.redhat.com
