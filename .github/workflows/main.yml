@@ -1,0 +1,55 @@
+---
+name: CICD
+
+on:
+  pull_request:
+  push:
+  workflow_call:
+    inputs:
+      validate-all:
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+    name: Static Analysis
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure linters
+        run : |-
+          # echo "disable=SC2086" > ~/.shellcheckrc
+          mkdir -vp .github/linters/config/
+          curl -o .github/linters/config/.jscpd.json https://raw.githubusercontent.com/ansible/metrics-utility/main/.github/linters/.jscpd.json
+
+      - name: Lint
+        uses: github/super-linter@v4
+        env:
+          VALIDATE_GITHUB_ACTIONS: false
+          VALIDATE_ALL_CODEBASE: ${{ inputs.validate-all }}
+          VALIDATE_MARKDOWN: false
+          VALIDATE_PYTHON_MYPY: false
+          VALIDATE_PYTHON_FLAKE8: false
+          VALIDATE_NATURAL_LANGUAGE: false
+          DEFAULT_BRANCH: "main"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Pytest
+        run: |-
+          pip3 install pytest pytest-mock mock mocker
+          # pytest -s -v tests/
