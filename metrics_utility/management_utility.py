@@ -48,7 +48,7 @@ class ManagementUtility(management.ManagementUtility):
         # 'django-admin --help' to work, for backwards compatibility.
         elif subcommand == "version" or self.argv[1:] == ["--version"]:
             # sys.stdout.write(django.get_version() + "\n")
-            sys.stdout.write("0.0.0.TODO" + "\n")
+            sys.stdout.write("0.4.0" + "\n")
         elif self.argv[1:] in (["--help"], ["-h"]):
             sys.stdout.write(self.main_help_text() + "\n")
         else:

@@ -95,6 +95,48 @@ metrics-utility gather_automation_controller_billing_data --ship --until=10m
 metrics-utility build_report
 ```
 
+
+#### Example with local directory storage RENEWAL_GUIDANCE type
+
+```
+# Set needed ENV VARs for data gathering
+export METRICS_UTILITY_SHIP_TARGET=directory
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCEv2
+export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
+export METRICS_UTILITY_REPORT_SKU=MCT3752MO
+export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+export METRICS_UTILITY_REPORT_H1_HEADING="CCSP NA Direct Reporting Template"
+export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
+export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
+export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
+export METRICS_UTILITY_REPORT_PO_NUMBER="123"
+export METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME="Customer A"
+export METRICS_UTILITY_REPORT_END_USER_CITY="Springfield"
+export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
+export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
+
+# Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
+metrics-utility gather_automation_controller_billing_data --ship --until=10m
+
+# Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
+metrics-utility build_report
+```
+
+### Example with Controller's database as a storage RENEWAL_GUIDANCE type
+
+```
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_SHIP_TARGET=controller_db
+export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Builds report covering 365days back by default
+metrics-utility build_report
+```
+
 ### Pushing data periodically into console.redhat.com
 
 This command will push new data into console.redhat.com, it automatically stores the last collected interval and will collect
@@ -104,6 +146,7 @@ into the Controller's database. Run this command as a cronjob.
 export METRICS_UTILITY_SHIP_TARGET=crc
 export METRICS_UTILITY_SERVICE_ACCOUNT_ID=<service account name>
 export METRICS_UTILITY_SERVICE_ACCOUNT_SECRET=<service account secret>
+export METRICS_UTILITY_OPTIONAL_COLLECTORS=""
 
 # AWS specific params
 export METRICS_UTILITY_BILLING_PROVIDER=aws
