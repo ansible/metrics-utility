@@ -10,16 +10,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 import pandas as pd
 import time
 
-class ReportReportRenewalGuidanceV2(Base):
-    # BLACK_COLOR_HEX = "00000000"
-    # WHITE_COLOR_HEX = "00FFFFFF"
-    # BLUE_COLOR_HEX = "000000FF"
-    # RED_COLOR_HEX = "FF0000"
-    # LIGHT_BLUE_COLOR_HEX = "d4eaf3"
-    # GREEN_COLOR_HEX = "92d050"
-    # FONT = "Arial"
-    # PRICE_FORMAT = '$#,##0.00'
-
+class ReportRenewalGuidanceV2(Base):
     def __init__(self, dataframe, report_period, extra_params):
         self.wb = Workbook()
 

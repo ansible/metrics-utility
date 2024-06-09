@@ -87,7 +87,10 @@ class Command(BaseCommand):
         # Determine destination path for generated report and skip processing if it exists
         if opt_since is not None:
             now = datetime.datetime.now().replace(second=0, microsecond=0, tzinfo=timezone.utc)
-            extra_params['report_period_range'] = f"{opt_since.date()}, {now.date()}"
+            extra_params['since_date'] = opt_since.date()
+            extra_params['until_date'] = now.date()
+
+            extra_params['report_period_range'] = f"{extra_params['since_date']}, {extra_params['until_date']}"
 
             report_spreadsheet_destination_path = os.path.join(
                 extractor.get_report_path(now),
@@ -147,7 +150,7 @@ class Command(BaseCommand):
         if not report_type:
             raise MissingRequiredEnvVar(
                 "Missing required env variable METRICS_UTILITY_REPORT_TYPE.")
-        elif report_type not in ["CCSP", "CCSPv2", "RENEWAL_GUIDANCE"]:
+        elif report_type not in ["CCSP", "CCSPv2", "RENEWAL_GUIDANCE", "RENEWAL_GUIDANCE_v2"]:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
                 " valies are: [CCSP]")

@@ -55,8 +55,20 @@ class ReportRenewalGuidance(Base):
             7: 20
         }
 
+        uniform_column_widths = {
+            1: 20,
+            2: 20,
+            3: 20,
+            4: 20,
+            5: 20,
+            6: 20,
+            7: 20
+        }
+
         self.config['column_widths'] = default_column_widths
         self.config['data_column_widths'] = default_data_column_widths
+        self.config['uniform_column_widths'] = uniform_column_widths
+
 
     def build_spreadsheet(self):
         # Fix host names in the event data, to take in account the variables
@@ -73,6 +85,9 @@ class ReportRenewalGuidance(Base):
             host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
         host_metric_dataframe['days_automated'][host_metric_dataframe['days_automated'] < 0] = 0
 
+        if self.extra_params.get("opt_ephemeral") is not None:
+            ephemeral_usage_dataframe = self.compute_ephemeral_intervals(self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
+
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
         self.wb.create_sheet(title="Usage Reporting")
@@ -86,7 +101,7 @@ class ReportRenewalGuidance(Base):
         current_row = self._build_header(current_row, ws)
 
         current_row = self._build_updated_timestamp(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, host_metric_dataframe)
+        current_row = self._build_data_section(current_row, ws, host_metric_dataframe, ephemeral_usage_dataframe)
 
         # Add optional sheets
         sheet_index = 1
@@ -109,6 +124,12 @@ class ReportRenewalGuidance(Base):
                 ws = self.wb.worksheets[sheet_index]
                 current_row = self._build_data_section_host_metrics(
                     1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
+                sheet_index += 1
+
+                self.wb.create_sheet(title="Managed nodes ephemeral usage")
+                ws = self.wb.worksheets[sheet_index]
+                current_row = self._build_data_section_ephemeral_usage(
+                    1, ws, ephemeral_usage_dataframe)
                 sheet_index += 1
 
             self.wb.create_sheet(title="Deleted Managed nodes")
@@ -144,11 +165,46 @@ class ReportRenewalGuidance(Base):
     def df_deleted_managed_nodes_query(self, dataframe):
         return dataframe[dataframe["deleted"]==True]
 
+    def get_intervals(self, start_date, end_date, interval_size):
+        intervals = []
+        current_start = start_date
+        current_end = current_start + datetime.timedelta(days=interval_size) - datetime.timedelta(microseconds=1)
+
+        while current_end <= end_date:
+            intervals.append((current_start, current_end))
+
+            current_start += datetime.timedelta(days=1)
+            current_end = current_start + datetime.timedelta(days=interval_size) - datetime.timedelta(microseconds=1)
+
+        return intervals
+
+    def compute_ephemeral_intervals(self, host_metric_dataframe):
+        # Convert input date strings to datetime objects
+        start_date = pd.to_datetime(
+            self.extra_params['since_date']).tz_localize(None)
+        end_date = pd.to_datetime(
+            self.extra_params['until_date']).tz_localize(None) + datetime.timedelta(days=1) - datetime.timedelta(microseconds=1)
+
+        ephemeral_days = parse_number_of_days(self.extra_params.get("opt_ephemeral"))
+        ephemeral_usage_intervals = []
+        intervals = self.get_intervals(start_date, end_date, ephemeral_days)
+        for window_start, window_end in intervals:
+            print(f"Processing {window_start}, {window_end}")
+            filtered = host_metric_dataframe[(host_metric_dataframe["last_automation"] >= window_start) & (host_metric_dataframe["first_automation"] <= window_end)]
+            ephemeral_usage_intervals.append({
+                "window_start": window_start,
+                "window_end": window_end,
+                "ephemeral_hosts": filtered["hostname"].nunique(),
+            })
+
+        return pd.DataFrame(ephemeral_usage_intervals)
+
+
     def _init_dimensions(self, ws):
         for key, value in self.config['column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-    def _build_data_section(self, current_row, ws, dataframe):
+    def _build_data_section(self, current_row, ws, dataframe, ephemeral_usage_dataframe):
         header_font = Font(name=self.FONT,
                            size=10,
                            color=self.BLACK_COLOR_HEX,
@@ -194,10 +250,17 @@ class ReportRenewalGuidance(Base):
             }
             ccsp_report.append(ccsp_report_item)
 
-            # Automated hosts ephemeral
+            # Automated hosts ephemeral total
             ccsp_report_item = {
-                'description': "Automated hosts ephemeral",
+                'description': "Ephemeral automated hosts total",
                 'quantity_consumed': self.df_managed_nodes_query(dataframe, ephemeral=True)["hostname"].nunique()
+            }
+            ccsp_report.append(ccsp_report_item)
+
+            # Ephemeral automated hosts maximum concurrent usage in defined interval"
+            ccsp_report_item = {
+                'description': "Ephemeral automated hosts maximum\nconcurrent usage in defined interval",
+                'quantity_consumed': ephemeral_usage_dataframe['ephemeral_hosts'].max()
             }
             ccsp_report.append(ccsp_report_item)
 
@@ -290,6 +353,56 @@ class ReportRenewalGuidance(Base):
                 'days_automated': "Number of days\nbetween first_automation\nand last_automation",
                 'deleted_counter': "Number of\nDeletions",
                 'last_deleted': "Last\ndeleted",
+            }
+        )
+
+        row_counter = 0
+        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+
+            row_counter += 1
+
+        return current_row + row_counter
+
+    def _build_data_section_ephemeral_usage (self, current_row, ws, dataframe):
+        for key, value in self.config['uniform_column_widths'].items():
+            ws.column_dimensions[get_column_letter(key)].width = value
+
+        header_font = Font(name=self.FONT,
+                           size=10,
+                           color=self.BLACK_COLOR_HEX,
+                           bold=True)
+        value_font = Font(name=self.FONT,
+                          size=10,
+                          color=self.BLACK_COLOR_HEX)
+
+        # Rename the columns based on the template
+        ccsp_report_dataframe = dataframe.reset_index()
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
+            columns=[
+                'window_start',
+                'window_end',
+                'ephemeral_hosts',
+            ]
+        )
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(
+            columns={
+                'window_start': "Start of the\nephemeral window",
+                'window_end': "Start of the\nephemeral window",
+                'ephemeral_hosts': "Ephemeral automated hosts",
             }
         )
 

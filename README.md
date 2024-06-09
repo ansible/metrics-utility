@@ -134,7 +134,7 @@ export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
 export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
 
 # Builds report covering 365days back by default
-metrics-utility build_report
+metrics-utility build_report --since=12months --ephemeral=1month
 ```
 
 ### Pushing data periodically into console.redhat.com

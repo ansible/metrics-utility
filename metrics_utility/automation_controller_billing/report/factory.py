@@ -1,6 +1,8 @@
 from metrics_utility.automation_controller_billing.report.report_ccsp import ReportCCSP
 from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import ReportCCSPv2
 from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
+from metrics_utility.automation_controller_billing.report.report_renewal_guidance_v2 import ReportRenewalGuidanceV2
+
 
 
 class Factory:
@@ -20,6 +22,8 @@ class Factory:
             return self._get_report_ccsp_v2()
         elif self.report_type == "RENEWAL_GUIDANCE":
             return self._get_report_renewal_guidance()
+        elif self.report_type == "RENEWAL_GUIDANCEv2":
+            return self._get_report_renewal_guidance()
 
     def _get_report_ccsp(self):
         # Return default S3 loader
@@ -32,3 +36,6 @@ class Factory:
     def _get_report_renewal_guidance(self):
         # Return default S3 loader
         return ReportRenewalGuidance(self.report_dataframe, self.report_period, self.extra_params)
+
+    def _get_report_renewal_guidancev2(self):
+        return ReportRenewalGuidanceV2(self.report_dataframe, self.report_period, self.extra_params)
