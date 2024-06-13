@@ -10,7 +10,7 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base \
 logger = logging.getLogger(__name__)
 
 #######################################
-# Code for building of the dataframe report based on Event table
+# Code for building of the dataframe report based on HostMetric table
 ######################################
 
 class DBDataframeHostMetric(Base):
@@ -29,7 +29,7 @@ class DBDataframeHostMetric(Base):
             if host_metric.empty:
                 continue
 
-            # events['install_uuid'] = data['config']['install_uuid']
+            # host_metric['install_uuid'] = data['config']['install_uuid']
             host_metric["last_deleted"] = pd.to_datetime(host_metric['last_deleted'])
 
             ################################
@@ -74,8 +74,6 @@ class DBDataframeHostMetric(Base):
                 # Tweak types to match the table
                 host_metric_rollup = self.cast_dataframe(
                     host_metric_rollup, self.cast_types())
-
-                # host_metric_rollup["last_deleted"] = pd.to_datetime(host_metric_rollup['last_deleted'])
 
         if host_metric_rollup is None:
             return None

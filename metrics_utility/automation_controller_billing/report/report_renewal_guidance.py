@@ -83,7 +83,8 @@ class ReportRenewalGuidance(Base):
 
         host_metric_dataframe['days_automated'] = (
             host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
-        host_metric_dataframe['days_automated'][host_metric_dataframe['days_automated'] < 0] = 0
+        host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(
+            lambda x: x if x > 0 else 0)
 
         if self.extra_params.get("opt_ephemeral") is not None:
             ephemeral_usage_dataframe = self.compute_ephemeral_intervals(self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
@@ -189,7 +190,7 @@ class ReportRenewalGuidance(Base):
         ephemeral_usage_intervals = []
         intervals = self.get_intervals(start_date, end_date, ephemeral_days)
         for window_start, window_end in intervals:
-            print(f"Processing {window_start}, {window_end}")
+            # print(f"Processing {window_start}, {window_end}")
             filtered = host_metric_dataframe[(host_metric_dataframe["last_automation"] >= window_start) & (host_metric_dataframe["first_automation"] <= window_end)]
             ephemeral_usage_intervals.append({
                 "window_start": window_start,
@@ -401,7 +402,7 @@ class ReportRenewalGuidance(Base):
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
                 'window_start': "Start of the\nephemeral window",
-                'window_end': "Start of the\nephemeral window",
+                'window_end': "End of the\nephemeral window",
                 'ephemeral_hosts': "Ephemeral automated hosts",
             }
         )
