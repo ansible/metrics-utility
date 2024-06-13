@@ -95,6 +95,19 @@ metrics-utility gather_automation_controller_billing_data --ship --until=10m
 metrics-utility build_report
 ```
 
+
+### Example with Controller's database as a storage RENEWAL_GUIDANCE type
+
+```
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_SHIP_TARGET=controller_db
+export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Builds report covering 365days back by default
+metrics-utility build_report --since=12months --ephemeral=1month
+```
+
 ### Pushing data periodically into console.redhat.com
 
 This command will push new data into console.redhat.com, it automatically stores the last collected interval and will collect
@@ -104,6 +117,7 @@ into the Controller's database. Run this command as a cronjob.
 export METRICS_UTILITY_SHIP_TARGET=crc
 export METRICS_UTILITY_SERVICE_ACCOUNT_ID=<service account name>
 export METRICS_UTILITY_SERVICE_ACCOUNT_SECRET=<service account secret>
+export METRICS_UTILITY_OPTIONAL_COLLECTORS=""
 
 # AWS specific params
 export METRICS_UTILITY_BILLING_PROVIDER=aws

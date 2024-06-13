@@ -51,17 +51,29 @@ class Base:
 
     def cast_dataframe(self, df, types):
         levels = []
-        for index, level in enumerate(df.index.levels):
-            casted_level = df.index.levels[index].astype(object)
-            levels.append(casted_level)
+        if len(self.unique_index_columns()) == 1:
+            # Special behavior if the index is not composite, but only 1 column
+            # Casting index field to object
+            df.index = df.index.astype(object)
+        else:
+            # Composite index branch
+            # Casting index field to object
+            for index, level in enumerate(df.index.levels):
+                casted_level = df.index.levels[index].astype(object)
+                levels.append(casted_level)
 
-        df.index = df.index.set_levels(levels)
+            df.index = df.index.set_levels(levels)
 
         return df.astype(types)
 
-    def summarize_merged_dataframes(self, df, columns):
+    def summarize_merged_dataframes(self, df, columns, operations={}):
         for col in columns:
-            df[col] = df[[f"{col}_x", f"{col}_y"]].sum(axis=1)
+            if operations.get(col) == "min":
+                df[col] = df[[f"{col}_x", f"{col}_y"]].min(axis=1)
+            elif operations.get(col) == "max":
+                df[col] = df[[f"{col}_x", f"{col}_y"]].max(axis=1)
+            else:
+                df[col] = df[[f"{col}_x", f"{col}_y"]].sum(axis=1)
             del df[f"{col}_x"]
             del df[f"{col}_y"]
         return df

@@ -9,6 +9,7 @@ from metrics_utility.automation_controller_billing.collector import Collector
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
+from metrics_utility.automation_controller_billing.helpers import parse_date_param
 
 
 
@@ -31,6 +32,15 @@ class Command(BaseCommand):
                             help='Month the report will be generated for, with format YYYY-MM. '\
                                  'If this params isn\'t provided, previou month report will be'\
                                  'generated if it doesn\'t exists already.')
+        parser.add_argument('--since',
+                            dest='since',
+                            action='store',
+                            help='Date or number of days months ago we want to generate the reports for.')
+        parser.add_argument('--ephemeral',
+                            dest='ephemeral',
+                            action='store',
+                            help='Duration in months or days to determine if host is ephemeral. Months are taken'\
+                                 'as 30days duration.')
         parser.add_argument('--force',
                             dest='force',
                             action='store_true',
@@ -48,19 +58,47 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.init_logging()
 
+        # parse params
         opt_month = options.get('month') or None
         opt_month, month = self._handle_month(opt_month)
+
+        # Since and ephemenral params are specific to subset of reports
+        opt_since = None
+        opt_ephemeral = None
+        if os.getenv('METRICS_UTILITY_REPORT_TYPE', None) in ["RENEWAL_GUIDANCE"]:
+            if options.get('since') is None:
+                # Default
+                opt_since = "12months"
+            else:
+                opt_since = options.get('since') or None
+            opt_since = parse_date_param(opt_since)
+
+            opt_ephemeral = options.get('ephemeral') or None
+
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_ship_target(ship_target)
+        extra_params['opt_since'] = opt_since
+        extra_params['opt_ephemeral'] = opt_ephemeral
 
         extractor = ExtractorFactory(ship_target, extra_params).create()
 
         # Determine destination path for generated report and skip processing if it exists
-        report_spreadsheet_destination_path = os.path.join(
-            extractor.get_report_path(month),
-            f"{extra_params['report_type']}-{opt_month}.xlsx")
+        if opt_since is not None:
+            now = datetime.datetime.now().replace(second=0, microsecond=0, tzinfo=timezone.utc)
+            extra_params['since_date'] = opt_since.date()
+            extra_params['until_date'] = now.date()
+
+            extra_params['report_period_range'] = f"{extra_params['since_date']}, {extra_params['until_date']}"
+
+            report_spreadsheet_destination_path = os.path.join(
+                extractor.get_report_path(now),
+                f"{extra_params['report_type']}-{opt_since.date()}--{now.date()}.xlsx")
+        else:
+            report_spreadsheet_destination_path = os.path.join(
+                extractor.get_report_path(month),
+                f"{extra_params['report_type']}-{opt_month}.xlsx")
 
         if os.path.exists(report_spreadsheet_destination_path) and not opt_force:
             # If the monthly report already exists, skip the generation
@@ -91,13 +129,15 @@ class Command(BaseCommand):
 
     def _handle_ship_target(self, ship_target):
         if ship_target == "directory":
-            return self._handle_extra_params()
+            return self._handle_extra_params(ship_target)
+        elif ship_target == "controller_db":
+            return self._handle_extra_params(ship_target)
         else:
             raise BadShipTarget("Unexpected value for METRICS_UTILITY_SHIP_TARGET env var"\
                                 ", allowed value for local report generation are "\
-                                "[directory]")
+                                "[controller_db, directory]")
 
-    def _handle_extra_params(self):
+    def _handle_extra_params(self, ship_target=None):
         ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
@@ -110,7 +150,7 @@ class Command(BaseCommand):
         if not report_type:
             raise MissingRequiredEnvVar(
                 "Missing required env variable METRICS_UTILITY_REPORT_TYPE.")
-        elif report_type not in ["CCSP", "CCSPv2"]:
+        elif report_type not in ["CCSP", "CCSPv2", "RENEWAL_GUIDANCE", "RENEWAL_GUIDANCE_v2"]:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
                 " valies are: [CCSP]")
@@ -148,5 +188,3 @@ class Command(BaseCommand):
             month = f"{y}-{m}"
 
         return month, date
-
-

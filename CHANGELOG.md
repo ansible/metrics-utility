@@ -42,3 +42,7 @@
 - Both CCSP and CCSPv2 reports are getting extra sheets with additional usage stats
 - Fix tar.extractall call on older python version missing a filter arg
 - Fix return codes
+
+## 0.4.0
+- Adding RENEWAL_GUIDANCE reports
+- removing obsolete host_metric command
