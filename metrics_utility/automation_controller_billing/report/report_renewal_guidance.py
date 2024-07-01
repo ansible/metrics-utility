@@ -342,6 +342,7 @@ class ReportRenewalGuidance(Base):
                 'days_automated',
                 'deleted_counter',
                 'last_deleted',
+                'ansible_board_serial',
             ]
         )
 
@@ -354,6 +355,7 @@ class ReportRenewalGuidance(Base):
                 'days_automated': "Number of days\nbetween first_automation\nand last_automation",
                 'deleted_counter': "Number of\nDeletions",
                 'last_deleted': "Last\ndeleted",
+                'ansible_board_serial': "Serial Numbers"
             }
         )
 
