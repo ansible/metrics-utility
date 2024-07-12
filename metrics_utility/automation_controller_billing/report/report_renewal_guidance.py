@@ -3,6 +3,7 @@
 ######################################
 from metrics_utility.automation_controller_billing.helpers import parse_number_of_days
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
@@ -52,7 +53,11 @@ class ReportRenewalGuidance(Base):
             4: 20,
             5: 20,
             6: 20,
-            7: 20
+            7: 20,
+            8: 20,
+            9: 20,
+            10: 20,
+            11: 20
         }
 
         uniform_column_widths = {
@@ -62,7 +67,11 @@ class ReportRenewalGuidance(Base):
             4: 20,
             5: 20,
             6: 20,
-            7: 20
+            7: 20,
+            8: 20,
+            9: 20,
+            10: 20,
+            11: 20
         }
 
         self.config['column_widths'] = default_column_widths
@@ -80,6 +89,9 @@ class ReportRenewalGuidance(Base):
             host_metric_dataframe['last_automation']).dt.tz_localize(None)
         host_metric_dataframe['last_deleted'] = pd.to_datetime(
             host_metric_dataframe['last_deleted']).dt.tz_localize(None)
+
+        # Run the host deduplication first
+        host_metric_dataframe = Dedup(host_metric_dataframe).run_deduplication()
 
         host_metric_dataframe['days_automated'] = (
             host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
@@ -342,7 +354,10 @@ class ReportRenewalGuidance(Base):
                 'days_automated',
                 'deleted_counter',
                 'last_deleted',
-                'ansible_board_serial',
+                'hostnames',
+                'ansible_host_variables',
+                'ansible_board_serials',
+                'ansible_machine_ids',
             ]
         )
 
@@ -355,7 +370,10 @@ class ReportRenewalGuidance(Base):
                 'days_automated': "Number of days\nbetween first_automation\nand last_automation",
                 'deleted_counter': "Number of\nDeletions",
                 'last_deleted': "Last\ndeleted",
-                'ansible_board_serial': "Serial Numbers"
+                'hostnames': "Host names",
+                'ansible_host_variables': "Variables ansible_host",
+                'ansible_board_serials': "Serial Numbers",
+                'ansible_machine_ids': "Machine UUIDs",
             }
         )
 
