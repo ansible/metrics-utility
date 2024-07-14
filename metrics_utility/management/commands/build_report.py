@@ -172,6 +172,8 @@ class Command(BaseCommand):
                 "report_end_user_company_city": os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ""),
                 "report_end_user_company_state": os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ""),
                 "report_end_user_company_country": os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ""),
+                # Renewal guidance specific params
+                "report_renewal_guidance_dedup_iterations": os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', "3"),
                 }
 
     def _handle_month(self, month):

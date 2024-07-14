@@ -1,8 +1,9 @@
 import pandas as pd
 
 class Dedup:
-    def __init__(self, dataframe):
+    def __init__(self, dataframe, extra_params):
         self.dataframe = dataframe
+        self.extra_params = extra_params
 
     def run_deduplication(self):
         # Cleanup the null like values first
@@ -27,8 +28,8 @@ class Dedup:
             dupes = self.dataframe[self.dataframe['hostname']==row['hostname']]
 
             # We will do the search in iterations, to cover more indirect relationships
-            max_iterations = 3
-            for i in range(max_iterations):
+            iterations = int(self.extra_params['report_renewal_guidance_dedup_iterations'])
+            for i in range(iterations):
                 # Hostname dupe lookup
                 dupes = self.find_dupes(dupes, 'hostname', dupes["hostname"])
 

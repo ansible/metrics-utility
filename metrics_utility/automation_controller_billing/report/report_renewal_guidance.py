@@ -91,7 +91,8 @@ class ReportRenewalGuidance(Base):
             host_metric_dataframe['last_deleted']).dt.tz_localize(None)
 
         # Run the host deduplication first
-        host_metric_dataframe = Dedup(host_metric_dataframe).run_deduplication()
+        host_metric_dataframe = Dedup(host_metric_dataframe,
+                                      extra_params=self.extra_params).run_deduplication()
 
         host_metric_dataframe['days_automated'] = (
             host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
@@ -99,7 +100,10 @@ class ReportRenewalGuidance(Base):
             lambda x: x if x > 0 else 0)
 
         if self.extra_params.get("opt_ephemeral") is not None:
-            ephemeral_usage_dataframe = self.compute_ephemeral_intervals(self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
+            # Looking at the historical ephemeral usage, so we want to looks also at records that
+            # were soft-deleted already.
+            ephemeral_usage_dataframe = self.compute_ephemeral_intervals(self.df_managed_nodes_query(
+                host_metric_dataframe, ephemeral=True, with_deleted=True))
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
@@ -153,12 +157,13 @@ class ReportRenewalGuidance(Base):
 
         return self.wb
 
-    def df_managed_nodes_query(self, dataframe, ephemeral=None):
+    def df_managed_nodes_query(self, dataframe, ephemeral=None, with_deleted=False):
         if ephemeral is None:
             return dataframe[dataframe["deleted"]==False]
         else:
             # Take only non deleted
-            dataframe = dataframe[dataframe["deleted"]==False]
+            if not with_deleted:
+                dataframe = dataframe[dataframe["deleted"]==False]
 
             # Filter ephemeral based on number of automated days
             ephemeral_days = parse_number_of_days(self.extra_params.get("opt_ephemeral"))
