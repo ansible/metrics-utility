@@ -150,10 +150,10 @@ class Command(BaseCommand):
         if not report_type:
             raise MissingRequiredEnvVar(
                 "Missing required env variable METRICS_UTILITY_REPORT_TYPE.")
-        elif report_type not in ["CCSP", "CCSPv2", "RENEWAL_GUIDANCE", "RENEWAL_GUIDANCE_v2"]:
+        elif report_type not in ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
-                " valies are: [CCSP]")
+                " values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']")
 
         return {"ship_path": ship_path,
                 "report_type": report_type,
@@ -172,6 +172,8 @@ class Command(BaseCommand):
                 "report_end_user_company_city": os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ""),
                 "report_end_user_company_state": os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ""),
                 "report_end_user_company_country": os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ""),
+                # Renewal guidance specific params
+                "report_renewal_guidance_dedup_iterations": os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', "3"),
                 }
 
     def _handle_month(self, month):

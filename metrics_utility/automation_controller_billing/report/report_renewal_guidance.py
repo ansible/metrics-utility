@@ -3,6 +3,7 @@
 ######################################
 from metrics_utility.automation_controller_billing.helpers import parse_number_of_days
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils import get_column_letter
@@ -52,7 +53,11 @@ class ReportRenewalGuidance(Base):
             4: 20,
             5: 20,
             6: 20,
-            7: 20
+            7: 20,
+            8: 20,
+            9: 20,
+            10: 20,
+            11: 20
         }
 
         uniform_column_widths = {
@@ -62,7 +67,11 @@ class ReportRenewalGuidance(Base):
             4: 20,
             5: 20,
             6: 20,
-            7: 20
+            7: 20,
+            8: 20,
+            9: 20,
+            10: 20,
+            11: 20
         }
 
         self.config['column_widths'] = default_column_widths
@@ -81,13 +90,20 @@ class ReportRenewalGuidance(Base):
         host_metric_dataframe['last_deleted'] = pd.to_datetime(
             host_metric_dataframe['last_deleted']).dt.tz_localize(None)
 
+        # Run the host deduplication first
+        host_metric_dataframe = Dedup(host_metric_dataframe,
+                                      extra_params=self.extra_params).run_deduplication()
+
         host_metric_dataframe['days_automated'] = (
             host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
         host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(
             lambda x: x if x > 0 else 0)
 
         if self.extra_params.get("opt_ephemeral") is not None:
-            ephemeral_usage_dataframe = self.compute_ephemeral_intervals(self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
+            # Looking at the historical ephemeral usage, so we want to looks also at records that
+            # were soft-deleted already.
+            ephemeral_usage_dataframe = self.compute_ephemeral_intervals(self.df_managed_nodes_query(
+                host_metric_dataframe, ephemeral=True, with_deleted=True))
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
@@ -141,12 +157,13 @@ class ReportRenewalGuidance(Base):
 
         return self.wb
 
-    def df_managed_nodes_query(self, dataframe, ephemeral=None):
+    def df_managed_nodes_query(self, dataframe, ephemeral=None, with_deleted=False):
         if ephemeral is None:
             return dataframe[dataframe["deleted"]==False]
         else:
             # Take only non deleted
-            dataframe = dataframe[dataframe["deleted"]==False]
+            if not with_deleted:
+                dataframe = dataframe[dataframe["deleted"]==False]
 
             # Filter ephemeral based on number of automated days
             ephemeral_days = parse_number_of_days(self.extra_params.get("opt_ephemeral"))
@@ -342,6 +359,10 @@ class ReportRenewalGuidance(Base):
                 'days_automated',
                 'deleted_counter',
                 'last_deleted',
+                'hostnames',
+                'ansible_host_variables',
+                'ansible_board_serials',
+                'ansible_machine_ids',
             ]
         )
 
@@ -354,6 +375,10 @@ class ReportRenewalGuidance(Base):
                 'days_automated': "Number of days\nbetween first_automation\nand last_automation",
                 'deleted_counter': "Number of\nDeletions",
                 'last_deleted': "Last\ndeleted",
+                'hostnames': "Host names",
+                'ansible_host_variables': "Variables ansible_host",
+                'ansible_board_serials': "Serial Numbers",
+                'ansible_machine_ids': "Machine UUIDs",
             }
         )
 
