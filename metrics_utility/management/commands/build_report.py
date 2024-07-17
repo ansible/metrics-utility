@@ -153,7 +153,7 @@ class Command(BaseCommand):
         elif report_type not in ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
-                " valies are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']")
+                " values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']")
 
         return {"ship_path": ship_path,
                 "report_type": report_type,

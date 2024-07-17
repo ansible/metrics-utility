@@ -136,4 +136,4 @@ class ExtractorControllerDB():
 
     @staticmethod
     def limit():
-        return 1
+        return 10000
