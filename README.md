@@ -6,9 +6,35 @@ It's an alternative command line tool for the Controller's CLI `awx-manage`
 
 ## Installation
 
+### Run from source
+
+Run as awx user, to have the python virtual env available:
+
+```shell
+cd ~
+git clone https://github.com/ansible/metrics-utility.git (or fetch the latest upstream commits)
+cd metrics-utility
+
+# Activate Automation Controller's Python virtual environment
+. /var/lib/awx/venv/awx/bin/activate
+
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_SHIP_TARGET=controller_db
+export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
+# add path for the report to go in
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Run some command, but rather instead of command using RPM like:
+# metrics-utility build_report ...
+# we run it as
+# python manage.py build_report ...
+python manage.py build_report --since=12months --ephemeral=1month
+```
+
+
 ### From GitHub repository
 
-Install as a root user:
+Install as a root user (running this on older Controller envs can result in package conflicts):
 
 ```shell
 # Download to any folder

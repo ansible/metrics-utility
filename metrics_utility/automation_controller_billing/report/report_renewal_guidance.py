@@ -99,6 +99,7 @@ class ReportRenewalGuidance(Base):
         host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(
             lambda x: x if x > 0 else 0)
 
+        ephemeral_usage_dataframe = None
         if self.extra_params.get("opt_ephemeral") is not None:
             # Looking at the historical ephemeral usage, so we want to looks also at records that
             # were soft-deleted already.
