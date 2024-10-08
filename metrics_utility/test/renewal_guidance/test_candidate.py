@@ -3,7 +3,7 @@
 
 # HOST 1
 {
-    'ansible_board_serial': 'abc',
+    'ansible_product_serial': 'abc',
     'ansible_machine_id': '111',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
     'host_name': ['test_host_11', 'test_host_21']
@@ -11,7 +11,7 @@
 
 # HOST 2 duplicate
 {
-    'ansible_board_serial': 'abc',
+    'ansible_product_serial': 'abc',
     'ansible_machine_id': '111',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
     'host_name': ['test_host_11', 'test_host_21']
@@ -19,7 +19,7 @@
 
 # HOST 3 duplicate missing board_serial
 {
-    'ansible_board_serial': '',
+    'ansible_product_serial': '',
     'ansible_machine_id': '111',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
     'host_name': ['test_host_11', 'test_host_21']
@@ -27,7 +27,7 @@
 
 # HOST 4 duplicate different machine id same hosts
 {
-    'ansible_board_serial': '',
+    'ansible_product_serial': '',
     'ansible_machine_id': '222',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
     'host_name': ['test_host_11', 'test_host_21']
@@ -35,7 +35,7 @@
 
 # HOST 5 duplicate different board_serial same hosts
 {
-    'ansible_board_serial': 'def',
+    'ansible_product_serial': 'def',
     'ansible_machine_id': '',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
     'host_name': ['test_host_11', 'test_host_21']
@@ -43,7 +43,7 @@
 
 # HOST 6 duplicate different machine_id
 {
-    'ansible_board_serial': 'abc',
+    'ansible_product_serial': 'abc',
     'ansible_machine_id': '1234',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
     'host_name': ['test_host_11', 'test_host_21']
@@ -51,7 +51,7 @@
 
 # HOST 7 duplicate different machine_id and hosts
 {
-    'ansible_board_serial': 'abc',
+    'ansible_product_serial': 'abc',
     'ansible_machine_id': '12345',
     'ansible_host_variable': ['test_real_host_51', 'test_real_host_61'],
     'host_name': ['test_host_51', 'test_host_61']
@@ -59,7 +59,7 @@
 
 # HOST 8 duplicate differernt machine_id and overlapping hosts
 {
-    'ansible_board_serial': 'abc',
+    'ansible_product_serial': 'abc',
     'ansible_machine_id': '12345',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_51'],
     'host_name': ['test_host_11', 'test_real_host_51']
@@ -67,7 +67,7 @@
 
 # HOST 9 duplicate matching host_variable
 {
-    'ansible_board_serial': '',
+    'ansible_product_serial': '',
     'ansible_machine_id': '',
     'ansible_host_variable': ['test_real_host_11'],
     'host_name': ['test_host_11']
@@ -75,7 +75,7 @@
 
 # HOST 10 duplicate matching host_name
 {
-    'ansible_board_serial': '',
+    'ansible_product_serial': '',
     'ansible_machine_id': '',
     'ansible_host_variable': [],
     'host_name': ['test_host_11']

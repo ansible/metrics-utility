@@ -9,8 +9,8 @@ class Dedup:
         # Cleanup the null like values first
         self.dataframe['ansible_host_variable'] = self.dataframe['ansible_host_variable'].replace('', None)
 
-        self.dataframe['ansible_board_serial'] = self.dataframe['ansible_board_serial'].replace('NA', None)
-        self.dataframe['ansible_board_serial'] = self.dataframe['ansible_board_serial'].replace('', None)
+        self.dataframe['ansible_product_serial'] = self.dataframe['ansible_product_serial'].replace('NA', None)
+        self.dataframe['ansible_product_serial'] = self.dataframe['ansible_product_serial'].replace('', None)
 
         self.dataframe['ansible_machine_id'] = self.dataframe['ansible_machine_id'].replace('NA', None)
         self.dataframe['ansible_machine_id'] = self.dataframe['ansible_machine_id'].replace('', None)
@@ -37,7 +37,7 @@ class Dedup:
                 dupes = self.find_dupes(dupes, 'ansible_host_variable', dupes["ansible_host_variable"])
 
                 # Serial key dupes lookup
-                dupes = self.find_dupes(dupes, 'ansible_board_serial', dupes["ansible_board_serial"])
+                dupes = self.find_dupes(dupes, 'ansible_product_serial', dupes["ansible_product_serial"])
 
                 # ansible_machine_id key dupes lookup
                 dupes = self.find_dupes(dupes, 'ansible_machine_id', dupes["ansible_machine_id"])
@@ -46,9 +46,12 @@ class Dedup:
 
             deduped_list.append({
                 'hostname': row['hostname'],
+                'hostmetric_record_count': dupes['hostname'].nunique(),
+                'hostmetric_record_count_active': dupes[~dupes["deleted"]==True]['hostname'].nunique(),
+                'hostmetric_record_count_deleted': dupes[dupes["deleted"]==True]['hostname'].nunique(),
                 'hostnames': self.stringify(set(dupes['hostname'])),
                 'ansible_host_variables': self.stringify(set(dupes['ansible_host_variable'])),
-                'ansible_board_serials': self.stringify(set(dupes['ansible_board_serial'])),
+                'ansible_product_serials': self.stringify(set(dupes['ansible_product_serial'])),
                 'ansible_machine_ids': self.stringify(set(dupes['ansible_machine_id'])),
                 'deleted': min(dupes['deleted']), # if there was at least one false, it's not deleted
                 'first_automation':  min(dupes['first_automation']),
