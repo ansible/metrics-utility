@@ -360,9 +360,12 @@ class ReportRenewalGuidance(Base):
                 'days_automated',
                 'deleted_counter',
                 'last_deleted',
+                'hostmetric_record_count',
+                'hostmetric_record_count_active',
+                'hostmetric_record_count_deleted',
                 'hostnames',
                 'ansible_host_variables',
-                'ansible_board_serials',
+                'ansible_product_serials',
                 'ansible_machine_ids',
             ]
         )
@@ -376,9 +379,12 @@ class ReportRenewalGuidance(Base):
                 'days_automated': "Number of days\nbetween first_automation\nand last_automation",
                 'deleted_counter': "Number of\nDeletions",
                 'last_deleted': "Last\ndeleted",
+                'hostmetric_record_count': "HostMetric\nrecord count",
+                'hostmetric_record_count_active': "HostMetric active\nrecord count",
+                'hostmetric_record_count_deleted': "HostMetric deleted\nrecord count",
                 'hostnames': "Host names",
                 'ansible_host_variables': "Variables ansible_host",
-                'ansible_board_serials': "Serial Numbers",
+                'ansible_product_serials': "Serial Numbers",
                 'ansible_machine_ids': "Machine UUIDs",
             }
         )

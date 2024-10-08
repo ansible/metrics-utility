@@ -111,7 +111,7 @@ class ExtractorControllerDB():
                    main_hostmetric.deleted_counter,
                    main_hostmetric.last_deleted,
                    main_hostmetric.deleted,
-                   main_host.ansible_facts->>'ansible_board_serial'::TEXT AS ansible_board_serial,
+                   main_host.ansible_facts->>'ansible_product_serial'::TEXT AS ansible_product_serial,
                    main_host.ansible_facts->>'ansible_machine_id'::TEXT AS ansible_machine_id,
                    CASE
                        WHEN (metrics_utility_is_valid_json(main_host.variables))
