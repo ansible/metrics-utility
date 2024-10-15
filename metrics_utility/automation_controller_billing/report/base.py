@@ -50,7 +50,7 @@ class Base:
 
         return destination_dataframe
 
-    def _build_data_section_usage_by_node(self, current_row, ws, dataframe):
+    def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None):
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
@@ -68,26 +68,38 @@ class Base:
             .agg(
                 organizations=('organization_name', 'nunique'),
                 host_runs=('host_name', 'count'),
-                task_runs=('task_runs', 'sum')
+                task_runs=('task_runs', 'sum'),
+                first_automation=('first_automation', 'min'),
+                last_automation=('last_automation', 'max')
             )
         )
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
+        columns = [
+            'host_name',
+            'organizations',
+            'host_runs',
+            'task_runs',
+            'first_automation',
+            'last_automation',
+        ]
+        if mode == "by_organization":
+            # Filter some columns out based on mode
+            columns = [col for col in columns if col not in ['organizations']]
         ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=[
-                'host_name',
-                'organizations',
-                'host_runs',
-                'task_runs'
-            ]
+            columns=columns
         )
 
+        labels = {
+            "host_name": "Host name",
+            "organizations": "Automated by\norganizations",
+            "host_runs": "Non-unique managed\nnodes automated",
+            "task_runs": "Number of task\nruns",
+            'first_automation': "First\nautomation",
+            'last_automation': "Last\nautomation",
+        }
+        labels = {k:v for k, v in labels.items() if k in columns}
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                "host_name": "Host name",
-                "organizations": "Automated by\norganizations",
-                "host_runs": "Non-unique managed\nnodes automated",
-                "task_runs": "Number of task\nruns",
-            }
+            columns=labels
         )
 
         row_counter = 0

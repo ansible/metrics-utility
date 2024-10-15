@@ -46,3 +46,4 @@
 ## 0.4.0
 - Adding RENEWAL_GUIDANCE reports having host fact based dedup and detection of ephemeral hosts
 - removing obsolete host_metric command
+- adding organization usage details into CCSPv2 report

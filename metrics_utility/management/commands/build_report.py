@@ -35,7 +35,11 @@ class Command(BaseCommand):
         parser.add_argument('--since',
                             dest='since',
                             action='store',
-                            help='Date or number of days months ago we want to generate the reports for.')
+                            help='Date or number of days/months ago we want to generate the reports for.')
+        parser.add_argument('--until',
+                            dest='until',
+                            action='store',
+                            help='Date or number of days/months ago we want to generate the reports until. Not available for renewal guidance report')
         parser.add_argument('--ephemeral',
                             dest='ephemeral',
                             action='store',
@@ -65,21 +69,21 @@ class Command(BaseCommand):
         # Since and ephemenral params are specific to subset of reports
         opt_since = None
         opt_ephemeral = None
-        if os.getenv('METRICS_UTILITY_REPORT_TYPE', None) in ["RENEWAL_GUIDANCE"]:
-            if options.get('since') is None:
-                # Default
-                opt_since = "12months"
-            else:
-                opt_since = options.get('since') or None
-            opt_since = parse_date_param(opt_since)
 
-            opt_ephemeral = options.get('ephemeral') or None
+        opt_since = options.get('since') or None
+        opt_since = parse_date_param(opt_since)
+
+        opt_until = options.get('until') or None
+        opt_until = parse_date_param(opt_until)
+
+        opt_ephemeral = options.get('ephemeral') or None
 
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_ship_target(ship_target)
         extra_params['opt_since'] = opt_since
+        extra_params['opt_until'] = opt_until
         extra_params['opt_ephemeral'] = opt_ephemeral
 
         extractor = ExtractorFactory(ship_target, extra_params).create()
@@ -88,13 +92,13 @@ class Command(BaseCommand):
         if opt_since is not None:
             now = datetime.datetime.now().replace(second=0, microsecond=0, tzinfo=timezone.utc)
             extra_params['since_date'] = opt_since.date()
-            extra_params['until_date'] = now.date()
+            extra_params['until_date'] = opt_until.date() if opt_until else now.date()
 
             extra_params['report_period_range'] = f"{extra_params['since_date']}, {extra_params['until_date']}"
 
             report_spreadsheet_destination_path = os.path.join(
-                extractor.get_report_path(now),
-                f"{extra_params['report_type']}-{opt_since.date()}--{now.date()}.xlsx")
+                extractor.get_report_path(extra_params['until_date']),
+                f"{extra_params['report_type']}-{opt_since.date()}--{extra_params['until_date']}.xlsx")
         else:
             report_spreadsheet_destination_path = os.path.join(
                 extractor.get_report_path(month),

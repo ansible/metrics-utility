@@ -71,7 +71,7 @@ class ReportCCSPv2(Base):
 
         default_column_widths = {
             1: 40,
-            2: 20,
+            2: 25,
             3: 15,
             4: 15,
             5: 15,
@@ -153,6 +153,19 @@ class ReportCCSPv2(Base):
                 self.wb.create_sheet(title="Usage by modules")
                 ws = self.wb.worksheets[sheet_index]
                 current_row = self._build_data_section_usage_by_modules(1, ws, events_dataframe)
+                sheet_index += 1
+
+        if "managed_nodes_by_organizations" in self.optional_report_sheets():
+            # Sheet with list of managed nodes by organization, this will generate multiple tabs
+            organization_names = sorted(job_host_sumary_dataframe['organization_name'].unique())
+            for organization_name in organization_names:
+                self.wb.create_sheet(title=organization_name)
+                ws = self.wb.worksheets[sheet_index]
+
+                # Filter the data for a certain organization
+                filtered_job_host_sumary_dataframe = job_host_sumary_dataframe[
+                    job_host_sumary_dataframe["organization_name"] == organization_name]
+                current_row = self._build_data_section_usage_by_node(1, ws, filtered_job_host_sumary_dataframe, mode="by_organization")
                 sheet_index += 1
 
         return self.wb
