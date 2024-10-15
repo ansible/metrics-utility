@@ -19,14 +19,7 @@ class DataframeJobhostSummaryUsage(Base):
         # A daily rollup dataframe
         billing_data_monthly_rollup = None
 
-        # Get list of days of the specified month for the monthly report
-        beginning_of_the_month = self.month.replace(day=1)
-        end_of_the_month = beginning_of_the_month + relativedelta(months=1) - relativedelta(days=1)
-        dates_list = list_dates(start_date=beginning_of_the_month,
-                                end_date=end_of_the_month,
-                                granularity="daily")
-
-        for date in dates_list:
+        for date in self.dates():
             ###############################
             # Generate the monthly dataset for report
             ###############################
@@ -54,14 +47,21 @@ class DataframeJobhostSummaryUsage(Base):
                     return sum([row[i] for i in ['dark', 'failures', 'ok', 'skipped', 'ignored',  'rescued']])
                 billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
 
+                billing_data['created'] = pd.to_datetime(
+                    billing_data['created']).dt.tz_localize(None)
+
                 ################################
                 # Do the aggregation
                 ################################
+
                 billing_data_group = billing_data.groupby(
                     self.unique_index_columns(), dropna=False
                 ).agg(
                     task_runs=('task_runs', 'sum'),
-                    host_runs=('host_name', 'count'))
+                    host_runs=('host_name', 'count'),
+                    first_automation=('created', 'min'),
+                    last_automation=('created', 'max'),
+                    )
 
                 # Tweak types to match the table
                 billing_data_group = self.cast_dataframe(billing_data_group, self.cast_types())
@@ -80,7 +80,8 @@ class DataframeJobhostSummaryUsage(Base):
                         how='outer')
 
                     billing_data_monthly_rollup = self.summarize_merged_dataframes(
-                        billing_data_monthly_rollup, self.data_columns())
+                        billing_data_monthly_rollup, self.data_columns(),
+                        operations={"first_automation": "min", "last_automation": "max"})
 
                     # Tweak types to match the table
                     billing_data_monthly_rollup = self.cast_dataframe(
@@ -97,8 +98,9 @@ class DataframeJobhostSummaryUsage(Base):
 
     @staticmethod
     def data_columns():
-        return ['host_runs', 'task_runs']
+        return ['host_runs', 'task_runs', 'first_automation', 'last_automation']
 
     @staticmethod
     def cast_types():
-        return {'task_runs': int, 'host_runs': int}
+        return {'task_runs': int, 'host_runs': int,
+                'first_automation': 'datetime64[ns]', 'last_automation': 'datetime64[ns]'}

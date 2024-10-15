@@ -7,7 +7,11 @@ from metrics_utility.automation_controller_billing.report.report_renewal_guidanc
 
 class Factory:
     def __init__(self, report_period, report_dataframe, ship_target, extra_params):
-        self.report_period = report_period
+        if extra_params.get('report_period_range') is not None:
+            self.report_period = extra_params.get('report_period_range')
+        else:
+            self.report_period = report_period
+
         self.report_dataframe = report_dataframe
 
         self.ship_target = ship_target

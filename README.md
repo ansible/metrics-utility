@@ -115,10 +115,25 @@ export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
 export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
 
 # Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
-metrics-utility gather_automation_controller_billing_data --ship --until=10m
+python manage.py gather_automation_controller_billing_data --ship --until=10m
+# or metrics-utility gather_automation_controller_billing_data --ship --until=10m
+
+# Optionally set subset of sheets to be built, the default list is:
+# 'managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'usage_by_modules'
+export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS='managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules,managed_nodes_by_organizations'
 
 # Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
-metrics-utility build_report
+python manage.py build_report
+# or metrics-utility build_report
+
+# Build report for a sepcific month
+python manage.py build_report --month=2024=06
+
+# Build report defining a custom range, report on last 5 months will be
+python manage.py build_report --since=5months
+
+# Build report defining a custom range with specific dates
+python manage.py build_report --since=2024-05-01 --until=2024-09-30
 ```
 
 

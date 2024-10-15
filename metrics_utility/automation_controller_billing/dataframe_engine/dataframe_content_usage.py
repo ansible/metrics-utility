@@ -17,17 +17,10 @@ class DataframeContentUsage(Base):
     LOG_PREFIX = "[AAPBillingReport] "
 
     def build_dataframe(self):
-        # Get list of days of the specified month for the monthly report
-        beginning_of_the_month = self.month.replace(day=1)
-        end_of_the_month = beginning_of_the_month + relativedelta(months=1) - relativedelta(days=1)
-        dates_list = list_dates(start_date=beginning_of_the_month,
-                                end_date=end_of_the_month,
-                                granularity="daily")
-
         # A monthly rollup dataframe
         content_explorer_rollup = None
 
-        for date in dates_list:
+        for date in self.dates():
             ###############################
             # Start a daily rollup code here
             ###############################
