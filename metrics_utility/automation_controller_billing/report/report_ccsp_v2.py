@@ -89,8 +89,7 @@ class ReportCCSPv2(Base):
             3: 20,
             4: 20,
             5: 20,
-            6: 20,
-            7: 20
+            6: 20
         }
 
         self.config['sku_description'] = default_sku_description
@@ -119,7 +118,14 @@ class ReportCCSPv2(Base):
 
         # Add optional sheets
         sheet_index = 1
-        if "managed_nodes" in self.optional_report_sheets():
+
+        if "managed_nodes_by_organizations" in self.optional_report_sheets() and "managed_nodes" in self.optional_report_sheets():
+            # Sheet with list of managed nodes
+            self.wb.create_sheet(title="Managed nodes")
+            ws = self.wb.worksheets[sheet_index]
+            current_row = self._build_data_section_usage_by_node_with_org_details(1, ws, job_host_sumary_dataframe)
+            sheet_index += 1
+        elif "managed_nodes" in self.optional_report_sheets():
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
