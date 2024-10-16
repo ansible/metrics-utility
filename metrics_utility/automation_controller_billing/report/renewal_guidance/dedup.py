@@ -44,8 +44,12 @@ class Dedup:
 
             processed_dupes_index.update(dupes['index'])
 
+            # Take the last updated non deleted hostname with priority, to represent the
+            # duplicate group
+            latest_hostname = dupes.sort_values(by=['deleted', 'last_automation'],
+                                                ascending=[True, False])['hostname'].iloc[0]
             deduped_list.append({
-                'hostname': row['hostname'],
+                'hostname': latest_hostname,
                 'hostmetric_record_count': dupes['hostname'].nunique(),
                 'hostmetric_record_count_active': dupes[~dupes["deleted"]==True]['hostname'].nunique(),
                 'hostmetric_record_count_deleted': dupes[dupes["deleted"]==True]['hostname'].nunique(),
