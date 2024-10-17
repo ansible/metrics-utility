@@ -18,6 +18,9 @@ cd metrics-utility
 # Activate Automation Controller's Python virtual environment
 . /var/lib/awx/venv/awx/bin/activate
 
+# Install the dependecies
+pip install .
+
 # Set extra ENV VARs for report generation purposes
 export METRICS_UTILITY_SHIP_TARGET=controller_db
 export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
