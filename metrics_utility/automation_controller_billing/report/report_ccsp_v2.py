@@ -96,47 +96,68 @@ class ReportCCSPv2(Base):
         self.config['column_widths'] = default_column_widths
         self.config['data_column_widths'] = default_data_column_widths
 
+    def _apply_filter(self, job_host_summary_dataframe, events_dataframe):
+        if self.extra_params['report_organization_filter'] is not None:
+            org_filter = self.extra_params['report_organization_filter'].split(";")
+            job_host_summary_dataframe = job_host_summary_dataframe[
+                job_host_summary_dataframe["organization_name"].isin(org_filter)].copy()
+
+            # TODO: not filtering events fight now, but we can filter events by the job_remote_id
+            # and install_uuid coming from the filkterd job_host_summary
+
+        return job_host_summary_dataframe, events_dataframe
+
+
     def build_spreadsheet(self):
         # Fix host names in the event data, to take in account the variables
-        job_host_sumary_dataframe = self.dataframe[0]
+        job_host_summary_dataframe = self.dataframe[0]
         events_dataframe = self.dataframe[1]
-        events_dataframe = self._fix_event_host_names(job_host_sumary_dataframe, events_dataframe)
+        events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
+
+        job_host_summary_dataframe, events_dataframe = self._apply_filter(job_host_summary_dataframe, events_dataframe)
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
-        self.wb.create_sheet(title="Usage Reporting")
 
-        # First sheet with billing
-        ws = self.wb.worksheets[0]
+        # First sheet index
+        sheet_index = 0
 
-        self._init_dimensions(ws)
-        current_row = self._build_heading_h1(1, ws)
-        current_row = self._build_header(current_row, ws)
-        current_row = self._build_po_number(current_row, ws)
-        current_row = self._build_updated_timestamp(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, job_host_sumary_dataframe)
+        if "ccsp_summary" in self.optional_report_sheets():
+            self.wb.create_sheet(title="Usage Reporting")
+            ws = self.wb.worksheets[sheet_index]
+            self._init_dimensions(ws)
+            current_row = self._build_heading_h1(1, ws)
+            current_row = self._build_header(current_row, ws)
+            current_row = self._build_po_number(current_row, ws)
+            current_row = self._build_updated_timestamp(current_row, ws)
+            current_row = self._build_data_section(current_row, ws, job_host_summary_dataframe)
+            sheet_index += 1
 
-        # Add optional sheets
-        sheet_index = 1
+        if "jobs" in self.optional_report_sheets():
+            # Sheet with usage by org
+            self.wb.create_sheet(title="Jobs")
+            ws = self.wb.worksheets[sheet_index]
+            current_row = self._build_data_section_usage_by_job(1, ws, job_host_summary_dataframe)
+            sheet_index += 1
 
         if "managed_nodes_by_organizations" in self.optional_report_sheets() and "managed_nodes" in self.optional_report_sheets():
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node_with_org_details(1, ws, job_host_sumary_dataframe)
+            current_row = self._build_data_section_usage_by_node_with_org_details(1, ws, job_host_summary_dataframe)
             sheet_index += 1
         elif "managed_nodes" in self.optional_report_sheets():
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node(1, ws, job_host_sumary_dataframe)
+            current_row = self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if "usage_by_organizations" in self.optional_report_sheets():
             # Sheet with usage by org
             self.wb.create_sheet(title="Usage by organizations")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_org(1, ws, job_host_sumary_dataframe)
+            current_row = self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if events_dataframe is not None:
@@ -163,15 +184,15 @@ class ReportCCSPv2(Base):
 
         if "managed_nodes_by_organizations" in self.optional_report_sheets():
             # Sheet with list of managed nodes by organization, this will generate multiple tabs
-            organization_names = sorted(job_host_sumary_dataframe['organization_name'].unique())
+            organization_names = sorted(job_host_summary_dataframe['organization_name'].unique())
             for organization_name in organization_names:
                 self.wb.create_sheet(title=organization_name)
                 ws = self.wb.worksheets[sheet_index]
 
                 # Filter the data for a certain organization
-                filtered_job_host_sumary_dataframe = job_host_sumary_dataframe[
-                    job_host_sumary_dataframe["organization_name"] == organization_name]
-                current_row = self._build_data_section_usage_by_node(1, ws, filtered_job_host_sumary_dataframe, mode="by_organization")
+                filtered_job_host_summary_dataframe = job_host_summary_dataframe[
+                    job_host_summary_dataframe["organization_name"] == organization_name]
+                current_row = self._build_data_section_usage_by_node(1, ws, filtered_job_host_summary_dataframe, mode="by_organization")
                 sheet_index += 1
 
         return self.wb
@@ -188,10 +209,13 @@ class ReportCCSPv2(Base):
                           size=10,
                           color=self.BLACK_COLOR_HEX)
 
+        dataframe['job_remote_id_install_uuid'] = list(zip(dataframe['job_remote_id'], dataframe['install_uuid']))
+
         # Rename the columns based on the template
         ccsp_report_dataframe = (
             dataframe.groupby('organization_name', dropna=False)
             .agg(
+                job_runs=('job_remote_id_install_uuid', 'nunique'),
                 host_runs_unique=('host_name', 'nunique'),
                 host_runs=('host_name', 'count'),
                 task_runs=('task_runs', 'sum')
@@ -201,6 +225,7 @@ class ReportCCSPv2(Base):
         ccsp_report_dataframe = ccsp_report_dataframe.reindex(
             columns=[
                 'organization_name',
+                'job_runs',
                 'host_runs_unique',
                 'host_runs',
                 'task_runs'
@@ -210,6 +235,7 @@ class ReportCCSPv2(Base):
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
                 "organization_name": "Organization name",
+                "job_runs": "Job runs",
                 "host_runs_unique": "Unique managed nodes\nautomated",
                 "host_runs": "Non-unique managed\nnodes automated",
                 "task_runs": "Number of task\nruns",

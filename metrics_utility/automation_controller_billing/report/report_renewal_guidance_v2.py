@@ -90,9 +90,9 @@ class ReportRenewalGuidanceV2(Base):
 
     def build_spreadsheet(self):
         # Fix host names in the event data, to take in account the variables
-        job_host_sumary_dataframe = self.dataframe[0]
+        job_host_summary_dataframe = self.dataframe[0]
         events_dataframe = self.dataframe[1]
-        events_dataframe = self._fix_event_host_names(job_host_sumary_dataframe, events_dataframe)
+        events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
@@ -106,7 +106,7 @@ class ReportRenewalGuidanceV2(Base):
         current_row = self._build_header(current_row, ws)
         current_row = self._build_po_number(current_row, ws)
         current_row = self._build_updated_timestamp(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, job_host_sumary_dataframe)
+        current_row = self._build_data_section(current_row, ws, job_host_summary_dataframe)
 
         # Add optional sheets
         sheet_index = 1
@@ -114,14 +114,14 @@ class ReportRenewalGuidanceV2(Base):
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node(1, ws, job_host_sumary_dataframe)
+            current_row = self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if "usage_by_organizations" in self.optional_report_sheets():
             # Sheet with usage by org
             self.wb.create_sheet(title="Usage by organizations")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_org(1, ws, job_host_sumary_dataframe)
+            current_row = self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if events_dataframe is not None:

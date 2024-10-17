@@ -24,7 +24,7 @@ class Base:
     def optional_report_sheets():
         return os.environ.get(
             'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-            'managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'\
+            'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'\
             'usage_by_modules').split(",")
 
     def _fix_event_host_names(self, mapping_dataframe, destination_dataframe):
@@ -109,7 +109,7 @@ class Base:
         labels = {
             "host_name": "Host name",
             "organizations": "Automated by\norganizations",
-            "host_runs": "Non-unique managed\nnodes automated",
+            "host_runs": "Job runs",  # Job runs is the same as host_runs, Non-unique managed nodes automated
             "task_runs": "Number of task\nruns",
             'first_automation': "First\nautomation",
             'last_automation': "Last\nautomation",
@@ -138,6 +138,81 @@ class Base:
             row_counter += 1
 
         return current_row + row_counter
+
+
+    def _build_data_section_usage_by_job(self, current_row, ws, dataframe):
+        for key, value in self.config['data_column_widths'].items():
+            ws.column_dimensions[get_column_letter(key)].width = value
+
+        header_font = Font(name=self.FONT,
+                           size=10,
+                           color=self.BLACK_COLOR_HEX,
+                           bold=True)
+        value_font = Font(name=self.FONT,
+                          size=10,
+                          color=self.BLACK_COLOR_HEX)
+
+        dataframe['job_remote_id_install_uuid'] = list(zip(dataframe['job_remote_id'], dataframe['install_uuid']))
+
+        # Rename the columns based on the template
+        ccsp_report_dataframe = (
+            dataframe.groupby(['organization_name', 'job_template_name'], dropna=False)
+            .agg(
+                job_runs=('job_remote_id_install_uuid', 'nunique'),
+                host_runs_unique=('host_name', 'nunique'),
+                host_runs=('host_name', 'count'),
+                task_runs=('task_runs', 'sum'),
+                first_run=('job_created', 'min'),
+                last_run=('job_created', 'max'),
+            )
+        )
+        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
+            columns=[
+                'job_template_name',
+                'organization_name',
+                'job_runs',
+                'host_runs_unique',
+                'host_runs',
+                'task_runs',
+                'first_run',
+                'last_run'
+            ]
+        )
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(
+            columns={
+                "job_template_name": "Job template\nname",
+                "organization_name": "Organization\nname",
+                "job_runs": "Job runs",
+                "host_runs_unique": "Unique managed nodes\nautomated",
+                "host_runs": "Non-unique managed\nnodes automated",
+                "task_runs": "Number of task\nruns",
+                "first_run": "First\nrun",
+                "last_run": "Last\nrun",
+            }
+        )
+
+        row_counter = 0
+        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+
+            row_counter += 1
+
+        return current_row + row_counter
+
 
 
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None):
@@ -182,7 +257,7 @@ class Base:
         labels = {
             "host_name": "Host name",
             "organizations": "Automated by\norganizations",
-            "host_runs": "Non-unique managed\nnodes automated",
+            "host_runs": "Job runs",  # Job runs is the same as host_runs, Non-unique managed nodes automated
             "task_runs": "Number of task\nruns",
             'first_automation': "First\nautomation",
             'last_automation': "Last\nautomation",

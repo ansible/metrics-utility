@@ -118,16 +118,37 @@ export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
 python manage.py gather_automation_controller_billing_data --ship --until=10m
 # or metrics-utility gather_automation_controller_billing_data --ship --until=10m
 
-# Optionally set subset of sheets to be built, the default list is:
-# 'managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'usage_by_modules'
-export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS='managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules,managed_nodes_by_organizations'
-
 # Build report for previous month unless it already exists. Report will be created under ./reports dir under SHIP_PATH dir.
 python manage.py build_report
 # or metrics-utility build_report
 
-# Build report for a sepcific month
+# Build report for a specific month
 python manage.py build_report --month=2024=06
+
+
+```
+
+#### Example with local directory storage CCSPv2 type report for jobs, organizations and managed nodes usage history
+
+This example reuses CCSPv2 type, but just provides a usage report outside of CCSP domain
+
+```
+# Set needed ENV VARs for data gathering
+export METRICS_UTILITY_SHIP_TARGET=directory
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+# Set extra ENV VARs for report generation purposes
+export METRICS_UTILITY_REPORT_TYPE=CCSPv2
+
+# Optionally set subset of sheets to be built, the default list is:
+export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS='jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations'
+
+# Optionally add a semicolon separated list of organizations, to limit the report only for certain orgs
+# e.g. export METRICS_UTILITY_ORGANIZATION_FILTER="ACME;Test Org 1"
+
+# Gather and store the data in provided SHIP_PATH directory under ./report_data subdir
+python manage.py gather_automation_controller_billing_data --ship --until=10m
+# or metrics-utility gather_automation_controller_billing_data --ship --until=10m
 
 # Build report defining a custom range, report on last 5 months will be
 python manage.py build_report --since=5months
@@ -135,7 +156,6 @@ python manage.py build_report --since=5months
 # Build report defining a custom range with specific dates
 python manage.py build_report --since=2024-05-01 --until=2024-09-30
 ```
-
 
 ### Example with Controller's database as a storage RENEWAL_GUIDANCE type
 
