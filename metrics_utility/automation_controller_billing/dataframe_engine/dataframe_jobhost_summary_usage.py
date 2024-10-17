@@ -50,6 +50,9 @@ class DataframeJobhostSummaryUsage(Base):
                 billing_data['created'] = pd.to_datetime(
                     billing_data['created']).dt.tz_localize(None)
 
+                billing_data['job_created'] = pd.to_datetime(
+                    billing_data['job_created']).dt.tz_localize(None)
+
                 ################################
                 # Do the aggregation
                 ################################
@@ -61,6 +64,7 @@ class DataframeJobhostSummaryUsage(Base):
                     host_runs=('host_name', 'count'),
                     first_automation=('created', 'min'),
                     last_automation=('created', 'max'),
+                    job_created=('job_created', 'max'),
                     )
 
                 # Tweak types to match the table
@@ -81,7 +85,9 @@ class DataframeJobhostSummaryUsage(Base):
 
                     billing_data_monthly_rollup = self.summarize_merged_dataframes(
                         billing_data_monthly_rollup, self.data_columns(),
-                        operations={"first_automation": "min", "last_automation": "max"})
+                        operations={"first_automation": "min",
+                                    "last_automation": "max",
+                                    "job_created": "max"})
 
                     # Tweak types to match the table
                     billing_data_monthly_rollup = self.cast_dataframe(
@@ -94,13 +100,17 @@ class DataframeJobhostSummaryUsage(Base):
 
     @staticmethod
     def unique_index_columns():
-        return ['organization_name', 'host_name', 'original_host_name', 'install_uuid', 'job_remote_id']
+        return ['organization_name', 'job_template_name', 'host_name', 'original_host_name', 'install_uuid', 'job_remote_id']
 
     @staticmethod
     def data_columns():
-        return ['host_runs', 'task_runs', 'first_automation', 'last_automation']
+        return ['host_runs', 'task_runs', 'first_automation', 'last_automation', 'job_created']
 
     @staticmethod
     def cast_types():
-        return {'task_runs': int, 'host_runs': int,
-                'first_automation': 'datetime64[ns]', 'last_automation': 'datetime64[ns]'}
+        return {'task_runs': int,
+                'host_runs': int,
+                'first_automation': 'datetime64[ns]',
+                'last_automation': 'datetime64[ns]',
+                'job_created': 'datetime64[ns]',
+                }

@@ -47,3 +47,6 @@
 - Adding RENEWAL_GUIDANCE reports having host fact based dedup and detection of ephemeral hosts
 - removing obsolete host_metric command
 - adding organization usage details into CCSPv2 report
+- adding job usage details into CCSPv2 report
+- make CCSPv2 report generated sheets configurable, to be able to use it as a report for AAP historical usage
+- allow arbitrary date range selection for the CCSPv2 report

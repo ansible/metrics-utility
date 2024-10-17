@@ -96,9 +96,9 @@ class ReportCCSP(Base):
         self.config['data_column_widths'] = default_data_column_widths
 
     def build_spreadsheet(self):
-        job_host_sumary_dataframe = self.dataframe[0]
+        job_host_summary_dataframe = self.dataframe[0]
         events_dataframe = self.dataframe[1]
-        events_dataframe = self._fix_event_host_names(job_host_sumary_dataframe, events_dataframe)
+        events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
@@ -112,7 +112,7 @@ class ReportCCSP(Base):
         current_row = self._build_header(current_row, ws)
         current_row = self._build_heading_h2(current_row, ws)
         current_row = self._build_sku_description(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, job_host_sumary_dataframe)
+        current_row = self._build_data_section(current_row, ws, job_host_summary_dataframe)
 
         # Add optional sheets
         sheet_index = 1
@@ -120,7 +120,7 @@ class ReportCCSP(Base):
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node(1, ws, job_host_sumary_dataframe)
+            current_row = self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if events_dataframe is not None:
