@@ -50,3 +50,4 @@
 - adding job usage details into CCSPv2 report
 - make CCSPv2 report generated sheets configurable, to be able to use it as a report for AAP historical usage
 - allow arbitrary date range selection for the CCSPv2 report
+- introducing S3 adapter for CCSP types of reports

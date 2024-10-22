@@ -9,9 +9,9 @@ from metrics_utility.automation_controller_billing.collector import Collector
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
+from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.automation_controller_billing.helpers import parse_date_param
-
-
+from metrics_utility.management.validation import handle_directory_ship_target, handle_s3_ship_target
 
 from dateutil import parser
 from django.core.management.base import BaseCommand
@@ -81,7 +81,7 @@ class Command(BaseCommand):
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
-        extra_params = self._handle_ship_target(ship_target)
+        extra_params = self._handle_extra_params(ship_target)
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
         extra_params['opt_ephemeral'] = opt_ephemeral
@@ -96,18 +96,21 @@ class Command(BaseCommand):
 
             extra_params['report_period_range'] = f"{extra_params['since_date']}, {extra_params['until_date']}"
 
-            report_spreadsheet_destination_path = os.path.join(
+            extra_params['report_spreadsheet_destination_path'] = os.path.join(
                 extractor.get_report_path(extra_params['until_date']),
                 f"{extra_params['report_type']}-{opt_since.date()}--{extra_params['until_date']}.xlsx")
         else:
-            report_spreadsheet_destination_path = os.path.join(
+            extra_params['report_spreadsheet_destination_path'] = os.path.join(
                 extractor.get_report_path(month),
                 f"{extra_params['report_type']}-{opt_month}.xlsx")
 
-        if os.path.exists(report_spreadsheet_destination_path) and not opt_force:
+        report_saver_engine = ReportSaverFactory(ship_target, extra_params=extra_params).create()
+
+        if report_saver_engine.report_exist() and not opt_force:
             # If the monthly report already exists, skip the generation
             self.logger.info("Skipping report generation, report: "\
-                             f"{report_spreadsheet_destination_path} already exists")
+                             f"{report_saver_engine.report_spreadsheet_destination_path} already exists. "\
+                             "Use --force option to override the report.")
             return
 
         report_dataframe = DataframeEngineFactory(
@@ -119,29 +122,31 @@ class Command(BaseCommand):
             self.logger.info(f"No billing data for month: {opt_month}")
             return
 
-        # Create the dir structure for the final report
-        os.makedirs(os.path.dirname(report_spreadsheet_destination_path), exist_ok=True)
-
         report_engine = ReportFactory(report_period=opt_month,
                                       report_dataframe=report_dataframe,
                                       ship_target=ship_target,
                                       extra_params=extra_params).create()
         report_spreadsheet = report_engine.build_spreadsheet()
-        report_spreadsheet.save(report_spreadsheet_destination_path)
 
-        self.logger.info(f"Report generated into: {report_spreadsheet_destination_path}")
+        # Save the report to the configured destination
+        report_saver_engine.save(report_spreadsheet)
+        self.logger.info(f"Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}")
 
     def _handle_ship_target(self, ship_target):
-        if ship_target == "directory":
-            return self._handle_extra_params(ship_target)
-        elif ship_target == "controller_db":
-            return self._handle_extra_params(ship_target)
+        if ship_target == "controller_db":
+            return {}
+        elif ship_target == "directory":
+            return handle_directory_ship_target(ship_target)
+        elif ship_target == "s3":
+            return handle_s3_ship_target(ship_target)
         else:
             raise BadShipTarget("Unexpected value for METRICS_UTILITY_SHIP_TARGET env var"\
                                 ", allowed value for local report generation are "\
-                                "[controller_db, directory]")
+                                "['s3', 'directory', 'controller_db']")
 
     def _handle_extra_params(self, ship_target=None):
+        base = self._handle_ship_target(ship_target)
+
         ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
@@ -159,27 +164,35 @@ class Command(BaseCommand):
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed"\
                 " values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']")
 
-        return {"ship_path": ship_path,
-                "report_type": report_type,
-                "price_per_node": price_per_node,
-                # XLSX specific params
-                "report_sku": os.getenv('METRICS_UTILITY_REPORT_SKU', ""),
-                "report_sku_description": os.getenv('METRICS_UTILITY_REPORT_SKU_DESCRIPTION', ""),
-                "report_h1_heading": os.getenv('METRICS_UTILITY_REPORT_H1_HEADING', ""),
-                "report_company_name": os.getenv('METRICS_UTILITY_REPORT_COMPANY_NAME', ""),
-                "report_email": os.getenv('METRICS_UTILITY_REPORT_EMAIL', ""),
-                "report_rhn_login": os.getenv('METRICS_UTILITY_REPORT_RHN_LOGIN', ""),
-                "report_po_number": os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ""),
-                "report_company_business_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ""),
-                "report_company_procurement_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ""),
-                "report_end_user_company_name": os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ""),
-                "report_end_user_company_city": os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ""),
-                "report_end_user_company_state": os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ""),
-                "report_end_user_company_country": os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ""),
-                # Renewal guidance specific params
-                "report_renewal_guidance_dedup_iterations": os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', "3"),
-                "report_organization_filter": os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER', None),
-                }
+        base.update({
+            "ship_path": ship_path,
+            "report_type": report_type,
+            "price_per_node": price_per_node,
+            # XLSX specific params
+            "report_sku": os.getenv('METRICS_UTILITY_REPORT_SKU', ""),
+            "report_sku_description": os.getenv('METRICS_UTILITY_REPORT_SKU_DESCRIPTION', ""),
+            "report_h1_heading": os.getenv('METRICS_UTILITY_REPORT_H1_HEADING', ""),
+            "report_company_name": os.getenv('METRICS_UTILITY_REPORT_COMPANY_NAME', ""),
+            "report_email": os.getenv('METRICS_UTILITY_REPORT_EMAIL', ""),
+            "report_rhn_login": os.getenv('METRICS_UTILITY_REPORT_RHN_LOGIN', ""),
+            "report_po_number": os.getenv('METRICS_UTILITY_REPORT_PO_NUMBER', ""),
+            "report_company_business_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER', ""),
+            "report_company_procurement_leader": os.getenv('METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER', ""),
+            "report_end_user_company_name": os.getenv('METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME', ""),
+            "report_end_user_company_city": os.getenv('METRICS_UTILITY_REPORT_END_USER_CITY', ""),
+            "report_end_user_company_state": os.getenv('METRICS_UTILITY_REPORT_END_USER_STATE', ""),
+            "report_end_user_company_country": os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ""),
+            # Renewal guidance specific params
+            "report_renewal_guidance_dedup_iterations": os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', "3"),
+            "report_organization_filter": os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER', None),
+            # S3 specific options
+            "s3_bucket_name": os.getenv('METRICS_UTILITY_BUCKET_NAME', None),
+            "s3_bucket_endpoint": os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', None),
+            "s3_bucket_region": os.getenv('METRICS_UTILITY_BUCKET_REGION', None),
+            "s3_bucket_id": os.getenv('METRICS_UTILITY_BUCKET_ID', None),
+            "s3_bucket_key": os.getenv('METRICS_UTILITY_BUCKET_KEY', None),
+        })
+        return base
 
     def _handle_month(self, month):
         # Process month argument

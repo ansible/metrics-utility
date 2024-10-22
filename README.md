@@ -50,7 +50,7 @@ git clone https://github.com/ansible/metrics-utility.git
 # Install the utility
 cd metrics-utility
 pip install .
-# Successfully installed metrics-utility-0.0.1
+# Successfully installed metrics-utility
 
 which metrics-utility
 # /var/lib/awx/venv/awx/bin/metrics-utility
@@ -61,6 +61,38 @@ mv /var/lib/awx/venv/awx/bin/metrics-utility /usr/bin/
 
 ## Available functionality
 
+### Available storage adapters
+
+#### Local directory
+
+Storing datasets under a local directory. With using PVC on OpenShift deployments.
+
+```
+# Set needed ENV VARs for data gathering
+export METRICS_UTILITY_SHIP_TARGET=directory
+export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+```
+
+#### Object storage with S3 interface
+
+Object storage with S3 like interface
+
+```
+# Set needed ENV VARs for data gathering
+export METRICS_UTILITY_SHIP_TARGET=s3
+export METRICS_UTILITY_SHIP_PATH=metrics-utility/shipped_data
+
+# Define S3 config
+export METRICS_UTILITY_BUCKET_NAME=metrics-utility
+export METRICS_UTILITY_BUCKET_ENDPOINT=<endpoint to your S3>
+# For AWS S3, define also a region
+# export METRICS_UTILITY_BUCKET_REGION="us-east-1"
+
+# Define S3 credentials
+export METRICS_UTILITY_BUCKET_ACCESS_KEY=<access_key>
+export METRICS_UTILITY_BUCKET_SECRET_KEY=<secret_key>
+```
+
 
 ### Local data gathering and CCSP report generation
 
@@ -68,13 +100,11 @@ This set of commands will be periodically storing data and generating CCSP repor
 Run this command as a cronjob.
 
 
-#### Example with local directory storage CCSP type
+#### Example for CCSP type report
+
+Set a storage adapter and path first, pick one from [Available storage adapters](#available-storage-adapters)
 
 ```
-# Set needed ENV VARs for data gathering
-export METRICS_UTILITY_SHIP_TARGET=directory
-export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
-
 # Set extra ENV VARs for report generation purposes
 export METRICS_UTILITY_REPORT_TYPE=CCSP
 export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
@@ -95,13 +125,11 @@ metrics-utility build_report
 ```
 
 
-#### Example with local directory storage CCSPv2 type
+#### Example for CCSPv2 type report
+
+Set a storage adapter and path first, pick one from [Available storage adapters](#available-storage-adapters)
 
 ```
-# Set needed ENV VARs for data gathering
-export METRICS_UTILITY_SHIP_TARGET=directory
-export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
-
 # Set extra ENV VARs for report generation purposes
 export METRICS_UTILITY_REPORT_TYPE=CCSPv2
 export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
@@ -126,24 +154,22 @@ python manage.py build_report
 # or metrics-utility build_report
 
 # Build report for a specific month
-python manage.py build_report --month=2024=06
+python manage.py build_report --month=2024-06
 
 
 ```
 
-#### Example with local directory storage CCSPv2 type report for jobs, organizations and managed nodes usage history
+#### Example for CCSPv2 type report for jobs, organizations and managed nodes usage history
 
 This example reuses CCSPv2 type, but just provides a usage report outside of CCSP domain
 
-```
-# Set needed ENV VARs for data gathering
-export METRICS_UTILITY_SHIP_TARGET=directory
-export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+Set a storage adapter and path first, pick one from [Available storage adapters](#available-storage-adapters)
 
-# Set extra ENV VARs for report generation purposes
+```
+# Set report type
 export METRICS_UTILITY_REPORT_TYPE=CCSPv2
 
-# Optionally set subset of sheets to be built, the default list is:
+# Set subset of sheets to be built:
 export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS='jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations'
 
 # Optionally add a semicolon separated list of organizations, to limit the report only for certain orgs
@@ -169,7 +195,8 @@ export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
 export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
 
 # Builds report covering 365days back by default
-metrics-utility build_report --since=12months --ephemeral=1month
+python manage.py build_report --since=12months --ephemeral=1month
+# or metrics-utility build_report --since=12months --ephemeral=1month
 ```
 
 ### Pushing data periodically into console.redhat.com
