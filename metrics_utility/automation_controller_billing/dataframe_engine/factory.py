@@ -7,6 +7,9 @@ from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_co
 from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric \
     import DBDataframeHostMetric
 
+from metrics_utility.exceptions import NotSupportedFactory
+
+
 class Factory:
     def __init__(self, extractor, month, extra_params):
         self.extractor = extractor
@@ -27,6 +30,8 @@ class Factory:
         elif self.report_type == "RENEWAL_GUIDANCEv2":
             return (self._get_dataframe_jobhost_summary_usage().build_dataframe(),
                     self._get_dataframe_content_usage().build_dataframe())
+        else:
+            raise NotSupportedFactory(f"Factory for {self.ship_target} not supported")
 
 
     def _get_dataframe_jobhost_summary_usage(self):
