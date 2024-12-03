@@ -51,3 +51,6 @@
 - make CCSPv2 report generated sheets configurable, to be able to use it as a report for AAP historical usage
 - allow arbitrary date range selection for the CCSPv2 report
 - introducing S3 adapter for CCSP types of reports
+
+## 0.4.1
+- relax boto3 requirement so it builds with any version available
