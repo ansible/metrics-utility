@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Configure linters
-        run : |-
+        run: |-
           # echo "disable=SC2086" > ~/.shellcheckrc
           mkdir -vp .github/linters/config/
           curl -o .github/linters/config/.jscpd.json https://raw.githubusercontent.com/ansible/metrics-utility/main/.github/linters/.jscpd.json
@@ -53,3 +53,20 @@ jobs:
         run: |-
           pip3 install pytest pytest-mock mock mocker
           # pytest -s -v tests/
+
+  sonarcloud-analysis:
+    runs-on: ubuntu-latest
+    needs: static-analysis
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SonarCloud
+        uses: sonarsource/sonarcloud-github-action@v2
+        with:
+          projectKey: ansible_metrics-utility
+          organization: ansible
+          token: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Run SonarCloud analysis
+        run: sonar-scanner
