@@ -15,8 +15,9 @@ Ensure the following tasks are completed before submitting the PR:
 - [ ] Code is linted and formatted.
 - [ ] All existing and new tests pass.
 - [ ] New tests have been written or existing tests have been updated.
-- [ ] Documentation is updated, if necessary.
-- [ ] Changes are reviewed by a team member.
+- [ ] Documentation is updated, if necessary, 
+      but docs will live in handbook repo, so if needed, separate PR for handbook should be created.
+- [ ] Changes are reviewed by a two team members.
 
 # Notes for Reviewers
 Add any additional context or instructions for reviewers here.
