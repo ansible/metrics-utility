@@ -1,4 +1,3 @@
-# Brief Title Describing the Change
 [AAP-XXXXX]
 Dont forget to link back issue to PR.
 
