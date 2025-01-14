@@ -60,6 +60,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Validate SONAR_TOKEN
+        run: |
+          if [ -z "${{ secrets.SONAR_TOKEN }}" ]; then
+            echo "SONAR_TOKEN is not set or empty."
+            exit 1
+          else
+            echo "SONAR_TOKEN is set."
+          fi
+
       - name: Set up SonarCloud
         uses: sonarsource/sonarcloud-github-action@v2
         with:
