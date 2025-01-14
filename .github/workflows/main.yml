@@ -63,9 +63,7 @@ jobs:
       - name: Set up SonarCloud
         uses: sonarsource/sonarcloud-github-action@v2
         with:
-          projectKey: ansible_metrics-utility
-          organization: ansible
-          token: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Run SonarCloud analysis
-        run: sonar-scanner
+          args: >
+            -Dsonar.projectKey=ansible_metrics-utility
+            -Dsonar.organization=ansible
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
