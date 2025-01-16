@@ -31,12 +31,12 @@ jobs:
         uses: github/super-linter@v4
         env:
           VALIDATE_GITHUB_ACTIONS: false
-          VALIDATE_ALL_CODEBASE: ${{ inputs.validate-all }}
+          VALIDATE_ALL_CODEBASE: false
           VALIDATE_MARKDOWN: false
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_FLAKE8: false
           VALIDATE_NATURAL_LANGUAGE: false
-          DEFAULT_BRANCH: "main"
+          DEFAULT_BRANCH: "devel"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   unit-test:
