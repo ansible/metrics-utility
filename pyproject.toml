@@ -2,11 +2,17 @@
 requires = ["setuptools>=45", "setuptools_scm[toml]>=6.0"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "metrics-utility"
+version = "0.1.0"
+description = "A metrics utility for Ansible"
+dependencies = [
+    "ruff",
+    "pytest",
+    "Django>=4.0,<5.0",
+    "pre-commit",
+]
+
 # Do not uncomment the line below. We need to be able to override the version via a file, and this
 # causes the "version" key in setup.cfg to be ignored.
 # [tool.setuptools_scm]
-
-[tool.black]
-line-length = 160
-fast = true
-skip-string-normalization = true
