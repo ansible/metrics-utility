@@ -1,7 +1,9 @@
 import pandas as pd
 import pytest
 
-file_path = "/awx_devel/awx-dev/metrics-utility/shipped_data/billing/reports/2025/01/CCSPv2-2025-01.xlsx"
+file_path = (
+    "/awx_devel/awx-dev/metrics-utility/shipped_data/billing/reports/2025/01/CCSPv2-2025-01.xlsx"
+)
 
 EXPECTED_SHEETS = {
     "Usage Reporting": [
@@ -73,10 +75,14 @@ def test_sheet_columns(sheet_name, expected_columns):
         print(f"Expected columns (normalized): {expected_columns}")
         print(f"Mismatched columns: {set(actual_columns) ^ set(expected_columns)}")
 
-    assert actual_columns == expected_columns, f"Column names do not match for sheet: {sheet_name}"
+    assert (
+        actual_columns == expected_columns
+    ), f"Column names do not match for sheet: {sheet_name}"
 
 
 def test_sheet_tab_names():
     """Test the sheet names in the Excel file."""
     excel_data = pd.ExcelFile(file_path)
-    assert excel_data.sheet_names == list(EXPECTED_SHEETS.keys()), "Sheet names do not match."
+    assert excel_data.sheet_names == list(
+        EXPECTED_SHEETS.keys()
+    ), "Sheet names do not match."
