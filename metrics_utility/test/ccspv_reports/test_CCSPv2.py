@@ -5,33 +5,46 @@ file_path = "/awx_devel/awx-dev/metrics-utility/shipped_data/billing/reports/202
 
 EXPECTED_SHEETS = {
     "Usage Reporting": [
-        'CCSP NA Direct Reporting Template', 'Unnamed: 1', 'Unnamed: 2',
-        'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5', 'Unnamed: 6',
-        'Updated: Jan 17, 2025', 'Unnamed: 8', 'Unnamed: 9', 'Unnamed: 10'
+        'CCSP NA Direct Reporting Template',
+        'Unnamed: 1',
+        'Unnamed: 2',
+        'Unnamed: 3',
+        'Unnamed: 4',
+        'Unnamed: 5',
+        'Unnamed: 6',
+        'Updated: Jan 17, 2025',
+        'Unnamed: 8',
+        'Unnamed: 9',
+        'Unnamed: 10',
     ],
-    "Managed nodes": [
-        'Host name', 'Automated by\norganizations', 'Job runs',
-        'Number of task\nruns', 'First\nautomation', 'Last\nautomation'
-    ],
+    "Managed nodes": ['Host name', 'Automated by\norganizations', 'Job runs', 'Number of task\nruns', 'First\nautomation', 'Last\nautomation'],
     "Usage by organizations": [
-        'Organization name', 'Job runs',
-        'Unique managed nodes\nautomated', 'Non-unique managed\nnodes automated',
-        'Number of task\nruns'
+        'Organization name',
+        'Job runs',
+        'Unique managed nodes\nautomated',
+        'Non-unique managed\nnodes automated',
+        'Number of task\nruns',
     ],
     "Usage by collections": [
-        'Collection name', 'Unique managed nodes\nautomated',
-        'Non-unique managed\nnodes automated', 'Number of task\nruns',
-        'Duration of task\nruns [seconds]'
+        'Collection name',
+        'Unique managed nodes\nautomated',
+        'Non-unique managed\nnodes automated',
+        'Number of task\nruns',
+        'Duration of task\nruns [seconds]',
     ],
     "Usage by roles": [
-        'Role name', 'Unique managed nodes\nautomated',
-        'Non-unique managed\nnodes automated', 'Number of task\nruns',
-        'Duration of task\nruns [seconds]'
+        'Role name',
+        'Unique managed nodes\nautomated',
+        'Non-unique managed\nnodes automated',
+        'Number of task\nruns',
+        'Duration of task\nruns [seconds]',
     ],
     "Usage by modules": [
-        'Module name', 'Unique managed nodes\nautomated',
-        'Non-unique managed\nnodes automated', 'Number of task\nruns',
-        'Duration of task\nruns [seconds]'
+        'Module name',
+        'Unique managed nodes\nautomated',
+        'Non-unique managed\nnodes automated',
+        'Number of task\nruns',
+        'Duration of task\nruns [seconds]',
     ],
 }
 
@@ -39,6 +52,7 @@ EXPECTED_SHEETS = {
 @pytest.mark.parametrize("sheet_name, expected_columns", EXPECTED_SHEETS.items())
 def test_sheet_columns(sheet_name, expected_columns):
     """Test the column names for each sheet."""
+
     def normalize_column(col):
         return col.strip().replace("\\n", "\n").replace("\n", " ").lower()
 
@@ -53,8 +67,6 @@ def test_sheet_columns(sheet_name, expected_columns):
         print(f"Mismatched columns: {set(actual_columns) ^ set(expected_columns)}")
 
     assert actual_columns == expected_columns, f"Column names do not match for sheet: {sheet_name}"
-
-
 
 
 def test_sheet_tab_names():
