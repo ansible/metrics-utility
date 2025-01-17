@@ -50,9 +50,12 @@ class DataframeJobhostSummaryUsage(Base):
                 billing_data['created'] = pd.to_datetime(
                     billing_data['created']).dt.tz_localize(None)
 
-                billing_data['job_created'] = pd.to_datetime(
-                    billing_data['job_created']).dt.tz_localize(None)
-
+                if ('job_created' in billing_data):
+                    billing_data['job_created'] = pd.to_datetime(
+                        billing_data['job_created']).dt.tz_localize(None)
+                else:
+                    billing_data['job_created'] = ''
+                    
                 ################################
                 # Do the aggregation
                 ################################
