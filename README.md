@@ -2,7 +2,7 @@
 
 The AAP metrics utility tool is a standalone CLI utility called `metrics-utility` which is intended to be installed to
 the system containing instance of the [Automation Controller](https://www.ansible.com/products/controller).
-It's an alternative command line tool for the Controller's CLI `awx-manage`
+It's an alternative command line tool for the Controller's CLI `awx-manage`.
 
 ## Installation
 
