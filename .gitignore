@@ -40,3 +40,6 @@ metrics_utility/test/test_data/data/2024/**/*.csv
 
 # Reports
 /metrics_utility/test/test_data/reports/
+
+# Shipped data - for regular usage during developement
+/shipped_data
