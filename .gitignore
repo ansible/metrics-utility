@@ -30,3 +30,13 @@ testem.log
 
 # PyCharm
 .idea/*
+
+# Testing data
+metrics_utility/test/test_data/data/**
+!metrics_utility/test/test_data/data/2024/
+!metrics_utility/test/test_data/data/2024/**
+metrics_utility/test/test_data/data/2024/**/*.json
+metrics_utility/test/test_data/data/2024/**/*.csv
+
+# Reports
+/metrics_utility/test/test_data/reports/
