@@ -12,6 +12,7 @@ dependencies = [
     "Django>=4.0,<5.0",
     "pre-commit",
 ]
+requires-python = ">=3.12"
 
 # Do not uncomment the line below. We need to be able to override the version via a file, and this
 # causes the "version" key in setup.cfg to be ignored.
