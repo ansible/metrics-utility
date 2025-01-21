@@ -74,31 +74,9 @@ def test_command():
 
     assert result.returncode == 0
 
-    for sheet_name, expected_columns in EXPECTED_SHEETS.items():
-        validate_sheet_columns(sheet_name=sheet_name, expected_columns=expected_columns)
+    validate_sheet_columns()
     validate_sheet_tab_names()
     cleanup()
-
-def validate_sheet_columns(sheet_name, expected_columns):
-    """Test the column names for each sheet."""
-
-    def normalize_column(col):
-        return col.strip().replace("\n", " ").lower()
-
-    df = pd.read_excel(file_path, sheet_name=sheet_name)
-    actual_columns = [normalize_column(col) for col in df.columns.tolist()]
-    expected_columns = [normalize_column(col) for col in expected_columns]
-
-    if actual_columns != expected_columns:
-        print(f"Mismatch for sheet: {sheet_name}")
-        print(f"Actual columns (normalized): {actual_columns}")
-        print(f"Expected columns (normalized): {expected_columns}")
-        print(f"Mismatched columns: {set(actual_columns) ^ set(expected_columns)}")
-
-    assert (
-        actual_columns == expected_columns
-    ), f"Column names do not match for sheet: {sheet_name}"
-
 
 def validate_sheet_tab_names():
     """Test the sheet names in the Excel file."""
@@ -106,6 +84,27 @@ def validate_sheet_tab_names():
     assert excel_data.sheet_names == list(
         EXPECTED_SHEETS.keys()
     ), "Sheet names do not match."
+
+def validate_sheet_columns():
+    """Test the column names for each sheet."""
+
+    def normalize_column(col):
+        return col.strip().replace("\n", " ").lower()
+
+    for sheet_name, expected_columns in EXPECTED_SHEETS.items():
+        df = pd.read_excel(file_path, sheet_name=sheet_name)
+        actual_columns = [normalize_column(col) for col in df.columns.tolist()]
+        expected_columns = [normalize_column(col) for col in expected_columns]
+
+        if actual_columns != expected_columns:
+            print(f"Mismatch for sheet: {sheet_name}")
+            print(f"Actual columns (formatted): {actual_columns}")
+            print(f"Expected columns (formatted): {expected_columns}")
+
+        assert (
+            actual_columns == expected_columns
+        ), f"Column names do not match for sheet: {sheet_name}"
+
 
 def cleanup():
        if os.path.exists(file_path):
