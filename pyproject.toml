@@ -7,10 +7,18 @@ name = "metrics-utility"
 version = "0.1.0"
 description = "A metrics utility for Ansible"
 dependencies = [
-    "ruff",
-    "pytest",
     "Django>=4.0,<5.0",
-    "pre-commit",
+    "boto3>=1.36.2",
+    "botocore>=1.36.2",
+    "distro>=1.9.0",
+    "insights-analytics-collector==0.3.2",
+    "openpyxl==3.1.2",
+    "pandas==2.2.1",
+    "pre-commit>=4.0.1",
+    "pytest>=8.3.4",
+    "requests>=2.32.3",
+    "ruff>=0.9.2",
+    "setuptools>=75.8.0",
 ]
 requires-python = ">=3.12"
 
