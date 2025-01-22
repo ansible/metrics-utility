@@ -1,9 +1,10 @@
-import pandas as pd
+
 import os
-import subprocess
 import sys
-import pytest
 from datetime import datetime
+import pandas as pd
+import pytest
+import subprocess
 
 env_vars = {
     "METRICS_UTILITY_PRICE_PER_NODE": "11.55",
