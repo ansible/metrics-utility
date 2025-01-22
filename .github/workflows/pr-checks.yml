@@ -1,0 +1,33 @@
+name: "PR checks"
+
+on:
+  pull_request:
+    branches: [ 'devel', ]
+
+jobs:
+
+  pr-checks:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: "Checkout metrics-utility (${{ github.ref }})"
+      uses: actions/checkout@v4
+
+    - name: "Install python 3.11"
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: "Install uv"
+      run: |
+        pip install uv
+
+    - name: "Install pre-commit"
+      run: |
+        pip install pre-commit
+
+    - name: "Check for changes in uv.lock file"
+      run: |
+        # fail if uv sync had to change uv.lock
+        uv sync
+        git diff --exit-code uv.lock
