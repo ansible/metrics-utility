@@ -71,23 +71,6 @@ def cleanup():
     if os.path.exists(file_path):
         os.remove(file_path)
 
-def test_command(cleanup):
-    print("Test running")
-
-    python_executable = sys.executable
-    result = subprocess.run(
-        [python_executable, 'manage.py', 'build_report', '--month=2024-02', '--force'],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env_vars,
-    )
-
-    assert result.returncode == 0
-
-    validate_sheet_columns()
-    validate_sheet_tab_names()
-
 def validate_sheet_tab_names():
     """Test the sheet names in the Excel file."""
     excel_data = pd.ExcelFile(file_path)
@@ -114,3 +97,21 @@ def validate_sheet_columns():
         assert (
             actual_columns == expected_columns
         ), f"Column names do not match for sheet: {sheet_name}"
+
+
+def test_command(cleanup):
+    """Build xlsx report using build command and test its contents."""
+
+    python_executable = sys.executable
+    result = subprocess.run(
+        [python_executable, 'manage.py', 'build_report', '--month=2024-02', '--force'],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env_vars,
+    )
+
+    assert result.returncode == 0
+
+    validate_sheet_columns()
+    validate_sheet_tab_names()
