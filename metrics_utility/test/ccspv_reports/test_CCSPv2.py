@@ -24,9 +24,8 @@ env_vars = {
     "AWX_LOGGING_MODE": "stdout",
 }
 
-file_path = (
-    "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/reports/2024/02/CCSPv2-2024-02.xlsx"
-)
+file_path = "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/reports/2024/02/CCSPv2-2024-02.xlsx"
+
 
 date_today = datetime.now().strftime("%b %d, %Y")
 EXPECTED_SHEETS = {
@@ -60,6 +59,7 @@ EXPECTED_SHEETS = {
     ],
 }
 
+
 @pytest.fixture
 def cleanup():
     """Fixture to clean up the generated file at the start and end of test."""
@@ -71,12 +71,14 @@ def cleanup():
     if os.path.exists(file_path):
         os.remove(file_path)
 
+
 def validate_sheet_tab_names():
     """Test the sheet names in the Excel file."""
     excel_data = pd.ExcelFile(file_path)
     assert excel_data.sheet_names == list(
         EXPECTED_SHEETS.keys()
     ), "Sheet names do not match."
+
 
 def validate_sheet_columns():
     """Test the column names for each sheet."""
@@ -104,7 +106,7 @@ def test_command(cleanup):
 
     python_executable = sys.executable
     result = subprocess.run(
-        [python_executable, 'manage.py', 'build_report', '--month=2024-02', '--force'],
+        [python_executable, "manage.py", "build_report", "--month=2024-02", "--force"],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
