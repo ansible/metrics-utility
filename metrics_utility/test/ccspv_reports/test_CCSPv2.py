@@ -2,6 +2,8 @@ import pandas as pd
 import os
 import subprocess
 import sys
+import pytest
+from datetime import datetime
 
 env_vars = {
     "METRICS_UTILITY_PRICE_PER_NODE": "11.55",
@@ -26,7 +28,7 @@ file_path = (
     "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/reports/2024/02/CCSPv2-2024-02.xlsx"
 )
 
-
+date_today = datetime.now().strftime("%b %d, %Y")
 EXPECTED_SHEETS = {
     "Usage Reporting": [
         "CCSP NA Direct Reporting Template",
@@ -36,7 +38,7 @@ EXPECTED_SHEETS = {
         "Unnamed: 4",
         "Unnamed: 5",
         "Unnamed: 6",
-        "Updated: Jan 21, 2025",
+        f"Updated: {date_today}",
         "Unnamed: 8",
         "Unnamed: 9",
         "Unnamed: 10",
@@ -58,10 +60,19 @@ EXPECTED_SHEETS = {
     ],
 }
 
-def test_command():
-    print("Test running")
+@pytest.fixture
+def cleanup():
+    """Fixture to clean up the generated file at the start and end of test."""
+    # Cleanup at the beginning
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    yield
+    # Cleanup at the end
+    if os.path.exists(file_path):
+        os.remove(file_path)
 
-    cleanup()
+def test_command(cleanup):
+    print("Test running")
 
     python_executable = sys.executable
     result = subprocess.run(
@@ -76,7 +87,6 @@ def test_command():
 
     validate_sheet_columns()
     validate_sheet_tab_names()
-    cleanup()
 
 def validate_sheet_tab_names():
     """Test the sheet names in the Excel file."""
@@ -104,8 +114,3 @@ def validate_sheet_columns():
         assert (
             actual_columns == expected_columns
         ), f"Column names do not match for sheet: {sheet_name}"
-
-
-def cleanup():
-       if os.path.exists(file_path):
-        os.remove(file_path)
