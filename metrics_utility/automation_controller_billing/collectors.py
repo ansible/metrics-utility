@@ -2,18 +2,19 @@ import json
 import os
 import os.path
 import platform
-import distro
 
-from django.db import connection
+import distro
+from awx.conf.license import get_license
+from awx.main.utils import datetime_hook, get_awx_version
 from django.conf import settings
+from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
-
-from awx.conf.license import get_license
-from awx.main.utils import get_awx_version, datetime_hook
 # TODO: enhance the CsvFIleSplitter base class and use that
-from insights_analytics_collector import register #, CsvFileSplitter
-from metrics_utility.automation_controller_billing.csv_file_splitter import CsvFileSplitter
+from insights_analytics_collector import register  # , CsvFileSplitter
+
+from metrics_utility.automation_controller_billing.csv_file_splitter import \
+    CsvFileSplitter
 
 """
 This module is used to define metrics collected by

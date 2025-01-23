@@ -1,7 +1,9 @@
-from metrics_utility.automation_controller_billing.extract.extractor_directory import ExtractorDirectory
-from metrics_utility.automation_controller_billing.extract.extractor_controller_db import ExtractorControllerDB
-from metrics_utility.automation_controller_billing.extract.extractor_s3 import ExtractorS3
-
+from metrics_utility.automation_controller_billing.extract.extractor_controller_db import \
+    ExtractorControllerDB
+from metrics_utility.automation_controller_billing.extract.extractor_directory import \
+    ExtractorDirectory
+from metrics_utility.automation_controller_billing.extract.extractor_s3 import \
+    ExtractorS3
 from metrics_utility.exceptions import NotSupportedFactory
 
 

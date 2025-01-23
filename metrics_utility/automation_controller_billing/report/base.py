@@ -1,11 +1,11 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
+import os
+
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
-
-import os
 
 
 class Base:

@@ -1,17 +1,21 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
-from metrics_utility.automation_controller_billing.helpers import parse_number_of_days
-from metrics_utility.automation_controller_billing.report.base import Base
-from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup
+import datetime
+import time
+
+import pandas as pd
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-import datetime
-import pandas as pd
-import time
+from metrics_utility.automation_controller_billing.helpers import \
+    parse_number_of_days
+from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import \
+    Dedup
+
 
 class ReportRenewalGuidance(Base):
     def __init__(self, dataframe, report_period, extra_params):
@@ -160,11 +164,11 @@ class ReportRenewalGuidance(Base):
 
     def df_managed_nodes_query(self, dataframe, ephemeral=None, with_deleted=False):
         if ephemeral is None:
-            return dataframe[dataframe["deleted"]==False]
+            return dataframe[not dataframe["deleted"]]
         else:
             # Take only non deleted
             if not with_deleted:
-                dataframe = dataframe[dataframe["deleted"]==False]
+                dataframe = dataframe[not dataframe["deleted"]]
 
             # Filter ephemeral based on number of automated days
             ephemeral_days = parse_number_of_days(self.extra_params.get("opt_ephemeral"))
@@ -182,7 +186,7 @@ class ReportRenewalGuidance(Base):
                                  (dataframe["first_automation"] > ephemeral_threshold)]
 
     def df_deleted_managed_nodes_query(self, dataframe):
-        return dataframe[dataframe["deleted"]==True]
+        return dataframe[dataframe["deleted"]]
 
     def get_intervals(self, start_date, end_date, interval_size):
         intervals = []

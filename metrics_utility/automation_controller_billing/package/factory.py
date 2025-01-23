@@ -1,6 +1,9 @@
-from metrics_utility.automation_controller_billing.package.package_crc import PackageCRC
-from metrics_utility.automation_controller_billing.package.package_directory import PackageDirectory
-from metrics_utility.automation_controller_billing.package.package_s3 import PackageS3
+from metrics_utility.automation_controller_billing.package.package_crc import \
+    PackageCRC
+from metrics_utility.automation_controller_billing.package.package_directory import \
+    PackageDirectory
+from metrics_utility.automation_controller_billing.package.package_s3 import \
+    PackageS3
 from metrics_utility.exceptions import NotSupportedFactory
 
 

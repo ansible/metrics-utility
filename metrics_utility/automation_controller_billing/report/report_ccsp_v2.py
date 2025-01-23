@@ -1,14 +1,16 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
-from metrics_utility.automation_controller_billing.report.base import Base
+import time
+
+import pandas as pd
 from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-import pandas as pd
-import time
+from metrics_utility.automation_controller_billing.report.base import Base
+
 
 class ReportCCSPv2(Base):
     # BLACK_COLOR_HEX = "00000000"

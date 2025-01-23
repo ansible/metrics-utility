@@ -2,7 +2,6 @@ import logging
 import os
 
 
-
 class ReportSaverDirectory():
     LOG_PREFIX = "[ExtractorDirectory]"
 

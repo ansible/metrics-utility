@@ -1,20 +1,20 @@
 import contextlib
 import json
 import logging
-from django.conf import settings
-from django.db import connection
 
 import insights_analytics_collector as base
-
+from awx.main.utils import datetime_hook
+from awx.main.utils.pglock import advisory_lock
+from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import connection
+
 # from awx.conf.license import get_license
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
-from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
-
-from awx.main.utils import datetime_hook
-from awx.main.utils.pglock import advisory_lock
+from metrics_utility.automation_controller_billing.package.factory import \
+    Factory as PackageFactory
 
 logger = logging.getLogger('metrics_utility.collector')
 
@@ -129,7 +129,7 @@ class Collector(base.Collector):
         if self.is_shipping_enabled():
             # We need to wait on analytics lock, to update the last collected timestamp settings
             # so we don't clash with analytics job collection.
-            with self._pg_advisory_lock("gather_analytics_lock", wait=True) as acquired:
+            with self._pg_advisory_lock("gather_analytics_lock", wait=True):
                 # We need to load fresh settings again as we're obtaning the lock, since
                 # Analytics job could have changed this on the background and we'd be resetting
                 # the Analytics values here.

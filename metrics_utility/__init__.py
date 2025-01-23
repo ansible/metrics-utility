@@ -1,6 +1,6 @@
+import importlib.util
 import os
 import sys
-import importlib.util
 
 from metrics_utility.management_utility import ManagementUtility
 
@@ -18,8 +18,8 @@ def manage():
             sys.stderr.write(f"Automation Controller modules not found in {awx_path}\n")
             exit(1)
 
-    from awx import prepare_env
     import django
+    from awx import prepare_env
 
     prepare_env()
     django.setup()

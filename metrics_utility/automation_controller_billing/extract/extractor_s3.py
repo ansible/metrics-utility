@@ -6,7 +6,8 @@ import tempfile
 
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
+from metrics_utility.automation_controller_billing.base.s3_handler import \
+    S3Handler
 
 
 class ExtractorS3():

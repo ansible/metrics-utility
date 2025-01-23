@@ -1,8 +1,9 @@
 import logging
+
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base \
-    import Base
+from metrics_utility.automation_controller_billing.dataframe_engine.base import \
+    Base
 
 logger = logging.getLogger(__name__)
 

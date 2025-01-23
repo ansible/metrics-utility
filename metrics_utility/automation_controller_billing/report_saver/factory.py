@@ -1,6 +1,7 @@
-from metrics_utility.automation_controller_billing.report_saver.report_saver_directory import ReportSaverDirectory
-from metrics_utility.automation_controller_billing.report_saver.report_saver_s3 import ReportSaverS3
-
+from metrics_utility.automation_controller_billing.report_saver.report_saver_directory import \
+    ReportSaverDirectory
+from metrics_utility.automation_controller_billing.report_saver.report_saver_s3 import \
+    ReportSaverS3
 from metrics_utility.exceptions import NotSupportedFactory
 
 

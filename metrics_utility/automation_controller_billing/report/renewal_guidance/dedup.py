@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class Dedup:
     def __init__(self, dataframe, extra_params):
         self.dataframe = dataframe
@@ -51,8 +52,8 @@ class Dedup:
             deduped_list.append({
                 'hostname': latest_hostname,
                 'hostmetric_record_count': dupes['hostname'].nunique(),
-                'hostmetric_record_count_active': dupes[~dupes["deleted"]==True]['hostname'].nunique(),
-                'hostmetric_record_count_deleted': dupes[dupes["deleted"]==True]['hostname'].nunique(),
+                'hostmetric_record_count_active': dupes[~dupes["deleted"]]['hostname'].nunique(),
+                'hostmetric_record_count_deleted': dupes[dupes["deleted"]]['hostname'].nunique(),
                 'hostnames': self.stringify(set(dupes['hostname'])),
                 'ansible_host_variables': self.stringify(set(dupes['ansible_host_variable'])),
                 'ansible_product_serials': self.stringify(set(dupes['ansible_product_serial'])),
@@ -75,5 +76,3 @@ class Dedup:
         dupes = pd.concat([dupes,next_iteration_dupes]).drop_duplicates().reset_index(drop=True)
 
         return dupes
-
-

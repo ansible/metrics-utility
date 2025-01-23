@@ -1,16 +1,19 @@
+import datetime
 import logging
 import os
-
-import datetime
-from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar, FailedToUploadPayload,\
-    BadRequiredEnvVar, NoAnalyticsCollected
-from metrics_utility.automation_controller_billing.collector import Collector
-from metrics_utility.management.validation import handle_directory_ship_target, handle_s3_ship_target, \
-    handle_crc_ship_target
 
 from dateutil import parser
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
+from metrics_utility.automation_controller_billing.collector import Collector
+from metrics_utility.exceptions import (BadRequiredEnvVar, BadShipTarget,
+                                        FailedToUploadPayload,
+                                        MissingRequiredEnvVar,
+                                        NoAnalyticsCollected)
+from metrics_utility.management.validation import (
+    handle_crc_ship_target, handle_directory_ship_target,
+    handle_s3_ship_target)
 
 
 class Command(BaseCommand):

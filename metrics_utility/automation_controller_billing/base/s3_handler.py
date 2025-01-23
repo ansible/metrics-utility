@@ -1,7 +1,9 @@
 import logging
+import os
+
 import boto3
 from botocore.exceptions import ClientError
-import os
+
 
 class S3Handler():
     def __init__(self, params):

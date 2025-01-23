@@ -1,13 +1,13 @@
-import os
-import requests
 import json
+import os
 
 import insights_analytics_collector as base
-
+import requests
 from awx.main.utils import get_awx_http_client_headers
+from django.conf import settings
+
 from metrics_utility.exceptions import FailedToUploadPayload
 
-from django.conf import settings
 
 class PackageCRC(base.Package):
     CERT_PATH = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"

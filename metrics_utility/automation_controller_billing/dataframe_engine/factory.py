@@ -1,12 +1,9 @@
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_jobhost_summary_usage \
-    import DataframeJobhostSummaryUsage
-
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage \
-    import DataframeContentUsage
-
-from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric \
-    import DBDataframeHostMetric
-
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import \
+    DataframeContentUsage
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_jobhost_summary_usage import \
+    DataframeJobhostSummaryUsage
+from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric import \
+    DBDataframeHostMetric
 from metrics_utility.exceptions import NotSupportedFactory
 
 

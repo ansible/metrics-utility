@@ -1,7 +1,8 @@
 import os
 import sys
-import django.core.management as management
 from importlib import import_module
+
+import django.core.management as management
 
 
 class ManagementUtility(management.ManagementUtility):
