@@ -14,7 +14,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
 
 from awx.main.utils import datetime_hook
-from awx.main.utils.pglock import advisory_lock
+from ansible_base.lib.utils.db import advisory_lock
 
 logger = logging.getLogger('metrics_utility.collector')
 
