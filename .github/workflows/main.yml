@@ -17,27 +17,32 @@ jobs:
     name: Static Analysis
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Configure linters
+      - name: Install UV
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.5.23"
+
+        name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install the project with uv
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff
+        run: ruff check --output-format=github .
+
+      - name: Configure JSCPD Linter
         run : |-
           # echo "disable=SC2086" > ~/.shellcheckrc
           mkdir -vp .github/linters/config/
           curl -o .github/linters/config/.jscpd.json https://raw.githubusercontent.com/ansible/metrics-utility/main/.github/linters/.jscpd.json
 
-      - name: Lint
-        uses: github/super-linter@v4
-        env:
-          VALIDATE_GITHUB_ACTIONS: false
-          VALIDATE_ALL_CODEBASE: false
-          VALIDATE_MARKDOWN: false
-          VALIDATE_PYTHON_MYPY: false
-          VALIDATE_PYTHON_FLAKE8: false
-          VALIDATE_NATURAL_LANGUAGE: false
-          DEFAULT_BRANCH: "devel"
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   unit-test:
     name: Unit Tests
