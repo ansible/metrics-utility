@@ -1,4 +1,3 @@
-import io
 import os
 
 from insights_analytics_collector import CsvFileSplitter as BaseCsvFileSplitter

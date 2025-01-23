@@ -1,10 +1,8 @@
 import logging
-import datetime
 import pandas as pd
-from dateutil.relativedelta import relativedelta
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base \
-    import Base, list_dates
+    import Base
 
 logger = logging.getLogger(__name__)
 

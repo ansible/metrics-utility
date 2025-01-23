@@ -1,13 +1,11 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 import os
-import pandas as pd
 
 
 class Base:

@@ -5,7 +5,6 @@ import datetime
 from dateutil.parser import parse as date_parse
 from dateutil.relativedelta import relativedelta
 from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar
-from metrics_utility.automation_controller_billing.collector import Collector
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
@@ -13,7 +12,6 @@ from metrics_utility.automation_controller_billing.report_saver.factory import F
 from metrics_utility.automation_controller_billing.helpers import parse_date_param
 from metrics_utility.management.validation import handle_directory_ship_target, handle_s3_ship_target
 
-from dateutil import parser
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 

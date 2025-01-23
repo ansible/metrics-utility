@@ -1,7 +1,6 @@
 import os
 import requests
 import json
-import logging
 
 import insights_analytics_collector as base
 

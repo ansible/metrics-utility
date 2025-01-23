@@ -109,7 +109,7 @@ class ExtractorDirectory():
             with open(file_path) as f:
                 config_data = json.loads(f.read())
             return config_data
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             self.logger.warn(f"{self.LOG_PREFIX} missing required file under path: {self.path} and date: {self.date}")
             # raise MissingRequiredFile(self.filename) from e
 
@@ -118,7 +118,7 @@ class ExtractorDirectory():
 
         try:
             paths = [os.path.join(prefix, f) for f in os.listdir(prefix) if os.path.isfile(os.path.join(prefix, f))]
-        except FileNotFoundError as e:
+        except FileNotFoundError:
             paths = []
 
         return paths

@@ -1,7 +1,5 @@
 import os
-import shutil
 import insights_analytics_collector as base
-import tempfile
 
 from django.conf import settings
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
