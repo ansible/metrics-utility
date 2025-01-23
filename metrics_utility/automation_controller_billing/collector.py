@@ -1,27 +1,33 @@
 import contextlib
 import json
 import logging
-from django.conf import settings
-from django.db import connection
 
 import insights_analytics_collector as base
-
+from ansible_base.lib.utils.db import advisory_lock
+from awx.main.utils import datetime_hook
+from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import connection
+
 # from awx.conf.license import get_license
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
-from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+from metrics_utility.automation_controller_billing.package.factory import (
+    Factory as PackageFactory,
+)
 
-from awx.main.utils import datetime_hook
-from ansible_base.lib.utils.db import advisory_lock
-
-logger = logging.getLogger('metrics_utility.collector')
+logger = logging.getLogger("metrics_utility.collector")
 
 
 class Collector(base.Collector):
-    def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None,
-                 ship_target=None, billing_provider_params=None):
+    def __init__(
+        self,
+        collection_type=base.Collector.SCHEDULED_COLLECTION,
+        collector_module=None,
+        ship_target=None,
+        billing_provider_params=None,
+    ):
         from metrics_utility.automation_controller_billing import collectors
 
         if collector_module is None:
@@ -30,12 +36,23 @@ class Collector(base.Collector):
         self.ship_target = ship_target
         self.billing_provider_params = billing_provider_params
 
-        super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module, logger=logger)
+        super(Collector, self).__init__(
+            collection_type=collection_type,
+            collector_module=collector_module,
+            logger=logger,
+        )
 
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
     # TODO: extract to superclass ability to push extra params into config.json
-    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
+    def gather(
+        self,
+        dest=None,
+        subset=None,
+        since=None,
+        until=None,
+        billing_provider_params=None,
+    ):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
@@ -47,10 +64,13 @@ class Collector(base.Collector):
         if not self.is_enabled():
             return None
 
-        with self._pg_advisory_lock("gather_automation_controller_billing_lock", wait=False) as acquired:
+        with self._pg_advisory_lock(
+            "gather_automation_controller_billing_lock", wait=False
+        ) as acquired:
             if not acquired:
                 self.logger.log(
-                    self.log_level, "Not gathering Automation Controller billing data, another task holds lock"
+                    self.log_level,
+                    "Not gathering Automation Controller billing data, another task holds lock",
                 )
                 return None
 
@@ -61,9 +81,9 @@ class Collector(base.Collector):
 
             self._gather_json_collections()
             # Extend the config collection to contain billing specific info:
-            config_collection = self.collections['config']
+            config_collection = self.collections["config"]
             data = json.loads(config_collection.data)
-            data['billing_provider_params'] = billing_provider_params
+            data["billing_provider_params"] = billing_provider_params
             config_collection._save_gathering(data)
             # End of extension
 
@@ -120,8 +140,13 @@ class Collector(base.Collector):
         # these settings.
         from awx.conf.models import Setting
 
-        last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-        last_gathered_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+        last_entries = Setting.objects.filter(
+            key="AUTOMATION_ANALYTICS_LAST_ENTRIES"
+        ).first()
+        last_gathered_entries = json.loads(
+            (last_entries.value if last_entries is not None else "") or "{}",
+            object_hook=datetime_hook,
+        )
         return last_gathered_entries
 
     def _gather_finalize(self):
@@ -137,7 +162,9 @@ class Collector(base.Collector):
                 self._update_last_gathered_entries()
 
     def _save_last_gathered_entries(self, last_gathered_entries):
-        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
+        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(
+            last_gathered_entries, cls=DjangoJSONEncoder
+        )
 
     def _package_class(self):
         return PackageFactory(ship_target=self.ship_target).create()
