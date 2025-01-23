@@ -223,3 +223,19 @@ You can inspect the data sent with --dry-run attribute and provide your own inte
 # This will collect whole day of 2023-12-21
 metrics-utility gather_automation_controller_billing_data --dry-run --since=2023-12-21 --until=2023-12-22
 ```
+
+## Developer Setup
+
+For developers contributing to this project, refer to the [Developer Setup Guide](./docs/developer_setup.md) for detailed instructions on setting up your local development environment, installing dependencies, and configuring pre-commit hooks.
+
+---
+
+## Available Documentation
+
+Additional documentation is available in the `/docs` directory. This includes:
+
+- **Developer Setup**: [docs/developer_setup.md](./docs/developer_setup.md)
+
+Please note that this is the upstream documentation for the metrics-utility project. Additional internal downstream documentation, accessible only to the Ansible organization, is maintained separately in the [Ansible Handbook](https://github.com/ansible/handbook/tree/main/The%20Ansible%20Engineering%20Handbook/docs/AAP/Services/Metrics).
+
+As the project grows, more guides and references will be added to the `/docs` folder.
