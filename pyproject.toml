@@ -25,3 +25,7 @@ requires-python = ">=3.11"
 # Do not uncomment the line below. We need to be able to override the version via a file, and this
 # causes the "version" key in setup.cfg to be ignored.
 # [tool.setuptools_scm]
+
+[tool.ruff]
+# Allow longer lines than ruff's default 88.
+line-length = 150
