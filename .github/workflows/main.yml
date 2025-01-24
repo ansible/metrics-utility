@@ -43,13 +43,6 @@ jobs:
       - name: Run Ruff
         run: ruff check --output-format=github .
 
-      - name: Configure JSCPD Linter
-        run : |-
-          # echo "disable=SC2086" > ~/.shellcheckrc
-          mkdir -vp .github/linters/config/
-          curl -o .github/linters/config/.jscpd.json https://raw.githubusercontent.com/ansible/metrics-utility/main/.github/linters/.jscpd.json
-
-
   unit-test:
     name: Unit Tests
     runs-on: ubuntu-latest
