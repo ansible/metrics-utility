@@ -1,0 +1,52 @@
+#!/bin/sh
+set -e
+cd "`dirname "$0"`"
+
+export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
+export METRICS_UTILITY_SHIP_PATH="./out"
+export METRICS_UTILITY_SHIP_TARGET="directory"
+
+export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
+export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
+export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
+export METRICS_UTILITY_REPORT_END_USER_CITY="Springfield"
+export METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME="Customer A"
+export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
+export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
+export METRICS_UTILITY_REPORT_H1_HEADING="CCSP NA Direct Reporting Template"
+export METRICS_UTILITY_REPORT_PO_NUMBER="123"
+export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
+export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
+export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+
+SCHEMA=`realpath "metrics_utility/test/test_data/schemas/awx/latest.sql"`
+ROLES=`realpath "metrics_utility/test/test_data/schemas/awx/roles.sql"`
+NAME=ccsp2-gather-`basename "$SCHEMA" .schema`
+
+echo "$NAME"
+pg_isready -h localhost ||
+podman run --name "$NAME" --replace \
+    -e POSTGRES_USER="myuser" \
+    -e POSTGRES_PASSWORD="mypassword" \
+    -e POSTGRES_DB="awx" \
+    -v "$ROLES":/docker-entrypoint-initdb.d/init-roles.sql:ro \
+    -v "$SCHEMA":/docker-entrypoint-initdb.d/init-schema.sql:ro \
+    -p 5432:5432 \
+    -d quay.io/cloudservices/postgres
+
+tries=5
+until pg_isready -h localhost; do
+  [ "$tries" -lt 1 ] && break
+
+  echo "Waiting for PostgreSQL to be ready...($tries)"
+  sleep "$tries"
+
+  tries=`expr "$tries" - 1`
+done
+
+uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force "$@"
+
+podman stop "$NAME"
+
+set -x
+ls -lR out/data/`date +%Y`/

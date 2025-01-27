@@ -1,5 +1,10 @@
 #!/bin/sh
 set -e
+cd "`dirname "$0"`"
+
+export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
+export METRICS_UTILITY_SHIP_PATH="./metrics_utility/test/test_data/"
+export METRICS_UTILITY_SHIP_TARGET="directory"
 
 export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
 export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
@@ -13,9 +18,6 @@ export METRICS_UTILITY_REPORT_PO_NUMBER="123"
 export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
-export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
-export METRICS_UTILITY_SHIP_PATH=./metrics_utility/test/test_data/
-export METRICS_UTILITY_SHIP_TARGET=directory
 
 uv run ./manage.py build_report --month=2024-04 --force "$@"
 
