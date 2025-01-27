@@ -1,1 +1,0 @@
-from django_pglocks import advisory_lock
