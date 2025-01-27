@@ -2,9 +2,9 @@ import contextlib
 import json
 import logging
 
+import importlib.util
+
 import insights_analytics_collector as base
-from awx.main.utils import datetime_hook
-from awx.main.utils.pglock import advisory_lock
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
@@ -13,8 +13,17 @@ from django.db import connection
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
-from metrics_utility.automation_controller_billing.package.factory import \
-    Factory as PackageFactory
+
+from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+
+from awx.main.utils import datetime_hook
+
+if importlib.util.find_spec('ansible_base') is None:
+    # 2.4
+    from awx.main.utils.pglock import advisory_lock
+else:
+    # 2.5
+    from ansible_base.lib.utils.db import advisory_lock
 
 logger = logging.getLogger('metrics_utility.collector')
 
