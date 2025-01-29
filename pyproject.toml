@@ -29,3 +29,15 @@ requires-python = ">=3.11, <3.13"
 [tool.ruff]
 # Allow longer lines than ruff's default 88.
 line-length = 150
+
+[tool.ruff.format]
+# Normalize double quotes to single quotes
+quote-style = "single"
+
+[tool.ruff.lint.isort]
+# Separate direct imports from 'from' imports
+lines-between-types = 1
+# Order alphabetically and by case
+order-by-type = true
+# Use a single line after each import block
+lines-after-imports = 1
