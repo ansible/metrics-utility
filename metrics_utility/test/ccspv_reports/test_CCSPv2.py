@@ -32,16 +32,16 @@ date_today = datetime.now().strftime("%b %d, %Y")
 EXPECTED_SHEETS = {
     "Usage Reporting": [
         "CCSP NA Direct Reporting Template",
-        "Unnamed: 1",
-        "Unnamed: 2",
-        "Unnamed: 3",
-        "Unnamed: 4",
-        "Unnamed: 5",
-        "Unnamed: 6",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
         f"Updated: {date_today}",
-        "Unnamed: 8",
-        "Unnamed: 9",
-        "Unnamed: 10",
+        "",
+        "",
+        "",
     ],
     "Managed nodes": [
         "Host name",
@@ -75,11 +75,15 @@ def cleanup():
 
 def validate_sheet_tab_names():
     """Test the sheet names in the Excel file."""
+
     wb = openpyxl.load_workbook(file_path)
-    actual_tab_names = wb.sheetnames
-    assert actual_tab_names == list(
-        EXPECTED_SHEETS.keys()
-    ), "Sheet names do not match."
+    try:
+        actual_tab_names = wb.sheetnames
+        assert actual_tab_names == list(
+            EXPECTED_SHEETS.keys()
+        ), "Sheet names do not match."
+    finally:
+        wb.close()
 
 
 def validate_sheet_columns():
@@ -88,23 +92,44 @@ def validate_sheet_columns():
     def normalize_column(col):
         return col.strip().replace("\n", " ").lower() if col else ""
 
-    for sheet_name, expected_columns in EXPECTED_SHEETS.items():
-        # df = pd.read_excel(file_path, sheet_name=sheet_name)
-        wb = openpyxl.load_workbook(file_path)
+    wb = openpyxl.load_workbook(file_path)
+    try:
+        for sheet_name, expected_columns in EXPECTED_SHEETS.items():
+            sheet = wb[sheet_name]
+            actual_columns = [normalize_column(cell.value) for cell in next(sheet.iter_rows(max_row=1))]
+            expected_columns = [normalize_column(col) for col in expected_columns]
+            if actual_columns != expected_columns:
+                print(f"Mismatch for sheet: {sheet_name}")
+                print(f"Actual columns (formatted): {actual_columns}")
+                print(f"Expected columns (formatted): {expected_columns}")
+
+            assert (
+                actual_columns == expected_columns
+            ), f"Column names do not match for sheet: {sheet_name}"
+    finally:
+            wb.close()
+
+def check_numeric_values(file_path, sheet_name, column_index):
+    """
+    Checks if all the values in a specified column are numbers.
+
+    :param file_path: Path to the Excel file.
+    :param sheet_name: Name of the sheet to validate.
+    :param column_index: Index of the column to check (1-based, e.g., 1 for 'A').
+    :return: True if all values in the column are numbers, False otherwise.
+    """
+    with openpyxl.load_workbook(file_path) as wb:
         sheet = wb[sheet_name]
-        actual_columns = [normalize_column(cell.value) for cell in next(sheet.iter_rows(max_row=1))]
-        expected_columns = [normalize_column(col) for col in expected_columns]
-        if actual_columns != expected_columns:
-            print(f"Mismatch for sheet: {sheet_name}")
-            print(f"Actual columns (formatted): {actual_columns}")
-            print(f"Expected columns (formatted): {expected_columns}")
 
-        assert (
-            actual_columns == expected_columns
-        ), f"Column names do not match for sheet: {sheet_name}"
+        for row in sheet.iter_rows(min_col=column_index, max_col=column_index, min_row=2):  # Skip the header
+            cell = row[0]  # Each row is a tuple of cells; we only care about the single column
+            if cell.value is not None and not isinstance(cell.value, (int, float)):
+                print(f"Non-numeric value found: {cell.value} in row {cell.row}")
+                return False
 
+    return True
 
-def test_command(cleanup):
+def test_command():
     """Build xlsx report using build command and test its contents."""
 
     python_executable = sys.executable
@@ -118,5 +143,5 @@ def test_command(cleanup):
 
     assert result.returncode == 0
 
-    # validate_sheet_columns()
+    validate_sheet_columns()
     validate_sheet_tab_names()
