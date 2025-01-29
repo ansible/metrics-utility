@@ -29,10 +29,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-dev libpython3-dev pkg-config cython3
 
       - name: Install the project with uv
-        run: uv sync
+        run: uv sync --dev
 
       # Update output format to enable automatic inline annotations.
       - name: Run Ruff
