@@ -31,6 +31,9 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
+      - name: Ensure build tools are installed
+        run: pip install --upgrade pip setuptools wheel meson meson-python numpy
+
       - name: Install the project with uv
         run: uv sync --all-extras --dev
 
