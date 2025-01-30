@@ -1,10 +1,12 @@
 import contextlib
 import json
 import logging
+import importlib.util
 
 import importlib.util
 
 import insights_analytics_collector as base
+
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
