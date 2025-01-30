@@ -45,9 +45,9 @@ extend-select = [
 # PEP 8 warnings (whitespace, line breaks)
     "W",
 # PEP 8 naming conventions
-    "N",
+#   "N",
 # Python syntax upgrades
-    "UP",
+#   "UP",
 ]
 
 [tool.ruff.lint.isort]

@@ -442,7 +442,7 @@ class ReportRenewalGuidanceV2(Base):
                         # Multiply columns 3x4 instead of inserting the price per org
                         cell_m_1 = ws.cell(row=r_idx, column=7).column_letter + str(r_idx)
                         cell_m_2 = ws.cell(row=r_idx, column=9).column_letter + str(r_idx)
-                        cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
+                        cell.value = f'={cell_m_1}*{cell_m_2}'
 
             row_counter += 1
 
@@ -469,7 +469,7 @@ class ReportRenewalGuidanceV2(Base):
                     # Multiply columns 3x4 instead of inserting the price per org
                     cell_m_1 = ws.cell(row=r_idx, column=7).column_letter + str(r_idx)
                     cell_m_2 = ws.cell(row=r_idx, column=9).column_letter + str(r_idx)
-                    cell.value = '={0}*{1}'.format(cell_m_1, cell_m_2)
+                    cell.value = f'={cell_m_1}*{cell_m_2}'
 
             row_counter += 1
 
@@ -487,7 +487,7 @@ class ReportRenewalGuidanceV2(Base):
             cell = ws.cell(row=2, column=10)
             cell_sum_start = cell.column_letter + str(first_row)
             cell_sum_end = cell.column_letter + str(last_row)
-            cell.value = '=SUM({0}:{1})'.format(cell_sum_start, cell_sum_end)
+            cell.value = f'=SUM({cell_sum_start}:{cell_sum_end})'
             cell.fill = PatternFill("solid", fgColor=self.LIGHT_BLUE_COLOR_HEX)
             cell.font = Font(name=self.FONT,
                              size=10,

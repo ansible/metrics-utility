@@ -2,7 +2,7 @@ import logging
 import os
 
 
-class ReportSaverDirectory():
+class ReportSaverDirectory:
     LOG_PREFIX = "[ExtractorDirectory]"
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):

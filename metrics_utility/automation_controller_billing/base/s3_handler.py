@@ -5,7 +5,7 @@ import boto3
 from botocore.exceptions import ClientError
 
 
-class S3Handler():
+class S3Handler:
     def __init__(self, params):
         self.bucket_name = params.get("bucket_name")
         self.bucket_endpoint = params.get("bucket_endpoint")

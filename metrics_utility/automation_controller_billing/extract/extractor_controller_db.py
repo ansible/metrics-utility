@@ -5,7 +5,7 @@ import pandas as pd
 from django.db import connection
 
 
-class ExtractorControllerDB():
+class ExtractorControllerDB:
     LOG_PREFIX = "[ExtractorDirectory]"
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
@@ -33,7 +33,7 @@ class ExtractorControllerDB():
 
             since = self.extra_params['opt_since']
             if since.tzinfo is None:
-                since = since.replace(tzinfo=datetime.timezone.utc)
+                since = since.replace(tzinfo=datetime.UTC)
 
             marker_cond = ""
             while True:

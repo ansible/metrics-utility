@@ -118,7 +118,12 @@
 #         "ANSIBLE_BASE_ROLE_PRECREATE": "{}",
 #         "ANSIBLE_RETRY_FILES_ENABLED": "False",
 #         "ANSIBLE_SSH_CONTROL_PATH_DIR": "/runner/cp",
-#         "ANSIBLE_BASE_ALL_REST_FILTERS": "('ansible_base.rest_filters.rest_framework.type_filter_backend.TypeFilterBackend', 'ansible_base.rest_filters.rest_framework.field_lookup_backend.FieldLookupBackend', 'rest_framework.filters.SearchFilter', 'ansible_base.rest_filters.rest_framework.order_backend.OrderByBackend')",
+#         "ANSIBLE_BASE_ALL_REST_FILTERS": (
+#    "('ansible_base.rest_filters.rest_framework.type_filter_backend.TypeFilterBackend', "
+#    "'ansible_base.rest_filters.rest_framework.field_lookup_backend.FieldLookupBackend', "
+#    "'rest_framework.filters.SearchFilter', "
+#    "'ansible_base.rest_filters.rest_framework.order_backend.OrderByBackend')"
+#)
 #         "ANSIBLE_BASE_CREATOR_DEFAULTS": "['change', 'delete', 'execute', 'use', 'adhoc', 'approve', 'update', 'view']",
 #         "ANSIBLE_BASE_PERMISSION_MODEL": "main.Permission",
 #         "ANSIBLE_BASE_ROLE_CREATOR_NAME": "{cls.__name__} Creator",
@@ -141,9 +146,10 @@
 #         "ANSIBLE_BASE_CHECK_RELATED_PERMISSIONS": "['use', 'change', 'view']",
 #         "ANSIBLE_BASE_ALLOW_SINGLETON_TEAM_ROLES": "False",
 #         "ANSIBLE_BASE_ALLOW_SINGLETON_USER_ROLES": "True",
-#         "ANSIBLE_BASE_REST_FILTERS_RESERVED_NAMES": "('page', 'page_size', 'format', 'order', 'order_by', 'search', 'type', 'host_filter', 'count_disabled', 'no_truncate', 'limit', 'validate')",
-#         "ANSIBLE_BASE_EVALUATIONS_IGNORE_CONFLICTS": "True",
-#     },
+#         "ANSIBLE_BASE_REST_FILTERS_RESERVED_NAMES":
+#             "('page', 'page_size', 'format', 'order', 'order_by', "
+#             "'search', 'type', 'host_filter', 'count_disabled', "
+#             "'no_truncate', 'limit', 'validate')"
 #     "ansible_lsb": {},
 #     "ansible_lvm": "N/A",
 #     "ansible_fips": false,
@@ -461,7 +467,11 @@
 #     "ansible_board_vendor": "NA",
 #     "ansible_device_links": {"ids": {}, "uuids": {}, "labels": {}, "masters": {}},
 #     "ansible_distribution": "CentOS",
-#     "ansible_proc_cmdline": {"console": ["hvc0", "tty0", "ttyS0,115200"], "modules": "loop,squashfs,sd-mod,usb-storage", "BOOT_IMAGE": "/boot/vmlinuz-virt"},
+#     "ansible_proc_cmdline": {
+#    "console": ["hvc0", "tty0", "ttyS0,115200"],
+#    "modules": "loop,squashfs,sd-mod,usb-storage",
+#    "BOOT_IMAGE": "/boot/vmlinuz-virt"
+#},
 #     "ansible_product_name": "QEMU Virtual Machine",
 #     "ansible_product_uuid": "NA",
 #     "ansible_real_user_id": 0,

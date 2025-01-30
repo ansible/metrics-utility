@@ -10,7 +10,7 @@ from metrics_utility.automation_controller_billing.base.s3_handler import \
     S3Handler
 
 
-class ExtractorS3():
+class ExtractorS3:
     LOG_PREFIX = "[ExtractorS3]"
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):

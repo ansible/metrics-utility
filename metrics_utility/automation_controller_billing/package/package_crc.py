@@ -88,7 +88,7 @@ class PackageCRC(base.Package):
             #################################
             ## Query crc with bearer token
             headers = session.headers
-            headers['authorization'] = 'Bearer {}'.format(access_token)
+            headers['authorization'] = f'Bearer {access_token}'
 
             proxies = {}
             if self.get_proxy_url():
@@ -121,9 +121,7 @@ class PackageCRC(base.Package):
         # Accept 2XX status_codes
         if response.status_code >= 300:
             raise FailedToUploadPayload(
-                "Upload failed with status {}, {}".format(
-                    response.status_code, response.text
-                )
+                f"Upload failed with status {response.status_code}, {response.text}"
             )
 
         return True

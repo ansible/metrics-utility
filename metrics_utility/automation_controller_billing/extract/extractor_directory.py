@@ -8,7 +8,7 @@ import tempfile
 import pandas as pd
 
 
-class ExtractorDirectory():
+class ExtractorDirectory:
     LOG_PREFIX = "[ExtractorDirectory]"
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):

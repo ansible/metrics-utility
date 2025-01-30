@@ -213,7 +213,10 @@ class ReportRenewalGuidance(Base):
         intervals = self.get_intervals(start_date, end_date, ephemeral_days)
         for window_start, window_end in intervals:
             # print(f"Processing {window_start}, {window_end}")
-            filtered = host_metric_dataframe[(host_metric_dataframe["last_automation"] >= window_start) & (host_metric_dataframe["first_automation"] <= window_end)]
+            filtered = host_metric_dataframe[
+    (host_metric_dataframe["last_automation"] >= window_start) &
+    (host_metric_dataframe["first_automation"] <= window_end)
+]
             ephemeral_usage_intervals.append({
                 "window_start": window_start,
                 "window_end": window_end,

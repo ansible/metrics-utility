@@ -186,7 +186,7 @@ def job_host_summary_table(since, full_path, until, **kwargs):
         LANGUAGE plpgsql;
     '''
 
-    query = '''
+    query = f'''
         (SELECT main_jobhostsummary.id,
                 main_jobhostsummary.created,
                 main_jobhostsummary.modified,
@@ -235,11 +235,9 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                 LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
                 -- get variables from main_host
                 LEFT JOIN main_host ON main_host.id = main_jobhostsummary.host_id
-                WHERE (main_jobhostsummary.modified >= '{0}' AND main_jobhostsummary.modified < '{1}')
+                WHERE (main_jobhostsummary.modified >= '{since.isoformat()}' AND main_jobhostsummary.modified < '{until.isoformat()}')
                 ORDER BY main_jobhostsummary.modified ASC)
-        '''.format(
-            since.isoformat(), until.isoformat()
-    )
+        '''
 
     return _copy_table(table='main_jobhostsummary',
                        query=f"COPY {query} TO STDOUT WITH CSV HEADER",
