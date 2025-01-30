@@ -29,35 +29,36 @@ file_path = "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/r
 
 
 date_today = datetime.now().strftime("%b %d, %Y")
+
 EXPECTED_SHEETS = {
     "Usage Reporting": [
-        "CCSP NA Direct Reporting Template",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        f"Updated: {date_today}",
-        "",
-        "",
-        "",
+        {"End User Company Name": ['CCSP Company Name', 'CCSP Email', 'CCSP RHN Login', 'Report Period (YYYY-MM)', 'End User Company Name', 'Customer A', None, None, None, None, None]},
+        {"Enter 'X' to Indicate\nInteral Usage": ['Partner A', 'email@email.com', 'test_login', '2024-02', "Enter 'X' to indicate\nInteral Usage", None, None, None, None, None, None]},
+        {"End User\nCity": [None, None, None, None, 'End User\nCity', 'Springfield', None, None, None, None, None]},
+        {"End User\nState/Prov": [None, None, None, None, 'End User\nState/Prov', 'TX', None, None, None, None, None]},
+        {"Country Where\nSKU Consumed": [None, None, 'PO Number', None, 'Country Where\nSKU Consumed', 'US', None, None, None, None, None]},
+        {"SKU Number": [None, None, '123', None, 'SKU Number', 'MCT3752MO', None, None, None, None, None]},
+        {"Quantity":[None, None, None, None, 'Quantity', 3, None, None, None, None, None]},
+        {"SKU Description": [None, None, None, None, 'SKU Description', 'EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)', None, None, None, None, None]},
+        {"SKU Unit Price": ['Grand total', None, None, None, 'SKU Unit Price', 11.55, None, None, None, None, None]},
+        {"SKU Extended Unit\nPrice": ['=SUM(J7:J12)', None, None, None, 'SKU Extended Unit\nPrice', '=G7*I7', '=G8*I8', '=G9*I9', '=G10*I10', '=G11*I11', '=G12*I12']},
+        {"Notes": [None, None, None, None, 'Notes', None, None, None, None, None, None]},
     ],
     "Managed nodes": [
-        {"Host name": ['Host name', 'localhost', 'test host 1', 'test host 2']},
-        "Automated by\norganizations",
-        "Job runs",
-        "Number of task\nruns",
-        "First\nautomation",
-        "Last\nautomation",
+        {"Host name": ['localhost', 'test host 1', 'test host 2']},
+        {"automated by organizations": [1, 1, 1]},
+        {'job runs':  [2, 2, 2]},
+        {'number of task runs': [4, 4, 4]},
+        {'first automation':[datetime(2024, 2, 28, 8, 48, 36, 37000), datetime(2024, 2, 28, 8, 48, 41, 638000), datetime(2024, 2, 28, 8, 48, 41, 638000)]},
+        {'last automation': [datetime(2024, 2, 28, 8, 48, 50, 35000), datetime(2024, 2, 28, 8, 48, 58, 766000), datetime(2024, 2, 28, 8, 48, 58, 766000)]},
     ],
     "Usage by organizations": [
-        {"Organization name" : ['Organization name', 'Default', 'test organization']},
-        "Job runs",
-        "Unique managed nodes\nautomated",
-        "Non-unique managed\nnodes automated",
-        "Number of task\nruns",
-    ],
+        {"Organization name" : ['Default', 'test organization']},
+        {"Job runs": [ 2, 2]},
+        {"Unique managed nodes automated": [1, 2]},
+        {"Non-unique managed nodes automated": [2, 4]},
+        {"Number of task runs":[4,8]},
+    ]
 }
 
 
@@ -96,46 +97,54 @@ def validate_sheet_columns():
     try:
         for sheet_name, expected_column_data in EXPECTED_SHEETS.items():
             sheet = wb[sheet_name]
-            actual_column_headers = [normalize_column(cell.value) for cell in next(sheet.iter_rows(max_row=1))]
 
+            # For the 'Usage Reporting' sheet, start at row 6
+            if sheet_name == "Usage Reporting":
+                min_row = 6
+            else:
+                min_row = 1  # Default for other sheets
+
+            # All actual column headers for sheet
+            actual_column_headers = [normalize_column(cell.value) for cell in next(sheet.iter_rows(min_row=min_row, max_row=min_row))]
+
+            # All expected column headers
+            expected_column_headers = []
             for column_group in expected_column_data:
-                expected_column_headers = [normalize_column(col) for col in list(column_group.keys())]
-            if actual_column_headers != expected_column_headers:
-                print(f"Mismatch for sheet: {sheet_name}")
-                print(f"Actual columns (formatted): {actual_column_headers}")
-                print(f"Expected columns (formatted): {expected_column_headers}")
+                expected_column_headers.extend(normalize_column(col) for col in column_group.keys())
 
-            # check column headers
-            assert (
-                actual_column_headers == expected_column_headers
-            ), f"Column names do not match for sheet: {sheet_name}"
+            print("Actual column headers (formatted):", actual_column_headers)
+            print("Expected column headers (formatted):", expected_column_headers)
 
-            # check column values
-            # expected
-    finally:
-            wb.close()
+            # Assert column headers
+            assert actual_column_headers == expected_column_headers, f"Column names do not match for sheet: {sheet_name}"
 
-def check_numeric_values(file_path, sheet_name, column_index):
-    """
-    Checks if all the values in a specified column are numbers.
+            # Iterate through each expected column group
+            for column_group in expected_column_data:
+                for expected_col_name, expected_column_values in column_group.items():
 
-    :param file_path: Path to the Excel file.
-    :param sheet_name: Name of the sheet to validate.
-    :param column_index: Index of the column to check (1-based, e.g., 1 for 'A').
-    :return: True if all values in the column are numbers, False otherwise.
-    """
-    wb = openpyxl.load_workbook(file_path)
-    try:
-        for sheet_name, expected_columns in EXPECTED_SHEETS.items():
-            sheet = wb[sheet_name]
-            print(expected_columns)
+                    # Find the actual column index for this column
+                    try:
+                        col_index = actual_column_headers.index(normalize_column(expected_col_name)) + 1
+                    except ValueError:
+                        raise AssertionError(f"Expected column '{expected_col_name}' not found in actual columns for sheet: {sheet_name}")
 
-            actual_values = [row[0].value for row in sheet.iter_rows(min_col=1, max_col=1, values_only=False)]
-            print(actual_values)
+                    # Extract actual values for this column (skip the header)
+                    actual_column_values = [
+                        cell.value for row in sheet.iter_rows(min_row=2, min_col=col_index, max_col=col_index)
+                        for cell in row
+                    ]
+
+                    print(f"Actual column values for '{expected_col_name}':", actual_column_values)
+                    print(f"Expected column values for '{expected_col_name}':", expected_column_values)
+
+                    # Assert column values
+                    assert actual_column_values == expected_column_values, (
+                        f"Column values do not match for column '{expected_col_name}' in sheet '{sheet_name}'"
+                    )
     finally:
         wb.close()
 
-def test_command():
+def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
     python_executable = sys.executable
