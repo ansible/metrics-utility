@@ -20,7 +20,7 @@ dependencies = [
     "ruff>=0.9.2",
     "setuptools==70.3.0",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.13"
 
 # Do not uncomment the line below. We need to be able to override the version via a file, and this
 # causes the "version" key in setup.cfg to be ignored.
