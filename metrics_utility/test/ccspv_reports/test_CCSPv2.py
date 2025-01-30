@@ -32,16 +32,72 @@ date_today = datetime.now().strftime("%b %d, %Y")
 
 EXPECTED_SHEETS = {
     "Usage Reporting": [
-        {"End User Company Name": ['CCSP Company Name', 'CCSP Email', 'CCSP RHN Login', 'Report Period (YYYY-MM)', 'End User Company Name', 'Customer A', None, None, None, None, None]},
-        {"Enter 'X' to Indicate\nInteral Usage": ['Partner A', 'email@email.com', 'test_login', '2024-02', "Enter 'X' to indicate\nInteral Usage", None, None, None, None, None, None]},
+        {
+    "End User Company Name": [
+        'CCSP Company Name',
+        'CCSP Email',
+        'CCSP RHN Login',
+        'Report Period (YYYY-MM)',
+        'End User Company Name',
+        'Customer A',
+        None,
+        None,
+        None,
+        None,
+        None
+    ]
+},
+        {
+    "Enter 'X' to Indicate\nInteral Usage": [
+        'Partner A',
+        'email@email.com',
+        'test_login',
+        '2024-02',
+        "Enter 'X' to indicate\nInteral Usage",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None
+    ]
+},
         {"End User\nCity": [None, None, None, None, 'End User\nCity', 'Springfield', None, None, None, None, None]},
         {"End User\nState/Prov": [None, None, None, None, 'End User\nState/Prov', 'TX', None, None, None, None, None]},
         {"Country Where\nSKU Consumed": [None, None, 'PO Number', None, 'Country Where\nSKU Consumed', 'US', None, None, None, None, None]},
         {"SKU Number": [None, None, '123', None, 'SKU Number', 'MCT3752MO', None, None, None, None, None]},
         {"Quantity":[None, None, None, None, 'Quantity', 3, None, None, None, None, None]},
-        {"SKU Description": [None, None, None, None, 'SKU Description', 'EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)', None, None, None, None, None]},
+        {
+    "SKU Description": [
+        None,
+        None,
+        None,
+        None,
+        'SKU Description',
+        'EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)',
+        None,
+        None,
+        None,
+        None,
+        None
+    ]
+},
         {"SKU Unit Price": ['Grand total', None, None, None, 'SKU Unit Price', 11.55, None, None, None, None, None]},
-        {"SKU Extended Unit\nPrice": ['=SUM(J7:J12)', None, None, None, 'SKU Extended Unit\nPrice', '=G7*I7', '=G8*I8', '=G9*I9', '=G10*I10', '=G11*I11', '=G12*I12']},
+        {
+    "SKU Extended Unit\nPrice": [
+        '=SUM(J7:J12)',
+        None,
+        None,
+        None,
+        'SKU Extended Unit\nPrice',
+        '=G7*I7',
+        '=G8*I8',
+        '=G9*I9',
+        '=G10*I10',
+        '=G11*I11',
+        '=G12*I12'
+    ]
+},
         {"Notes": [None, None, None, None, 'Notes', None, None, None, None, None, None]},
     ],
     "Managed nodes": [
@@ -49,8 +105,20 @@ EXPECTED_SHEETS = {
         {"automated by organizations": [1, 1, 1]},
         {'job runs':  [2, 2, 2]},
         {'number of task runs': [4, 4, 4]},
-        {'first automation':[datetime(2024, 2, 28, 8, 48, 36, 37000), datetime(2024, 2, 28, 8, 48, 41, 638000), datetime(2024, 2, 28, 8, 48, 41, 638000)]},
-        {'last automation': [datetime(2024, 2, 28, 8, 48, 50, 35000), datetime(2024, 2, 28, 8, 48, 58, 766000), datetime(2024, 2, 28, 8, 48, 58, 766000)]},
+        {
+    'first automation': [
+        datetime(2024, 2, 28, 8, 48, 36, 37000),
+        datetime(2024, 2, 28, 8, 48, 41, 638000),
+        datetime(2024, 2, 28, 8, 48, 41, 638000)
+    ]
+},
+        {
+    'last automation': [
+        datetime(2024, 2, 28, 8, 48, 50, 35000),
+        datetime(2024, 2, 28, 8, 48, 58, 766000),
+        datetime(2024, 2, 28, 8, 48, 58, 766000)
+    ]
+},
     ],
     "Usage by organizations": [
         {"Organization name" : ['Default', 'test organization']},
