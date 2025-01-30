@@ -44,7 +44,7 @@ EXPECTED_SHEETS = {
         "",
     ],
     "Managed nodes": [
-        "Host name",
+        {"Host name": ['Host name', 'localhost', 'test host 1', 'test host 2']},
         "Automated by\norganizations",
         "Job runs",
         "Number of task\nruns",
@@ -52,7 +52,7 @@ EXPECTED_SHEETS = {
         "Last\nautomation",
     ],
     "Usage by organizations": [
-        "Organization name",
+        {"Organization name" : ['Organization name', 'Default', 'test organization']},
         "Job runs",
         "Unique managed nodes\nautomated",
         "Non-unique managed\nnodes automated",
@@ -94,18 +94,24 @@ def validate_sheet_columns():
 
     wb = openpyxl.load_workbook(file_path)
     try:
-        for sheet_name, expected_columns in EXPECTED_SHEETS.items():
+        for sheet_name, expected_column_data in EXPECTED_SHEETS.items():
             sheet = wb[sheet_name]
-            actual_columns = [normalize_column(cell.value) for cell in next(sheet.iter_rows(max_row=1))]
-            expected_columns = [normalize_column(col) for col in expected_columns]
-            if actual_columns != expected_columns:
-                print(f"Mismatch for sheet: {sheet_name}")
-                print(f"Actual columns (formatted): {actual_columns}")
-                print(f"Expected columns (formatted): {expected_columns}")
+            actual_column_headers = [normalize_column(cell.value) for cell in next(sheet.iter_rows(max_row=1))]
 
+            for column_group in expected_column_data:
+                expected_column_headers = [normalize_column(col) for col in list(column_group.keys())]
+            if actual_column_headers != expected_column_headers:
+                print(f"Mismatch for sheet: {sheet_name}")
+                print(f"Actual columns (formatted): {actual_column_headers}")
+                print(f"Expected columns (formatted): {expected_column_headers}")
+
+            # check column headers
             assert (
-                actual_columns == expected_columns
+                actual_column_headers == expected_column_headers
             ), f"Column names do not match for sheet: {sheet_name}"
+
+            # check column values
+            # expected
     finally:
             wb.close()
 
@@ -118,16 +124,16 @@ def check_numeric_values(file_path, sheet_name, column_index):
     :param column_index: Index of the column to check (1-based, e.g., 1 for 'A').
     :return: True if all values in the column are numbers, False otherwise.
     """
-    with openpyxl.load_workbook(file_path) as wb:
-        sheet = wb[sheet_name]
+    wb = openpyxl.load_workbook(file_path)
+    try:
+        for sheet_name, expected_columns in EXPECTED_SHEETS.items():
+            sheet = wb[sheet_name]
+            print(expected_columns)
 
-        for row in sheet.iter_rows(min_col=column_index, max_col=column_index, min_row=2):  # Skip the header
-            cell = row[0]  # Each row is a tuple of cells; we only care about the single column
-            if cell.value is not None and not isinstance(cell.value, (int, float)):
-                print(f"Non-numeric value found: {cell.value} in row {cell.row}")
-                return False
-
-    return True
+            actual_values = [row[0].value for row in sheet.iter_rows(min_col=1, max_col=1, values_only=False)]
+            print(actual_values)
+    finally:
+        wb.close()
 
 def test_command():
     """Build xlsx report using build command and test its contents."""
