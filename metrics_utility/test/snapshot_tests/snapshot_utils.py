@@ -142,10 +142,11 @@ def run_and_test_snapshot_definitions(directory):
 
         original_file = './' + data_dir + "/report.xlsx"
         
-        run_manualy = None
-        if 'run_manualy' in data['custom_params']:
-            run_manualy = data['custom_params']
-        if (run_manualy != 'Yes'):
+        run_manually = None
+        if 'run_manually' in data['custom_params']:
+            run_manually = data['custom_params']['run_manually']
+        
+        if (run_manually != 'Yes'):
             generated_file = run_snapshot_definition(data)
 
             # compare the generated and original_file

@@ -60,13 +60,16 @@ env_vars_CCSP.update({
 
 # generate tests for both reports
 
-def select_env_vars(dictionary):
+def select_env_vars(dictionary, position):
     values = {}
 
     for key in dictionary:
         strings = dictionary[key]
-        random_string = random.choice(strings)
-        values[key] = random_string
+        
+        if len(strings) == 1:
+            values[key] = strings[0]
+        else:
+            values[key] = strings[position]
 
     return values
 
@@ -80,16 +83,18 @@ for report_type in ['CCSPv2']:
     if (report_type == 'CCSP'):
         dictionary = env_vars_CCSP
     
+    # monthly reports
     for month in months:
-        env_vars = select_env_vars(dictionary)
+        env_vars = select_env_vars(dictionary, 0)
         env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
 
         path = entry_point_dir + f'/data/{report_type}/snapshot_def_{month}.json'
         data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params' : custom_params}
         snapshot_utils.save_snapshot_definition(data, path )
 
+    # reports with arbitrary ranges
     for since_until_pair in since_until_pairs:
-        env_vars = select_env_vars(dictionary)
+        env_vars = select_env_vars(dictionary, 1)
         env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
 
         since = since_until_pair['since']
@@ -99,23 +104,37 @@ for report_type in ['CCSPv2']:
         data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
         snapshot_utils.save_snapshot_definition(data, path )
 
-    continue
     # generate special reports for direct comparsion of each other
     # for example comparing month 2024-02 to range 2024-02-01 and 2024-02-29, which should hold the same result
-    custom_params = {'run_command' : 'Yes', 'generated' :  datetime.now().date().strftime("%Y-%m-%d"), 'run_manualy' : 'Yes'}
-    env_vars = select_env_vars(globals()[dict_name])
+    custom_params = {'run_command' : 'Yes', 'generated' :  datetime.now().date().strftime("%Y-%m-%d"), 'run_manually' : 'Yes'}
+    env_vars = select_env_vars(dictionary, 2)
     env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
 
-    since = since_until_pair['since']
-    until = since_until_pair['until']
+    # 2024-02
+    since = '2024-02-01'
+    until = '2024-02-29'
     suffix = since + "--" + until
-    path = entry_point_dir + f'/data/{report_type}/snapshot_def_special_{suffix}.json'
+    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{suffix}.json'
     data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
-    snapshot_utils.save_snapshot_definition(data, path )
+    snapshot_utils.save_snapshot_definition(data, path)
 
-    
-    
+    month = '2024-02'
+    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{month}.json'
+    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params' : custom_params}
+    snapshot_utils.save_snapshot_definition(data, path)
 
+    # 2024-03
+    since = '2024-03-01'
+    until = '2024-03-31'
+    suffix = since + "--" + until
+    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{suffix}.json'
+    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
+    snapshot_utils.save_snapshot_definition(data, path)
+
+    month = '2024-03'
+    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{month}.json'
+    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params' : custom_params}
+    snapshot_utils.save_snapshot_definition(data, path)
 
 # run generated definitions
 snapshot_utils.run_and_generate_snapshot_definitions(entry_point_dir + '/data/')
