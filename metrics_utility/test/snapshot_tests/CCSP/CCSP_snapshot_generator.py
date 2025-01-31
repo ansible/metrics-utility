@@ -1,23 +1,23 @@
 import random
-
-#sys.path.append(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir, os.pardir))))
 from .. import snapshot_utils
-
+from datetime import datetime
 import copy
+from pprint import pprint
 
 entry_point_dir = snapshot_utils.get_entry_point_directory()
 
+
 months = ['2024-02', '2024-03', '2024-04']
 since_until_pairs = [
-    {'since' : '2024-01-03', 'until' : '2024-01-07'},
-    {'since' : '2024-01-03', 'until' : '2024-01-20'},
-    {'since' : '2024-01-01', 'until' : '2024-02-15'},
-    {'since' : '2024-01-15', 'until' : '2024-03-22'},
-    {'since' : '2024-02-05', 'until' : '2024-03-15'},
-    {'since' : '2024-03-02', 'until' : '2024-03-30'},
-    {'since' : '2024-01', 'until' : '2024-03'},
-    {'since' : '2024-02', 'until' : '2024-03'},
+    {'since' : '2024-02-01', 'until' : '2024-02-29'},
+    {'since' : '2024-03-01', 'until' : '2024-03-31'},
+    {'since' : '2024-02-15', 'until' : '2024-03-22'},
+    {'since' : '2024-03-05', 'until' : '2024-03-15'},
+    {'since' : '2024-02-05', 'until' : '2024-04-30'},
+    {'since' : '2024-03-02', 'until' : '2024-04-20'},
 ]
+
+
 
 # Base dictionary
 base_dict = {
@@ -40,6 +40,7 @@ base_dict = {
     'METRICS_UTILITY_REPORT_RHN_LOGIN': ['test_login', 'admin_user', 'guest_user'],
 }
 
+
 # Create env_vars_CCSPv2 by copying base_dict and extending it
 env_vars_CCSPv2 = copy.deepcopy(base_dict)
 env_vars_CCSPv2.update({
@@ -57,7 +58,7 @@ env_vars_CCSP.update({
     'METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER': ['PROCUREMENT LEADER', 'PURCHASING HEAD', 'SUPPLY MANAGER']
 })
 
-
+# generate tests for both reports
 
 def select_env_vars(dictionary):
     values = {}
@@ -66,31 +67,55 @@ def select_env_vars(dictionary):
         strings = dictionary[key]
         random_string = random.choice(strings)
         values[key] = random_string
+
     return values
 
-
-# generate tests for both reports
-#METRICS_UTILITY_REPORT_TYPE
-
 for report_type in ['CCSPv2']:
-    dict_name = 'env_vars_' + report_type
-    env_vars = select_env_vars(globals()[dict_name])
-    env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
-    custom_params = { 'run_command' : True}
+    custom_params = {'run_command' : 'Yes', 'generated' :  datetime.now().date().strftime("%Y-%m-%d")}
+    
+    dictionary = None
+    if (report_type == 'CCSPv2'):
+        dictionary = env_vars_CCSPv2
 
+    if (report_type == 'CCSP'):
+        dictionary = env_vars_CCSP
+    
     for month in months:
-        path = entry_point_dir + f'/data/{report_type}/snapshot_def_month_{month}.json'
+        env_vars = select_env_vars(dictionary)
+        env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
+
+        path = entry_point_dir + f'/data/{report_type}/snapshot_def_{month}.json'
         data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params' : custom_params}
         snapshot_utils.save_snapshot_definition(data, path )
 
     for since_until_pair in since_until_pairs:
+        env_vars = select_env_vars(dictionary)
+        env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
+
         since = since_until_pair['since']
         until = since_until_pair['until']
-        suffix = since + "__" + until
-        path = entry_point_dir + f'/data/{report_type}/snapshot_def_since_until_{suffix}.json'
+        suffix = since + "--" + until
+        path = entry_point_dir + f'/data/{report_type}/snapshot_def_{suffix}.json'
         data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
-        
         snapshot_utils.save_snapshot_definition(data, path )
+
+    continue
+    # generate special reports for direct comparsion of each other
+    # for example comparing month 2024-02 to range 2024-02-01 and 2024-02-29, which should hold the same result
+    custom_params = {'run_command' : 'Yes', 'generated' :  datetime.now().date().strftime("%Y-%m-%d"), 'run_manualy' : 'Yes'}
+    env_vars = select_env_vars(globals()[dict_name])
+    env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
+
+    since = since_until_pair['since']
+    until = since_until_pair['until']
+    suffix = since + "--" + until
+    path = entry_point_dir + f'/data/{report_type}/snapshot_def_special_{suffix}.json'
+    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
+    snapshot_utils.save_snapshot_definition(data, path )
+
+    
+    
+
 
 # run generated definitions
 snapshot_utils.run_and_generate_snapshot_definitions(entry_point_dir + '/data/')
