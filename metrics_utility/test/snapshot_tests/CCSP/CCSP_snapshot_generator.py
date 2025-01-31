@@ -73,7 +73,7 @@ def select_env_vars(dictionary, position):
 
     return values
 
-for report_type in ['CCSPv2']:
+for report_type in ['CCSP','CCSPv2']:
     custom_params = {'run_command' : 'Yes', 'generated' :  datetime.now().date().strftime("%Y-%m-%d")}
     
     dictionary = None

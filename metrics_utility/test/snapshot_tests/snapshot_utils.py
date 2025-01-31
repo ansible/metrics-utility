@@ -149,10 +149,15 @@ def run_and_test_snapshot_definitions(directory):
         if (run_manually != 'Yes'):
             generated_file = run_snapshot_definition(data)
 
+            print(f'Compare {original_file} to {generated_file}')
             # compare the generated and original_file
+            
             if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSPv2'):
-                print(f'Compare {original_file} to {generated_file}')
                 compare_CCSPv2_reports(original_file, generated_file)
+
+            if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSP'):
+                compare_CCSP_reports(original_file, generated_file)
+    
 
             if os.path.exists(generated_file):
                 print(f'Removing {generated_file}')
@@ -173,6 +178,22 @@ def compare_CCSPv2_reports(original_report_path, generated_report_path):
         compareWorksheets(g_wb, o_wb, 0, ['H1', 'B5'])
         compareWorksheets(g_wb, o_wb, 1, [])
         compareWorksheets(g_wb, o_wb, 2, [])
+    finally:
+        g_wb.close()
+        o_wb.close()
+       
+    return
+
+def compare_CCSP_reports(original_report_path, generated_report_path):
+    print(f'Opening {generated_report_path}')
+    g_wb = openpyxl.load_workbook(filename = generated_report_path)  
+                      
+    print(f'Opening {original_report_path}')
+    o_wb = openpyxl.load_workbook(filename = original_report_path)
+
+    try:
+        compareWorksheets(g_wb, o_wb, 0, ['B5'])
+        compareWorksheets(g_wb, o_wb, 1, [])
     finally:
         g_wb.close()
         o_wb.close()
