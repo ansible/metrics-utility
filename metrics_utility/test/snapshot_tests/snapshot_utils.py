@@ -200,14 +200,13 @@ def compare_worksheets(workbook_generated, workbook_original, sheet_number, exce
         for row in range(1, max_row_1+1):
             addr = openpyxl.utils.get_column_letter(column) + str(row)
             
-            
-            if not (addr in exceptions):
-                valG = worksheet_generated[addr].value
-                valO = worksheet_original[addr].value 
+            if addr not in exceptions:
+                val_g = worksheet_generated[addr].value
+                val_o = worksheet_original[addr].value 
                
                 assert (
-                    valG == valO
-                    ), f"Column names do not match for sheet number: {sheet_number}. Address {addr}. Actual value = {valG}, expected value = {valO}"
+                    val_g == val_o
+                    ), f"Column names do not match for sheet number: {sheet_number}. Address {addr}. Actual value = {val_g}, expected value = {val_o}"
     
 def get_file_name(params, env_vars):
     if env_vars['METRICS_UTILITY_REPORT_TYPE'] == 'CCSPv2':
