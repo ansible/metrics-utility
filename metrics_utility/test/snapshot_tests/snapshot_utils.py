@@ -25,10 +25,6 @@ class DataShape:
     # in future we may want to run function directly due to mocking datetime
 
     # generated: date when report was generated
-    # run_manualy : 'Yes' - this will disable automatic testing between original and newly generated report
-    # it is used in situations when we want to manually compare existing original reports, for example
-    # reports with different params that should hold the same result 
-    # (for example month 2024-02 compared to 2024-02-01 to 2024-02-29)
     custom_params: Dict[str, str]
 
 def create_directory_if_not_exists(directory_path):
@@ -141,29 +137,20 @@ def run_and_test_snapshot_definitions(directory):
         data : DataShape = parse_json_file(json_file)
 
         original_file = './' + data_dir + "/report.xlsx"
-        
-        run_manually = None
-        if 'run_manually' in data['custom_params']:
-            run_manually = data['custom_params']['run_manually']
-        
-        if (run_manually != 'Yes'):
-            generated_file = run_snapshot_definition(data)
+        generated_file = run_snapshot_definition(data)
 
-            print(f'Compare {original_file} to {generated_file}')
-            # compare the generated and original_file
+        print(f'Compare {original_file} to {generated_file}')
+        # compare the generated and original_file
             
-            if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSPv2'):
-                compare_CCSPv2_reports(original_file, generated_file)
+        if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSPv2'):
+            compare_CCSPv2_reports(original_file, generated_file)
 
-            if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSP'):
-                compare_CCSP_reports(original_file, generated_file)
+        if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSP'):
+            compare_CCSP_reports(original_file, generated_file)
     
 
-            if os.path.exists(generated_file):
-                print(f'Removing {generated_file}')
-                os.remove(generated_file)
-        else:
-            print(f'Skipping the file {original_file} because it has custom_params run_manualy to Yes')
+        if os.path.exists(generated_file):
+            print(f'Removing {generated_file}')
         
     return
 

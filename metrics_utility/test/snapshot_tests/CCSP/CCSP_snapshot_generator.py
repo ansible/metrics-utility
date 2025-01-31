@@ -86,6 +86,11 @@ for report_type in ['CCSP','CCSPv2']:
     # monthly reports
     for month in months:
         env_vars = select_env_vars(dictionary, 0)
+
+        # test also some different env_vars
+        if (month == '2024-04'):
+            env_vars = select_env_vars(dictionary, 2)
+    
         env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
 
         path = entry_point_dir + f'/data/{report_type}/snapshot_def_{month}.json'
@@ -95,6 +100,14 @@ for report_type in ['CCSP','CCSPv2']:
     # reports with arbitrary ranges
     for since_until_pair in since_until_pairs:
         env_vars = select_env_vars(dictionary, 1)
+
+        # Those files are going to be compared to months above, so they need to have the same env vars
+        if (since_until_pair['since'] == '2024-02-01' and since_until_pair['until'] == '2024-02-29'):
+            env_vars = select_env_vars(dictionary, 0 )
+        
+        if (since_until_pair['since'] == '2024-03-01' and since_until_pair['until'] == '2024-03-31'):
+            env_vars = select_env_vars(dictionary, 0 )
+   
         env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
 
         since = since_until_pair['since']
@@ -103,38 +116,6 @@ for report_type in ['CCSP','CCSPv2']:
         path = entry_point_dir + f'/data/{report_type}/snapshot_def_{suffix}.json'
         data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
         snapshot_utils.save_snapshot_definition(data, path )
-
-    # generate special reports for direct comparsion of each other
-    # for example comparing month 2024-02 to range 2024-02-01 and 2024-02-29, which should hold the same result
-    custom_params = {'run_command' : 'Yes', 'generated' :  datetime.now().date().strftime("%Y-%m-%d"), 'run_manually' : 'Yes'}
-    env_vars = select_env_vars(dictionary, 2)
-    env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
-
-    # 2024-02
-    since = '2024-02-01'
-    until = '2024-02-29'
-    suffix = since + "--" + until
-    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{suffix}.json'
-    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
-    snapshot_utils.save_snapshot_definition(data, path)
-
-    month = '2024-02'
-    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{month}.json'
-    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params' : custom_params}
-    snapshot_utils.save_snapshot_definition(data, path)
-
-    # 2024-03
-    since = '2024-03-01'
-    until = '2024-03-31'
-    suffix = since + "--" + until
-    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{suffix}.json'
-    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--since={since}', f'--until={until}', '--force'], 'custom_params' : custom_params}
-    snapshot_utils.save_snapshot_definition(data, path)
-
-    month = '2024-03'
-    path = entry_point_dir + f'/data/{report_type}/special_snapshot_def_{month}.json'
-    data = { 'env_vars' : env_vars, 'params' : ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params' : custom_params}
-    snapshot_utils.save_snapshot_definition(data, path)
 
 # run generated definitions
 snapshot_utils.run_and_generate_snapshot_definitions(entry_point_dir + '/data/')

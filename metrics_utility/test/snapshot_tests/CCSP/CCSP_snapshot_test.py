@@ -1,36 +1,48 @@
 from .. import snapshot_utils
 import pytest
+import os
 
 @pytest.mark.filterwarnings("ignore::ResourceWarning")
 def test_snapshot():    
     snapshot_utils.run_and_test_snapshot_definitions('./metrics_utility/test/snapshot_tests/CCSP/data/')
 
+    print('\nNow comparing original CCSPv2 and CCSP reports pairs that should hold the same result:\n')
+   
     # compare test with different params that should hold the same result (except ignored fields)
-    
-    # CCSPv2
-    print('\nNow comparing original CCSPv2 reports pairs that should hold the same result:\n')
-   
-    prefix = './metrics_utility/test/snapshot_tests/CCSP/data/CCSPv2/'
-    report1 = prefix + 'special_snapshot_def_2024-02-01--2024-02-29/report.xlsx'
-    report2 = prefix + 'special_snapshot_def_2024-02/report.xlsx'
-    snapshot_utils.compare_CCSPv2_reports(report1, report2)
-    print('')
+    for type in ['CCSP','CCSPv2']:
+        prefix = f'./metrics_utility/test/snapshot_tests/CCSP/data/{type}/'
 
-    report1 = prefix + 'special_snapshot_def_2024-03-01--2024-03-31/report.xlsx'
-    report2 = prefix + 'special_snapshot_def_2024-03/report.xlsx'
-    snapshot_utils.compare_CCSPv2_reports(report1, report2)
+        path1 = prefix + 'snapshot_def_2024-02-01--2024-02-29.json'
+        path2 = prefix + 'snapshot_def_2024-02.json'
+        compareDifferentReports(path1, path2, type)
 
-    # CCSP
-    print('\nNow comparing original CCSP reports pairs that should hold the same result:\n')
-   
-    prefix = './metrics_utility/test/snapshot_tests/CCSP/data/CCSP/'
-    report1 = prefix + 'special_snapshot_def_2024-02-01--2024-02-29/report.xlsx'
-    report2 = prefix + 'special_snapshot_def_2024-02/report.xlsx'
-    snapshot_utils.compare_CCSP_reports(report1, report2)
-    print('')
+        path1 = prefix + 'snapshot_def_2024-03-01--2024-03-31.json'
+        path2 = prefix + 'snapshot_def_2024-03.json'
+        compareDifferentReports(path1, path2, type)
 
-    report1 = prefix + 'special_snapshot_def_2024-03-01--2024-03-31/report.xlsx'
-    report2 = prefix + 'special_snapshot_def_2024-03/report.xlsx'
-    snapshot_utils.compare_CCSP_reports(report1, report2)
-    
     print('Test finished!')
+   
+
+
+def compareDifferentReports(path1, path2, type):
+    print(f'\nComparing different reports in {path1} and {path2}')
+
+    json1 = snapshot_utils.parse_json_file(path1)
+    json2 = snapshot_utils.parse_json_file(path2)
+
+    report1 = snapshot_utils.run_snapshot_definition(json1)
+    report2 = snapshot_utils.run_snapshot_definition(json2)
+
+    if (type == 'CCSP'):
+        snapshot_utils.compare_CCSP_reports(report1, report2)
+    
+    if (type == 'CCSPv2'):
+        snapshot_utils.compare_CCSPv2_reports(report1, report2)
+
+    print('Removing generated reports')
+    if os.path.exists(report1):
+            os.remove(report1)
+
+    if os.path.exists(report2):
+            os.remove(report2)
+        
