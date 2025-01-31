@@ -14,17 +14,17 @@ def test_snapshot():
 
         path1 = prefix + 'snapshot_def_2024-02-01--2024-02-29.json'
         path2 = prefix + 'snapshot_def_2024-02.json'
-        compareDifferentReports(path1, path2, type)
+        compare_different_reports(path1, path2, type)
 
         path1 = prefix + 'snapshot_def_2024-03-01--2024-03-31.json'
         path2 = prefix + 'snapshot_def_2024-03.json'
-        compareDifferentReports(path1, path2, type)
+        compare_different_reports(path1, path2, type)
 
     print('Test finished!')
    
 
 
-def compareDifferentReports(path1, path2, type):
+def compare_different_reports(path1, path2, type):
     print(f'\nComparing different reports in {path1} and {path2}')
 
     json1 = snapshot_utils.parse_json_file(path1)
@@ -34,10 +34,10 @@ def compareDifferentReports(path1, path2, type):
     report2 = snapshot_utils.run_snapshot_definition(json2)
 
     if (type == 'CCSP'):
-        snapshot_utils.compare_CCSP_reports(report1, report2)
+        snapshot_utils.compare_ccsp_reports(report1, report2)
     
     if (type == 'CCSPv2'):
-        snapshot_utils.compare_CCSPv2_reports(report1, report2)
+        snapshot_utils.compare_ccspv2_reports(report1, report2)
 
     print('Removing generated reports')
     if os.path.exists(report1):

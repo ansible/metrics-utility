@@ -1,11 +1,8 @@
-import random
 from .. import snapshot_utils
 from datetime import datetime
 import copy
-from pprint import pprint
 
 entry_point_dir = snapshot_utils.get_entry_point_directory()
-
 
 months = ['2024-02', '2024-03', '2024-04']
 since_until_pairs = [
@@ -16,8 +13,6 @@ since_until_pairs = [
     {'since' : '2024-02-05', 'until' : '2024-04-30'},
     {'since' : '2024-03-02', 'until' : '2024-04-20'},
 ]
-
-
 
 # Base dictionary
 base_dict = {
@@ -66,6 +61,9 @@ def select_env_vars(dictionary, position):
     for key in dictionary:
         strings = dictionary[key]
         
+        if strings is None:
+            continue
+
         if len(strings) == 1:
             values[key] = strings[0]
         else:

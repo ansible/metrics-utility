@@ -11,7 +11,6 @@ import re
 import shutil
 import openpyxl
 import openpyxl.utils
-from openpyxl.worksheet.worksheet import Worksheet
 
 import warnings
 warnings.filterwarnings("ignore", category=ResourceWarning)
@@ -58,9 +57,6 @@ def save_snapshot_definition(data: DataShape, path: str):
     except Exception as e:
         print(f"An error occurred while saving the data: {e} into {path}")
 
-    return
-
-
 def find_json_files(directory):
     return list(Path(directory).rglob("*.json"))
 
@@ -82,7 +78,7 @@ def run_and_generate_snapshot_definitions(directory):
 
         shutil.move(generated_file, output_file)
         print(f'Report generated and moved from {generated_file} to {output_file}\n')
-    return
+    
 
 # Returns path to generated file
 def run_snapshot_definition(data):
@@ -119,7 +115,7 @@ def run_snapshot_definition(data):
         return generated_file
         
     # Regular expression to capture the file path if get_file_name was not able to compute it
-    pattern = r"Report generated into directory:\s*(.*?)\.xlsx"
+    pattern = r"Report generated into directory:\s*([\w\-/]+)\.xlsx"
 
     match = re.search(pattern, text)
     if match:
@@ -143,18 +139,16 @@ def run_and_test_snapshot_definitions(directory):
         # compare the generated and original_file
             
         if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSPv2'):
-            compare_CCSPv2_reports(original_file, generated_file)
+            compare_ccspv2_reports(original_file, generated_file)
 
         if (data["env_vars"]["METRICS_UTILITY_REPORT_TYPE"] == 'CCSP'):
-            compare_CCSP_reports(original_file, generated_file)
+            compare_ccsp_reports(original_file, generated_file)
     
 
         if os.path.exists(generated_file):
             print(f'Removing {generated_file}')
-        
-    return
 
-def compare_CCSPv2_reports(original_report_path, generated_report_path):
+def compare_ccspv2_reports(original_report_path, generated_report_path):
     print(f'Opening {generated_report_path}')
     g_wb = openpyxl.load_workbook(filename = generated_report_path)  
                       
@@ -162,16 +156,14 @@ def compare_CCSPv2_reports(original_report_path, generated_report_path):
     o_wb = openpyxl.load_workbook(filename = original_report_path)
 
     try:
-        compareWorksheets(g_wb, o_wb, 0, ['H1', 'B5'])
-        compareWorksheets(g_wb, o_wb, 1, [])
-        compareWorksheets(g_wb, o_wb, 2, [])
+        compare_worksheets(g_wb, o_wb, 0, ['H1', 'B5'])
+        compare_worksheets(g_wb, o_wb, 1, [])
+        compare_worksheets(g_wb, o_wb, 2, [])
     finally:
         g_wb.close()
         o_wb.close()
-       
-    return
 
-def compare_CCSP_reports(original_report_path, generated_report_path):
+def compare_ccsp_reports(original_report_path, generated_report_path):
     print(f'Opening {generated_report_path}')
     g_wb = openpyxl.load_workbook(filename = generated_report_path)  
                       
@@ -179,15 +171,13 @@ def compare_CCSP_reports(original_report_path, generated_report_path):
     o_wb = openpyxl.load_workbook(filename = original_report_path)
 
     try:
-        compareWorksheets(g_wb, o_wb, 0, ['B5'])
-        compareWorksheets(g_wb, o_wb, 1, [])
+        compare_worksheets(g_wb, o_wb, 0, ['B5'])
+        compare_worksheets(g_wb, o_wb, 1, [])
     finally:
         g_wb.close()
         o_wb.close()
-       
-    return
 
-def compareWorksheets(workbook_generated, workbook_original, sheetNumber, exceptions : List[str]):   
+def compare_worksheets(workbook_generated, workbook_original, sheetNumber, exceptions : List[str]):   
     worksheet_generated = workbook_generated.worksheets[sheetNumber]
     worksheet_original = workbook_original.worksheets[sheetNumber]
     
@@ -199,11 +189,11 @@ def compareWorksheets(workbook_generated, workbook_original, sheetNumber, except
 
     assert (
             maxColumn1 == maxColumn2
-    ), f"Number of columns do not match for sheet number: {sheetNumber}. Address {addr}. Actual value = {maxColumn2}, expected value = {maxColumn1}"
+    ), f"Number of columns do not match for sheet number: {sheetNumber}. Actual value = {maxColumn2}, expected value = {maxColumn1}"
 
     assert (
             maxRow1 == maxRow2
-    ), f"Number of rows do not match for sheet number: {sheetNumber}. Address {addr}. Actual value = {maxRow2}, expected value = {maxRow1}"
+    ), f"Number of rows do not match for sheet number: {sheetNumber}. Actual value = {maxRow2}, expected value = {maxRow1}"
 
 
     for column in range(1, maxColumn1+1):
@@ -219,22 +209,16 @@ def compareWorksheets(workbook_generated, workbook_original, sheetNumber, except
                     valG == valO
                     ), f"Column names do not match for sheet number: {sheetNumber}. Address {addr}. Actual value = {valG}, expected value = {valO}"
     
-
-
-def get_lines_count():
-    return
-
-
 def get_file_name(params, env_vars):
     if env_vars['METRICS_UTILITY_REPORT_TYPE'] == 'CCSPv2':
-        month = getParamValue(params, 'month')
+        month = get_param_value(params, 'month')
         if month:
             return f'CCSPv2-{month}.xlsx'
         
         # since and until has weirdly generated names, use the file name from terminal output of command
     return None
 
-def getParamValue(params : List[str], name):
+def get_param_value(params : List[str], name):
     for param in params:
         if param.startswith(name + '='):
             key, value = param.split('=')
