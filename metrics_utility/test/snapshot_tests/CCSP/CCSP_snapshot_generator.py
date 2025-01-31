@@ -37,8 +37,8 @@ base_dict = {
 
 
 # Create env_vars_CCSPv2 by copying base_dict and extending it
-env_vars_CCSPv2 = copy.deepcopy(base_dict)
-env_vars_CCSPv2.update({
+env_vars_ccspv2 = copy.deepcopy(base_dict)
+env_vars_ccspv2.update({
     'METRICS_UTILITY_REPORT_PO_NUMBER': ['123', '456', '789'],
     'METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME': ['Customer A', 'Customer B', 'Customer C'],
     'METRICS_UTILITY_REPORT_END_USER_CITY': ['Springfield', 'Rivertown', 'Lakeview'],
@@ -47,8 +47,8 @@ env_vars_CCSPv2.update({
 })
 
 # Create env_vars_CCSP by copying base_dict and extending it
-env_vars_CCSP = copy.deepcopy(base_dict)
-env_vars_CCSP.update({
+env_vars_ccsp = copy.deepcopy(base_dict)
+env_vars_ccsp.update({
     'METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER': ['BUSINESS LEADER', 'DIRECTOR', 'CEO'],
     'METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER': ['PROCUREMENT LEADER', 'PURCHASING HEAD', 'SUPPLY MANAGER']
 })
@@ -76,10 +76,10 @@ for report_type in ['CCSP','CCSPv2']:
     
     dictionary = None
     if (report_type == 'CCSPv2'):
-        dictionary = env_vars_CCSPv2
+        dictionary = env_vars_ccspv2
 
     if (report_type == 'CCSP'):
-        dictionary = env_vars_CCSP
+        dictionary = env_vars_ccsp
     
     # monthly reports
     for month in months:

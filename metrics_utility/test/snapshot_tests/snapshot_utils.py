@@ -177,27 +177,27 @@ def compare_ccsp_reports(original_report_path, generated_report_path):
         g_wb.close()
         o_wb.close()
 
-def compare_worksheets(workbook_generated, workbook_original, sheetNumber, exceptions : List[str]):   
-    worksheet_generated = workbook_generated.worksheets[sheetNumber]
-    worksheet_original = workbook_original.worksheets[sheetNumber]
+def compare_worksheets(workbook_generated, workbook_original, sheet_number, exceptions : List[str]):   
+    worksheet_generated = workbook_generated.worksheets[sheet_number]
+    worksheet_original = workbook_original.worksheets[sheet_number]
     
-    maxRow1 = worksheet_original.max_row
-    maxColumn1 = worksheet_original.max_column
+    max_row_1 = worksheet_original.max_row
+    max_column_1 = worksheet_original.max_column
 
-    maxRow2 = worksheet_generated.max_row
-    maxColumn2 = worksheet_generated.max_column
-
-    assert (
-            maxColumn1 == maxColumn2
-    ), f"Number of columns do not match for sheet number: {sheetNumber}. Actual value = {maxColumn2}, expected value = {maxColumn1}"
+    max_row_2 = worksheet_generated.max_row
+    max_column_2 = worksheet_generated.max_column
 
     assert (
-            maxRow1 == maxRow2
-    ), f"Number of rows do not match for sheet number: {sheetNumber}. Actual value = {maxRow2}, expected value = {maxRow1}"
+            max_column_1 == max_column_2
+    ), f"Number of columns do not match for sheet number: {sheet_number}. Actual value = {max_column_2}, expected value = {max_column_1}"
+
+    assert (
+            max_row_1 == max_row_2
+    ), f"Number of rows do not match for sheet number: {sheet_number}. Actual value = {max_row_2}, expected value = {max_row_1}"
 
 
-    for column in range(1, maxColumn1+1):
-        for row in range(1, maxRow1+1):
+    for column in range(1, max_column_1+1):
+        for row in range(1, max_row_1+1):
             addr = openpyxl.utils.get_column_letter(column) + str(row)
             
             
@@ -207,7 +207,7 @@ def compare_worksheets(workbook_generated, workbook_original, sheetNumber, excep
                
                 assert (
                     valG == valO
-                    ), f"Column names do not match for sheet number: {sheetNumber}. Address {addr}. Actual value = {valG}, expected value = {valO}"
+                    ), f"Column names do not match for sheet number: {sheet_number}. Address {addr}. Actual value = {valG}, expected value = {valO}"
     
 def get_file_name(params, env_vars):
     if env_vars['METRICS_UTILITY_REPORT_TYPE'] == 'CCSPv2':
@@ -232,5 +232,3 @@ def get_entry_point_directory():
     # Get the directory containing the entry-point file
     entry_point_dir = os.path.dirname(entry_point_file)
     return entry_point_dir
-
-    
