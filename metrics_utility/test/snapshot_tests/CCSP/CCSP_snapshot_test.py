@@ -2,14 +2,15 @@ from .. import snapshot_utils
 import pytest
 import os
 
-@pytest.mark.filterwarnings("ignore::ResourceWarning")
-def test_snapshot():    
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_snapshot():
     snapshot_utils.run_and_test_snapshot_definitions('./metrics_utility/test/snapshot_tests/CCSP/data/')
 
     print('\nNow comparing original CCSPv2 and CCSP reports pairs that should hold the same result:\n')
-   
+
     # compare test with different params that should hold the same result (except ignored fields)
-    for type in ['CCSP','CCSPv2']:
+    for type in ['CCSP', 'CCSPv2']:
         prefix = f'./metrics_utility/test/snapshot_tests/CCSP/data/{type}/'
 
         path1 = prefix + 'snapshot_def_2024-02-01--2024-02-29.json'
@@ -21,7 +22,6 @@ def test_snapshot():
         compare_different_reports(path1, path2, type)
 
     print('Test finished!')
-   
 
 
 def compare_different_reports(path1, path2, type):
@@ -33,16 +33,15 @@ def compare_different_reports(path1, path2, type):
     report1 = snapshot_utils.run_snapshot_definition(json1)
     report2 = snapshot_utils.run_snapshot_definition(json2)
 
-    if (type == 'CCSP'):
+    if type == 'CCSP':
         snapshot_utils.compare_ccsp_reports(report1, report2)
-    
-    if (type == 'CCSPv2'):
+
+    if type == 'CCSPv2':
         snapshot_utils.compare_ccspv2_reports(report1, report2)
 
     print('Removing generated reports')
     if os.path.exists(report1):
-            os.remove(report1)
+        os.remove(report1)
 
     if os.path.exists(report2):
-            os.remove(report2)
-        
+        os.remove(report2)
