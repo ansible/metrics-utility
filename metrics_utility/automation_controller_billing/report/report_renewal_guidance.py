@@ -164,11 +164,11 @@ class ReportRenewalGuidance(Base):
 
     def df_managed_nodes_query(self, dataframe, ephemeral=None, with_deleted=False):
         if ephemeral is None:
-            return dataframe[not dataframe["deleted"]]
+            return dataframe[~dataframe["deleted"]]
         else:
             # Take only non deleted
             if not with_deleted:
-                dataframe = dataframe[not dataframe["deleted"]]
+                dataframe = dataframe[~dataframe["deleted"]]
 
             # Filter ephemeral based on number of automated days
             ephemeral_days = parse_number_of_days(self.extra_params.get("opt_ephemeral"))
