@@ -18,32 +18,43 @@ services:
     image: minio/mc:latest
     depends_on:
       - minio
-    entrypoint: >
+    volumes:
+      - minio_config:/tmp
+    entrypoint: |
       sh -c '
       echo "Waiting for MinIO to be ready...";
       sleep 5;
-
       until /usr/bin/mc alias set local http://minio:9000 minioaccess miniosecret; do
         echo "MinIO is not ready yet... waiting...";
         sleep 2;
       done;
 
-      echo "MinIO is ready! Creating bucket...";
-      /usr/bin/mc mb --ignore-existing local/metricsutilitys3 || { echo "Error creating bucket"; exit 1; }
+      echo "MinIO is ready! Creating bucket and user...";
+      /usr/bin/mc mb --ignore-existing local/metricsutilitys3 || exit 1;
+      /usr/bin/mc admin user add local mynewuser mysecretpassword || exit 1;
+      /usr/bin/mc admin policy attach local readwrite --user=mynewuser || exit 1;
+      /usr/bin/mc admin user svcacct add local mynewuser > /tmp/minio_keys.txt;
+      
+      echo "Extracting credentials...";
+      ACCESS_KEY=""
+      SECRET_KEY=""
+      
+      while IFS= read -r line; do
+        case "$$line" in
+          "Access Key:"*) ACCESS_KEY="$${line#Access Key: }" ;;
+          "Secret Key:"*) SECRET_KEY="$${line#Secret Key: }" ;;
+        esac
+      done < /tmp/minio_keys.txt
 
-      echo "Creating new access key...";
-      /usr/bin/mc admin user add local mynewuser mysecretpassword || { echo "Error creating user"; exit 1; }
+      if [ -z "$${ACCESS_KEY}" ] || [ -z "$${SECRET_KEY}" ]; then
+        echo "ERROR: Failed to extract credentials!"
+        exit 1
+      fi
 
-      echo "Assigning policy to the new user...";
-      /usr/bin/mc admin policy attach local readwrite --user=mynewuser || { echo "Error assigning policy"; exit 1; }
-
-      echo "Generating service account for user (Access Key & Secret Key)...";
-      /usr/bin/mc admin user svcacct add local mynewuser > /tmp/minio_keys.txt
-
-      echo "User details:";
-      cat /tmp/minio_keys.txt;
-
-      echo "Setup complete!";
+      echo "ACCESS_KEY=$${ACCESS_KEY}" > /tmp/minio_env.sh
+      echo "SECRET_KEY=$${SECRET_KEY}" >> /tmp/minio_env.sh
+      chmod +x /tmp/minio_env.sh
+      echo "Setup complete.";
       '
 
   metrics-utility:
@@ -53,6 +64,7 @@ services:
       - minio-setup
     volumes:
       - .:/app
+      - minio_config:/tmp
     working_dir: /app
     environment:
       UV_VENV: /app/.venv
@@ -61,29 +73,39 @@ services:
       METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
       METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-      METRICS_UTILITY_BUCKET_ACCESS_KEY: "xxxxxx"
-      METRICS_UTILITY_BUCKET_SECRET_KEY: "xxxxxx"
       METRICS_UTILITY_REPORT_TYPE: CCSPv2
-      METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: 'jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations'
-    entrypoint: >
-      bash -c "
-      echo 'Installing uv...';
+      METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
+    entrypoint: |
+      bash -c '
+      echo "Waiting for MinIO credentials...";
+      while [ ! -s /tmp/minio_env.sh ]; do
+        sleep 2;
+      done;
+
+      source /tmp/minio_env.sh;
+      
+      if [ -z "$$ACCESS_KEY" ] || [ -z "$$SECRET_KEY" ]; then
+        echo "ERROR: Loaded credentials are empty!"
+        exit 1
+      fi
+
+      export METRICS_UTILITY_BUCKET_ACCESS_KEY=$$ACCESS_KEY;
+      export METRICS_UTILITY_BUCKET_SECRET_KEY=$$SECRET_KEY;
+
+      echo "Listing all environment variables:";
+      printenv | sort;
+
+      echo "Installing dependencies...";
       pip install uv || exit 1;
-
-      echo 'Creating virtual environment with uv...';
       uv venv || exit 1;
-
-      echo 'Installing dependencies using uv...';
       uv pip install . || exit 1;
-
-      echo 'Activating virtual environment...';
       . .venv/bin/activate || exit 1;
 
-      echo 'Running automation billing data collection...';
+      echo "Running automation billing data collection...";
       python manage.py gather_automation_controller_billing_data --ship --since=20d || exit 1;
-
-      echo 'Execution complete.';
-      "
+      echo "Execution complete.";
+      '
 
 volumes:
   minio_data:
+  minio_config:
