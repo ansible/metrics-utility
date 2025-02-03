@@ -212,6 +212,7 @@ def validate_sheet_columns():
     finally:
         wb.close()
 
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
