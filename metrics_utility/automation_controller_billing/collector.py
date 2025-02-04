@@ -1,12 +1,10 @@
 import contextlib
 import json
 import logging
-import importlib.util
 
 import importlib.util
 
 import insights_analytics_collector as base
-
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
@@ -27,12 +25,12 @@ else:
     # 2.5
     from ansible_base.lib.utils.db import advisory_lock
 
-
 logger = logging.getLogger('metrics_utility.collector')
 
 
 class Collector(base.Collector):
-    def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
+    def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None,
+                 ship_target=None, billing_provider_params=None):
         from metrics_utility.automation_controller_billing import collectors
 
         if collector_module is None:
@@ -58,9 +56,11 @@ class Collector(base.Collector):
         if not self.is_enabled():
             return None
 
-        with self._pg_advisory_lock('gather_automation_controller_billing_lock', wait=False) as acquired:
+        with self._pg_advisory_lock("gather_automation_controller_billing_lock", wait=False) as acquired:
             if not acquired:
-                self.logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
+                self.logger.log(
+                    self.log_level, "Not gathering Automation Controller billing data, another task holds lock"
+                )
                 return None
 
             self._gather_initialize(dest, subset, since, until)
@@ -138,7 +138,7 @@ class Collector(base.Collector):
         if self.is_shipping_enabled():
             # We need to wait on analytics lock, to update the last collected timestamp settings
             # so we don't clash with analytics job collection.
-            with self._pg_advisory_lock('gather_analytics_lock', wait=True):
+            with self._pg_advisory_lock("gather_analytics_lock", wait=True):
                 # We need to load fresh settings again as we're obtaning the lock, since
                 # Analytics job could have changed this on the background and we'd be resetting
                 # the Analytics values here.
