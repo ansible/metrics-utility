@@ -26,7 +26,7 @@ file_path = "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/r
 
 date_today = datetime.now().strftime("%b %d, %Y")
 
-EXPECTED_SHEETS = {
+expected_sheets = {
     "Usage Reporting": [
         {
             "SKU": [
@@ -222,5 +222,5 @@ def test_command(cleanup):
 
     assert result.returncode == 0
 
-    Helpers.validate_sheet_columns(file_path, EXPECTED_SHEETS, 14)
-    Helpers.validate_sheet_tab_names(file_path, EXPECTED_SHEETS)
+    Helpers.validate_sheet_columns(file_path, expected_sheets, 14)
+    Helpers.validate_sheet_tab_names(file_path, expected_sheets)
