@@ -4,46 +4,51 @@ import openpyxl
 
 class Helpers:
     @staticmethod
-    def validate_sheet_tab_names(file_path, EXPECTED_SHEETS):
+    def validate_sheet_tab_names(file_path, expected_sheets):
         """Test the sheet names in the Excel file."""
 
         wb = openpyxl.load_workbook(file_path)
         try:
             actual_tab_names = wb.sheetnames
             assert actual_tab_names == list(
-                EXPECTED_SHEETS.keys()
+                expected_sheets.keys()
             ), "Sheet names do not match."
         finally:
             wb.close()
 
     @staticmethod
-    def validate_sheet_columns(file_path, EXPECTED_SHEETS, usage_reporting_min_row):
+    def normalize_column(col):
+        if not col:
+            return ""
+        return col.strip().replace("\n", " ").lower()
+
+    @staticmethod
+    def validate_sheet_columns(file_path, expected_sheets, usage_reporting_min_row):
         """Test the column names for each sheet."""
 
-        def normalize_column(col):
-            return col.strip().replace("\n", " ").lower() if col else ""
+        # For the 'Usage Reporting' sheet, start at specific row with value for ease of traversing
+        def get_min_row(sheet_name):
+            return usage_reporting_min_row if sheet_name == "Usage Reporting" else 1
+
+        # Function returns column headers
+        def get_column_headers(expected_column_data):
+            expected_column_headers = []
+            for column_group in expected_column_data:
+                expected_column_headers.extend(Helpers.normalize_column(col) for col in column_group.keys())
+            return expected_column_headers
 
         wb = openpyxl.load_workbook(file_path)
         try:
-            for sheet_name, expected_column_data in EXPECTED_SHEETS.items():
+            for sheet_name, expected_column_data in expected_sheets.items():
                 sheet = wb[sheet_name]
 
-                # For the 'Usage Reporting' sheet, start at specific row with value for ease of traversing
-                if sheet_name == "Usage Reporting":
-                    min_row = usage_reporting_min_row
-                else:
-                    min_row = 1  # Default for other sheets
+                min_row = get_min_row(sheet_name)
 
                 # All actual column headers for sheet
-                actual_column_headers = [normalize_column(cell.value) for cell in next(sheet.iter_rows(min_row=min_row, max_row=min_row))]
+                actual_column_headers = [Helpers.normalize_column(cell.value) for cell in next(sheet.iter_rows(min_row=min_row, max_row=min_row))]
 
                 # All expected column headers
-                expected_column_headers = []
-                for column_group in expected_column_data:
-                    expected_column_headers.extend(normalize_column(col) for col in column_group.keys())
-
-                print("Actual column headers (formatted):", actual_column_headers)
-                print("Expected column headers (formatted):", expected_column_headers)
+                expected_column_headers = get_column_headers(expected_column_data)
 
                 # Assert column headers
                 assert actual_column_headers == expected_column_headers, f"Column names do not match for sheet: {sheet_name}"
@@ -54,7 +59,7 @@ class Helpers:
 
                         # Find the actual column index for this column
                         try:
-                            col_index = actual_column_headers.index(normalize_column(expected_col_name)) + 1
+                            col_index = actual_column_headers.index(Helpers.normalize_column(expected_col_name)) + 1
                         except ValueError:
                             raise AssertionError(f"Expected column '{expected_col_name}' not found in actual columns for sheet: {sheet_name}")
 
@@ -63,9 +68,6 @@ class Helpers:
                             cell.value for row in sheet.iter_rows(min_row=2, min_col=col_index, max_col=col_index)
                             for cell in row
                         ]
-
-                        print(f"Actual column values for '{expected_col_name}':", actual_column_values)
-                        print(f"Expected column values for '{expected_col_name}':", expected_column_values)
 
                         # Assert column values
                         assert actual_column_values == expected_column_values, (
