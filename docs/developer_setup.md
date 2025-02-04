@@ -41,7 +41,16 @@ The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check an
    ```
    This command creates (or updates) the virtual environment defined by `pyproject.toml` and `uv.lock`. It installs all project dependencies, including `ruff`, `pytest`, `django-admin`, etc.
 
-4. **Verify Installations**:
+4. **(Optional) Using the Virtual Environment Directly**  
+   - By default, `uv` stores the environment in `.venv`. If you want to **manually activate** it, you can run:
+     ```bash
+     source .venv/bin/activate   # For Unix/MacOS
+     # OR
+     .venv\Scripts\activate      # For Windows
+     ```
+   - Typically, you **won’t** need to do this if you rely on **`uvx`** or **`uv run`** (detailed below) to execute commands within the environment. You can also use `uv tool install` to add tools like `ruff` or `pytest` to your path, eliminating the need for manual activation.
+
+5. **Verify Installations**:
    ```bash
    ruff --version
    pytest --version
@@ -52,7 +61,29 @@ The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check an
 
 ---
 
-## 4. Configuring Pre-commit Hooks
+## 4. Running Commands (optional approaches)
+
+Depending on your workflow, you can run commands in various ways:
+
+1. **`uvx <command>`**:  
+   Runs a command within the `.venv` environment without manual activation:
+   ```bash
+   uvx ruff check .
+   uvx pytest
+   ```
+2. **`uv tool install`**:  
+   Installs binaries in a way that they become available on your local PATH (i.e., no `uv` prefix needed):
+   ```bash
+   uv tool install ruff
+   uv tool install pytest
+   # Now ruff/pytest commands are available in your shell directly
+   ```
+
+Use whichever approach suits your workflow.
+
+---
+
+## 5. Configuring Pre-commit Hooks
 
 1. **Install Pre-commit Hooks**:
    ```bash
@@ -74,7 +105,7 @@ The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check an
 
 ---
 
-## 5. Fixing Linting Issues
+## 6. Fixing Linting Issues
 
 Depending on the project’s configuration:
 
@@ -98,15 +129,16 @@ This time, the commit should succeed if all issues are resolved.
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 1. **`uv sync` Errors**  
-   - Ensure Python 3.8+ is installed.
+   - Ensure Python 3.11+ is installed.
    - Confirm you have the correct permissions to install packages.
 
 2. **`ruff` or `pre-commit` Not Found**  
    - Run `uv sync` again.
-   - Make sure your shell is set to use the environment from `uv`.
+   - Make sure your shell is set to use the environment from `uv` (via `uv shell` or by sourcing `.venv/bin/activate`).
+   - Alternatively, use `uvx ruff` or `uv tool install ruff`.
 
 3. **Hook Doesn’t Run**  
    - Check that `.pre-commit-config.yaml` references `ruff`.
@@ -117,7 +149,7 @@ This time, the commit should succeed if all issues are resolved.
 
 ---
 
-## 7. Additional Resources
+## 8. Additional Resources
 
 - [Ruff Documentation](https://beta.ruff.rs/docs/)
 - [Pre-commit Documentation](https://pre-commit.com/)

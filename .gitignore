@@ -1,5 +1,6 @@
 # Python & setuptools
 __pycache__
+.venv/
 /build
 /deb-build
 /reprepro
