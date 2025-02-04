@@ -1,9 +1,9 @@
 from datetime import datetime
-import os
+from conftest import Helpers
+
 import subprocess
 import sys
 
-import openpyxl
 import pytest
 
 env_vars = {
@@ -206,89 +206,7 @@ EXPECTED_SHEETS = {
     ]
 }
 
-
-
-@pytest.fixture
-def cleanup():
-    """Fixture to clean up the generated file at the start and end of test."""
-    # Cleanup at the beginning
-    if os.path.exists(file_path):
-        os.remove(file_path)
-    yield
-    # Cleanup at the end
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-
-def validate_sheet_tab_names():
-    """Test the sheet names in the Excel file."""
-
-    wb = openpyxl.load_workbook(file_path)
-    try:
-        actual_tab_names = wb.sheetnames
-        assert actual_tab_names == list(
-            EXPECTED_SHEETS.keys()
-        ), "Sheet names do not match."
-    finally:
-        wb.close()
-
-
-def validate_sheet_columns():
-    """Test the column names for each sheet."""
-
-    def normalize_column(col):
-        return col.strip().replace("\n", " ").lower() if col else ""
-
-    wb = openpyxl.load_workbook(file_path)
-    try:
-        for sheet_name, expected_column_data in EXPECTED_SHEETS.items():
-            sheet = wb[sheet_name]
-
-            # For the 'Usage Reporting' sheet, start at row 14
-            if sheet_name == "Usage Reporting":
-                min_row = 14
-            else:
-                min_row = 1  # Default for other sheets
-
-            # All actual column headers for sheet
-            actual_column_headers = [normalize_column(cell.value) for cell in next(sheet.iter_rows(min_row=min_row, max_row=min_row))]
-
-            # All expected column headers
-            expected_column_headers = []
-            for column_group in expected_column_data:
-                expected_column_headers.extend(normalize_column(col) for col in column_group.keys())
-
-            print("Actual column headers (formatted):", actual_column_headers)
-            print("Expected column headers (formatted):", expected_column_headers)
-
-            # Assert column headers
-            assert actual_column_headers == expected_column_headers, f"Column names do not match for sheet: {sheet_name}"
-
-            # Iterate through each expected column group
-            for column_group in expected_column_data:
-                for expected_col_name, expected_column_values in column_group.items():
-
-                    # Find the actual column index for this column
-                    try:
-                        col_index = actual_column_headers.index(normalize_column(expected_col_name)) + 1
-                    except ValueError:
-                        raise AssertionError(f"Expected column '{expected_col_name}' not found in actual columns for sheet: {sheet_name}")
-
-                    # Extract actual values for this column (skip the header)
-                    actual_column_values = [
-                        cell.value for row in sheet.iter_rows(min_row=2, min_col=col_index, max_col=col_index)
-                        for cell in row
-                    ]
-
-                    print(f"Actual column values for '{expected_col_name}':", actual_column_values)
-                    print(f"Expected column values for '{expected_col_name}':", expected_column_values)
-
-                    # Assert column values
-                    assert actual_column_values == expected_column_values, (
-                        f"Column values do not match for column '{expected_col_name}' in sheet '{sheet_name}'"
-                    )
-    finally:
-        wb.close()
+@pytest.mark.parametrize("cleanup", [file_path,], indirect=True)
 
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
@@ -304,5 +222,5 @@ def test_command(cleanup):
 
     assert result.returncode == 0
 
-    validate_sheet_columns()
-    validate_sheet_tab_names()
+    Helpers.validate_sheet_columns(file_path, EXPECTED_SHEETS, 14)
+    Helpers.validate_sheet_tab_names(file_path, EXPECTED_SHEETS)
