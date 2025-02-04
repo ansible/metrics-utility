@@ -52,7 +52,7 @@ def create_directory_if_not_exists(directory_path: str) -> None:
         print(f'Error creating directory: {e}')
 
 
-def parse_json_file(file_path: str) -> dict:
+def parse_json_file(file_path: str) -> dict | None:
     """
     Parses a JSON file and returns the data as a dictionary.
 
@@ -342,7 +342,7 @@ def compare_worksheets(workbook_generated: openpyxl.Workbook,
                 )
 
 
-def get_file_name(params: List[str], env_vars: Dict[str, str]) -> str:
+def get_file_name(params: List[str], env_vars: Dict[str, str]) -> str | None:
     """
     Attempts to deduce the filename for the generated report based on report type and parameters.
 
@@ -363,7 +363,7 @@ def get_file_name(params: List[str], env_vars: Dict[str, str]) -> str:
     return None
 
 
-def get_param_value(params: List[str], name: str) -> str:
+def get_param_value(params: List[str], name: str) -> str | None:
     """
     Extracts the value from a command-line parameter of the form "name=value".
 
