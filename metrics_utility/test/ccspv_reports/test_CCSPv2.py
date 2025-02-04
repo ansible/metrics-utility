@@ -180,9 +180,6 @@ def validate_sheet_columns():
             for column_group in expected_column_data:
                 expected_column_headers.extend(normalize_column(col) for col in column_group.keys())
 
-            print("Actual column headers (formatted):", actual_column_headers)
-            print("Expected column headers (formatted):", expected_column_headers)
-
             # Assert column headers
             assert actual_column_headers == expected_column_headers, f"Column names do not match for sheet: {sheet_name}"
 
@@ -201,9 +198,6 @@ def validate_sheet_columns():
                         cell.value for row in sheet.iter_rows(min_row=2, min_col=col_index, max_col=col_index)
                         for cell in row
                     ]
-
-                    print(f"Actual column values for '{expected_col_name}':", actual_column_values)
-                    print(f"Expected column values for '{expected_col_name}':", expected_column_values)
 
                     # Assert column values
                     assert actual_column_values == expected_column_values, (
