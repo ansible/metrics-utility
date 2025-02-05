@@ -206,8 +206,8 @@ expected_sheets = {
     ]
 }
 
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
 @pytest.mark.parametrize("cleanup", [file_path,], indirect=True)
-
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
