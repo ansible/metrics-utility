@@ -18,6 +18,7 @@ class Helpers:
 
     @staticmethod
     def normalize_column(col):
+        """Remove whitespace, newlines, and uppercase chars from column name."""
         if not col:
             return ""
         return col.strip().replace("\n", " ").lower()
@@ -26,11 +27,11 @@ class Helpers:
     def validate_sheet_columns(file_path, expected_sheets, usage_reporting_min_row):
         """Test the column names for each sheet."""
 
-        # For the 'Usage Reporting' sheet, start at specific row with value for ease of traversing
+        """Determine the min_row (first row) to identify."""
         def get_min_row(sheet_name):
             return usage_reporting_min_row if sheet_name == "Usage Reporting" else 1
 
-        # Function returns column headers
+        """Determine the expected column headers."""
         def get_column_headers(expected_column_data):
             expected_column_headers = []
             for column_group in expected_column_data:
@@ -44,32 +45,32 @@ class Helpers:
 
                 min_row = get_min_row(sheet_name)
 
-                # All actual column headers for sheet
+                """Determine all actual column headers."""
                 actual_column_headers = [Helpers.normalize_column(cell.value) for cell in next(sheet.iter_rows(min_row=min_row, max_row=min_row))]
 
-                # All expected column headers
+                """Call the get_column_headers() method and assign return value to expected_column_headers."""
                 expected_column_headers = get_column_headers(expected_column_data)
 
-                # Assert column headers
+                """Assert the actual headers equal expected headers."""
                 assert actual_column_headers == expected_column_headers, f"Column names do not match for sheet: {sheet_name}"
 
-                # Iterate through each expected column group
+                """Iterate through each expected column group"""
                 for column_group in expected_column_data:
                     for expected_col_name, expected_column_values in column_group.items():
 
-                        # Find the actual column index for this column
+                        """Find the actual column index for this column"""
                         try:
                             col_index = actual_column_headers.index(Helpers.normalize_column(expected_col_name)) + 1
                         except ValueError:
                             raise AssertionError(f"Expected column '{expected_col_name}' not found in actual columns for sheet: {sheet_name}")
 
-                        # Extract actual values for this column (skip the header)
+                        """Extract actual values for this column (skip the header)."""
                         actual_column_values = [
                             cell.value for row in sheet.iter_rows(min_row=2, min_col=col_index, max_col=col_index)
                             for cell in row
                         ]
 
-                        # Assert column values
+                        """Assert that the actual column values equal the expected column values."""
                         assert actual_column_values == expected_column_values, (
                             f"Column values do not match for column '{expected_col_name}' in sheet '{sheet_name}'"
                         )
@@ -82,10 +83,10 @@ class Helpers:
 def cleanup(request):
     file_path = request.param
     """Fixture to clean up the generated file at the start and end of test."""
-    # Cleanup at the beginning
+    """Cleanup at the beginning"""
     if os.path.exists(file_path):
         os.remove(file_path)
     yield
-    # Cleanup at the end
+    """Cleanup at the end"""
     if os.path.exists(file_path):
         os.remove(file_path)
