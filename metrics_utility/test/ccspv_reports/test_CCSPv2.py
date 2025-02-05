@@ -1,9 +1,8 @@
-from conftest import Helpers
+from conftest import validate_sheet_columns, validate_sheet_tab_names
+from datetime import datetime
 
 import subprocess
 import sys
-from datetime import datetime
-
 import pytest
 
 env_vars = {
@@ -144,5 +143,5 @@ def test_command(cleanup):
 
     assert result.returncode == 0
 
-    Helpers.validate_sheet_columns(file_path, expected_sheets, 6)
-    Helpers.validate_sheet_tab_names(file_path, expected_sheets)
+    validate_sheet_columns(file_path, expected_sheets, 6)
+    validate_sheet_tab_names(file_path, expected_sheets)

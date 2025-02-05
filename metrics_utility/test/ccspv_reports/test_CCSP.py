@@ -1,5 +1,5 @@
 from datetime import datetime
-from conftest import Helpers
+from conftest import validate_sheet_columns, validate_sheet_tab_names
 
 import subprocess
 import sys
@@ -222,5 +222,5 @@ def test_command(cleanup):
 
     assert result.returncode == 0
 
-    Helpers.validate_sheet_columns(file_path, expected_sheets, 14)
-    Helpers.validate_sheet_tab_names(file_path, expected_sheets)
+    validate_sheet_columns(file_path, expected_sheets, 14)
+    validate_sheet_tab_names(file_path, expected_sheets)
