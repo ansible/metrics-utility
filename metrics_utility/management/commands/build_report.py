@@ -124,7 +124,17 @@ class Command(BaseCommand):
             extra_params=extra_params).create()
 
         if report_dataframe[0] is None or report_dataframe[0].empty:
-            self.logger.info(f"No billing data for month: {opt_month}")
+            if (opt_since is not None or opt_until is not None):
+                log = 'No billing data for date range: '
+                if (opt_since is not None):
+                    log += f' since={opt_since}'
+                if (opt_until is not None):
+                    log += f' until={opt_until}'
+                self.logger.info(log)
+            elif (opt_month is not None):
+                self.logger.info(f"No billing data for month: {opt_month}")
+            else:
+                self.logger.info('No billing data for input date range')
             return
 
         report_engine = ReportFactory(report_period=opt_month,

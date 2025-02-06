@@ -23,11 +23,11 @@ class Factory:
             raise NotSupportedFactory(f"Factory for {self.ship_target} not supported")
 
     def _get_extractor_directory(self):
-        # Return default S3 loader
+        # Return default directory loader
         return ExtractorDirectory(self.extra_params)
 
     def _get_extractor_controller_db(self):
-        # Return default S3 loader
+        # Return default DB loader
         return ExtractorControllerDB(self.extra_params)
 
     def _get_extractor_s3(self):
