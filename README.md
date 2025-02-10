@@ -96,5 +96,5 @@ Documentation is available in the [`/docs` directory](./docs).
 
 ## Contributing
 
-Please follow our [Contributor's Guide](./docs/contributing/contributor_guide.md) for details on submitting changes and documentation standards.
+Please follow our [Contributor's Guide](./docs/contributing/CONTRIBUTING.md) for details on submitting changes and documentation standards.
 

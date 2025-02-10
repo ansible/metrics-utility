@@ -48,7 +48,7 @@ To ensure consistency and maintainability, a PR should meet the following criter
 
 - ✅ Follow the **pull request template** (`.github/pull_request_template.md`).
 - ✅ Code should be properly **formatted and linted** using `pre-commit` and `ruff`.
-- ✅ Review the **essential linter settings** in [`pyproject.toml`](../pyproject.toml) to ensure compliance.
+- ✅ Review the **essential linter settings** in [`pyproject.toml`](../../pyproject.toml) to ensure compliance.
 - ✅ All **conversations on the PR must be resolved** before merging.
 - ✅ PR must receive **at least two approvals** from maintainers.
 - ✅ Internal contributors must **sign commits** (Verified tag).
