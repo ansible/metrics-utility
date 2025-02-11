@@ -86,7 +86,7 @@ class DataframeJobhostSummaryUsage(Base):
                         billing_data_group.loc[:, ],
                         on=self.unique_index_columns(),
                         how='outer')
-                    #print_data(billing_data_monthly_rollup, "Global data outer join batch data")
+                    print_data(billing_data_monthly_rollup, "Global data outer join batch data")
                     billing_data_monthly_rollup = self.summarize_merged_dataframes(
                         billing_data_monthly_rollup, self.data_columns(),
                         operations={"first_automation": "min",
@@ -97,7 +97,7 @@ class DataframeJobhostSummaryUsage(Base):
                     billing_data_monthly_rollup = self.cast_dataframe(
                         billing_data_monthly_rollup, self.cast_types())
                     
-                #print_data(billing_data_monthly_rollup, "Actual global data")
+                print_data(billing_data_monthly_rollup, "Actual global data")
                
         if billing_data_monthly_rollup is None:
             return None
