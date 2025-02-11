@@ -76,7 +76,7 @@ class Command(BaseCommand):
                 standalone_handler.setLevel(logging.DEBUG)
                 standalone_handler.setFormatter(logging.Formatter('%(message)s'))
                 self.logger.addHandler(standalone_handler)
-            
+
             self.logger.propagate = False  # Ensure logs do not propagate to other handlers
 
     def handle(self, *args, **options):
