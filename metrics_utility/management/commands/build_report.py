@@ -58,11 +58,26 @@ class Command(BaseCommand):
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter('%(message)s'))
-        self.logger.addHandler(handler)
-        self.logger.propagate = False
+
+        if os.getenv('STANDALONE_MODE') is None:
+            # Prevent duplicate handlers
+            if not self.logger.handlers:
+                self.logger = logging.getLogger('awx.main.analytics')
+                handler = logging.StreamHandler()
+                handler.setLevel(logging.DEBUG)
+                handler.setFormatter(logging.Formatter('%(message)s'))
+                self.logger.addHandler(handler)
+                self.logger.propagate = False
+
+        if os.getenv('STANDALONE_MODE') is not None:
+            self.logger.setLevel(logging.DEBUG)  # Ensure the logger captures all messages
+            if not self.logger.handlers:  # If no handlers exist, add one
+                standalone_handler = logging.StreamHandler()
+                standalone_handler.setLevel(logging.DEBUG)
+                standalone_handler.setFormatter(logging.Formatter('%(message)s'))
+                self.logger.addHandler(standalone_handler)
+            
+            self.logger.propagate = False  # Ensure logs do not propagate to other handlers
 
     def handle(self, *args, **options):
         self.init_logging()
