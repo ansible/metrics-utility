@@ -55,7 +55,11 @@ class Command(BaseCommand):
                             action='store_true',
                             help='With this option, the existing reports will be overwritten if '\
                                  'running this command again.')
-
+        parser.add_argument('--verbose',
+                            dest='verbose',
+                            action='store_true',
+                            help='Starts to print debug information to terminal.')
+        
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
         handler = logging.StreamHandler()
