@@ -11,12 +11,14 @@ def print_data(df, caption):
         return
     
     df = df.reset_index()
-    excluded_columns = ['created', 'modified', 'job_created', 
+    excluded_columns = ['created', 'modified', 'job_created', 'install_uuid', 'duration',
                         'project_remote_id', 'project_name', 'original_host_name', 
                         'organization_remote_id', 'host_remote_id', 'inventory_remote_id',
                         'ansible_connection_variable', 'changed', 'inventory_name',
                         'job_template_remote_id', 'ansible_host_variable', 
-                        'first_automation', 'last_automation']
+                        'first_automation', 'last_automation', 
+                        'main_jobhostsummary_id', 'main_jobhostsummary_created',
+                        'resolved_action','failed', 'resolved_role']
 
     valid_excluded_columns = [col for col in excluded_columns if col in df.columns]
     pprint('-----------------------------------------------')
