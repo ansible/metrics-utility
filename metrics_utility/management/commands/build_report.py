@@ -68,8 +68,7 @@ class Command(BaseCommand):
                 handler.setFormatter(logging.Formatter('%(message)s'))
                 self.logger.addHandler(handler)
                 self.logger.propagate = False
-
-        if os.getenv('STANDALONE_MODE') is not None:
+        else:
             self.logger.setLevel(logging.DEBUG)  # Ensure the logger captures all messages
             if not self.logger.handlers:  # If no handlers exist, add one
                 standalone_handler = logging.StreamHandler()
