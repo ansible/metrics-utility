@@ -1,5 +1,5 @@
 import logging
-from debug_utils import print_data, print_debug
+from debug_utils import print_data
 
 import pandas as pd
 
@@ -96,9 +96,9 @@ class DataframeJobhostSummaryUsage(Base):
                     # Tweak types to match the table
                     billing_data_monthly_rollup = self.cast_dataframe(
                         billing_data_monthly_rollup, self.cast_types())
-                    
+
                 print_data(billing_data_monthly_rollup, "Actual global data")
-               
+
         if billing_data_monthly_rollup is None:
             return None
 

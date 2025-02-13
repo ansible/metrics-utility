@@ -59,7 +59,7 @@ class Command(BaseCommand):
                             dest='verbose',
                             action='store_true',
                             help='Starts to print debug information to terminal.')
-        
+
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
         handler = logging.StreamHandler()
@@ -143,7 +143,7 @@ class Command(BaseCommand):
 
         # Save the report to the configured destination
         report_saver_engine.save(report_spreadsheet)
-        
+
         print(f"Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}")
 
         self.logger.info(f"Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}")

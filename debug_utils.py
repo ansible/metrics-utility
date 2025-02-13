@@ -1,5 +1,6 @@
 from pprint import pprint
-import os, sys
+import os
+import sys
 
 def print_debug(text):
     if '--verbose' not in sys.argv:
@@ -9,14 +10,14 @@ def print_debug(text):
 def print_data(df, caption):
     if '--verbose' not in sys.argv:
         return
-    
+
     df = df.reset_index()
     excluded_columns = ['created', 'modified', 'job_created', 'install_uuid', 'duration',
-                        'project_remote_id', 'project_name', 'original_host_name', 
+                        'project_remote_id', 'project_name', 'original_host_name',
                         'organization_remote_id', 'host_remote_id', 'inventory_remote_id',
                         'ansible_connection_variable', 'changed', 'inventory_name',
-                        'job_template_remote_id', 'ansible_host_variable', 
-                        'first_automation', 'last_automation', 
+                        'job_template_remote_id', 'ansible_host_variable',
+                        'first_automation', 'last_automation',
                         'main_jobhostsummary_id', 'main_jobhostsummary_created',
                         'resolved_action','failed', 'resolved_role']
 
@@ -39,7 +40,9 @@ def set_ccspv2_vars():
     os.environ["METRICS_UTILITY_REPORT_PO_NUMBER"] = "123"
     os.environ["METRICS_UTILITY_REPORT_RHN_LOGIN"] = "test_login"
     os.environ["METRICS_UTILITY_REPORT_SKU"] = "MCT3752MO"
-    os.environ["METRICS_UTILITY_REPORT_SKU_DESCRIPTION"] = "EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+    os.environ["METRICS_UTILITY_REPORT_SKU_DESCRIPTION"] = \
+    "EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+
     os.environ["METRICS_UTILITY_REPORT_TYPE"] = "CCSPv2"
     os.environ["METRICS_UTILITY_SHIP_PATH"] = "./metrics_utility/test/test_data"
     os.environ["METRICS_UTILITY_SHIP_TARGET"] = "directory"
