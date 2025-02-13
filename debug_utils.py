@@ -1,13 +1,25 @@
-from pprint import pprint
 import os
 import sys
+from pprint import pprint
 
 def print_debug(text):
+    """
+    Prints debug text only if '--verbose' is in the command-line arguments.
+
+    :param text: The debug message to print.
+    """
     if '--verbose' not in sys.argv:
         return
     print(text)
 
 def print_data(df, caption):
+    """
+    Prints a DataFrame with a caption, excluding specific columns,
+    only if '--verbose' is in the command-line arguments.
+
+    :param df: The Pandas DataFrame to print.
+    :param caption: A string caption describing the data.
+    """
     if '--verbose' not in sys.argv:
         return
 
@@ -29,6 +41,10 @@ def print_data(df, caption):
     pprint('-----------------------------------------------')
 
 def set_ccspv2_vars():
+    """
+    Sets environment variables for CCSP v2 report generation. Useful for debugging
+    in an editor like VS Code.
+    """
     os.environ["METRICS_UTILITY_PRICE_PER_NODE"] = "11.55"
     os.environ["METRICS_UTILITY_REPORT_COMPANY_NAME"] = "Partner A"
     os.environ["METRICS_UTILITY_REPORT_EMAIL"] = "email@email.com"
@@ -40,11 +56,12 @@ def set_ccspv2_vars():
     os.environ["METRICS_UTILITY_REPORT_PO_NUMBER"] = "123"
     os.environ["METRICS_UTILITY_REPORT_RHN_LOGIN"] = "test_login"
     os.environ["METRICS_UTILITY_REPORT_SKU"] = "MCT3752MO"
-    os.environ["METRICS_UTILITY_REPORT_SKU_DESCRIPTION"] = \
-    "EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
-
+    os.environ["METRICS_UTILITY_REPORT_SKU_DESCRIPTION"] = (
+        "EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
+    )
     os.environ["METRICS_UTILITY_REPORT_TYPE"] = "CCSPv2"
     os.environ["METRICS_UTILITY_SHIP_PATH"] = "./metrics_utility/test/test_data"
     os.environ["METRICS_UTILITY_SHIP_TARGET"] = "directory"
 
+    # Simulating command-line arguments for debugging
     sys.argv = ["manage.py", "build_report", "--month", "2024-03", "--force", "--verbose"]
