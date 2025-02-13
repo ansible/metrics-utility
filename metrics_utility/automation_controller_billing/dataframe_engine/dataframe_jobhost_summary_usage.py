@@ -1,5 +1,5 @@
 import logging
-from debug_utils import print_data
+from debug_utils import print_data, print_debug
 
 import pandas as pd
 
@@ -28,7 +28,7 @@ class DataframeJobhostSummaryUsage(Base):
                 if billing_data.empty:
                     continue
 
-                #print_debug(f'\nComputing data batch for {date}')
+                print_debug(f'\nComputing data batch for {date}')
                 billing_data['organization_name'] = billing_data.organization_name.fillna("No organization name")
                 billing_data['install_uuid'] = data['config']['install_uuid']
 

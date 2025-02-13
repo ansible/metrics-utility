@@ -143,9 +143,6 @@ class Command(BaseCommand):
 
         # Save the report to the configured destination
         report_saver_engine.save(report_spreadsheet)
-
-        print(f"Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}")
-
         self.logger.info(f"Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}")
 
     def _handle_ship_target(self, ship_target):

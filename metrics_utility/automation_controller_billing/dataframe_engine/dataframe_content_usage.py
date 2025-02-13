@@ -1,5 +1,6 @@
 import logging
 import re
+from debug_utils import print_data, print_debug
 
 import pandas as pd
 
@@ -67,7 +68,7 @@ class DataframeContentUsage(Base):
                 ################################
                 # Do the aggregation
                 ################################
-                from debug_utils import print_data
+                print_debug(f'\nComputing data batch for {date}')
                 print_data(events, "Events data")
                 events_group = events.groupby(
                     self.unique_index_columns(), dropna=False
