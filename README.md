@@ -84,8 +84,14 @@ Recent changes in AWX have decoupled some dependencies, meaning certain componen
 4. Generate renewal guidance report:
 
    ```bash
-   export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
-   python manage.py build_report --since=12months --ephemeral=1month
+      # Set extra ENV VARs for report generation purposes
+      export METRICS_UTILITY_SHIP_TARGET=controller_db
+      export METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE
+      export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+
+      # Builds report covering 365days back by default
+      python manage.py build_report --since=12months --ephemeral=1month
+      # or metrics-utility build_report --since=12months --ephemeral=1month
    ```
 
 ## Documentation
