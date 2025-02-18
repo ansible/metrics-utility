@@ -5,7 +5,7 @@ import os
 from dateutil.parser import parse as date_parse
 from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
-from datetime import timezone
+from django.utils import timezone
 
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import \
     Factory as DataframeEngineFactory
@@ -133,7 +133,6 @@ class Command(BaseCommand):
             else:
                 self.logger.info(f'No billing data for month {opt_month}')
             return
-
 
         report_engine = ReportFactory(report_period=opt_month,
                                       report_dataframe=report_dataframe,

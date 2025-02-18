@@ -2,7 +2,7 @@ import datetime
 
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from datetime import timezone
+from django.utils import timezone
 
 from metrics_utility.exceptions import UnparsableParameter
 

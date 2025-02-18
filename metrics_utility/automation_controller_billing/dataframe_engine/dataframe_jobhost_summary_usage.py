@@ -18,10 +18,12 @@ class DataframeJobhostSummaryUsage(Base):
     def build_dataframe(self):
         # A daily rollup dataframe
         billing_data_monthly_rollup = None
+
         for date in self.dates():
             ###############################
             # Generate the monthly dataset for report
             ###############################
+
             for data in self.extractor.iter_batches(date=date):
                 # If the dataframe is empty, skip additional processing
                 billing_data = data['job_host_summary']
@@ -87,6 +89,7 @@ class DataframeJobhostSummaryUsage(Base):
                         on=self.unique_index_columns(),
                         how='outer')
                     print_data(billing_data_monthly_rollup, "Global data outer join batch data")
+
                     billing_data_monthly_rollup = self.summarize_merged_dataframes(
                         billing_data_monthly_rollup, self.data_columns(),
                         operations={"first_automation": "min",

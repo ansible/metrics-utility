@@ -15,7 +15,7 @@ def manage():
         sys.path.append(awx_path)
         spec = importlib.util.find_spec('awx')
         if spec is None:
-            sys.stderr.write(f"Automation Controller modules not found in {awx_path} (AWX_PATH). Using mock and continuing.\n")
+            sys.stderr.write(f'Automation Controller modules not found in {awx_path} (AWX_PATH). Using mock and continuing.\n')
             sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'mock_awx')))
 
     import django

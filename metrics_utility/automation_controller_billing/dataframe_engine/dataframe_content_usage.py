@@ -76,6 +76,7 @@ class DataframeContentUsage(Base):
                     task_runs=('module_name', 'count'),
                     duration=('duration', "sum"))
                 print_data(events, "Aggregated Events data")
+
                 # Duration is null in older versions of Controller
                 events_group['duration'] = events_group.duration.fillna(0)
                 # Tweak types to match the table
