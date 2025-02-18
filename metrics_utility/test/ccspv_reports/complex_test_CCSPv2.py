@@ -29,98 +29,6 @@ file_path = "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/r
 
 date_today = datetime.now().strftime("%b %d, %Y")
 
-expected_sheets = {
-    "Usage Reporting": [
-        {
-    "End User Company Name": [
-        'CCSP Company Name',
-        'CCSP Email',
-        'CCSP RHN Login',
-        'Report Period (YYYY-MM)',
-        'End User Company Name',
-        'Customer A',
-        None,
-        None,
-        None,
-        None,
-        None
-    ]
-},
-        {
-    "Enter 'X' to Indicate\nInteral Usage": [
-        'Partner A',
-        'email@email.com',
-        'test_login',
-        '2025-02-13, 2025-02-13',
-        "Enter 'X' to indicate\nInteral Usage",
-        None,
-        None,
-        None,
-        None,
-        None,
-        None
-    ]
-},
-        {"End User\nCity": [None, None, None, None, 'End User\nCity', 'Springfield', None, None, None, None, None]},
-        {"End User\nState/Prov": [None, None, None, None, 'End User\nState/Prov', 'TX', None, None, None, None, None]},
-        {"Country Where\nSKU Consumed": [None, None, 'PO Number', None, 'Country Where\nSKU Consumed', 'US', None, None, None, None, None]},
-        {"SKU Number": [None, None, '123', None, 'SKU Number', 'MCT3752MO', None, None, None, None, None]},
-        {"Quantity":[None, None, None, None, 'Quantity', 4, None, None, None, None, None]},
-        {
-    "SKU Description": [
-        None,
-        None,
-        None,
-        None,
-        'SKU Description',
-        'EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)',
-        None,
-        None,
-        None,
-        None,
-        None
-    ]
-},
-        {"SKU Unit Price": ['Grand total', None, None, None, 'SKU Unit Price', 11.55, None, None, None, None, None]},
-        {
-    "SKU Extended Unit\nPrice": [
-        '=SUM(J7:J12)',
-        None,
-        None,
-        None,
-        'SKU Extended Unit\nPrice',
-        '=G7*I7',
-        '=G8*I8',
-        '=G9*I9',
-        '=G10*I10',
-        '=G11*I11',
-        '=G12*I12'
-    ]
-},
-        {"Notes": [None, None, None, None, 'Notes', None, None, None, None, None, None]},
-    ],
-    "Managed nodes": [
-        {"Host name": ['host1', 'localhost', 'test_host', 'test_host_1']},
-        {"automated by organizations": [2, 1, 1, 1]},
-        {'job runs':  [8, 1, 4, 1]},
-        {'number of task runs': [12, 2, 8, 2]},
-        {
-            'first automation': [
-                datetime(2025, 2, 13, 12, 39, 15, 342000),
-                datetime(2025, 2, 13, 12, 33, 50, 933000),]
-        },
-        {
-            'last automation': []
-        },
-    ],
-    "Usage by organizations": [
-        {"Organization name" : ['Default', 'org1']},
-        {"Job runs": [ 5, 1]},
-        {"Unique managed nodes automated": [4, 1]},
-        {"Non-unique managed nodes automated": [12, 2]},
-        {"Number of task runs":[20,4]},
-    ]
-}
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 @pytest.mark.parametrize("cleanup", [file_path,], indirect=True)
 def test_command(cleanup):
@@ -141,7 +49,10 @@ def test_command(cleanup):
         workbook = openpyxl.load_workbook(filename=file_path)
 
         validate_managed_nodes(workbook)
-
+        validate_usage_by_organization(workbook)
+        validate_usage_by_collections(workbook)
+        validate_usage_by_roles(workbook)
+        validate_usage_by_modules(workbook)
 
     finally:
         workbook.close()
@@ -177,3 +88,62 @@ def validate_managed_nodes(workbook):
                     '2025-02-13 12:33:50', 
                     '2025-02-13 12:33:50', 
                     '2025-02-13 12:33:46'])
+
+def validate_usage_by_organization(workbook):
+    sheet_name = "Usage by organizations"
+
+    validate_column(workbook, sheet_name, 'A', 1, ['Organization name', 'Default', 'org1'])
+    validate_column(workbook, sheet_name, 'B', 1, ['Job runs', '5', '1'])
+    validate_column(workbook, sheet_name, 'C', 1, ['Unique managed nodes automated', '4', '1'])
+    validate_column(workbook, sheet_name, 'D', 1, ['Non-unique managed nodes automated', '12', '2'])
+    validate_column(workbook, sheet_name, 'E', 1, ['Number of task runs', '20', '4'])
+
+def validate_usage_by_collections(workbook):
+    sheet_name = "Usage by collections"
+
+    validate_column(workbook, sheet_name, 'A', 1, ['Collection name', 'ansible.builtin', 'ansible.builtin2'])
+    validate_column(workbook, sheet_name, 'B', 1, ['Unique managed nodes automated', '4', '1'])
+    validate_column(workbook, sheet_name, 'C', 1, ['Non-unique managed nodes automated', '8', '1'])
+    validate_column(workbook, sheet_name, 'D', 1, ['Number of task runs', '22', '2'])
+    validate_column(workbook, sheet_name, 'E', 1, ['Duration of task runs [seconds]', '22.055472', '0.802726'])
+
+def validate_usage_by_roles(workbook):
+    sheet_name = "Usage by roles"
+
+    validate_column(workbook, sheet_name, 'A', 1, ['Role name', 'No role used', 'ansible.builtin2.role'])
+    validate_column(workbook, sheet_name, 'B', 1, ['Unique managed nodes automated', '4', '1'])
+    validate_column(workbook, sheet_name, 'C', 1, ['Non-unique managed nodes automated', '8', '1'])
+    validate_column(workbook, sheet_name, 'D', 1, ['Number of task runs', '22', '2'])
+    validate_column(workbook, sheet_name, 'E', 1, ['Duration of task runs [seconds]', '22.055472', '0.802726'])
+
+def validate_usage_by_modules(workbook):
+    sheet_name = "Usage by modules"
+
+    validate_column(workbook, sheet_name, 'A', 1, [
+        'Module name', 
+        'ansible.builtin.debug', 
+        'ansible.builtin.gather_facts', 
+        'ansible.builtin2.debug', 
+        'ansible.builtin2.gather_facts'
+    ])
+
+    validate_column(workbook, sheet_name, 'B', 1, [
+        'Unique managed nodes automated', 
+        '4', '4', '1', '1'
+    ])
+
+    validate_column(workbook, sheet_name, 'C', 1, [
+        'Non-unique managed nodes automated', 
+        '6', '8', '1', '1'
+    ])
+
+    validate_column(workbook, sheet_name, 'D', 1, [
+        'Number of task runs', 
+        '9', '13', '1', '1'
+    ])
+
+    validate_column(workbook, sheet_name, 'E', 1, [
+        'Duration of task runs [seconds]', 
+        '0.119905', '21.935567', '0.011992', '0.790734'
+    ])
+
