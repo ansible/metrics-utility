@@ -1,7 +1,8 @@
 import os
 import pytest
 import openpyxl
-
+from openpyxl import Workbook
+from datetime import datetime
 
 def validate_sheet_tab_names(file_path, expected_sheets):
     """Test the sheet names in the Excel file."""
@@ -87,3 +88,35 @@ def cleanup(request):
     # Cleanup at the end
     if os.path.exists(file_path):
         os.remove(file_path)
+
+def validate_column(workbook : Workbook, sheet_name, column_name, row_id, expected_values):
+    actual_row_id = row_id - 1
+
+    sheet = workbook[sheet_name]
+
+    for exp in expected_values:
+        expected_value = exp
+        actual_row_id += 1
+        addr = column_name + str(actual_row_id)
+
+        real_value = sheet[addr].value
+        
+        if isinstance(real_value, str):
+            real_value = real_value.replace("\n", " ")
+
+        if isinstance(expected_value, int):
+            expected_value = str(expected_value)
+
+        if isinstance(real_value, int):
+            real_value = str(real_value)
+
+        if isinstance(real_value, datetime):
+            real_value = real_value.strftime("%Y-%m-%d %H:%M:%S")
+
+        assert real_value == expected_value, (
+                    f'Column names do not match for sheet name: {sheet_name}. '
+                    f'Address {addr}. Actual value = {real_value}, expected value = {expected_value}'
+                )
+
+
+
