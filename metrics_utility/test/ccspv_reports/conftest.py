@@ -113,13 +113,16 @@ def validate_column(workbook : Workbook, sheet_name, column_name, row_id, expect
         if isinstance(real_value, datetime):
             real_value = real_value.strftime("%Y-%m-%d %H:%M:%S")
 
+        equals = real_value == expected_value
+
         if isinstance(real_value, float):
-            real_value = str(real_value)
+            if isinstance(expected_value, str):
+                expected_value = float(expected_value)
 
-        if isinstance(expected_value, float):
-            expected_value = str(expected_value)
+            equals = pytest.approx(real_value) == expected_value
 
-        assert real_value == expected_value, (
+
+        assert equals, (
                     f'Column names do not match for sheet name: {sheet_name}. '
                     f'Address {addr}. Actual value = {real_value}, expected value = {expected_value}'
                 )
