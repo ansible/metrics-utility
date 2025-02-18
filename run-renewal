@@ -8,7 +8,7 @@ export METRICS_UTILITY_SHIP_TARGET="controller_db"
 
 SCHEMA=`realpath "metrics_utility/test/test_data/schemas/awx/latest.sql"`
 ROLES=`realpath "metrics_utility/test/test_data/schemas/awx/roles.sql"`
-NAME=ccsp2-gather-`basename "$SCHEMA" .schema`
+NAME=renewal-`basename "$SCHEMA" .schema`
 
 echo "$NAME"
 pg_isready -h localhost ||

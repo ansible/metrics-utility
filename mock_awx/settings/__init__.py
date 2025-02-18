@@ -8,11 +8,8 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
-INSTALLED_APPS = ['awx.conf']
-
-# Fixes TypeError: can't compare offset-naive and offset-aware datetimes, when comparing to django.utils.timezone.now
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+INSTALLED_APPS = ['awx.conf']
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -20,7 +17,7 @@ USE_L10N = True
 USE_TZ = True
 
 # Collected
-AUTHENTICATION_BACKENDS = ('awx.main.backends.AWXModelBackend',)  # FIXME mock?, empty?
+AUTHENTICATION_BACKENDS = ('awx.main.backends.AWXModelBackend',)
 AUTOMATION_ANALYTICS_LAST_ENTRIES = ''
 INSTALL_UUID = '00000000-0000-0000-0000-000000000000'
 LOG_AGGREGATOR_ENABLED = False
