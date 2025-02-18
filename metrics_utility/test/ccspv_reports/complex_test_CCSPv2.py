@@ -59,34 +59,34 @@ def test_command(cleanup):
 
 def validate_managed_nodes(workbook):
 
-    validate_column(workbook, "Managed nodes", 'A', 1, 
+    validate_column(workbook, "Managed nodes", 'A', 1,
             ['Host name',
             'host1',
             'localhost',
             'test_host',
             'test_host_1'])
-    
-    validate_column(workbook, "Managed nodes", 'B', 1, 
+
+    validate_column(workbook, "Managed nodes", 'B', 1,
             ['Automated by organizations', 2, 1, 1, 1])
 
-    validate_column(workbook, "Managed nodes", 'C', 1, 
+    validate_column(workbook, "Managed nodes", 'C', 1,
                     ['Job runs', 8, 1, 4, 1])
 
-    validate_column(workbook, "Managed nodes", 'D', 1, 
+    validate_column(workbook, "Managed nodes", 'D', 1,
                     ['Number of task runs', 12, 2, 8, 2])
 
-    validate_column(workbook, "Managed nodes", 'E', 1, 
-                    ['First automation', 
-                    '2025-02-13 12:39:15', 
-                    '2025-02-13 12:33:50', 
-                    '2025-02-13 12:33:46', 
+    validate_column(workbook, "Managed nodes", 'E', 1,
+                    ['First automation',
+                    '2025-02-13 12:39:15',
+                    '2025-02-13 12:33:50',
+                    '2025-02-13 12:33:46',
                     '2025-02-13 12:33:46'])
 
-    validate_column(workbook, "Managed nodes", 'F', 1, 
-                    ['Last automation', 
-                    '2025-02-13 12:49:01', 
-                    '2025-02-13 12:33:50', 
-                    '2025-02-13 12:33:50', 
+    validate_column(workbook, "Managed nodes", 'F', 1,
+                    ['Last automation',
+                    '2025-02-13 12:49:01',
+                    '2025-02-13 12:33:50',
+                    '2025-02-13 12:33:50',
                     '2025-02-13 12:33:46'])
 
 def validate_usage_by_organization(workbook):
@@ -120,30 +120,30 @@ def validate_usage_by_modules(workbook):
     sheet_name = "Usage by modules"
 
     validate_column(workbook, sheet_name, 'A', 1, [
-        'Module name', 
-        'ansible.builtin.debug', 
-        'ansible.builtin.gather_facts', 
-        'ansible.builtin2.debug', 
+        'Module name',
+        'ansible.builtin.debug',
+        'ansible.builtin.gather_facts',
+        'ansible.builtin2.debug',
         'ansible.builtin2.gather_facts'
     ])
 
     validate_column(workbook, sheet_name, 'B', 1, [
-        'Unique managed nodes automated', 
+        'Unique managed nodes automated',
         '4', '4', '1', '1'
     ])
 
     validate_column(workbook, sheet_name, 'C', 1, [
-        'Non-unique managed nodes automated', 
+        'Non-unique managed nodes automated',
         '6', '8', '1', '1'
     ])
 
     validate_column(workbook, sheet_name, 'D', 1, [
-        'Number of task runs', 
+        'Number of task runs',
         '9', '13', '1', '1'
     ])
 
     validate_column(workbook, sheet_name, 'E', 1, [
-        'Duration of task runs [seconds]', 
+        'Duration of task runs [seconds]',
         '0.119905', '21.935567', '0.011992', '0.790734'
     ])
 

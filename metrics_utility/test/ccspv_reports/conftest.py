@@ -100,7 +100,7 @@ def validate_column(workbook : Workbook, sheet_name, column_name, row_id, expect
         addr = column_name + str(actual_row_id)
 
         real_value = sheet[addr].value
-        
+
         if isinstance(real_value, str):
             real_value = real_value.replace("\n", " ")
 
