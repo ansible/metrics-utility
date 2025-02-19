@@ -19,9 +19,9 @@ export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 
-SCHEMA=`realpath "metrics_utility/test/test_data/schemas/awx/latest.sql"`
-ROLES=`realpath "metrics_utility/test/test_data/schemas/awx/roles.sql"`
-NAME=ccsp2-gather-`basename "$SCHEMA" .schema`
+SCHEMA=`realpath "tools/docker/latest.sql"`
+ROLES=`realpath "tools/docker/roles.sql"`
+NAME=ccsp2-gather-`basename "$SCHEMA" .sql`
 
 echo "$NAME"
 pg_isready -h localhost ||

@@ -6,9 +6,9 @@ export METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE"
 export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="controller_db"
 
-SCHEMA=`realpath "metrics_utility/test/test_data/schemas/awx/latest.sql"`
-ROLES=`realpath "metrics_utility/test/test_data/schemas/awx/roles.sql"`
-NAME=renewal-`basename "$SCHEMA" .schema`
+SCHEMA=`realpath "tools/docker/latest.sql"`
+ROLES=`realpath "tools/docker/roles.sql"`
+NAME=renewal-`basename "$SCHEMA" .sql`
 
 echo "$NAME"
 pg_isready -h localhost ||

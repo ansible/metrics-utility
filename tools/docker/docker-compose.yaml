@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   minio:
-    image: minio/minio:latest
+    image: "quay.io/cloudservices/minio:latest"
     container_name: minio
     ports:
       - "9000:9000"
@@ -15,7 +15,7 @@ services:
     command: server /data --console-address ":9001"
 
   minio-setup:
-    image: minio/mc:latest
+    image: "quay.io/cloudservices/mc:latest"
     depends_on:
       - minio
     volumes:
@@ -34,11 +34,11 @@ services:
       /usr/bin/mc admin user add local mynewuser mysecretpassword || exit 1;
       /usr/bin/mc admin policy attach local readwrite --user=mynewuser || exit 1;
       /usr/bin/mc admin user svcacct add local mynewuser > /tmp/minio_keys.txt;
-      
+
       echo "Extracting credentials...";
       ACCESS_KEY=""
       SECRET_KEY=""
-      
+
       while IFS= read -r line; do
         case "$$line" in
           "Access Key:"*) ACCESS_KEY="$${line#Access Key: }" ;;
@@ -51,23 +51,52 @@ services:
         exit 1
       fi
 
-      echo "ACCESS_KEY=$${ACCESS_KEY}" > /tmp/minio_env.sh
-      echo "SECRET_KEY=$${SECRET_KEY}" >> /tmp/minio_env.sh
+      echo "export METRICS_UTILITY_BUCKET_ACCESS_KEY=$${ACCESS_KEY}" > /tmp/minio_env.sh
+      echo "export METRICS_UTILITY_BUCKET_SECRET_KEY=$${SECRET_KEY}" >> /tmp/minio_env.sh
       chmod +x /tmp/minio_env.sh
       echo "Setup complete.";
       '
 
+  postgres:
+    image: "quay.io/cloudservices/postgres"
+    container_name: postgres
+    environment:
+      POSTGRES_DB: awx
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./roles.sql:/docker-entrypoint-initdb.d/init-roles.sql
+      - ./latest.sql:/docker-entrypoint-initdb.d/init-schema.sql
+
+  postgres-wait:
+    image: "quay.io/cloudservices/postgres"
+    depends_on:
+      - postgres
+    command: |
+      sh -c '
+        echo "Waiting for PostgreSQL to be ready..."
+        until pg_isready -h postgres; do
+          sleep 2
+        done
+      '
+
   metrics-utility:
-    image: python:3.11-slim
+    image: "quay.io/fedora/python-311"
     container_name: metrics-utility
     depends_on:
-      - minio-setup
+      minio-setup:
+        condition: service_completed_successfully
+      postgres-wait:
+        condition: service_completed_successfully
     volumes:
-      - .:/app
+      - ../..:/app_ro
       - minio_config:/tmp
+    tmpfs:
+      - /app:mode=1777
     working_dir: /app
     environment:
-      UV_VENV: /app/.venv
       METRICS_UTILITY_SHIP_TARGET: s3
       METRICS_UTILITY_SHIP_PATH: metrics-utility/shipped_data
       METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
@@ -76,34 +105,20 @@ services:
       METRICS_UTILITY_REPORT_TYPE: CCSPv2
       METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
     entrypoint: |
-      bash -c '
-      echo "Waiting for MinIO credentials...";
-      while [ ! -s /tmp/minio_env.sh ]; do
-        sleep 2;
-      done;
+      sh -c '
+        set -e
+        source /tmp/minio_env.sh
 
-      source /tmp/minio_env.sh;
-      
-      if [ -z "$$ACCESS_KEY" ] || [ -z "$$SECRET_KEY" ]; then
-        echo "ERROR: Loaded credentials are empty!"
-        exit 1
-      fi
+        rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
 
-      export METRICS_UTILITY_BUCKET_ACCESS_KEY=$$ACCESS_KEY;
-      export METRICS_UTILITY_BUCKET_SECRET_KEY=$$SECRET_KEY;
+        cd /app/metrics-utility/
+        sed -i '/HOST/s/localhost/postgres/' mock_awx/settings/__init__.py
 
-      echo "Listing all environment variables:";
-      printenv | sort;
+        pip install uv
+        uv sync
 
-      echo "Installing dependencies...";
-      pip install uv || exit 1;
-      uv venv || exit 1;
-      uv pip install . || exit 1;
-      . .venv/bin/activate || exit 1;
-
-      echo "Running automation billing data collection...";
-      python manage.py gather_automation_controller_billing_data --ship --since=20d || exit 1;
-      echo "Execution complete.";
+        env | grep ^METRICS | sort
+        uv run python manage.py gather_automation_controller_billing_data --ship --since=20d
       '
 
 volumes:
