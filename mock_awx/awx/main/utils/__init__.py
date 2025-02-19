@@ -8,7 +8,7 @@ def get_awx_version():
 def get_awx_http_client_headers():
     return {
         'Content-Type': 'application/json',
-        'User-Agent': '{} {} ({})'.format('Red Hat Ansible Automation Platform', get_awx_version(), 'UNLICENSED'),
+        'User-Agent': '{} {} ({})'.format('AWX', get_awx_version(), 'UNLICENSED'),
     }
 
 
