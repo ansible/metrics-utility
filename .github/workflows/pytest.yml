@@ -35,7 +35,7 @@ jobs:
           chmod +x ~/.local/bin/{mc,minio}
 
           mkdir minio-data
-          minio server ./minio-data --console-address ":9001"
+          minio server ./minio-data --console-address ":9001" &
 
           mc alias set local http://localhost:9000 minioaccess miniosecret
           mc mb --ignore-existing local/metricsutilitys3
