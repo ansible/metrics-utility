@@ -1,9 +1,9 @@
-# AAP Metrics-Utility
+# AAP metrics-utility
 
 A standalone CLI utility for collecting and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances. This tool allows users to:
 
 - Collect and analyze Controller usage data
-- Generate reports (CCSP, CCSPv2, RENEWAL_GUIDANCE)
+- Generate reports (CCSP, CCSPv2, RENEWAL\_GUIDANCE)
 - Support multiple storage adapters for data persistence
 - Push metrics data to `console.redhat.com`
 
@@ -71,14 +71,14 @@ Recent changes in AWX have decoupled some dependencies, meaning certain componen
    # Collect metrics data
    python manage.py gather_automation_controller_billing_data --ship --until=10m
    ```
-   
+
    If the Automation Controller environment is missing, you will see an error like:
-   
+
    ```
    Automation Controller modules not found in /awx_devel (AWX_PATH). Using mock and continuing.
    ModuleNotFoundError: No module named 'awx.main.utils.pglock'
    ```
-   
+
    Ensure Automation Controller is correctly installed and running before proceeding.
 
 4. Generate renewal guidance report:
@@ -100,4 +100,4 @@ Please follow our [Contributor's Guide](./docs/contributing/CONTRIBUTING.md) for
 
 ## Tests
 
-Run tests using `pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one. You may need to `docker login quay.io` first.
+Run tests using `pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one. You may need to `docker login quay.io` first. You can also `docker compose -f tools/docker/docker-compose.yaml --profile=run-pytest up` to run pytest in a container too.
