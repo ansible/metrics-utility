@@ -2,32 +2,32 @@ name: "PR checks"
 
 on:
   pull_request:
-    branches: [ 'devel', ]
 
 jobs:
-
   pr-checks:
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout metrics-utility (${{ github.ref }})"
+        uses: actions/checkout@v4
 
-    - name: "Checkout metrics-utility (${{ github.ref }})"
-      uses: actions/checkout@v4
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@v5
 
-    - name: "Install python 3.11"
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: "Set up Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: "pyproject.toml"
 
-    - name: "Install uv"
-      run: |
-        pip install uv
+      - name: "Check for changes in uv.lock"
+        run: |
+          # fail if uv sync had to change uv.lock
+          uv sync
+          git diff --exit-code uv.lock
 
-    - name: "Install pre-commit"
-      run: |
-        pip install pre-commit
+      - name: "Run ruff check"
+        run: |
+          uvx ruff check --output-format=github .
 
-    - name: "Check for changes in uv.lock file"
-      run: |
-        # fail if uv sync had to change uv.lock
-        uv sync
-        git diff --exit-code uv.lock
+      - name: "Check ruff format (skipped)"
+        run: |
+          uvx ruff format --check || true
