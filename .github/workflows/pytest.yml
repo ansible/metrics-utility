@@ -21,7 +21,17 @@ jobs:
       - name: "Set up postgresql"
         run: |
           sudo apt install postgresql postgresql-client
-          sudo systemctl start postgresql.service
+          sudo systemctl start postgresql.service  # ubuntu
+
+      - name: "Wait for postgresql"
+        timeout-minutes: 1
+        run: |
+          until pg_isready; do
+            sleep 4
+          done
+
+      - name: "Import SQL dump"
+        run: |
           cat tools/docker/{roles,latest}.sql | sudo su - postgres -c psql
 
       - name: "Set up minio"
@@ -37,6 +47,21 @@ jobs:
           mkdir minio-data
           minio server ./minio-data --console-address ":9001" &
 
+      - name: "Wait for minio"
+        timeout-minutes: 1
+        env:
+          MINIO_ROOT_USER: minioaccess
+          MINIO_ROOT_PASSWORD: miniosecret
+        run: |
+          until mc alias set local http://localhost:9000 minioaccess miniosecret; do
+            sleep 4
+          done
+
+      - name: "Create minio user"
+        env:
+          MINIO_ROOT_USER: minioaccess
+          MINIO_ROOT_PASSWORD: miniosecret
+        run: |
           mc alias set local http://localhost:9000 minioaccess miniosecret
           mc mb --ignore-existing local/metricsutilitys3
           mc admin user add local mynewuser mysecretpassword
@@ -45,10 +70,10 @@ jobs:
 
       - name: "Run pytest"
         env:
-          METRICS_UTILITY_BUCKET_ACCESS_KEY: myuseraccesskey
+          METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
           METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
-          METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
+          METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-          METRICS_UTILITY_BUCKET_SECRET_KEY: myusersecretkey
+          METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
         run: |
-          pytest -s -v
+          env # pytest -s -v
