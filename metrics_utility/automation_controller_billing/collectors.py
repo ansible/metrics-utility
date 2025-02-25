@@ -338,9 +338,13 @@ def job_host_summary_table(since, full_path, until, **kwargs):
         {query_indirect}
         ORDER BY modified ASC)
         """
-    print(combined_query)
+
+    value = os.getenv("METRICS_UTILITY_INDIRECT_HOSTS")
+    if (value == 'True'):
+        query = combined_query
+
     return _copy_table(table='main_jobhostsummary',
-                       query=f"COPY {combined_query} TO STDOUT WITH CSV HEADER",
+                       query=f"COPY {query} TO STDOUT WITH CSV HEADER",
                        path=full_path,
                        prepend_query=prepend_query)
 
