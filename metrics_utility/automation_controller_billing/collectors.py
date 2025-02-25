@@ -188,20 +188,24 @@ def job_host_summary_table(since, full_path, until, **kwargs):
 
     query = f'''
         (SELECT main_jobhostsummary.id,
+                0 as is_indirect,
                 main_jobhostsummary.created,
                 main_jobhostsummary.modified,
                 main_jobhostsummary.host_name,
                 main_jobhostsummary.host_id as host_remote_id,
+
                 CASE
                     WHEN (metrics_utility_is_valid_json(main_host.variables))
                         THEN main_host.variables::jsonb->>'ansible_host'
                     ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_host' )
                 END AS ansible_host_variable,
+           
                 CASE
                     WHEN (metrics_utility_is_valid_json(main_host.variables))
                         THEN main_host.variables::jsonb->>'ansible_connection'
                     ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
                 END AS ansible_connection_variable,
+
                 -- main_jobhostsummary.constructed_host_id,
                 main_jobhostsummary.changed,
                 main_jobhostsummary.dark,
@@ -223,24 +227,120 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                 main_unifiedjobtemplate_project.id AS project_remote_id,
                 main_unifiedjobtemplate_project.name AS project_name
                 FROM main_jobhostsummary
+  
                 -- connect to main_job, that has connections into inventory and project
                 LEFT JOIN main_job ON main_jobhostsummary.job_id = main_job.unifiedjob_ptr_id
+                
                 -- get project name from project_options
                 LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project ON main_unifiedjobtemplate_project.id = main_job.project_id
+
                 -- get inventory name from main_inventory
                 LEFT JOIN main_inventory ON main_inventory.id = main_job.inventory_id
+
                 -- get job name from main_unifiedjob
                 LEFT JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
+
                 -- get organization name from main_organization
                 LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
+
                 -- get variables from main_host
                 LEFT JOIN main_host ON main_host.id = main_jobhostsummary.host_id
                 WHERE (main_jobhostsummary.modified >= '{since.isoformat()}' AND main_jobhostsummary.modified < '{until.isoformat()}')
                 ORDER BY main_jobhostsummary.modified ASC)
         '''
+    
+    query_indirect = f"""
+        (
+            SELECT
+                main_indirectmanagednodeaudit.id,
+                1 as is_indirect,
+                main_indirectmanagednodeaudit.created as created,
+                -- We have no separate 'modified' in this table, reuse created or use another field if available:
+                main_indirectmanagednodeaudit.created as modified,
 
+                -- rename 'name' to 'host_name'
+                main_indirectmanagednodeaudit.name as host_name,
+
+                -- The host_id from the indirect table
+                main_indirectmanagednodeaudit.host_id AS host_remote_id,
+
+                -- We have no 'variables' for ansible_host_variable or ansible_connection_variable
+                NULL AS ansible_host_variable,
+                NULL AS ansible_connection_variable,
+
+                -- If these fields aren't present, supply 0 or NULL
+                0 AS changed,
+                0 AS dark,
+                0 AS failures,
+                0 AS ok,
+                0 AS processed,
+                0 AS skipped,
+                FALSE AS failed,
+                0 AS ignored,
+                0 AS rescued,
+
+                -- We can get job_created from the main_unifiedjob or main_job
+                main_unifiedjob.created AS job_created,
+
+                -- job_id from the indirect table
+                main_indirectmanagednodeaudit.job_id AS job_remote_id,
+
+                -- Possibly we can fetch unified_job_template_id from main_unifiedjob
+                main_unifiedjob.unified_job_template_id AS job_template_remote_id,
+
+                -- The job name from main_unifiedjob
+                main_unifiedjob.name AS job_template_name,
+
+                -- inventory
+                main_inventory.id AS inventory_remote_id,
+                main_inventory.name AS inventory_name,
+
+                -- organization
+                main_organization.id AS organization_remote_id,
+                main_organization.name AS organization_name,
+
+                -- project
+                main_unifiedjobtemplate_project.id AS project_remote_id,
+                main_unifiedjobtemplate_project.name AS project_name
+
+            FROM main_indirectmanagednodeaudit
+
+            -- Join to job so we can eventually retrieve project
+            LEFT JOIN main_job
+                ON main_job.unifiedjob_ptr_id = main_indirectmanagednodeaudit.job_id
+
+            -- The unified job that corresponds to that job_id
+            LEFT JOIN main_unifiedjob
+                ON main_unifiedjob.id = main_indirectmanagednodeaudit.job_id
+
+            -- Inventory from the indirect record
+            LEFT JOIN main_inventory
+                ON main_inventory.id = main_indirectmanagednodeaudit.inventory_id
+
+            -- Organization from the job’s organization_id
+            LEFT JOIN main_organization
+                ON main_organization.id = main_unifiedjob.organization_id
+
+            -- Project info from main_unifiedjobtemplate (same approach as your first query)
+            LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project
+                ON main_unifiedjobtemplate_project.id = main_job.project_id
+
+            WHERE (main_indirectmanagednodeaudit.created >= '{since.isoformat()}'
+            AND  main_indirectmanagednodeaudit.created < '{until.isoformat()}')
+
+            ORDER BY main_indirectmanagednodeaudit.created ASC
+        )
+        """
+    
+    combined_query = f"""
+        ({query}
+        UNION ALL
+        {query_indirect}
+        ORDER BY modified ASC)
+        """
+    print(combined_query)
     return _copy_table(table='main_jobhostsummary',
-                       query=f"COPY {query} TO STDOUT WITH CSV HEADER",
+                       query=f"COPY {combined_query} TO STDOUT WITH CSV HEADER",
                        path=full_path,
                        prepend_query=prepend_query)
 
