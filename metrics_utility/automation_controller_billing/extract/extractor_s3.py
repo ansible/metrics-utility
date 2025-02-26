@@ -80,10 +80,18 @@ class ExtractorS3:
                     # for index, row in chunk.iterrows():
                     #     print(row)
 
+                    # TODO - this is the same as in extractor_directory, will need
+                    # refactor in future and have function for it
+                    
                     if os.path.exists(os.path.join(temp_dir, 'job_host_summary.csv')):
                         job_host_summary = pd.read_csv(os.path.join(temp_dir, 'job_host_summary.csv'))
                     else:
                         job_host_summary = pd.DataFrame([{}])
+
+                    if os.path.exists(os.path.join(temp_dir, 'indirect_nodes.csv')):
+                        indirect_nodes = pd.read_csv(os.path.join(temp_dir, 'indirect_nodes.csv'))
+                    else:
+                        indirect_nodes = pd.DataFrame([{}])
 
                     if os.path.exists(os.path.join(temp_dir, 'main_jobevent.csv')):
                         main_jobevent = pd.read_csv(os.path.join(temp_dir, 'main_jobevent.csv'))
@@ -92,6 +100,7 @@ class ExtractorS3:
 
                     yield {'main_jobevent': main_jobevent,
                            'job_host_summary': job_host_summary,
+                           'indirect_nodes' : indirect_nodes,
                            'config': config}
 
                 except Exception as e:
