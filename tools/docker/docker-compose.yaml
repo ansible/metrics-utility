@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   minio:
     image: "quay.io/cloudservices/minio:latest"
@@ -8,62 +6,39 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioaccess
-      MINIO_ROOT_PASSWORD: miniosecret
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
+      MINIO_ROOT_USER: "minioaccess"
+      MINIO_ROOT_PASSWORD: "miniosecret"
+    tmpfs:
+      - /minio-data:mode=1777
+    command: server /minio-data --console-address ":9001"
 
   minio-setup:
     image: "quay.io/cloudservices/mc:latest"
     depends_on:
       - minio
-    volumes:
-      - minio_config:/tmp
     entrypoint: |
       sh -c '
-      echo "Waiting for MinIO to be ready...";
-      sleep 5;
-      until /usr/bin/mc alias set local http://minio:9000 minioaccess miniosecret; do
-        echo "MinIO is not ready yet... waiting...";
-        sleep 2;
-      done;
+        set -e
 
-      echo "MinIO is ready! Creating bucket and user...";
-      /usr/bin/mc mb --ignore-existing local/metricsutilitys3 || exit 1;
-      /usr/bin/mc admin user add local mynewuser mysecretpassword || exit 1;
-      /usr/bin/mc admin policy attach local readwrite --user=mynewuser || exit 1;
-      /usr/bin/mc admin user svcacct add local mynewuser > /tmp/minio_keys.txt;
+        echo "Waiting for MinIO to be ready..."
+        until mc alias set local http://minio:9000 "minioaccess" "miniosecret"; do
+          sleep 2
+        done
 
-      echo "Extracting credentials...";
-      ACCESS_KEY=""
-      SECRET_KEY=""
-
-      while IFS= read -r line; do
-        case "$$line" in
-          "Access Key:"*) ACCESS_KEY="$${line#Access Key: }" ;;
-          "Secret Key:"*) SECRET_KEY="$${line#Secret Key: }" ;;
-        esac
-      done < /tmp/minio_keys.txt
-
-      if [ -z "$${ACCESS_KEY}" ] || [ -z "$${SECRET_KEY}" ]; then
-        echo "ERROR: Failed to extract credentials!"
-        exit 1
-      fi
-
-      echo "export METRICS_UTILITY_BUCKET_ACCESS_KEY=$${ACCESS_KEY}" > /tmp/minio_env.sh
-      echo "export METRICS_UTILITY_BUCKET_SECRET_KEY=$${SECRET_KEY}" >> /tmp/minio_env.sh
-      chmod +x /tmp/minio_env.sh
-      echo "Setup complete.";
+        echo "MinIO is ready! Creating bucket and user..."
+        mc mb --ignore-existing local/metricsutilitys3
+        mc admin user add local "mynewuser" "mysecretpassword"
+        mc admin policy attach local readwrite --user="mynewuser"
+        mc admin accesskey create local "mynewuser" --access-key "myuseraccesskey" --secret-key "myusersecretkey"
       '
 
   postgres:
     image: "quay.io/cloudservices/postgres"
     container_name: postgres
     environment:
-      POSTGRES_DB: awx
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: "awx"
+      POSTGRES_USER: "myuser"
+      POSTGRES_PASSWORD: "mypassword"
     ports:
       - "5432:5432"
     volumes:
@@ -92,23 +67,19 @@ services:
         condition: service_completed_successfully
     volumes:
       - ../..:/app_ro
-      - minio_config:/tmp
     tmpfs:
-      - /app:mode=1777
+      - /app:rw,exec,mode=0755,uid=1001
     working_dir: /app
+    profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
-      METRICS_UTILITY_SHIP_TARGET: s3
-      METRICS_UTILITY_SHIP_PATH: metrics-utility/shipped_data
-      METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
+      METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
       METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
+      METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-      METRICS_UTILITY_REPORT_TYPE: CCSPv2
-      METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
+      METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
     entrypoint: |
       sh -c '
         set -e
-        source /tmp/minio_env.sh
-
         rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
 
         cd /app/metrics-utility/
@@ -117,9 +88,7 @@ services:
         pip install uv
         uv sync
 
-        env | grep ^METRICS | sort
-        uv run python manage.py gather_automation_controller_billing_data --ship --since=20d
-
+        uv run pytest -s -v
       '
 
   metrics-utility-env:
@@ -136,37 +105,28 @@ services:
         condition: service_completed_successfully
     volumes:
       - ../../:/app         # Mount the current local directory to /app in the container
-      - minio_config:/tmp
     working_dir: /app
+    profiles: ["env"] # makes this service non-default, except when --profile=env
     environment:
-      METRICS_UTILITY_SHIP_TARGET: s3
-      METRICS_UTILITY_SHIP_PATH: metrics-utility/shipped_data
-      METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
+      METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
       METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
+      METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-      METRICS_UTILITY_REPORT_TYPE: CCSPv2
+      METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
       METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
+      METRICS_UTILITY_REPORT_TYPE: "CCSPv2"
+      METRICS_UTILITY_SHIP_PATH: "metrics-utility/shipped_data"
+      METRICS_UTILITY_SHIP_TARGET: "s3"
     entrypoint: |
       sh -c '
         set -e
-        source /tmp/minio_env.sh
 
         ls
-
-        # sed -i "/HOST/s/localhost/postgres/" mock_awx/settings/__init__.py
 
         pip install uv
         uv sync
 
         env | grep ^METRICS | sort
-        # uv run python manage.py gather_automation_controller_billing_data --ship --since=20d
-        # uv run pytest
 
         tail -f /dev/null
       '
-
-
-
-volumes:
-  minio_data:
-  minio_config:
