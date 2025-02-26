@@ -27,10 +27,34 @@ class DataframeJobhostSummaryUsage(Base):
             for data in self.extractor.iter_batches(date=date):
                 # If the dataframe is empty, skip additional processing
                 billing_data = data['job_host_summary']
-                if billing_data.empty:
-                    continue
+
+                if not billing_data.empty:
+                    billing_data["is_indirect"] = 0
+                else:
+                    billing_data = data['indirect_nodes']
+
+                    if billing_data.empty:
+                        continue
+                    else:
+                        billing_data["is_indirect"] = 1
+                        billing_data = billing_data.assign(
+                            ansible_host_variable=None,
+                            ansible_connection_variable=None,
+                            changed=0,
+                            dark=0,
+                            failures=0,
+                            ok=0,
+                            processed=0,
+                            skipped=0,
+                            failed=False,
+                            ignored=0,
+                            rescued=0
+                        )
+                       
 
                 print_debug(f'\nComputing data batch for {date}')
+                print_data(billing_data, "Newly loaded data")
+
                 billing_data['organization_name'] = billing_data.organization_name.fillna("No organization name")
                 billing_data['install_uuid'] = data['config']['install_uuid']
 

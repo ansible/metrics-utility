@@ -11,6 +11,7 @@ def print_debug(text):
     if '--verbose' not in sys.argv:
         return
     print(text)
+    sys.stdout.flush()
 
 def print_data(df, caption):
     """
@@ -39,6 +40,7 @@ def print_data(df, caption):
     pprint('-----------------------------------------------')
     pprint(df.drop(columns=valid_excluded_columns))
     pprint('-----------------------------------------------')
+    sys.stdout.flush()
 
 def set_ccspv2_vars():
     """
