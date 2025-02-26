@@ -6,7 +6,7 @@ This document helps new contributors set up their local development environment 
 
 ## 1. Overview
 
-- **`uv`**: A Python virtual environment manager that simplifies dependency management.  
+- **`uv`**: A Python virtual environment manager that simplifies dependency management.
 - **`ruff`**: A fast Python linter and formatter. Ensures code adheres to style and best practices.
 
 The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check and format your code whenever you run `git commit`. This helps maintain consistent code quality.
@@ -41,14 +41,14 @@ The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check an
    ```
    This command creates (or updates) the virtual environment defined by `pyproject.toml` and `uv.lock`. It installs all project dependencies, including `ruff`, `pytest`, `django-admin`, etc.
 
-4. **(Optional) Using the Virtual Environment Directly**  
+4. **(Optional) Using the Virtual Environment Directly**
    - By default, `uv` stores the environment in `.venv`. If you want to **manually activate** it, you can run:
      ```bash
      source .venv/bin/activate   # For Unix/MacOS
      # OR
      .venv\Scripts\activate      # For Windows
      ```
-   - Typically, you **won’t** need to do this if you rely on **`uvx`** or **`uv run`** (detailed below) to execute commands within the environment. You can also use `uv tool install` to add tools like `ruff` or `pytest` to your path, eliminating the need for manual activation.
+   - Typically, you **won't** need to do this if you rely on **`uvx`** or **`uv run`** (detailed below) to execute commands within the environment. You can also use `uv tool install` to add tools like `ruff` or `pytest` to your path, eliminating the need for manual activation.
 
 5. **Verify Installations**:
    ```bash
@@ -65,13 +65,13 @@ The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check an
 
 Depending on your workflow, you can run commands in various ways:
 
-1. **`uvx <command>`**:  
+1. **`uvx <command>`**:
    Runs a command within the `.venv` environment without manual activation:
    ```bash
    uvx ruff check .
    uvx pytest
    ```
-2. **`uv tool install`**:  
+2. **`uv tool install`**:
    Installs binaries in a way that they become available on your local PATH (i.e., no `uv` prefix needed):
    ```bash
    uv tool install ruff
@@ -107,14 +107,14 @@ Use whichever approach suits your workflow.
 
 ## 6. Fixing Linting Issues
 
-Depending on the project’s configuration:
+Depending on the project's configuration:
 
-- **Manual Fix**: Remove unused imports or fix spacing.  
-- **Auto-fix with Ruff**:  
+- **Manual Fix**: Remove unused imports or fix spacing.
+- **Auto-fix with Ruff**:
   ```bash
   ruff format test.py
   ```
-  or  
+  or
   ```bash
   ruff check test.py --fix
   ```
@@ -131,21 +131,21 @@ This time, the commit should succeed if all issues are resolved.
 
 ## 7. Troubleshooting
 
-1. **`uv sync` Errors**  
+1. **`uv sync` Errors**
    - Ensure Python 3.11+ is installed.
    - Confirm you have the correct permissions to install packages.
 
-2. **`ruff` or `pre-commit` Not Found**  
+2. **`ruff` or `pre-commit` Not Found**
    - Run `uv sync` again.
    - Make sure your shell is set to use the environment from `uv` (via `uv shell` or by sourcing `.venv/bin/activate`).
    - Alternatively, use `uvx ruff` or `uv tool install ruff`.
 
-3. **Hook Doesn’t Run**  
+3. **Hook Doesn't Run**
    - Check that `.pre-commit-config.yaml` references `ruff`.
    - Re-run `pre-commit install`.
 
-4. **Bypassing Hooks**  
-   - If you see developers bypassing hooks with `--no-verify`, note that the checks won’t run. For consistent code quality, discourage skipping hooks.
+4. **Bypassing Hooks**
+   - If you see developers bypassing hooks with `--no-verify`, note that the checks won't run. For consistent code quality, discourage skipping hooks.
 
 ---
 
@@ -157,4 +157,4 @@ This time, the commit should succeed if all issues are resolved.
 
 ---
 
-**That’s it!** You should now have a functioning development environment for `metrics-utility` with a pre-commit hook that catches lint and formatting issues via `ruff`.
+**That's it!** You should now have a functioning development environment for `metrics-utility` with a pre-commit hook that catches lint and formatting issues via `ruff`.

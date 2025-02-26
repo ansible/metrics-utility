@@ -33,7 +33,7 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
    git push origin <branch-name>
    ```
    - Use a **descriptive branch name** that reflects the work being done.
-   - If your work is related to a Jira ticket, **consider** including the issue ID:  
+   - If your work is related to a Jira ticket, **consider** including the issue ID:
      ```bash
      git checkout -b feat/AAP-1234-logging-improvements
      ```
@@ -59,7 +59,7 @@ For **external contributors**, a member of the `aap-metrics-write` group will re
 ---
 
 ## **4. Setting Up Your Development Environment**
-To contribute effectively, you’ll need a few essential tools:
+To contribute effectively, you'll need a few essential tools:
 
 - **`uv`** - Dependency and environment manager.
 - **`ruff`** - Linter and formatter for maintaining code consistency.
@@ -91,7 +91,7 @@ For **detailed setup instructions**, refer to **[`docs/developer_setup.md`](./de
 - **Linting & Formatting:** `ruff` (automated via pre-commit hooks).
 - **Pre-commit Hooks:** Ensure compliance with formatting and static analysis.
   - **Pre-commit configuration is defined in [`/.pre-commit-config.yaml`](../../.pre-commit-config.yaml)**.
-- **Commit Style:**  
+- **Commit Style:**
   - ✅ Good: `"Fix issue with data collection on S3 storage"`
   - ❌ Bad: `"fix stuff"`
 
@@ -108,23 +108,23 @@ metrics-utility/
     ├── contributing/
     │   ├── contributor_guide.md
     │   ├── code_of_conduct.md
-    │   ├── pull_request_guidelines.md
+    │   └── pull_request_guidelines.md
     ├── guides/
     │   ├── installation.md
     │   ├── configuration.md
     │   ├── storage_adapters.md
-    │   ├── report_types.md
-    ├── reference/
-    │   ├── cli_commands.md
-    │   ├── environment_variables.md
-    │   ├── troubleshooting.md
+    │   └── report_types.md
+    └── reference/
+        ├── cli_commands.md
+        ├── environment_variables.md
+        └── troubleshooting.md
 ```
 
 If you are adding documentation, please try to follow this structure.
 
 ### **🚨 Important: Downstream Documentation**
-- **Do NOT include internal deployment details, configurations, or organization-specific processes in this repository.**  
-- **Downstream documentation** should be maintained in the Ansible **private** repository instead.  
+- **Do NOT include internal deployment details, configurations, or organization-specific processes in this repository.**
+- **Downstream documentation** should be maintained in the Ansible **private** repository instead.
 - When in doubt, check with maintainers before adding documentation that might contain internal details.
 
 ---
@@ -132,7 +132,7 @@ If you are adding documentation, please try to follow this structure.
 ## **8. Getting Your PR Merged**
 
 - **Internal Ansible Org Contributors**: Request to join the `aap-metrics-write` team for merge permissions.
-- **External Contributors**: Since you don’t have write access, a maintainer will review and merge your PR.
+- **External Contributors**: Since you don't have write access, a maintainer will review and merge your PR.
 
 ---
 
