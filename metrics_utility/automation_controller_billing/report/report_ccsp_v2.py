@@ -15,6 +15,12 @@ DIRECT = 0
 INDIRECT = 1
 # EDGE = 2
 
+def get_optional_collectors():
+    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
+
+environs = get_optional_collectors()
+INCLUDE_INDIRECT = ('indirect_nodes' in environs)
+
 class ReportCCSPv2(Base):
     # BLACK_COLOR_HEX = "00000000"
     # WHITE_COLOR_HEX = "00FFFFFF"
@@ -159,8 +165,8 @@ class ReportCCSPv2(Base):
             current_row = func(1, ws, directs)
             sheet_index += 1
 
-            environs = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
-            if 'indirect_nodes' in environs:
+            environs = get_optional_collectors()
+            if INCLUDE_INDIRECT:
                 self.wb.create_sheet(title="Indirectly Managed nodes")
                 ws = self.wb.worksheets[sheet_index]
                 indirects = job_host_summary_dataframe[job_host_summary_dataframe['device_type'] == INDIRECT]
@@ -213,9 +219,6 @@ class ReportCCSPv2(Base):
 
     def _build_data_section_usage_by_org(self, current_row, ws, dataframe):
         
-        environs = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
-        include_indirect = ('indirect_nodes' in environs)
-
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
@@ -229,16 +232,38 @@ class ReportCCSPv2(Base):
 
         dataframe['job_remote_id_install_uuid'] = list(zip(dataframe['job_remote_id'], dataframe['install_uuid']))
 
-        # Rename the columns based on the template
-        ccsp_report_dataframe = (
-            dataframe.groupby('organization_name', dropna=False)
-            .agg(
-                job_runs=('job_remote_id_install_uuid', 'nunique'),
-                host_runs_unique=('host_name', 'nunique'),
-                host_runs=('host_name', 'count'),
-                task_runs=('task_runs', 'sum')
+        agg_dict = {
+            "job_runs": ("job_remote_id_install_uuid", "nunique"),
+            # Only count host_name if the device_type is "DIRECT"
+            "host_runs_unique": (
+                "host_name",
+                lambda x: x[dataframe.loc[x.index, "device_type"] == DIRECT].nunique()
+            ),
+            "host_runs": (
+                "host_name",
+                lambda x: x[dataframe.loc[x.index, "device_type"] == DIRECT].count()
+            ),
+            "task_runs": ("task_runs", "sum"),
+        }
+
+        # Add the INDIRECT aggregations only if the condition is met
+        if INCLUDE_INDIRECT:
+            agg_dict["indirect_host_runs_unique"] = (
+                "host_name",
+                lambda x: x[dataframe.loc[x.index, "device_type"] == INDIRECT].nunique()
             )
+            agg_dict["indirect_host_runs"] = (
+                "host_name",
+                lambda x: x[dataframe.loc[x.index, "device_type"] == INDIRECT].count()
+            )
+
+        # Now pass this dictionary into .agg()
+        ccsp_report_dataframe = (
+            dataframe
+            .groupby("organization_name", dropna=False)
+            .agg(**agg_dict)
         )
+
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
         ccsp_report_dataframe = ccsp_report_dataframe.reindex(
             columns=[
@@ -246,19 +271,31 @@ class ReportCCSPv2(Base):
                 'job_runs',
                 'host_runs_unique',
                 'host_runs',
+                'indirect_host_runs_unique',
+                'indirect_host_runs',
                 'task_runs'
             ]
         )
+
+        if not INCLUDE_INDIRECT:
+            ccsp_report_dataframe.drop(['indirect_host_runs_unique', 'indirect_host_runs'], axis=1, inplace=True)
 
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
                 "organization_name": "Organization name",
                 "job_runs": "Job runs",
+
                 "host_runs_unique": "Unique managed nodes\nautomated",
                 "host_runs": "Non-unique managed\nnodes automated",
+
+                "indirect_host_runs_unique": "Unique indirect managed nodes\nautomated",
+                "indirect_host_runs": "Non-unique indirect managed\nnodes automated",
+
                 "task_runs": "Number of task\nruns",
             }
         )
+
+
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)

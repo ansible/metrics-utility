@@ -2,6 +2,7 @@ import logging
 from debug_utils import print_data, print_debug
 
 import pandas as pd
+import os
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import \
     Base
@@ -11,6 +12,9 @@ logger = logging.getLogger(__name__)
 DIRECT = 0
 INDIRECT = 1
 # EDGE = 2
+
+def get_optional_collectors():
+    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
 
 #######################################
 # Code for building of the dataframe report based on JobhostSummary table
@@ -42,7 +46,11 @@ class DataframeJobhostSummaryUsage(Base):
                     if billing_data.empty:
                         continue
                     else:
-                        billing_data["device_type"] = INDIRECT
+                        environs = get_optional_collectors()
+                        if 'indirect_nodes' in environs:
+                            billing_data["device_type"] = INDIRECT
+                        else:
+                            continue
                         
                 print_debug(f'\nComputing data batch for {date}')
                 print_data(billing_data, "Newly loaded data")
