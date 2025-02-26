@@ -319,7 +319,7 @@ def indirect_nodes_table(since, full_path, until, **kwargs):
                 main_indirectmanagednodeaudit.canonical_facts,
                 main_indirectmanagednodeaudit.facts,
                 main_indirectmanagednodeaudit.events,
-                main_indirectmanagednodeaudit.count,
+                main_indirectmanagednodeaudit.count as task_runs,
                 main_unifiedjob.created AS job_created,
                 main_indirectmanagednodeaudit.job_id AS job_remote_id,
                 main_unifiedjob.unified_job_template_id AS job_template_remote_id,
