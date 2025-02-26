@@ -316,6 +316,7 @@ def indirect_nodes_table(since, full_path, until, **kwargs):
                 main_indirectmanagednodeaudit.created as created,
                 main_indirectmanagednodeaudit.name as host_name,
                 main_indirectmanagednodeaudit.host_id AS host_remote_id,
+                main_indirectmanagednodeaudit.canonical_facts,
                 main_indirectmanagednodeaudit.facts,
                 main_indirectmanagednodeaudit.events,
                 main_indirectmanagednodeaudit.count,
