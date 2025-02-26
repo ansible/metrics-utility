@@ -1,7 +1,7 @@
 {
     "env_vars": {
         "METRICS_UTILITY_SHIP_TARGET": "directory",
-        "METRICS_UTILITY_SHIP_PATH": "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data",
+        "METRICS_UTILITY_SHIP_PATH": "./metrics_utility/test/test_data",
         "METRICS_UTILITY_PRICE_PER_NODE": "9.99",
         "METRICS_UTILITY_REPORT_SKU": "RHT1234PL",
         "METRICS_UTILITY_REPORT_SKU_DESCRIPTION": "EX: Red Hat Satellite, Standard Support (1 Node, Monthly)",

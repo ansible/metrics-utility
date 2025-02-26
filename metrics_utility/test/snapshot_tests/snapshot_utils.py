@@ -189,7 +189,7 @@ def run_snapshot_definition(data: DataShape) -> str:
         return generated_file
 
     # Regular expression to capture the file path if get_file_name was not able to compute it
-    pattern = r'Report generated into directory:\s*([\w\-/]+)\.xlsx'
+    pattern = r'Report generated into directory:\s*(.+)\.xlsx'
 
     match = re.search(pattern, text)
     if match:
