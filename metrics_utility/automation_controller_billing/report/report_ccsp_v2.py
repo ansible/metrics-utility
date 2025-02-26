@@ -165,7 +165,6 @@ class ReportCCSPv2(Base):
             current_row = func(1, ws, directs)
             sheet_index += 1
 
-            environs = get_optional_collectors()
             if INCLUDE_INDIRECT:
                 self.wb.create_sheet(title="Indirectly Managed nodes")
                 ws = self.wb.worksheets[sheet_index]
