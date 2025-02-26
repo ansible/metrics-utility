@@ -9,7 +9,7 @@ import pytest
 env_vars = {
     "METRICS_UTILITY_PRICE_PER_NODE": "11.55",
     "METRICS_UTILITY_REPORT_RHN_LOGIN": "test_login",
-    "METRICS_UTILITY_SHIP_PATH": "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data",
+    "METRICS_UTILITY_SHIP_PATH": "./metrics_utility/test/test_data",
     "METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME": "Customer A",
     "METRICS_UTILITY_REPORT_END_USER_STATE": "TX",
     "METRICS_UTILITY_REPORT_SKU_DESCRIPTION": "EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)",
@@ -25,7 +25,7 @@ env_vars = {
     "AWX_LOGGING_MODE": "stdout",
 }
 
-file_path = "/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13--2025-02-13.xlsx"
+file_path = "./metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13--2025-02-13.xlsx"
 
 date_today = datetime.now().strftime("%b %d, %Y")
 

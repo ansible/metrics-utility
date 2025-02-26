@@ -76,4 +76,4 @@ jobs:
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
         run: |
-          env # pytest -s -v
+          uv run pytest -s -v

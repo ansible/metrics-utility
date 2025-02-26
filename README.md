@@ -98,3 +98,6 @@ Documentation is available in the [`/docs` directory](./docs).
 
 Please follow our [Contributor's Guide](./docs/contributing/CONTRIBUTING.md) for details on submitting changes and documentation standards.
 
+## Tests
+
+Run tests using `pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one.

@@ -3,7 +3,7 @@ from datetime import datetime
 import copy
 
 # You can run this script by using:
-# python -m metrics_utility.test.snapshot_tests.CCSP.CCSP_snapshot_generator
+# uv run python -m metrics_utility.test.snapshot_tests.CCSP.CCSP_snapshot_generator
 
 def select_env_vars(dictionary, position):
     values = {}
@@ -35,7 +35,7 @@ def get_data():
     # Base dictionary
     base_dict = {
         'METRICS_UTILITY_SHIP_TARGET': ['directory'],
-        'METRICS_UTILITY_SHIP_PATH': ['/awx_devel/awx-dev/metrics-utility/metrics_utility/test/test_data'],
+        'METRICS_UTILITY_SHIP_PATH': ['./metrics_utility/test/test_data'],
         'METRICS_UTILITY_PRICE_PER_NODE': ['11.55', '15.01', '9.99'],
         'METRICS_UTILITY_REPORT_SKU': ['MCT3752MO', 'CSP8794CE', 'RHT1234PL'],
         'METRICS_UTILITY_REPORT_SKU_DESCRIPTION': [
