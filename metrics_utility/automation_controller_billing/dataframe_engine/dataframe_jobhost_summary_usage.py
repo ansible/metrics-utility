@@ -94,6 +94,7 @@ class DataframeJobhostSummaryUsage(Base):
                     first_automation=('created', 'min'),
                     last_automation=('created', 'max'),
                     job_created=('job_created', 'max'),
+                    is_indirect=('is_indirect', 'min'),
                     )
                 print_data(billing_data_group, 'New data batch after aggregation')
 
@@ -118,7 +119,9 @@ class DataframeJobhostSummaryUsage(Base):
                         billing_data_monthly_rollup, self.data_columns(),
                         operations={"first_automation": "min",
                                     "last_automation": "max",
-                                    "job_created": "max"})
+                                    "job_created": "max",
+                                    "is_indirect" : "min",
+                                    })
 
                     # Tweak types to match the table
                     billing_data_monthly_rollup = self.cast_dataframe(
@@ -137,12 +140,13 @@ class DataframeJobhostSummaryUsage(Base):
 
     @staticmethod
     def data_columns():
-        return ['host_runs', 'task_runs', 'first_automation', 'last_automation', 'job_created']
+        return ['host_runs', 'task_runs', 'first_automation', 'last_automation', 'job_created', 'is_indirect']
 
     @staticmethod
     def cast_types():
         return {'task_runs': int,
                 'host_runs': int,
+                'is_indirect' : int,
                 'first_automation': 'datetime64[ns]',
                 'last_automation': 'datetime64[ns]',
                 'job_created': 'datetime64[ns]',
