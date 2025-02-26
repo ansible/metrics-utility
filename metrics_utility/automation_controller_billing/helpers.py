@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from metrics_utility.exceptions import UnparsableParameter
 
-
 def parse_date_param(date_option):
     parsed_date = None
     if date_option and date_option.endswith('d'):

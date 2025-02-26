@@ -8,9 +8,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
-
+import os
 from metrics_utility.automation_controller_billing.report.base import Base
 
+DIRECT = 0
+INDIRECT = 1
+# EDGE = 2
 
 class ReportCCSPv2(Base):
     # BLACK_COLOR_HEX = "00000000"
@@ -142,18 +145,27 @@ class ReportCCSPv2(Base):
             current_row = self._build_data_section_usage_by_job(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
-        if "managed_nodes_by_organizations" in self.optional_report_sheets() and "managed_nodes" in self.optional_report_sheets():
+        if "managed_nodes" in self.optional_report_sheets():
+            # Determine the function to use
+            if "managed_nodes_by_organizations" in self.optional_report_sheets():
+                func = self._build_data_section_usage_by_node_with_org_details
+            else:
+                func = self._build_data_section_usage_by_node
+
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node_with_org_details(1, ws, job_host_summary_dataframe)
+            directs = job_host_summary_dataframe[job_host_summary_dataframe['device_type'] == DIRECT]
+            current_row = func(1, ws, directs)
             sheet_index += 1
-        elif "managed_nodes" in self.optional_report_sheets():
-            # Sheet with list of managed nodes
-            self.wb.create_sheet(title="Managed nodes")
-            ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
-            sheet_index += 1
+
+            environs = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
+            if 'indirect_nodes' in environs:
+                self.wb.create_sheet(title="Indirectly Managed nodes")
+                ws = self.wb.worksheets[sheet_index]
+                indirects = job_host_summary_dataframe[job_host_summary_dataframe['device_type'] == INDIRECT]
+                current_row = func(1, ws, indirects)
+                sheet_index += 1
 
         if "usage_by_organizations" in self.optional_report_sheets():
             # Sheet with usage by org
@@ -200,6 +212,10 @@ class ReportCCSPv2(Base):
         return self.wb
 
     def _build_data_section_usage_by_org(self, current_row, ws, dataframe):
+        
+        environs = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
+        include_indirect = ('indirect_nodes' in environs)
+
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 

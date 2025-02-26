@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 DIRECT = 0
 INDIRECT = 1
-EDGE = 1
+# EDGE = 2
 
 #######################################
 # Code for building of the dataframe report based on JobhostSummary table
