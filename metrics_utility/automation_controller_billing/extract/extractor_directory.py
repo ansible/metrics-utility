@@ -58,20 +58,6 @@ class ExtractorDirectory:
                 except Exception as e:
                     self.logger.exception(f"{self.LOG_PREFIX} ERROR: Extracting {path} failed with {e}")
 
-    @staticmethod
-    def tarball_sanitize_members(tar):
-        members = []
-        for member in tar.getmembers():
-            if member.isdir():
-                continue
-            if member.name.endswith("json") is False and member.name.endswith("csv") is False:
-                continue
-            if ".." in member.path:
-                continue
-
-            members.append(member)
-        return members
-
     def load_config(self, file_path):
         try:
             with open(file_path) as f:
