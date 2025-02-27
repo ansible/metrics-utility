@@ -3,7 +3,7 @@ import tarfile
 import pandas as pd
 
 def process_tarballs(self, path, temp_dir):
-    
+
     try:
         tar = tarfile.open(path)
         # The filter param is available in Python 3.9.17
