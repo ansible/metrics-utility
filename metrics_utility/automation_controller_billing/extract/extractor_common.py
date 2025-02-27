@@ -3,9 +3,9 @@ import tarfile
 import pandas as pd
 
 def process_tarballs(self, path, temp_dir):
-    tar = tarfile.open(path)
-
+    
     try:
+        tar = tarfile.open(path)
         # The filter param is available in Python 3.9.17
         tar.extractall(path=temp_dir, filter='data', members=self.tarball_sanitize_members(tar))
     except TypeError:
