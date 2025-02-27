@@ -8,15 +8,15 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
-import os
 from metrics_utility.automation_controller_billing.report.base import Base
+
+from metrics_utility.env_utils import get_optional_collectors
 
 DIRECT = 0
 INDIRECT = 1
 # EDGE = 2
 
-def get_optional_collectors():
-    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
+
 
 environs = get_optional_collectors()
 INCLUDE_INDIRECT = ('indirect_nodes' in environs)

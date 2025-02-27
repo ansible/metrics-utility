@@ -2,19 +2,17 @@ import logging
 from debug_utils import print_data, print_debug
 
 import pandas as pd
-import os
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import \
     Base
+
+from metrics_utility.env_utils import get_optional_collectors
 
 logger = logging.getLogger(__name__)
 
 DIRECT = 0
 INDIRECT = 1
 # EDGE = 2
-
-def get_optional_collectors():
-    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
 
 #######################################
 # Code for building of the dataframe report based on JobhostSummary table

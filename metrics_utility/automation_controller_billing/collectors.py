@@ -16,6 +16,8 @@ from insights_analytics_collector import register  # , CsvFileSplitter
 from metrics_utility.automation_controller_billing.csv_file_splitter import \
     CsvFileSplitter
 
+from env_utils import get_optional_collectors
+
 """
 This module is used to define metrics collected by
 gather_automation_controller_billing_data command. Each function is
@@ -32,11 +34,6 @@ All functions - when called - will be passed a datetime.datetime object,
 functions - like those that return metadata about playbook runs, may return
 data _since_ the last report date - i.e., new data in the last 24 hours)
 """
-
-
-def optional_collectors():
-    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(",")
-
 
 def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
