@@ -1,37 +1,75 @@
+import pandas as pd
 import os
 import tarfile
-import pandas as pd
 
 
-def safe_extract(path, extract_path):
-    count = 0
+def safe_extract(tar_path, extract_path, max_files=100, max_size=1024*1024*1024):
+    """
+    Safely extract a tar archive from 'tar_path' into 'extract_path' with constraints:
+      - Only extract *.json or *.csv files
+      - Skip directories, symbolic links, and hard links
+      - Limit number of extracted files to 'max_files'
+      - Limit total uncompressed size to 'max_size' bytes
+    """
+    extracted_files = 0
+    total_extracted_size = 0
 
-    size = 0
-    try:
-        tar = tarfile.open(path)
+    # Ensure the extraction directory exists
+    os.makedirs(extract_path, exist_ok=True)
+
+    with tarfile.open(tar_path, 'r:*') as tar:
         for member in tar.getmembers():
+
+            # 1) Skip directories and links
             if member.isdir():
                 continue
-            if member.name.endswith("json") is False and member.name.endswith("csv") is False:
+            if member.issym() or member.islnk():
+                print(f"Skipping link: {member.name}")
                 continue
-            if ".." in member.path:
+
+            # 2) Only allow .json or .csv
+            if not (member.name.endswith('.json') or member.name.endswith('.csv')):
                 continue
 
-            tar.extract(member, path=extract_path)
-            size += member.size
-            count += 1
+            # 3) Build a fully qualified path for this member
+            #    and ensure it stays within extract_path.
+            member_path = os.path.abspath(os.path.join(extract_path, member.name))
+            extract_path_abs = os.path.abspath(extract_path)
+            if not member_path.startswith(extract_path_abs + os.sep):
+                print(f"Skipping potentially unsafe file (path traversal): {member.name}")
+                continue
 
-            if count > 100:
-                print(f'Maximum members of tarball {path} is 100')
-                return
+            # 4) Limit total files
+            if extracted_files >= max_files:
+                print(f"Reached max file limit of {max_files}.")
+                break
 
-            if size > 1024 * 1024 * 1024:
-                print(f'Maximum size of tarball files {path} is 1 GB')
-                return
+            # 5) Extract file contents manually, in chunks,
+            #    to avoid trusting the tar's metadata size.
+            file_obj = tar.extractfile(member)
+            if file_obj is None:
+                # Could not read the file content for some reason
+                continue
 
-    except Exception as e:
-        raise e
+            # Make sure the subdirectory structure exists
+            os.makedirs(os.path.dirname(member_path), exist_ok=True)
 
+            with open(member_path, 'wb') as out_f:
+                chunk_size = 1024 * 1024  # 1 MB buffer
+                while True:
+                    data = file_obj.read(chunk_size)
+                    if not data:
+                        break
+                    total_extracted_size += len(data)
+                    if total_extracted_size > max_size:
+                        # Stop if we exceed total extraction size
+                        raise ValueError("Extraction aborted: Maximum total size exceeded.")
+                    out_f.write(data)
+
+            extracted_files += 1
+
+    print(f"Extraction complete. Files extracted: {extracted_files}, "
+          f"Total size: {total_extracted_size} bytes.")
 
 def process_tarballs(self, path, temp_dir):
     try:
