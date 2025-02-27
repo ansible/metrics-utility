@@ -3,47 +3,39 @@ import tarfile
 import pandas as pd
 
 
-def tarball_sanitize_members(tar, path):
-    members = []
+def safe_extract(path, extract_path):
     count = 0
 
     size = 0
-
-    for member in tar.getmembers():
-        if member.isdir():
-            continue
-        if member.name.endswith("json") is False and member.name.endswith("csv") is False:
-            continue
-        if ".." in member.path:
-            continue
-
-        members.append(member)
-
-        size += member.size
-        count += 1
-        if count > 100:
-            print(f'Maximum members of tarball {path} is 100')
-            return members
-
-        if size > 1024 * 1024 * 1024:
-            print(f'Maximum size of tarball files {path} is 1 GB')
-            return members
-
-    return members
-
-def process_tarballs(self, path, temp_dir):
-
     try:
         tar = tarfile.open(path)
-        try:
-            # The filter param is available in Python 3.9.17
-            tar.extractall(path=temp_dir, filter='data', members=tarball_sanitize_members(tar, path))
-        except TypeError:
-            # Trying without filter for older python versions
-            tar.extractall(path=temp_dir, members=tarball_sanitize_members(tar, path))
-        finally:
-            tar.close()
+        for member in tar.getmembers():
+            if member.isdir():
+                continue
+            if member.name.endswith("json") is False and member.name.endswith("csv") is False:
+                continue
+            if ".." in member.path:
+                continue
 
+            tar.extract(member, path=extract_path)
+            size += member.size
+            count += 1
+
+            if count > 100:
+                print(f'Maximum members of tarball {path} is 100')
+                return
+
+            if size > 1024 * 1024 * 1024:
+                print(f'Maximum size of tarball files {path} is 1 GB')
+                return
+
+    except Exception as e:
+        raise e
+
+
+def process_tarballs(self, path, temp_dir):
+    try:
+        safe_extract(path, temp_dir)
         config = self.load_config(os.path.join(temp_dir, 'config.json'))
 
         # # TODO: read the csvs in batches
