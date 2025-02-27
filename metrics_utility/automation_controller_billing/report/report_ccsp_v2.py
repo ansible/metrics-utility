@@ -10,13 +10,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 from metrics_utility.automation_controller_billing.report.base import Base
 
-from metrics_utility.env_utils import get_optional_collectors
-
-DIRECT = 0
-INDIRECT = 1
-# EDGE = 2
-
-
+from metrics_utility.env_utils import get_optional_collectors, DIRECT, INDIRECT
 
 environs = get_optional_collectors()
 INCLUDE_INDIRECT = ('indirect_nodes' in environs)

@@ -303,7 +303,7 @@ def main_jobevent_table(since, full_path, until, **kwargs):
 @register('indirect_nodes', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def indirect_nodes_table(since, full_path, until, **kwargs):
 
-    if 'indirect_nodes' not in optional_collectors():
+    if 'indirect_nodes' not in get_optional_collectors():
         return None
     
     query = f"""

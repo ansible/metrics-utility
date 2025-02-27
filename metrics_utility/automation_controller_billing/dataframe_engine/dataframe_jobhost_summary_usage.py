@@ -6,13 +6,9 @@ import pandas as pd
 from metrics_utility.automation_controller_billing.dataframe_engine.base import \
     Base
 
-from metrics_utility.env_utils import get_optional_collectors
+from metrics_utility.env_utils import get_optional_collectors, DIRECT, INDIRECT
 
 logger = logging.getLogger(__name__)
-
-DIRECT = 0
-INDIRECT = 1
-# EDGE = 2
 
 #######################################
 # Code for building of the dataframe report based on JobhostSummary table
