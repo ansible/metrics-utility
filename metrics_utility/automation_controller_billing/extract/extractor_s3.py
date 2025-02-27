@@ -82,7 +82,7 @@ class ExtractorS3:
 
                     # TODO - this is the same as in extractor_directory, will need
                     # refactor in future and have function for it
-                    
+
                     if os.path.exists(os.path.join(temp_dir, 'job_host_summary.csv')):
                         job_host_summary = pd.read_csv(os.path.join(temp_dir, 'job_host_summary.csv'))
                     else:

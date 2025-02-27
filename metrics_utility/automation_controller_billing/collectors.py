@@ -16,7 +16,7 @@ from insights_analytics_collector import register  # , CsvFileSplitter
 from metrics_utility.automation_controller_billing.csv_file_splitter import \
     CsvFileSplitter
 
-from metrics_utility.metric_utils import INCLUDE_INDIRECT
+from metrics_utility.metric_utils import INCLUDE_INDIRECT, get_optional_collectors
 
 """
 This module is used to define metrics collected by
@@ -244,7 +244,7 @@ def job_host_summary_table(since, full_path, until, **kwargs):
 
 @register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_table(since, full_path, until, **kwargs):
-    if 'main_jobevent' not in optional_collectors():
+    if 'main_jobevent' not in get_optional_collectors():
         return None
 
     tbl = 'main_jobevent'
@@ -302,10 +302,10 @@ def main_jobevent_table(since, full_path, until, **kwargs):
 
 @register('indirect_nodes', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def indirect_nodes_table(since, full_path, until, **kwargs):
-    
+
     if not INCLUDE_INDIRECT:
         return None
-    
+
     query = f"""
         (
             SELECT
@@ -327,32 +327,24 @@ def indirect_nodes_table(since, full_path, until, **kwargs):
                 main_organization.name AS organization_name,
                 main_unifiedjobtemplate_project.id AS project_remote_id,
                 main_unifiedjobtemplate_project.name AS project_name
-
             FROM main_indirectmanagednodeaudit
-            
             LEFT JOIN main_job
                 ON main_job.unifiedjob_ptr_id = main_indirectmanagednodeaudit.job_id
-            
             LEFT JOIN main_unifiedjob
                 ON main_unifiedjob.id = main_indirectmanagednodeaudit.job_id
-            
             LEFT JOIN main_inventory
                 ON main_inventory.id = main_indirectmanagednodeaudit.inventory_id
-            
             LEFT JOIN main_organization
                 ON main_organization.id = main_unifiedjob.organization_id
-            
             LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project
                 ON main_unifiedjobtemplate_project.id = main_job.project_id
-
             WHERE (main_indirectmanagednodeaudit.created >= '{since.isoformat()}'
             AND  main_indirectmanagednodeaudit.created < '{until.isoformat()}')
             ORDER BY main_indirectmanagednodeaudit.created ASC
         )
         """
-    
+
     return _copy_table(table='main_indirectmanagednodeaudit',
                        query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
                        path=full_path)
 
- 

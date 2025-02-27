@@ -40,12 +40,12 @@ class DataframeJobhostSummaryUsage(Base):
                     if billing_data.empty:
                         continue
                     else:
-                        
+
                         if INCLUDE_INDIRECT:
                             billing_data["device_type"] = INDIRECT
                         else:
                             continue
-                        
+
                 print_debug(f'\nComputing data batch for {date}')
                 print_data(billing_data, "Newly loaded data")
 
@@ -64,7 +64,7 @@ class DataframeJobhostSummaryUsage(Base):
                 # Sumarize all task counts into 1 col
                 def sum_columns(row):
                     return sum([row[i] for i in ['dark', 'failures', 'ok', 'skipped', 'ignored',  'rescued']])
-                
+
                 if device_type == DIRECT:
                     billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
 

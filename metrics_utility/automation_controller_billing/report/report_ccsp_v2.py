@@ -208,7 +208,7 @@ class ReportCCSPv2(Base):
         return self.wb
 
     def _build_data_section_usage_by_org(self, current_row, ws, dataframe):
-        
+
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
