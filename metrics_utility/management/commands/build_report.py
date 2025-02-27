@@ -22,6 +22,7 @@ from metrics_utility.exceptions import (BadRequiredEnvVar, BadShipTarget,
 from metrics_utility.management.validation import (
     handle_directory_ship_target, handle_s3_ship_target)
 
+from metrics_utility.metric_utils import get_optional_collectors
 
 class Command(BaseCommand):
     """
@@ -203,6 +204,7 @@ class Command(BaseCommand):
             "s3_bucket_region": os.getenv('METRICS_UTILITY_BUCKET_REGION', None),
             "s3_bucket_id": os.getenv('METRICS_UTILITY_BUCKET_ID', None),
             "s3_bucket_key": os.getenv('METRICS_UTILITY_BUCKET_KEY', None),
+            "optional_collectors" : get_optional_collectors(),
         })
         return base
 

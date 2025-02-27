@@ -6,7 +6,7 @@ import pandas as pd
 from metrics_utility.automation_controller_billing.dataframe_engine.base import \
     Base
 
-from metrics_utility.env_utils import get_optional_collectors, DIRECT, INDIRECT
+from metrics_utility.metric_utils import INCLUDE_INDIRECT, DIRECT, INDIRECT
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ class DataframeJobhostSummaryUsage(Base):
                     if billing_data.empty:
                         continue
                     else:
-                        environs = get_optional_collectors()
-                        if 'indirect_nodes' in environs:
+                        
+                        if INCLUDE_INDIRECT:
                             billing_data["device_type"] = INDIRECT
                         else:
                             continue

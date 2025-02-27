@@ -4,7 +4,6 @@ from importlib import import_module
 
 import django.core.management as management
 
-
 class ManagementUtility(management.ManagementUtility):
     def execute(self):
         """

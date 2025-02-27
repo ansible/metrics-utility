@@ -10,10 +10,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 from metrics_utility.automation_controller_billing.report.base import Base
 
-from metrics_utility.env_utils import get_optional_collectors, DIRECT, INDIRECT
-
-environs = get_optional_collectors()
-INCLUDE_INDIRECT = ('indirect_nodes' in environs)
+from metrics_utility.metric_utils import INCLUDE_INDIRECT, DIRECT, INDIRECT
 
 class ReportCCSPv2(Base):
     # BLACK_COLOR_HEX = "00000000"

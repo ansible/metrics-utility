@@ -16,7 +16,7 @@ from insights_analytics_collector import register  # , CsvFileSplitter
 from metrics_utility.automation_controller_billing.csv_file_splitter import \
     CsvFileSplitter
 
-from metrics_utility.env_utils import get_optional_collectors
+from metrics_utility.metric_utils import INCLUDE_INDIRECT
 
 """
 This module is used to define metrics collected by
@@ -302,8 +302,8 @@ def main_jobevent_table(since, full_path, until, **kwargs):
 
 @register('indirect_nodes', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def indirect_nodes_table(since, full_path, until, **kwargs):
-
-    if 'indirect_nodes' not in get_optional_collectors():
+    
+    if not INCLUDE_INDIRECT:
         return None
     
     query = f"""
