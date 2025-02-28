@@ -3,8 +3,7 @@ import os
 import tarfile
 
 
-def write_member(member_path, file_obj, max_size):
-    total_extracted_size = 0
+def write_member(member_path, file_obj, max_size, total_extracted_size):
     with open(member_path, 'wb') as out_f:
         chunk_size = 1024 * 1024  # 1 MB buffer
         while True:
@@ -71,7 +70,7 @@ def safe_extract(tar_path, extract_path, max_files=100, max_size=1024*1024*1024)
             os.makedirs(os.path.dirname(member_path), exist_ok=True)
 
             # Write out the file, limiting max size
-            total_extracted_size += write_member(member_path, file_obj, max_size)
+            total_extracted_size = write_member(member_path, file_obj, max_size, total_extracted_size)
 
             extracted_files += 1
 
