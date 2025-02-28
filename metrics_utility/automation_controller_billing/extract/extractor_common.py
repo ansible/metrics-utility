@@ -3,6 +3,22 @@ import os
 import tarfile
 
 
+def write_member(member_path, file_obj, max_size):
+    total_extracted_size = 0
+    with open(member_path, 'wb') as out_f:
+        chunk_size = 1024 * 1024  # 1 MB buffer
+        while True:
+            data = file_obj.read(chunk_size)
+            if not data:
+                break
+            total_extracted_size += len(data)
+            if total_extracted_size > max_size:
+                # Stop if we exceed total extraction size
+                raise ValueError("Extraction aborted: Maximum total size exceeded.")
+            out_f.write(data)
+    return total_extracted_size
+
+
 def safe_extract(tar_path, extract_path, max_files=100, max_size=1024*1024*1024):
     """
     Safely extract a tar archive from 'tar_path' into 'extract_path' with constraints:
@@ -54,17 +70,8 @@ def safe_extract(tar_path, extract_path, max_files=100, max_size=1024*1024*1024)
             # Make sure the subdirectory structure exists
             os.makedirs(os.path.dirname(member_path), exist_ok=True)
 
-            with open(member_path, 'wb') as out_f:
-                chunk_size = 1024 * 1024  # 1 MB buffer
-                while True:
-                    data = file_obj.read(chunk_size)
-                    if not data:
-                        break
-                    total_extracted_size += len(data)
-                    if total_extracted_size > max_size:
-                        # Stop if we exceed total extraction size
-                        raise ValueError("Extraction aborted: Maximum total size exceeded.")
-                    out_f.write(data)
+            # Write out the file, limiting max size
+            total_extracted_size += write_member(member_path, file_obj, max_size)
 
             extracted_files += 1
 
