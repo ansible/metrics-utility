@@ -72,34 +72,31 @@ def safe_extract(tar_path, extract_path, max_files=100, max_size=1024*1024*1024)
           f"Total size: {total_extracted_size} bytes.")
 
 def process_tarballs(self, path, temp_dir):
-    try:
-        safe_extract(path, temp_dir)
-        config = self.load_config(os.path.join(temp_dir, 'config.json'))
+    safe_extract(path, temp_dir)
+    config = self.load_config(os.path.join(temp_dir, 'config.json'))
 
-        # # TODO: read the csvs in batches
-        # for chunk in pd.read_csv(filename, chunksize=chunksize):
-        # # chunk is a DataFrame. To "process" the rows in the chunk:
-        # for index, row in chunk.iterrows():
-        #     print(row)
+    # # TODO: read the csvs in batches
+    # for chunk in pd.read_csv(filename, chunksize=chunksize):
+    # # chunk is a DataFrame. To "process" the rows in the chunk:
+    # for index, row in chunk.iterrows():
+    #     print(row)
 
-        if os.path.exists(os.path.join(temp_dir, 'job_host_summary.csv')):
-            job_host_summary = pd.read_csv(os.path.join(temp_dir, 'job_host_summary.csv'))
-        else:
-            job_host_summary = pd.DataFrame([{}])
+    if os.path.exists(os.path.join(temp_dir, 'job_host_summary.csv')):
+        job_host_summary = pd.read_csv(os.path.join(temp_dir, 'job_host_summary.csv'))
+    else:
+        job_host_summary = pd.DataFrame([{}])
 
-        if os.path.exists(os.path.join(temp_dir, 'indirect_nodes.csv')):
-            indirect_nodes = pd.read_csv(os.path.join(temp_dir, 'indirect_nodes.csv'))
-        else:
-            indirect_nodes = pd.DataFrame([{}])
+    if os.path.exists(os.path.join(temp_dir, 'indirect_nodes.csv')):
+        indirect_nodes = pd.read_csv(os.path.join(temp_dir, 'indirect_nodes.csv'))
+    else:
+        indirect_nodes = pd.DataFrame([{}])
 
-        if os.path.exists(os.path.join(temp_dir, 'main_jobevent.csv')):
-            main_jobevent = pd.read_csv(os.path.join(temp_dir, 'main_jobevent.csv'))
-        else:
-            main_jobevent = pd.DataFrame([{}])
+    if os.path.exists(os.path.join(temp_dir, 'main_jobevent.csv')):
+        main_jobevent = pd.read_csv(os.path.join(temp_dir, 'main_jobevent.csv'))
+    else:
+        main_jobevent = pd.DataFrame([{}])
 
-        return {'main_jobevent': main_jobevent,
-                'job_host_summary': job_host_summary,
-                'indirect_nodes' : indirect_nodes,
-                'config': config}
-    except Exception as e:
-        raise e
+    return {'main_jobevent': main_jobevent,
+            'job_host_summary': job_host_summary,
+            'indirect_nodes' : indirect_nodes,
+            'config': config}
