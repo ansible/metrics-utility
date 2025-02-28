@@ -118,12 +118,11 @@ class ReportRenewalGuidance(Base):
         ws = self.wb.worksheets[0]
 
         self._init_dimensions(ws)
-        current_row = 1
         current_row = self._build_heading_h1(1, ws)
         current_row = self._build_header(current_row, ws)
 
         current_row = self._build_updated_timestamp(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, host_metric_dataframe, ephemeral_usage_dataframe)
+        self._build_data_section(current_row, ws, host_metric_dataframe, ephemeral_usage_dataframe)
 
         # Add optional sheets
         sheet_index = 1
@@ -132,31 +131,31 @@ class ReportRenewalGuidance(Base):
             if self.extra_params.get("opt_ephemeral") is None:
                 self.wb.create_sheet(title="Managed nodes")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_host_metrics(
+                self._build_data_section_host_metrics(
                     1, ws, self.df_managed_nodes_query(host_metric_dataframe))
                 sheet_index += 1
             else:
                 self.wb.create_sheet(title="Managed nodes")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_host_metrics(
+                self._build_data_section_host_metrics(
                     1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=False))
                 sheet_index += 1
 
                 self.wb.create_sheet(title="Managed nodes ephemeral")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_host_metrics(
+                self._build_data_section_host_metrics(
                     1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
                 sheet_index += 1
 
                 self.wb.create_sheet(title="Managed nodes ephemeral usage")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_ephemeral_usage(
+                self._build_data_section_ephemeral_usage(
                     1, ws, ephemeral_usage_dataframe)
                 sheet_index += 1
 
             self.wb.create_sheet(title="Deleted Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_host_metrics(
+            self._build_data_section_host_metrics(
                 1, ws, self.df_deleted_managed_nodes_query(host_metric_dataframe))
             sheet_index += 1
 

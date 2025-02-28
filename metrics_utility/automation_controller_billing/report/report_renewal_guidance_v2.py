@@ -108,7 +108,7 @@ class ReportRenewalGuidanceV2(Base):
         current_row = self._build_header(current_row, ws)
         current_row = self._build_po_number(current_row, ws)
         current_row = self._build_updated_timestamp(current_row, ws)
-        current_row = self._build_data_section(current_row, ws, job_host_summary_dataframe)
+        self._build_data_section(current_row, ws, job_host_summary_dataframe)
 
         # Add optional sheets
         sheet_index = 1
@@ -116,14 +116,14 @@ class ReportRenewalGuidanceV2(Base):
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
+            self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if "usage_by_organizations" in self.optional_report_sheets():
             # Sheet with usage by org
             self.wb.create_sheet(title="Usage by organizations")
             ws = self.wb.worksheets[sheet_index]
-            current_row = self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
+            self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if events_dataframe is not None:
@@ -131,21 +131,21 @@ class ReportRenewalGuidanceV2(Base):
                 # Sheet with usage by collections
                 self.wb.create_sheet(title="Usage by collections")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_usage_by_collections(1, ws, events_dataframe)
+                self._build_data_section_usage_by_collections(1, ws, events_dataframe)
                 sheet_index += 1
 
             if "usage_by_roles" in self.optional_report_sheets():
                 # Sheet with usage by roles
                 self.wb.create_sheet(title="Usage by roles")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_usage_by_roles(1, ws, events_dataframe)
+                self._build_data_section_usage_by_roles(1, ws, events_dataframe)
                 sheet_index += 1
 
             if "usage_by_modules" in self.optional_report_sheets():
                 # Sheet with usage by modules
                 self.wb.create_sheet(title="Usage by modules")
                 ws = self.wb.worksheets[sheet_index]
-                current_row = self._build_data_section_usage_by_modules(1, ws, events_dataframe)
+                self._build_data_section_usage_by_modules(1, ws, events_dataframe)
                 sheet_index += 1
 
         return self.wb
