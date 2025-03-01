@@ -7,16 +7,18 @@ from datetime import timezone
 
 from metrics_utility.exceptions import UnparsableParameter
 
+
 # Helper function to parse a JSON string or return the dict if it's already a dict.
 def parse_json(val):
     if isinstance(val, str):
         try:
             return json.loads(val)
-        except Exception as e:
+        except Exception:
             return {}  # Return empty dict if parsing fails.
     elif isinstance(val, dict):
         return val
     return {}
+
 
 # Function to merge a list of JSON values into a dict mapping each key to a set of non-null/non-empty values.
 def merge_json_sets(json_values):
@@ -27,7 +29,7 @@ def merge_json_sets(json_values):
             for key, value in d.items():
                 # Ignore null (None) or empty string values.
                 # We also want to ignore NA value used when facts are not available
-                if value is not None and value != "" and value != "NA":
+                if value is not None and value != '' and value != 'NA':
                     merged.setdefault(key, set()).add(value)
     return merged
 

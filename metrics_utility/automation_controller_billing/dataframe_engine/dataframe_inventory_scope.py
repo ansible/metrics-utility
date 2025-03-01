@@ -10,7 +10,7 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 logger = logging.getLogger(__name__)
 
 #######################################
-# Code for building of the dataframe report based on JobhostSummary table
+# Code for building of the dataframe report based on MainHost table
 ######################################
 
 class DataframeInventoryScope(Base):

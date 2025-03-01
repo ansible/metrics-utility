@@ -7,8 +7,6 @@ import pandas
 
 from pandas import Timestamp, NaT
 
-import subprocess
-import sys
 import pytest
 
 env_vars = {

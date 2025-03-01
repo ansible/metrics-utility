@@ -82,45 +82,45 @@ services:
         done
       '
 
-  # metrics-utility:
-  #   image: "quay.io/fedora/python-311"
-  #   container_name: metrics-utility
-  #   depends_on:
-  #     minio-setup:
-  #       condition: service_completed_successfully
-  #     postgres-wait:
-  #       condition: service_completed_successfully
-  #   volumes:
-  #     - ../..:/app_ro
-  #     - minio_config:/tmp
-  #   tmpfs:
-  #     - /app:mode=1777
-  #   working_dir: /app
-  #   environment:
-  #     METRICS_UTILITY_SHIP_TARGET: s3
-  #     METRICS_UTILITY_SHIP_PATH: metrics-utility/shipped_data
-  #     METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
-  #     METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
-  #     METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-  #     METRICS_UTILITY_REPORT_TYPE: CCSPv2
-  #     METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
-  #   entrypoint: |
-  #     sh -c '
-  #       set -e
-  #       source /tmp/minio_env.sh
+  metrics-utility:
+    image: "quay.io/fedora/python-311"
+    container_name: metrics-utility
+    depends_on:
+      minio-setup:
+        condition: service_completed_successfully
+      postgres-wait:
+        condition: service_completed_successfully
+    volumes:
+      - ../..:/app_ro
+      - minio_config:/tmp
+    tmpfs:
+      - /app:mode=1777
+    working_dir: /app
+    environment:
+      METRICS_UTILITY_SHIP_TARGET: s3
+      METRICS_UTILITY_SHIP_PATH: metrics-utility/shipped_data
+      METRICS_UTILITY_BUCKET_NAME: metricsutilitys3
+      METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
+      METRICS_UTILITY_BUCKET_REGION: "us-east-1"
+      METRICS_UTILITY_REPORT_TYPE: CCSPv2
+      METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
+    entrypoint: |
+      sh -c '
+        set -e
+        source /tmp/minio_env.sh
 
-  #       rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
+        rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
 
-  #       cd /app/metrics-utility/
-  #       sed -i '/HOST/s/localhost/postgres/' mock_awx/settings/__init__.py
+        cd /app/metrics-utility/
+        sed -i '/HOST/s/localhost/postgres/' mock_awx/settings/__init__.py
 
-  #       pip install uv
-  #       uv sync
+        pip install uv
+        uv sync
 
-  #       env | grep ^METRICS | sort
-  #       uv run python manage.py gather_automation_controller_billing_data --ship --since=20d
+        env | grep ^METRICS | sort
+        uv run python manage.py gather_automation_controller_billing_data --ship --since=20d
 
-  #     '
+      '
 
   metrics-utility-env:
     build:

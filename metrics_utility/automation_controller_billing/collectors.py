@@ -10,11 +10,11 @@ from django.conf import settings
 from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
+
 # TODO: enhance the CsvFIleSplitter base class and use that
 from insights_analytics_collector import register  # , CsvFileSplitter
 
-from metrics_utility.automation_controller_billing.csv_file_splitter import \
-    CsvFileSplitter
+from metrics_utility.automation_controller_billing.csv_file_splitter import CsvFileSplitter
 
 from metrics_utility.metric_utils import get_optional_collectors
 
@@ -34,6 +34,7 @@ All functions - when called - will be passed a datetime.datetime object,
 functions - like those that return metadata about playbook runs, may return
 data _since_ the last report date - i.e., new data in the last 24 hours)
 """
+
 
 def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
@@ -66,11 +67,11 @@ def daily_slicing(key, last_gather, **kwargs):
 
 
 def limit_slicing(key, last_gather, **kwargs):
-    # for tables where we always need to do a table full scan, we want to load batches
-    since, until = kwargs.get('since', None), kwargs.get('until', now())
+    # For tables where we always need to do a table full scan, we want to load batches
 
     # TODO: skip today's collection if it already happened, so we don't load full inventory
-    # every collection, which can be e.g. every 10 minutes
+    # every collection, which can be e.g. every 10 minutes. If the last_gather_was from today
+    # we should be able to skip the collection.
 
     # For now, we'll always store the inventory snapshot into daily partition.
     # It's not possible to collect historical state of inventory, so we always insert it
@@ -130,8 +131,8 @@ def config(since, **kwargs):
         'logging_aggregators': settings.LOG_AGGREGATOR_LOGGERS,
         'external_logger_enabled': settings.LOG_AGGREGATOR_ENABLED,
         'external_logger_type': getattr(settings, 'LOG_AGGREGATOR_TYPE', None),
-        'metrics_utility_version': "0.4.1", # TODO read from setup.cfg
-        'billing_provider_params': {} # Is being overwritten in collector.gather by set ENV VARS
+        'metrics_utility_version': '0.4.1',  # TODO read from setup.cfg
+        'billing_provider_params': {},  # Is being overwritten in collector.gather by set ENV VARS
     }
 
 
@@ -150,6 +151,7 @@ def _copy_table(table, query, path, prepend_query=None):
 
     return file.file_list()
 
+
 def _copy_table_aap_2_4_and_below(cursor, query, file):
     # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
     cursor.copy_expert(query, file)
@@ -162,8 +164,9 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
             byte_data = bytes(data)
             file.write(byte_data.decode())
 
+
 def yaml_and_json_parsing_functions():
-        query = '''
+    query = """
             -- Define function for parsing field out of yaml encoded as text
             CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
                 str text,
@@ -195,14 +198,14 @@ def yaml_and_json_parsing_functions():
             END;
             $$
             LANGUAGE plpgsql;
-        '''
-        return query
+        """
+    return query
 
 
 @register('job_host_summary', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
     # TODO: controler needs to have an index on main_jobhostsummary.modified
-    prepend_query = '''
+    prepend_query = """
         -- Define function for parsing field out of yaml encoded as text
         CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
             str text,
@@ -234,9 +237,9 @@ def job_host_summary_table(since, full_path, until, **kwargs):
         END;
         $$
         LANGUAGE plpgsql;
-    '''
+    """
 
-    query = f'''
+    query = f"""
         (SELECT main_jobhostsummary.id,
                 main_jobhostsummary.created,
                 main_jobhostsummary.modified,
@@ -287,12 +290,9 @@ def job_host_summary_table(since, full_path, until, **kwargs):
                 LEFT JOIN main_host ON main_host.id = main_jobhostsummary.host_id
                 WHERE (main_jobhostsummary.modified >= '{since.isoformat()}' AND main_jobhostsummary.modified < '{until.isoformat()}')
                 ORDER BY main_jobhostsummary.modified ASC)
-        '''
+        """
 
-    return _copy_table(table='main_jobhostsummary',
-                       query=f"COPY {query} TO STDOUT WITH CSV HEADER",
-                       path=full_path,
-                       prepend_query=prepend_query)
+    return _copy_table(table='main_jobhostsummary', query=f'COPY {query} TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
 
 
 @register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
@@ -301,9 +301,9 @@ def main_jobevent_table(since, full_path, until, **kwargs):
         return None
 
     tbl = 'main_jobevent'
-    event_data = fr"replace({tbl}.event_data, '\u', '\u005cu')::jsonb"
+    event_data = rf"replace({tbl}.event_data, '\u', '\u005cu')::jsonb"
 
-    query = f'''
+    query = f"""
         WITH job_scope AS (
             SELECT main_jobhostsummary.id AS main_jobhostsummary_id,
                    main_jobhostsummary.created AS main_jobhostsummary_created,
@@ -348,14 +348,12 @@ def main_jobevent_table(since, full_path, until, **kwargs):
                               'runner_item_on_ok',
                               'runner_item_on_failed',
                               'runner_item_on_skipped')
-        '''
-    return _copy_table(table=tbl,
-                       query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
-                       path=full_path)
+        """
+    return _copy_table(table=tbl, query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path)
+
 
 @register('indirect_nodes', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def indirect_nodes_table(since, full_path, until, **kwargs):
-
     if 'indirect_nodes' not in get_optional_collectors():
         return None
 
@@ -397,9 +395,7 @@ def indirect_nodes_table(since, full_path, until, **kwargs):
         )
         """
 
-    return _copy_table(table='main_indirectmanagednodeaudit',
-                       query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
-                       path=full_path)
+    return _copy_table(table='main_indirectmanagednodeaudit', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path)
 
 
 @register('main_host', '1.0', format='csv', description=_('Inventory data'), fnc_slicing=limit_slicing)
@@ -407,7 +403,7 @@ def main_host_table(since, full_path, until, **kwargs):
     if 'main_host' not in get_optional_collectors():
         return None
 
-    query = f"""
+    query = """
         (
             SELECT main_host.name as host_name,
                    main_host.id AS host_id,
@@ -449,21 +445,6 @@ def main_host_table(since, full_path, until, **kwargs):
         )
         """
 
-    # try:
-    #     with connection.cursor() as cursor:
-    #         cursor.execute(yaml_and_json_parsing_functions())
-
-    #         cursor.execute(query)
-    #         rows = cursor.fetchall()
-    #         columns = [desc[0] for desc in cursor.description]
-    #         result = [dict(zip(columns, row)) for row in rows]
-    # except Exception as e:
-    #     breakpoint()
-    #     pass
-
-    # breakpoint()
-
-    return _copy_table(table='main_host',
-                       query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
-                       path=full_path,
-                       prepend_query=yaml_and_json_parsing_functions())
+    return _copy_table(
+        table='main_host', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=yaml_and_json_parsing_functions()
+    )
