@@ -7,8 +7,6 @@ import pandas as pd
 from metrics_utility.automation_controller_billing.dataframe_engine.base import \
     Base
 
-from metrics_utility.metric_utils import INCLUDE_INDIRECT, DIRECT, INDIRECT
-
 logger = logging.getLogger(__name__)
 
 #######################################

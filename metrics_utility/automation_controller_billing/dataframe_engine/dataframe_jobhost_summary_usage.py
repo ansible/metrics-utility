@@ -6,7 +6,7 @@ import pandas as pd
 from metrics_utility.automation_controller_billing.dataframe_engine.base import \
     Base
 
-from metrics_utility.metric_utils import INCLUDE_INDIRECT, DIRECT, INDIRECT
+from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +39,8 @@ class DataframeJobhostSummaryUsage(Base):
 
                     if billing_data.empty:
                         continue
-                    else:
 
-                        if INCLUDE_INDIRECT:
-                            billing_data["device_type"] = INDIRECT
-                        else:
-                            continue
+                    billing_data["device_type"] = INDIRECT
 
                 print_debug(f'\nComputing data batch for {date}')
                 print_data(billing_data, "Newly loaded data")

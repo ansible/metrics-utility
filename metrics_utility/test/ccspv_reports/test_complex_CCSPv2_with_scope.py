@@ -12,24 +12,11 @@ import sys
 import pytest
 
 env_vars = {
-    'METRICS_UTILITY_PRICE_PER_NODE': '11.55',
-    'METRICS_UTILITY_REPORT_RHN_LOGIN': 'test_login',
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
-    'METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME': 'Customer A',
-    'METRICS_UTILITY_REPORT_END_USER_STATE': 'TX',
-    'METRICS_UTILITY_REPORT_SKU_DESCRIPTION': 'EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)',
-    'METRICS_UTILITY_REPORT_H1_HEADING': 'CCSP NA Direct Reporting Template',
-    'METRICS_UTILITY_REPORT_END_USER_CITY': 'Springfield',
-    'METRICS_UTILITY_REPORT_PO_NUMBER': '123',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
-    'METRICS_UTILITY_REPORT_END_USER_COUNTRY': 'US',
-    'METRICS_UTILITY_REPORT_COMPANY_NAME': 'Partner A',
-    'METRICS_UTILITY_REPORT_SKU': 'MCT3752MO',
-    'METRICS_UTILITY_REPORT_EMAIL': 'email@email.com',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,inventory_scope,usage_by_organizations,'
     'usage_by_collections,usage_by_roles,usage_by_modules',
-    'AWX_LOGGING_MODE': 'stdout',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/03/CCSPv2-2025-03-01--2025-03-02.xlsx'
