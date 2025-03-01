@@ -79,11 +79,11 @@ def validate_managed_nodes(file_path):
     assert transform_sheet(sheet.to_dict()) == {
         0: {
             'Automated by organizations': 2,
-            'First automation': Timestamp('2025-02-13 12:39:15.342000'),
+            'First automation': Timestamp('2025-02-13 12:41:44.619000'),
             'Host name': 'host1',
-            'Job runs': 8,
+            'Job runs': 4,
             'Last automation': Timestamp('2025-02-13 12:49:01.047000'),
-            'Number of task runs': 12,
+            'Number of task runs': 8,
         },
         1: {
             'Automated by organizations': 1,
@@ -116,9 +116,9 @@ def validate_usage_by_organization(file_path):
     sheet = pandas.read_excel(file_path, sheet_name='Usage by organizations')
     assert transform_sheet(sheet.to_dict()) == {
         0: {
-            'Job runs': 5,
-            'Non-unique managed nodes automated': 12,
-            'Number of task runs': 20,
+            'Job runs': 3,
+            'Non-unique managed nodes automated': 8,
+            'Number of task runs': 16,
             'Organization name': 'Default',
             'Unique managed nodes automated': 4,
         },
@@ -138,9 +138,9 @@ def validate_usage_by_collections(file_path):
         0: {
             'Collection name': 'ansible.builtin',
             'Duration of task runs [seconds]': 22.055472,
-            'Non-unique managed nodes automated': 8,
+            'Non-unique managed nodes automated': 10,
             'Number of task runs': 22,
-            'Unique managed nodes automated': 4,
+            'Unique managed nodes automated': 5,
         },
         1: {
             'Collection name': 'ansible.builtin2',
@@ -157,10 +157,10 @@ def validate_usage_by_roles(file_path):
     assert transform_sheet(sheet.to_dict()) == {
         0: {
             'Duration of task runs [seconds]': 22.055472,
-            'Non-unique managed nodes automated': 8,
+            'Non-unique managed nodes automated': 10,
             'Number of task runs': 22,
             'Role name': 'No role used',
-            'Unique managed nodes automated': 4,
+            'Unique managed nodes automated': 5,
         },
         1: {
             'Duration of task runs [seconds]': 0.802726,
@@ -185,9 +185,9 @@ def validate_usage_by_modules(file_path):
         1: {
             'Duration of task runs [seconds]': 21.935567,
             'Module name': 'ansible.builtin.gather_facts',
-            'Non-unique managed nodes automated': 8,
+            'Non-unique managed nodes automated': 10,
             'Number of task runs': 13,
-            'Unique managed nodes automated': 4,
+            'Unique managed nodes automated': 5,
         },
         2: {
             'Duration of task runs [seconds]': 0.011992,

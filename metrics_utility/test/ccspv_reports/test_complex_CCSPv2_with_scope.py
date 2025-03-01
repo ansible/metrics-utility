@@ -139,14 +139,6 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
             'Number of task runs': 10,
         },
-        9: {
-            'Automated by organizations': 1,
-            'First automation': Timestamp('2025-03-01 10:51:01.495000'),
-            'Host name': 'test_unreachable_host',
-            'Job runs': 2,
-            'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
-            'Number of task runs': 2,
-        },
     }
 
 
@@ -253,10 +245,10 @@ def validate_usage_by_organization(file_path):
         },
         1: {
             'Job runs': 5,
-            'Non-unique managed nodes automated': 20,
-            'Number of task runs': 38,
+            'Non-unique managed nodes automated': 18,
+            'Number of task runs': 36,
             'Organization name': 'Test Org 1',
-            'Unique managed nodes automated': 6,
+            'Unique managed nodes automated': 5,
         },
         2: {
             'Job runs': 3,

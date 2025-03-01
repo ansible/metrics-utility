@@ -64,8 +64,17 @@ class DataframeJobhostSummaryUsage(Base):
                 def sum_columns(row):
                     return sum([row[i] for i in ['dark', 'failures', 'ok', 'skipped', 'ignored',  'rescued']])
 
+                # Summarize all reachable task counts into 1 col
+                def sum_reachable_columns(row):
+                    return sum([row[i] for i in ['failures', 'ok', 'skipped', 'ignored',  'rescued']])
+
                 if managed_node_type == DIRECT:
                     billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
+
+                    # Filter out managed nodes that were unreachable (represented as the dark counter).
+                    # We want to count hosts that had at least one task running.
+                    billing_data['reachable_task_runs'] = billing_data.apply(sum_reachable_columns, axis=1)
+                    billing_data = billing_data[billing_data['reachable_task_runs'] > 0].copy()
 
                     billing_data['facts'] = None
                     billing_data['canonical_facts'] = None

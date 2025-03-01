@@ -138,14 +138,6 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
             'Number of task runs': 10,
         },
-        9: {
-            'Automated by organizations': 1,
-            'First automation': Timestamp('2025-03-01 10:51:01.495000'),
-            'Host name': 'test_unreachable_host',
-            'Job runs': 2,
-            'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
-            'Number of task runs': 2,
-        },
     }
 
 

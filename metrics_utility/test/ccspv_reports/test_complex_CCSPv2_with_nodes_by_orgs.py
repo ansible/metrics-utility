@@ -79,10 +79,10 @@ def validate_jobs(file_path):
             'Job runs': 5,
             'Job template name': 'Test Job Template 1',
             'Last run': Timestamp('2025-03-01 13:36:04.823000'),
-            'Non-unique managed nodes automated': 20,
-            'Number of task runs': 38,
+            'Non-unique managed nodes automated': 18,
+            'Number of task runs': 36,
             'Organization name': 'Test Org 1',
-            'Unique managed nodes automated': 6,
+            'Unique managed nodes automated': 5,
         },
         2: {
             'First run': Timestamp('2025-03-01 10:13:05.201000'),
@@ -199,17 +199,6 @@ def validate_managed_nodes(file_path):
             'Test Org 1': Timestamp('2025-03-01 13:36:08.627000'),
             'Test Org 2': NaT,
         },
-        9: {
-            'Automated by organizations': 1,
-            'Default': NaT,
-            'First automation': Timestamp('2025-03-01 10:51:01.495000'),
-            'Host name': 'test_unreachable_host',
-            'Job runs': 2,
-            'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
-            'Number of task runs': 2,
-            'Test Org 1': Timestamp('2025-03-01 13:36:08.627000'),
-            'Test Org 2': NaT,
-        },
     }
 
 
@@ -225,10 +214,10 @@ def validate_usage_by_organization(file_path):
         },
         1: {
             'Job runs': 5,
-            'Non-unique managed nodes automated': 20,
-            'Number of task runs': 38,
+            'Non-unique managed nodes automated': 18,
+            'Number of task runs': 36,
             'Organization name': 'Test Org 1',
-            'Unique managed nodes automated': 6,
+            'Unique managed nodes automated': 5,
         },
         2: {
             'Job runs': 3,
@@ -288,13 +277,6 @@ def validate_dynamic_sheets(file_path):
             'Job runs': 5,
             'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
             'Number of task runs': 10,
-        },
-        5: {
-            'First automation': Timestamp('2025-03-01 10:51:01.495000'),
-            'Host name': 'test_unreachable_host',
-            'Job runs': 2,
-            'Last automation': Timestamp('2025-03-01 13:36:08.627000'),
-            'Number of task runs': 2,
         },
     }
 
