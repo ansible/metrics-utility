@@ -2,6 +2,7 @@
 # Code for building the spreadsheet
 ######################################
 import os
+import json
 
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
@@ -24,6 +25,16 @@ class Base:
             'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
             'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'\
             'usage_by_modules').split(",")
+
+    def convert_cell(self, cell):
+        # If the cell is a dictionary, convert each set value to a list, then dump as a JSON string.
+        if isinstance(cell, dict):
+            new_cell = {k: sorted(list(v)) if isinstance(v, set) else v for k, v in cell.items()}
+            return json.dumps(new_cell)
+        # If the cell itself is a set, convert it to a sorted list and then to a JSON string.
+        elif isinstance(cell, set):
+            return json.dumps(sorted(list(cell)))
+        return cell
 
     def _fix_event_host_names(self, mapping_dataframe, destination_dataframe):
         if destination_dataframe is None:
@@ -211,6 +222,59 @@ class Base:
 
         return current_row + row_counter
 
+    def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
+        for key, value in self.config['data_column_widths'].items():
+            ws.column_dimensions[get_column_letter(key)].width = value
+
+        header_font = Font(name=self.FONT,
+                           size=10,
+                           color=self.BLACK_COLOR_HEX,
+                           bold=True)
+        value_font = Font(name=self.FONT,
+                          size=10,
+                          color=self.BLACK_COLOR_HEX)
+
+        ccsp_report_dataframe = dataframe
+
+        for col in ['organizations', 'inventories', 'canonical_facts', 'facts']:
+            ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
+
+        columns = [
+            'host_name',
+            'organizations', 'inventories', 'canonical_facts', 'facts'
+        ]
+
+        labels = {
+            "host_name": "Host name",
+            "organizations": "Organizations",
+            "inventories": "Inventories",  # Job runs is the same as host_runs, Non-unique managed nodes automated
+            "canonical_facts": "canonical_facts",
+            'facts': "facts",
+        }
+        labels = {k:v for k, v in labels.items() if k in columns}
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(
+            columns=labels
+        )
+
+        row_counter = 0
+        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+
+            row_counter += 1
+
+        return current_row + row_counter
 
 
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None):

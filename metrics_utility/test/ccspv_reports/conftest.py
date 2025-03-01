@@ -3,6 +3,18 @@ import pytest
 import openpyxl
 from openpyxl import Workbook
 from datetime import datetime
+from contextlib import contextmanager
+
+@contextmanager
+def temporary_env(new_env):
+    """Temporarily update os.environ with new_env."""
+    original = os.environ.copy()
+    os.environ.update(new_env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(original)
 
 def validate_sheet_tab_names(file_path, expected_sheets):
     """Test the sheet names in the Excel file."""
@@ -128,4 +140,28 @@ def validate_column(workbook : Workbook, sheet_name, column_name, row_id, expect
                 )
 
 
+def transform_sheet(sheet):
+    """
+    Transforms a sheet dictionary in column-wise format into a row-wise dictionary.
+
+    Parameters:
+        sheet (dict): A dictionary where keys are column names and values are dictionaries
+                      mapping row indices to cell values.
+
+    Returns:
+        dict: A dictionary where each key is a row index and each value is a dictionary mapping
+              column names to cell values for that row.
+    """
+    rows = {}
+    # Iterate over each column and its data
+    for col, col_data in sheet.items():
+        col = col.replace("\n", " ")
+        # For each row in the column
+        for row_index, value in col_data.items():
+            # Initialize the row if it hasn't been created yet
+            if row_index not in rows:
+                rows[row_index] = {}
+            # Set the value for the column in that row
+            rows[row_index][col] = value
+    return rows
 

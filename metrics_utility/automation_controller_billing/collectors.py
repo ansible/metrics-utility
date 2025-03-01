@@ -64,6 +64,24 @@ def daily_slicing(key, last_gather, **kwargs):
         yield (start, end)
         start = end
 
+
+def limit_slicing(key, last_gather, **kwargs):
+    # for tables where we always need to do a table full scan, we want to load batches
+    since, until = kwargs.get('since', None), kwargs.get('until', now())
+
+    # TODO: skip today's collection if it already happened, so we don't load full inventory
+    # every collection, which can be e.g. every 10 minutes
+
+    # For now, we'll always store the inventory snapshot into daily partition.
+    # It's not possible to collect historical state of inventory, so we always insert it
+    # into a daily partition of now.
+    today = now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # TODO: we should load day in batches of i.e. 100k nodes, just doing marker based pagination based
+    # on primary key
+    yield (today, today)
+
+
 @register('config', '1.0', description=_('General platform configuration.'), config=True)
 def config(since, **kwargs):
     license_info = get_license()
@@ -132,7 +150,6 @@ def _copy_table(table, query, path, prepend_query=None):
 
     return file.file_list()
 
-
 def _copy_table_aap_2_4_and_below(cursor, query, file):
     # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
     cursor.copy_expert(query, file)
@@ -144,6 +161,42 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
         while data := copy.read():
             byte_data = bytes(data)
             file.write(byte_data.decode())
+
+def yaml_and_json_parsing_functions():
+        query = '''
+            -- Define function for parsing field out of yaml encoded as text
+            CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
+                str text,
+                field text
+            )
+            RETURNS text AS
+            $$
+            DECLARE
+                line_re text;
+                field_re text;
+            BEGIN
+                field_re := ' *[:=] *(.+?) *$';
+                line_re := '(?n)^' || field || field_re;
+                RETURN trim(both '"' from substring(str from line_re) );
+            END;
+            $$
+            LANGUAGE plpgsql;
+
+            -- Define function to check if field is a valid json
+            CREATE OR REPLACE FUNCTION metrics_utility_is_valid_json(p_json text)
+                returns boolean
+            AS
+            $$
+            BEGIN
+                RETURN (p_json::json is not null);
+            EXCEPTION
+                WHEN others THEN
+                    RETURN false;
+            END;
+            $$
+            LANGUAGE plpgsql;
+        '''
+        return query
 
 
 @register('job_host_summary', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
@@ -348,3 +401,69 @@ def indirect_nodes_table(since, full_path, until, **kwargs):
                        query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
                        path=full_path)
 
+
+@register('main_host', '1.0', format='csv', description=_('Inventory data'), fnc_slicing=limit_slicing)
+def main_host_table(since, full_path, until, **kwargs):
+    if 'main_host' not in get_optional_collectors():
+        return None
+
+    query = f"""
+        (
+            SELECT main_host.name as host_name,
+                   main_host.id AS host_id,
+                   main_inventory.id AS inventory_remote_id,
+                   main_inventory.name AS inventory_name,
+                   main_organization.id AS organization_remote_id,
+                   main_organization.name AS organization_name,
+                   main_unifiedjob.created AS last_automation,
+
+                   CASE
+                       WHEN (metrics_utility_is_valid_json(main_host.variables))
+                           THEN main_host.variables::jsonb->>'ansible_host'
+                       ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_host' )
+                   END AS ansible_host_variable,
+
+                   jsonb_build_object(
+                       'ansible_product_serial', main_host.ansible_facts->>'ansible_product_serial'::TEXT,
+                       'ansible_machine_id', main_host.ansible_facts->>'ansible_machine_id'::TEXT
+                   ) AS canonical_facts,
+
+                   jsonb_build_object(
+                       'ansible_connection_variable',
+                       CASE
+                           WHEN (metrics_utility_is_valid_json(main_host.variables))
+                              THEN main_host.variables::jsonb->>'ansible_connection'
+                           ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
+                       END
+                   ) AS facts
+
+            FROM main_host
+            LEFT JOIN main_inventory
+                ON main_inventory.id = main_host.inventory_id
+            LEFT JOIN main_organization
+                ON main_organization.id = main_inventory.organization_id
+            LEFT JOIN main_unifiedjob
+                ON main_unifiedjob.id = main_host.last_job_id
+            WHERE enabled='t'
+            ORDER BY main_host.id ASC
+        )
+        """
+
+    # try:
+    #     with connection.cursor() as cursor:
+    #         cursor.execute(yaml_and_json_parsing_functions())
+
+    #         cursor.execute(query)
+    #         rows = cursor.fetchall()
+    #         columns = [desc[0] for desc in cursor.description]
+    #         result = [dict(zip(columns, row)) for row in rows]
+    # except Exception as e:
+    #     breakpoint()
+    #     pass
+
+    # breakpoint()
+
+    return _copy_table(table='main_host',
+                       query=f"COPY ({query}) TO STDOUT WITH CSV HEADER",
+                       path=full_path,
+                       prepend_query=yaml_and_json_parsing_functions())

@@ -5,7 +5,7 @@ import os
 from dateutil.parser import parse as date_parse
 from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
-from django.utils import timezone
+from datetime import timezone
 
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import \
     Factory as DataframeEngineFactory

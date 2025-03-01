@@ -115,6 +115,8 @@ class ReportCCSPv2(Base):
         job_host_summary_dataframe = self.dataframe[0]
         events_dataframe = self.dataframe[1]
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
+        # TODO: also apply organization filter
+        scope_dataframe = self.dataframe[2]
 
         job_host_summary_dataframe, events_dataframe = self._apply_filter(job_host_summary_dataframe, events_dataframe)
 
@@ -162,6 +164,13 @@ class ReportCCSPv2(Base):
                 indirects = job_host_summary_dataframe[job_host_summary_dataframe['device_type'] == INDIRECT]
                 func(1, ws, indirects)
                 sheet_index += 1
+
+        if "inventory_scope" in self.optional_report_sheets():
+            self.wb.create_sheet(title="Inventory Scope")
+            ws = self.wb.worksheets[sheet_index]
+            scope = scope_dataframe
+            self._build_data_section_scope(1, ws, scope)
+            sheet_index += 1
 
         if "usage_by_organizations" in self.optional_report_sheets():
             # Sheet with usage by org
