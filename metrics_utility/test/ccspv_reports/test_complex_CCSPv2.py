@@ -1,10 +1,14 @@
-from conftest import validate_column
+from conftest import transform_sheet, temporary_env
 from datetime import datetime
+from metrics_utility.management.commands.build_report import Command
+
 import openpyxl
 
-import subprocess
-import sys
+import pandas
 import pytest
+
+from pandas import Timestamp
+
 
 env_vars = {
     'METRICS_UTILITY_PRICE_PER_NODE': '11.55',
@@ -22,7 +26,8 @@ env_vars = {
     'METRICS_UTILITY_REPORT_SKU': 'MCT3752MO',
     'METRICS_UTILITY_REPORT_EMAIL': 'email@email.com',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
-    'AWX_LOGGING_MODE': 'stdout',
+    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,usage_by_organizations,'
+    'usage_by_collections,usage_by_roles,usage_by_modules',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13--2025-02-13.xlsx'
@@ -41,101 +46,161 @@ date_today = datetime.now().strftime('%b %d, %Y')
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
-    python_executable = sys.executable
-    result = subprocess.run(
-        [python_executable, 'manage.py', 'build_report', '--since=2025-02-13', '--until=2025-02-13', '--force'],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env_vars,
-    )
+    with temporary_env(env_vars):
+        options = {
+            'since': '2025-02-13',
+            'until': '2025-02-13',
+            'ephemeral': None,
+            'force': True,
+            'verbose': False,
+        }
 
-    assert result.returncode == 0
+        # Instantiate your command
+        command = Command()
+
+        # Call the handle() method directly with the options.
+        command.handle(**options)
 
     try:
         workbook = openpyxl.load_workbook(filename=file_path)
 
-        validate_managed_nodes(workbook)
-        validate_usage_by_organization(workbook)
-        validate_usage_by_collections(workbook)
-        validate_usage_by_roles(workbook)
-        validate_usage_by_modules(workbook)
+        validate_managed_nodes(file_path)
+        validate_usage_by_organization(file_path)
+        validate_usage_by_collections(file_path)
+        validate_usage_by_roles(file_path)
+        validate_usage_by_modules(file_path)
 
     finally:
         workbook.close()
 
 
-def validate_managed_nodes(workbook):
-    validate_column(workbook, 'Managed nodes', 'A', 1, ['Host name', 'host1', 'localhost', 'test_host', 'test_host_1'])
-
-    validate_column(workbook, 'Managed nodes', 'B', 1, ['Automated by organizations', 2, 1, 1, 1])
-
-    validate_column(workbook, 'Managed nodes', 'C', 1, ['Job runs', 8, 1, 4, 1])
-
-    validate_column(workbook, 'Managed nodes', 'D', 1, ['Number of task runs', 12, 2, 8, 2])
-
-    validate_column(
-        workbook,
-        'Managed nodes',
-        'E',
-        1,
-        ['First automation', '2025-02-13 12:39:15', '2025-02-13 12:33:50', '2025-02-13 12:33:46', '2025-02-13 12:33:46'],
-    )
-
-    validate_column(
-        workbook,
-        'Managed nodes',
-        'F',
-        1,
-        ['Last automation', '2025-02-13 12:49:01', '2025-02-13 12:33:50', '2025-02-13 12:33:50', '2025-02-13 12:33:46'],
-    )
-
-
-def validate_usage_by_organization(workbook):
-    sheet_name = 'Usage by organizations'
-
-    validate_column(workbook, sheet_name, 'A', 1, ['Organization name', 'Default', 'org1'])
-    validate_column(workbook, sheet_name, 'B', 1, ['Job runs', '5', '1'])
-    validate_column(workbook, sheet_name, 'C', 1, ['Unique managed nodes automated', '4', '1'])
-    validate_column(workbook, sheet_name, 'D', 1, ['Non-unique managed nodes automated', '12', '2'])
-    validate_column(workbook, sheet_name, 'E', 1, ['Number of task runs', '20', '4'])
-
-
-def validate_usage_by_collections(workbook):
-    sheet_name = 'Usage by collections'
-
-    validate_column(workbook, sheet_name, 'A', 1, ['Collection name', 'ansible.builtin', 'ansible.builtin2'])
-    validate_column(workbook, sheet_name, 'B', 1, ['Unique managed nodes automated', '4', '1'])
-    validate_column(workbook, sheet_name, 'C', 1, ['Non-unique managed nodes automated', '8', '1'])
-    validate_column(workbook, sheet_name, 'D', 1, ['Number of task runs', '22', '2'])
-    validate_column(workbook, sheet_name, 'E', 1, ['Duration of task runs [seconds]', '22.055472', '0.802726'])
+def validate_managed_nodes(file_path):
+    sheet = pandas.read_excel(file_path, sheet_name='Managed nodes')
+    assert transform_sheet(sheet.to_dict()) == {
+        0: {
+            'Automated by organizations': 2,
+            'First automation': Timestamp('2025-02-13 12:39:15.342000'),
+            'Host name': 'host1',
+            'Job runs': 8,
+            'Last automation': Timestamp('2025-02-13 12:49:01.047000'),
+            'Number of task runs': 12,
+        },
+        1: {
+            'Automated by organizations': 1,
+            'First automation': Timestamp('2025-02-13 12:33:50.933000'),
+            'Host name': 'localhost',
+            'Job runs': 1,
+            'Last automation': Timestamp('2025-02-13 12:33:50.933000'),
+            'Number of task runs': 2,
+        },
+        2: {
+            'Automated by organizations': 1,
+            'First automation': Timestamp('2025-02-13 12:33:46.093000'),
+            'Host name': 'test_host',
+            'Job runs': 4,
+            'Last automation': Timestamp('2025-02-13 12:33:50.933000'),
+            'Number of task runs': 8,
+        },
+        3: {
+            'Automated by organizations': 1,
+            'First automation': Timestamp('2025-02-13 12:33:46.093000'),
+            'Host name': 'test_host_1',
+            'Job runs': 1,
+            'Last automation': Timestamp('2025-02-13 12:33:46.093000'),
+            'Number of task runs': 2,
+        },
+    }
 
 
-def validate_usage_by_roles(workbook):
-    sheet_name = 'Usage by roles'
+def validate_usage_by_organization(file_path):
+    sheet = pandas.read_excel(file_path, sheet_name='Usage by organizations')
+    assert transform_sheet(sheet.to_dict()) == {
+        0: {
+            'Job runs': 5,
+            'Non-unique managed nodes automated': 12,
+            'Number of task runs': 20,
+            'Organization name': 'Default',
+            'Unique managed nodes automated': 4,
+        },
+        1: {
+            'Job runs': 1,
+            'Non-unique managed nodes automated': 2,
+            'Number of task runs': 4,
+            'Organization name': 'org1',
+            'Unique managed nodes automated': 1,
+        },
+    }
 
-    validate_column(workbook, sheet_name, 'A', 1, ['Role name', 'No role used', 'ansible.builtin2.role'])
-    validate_column(workbook, sheet_name, 'B', 1, ['Unique managed nodes automated', '4', '1'])
-    validate_column(workbook, sheet_name, 'C', 1, ['Non-unique managed nodes automated', '8', '1'])
-    validate_column(workbook, sheet_name, 'D', 1, ['Number of task runs', '22', '2'])
-    validate_column(workbook, sheet_name, 'E', 1, ['Duration of task runs [seconds]', '22.055472', '0.802726'])
+
+def validate_usage_by_collections(file_path):
+    sheet = pandas.read_excel(file_path, sheet_name='Usage by collections')
+    assert transform_sheet(sheet.to_dict()) == {
+        0: {
+            'Collection name': 'ansible.builtin',
+            'Duration of task runs [seconds]': 22.055472,
+            'Non-unique managed nodes automated': 8,
+            'Number of task runs': 22,
+            'Unique managed nodes automated': 4,
+        },
+        1: {
+            'Collection name': 'ansible.builtin2',
+            'Duration of task runs [seconds]': 0.802726,
+            'Non-unique managed nodes automated': 1,
+            'Number of task runs': 2,
+            'Unique managed nodes automated': 1,
+        },
+    }
 
 
-def validate_usage_by_modules(workbook):
-    sheet_name = 'Usage by modules'
+def validate_usage_by_roles(file_path):
+    sheet = pandas.read_excel(file_path, sheet_name='Usage by roles')
+    assert transform_sheet(sheet.to_dict()) == {
+        0: {
+            'Duration of task runs [seconds]': 22.055472,
+            'Non-unique managed nodes automated': 8,
+            'Number of task runs': 22,
+            'Role name': 'No role used',
+            'Unique managed nodes automated': 4,
+        },
+        1: {
+            'Duration of task runs [seconds]': 0.802726,
+            'Non-unique managed nodes automated': 1,
+            'Number of task runs': 2,
+            'Role name': 'ansible.builtin2.role',
+            'Unique managed nodes automated': 1,
+        },
+    }
 
-    validate_column(
-        workbook,
-        sheet_name,
-        'A',
-        1,
-        ['Module name', 'ansible.builtin.debug', 'ansible.builtin.gather_facts', 'ansible.builtin2.debug', 'ansible.builtin2.gather_facts'],
-    )
 
-    validate_column(workbook, sheet_name, 'B', 1, ['Unique managed nodes automated', '4', '4', '1', '1'])
-
-    validate_column(workbook, sheet_name, 'C', 1, ['Non-unique managed nodes automated', '6', '8', '1', '1'])
-
-    validate_column(workbook, sheet_name, 'D', 1, ['Number of task runs', '9', '13', '1', '1'])
-
-    validate_column(workbook, sheet_name, 'E', 1, ['Duration of task runs [seconds]', '0.119905', '21.935567', '0.011992', '0.790734'])
+def validate_usage_by_modules(file_path):
+    sheet = pandas.read_excel(file_path, sheet_name='Usage by modules')
+    assert transform_sheet(sheet.to_dict()) == {
+        0: {
+            'Duration of task runs [seconds]': 0.119905,
+            'Module name': 'ansible.builtin.debug',
+            'Non-unique managed nodes automated': 6,
+            'Number of task runs': 9,
+            'Unique managed nodes automated': 4,
+        },
+        1: {
+            'Duration of task runs [seconds]': 21.935567,
+            'Module name': 'ansible.builtin.gather_facts',
+            'Non-unique managed nodes automated': 8,
+            'Number of task runs': 13,
+            'Unique managed nodes automated': 4,
+        },
+        2: {
+            'Duration of task runs [seconds]': 0.011992,
+            'Module name': 'ansible.builtin2.debug',
+            'Non-unique managed nodes automated': 1,
+            'Number of task runs': 1,
+            'Unique managed nodes automated': 1,
+        },
+        3: {
+            'Duration of task runs [seconds]': 0.790734,
+            'Module name': 'ansible.builtin2.gather_facts',
+            'Non-unique managed nodes automated': 1,
+            'Number of task runs': 1,
+            'Unique managed nodes automated': 1,
+        },
+    }
