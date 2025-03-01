@@ -246,17 +246,25 @@ class Base:
         for col in ['organizations', 'inventories', 'canonical_facts', 'facts']:
             ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
+        # We're not showing cluster/install_uuid until we support multi-cluster view officially
+        del ccsp_report_dataframe['install_uuid']
+
         columns = [
             'host_name',
-            'organizations', 'inventories', 'canonical_facts', 'facts'
+            'last_automation',
+            'organizations',
+            'inventories',
+            'canonical_facts',
+            'facts',
         ]
 
         labels = {
             "host_name": "Host name",
+            "last_automation": "Last\nAutomation",
             "organizations": "Organizations",
             "inventories": "Inventories",  # Job runs is the same as host_runs, Non-unique managed nodes automated
-            "canonical_facts": "canonical_facts",
-            'facts': "facts",
+            "canonical_facts": "Canonical Facts",
+            'facts': "Facts",
         }
         labels = {k:v for k, v in labels.items() if k in columns}
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
