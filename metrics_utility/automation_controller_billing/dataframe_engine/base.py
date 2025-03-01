@@ -48,14 +48,24 @@ def combine_json(json1, json2):
 
 # For set columns: take the union of the two sets
 def combine_set(set1, set2):
-    if isinstance(set1, set) and isinstance(set2, set):
-        return set1.union(set2)
-    elif isinstance(set1, set):
-        return set1
-    elif isinstance(set2, set):
-        return set2
-    else:
-        return set()
+    """
+    Combine two collections (set or list) into a single set of unique items.
+    If an input is a list, it is first converted to a set.
+    If an input is not a list or a set, it is treated as empty.
+    """
+    # Convert to set if input is a list; otherwise, if not a set, default to an empty set.
+    if isinstance(set1, list):
+        set1 = set(set1)
+    elif not isinstance(set1, set):
+        set1 = set()
+
+    if isinstance(set2, list):
+        set2 = set(set2)
+    elif not isinstance(set2, set):
+        set2 = set()
+
+    # Return the union of both sets.
+    return set1.union(set2)
 
 # Helper function to combine two JSON values.
 # For each key, it builds a set of non-null, non-empty values from both inputs.

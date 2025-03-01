@@ -154,15 +154,15 @@ class ReportCCSPv2(Base):
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            directs = job_host_summary_dataframe[job_host_summary_dataframe['device_type'] == DIRECT]
-            func(1, ws, directs)
+            directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
+            func(1, ws, directs, managed_node_type="direct")
             sheet_index += 1
 
         if "indirectly_managed_nodes" in self.optional_report_sheets():
             self.wb.create_sheet(title="Indirectly Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            indirects = job_host_summary_dataframe[job_host_summary_dataframe['device_type'] == INDIRECT]
-            func(1, ws, indirects)
+            indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
+            func(1, ws, indirects, managed_node_type="indirect")
             sheet_index += 1
 
         if "inventory_scope" in self.optional_report_sheets():
@@ -233,14 +233,14 @@ class ReportCCSPv2(Base):
 
         agg_dict = {
             "job_runs": ("job_remote_id_install_uuid", "nunique"),
-            # Only count host_name if the device_type is "DIRECT"
+            # Only count host_name if the managed_node_type is "DIRECT"
             "host_runs_unique": (
                 "host_name",
-                lambda x: x[dataframe.loc[x.index, "device_type"] == DIRECT].nunique()
+                lambda x: x[dataframe.loc[x.index, "managed_node_type"] == DIRECT].nunique()
             ),
             "host_runs": (
                 "host_name",
-                lambda x: x[dataframe.loc[x.index, "device_type"] == DIRECT].count()
+                lambda x: x[dataframe.loc[x.index, "managed_node_type"] == DIRECT].count()
             ),
             "task_runs": ("task_runs", "sum"),
         }
@@ -249,11 +249,11 @@ class ReportCCSPv2(Base):
         if "indirectly_managed_nodes" in self.optional_report_sheets():
             agg_dict["indirect_host_runs_unique"] = (
                 "host_name",
-                lambda x: x[dataframe.loc[x.index, "device_type"] == INDIRECT].nunique()
+                lambda x: x[dataframe.loc[x.index, "managed_node_type"] == INDIRECT].nunique()
             )
             agg_dict["indirect_host_runs"] = (
                 "host_name",
-                lambda x: x[dataframe.loc[x.index, "device_type"] == INDIRECT].count()
+                lambda x: x[dataframe.loc[x.index, "managed_node_type"] == INDIRECT].count()
             )
 
         # Now pass this dictionary into .agg()

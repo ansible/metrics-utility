@@ -1,12 +1,26 @@
 import datetime
 import json
+import pandas as pd
 
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from datetime import timezone
+from itertools import chain
 
 from metrics_utility.exceptions import UnparsableParameter
 
+def parse_json_array(x):
+    if pd.isnull(x):
+        return []
+    try:
+        parsed = json.loads(x)
+        # Check if the parsed JSON object is a list (array)
+        if isinstance(parsed, list):
+            return parsed
+        else:
+            return []
+    except json.JSONDecodeError:
+        return []
 
 # Helper function to parse a JSON string or return the dict if it's already a dict.
 def parse_json(val):
@@ -30,8 +44,19 @@ def merge_json_sets(json_values):
                 # Ignore null (None) or empty string values.
                 # We also want to ignore NA value used when facts are not available
                 if value is not None and value != '' and value != 'NA':
-                    merged.setdefault(key, set()).add(value)
+                    if isinstance(value, set):
+                        merged.setdefault(key, set()).update(value)
+                    else:
+                        merged.setdefault(key, set()).add(value)
     return merged
+
+# Function to merge array type columns getting a unique set back
+def merge_arrays(values):
+    # Filter out None values
+    valid_events = [e for e in values if e is not None]
+    # Flatten the list of lists and extract unique events
+    unique = set(chain.from_iterable(valid_events))
+    return list(unique)
 
 
 def parse_date_param(date_option):

@@ -10,3 +10,5 @@ INCLUDE_INDIRECT = ('indirect_nodes' in get_optional_collectors())
 DIRECT = 0
 INDIRECT = 1
 # later also EDGE = 2
+
+MANAGED_NODE_TYPES = {DIRECT: "DIRECT", INDIRECT: "INDIRECT"}
