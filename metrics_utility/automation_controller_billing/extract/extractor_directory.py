@@ -51,6 +51,9 @@ class ExtractorDirectory:
             batch_size = self.batch_size()
 
         for path in paths:
+            if not path.endswith('.tar.gz'):
+                continue
+
             with tempfile.TemporaryDirectory(prefix="automation_controller_billing_data_") as temp_dir:
                 try:
                     yield process_tarballs(self, path, temp_dir)
