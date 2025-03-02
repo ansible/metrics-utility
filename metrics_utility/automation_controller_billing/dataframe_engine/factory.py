@@ -20,7 +20,8 @@ class Factory:
     def create(self):
         if self.report_type == "CCSP":
             return (self._get_dataframe_jobhost_summary_usage().build_dataframe(),
-                    self._get_dataframe_content_usage().build_dataframe())
+                    self._get_dataframe_content_usage().build_dataframe(),
+                    self._get_dataframe_inventory_scope().build_dataframe())
         elif self.report_type == "CCSPv2":
             return (self._get_dataframe_jobhost_summary_usage().build_dataframe(),
                     self._get_dataframe_content_usage().build_dataframe(),

@@ -8,6 +8,7 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
 
+from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 class ReportCCSP(Base):
     BLACK_COLOR_HEX = "00000000"
@@ -101,6 +102,7 @@ class ReportCCSP(Base):
         job_host_summary_dataframe = self.dataframe[0]
         events_dataframe = self.dataframe[1]
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
+        scope_dataframe = self.dataframe[2]
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active) # delete the default sheet
@@ -122,7 +124,22 @@ class ReportCCSP(Base):
             # Sheet with list of managed nodes
             self.wb.create_sheet(title="Managed nodes")
             ws = self.wb.worksheets[sheet_index]
-            self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
+            directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
+            self._build_data_section_usage_by_node(1, ws, directs, managed_node_type="direct")
+            sheet_index += 1
+
+        if "indirectly_managed_nodes" in self.optional_report_sheets():
+            self.wb.create_sheet(title="Indirectly Managed nodes")
+            ws = self.wb.worksheets[sheet_index]
+            indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
+            self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type="indirect")
+            sheet_index += 1
+
+        if "inventory_scope" in self.optional_report_sheets():
+            self.wb.create_sheet(title="Inventory Scope")
+            ws = self.wb.worksheets[sheet_index]
+            scope = scope_dataframe
+            self._build_data_section_scope(1, ws, scope)
             sheet_index += 1
 
         if events_dataframe is not None:
