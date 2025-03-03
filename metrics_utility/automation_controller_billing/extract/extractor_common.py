@@ -92,8 +92,8 @@ def process_tarballs(self, path, temp_dir):
     else:
         job_host_summary = pd.DataFrame([{}])
 
-    if os.path.exists(os.path.join(temp_dir, 'indirect_nodes.csv')):
-        indirect_nodes = pd.read_csv(os.path.join(temp_dir, 'indirect_nodes.csv'))
+    if os.path.exists(os.path.join(temp_dir, 'main_indirectmanagednodeaudit.csv')):
+        indirect_nodes = pd.read_csv(os.path.join(temp_dir, 'main_indirectmanagednodeaudit.csv'))
     else:
         indirect_nodes = pd.DataFrame([{}])
 
