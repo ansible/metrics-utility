@@ -352,9 +352,9 @@ def main_jobevent_table(since, full_path, until, **kwargs):
     return _copy_table(table=tbl, query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path)
 
 
-@register('indirect_nodes', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
-def indirect_nodes_table(since, full_path, until, **kwargs):
-    if 'indirect_nodes' not in get_optional_collectors():
+@register('main_indirectmanagednodeaudit', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
+def main_indirectmanagednodeaudit_table(since, full_path, until, **kwargs):
+    if 'main_indirectmanagednodeaudit' not in get_optional_collectors():
         return None
 
     query = f"""
