@@ -5,8 +5,6 @@ def get_optional_collectors():
 
 environs = get_optional_collectors()
 
-INCLUDE_INDIRECT = ('indirect_nodes' in get_optional_collectors())
-
 DIRECT = 0
 INDIRECT = 1
 # later also EDGE = 2

@@ -102,11 +102,6 @@ def process_tarballs(self, path, temp_dir):
     else:
         main_jobevent = pd.DataFrame([{}])
 
-    if os.path.exists(os.path.join(temp_dir, 'indirect_nodes.csv')):
-        indirect_nodes = pd.read_csv(os.path.join(temp_dir, 'indirect_nodes.csv'))
-    else:
-        indirect_nodes = pd.DataFrame([{}])
-
     if os.path.exists(os.path.join(temp_dir, 'main_host.csv')):
         main_host = pd.read_csv(os.path.join(temp_dir, 'main_host.csv'))
     else:
