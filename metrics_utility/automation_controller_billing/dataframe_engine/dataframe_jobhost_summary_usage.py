@@ -137,10 +137,10 @@ class DataframeJobhostSummaryUsage(Base):
                             'last_automation': 'max',
                             'job_created': 'max',
                             'managed_node_type': 'min',
-                            'manage_node_types': 'set_merge',
-                            'events': 'set_merge',
-                            'canonical_facts': 'dict_set_merge',
-                            'facts': 'dict_set_merge',
+                            'manage_node_types': 'combine_set',
+                            'events': 'combine_set',
+                            'canonical_facts': 'combine_json_values',
+                            'facts': 'combine_json_values',
                         },
                     )
 

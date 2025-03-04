@@ -133,11 +133,11 @@ class Base:
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
-            elif operations.get(col) == 'set_merge':
+            elif operations.get(col) == 'combine_set':
                 df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            elif operations.get(col) == 'dict_merge':
+            elif operations.get(col) == 'combine_json':
                 df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            elif operations.get(col) == 'dict_set_merge':
+            elif operations.get(col) == 'combine_json_values':
                 df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)

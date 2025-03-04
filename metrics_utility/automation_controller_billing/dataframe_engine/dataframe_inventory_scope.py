@@ -84,10 +84,10 @@ class DataframeInventoryScope(Base):
                         self.data_columns(),
                         operations={
                             'last_automation': 'max',
-                            'organizations': 'set_merge',
-                            'inventories': 'set_merge',
-                            'canonical_facts': 'dict_set_merge',
-                            'facts': 'dict_set_merge',
+                            'organizations': 'combine_set',
+                            'inventories': 'combine_set',
+                            'canonical_facts': 'combine_json_values',
+                            'facts': 'combine_json_values',
                         },
                     )
 
