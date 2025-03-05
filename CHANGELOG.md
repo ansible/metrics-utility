@@ -54,3 +54,6 @@
 
 ## 0.4.1
 - relax boto3 requirement so it builds with any version available
+
+## 0.4.2 (unreleased)
+- allow importing pglock from either awx or django-ansible-base
