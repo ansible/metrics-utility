@@ -18,11 +18,12 @@ from metrics_utility.automation_controller_billing.package.factory import Factor
 
 from awx.main.utils import datetime_hook
 
-if importlib.util.find_spec('ansible_base') is None:
-    # 2.4
+# work around https://github.com/ansible/awx/pull/15676
+try:
+    # 2.4, early 2.5
     from awx.main.utils.pglock import advisory_lock
-else:
-    # 2.5
+except ImportError:
+    # later 2.5, 2.6
     from ansible_base.lib.utils.db import advisory_lock
 
 logger = logging.getLogger('metrics_utility.collector')
