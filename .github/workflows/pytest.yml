@@ -68,6 +68,12 @@ jobs:
           mc admin policy attach local readwrite --user=mynewuser
           mc admin accesskey create local mynewuser --access-key myuseraccesskey --secret-key myusersecretkey
 
+      - name: "Patch mock_awx postgres config"
+        run: |
+          sed -i '/NAME/s/awx/postgres/' mock_awx/settings/__init__.py
+          sed -i '/USER/s/myuser/awx/' mock_awx/settings/__init__.py
+          sed -i '/PASSWORD/s/mypassword/awx/' mock_awx/settings/__init__.py
+
       - name: "Run pytest"
         env:
           METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
