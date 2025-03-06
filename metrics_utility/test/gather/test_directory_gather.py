@@ -1,4 +1,5 @@
 import glob
+import os
 import pytest
 import subprocess
 import sys
@@ -21,8 +22,15 @@ def validate_exists(file_glob):
     assert len(glob.glob(file_glob)) > 0
 
 
+@pytest.fixture
+def cleanup_glob():
+    yield
+    for file in glob.glob(file_glob):
+        os.remove(file)
+
+
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
-def test_command():
+def test_command(cleanup_glob):
     """Build xlsx report using build command and test its contents."""
 
     python_executable = sys.executable
