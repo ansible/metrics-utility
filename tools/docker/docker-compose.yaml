@@ -113,10 +113,6 @@ services:
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
-      METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: "jobs,managed_nodes,usage_by_organizations,managed_nodes_by_organizations"
-      METRICS_UTILITY_REPORT_TYPE: "CCSPv2"
-      METRICS_UTILITY_SHIP_PATH: "metrics-utility/shipped_data"
-      METRICS_UTILITY_SHIP_TARGET: "s3"
     entrypoint: |
       sh -c '
         set -e
