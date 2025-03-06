@@ -38,7 +38,15 @@ For more about the development setup, see the [Developer Setup Guide](./docs/dev
 
 Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one. You may need to `docker login quay.io` first.
 
-You can also `docker compose -f tools/docker/docker-compose.yaml --profile=run-pytest up` to run pytest in a container too.
+You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`.
+For more flexibility, use:
+
+```
+(host) $ docker compose -f tools/docker/docker-compose.yaml --profile=env up -d  # runs a metrics-utility-env container with python & uv set up
+(host) $ docker exec -it metrics-utility-env /bin/sh # (wait for postgres & minio containers to start before running)
+(container) $ uv run pytest -vv metrics_utility/test/ccspv_reports/test_complex_CCSP_with_scope.py # 1 test
+(container) $ uv run pytest -vv metrics_utility/test/ccspv_reports # all ccsp tests
+```
 
 ### Basic Usage
 
