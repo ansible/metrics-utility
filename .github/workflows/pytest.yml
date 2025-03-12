@@ -81,5 +81,6 @@ jobs:
           METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
+          METRICS_UTILITY_DB_HOST: "localhost"
         run: |
           uv run pytest -s -v

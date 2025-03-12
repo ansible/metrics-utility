@@ -1,10 +1,12 @@
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'awx',
         'USER': 'myuser',
         'PASSWORD': 'mypassword',
-        'HOST': 'localhost',
+        'HOST': os.getenv('METRICS_UTILITY_DB_HOST', 'localhost'),
         'PORT': '5432',
     }
 }
