@@ -5,7 +5,7 @@ A standalone CLI utility for collecting and reporting metrics from [Ansible Auto
 - Collect and analyze Controller usage data
 - Generate reports (`CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`)
 - Support multiple storage adapters for data persistence (local dir, S3)
-- Push metrics data to `console.redhat.com`
+- Push metrics data to `cons ole.redhat.com`
 
 ## Quick Start
 
