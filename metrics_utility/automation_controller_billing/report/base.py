@@ -1,7 +1,6 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
-import os
 import json
 
 from openpyxl.styles import Font
@@ -11,21 +10,23 @@ from metrics_utility.automation_controller_billing.helpers import merge_json_set
 
 
 class Base:
-    BLACK_COLOR_HEX = "00000000"
-    WHITE_COLOR_HEX = "00FFFFFF"
-    BLUE_COLOR_HEX = "000000FF"
-    RED_COLOR_HEX = "FF0000"
-    LIGHT_BLUE_COLOR_HEX = "d4eaf3"
-    GREEN_COLOR_HEX = "92d050"
-    FONT = "Arial"
+    BLACK_COLOR_HEX = '00000000'
+    WHITE_COLOR_HEX = '00FFFFFF'
+    BLUE_COLOR_HEX = '000000FF'
+    RED_COLOR_HEX = 'FF0000'
+    LIGHT_BLUE_COLOR_HEX = 'd4eaf3'
+    GREEN_COLOR_HEX = '92d050'
+    FONT = 'Arial'
     PRICE_FORMAT = '$#,##0.00'
+    HOST_NAME = 'Host name'
+    JOB_RUNS ='Job runs'
+    NUM_OF_TASKS_OR_RUNS = 'Number of task\nruns'
+    HOST_RUNS_UNIQUE = 'Unique managed nodes\nautomated'
+    HOST_RUNS = 'Non-unique managed\nnodes automated'
+    DURATION = 'Duration of task\nruns [seconds]'
 
-    @staticmethod
-    def optional_report_sheets():
-        return os.environ.get(
-            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-            'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,'\
-            'usage_by_modules').split(",")
+    def optional_report_sheets(self):
+        return self.extra_params.get('optional_sheets')
 
     def convert_cell(self, cell):
         # If the cell is a dictionary, convert each set value to a sorted list, then dump as a JSON string.
@@ -47,47 +48,38 @@ class Base:
             return None
 
         def concatenate_columns_mapping(row):
-            return f"{row['original_host_name']}__{str(row['install_uuid'])}__{str(row['job_remote_id'])}"
+            return f'{row["original_host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
 
         def concatenate_columns_destination(row):
-            return f"{row['host_name']}__{str(row['install_uuid'])}__{str(row['job_remote_id'])}"
+            return f'{row["host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
 
         # Apply the function to each row of the DataFrame
         mapping_dataframe['host_composite_id'] = mapping_dataframe.apply(concatenate_columns_mapping, axis=1)
-        mapping_dataframe = mapping_dataframe.set_index("host_composite_id")
-        mapping_dataframe = mapping_dataframe["host_name"].astype(str).to_dict()
+        mapping_dataframe = mapping_dataframe.set_index('host_composite_id')
+        mapping_dataframe = mapping_dataframe['host_name'].astype(str).to_dict()
 
         def apply_mapping(row):
-            return mapping_dataframe.get(f"{row['host_name']}__{str(row['install_uuid'])}__{row['job_remote_id']}", row['host_name'])
+            return mapping_dataframe.get(f'{row["host_name"]}__{str(row["install_uuid"])}__{row["job_remote_id"]}', row['host_name'])
 
         destination_dataframe['host_name'] = destination_dataframe.apply(apply_mapping, axis=1)
         destination_dataframe['host_composite_id'] = destination_dataframe.apply(concatenate_columns_destination, axis=1)
 
         return destination_dataframe
 
-
     def _build_data_section_usage_by_node_with_org_details(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         # Rename the columns based on the template
-        ccsp_report_dataframe = (
-            dataframe.groupby('host_name', dropna=False)
-            .agg(
-                organizations=('organization_name', 'nunique'),
-                host_runs=('host_name', 'count'),
-                task_runs=('task_runs', 'sum'),
-                first_automation=('first_automation', 'min'),
-                last_automation=('last_automation', 'max')
-            )
+        ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(
+            organizations=('organization_name', 'nunique'),
+            host_runs=('host_name', 'count'),
+            task_runs=('task_runs', 'sum'),
+            first_automation=('first_automation', 'min'),
+            last_automation=('last_automation', 'max'),
         )
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
         columns = [
@@ -98,20 +90,18 @@ class Base:
             'first_automation',
             'last_automation',
         ]
-        if mode == "by_organization":
+        if mode == 'by_organization':
             # Filter some columns out based on mode
             columns = [col for col in columns if col not in ['organizations']]
 
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=columns
-        )
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(columns=columns)
 
         # Create dataframe with hostname and orgs as columns, having last automation for each host
         pivoted_dataframe = dataframe.pivot_table(
             index='host_name',
             columns='organization_name',
             values='last_automation',
-            aggfunc='max'  # You can use 'max', 'min', 'mean', etc., depending on your needs
+            aggfunc='max',  # You can use 'max', 'min', 'mean', etc., depending on your needs
         )
 
         # Set index on host_name for join
@@ -122,17 +112,15 @@ class Base:
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
         labels = {
-            "host_name": "Host name",
-            "organizations": "Automated by\norganizations",
-            "host_runs": "Job runs",  # Job runs is the same as host_runs, Non-unique managed nodes automated
-            "task_runs": "Number of task\nruns",
-            'first_automation': "First\nautomation",
-            'last_automation': "Last\nautomation",
+            'host_name': self.HOST_NAME,
+            'organizations': 'Automated by\norganizations',
+            'host_runs': self.JOB_RUNS,  # Job runs is the same as host_runs, Non-unique managed nodes automated
+            'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+            'first_automation': 'First\nautomation',
+            'last_automation': 'Last\nautomation',
         }
-        labels = {k:v for k, v in labels.items() if k in columns}
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns=labels
-        )
+        labels = {k: v for k, v in labels.items() if k in columns}
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
@@ -154,57 +142,39 @@ class Base:
 
         return current_row + row_counter
 
-
     def _build_data_section_usage_by_job(self, current_row, ws, dataframe):
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         dataframe['job_remote_id_install_uuid'] = list(zip(dataframe['job_remote_id'], dataframe['install_uuid']))
 
         # Rename the columns based on the template
-        ccsp_report_dataframe = (
-            dataframe.groupby(['organization_name', 'job_template_name'], dropna=False)
-            .agg(
-                job_runs=('job_remote_id_install_uuid', 'nunique'),
-                host_runs_unique=('host_name', 'nunique'),
-                host_runs=('host_name', 'count'),
-                task_runs=('task_runs', 'sum'),
-                first_run=('job_created', 'min'),
-                last_run=('job_created', 'max'),
-            )
+        ccsp_report_dataframe = dataframe.groupby(['organization_name', 'job_template_name'], dropna=False).agg(
+            job_runs=('job_remote_id_install_uuid', 'nunique'),
+            host_runs_unique=('host_name', 'nunique'),
+            host_runs=('host_name', 'count'),
+            task_runs=('task_runs', 'sum'),
+            first_run=('job_created', 'min'),
+            last_run=('job_created', 'max'),
         )
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
         ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=[
-                'job_template_name',
-                'organization_name',
-                'job_runs',
-                'host_runs_unique',
-                'host_runs',
-                'task_runs',
-                'first_run',
-                'last_run'
-            ]
+            columns=['job_template_name', 'organization_name', 'job_runs', 'host_runs_unique', 'host_runs', 'task_runs', 'first_run', 'last_run']
         )
 
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
-                "job_template_name": "Job template\nname",
-                "organization_name": "Organization\nname",
-                "job_runs": "Job runs",
-                "host_runs_unique": "Unique managed nodes\nautomated",
-                "host_runs": "Non-unique managed\nnodes automated",
-                "task_runs": "Number of task\nruns",
-                "first_run": "First\nrun",
-                "last_run": "Last\nrun",
+                'job_template_name': 'Job template\nname',
+                'organization_name': 'Organization\nname',
+                'job_runs': self.JOB_RUNS,
+                'host_runs_unique': self.HOST_RUNS_UNIQUE,
+                'host_runs': self.HOST_RUNS,
+                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+                'first_run': 'First\nrun',
+                'last_run': 'Last\nrun',
             }
         )
 
@@ -232,13 +202,8 @@ class Base:
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         ccsp_report_dataframe = dataframe
 
@@ -259,17 +224,15 @@ class Base:
         ]
 
         labels = {
-            "host_name": "Host name",
-            "last_automation": "Last\nAutomation",
-            "organizations": "Organizations",
-            "inventories": "Inventories",  # Job runs is the same as host_runs, Non-unique managed nodes automated
-            "canonical_facts": "Canonical Facts",
-            'facts': "Facts",
+            'host_name': self.HOST_NAME,
+            'last_automation': 'Last\nAutomation',
+            'organizations': 'Organizations',
+            'inventories': 'Inventories',  # Job runs is the same as host_runs, Non-unique managed nodes automated
+            'canonical_facts': 'Canonical Facts',
+            'facts': 'Facts',
         }
-        labels = {k:v for k, v in labels.items() if k in columns}
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns=labels
-        )
+        labels = {k: v for k, v in labels.items() if k in columns}
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
@@ -291,37 +254,27 @@ class Base:
 
         return current_row + row_counter
 
-
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         agg_dict = {
-            "organizations": ('organization_name', 'nunique'),
-            "host_runs": ('host_name', 'count'),
-            "task_runs": ('task_runs', 'sum'),
-            "first_automation": ('first_automation', 'min'),
-            "last_automation": ('last_automation', 'max'),
-            "manage_node_types": ('manage_node_types', lambda x: merge_arrays(x)),
-            "events": ('events', lambda x: merge_arrays(x)),
-            "canonical_facts": ('canonical_facts', lambda x: merge_json_sets(x)),
-            "facts": ('facts', lambda x: merge_json_sets(x)),
+            'organizations': ('organization_name', 'nunique'),
+            'host_runs': ('host_name', 'count'),
+            'task_runs': ('task_runs', 'sum'),
+            'first_automation': ('first_automation', 'min'),
+            'last_automation': ('last_automation', 'max'),
+            'manage_node_types': ('manage_node_types', lambda x: merge_arrays(x)),
+            'events': ('events', lambda x: merge_arrays(x)),
+            'canonical_facts': ('canonical_facts', lambda x: merge_json_sets(x)),
+            'facts': ('facts', lambda x: merge_json_sets(x)),
         }
 
         # Now pass this dictionary into .agg()
-        ccsp_report_dataframe = (
-            dataframe
-            .groupby("host_name", dropna=False)
-            .agg(**agg_dict)
-        )
+        ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(**agg_dict)
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
         for col in ['manage_node_types', 'events', 'canonical_facts', 'facts']:
@@ -336,36 +289,34 @@ class Base:
             'first_automation',
             'last_automation',
         ]
-        if managed_node_type == "indirect":
+        if managed_node_type == 'indirect':
             columns += ['manage_node_types', 'canonical_facts', 'facts', 'events']
 
-        if mode == "by_organization":
+        if mode == 'by_organization':
             # Filter some columns out based on mode
             columns = [col for col in columns if col not in ['organizations']]
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=columns
-        )
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(columns=columns)
 
         labels = {
-            "host_name": "Host name",
-            "organizations": "Automated by\norganizations",
-            "host_runs": "Job runs",  # Job runs is the same as host_runs, Non-unique managed nodes automated
-            "task_runs": "Number of task\nruns",
-            'first_automation': "First\nautomation",
-            'last_automation': "Last\nautomation",
+            'host_name': self.HOST_NAME,
+            'organizations': 'Automated by\norganizations',
+            'host_runs': self.JOB_RUNS,  # Job runs is the same as host_runs, Non-unique managed nodes automated
+            'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+            'first_automation': 'First\nautomation',
+            'last_automation': 'Last\nautomation',
         }
-        if managed_node_type == "indirect":
-            labels.update({
-                "manage_node_types": "Manage\nNode\nTypes",
-                "canonical_facts": "Canonical\nFacts",
-                "facts": "Facts",
-                "events": "Events",
-            })
+        if managed_node_type == 'indirect':
+            labels.update(
+                {
+                    'manage_node_types': 'Manage\nNode\nTypes',
+                    'canonical_facts': 'Canonical\nFacts',
+                    'facts': 'Facts',
+                    'events': 'Events',
+                }
+            )
 
-        labels = {k:v for k, v in labels.items() if k in columns}
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns=labels
-        )
+        labels = {k: v for k, v in labels.items() if k in columns}
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
@@ -391,33 +342,27 @@ class Base:
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         # Take the content explorer dataframe and extract specific group by
-        ccsp_report_dataframe = dataframe.groupby(
-            ["collection_name"], dropna=False
-        ).agg(
+        ccsp_report_dataframe = dataframe.groupby(['collection_name'], dropna=False).agg(
             host_runs_unique=('host_name', 'nunique'),
             host_runs=('host_composite_id', 'nunique'),
             task_runs=('task_runs', 'sum'),
-            duration=('duration', "sum"))
+            duration=('duration', 'sum'),
+        )
 
         # Rename the columns based on the template
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
-                "collection_name": "Collection name",
-                "host_runs_unique": "Unique managed nodes\nautomated",
-                "host_runs": "Non-unique managed\nnodes automated",
-                "task_runs": "Number of task\nruns",
-                "duration": "Duration of task\nruns [seconds]",
+                'collection_name': 'Collection name',
+                'host_runs_unique': self.HOST_RUNS_UNIQUE,
+                'host_runs': self.HOST_RUNS,
+                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+                'duration': self.DURATION,
             }
         )
 
@@ -445,33 +390,27 @@ class Base:
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         # Take the content explorer dataframe and extract specific group by
-        ccsp_report_dataframe = dataframe.groupby(
-            ["role_name"], dropna=False
-        ).agg(
+        ccsp_report_dataframe = dataframe.groupby(['role_name'], dropna=False).agg(
             host_runs_unique=('host_name', 'nunique'),
             host_runs=('host_composite_id', 'nunique'),
             task_runs=('task_runs', 'sum'),
-            duration=('duration', "sum"))
+            duration=('duration', 'sum'),
+        )
 
         # Rename the columns based on the template
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
-                "role_name": "Role name",
-                "host_runs_unique": "Unique managed nodes\nautomated",
-                "host_runs": "Non-unique managed\nnodes automated",
-                "task_runs": "Number of task\nruns",
-                "duration": "Duration of task\nruns [seconds]",
+                'role_name': 'Role name',
+                'host_runs_unique': self.HOST_RUNS_UNIQUE,
+                'host_runs': self.HOST_RUNS,
+                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+                'duration': self.DURATION,
             }
         )
 
@@ -500,32 +439,26 @@ class Base:
         for key, value in self.config['data_column_widths'].items():
             ws.column_dimensions[get_column_letter(key)].width = value
 
-        header_font = Font(name=self.FONT,
-                           size=10,
-                           color=self.BLACK_COLOR_HEX,
-                           bold=True)
-        value_font = Font(name=self.FONT,
-                          size=10,
-                          color=self.BLACK_COLOR_HEX)
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
-        ccsp_report_dataframe = dataframe.groupby(
-            ["module_name"], dropna=False
-        ).agg(
+        ccsp_report_dataframe = dataframe.groupby(['module_name'], dropna=False).agg(
             host_runs_unique=('host_name', 'nunique'),
             host_runs=('host_composite_id', 'nunique'),
             task_runs=('task_runs', 'sum'),
-            duration=('duration', "sum"))
+            duration=('duration', 'sum'),
+        )
 
         # Rename the columns based on the template
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
         ccsp_report_dataframe = ccsp_report_dataframe.rename(
             columns={
-                "module_name": "Module name",
-                "host_runs_unique": "Unique managed nodes\nautomated",
-                "host_runs": "Non-unique managed\nnodes automated",
-                "task_runs": "Number of task\nruns",
-                "duration": "Duration of task\nruns [seconds]",
+                'module_name': 'Module name',
+                'host_runs_unique': self.HOST_RUNS_UNIQUE,
+                'host_runs': self.HOST_RUNS,
+                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+                'duration': self.DURATION,
             }
         )
 
