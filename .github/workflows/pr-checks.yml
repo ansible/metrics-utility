@@ -28,6 +28,6 @@ jobs:
         run: |
           uvx ruff check --output-format=github .
 
-      - name: "Check ruff format (skipped)"
+      - name: "Check ruff format"
         run: |
-          uvx ruff format --check || true
+          uvx ruff format --check
