@@ -3,14 +3,14 @@ import os
 
 
 class ReportSaverDirectory:
-    LOG_PREFIX = "[ExtractorDirectory]"
+    LOG_PREFIX = '[ExtractorDirectory]'
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         self.extra_params = extra_params
 
         self.logger = logger
 
-        self.report_spreadsheet_destination_path = self.extra_params["report_spreadsheet_destination_path"]
+        self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
 
     def report_exist(self):
         if os.path.exists(self.report_spreadsheet_destination_path):
@@ -23,4 +23,4 @@ class ReportSaverDirectory:
 
         report_spreadsheet.save(self.report_spreadsheet_destination_path)
 
-        self.logger.info(f"Report generated into: {self.report_spreadsheet_destination_path}")
+        self.logger.info(f'Report generated into: {self.report_spreadsheet_destination_path}')

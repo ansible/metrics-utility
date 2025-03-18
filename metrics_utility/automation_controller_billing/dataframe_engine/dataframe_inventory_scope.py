@@ -4,8 +4,7 @@ from metrics_utility.automation_controller_billing.helpers import merge_json_set
 
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base import \
-    Base
+from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +12,9 @@ logger = logging.getLogger(__name__)
 # Code for building of the dataframe report based on MainHost table
 ######################################
 
+
 class DataframeInventoryScope(Base):
-    LOG_PREFIX = "[AAPBillingReport] "
+    LOG_PREFIX = '[AAPBillingReport] '
 
     def build_dataframe(self):
         # A daily rollup dataframe
@@ -33,9 +33,9 @@ class DataframeInventoryScope(Base):
                     continue
 
                 print_debug(f'\nComputing data batch for {date}')
-                print_data(billing_data, "Newly loaded data")
+                print_data(billing_data, 'Newly loaded data')
 
-                billing_data['organization_name'] = billing_data.organization_name.fillna("No organization name")
+                billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
                 billing_data['install_uuid'] = data['config']['install_uuid']
 
                 # Store the original host name for mapping purposes
@@ -47,9 +47,7 @@ class DataframeInventoryScope(Base):
                     # what is in ansible_host_variable should be the actual host we count
                     billing_data['host_name'] = billing_data['ansible_host_variable']
 
-
-                billing_data['last_automation'] = pd.to_datetime(
-                    billing_data['last_automation']).dt.tz_localize(None)
+                billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation']).dt.tz_localize(None)
 
                 ################################
                 # Do the aggregation
@@ -57,15 +55,13 @@ class DataframeInventoryScope(Base):
 
                 print_data(billing_data, 'New loaded data batch')
 
-                billing_data_group = billing_data.groupby(
-                    self.unique_index_columns(), dropna=False
-                ).agg(
+                billing_data_group = billing_data.groupby(self.unique_index_columns(), dropna=False).agg(
                     organizations=('organization_name', lambda x: set(x)),
                     inventories=('inventory_name', lambda x: set(x)),
                     canonical_facts=('canonical_facts', lambda x: merge_json_sets(x)),
                     facts=('facts', lambda x: merge_json_sets(x)),
                     last_automation=('last_automation', 'max'),
-                    )
+                )
                 print_data(billing_data_group, 'New data batch after aggregation')
 
                 # Tweak types to match the table
@@ -79,26 +75,26 @@ class DataframeInventoryScope(Base):
                 else:
                     # Multipart collection, merge the dataframes and sum counts
                     billing_data_monthly_rollup = pd.merge(
-                        billing_data_monthly_rollup.loc[:, ],
-                        billing_data_group.loc[:, ],
-                        on=self.unique_index_columns(),
-                        how='outer')
-                    print_data(billing_data_monthly_rollup, "Global data outer join batch data")
+                        billing_data_monthly_rollup.loc[:,], billing_data_group.loc[:,], on=self.unique_index_columns(), how='outer'
+                    )
+                    print_data(billing_data_monthly_rollup, 'Global data outer join batch data')
 
                     billing_data_monthly_rollup = self.summarize_merged_dataframes(
-                        billing_data_monthly_rollup, self.data_columns(),
-                        operations={"last_automation": "max",
-                                    "organizations": "set_merge",
-                                    "inventories": "set_merge",
-                                    "canonical_facts": "dict_set_merge",
-                                    "facts": "dict_set_merge",
-                                    })
+                        billing_data_monthly_rollup,
+                        self.data_columns(),
+                        operations={
+                            'last_automation': 'max',
+                            'organizations': 'set_merge',
+                            'inventories': 'set_merge',
+                            'canonical_facts': 'dict_set_merge',
+                            'facts': 'dict_set_merge',
+                        },
+                    )
 
                     # Tweak types to match the table
-                    billing_data_monthly_rollup = self.cast_dataframe(
-                        billing_data_monthly_rollup, self.cast_types())
+                    billing_data_monthly_rollup = self.cast_dataframe(billing_data_monthly_rollup, self.cast_types())
 
-                print_data(billing_data_monthly_rollup, "Actual global data")
+                print_data(billing_data_monthly_rollup, 'Actual global data')
 
         if billing_data_monthly_rollup is None:
             return None

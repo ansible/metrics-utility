@@ -2,16 +2,15 @@ import logging
 import os
 import tempfile
 
-from metrics_utility.automation_controller_billing.base.s3_handler import \
-    S3Handler
+from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 
 
 class ReportSaverS3:
-    LOG_PREFIX = "[ReportSaverS3]"
+    LOG_PREFIX = '[ReportSaverS3]'
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         self.extra_params = extra_params
-        self.report_spreadsheet_destination_path = self.extra_params["report_spreadsheet_destination_path"]
+        self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
 
         self.logger = logger
 
@@ -23,7 +22,7 @@ class ReportSaverS3:
         return False
 
     def save(self, report_spreadsheet):
-        with tempfile.TemporaryDirectory(prefix="report_saver_billing_data_") as temp_dir:
+        with tempfile.TemporaryDirectory(prefix='report_saver_billing_data_') as temp_dir:
             try:
                 local_report_path = os.path.join(temp_dir, 'report')
                 report_spreadsheet.save(local_report_path)
@@ -32,8 +31,7 @@ class ReportSaverS3:
 
             except Exception as e:
                 self.logger.exception(
-    f"{self.LOG_PREFIX} ERROR: Saving report to S3 into path "
-    f"{self.report_spreadsheet_destination_path} failed with {e}"
-)
+                    f'{self.LOG_PREFIX} ERROR: Saving report to S3 into path {self.report_spreadsheet_destination_path} failed with {e}'
+                )
 
-        self.logger.info(f"Report sent into S3 bucket into path: {self.report_spreadsheet_destination_path}")
+        self.logger.info(f'Report sent into S3 bucket into path: {self.report_spreadsheet_destination_path}')

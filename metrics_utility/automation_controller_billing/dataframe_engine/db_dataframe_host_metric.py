@@ -2,8 +2,7 @@ import logging
 
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base import \
-    Base
+from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class DBDataframeHostMetric(Base):
-    LOG_PREFIX = "[AAPBillingReport] "
+    LOG_PREFIX = '[AAPBillingReport] '
 
     def build_dataframe(self):
         host_metric_concat = None
@@ -28,7 +27,7 @@ class DBDataframeHostMetric(Base):
                 continue
 
             # host_metric['install_uuid'] = data['config']['install_uuid']
-            host_metric["last_deleted"] = pd.to_datetime(host_metric['last_deleted'])
+            host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'])
 
             if host_metric_concat is None:
                 host_metric_concat = host_metric

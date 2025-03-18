@@ -13,8 +13,7 @@ env_vars = {
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSP',
-    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,inventory_scope,'
-    'usage_by_collections,usage_by_roles,usage_by_modules',
+    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,inventory_scope,usage_by_collections,usage_by_roles,usage_by_modules',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/03/CCSP-2025-03-01--2025-03-02.xlsx'

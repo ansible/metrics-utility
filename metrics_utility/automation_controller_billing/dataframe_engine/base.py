@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 def granularity_cast(date, granularity):
-    if granularity == "monthly":
+    if granularity == 'monthly':
         return date.replace(day=1)
-    elif granularity == "yearly":
+    elif granularity == 'yearly':
         return date.replace(month=1, day=1)
     else:
         return date
@@ -26,9 +26,9 @@ def list_dates(start_date, end_date, granularity):
     while start_date < end_date:
         dates_arr.append(start_date)
 
-        if granularity == "monthly":
+        if granularity == 'monthly':
             start_date += relativedelta(months=+1)
-        elif granularity == "yearly":
+        elif granularity == 'yearly':
             start_date += relativedelta(years=+1)
         else:
             start_date += datetime.timedelta(days=1)
@@ -36,6 +36,7 @@ def list_dates(start_date, end_date, granularity):
     dates_arr.append(end_date)
 
     return dates_arr
+
 
 # For JSON/dict columns: update one dict with the other (later values overwrite earlier ones)
 def combine_json(json1, json2):
@@ -45,6 +46,7 @@ def combine_json(json1, json2):
     if isinstance(json2, dict):
         merged.update(json2)
     return merged
+
 
 # For set columns: take the union of the two sets
 def combine_set(set1, set2):
@@ -67,6 +69,7 @@ def combine_set(set1, set2):
     # Return the union of both sets.
     return set1.union(set2)
 
+
 # Helper function to combine two JSON values.
 # For each key, it builds a set of non-null, non-empty values from both inputs.
 def combine_json_values(val1, val2):
@@ -74,7 +77,7 @@ def combine_json_values(val1, val2):
     for d in [val1, val2]:
         if isinstance(d, dict):
             for key, value in d.items():
-                if value is not None and value != "":
+                if value is not None and value != '':
                     if isinstance(value, set):
                         merged.setdefault(key, set()).update(value)
                     else:
@@ -82,8 +85,9 @@ def combine_json_values(val1, val2):
 
     return merged
 
+
 class Base:
-    LOG_PREFIX = "[AAPBillingReport] "
+    LOG_PREFIX = '[AAPBillingReport] '
 
     def __init__(self, extractor, month, extra_params):
         self.logger = logger
@@ -103,9 +107,7 @@ class Base:
             beginning_of_the_month = self.month.replace(day=1)
             end_of_the_month = beginning_of_the_month + relativedelta(months=1) - relativedelta(days=1)
 
-        dates_list = list_dates(start_date=beginning_of_the_month,
-                                end_date=end_of_the_month,
-                                granularity="daily")
+        dates_list = list_dates(start_date=beginning_of_the_month, end_date=end_of_the_month, granularity='daily')
         return dates_list
 
     def cast_dataframe(self, df, types):
@@ -127,20 +129,20 @@ class Base:
 
     def summarize_merged_dataframes(self, df, columns, operations={}):
         for col in columns:
-            if operations.get(col) == "min":
-                df[col] = df[[f"{col}_x", f"{col}_y"]].min(axis=1)
-            elif operations.get(col) == "max":
-                df[col] = df[[f"{col}_x", f"{col}_y"]].max(axis=1)
-            elif operations.get(col) == "set_merge":
-                df[col] = df.apply(lambda row: combine_set(row.get(f"{col}_x"), row.get(f"{col}_y")), axis=1)
-            elif operations.get(col) == "dict_merge":
-                df[col] = df.apply(lambda row: combine_json(row.get(f"{col}_x"), row.get(f"{col}_y")), axis=1)
-            elif operations.get(col) == "dict_set_merge":
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f"{col}_x"), row.get(f"{col}_y")), axis=1)
+            if operations.get(col) == 'min':
+                df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
+            elif operations.get(col) == 'max':
+                df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
+            elif operations.get(col) == 'set_merge':
+                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+            elif operations.get(col) == 'dict_merge':
+                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+            elif operations.get(col) == 'dict_set_merge':
+                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
             else:
-                df[col] = df[[f"{col}_x", f"{col}_y"]].sum(axis=1)
-            del df[f"{col}_x"]
-            del df[f"{col}_y"]
+                df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
+            del df[f'{col}_x']
+            del df[f'{col}_y']
         return df
 
     @staticmethod

@@ -6,24 +6,24 @@ from django.db import connection
 
 
 class ExtractorControllerDB:
-    LOG_PREFIX = "[ExtractorDirectory]"
+    LOG_PREFIX = '[ExtractorDirectory]'
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         super().__init__()
 
-        self.extension = "parquet"
-        self.path = extra_params["ship_path"]
+        self.extension = 'parquet'
+        self.path = extra_params['ship_path']
         self.extra_params = extra_params
 
         self.logger = logger
 
     def get_report_path(self, date):
-        path_prefix = f"{self.path}/reports"
+        path_prefix = f'{self.path}/reports'
 
-        year = date.strftime("%Y")
-        month = date.strftime("%m")
+        year = date.strftime('%Y')
+        month = date.strftime('%m')
 
-        path = f"{path_prefix}/{year}/{month}"
+        path = f'{path_prefix}/{year}/{month}'
 
         return path
 
@@ -35,7 +35,7 @@ class ExtractorControllerDB:
             if since.tzinfo is None:
                 since = since.replace(tzinfo=datetime.UTC)
 
-            marker_cond = ""
+            marker_cond = ''
             while True:
                 cursor.execute(self.host_metric_query(since, marker_cond))
                 host_metric = self.dict_fetchall(cursor)
@@ -44,13 +44,13 @@ class ExtractorControllerDB:
                 if len(host_metric) <= 0:
                     break
 
-                marker_cond = f'''
+                marker_cond = f"""
                     AND CONCAT(main_hostmetric.hostname , '___', COALESCE(main_host.id, 0)) >
                         '{list(host_metric)[-1]['hostname']}___{list(host_metric)[-1]['host_id']}'
                     -- TODO wrong query, has to use several or conditions, but will it help with usage of index?
                     -- AND main_hostmetric.hostname >= '{list(host_metric)[-1]['hostname']}'
                     -- AND COALESCE(main_host.id, 0) > {list(host_metric)[-1]['host_id']}
-                '''
+                """
 
                 host_metric = pd.DataFrame(host_metric)
 
@@ -65,7 +65,7 @@ class ExtractorControllerDB:
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     def pg_functions(self):
-        query = '''
+        query = """
             -- Define function for parsing field out of yaml encoded as text
             CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
                 str text,
@@ -97,11 +97,11 @@ class ExtractorControllerDB:
             END;
             $$
             LANGUAGE plpgsql;
-        '''
+        """
         return query
 
-    def host_metric_query(self, since, marker_cond=""):
-        query = f'''
+    def host_metric_query(self, since, marker_cond=''):
+        query = f"""
             SELECT main_hostmetric.hostname,
                    COALESCE(main_host.id, 0) AS host_id,
                    main_hostmetric.first_automation,
@@ -129,7 +129,7 @@ class ExtractorControllerDB:
             ORDER BY CONCAT(main_hostmetric.hostname , '___', COALESCE(main_host.id, 0)) ASC
             -- ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
             LIMIT {self.limit()}
-        '''
+        """
 
         return query
 

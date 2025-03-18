@@ -20,7 +20,7 @@ class CsvFileSplitter(BaseCsvFileSplitter):
         # If we only have one file, remove the suffix
         if len(self.files) == 1:
             filename = self.files.pop()
-            new_filename = filename.replace("_split0", "")
+            new_filename = filename.replace('_split0', '')
             os.rename(filename, new_filename)
             self.files.append(new_filename)
         return self.files

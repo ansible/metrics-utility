@@ -7,18 +7,17 @@ from botocore.exceptions import ClientError
 
 class S3Handler:
     def __init__(self, params):
-        self.bucket_name = params.get("bucket_name")
-        self.bucket_endpoint = params.get("bucket_endpoint")
-        self.bucket_region = params.get("bucket_region")
-        self.bucket_access_key = params.get("bucket_access_key")
-        self.bucket_secret_key = params.get("bucket_secret_key")
+        self.bucket_name = params.get('bucket_name')
+        self.bucket_endpoint = params.get('bucket_endpoint')
+        self.bucket_region = params.get('bucket_region')
+        self.bucket_access_key = params.get('bucket_access_key')
+        self.bucket_secret_key = params.get('bucket_secret_key')
 
         self._session = None
 
         self.s3 = self.get_s3_resource()
         self.s3_bucket = self.get_s3_bucket()
         self.s3_client = self.get_s3_client
-
 
     @property
     def session(self):
@@ -32,12 +31,11 @@ class S3Handler:
         )
         return self._session
 
-
     def get_s3_resource(self):
-        return self.session.resource("s3", endpoint_url=self.bucket_endpoint)
+        return self.session.resource('s3', endpoint_url=self.bucket_endpoint)
 
     def get_s3_client(self):
-        return self.session.client("s3", endpoint_url=self.bucket_endpoint)
+        return self.session.client('s3', endpoint_url=self.bucket_endpoint)
 
     def get_s3_bucket(self):
         return self.get_s3_resource().Bucket(self.bucket_name)
@@ -70,12 +68,12 @@ class S3Handler:
         """
         client = self.get_s3_client()
 
-        full_name = s3_filename # os.path.join(s3_path, s3_filename) if s3_path else s3_filename
+        full_name = s3_filename  # os.path.join(s3_path, s3_filename) if s3_path else s3_filename
         try:
             client.download_file(self.bucket_name, full_name, local_filename)
             status = True
         except ClientError as e:
-            code = int(e.response["Error"]["Code"])
+            code = int(e.response['Error']['Code'])
             if code == 404:
                 status = False
             else:
@@ -89,7 +87,7 @@ class S3Handler:
         paginator = s3_resource.meta.client.get_paginator('list_objects')
         for resp in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
             for ret_value in resp.get('Contents', []):
-                yield ret_value["Key"]
+                yield ret_value['Key']
 
     def list_subdirs(self, prefix):
         s3_resource = self.get_s3_resource()

@@ -22,9 +22,11 @@ class NoAnalyticsCollected(Exception):
     def __init__(self, message):
         self.name = message
 
+
 class UnparsableParameter(Exception):
     def __init__(self, message):
         self.name = message
+
 
 class NotSupportedFactory(Exception):
     def __init__(self, message):

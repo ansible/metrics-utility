@@ -9,6 +9,7 @@ from itertools import chain
 
 from metrics_utility.exceptions import UnparsableParameter
 
+
 def parse_json_array(x):
     if pd.isnull(x):
         return []
@@ -21,6 +22,7 @@ def parse_json_array(x):
             return []
     except json.JSONDecodeError:
         return []
+
 
 # Helper function to parse a JSON string or return the dict if it's already a dict.
 def parse_json(val):
@@ -49,6 +51,7 @@ def merge_json_sets(json_values):
                     else:
                         merged.setdefault(key, set()).add(value)
     return merged
+
 
 # Function to merge array type columns getting a unique set back
 def merge_arrays(values):

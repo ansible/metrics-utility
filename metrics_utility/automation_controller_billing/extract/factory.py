@@ -1,9 +1,6 @@
-from metrics_utility.automation_controller_billing.extract.extractor_controller_db import \
-    ExtractorControllerDB
-from metrics_utility.automation_controller_billing.extract.extractor_directory import \
-    ExtractorDirectory
-from metrics_utility.automation_controller_billing.extract.extractor_s3 import \
-    ExtractorS3
+from metrics_utility.automation_controller_billing.extract.extractor_controller_db import ExtractorControllerDB
+from metrics_utility.automation_controller_billing.extract.extractor_directory import ExtractorDirectory
+from metrics_utility.automation_controller_billing.extract.extractor_s3 import ExtractorS3
 from metrics_utility.exceptions import NotSupportedFactory
 
 
@@ -13,14 +10,14 @@ class Factory:
         self.extra_params = extra_params
 
     def create(self):
-        if self.ship_target == "directory":
+        if self.ship_target == 'directory':
             return self._get_extractor_directory()
-        elif self.ship_target == "controller_db":
+        elif self.ship_target == 'controller_db':
             return self._get_extractor_controller_db()
-        elif self.ship_target == "s3":
+        elif self.ship_target == 's3':
             return self._get_extractor_s3()
         else:
-            raise NotSupportedFactory(f"Factory for {self.ship_target} not supported")
+            raise NotSupportedFactory(f'Factory for {self.ship_target} not supported')
 
     def _get_extractor_directory(self):
         # Return default directory loader

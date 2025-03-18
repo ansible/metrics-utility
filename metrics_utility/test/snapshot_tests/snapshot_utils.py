@@ -31,6 +31,7 @@ class DataShape:
                                         mock the datetime in order to test relative times like --since=5months
                                         "generated": date when it was generated
     """
+
     env_vars: Dict[str, str]
     params: List[str]
     custom_params: Dict[str, str]
@@ -287,10 +288,7 @@ def compare_ccsp_reports(original_report_path: str, generated_report_path: str) 
         o_wb.close()
 
 
-def compare_worksheets(workbook_generated: openpyxl.Workbook,
-                       workbook_original: openpyxl.Workbook,
-                       sheet_number: int,
-                       exceptions: List[str]) -> None:
+def compare_worksheets(workbook_generated: openpyxl.Workbook, workbook_original: openpyxl.Workbook, sheet_number: int, exceptions: List[str]) -> None:
     """
     Compares worksheets in two workbooks cell by cell, optionally ignoring cells in the `exceptions` list.
 
@@ -319,13 +317,11 @@ def compare_worksheets(workbook_generated: openpyxl.Workbook,
     max_column_2 = worksheet_generated.max_column
 
     assert max_column_1 == max_column_2, (
-        f'Number of columns do not match for sheet number: {sheet_number}. '
-        f'Actual value = {max_column_2}, expected value = {max_column_1}'
+        f'Number of columns do not match for sheet number: {sheet_number}. Actual value = {max_column_2}, expected value = {max_column_1}'
     )
 
     assert max_row_1 == max_row_2, (
-        f'Number of rows do not match for sheet number: {sheet_number}. '
-        f'Actual value = {max_row_2}, expected value = {max_row_1}'
+        f'Number of rows do not match for sheet number: {sheet_number}. Actual value = {max_row_2}, expected value = {max_row_1}'
     )
 
     for column in range(1, max_column_1 + 1):
@@ -337,8 +333,7 @@ def compare_worksheets(workbook_generated: openpyxl.Workbook,
                 val_o = worksheet_original[addr].value
 
                 assert val_g == val_o, (
-                    f'Column names do not match for sheet number: {sheet_number}. '
-                    f'Address {addr}. Actual value = {val_g}, expected value = {val_o}'
+                    f'Column names do not match for sheet number: {sheet_number}. Address {addr}. Actual value = {val_g}, expected value = {val_o}'
                 )
 
 

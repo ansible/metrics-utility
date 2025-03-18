@@ -21,26 +21,24 @@ class PackageDirectory(base.Package):
 
     def is_shipping_configured(self):
         if not self.tar_path:
-            self.logger.error("Insights for Ansible Automation Platform TAR not found")
+            self.logger.error('Insights for Ansible Automation Platform TAR not found')
             return False
 
         if not os.path.exists(self.tar_path):
-            self.logger.error(
-                f"Insights for Ansible Automation Platform TAR {self.tar_path} not found"
-            )
+            self.logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
-        if "Error:" in str(self.tar_path):
+        if 'Error:' in str(self.tar_path):
             return False
 
         return True
 
     def _destination_path(self, base_path, timestamp, filename):
-        year = timestamp.strftime("%Y")
-        month = timestamp.strftime("%m")
-        day = timestamp.strftime("%d")
+        year = timestamp.strftime('%Y')
+        month = timestamp.strftime('%m')
+        day = timestamp.strftime('%d')
 
-        path = f"data/{year}/{month}/{day}"
+        path = f'data/{year}/{month}/{day}'
 
         return os.path.join(base_path, path, filename)
 
@@ -52,13 +50,10 @@ class PackageDirectory(base.Package):
             self.shipping_successful = False
             return False
 
-        self.logger.debug(f"shipping analytics file: {self.tar_path}")
+        self.logger.debug(f'shipping analytics file: {self.tar_path}')
 
         since, _ = self._batch_since_and_until()
-        destination_path = self._destination_path(
-            self.collector.billing_provider_params["ship_path"],
-            since,
-            os.path.basename(self.tar_path))
+        destination_path = self._destination_path(self.collector.billing_provider_params['ship_path'], since, os.path.basename(self.tar_path))
 
         os.makedirs(os.path.dirname(destination_path), exist_ok=True)
         shutil.copyfile(self.tar_path, destination_path)

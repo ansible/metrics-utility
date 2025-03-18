@@ -5,6 +5,7 @@ import copy
 # You can run this script by using:
 # uv run python -m metrics_utility.test.snapshot_tests.CCSP.CCSP_snapshot_generator
 
+
 def select_env_vars(dictionary, position):
     values = {}
 
@@ -20,6 +21,7 @@ def select_env_vars(dictionary, position):
             values[key] = strings[position]
 
     return values
+
 
 def get_data():
     months = ['2024-02', '2024-03', '2024-04']
@@ -70,15 +72,12 @@ def get_data():
     env_vars_ccsp.update(
         {
             'METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER': ['BUSINESS LEADER', 'DIRECTOR', 'CEO'],
-            'METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER': [
-                'PROCUREMENT LEADER',
-                'PURCHASING HEAD',
-                'SUPPLY MANAGER'
-            ],
+            'METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER': ['PROCUREMENT LEADER', 'PURCHASING HEAD', 'SUPPLY MANAGER'],
         }
     )
 
     return (months, since_until_pairs, env_vars_ccspv2, env_vars_ccsp)
+
 
 def generate_monthly_reports(report_type, months, dictionary, custom_params, entry_point_dir):
     for month in months:
@@ -92,12 +91,9 @@ def generate_monthly_reports(report_type, months, dictionary, custom_params, ent
         env_vars['METRICS_UTILITY_REPORT_TYPE'] = report_type
 
         path = entry_point_dir + f'/data/{report_type}/snapshot_def_{month}.json'
-        data = {
-            'env_vars': env_vars,
-            'params': ['manage.py', 'build_report', f'--month={month}', '--force'],
-            'custom_params': custom_params
-        }
+        data = {'env_vars': env_vars, 'params': ['manage.py', 'build_report', f'--month={month}', '--force'], 'custom_params': custom_params}
         snapshot_utils.save_snapshot_definition(data, path)
+
 
 def generate_since_until_reports(report_type, since_until_pairs, dictionary, custom_params, entry_point_dir):
     for pair in since_until_pairs:
@@ -124,16 +120,14 @@ def generate_since_until_reports(report_type, since_until_pairs, dictionary, cus
         }
         snapshot_utils.save_snapshot_definition(data, path)
 
+
 def generate():
     entry_point_dir = snapshot_utils.get_entry_point_directory()
 
     months, since_until_pairs, env_vars_ccspv2, env_vars_ccsp = get_data()
 
     for report_type in ['CCSP', 'CCSPv2']:
-        custom_params = {
-            'run_command': 'Yes',
-            'generated': datetime.now().date().strftime('%Y-%m-%d')
-        }
+        custom_params = {'run_command': 'Yes', 'generated': datetime.now().date().strftime('%Y-%m-%d')}
 
         # Decide which dictionary to use
         if report_type == 'CCSP':
@@ -148,5 +142,6 @@ def generate():
     # Finally, run all generated definitions
     snapshot_utils.run_and_generate_snapshot_definitions(entry_point_dir + '/data/')
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     generate()

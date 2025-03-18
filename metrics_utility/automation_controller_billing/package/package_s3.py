@@ -3,8 +3,7 @@ import os
 import insights_analytics_collector as base
 from django.conf import settings
 
-from metrics_utility.automation_controller_billing.base.s3_handler import \
-    S3Handler
+from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 
 
 class PackageS3(base.Package):
@@ -23,26 +22,24 @@ class PackageS3(base.Package):
 
     def is_shipping_configured(self):
         if not self.tar_path:
-            self.logger.error("Insights for Ansible Automation Platform TAR not found")
+            self.logger.error('Insights for Ansible Automation Platform TAR not found')
             return False
 
         if not os.path.exists(self.tar_path):
-            self.logger.error(
-                f"Insights for Ansible Automation Platform TAR {self.tar_path} not found"
-            )
+            self.logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
-        if "Error:" in str(self.tar_path):
+        if 'Error:' in str(self.tar_path):
             return False
 
         return True
 
     def _destination_path(self, base_path, timestamp, filename):
-        year = timestamp.strftime("%Y")
-        month = timestamp.strftime("%m")
-        day = timestamp.strftime("%d")
+        year = timestamp.strftime('%Y')
+        month = timestamp.strftime('%m')
+        day = timestamp.strftime('%d')
 
-        path = f"data/{year}/{month}/{day}"
+        path = f'data/{year}/{month}/{day}'
 
         return os.path.join(base_path, path, filename)
 
@@ -54,13 +51,10 @@ class PackageS3(base.Package):
             self.shipping_successful = False
             return False
 
-        self.logger.debug(f"shipping analytics file: {self.tar_path}")
+        self.logger.debug(f'shipping analytics file: {self.tar_path}')
 
         since, _ = self._batch_since_and_until()
-        destination_path = self._destination_path(
-            self.collector.billing_provider_params["ship_path"],
-            since,
-            os.path.basename(self.tar_path))
+        destination_path = self._destination_path(self.collector.billing_provider_params['ship_path'], since, os.path.basename(self.tar_path))
 
         s3_handler = S3Handler(params=self.collector.billing_provider_params)
         s3_handler.upload_file(self.tar_path, object_name=destination_path)

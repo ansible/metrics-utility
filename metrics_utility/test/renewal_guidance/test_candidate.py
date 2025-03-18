@@ -6,7 +6,7 @@
     'ansible_product_serial': 'abc',
     'ansible_machine_id': '111',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
-    'host_name': ['test_host_11', 'test_host_21']
+    'host_name': ['test_host_11', 'test_host_21'],
 }
 
 # HOST 2 duplicate
@@ -14,7 +14,7 @@
     'ansible_product_serial': 'abc',
     'ansible_machine_id': '111',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
-    'host_name': ['test_host_11', 'test_host_21']
+    'host_name': ['test_host_11', 'test_host_21'],
 }
 
 # HOST 3 duplicate missing board_serial
@@ -22,7 +22,7 @@
     'ansible_product_serial': '',
     'ansible_machine_id': '111',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
-    'host_name': ['test_host_11', 'test_host_21']
+    'host_name': ['test_host_11', 'test_host_21'],
 }
 
 # HOST 4 duplicate different machine id same hosts
@@ -30,7 +30,7 @@
     'ansible_product_serial': '',
     'ansible_machine_id': '222',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
-    'host_name': ['test_host_11', 'test_host_21']
+    'host_name': ['test_host_11', 'test_host_21'],
 }
 
 # HOST 5 duplicate different board_serial same hosts
@@ -38,7 +38,7 @@
     'ansible_product_serial': 'def',
     'ansible_machine_id': '',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
-    'host_name': ['test_host_11', 'test_host_21']
+    'host_name': ['test_host_11', 'test_host_21'],
 }
 
 # HOST 6 duplicate different machine_id
@@ -46,7 +46,7 @@
     'ansible_product_serial': 'abc',
     'ansible_machine_id': '1234',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_21'],
-    'host_name': ['test_host_11', 'test_host_21']
+    'host_name': ['test_host_11', 'test_host_21'],
 }
 
 # HOST 7 duplicate different machine_id and hosts
@@ -54,7 +54,7 @@
     'ansible_product_serial': 'abc',
     'ansible_machine_id': '12345',
     'ansible_host_variable': ['test_real_host_51', 'test_real_host_61'],
-    'host_name': ['test_host_51', 'test_host_61']
+    'host_name': ['test_host_51', 'test_host_61'],
 }
 
 # HOST 8 duplicate differernt machine_id and overlapping hosts
@@ -62,24 +62,14 @@
     'ansible_product_serial': 'abc',
     'ansible_machine_id': '12345',
     'ansible_host_variable': ['test_real_host_11', 'test_real_host_51'],
-    'host_name': ['test_host_11', 'test_real_host_51']
+    'host_name': ['test_host_11', 'test_real_host_51'],
 }
 
 # HOST 9 duplicate matching host_variable
-{
-    'ansible_product_serial': '',
-    'ansible_machine_id': '',
-    'ansible_host_variable': ['test_real_host_11'],
-    'host_name': ['test_host_11']
-}
+{'ansible_product_serial': '', 'ansible_machine_id': '', 'ansible_host_variable': ['test_real_host_11'], 'host_name': ['test_host_11']}
 
 # HOST 10 duplicate matching host_name
-{
-    'ansible_product_serial': '',
-    'ansible_machine_id': '',
-    'ansible_host_variable': [],
-    'host_name': ['test_host_11']
-}
+{'ansible_product_serial': '', 'ansible_machine_id': '', 'ansible_host_variable': [], 'host_name': ['test_host_11']}
 
 # host facts example from docker container
 
@@ -123,7 +113,7 @@
 #    "'ansible_base.rest_filters.rest_framework.field_lookup_backend.FieldLookupBackend', "
 #    "'rest_framework.filters.SearchFilter', "
 #    "'ansible_base.rest_filters.rest_framework.order_backend.OrderByBackend')"
-#)
+# )
 #         "ANSIBLE_BASE_CREATOR_DEFAULTS": "['change', 'delete', 'execute', 'use', 'adhoc', 'approve', 'update', 'view']",
 #         "ANSIBLE_BASE_PERMISSION_MODEL": "main.Permission",
 #         "ANSIBLE_BASE_ROLE_CREATOR_NAME": "{cls.__name__} Creator",
@@ -471,7 +461,7 @@
 #    "console": ["hvc0", "tty0", "ttyS0,115200"],
 #    "modules": "loop,squashfs,sd-mod,usb-storage",
 #    "BOOT_IMAGE": "/boot/vmlinuz-virt"
-#},
+# },
 #     "ansible_product_name": "QEMU Virtual Machine",
 #     "ansible_product_uuid": "NA",
 #     "ansible_real_user_id": 0,

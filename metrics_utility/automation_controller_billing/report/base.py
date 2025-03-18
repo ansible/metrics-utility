@@ -19,7 +19,7 @@ class Base:
     FONT = 'Arial'
     PRICE_FORMAT = '$#,##0.00'
     HOST_NAME = 'Host name'
-    JOB_RUNS ='Job runs'
+    JOB_RUNS = 'Job runs'
     NUM_OF_TASKS_OR_RUNS = 'Number of task\nruns'
     HOST_RUNS_UNIQUE = 'Unique managed nodes\nautomated'
     HOST_RUNS = 'Non-unique managed\nnodes automated'

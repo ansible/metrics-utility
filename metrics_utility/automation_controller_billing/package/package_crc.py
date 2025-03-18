@@ -10,10 +10,10 @@ from metrics_utility.exceptions import FailedToUploadPayload
 
 
 class PackageCRC(base.Package):
-    CERT_PATH = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
-    PAYLOAD_CONTENT_TYPE = "application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz"
+    CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
+    PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
-    SHIPPING_AUTH_SERVICE_ACCOUNT = "service-account"
+    SHIPPING_AUTH_SERVICE_ACCOUNT = 'service-account'
 
     def _tarname_base(self):
         timestamp = self.collector.gather_until
@@ -52,19 +52,19 @@ class PackageCRC(base.Package):
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             if not self.get_ingress_url():
-                self.logger.error("METRICS_UTILITY_CRC_INGRESS_URL is not set")
+                self.logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
                 return False
 
             if not self.get_sso_url():
-                self.logger.error("METRICS_UTILITY_CRC_SSO_URL is not set")
+                self.logger.error('METRICS_UTILITY_CRC_SSO_URL is not set')
                 return False
 
             if not self._get_rh_user():
-                self.logger.error("METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set")
+                self.logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set')
                 return False
 
             if not self._get_rh_password():
-                self.logger.error("METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set")
+                self.logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set')
                 return False
         return True
 
@@ -72,17 +72,11 @@ class PackageCRC(base.Package):
         # TODO: move to insights-analytics-collector
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             sso_url = self.get_sso_url()
-            headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-            data = {"client_id": self._get_rh_user(),
-                    "client_secret": self._get_rh_password(),
-                    "grant_type": "client_credentials"}
+            data = {'client_id': self._get_rh_user(), 'client_secret': self._get_rh_password(), 'grant_type': 'client_credentials'}
 
-            r = requests.post(sso_url,
-                              headers=headers,
-                              data=data,
-                              verify=self.CERT_PATH,
-                              timeout=(31, 31))
+            r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
             access_token = json.loads(r.content)['access_token']
 
             #################################
@@ -114,17 +108,10 @@ class PackageCRC(base.Package):
             )
 
         else:
-            response = session.post(
-                url, files=files, headers=session.headers, timeout=(31, 31)
-            )
+            response = session.post(url, files=files, headers=session.headers, timeout=(31, 31))
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
-            raise FailedToUploadPayload(
-                f"Upload failed with status {response.status_code}, {response.text}"
-            )
+            raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
 
         return True
-
-
-

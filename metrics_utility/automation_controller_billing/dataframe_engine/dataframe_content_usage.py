@@ -4,8 +4,7 @@ from metrics_utility.debug_utils import print_data, print_debug
 
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base import \
-    Base
+from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 
 logger = logging.getLogger(__name__)
 
@@ -13,8 +12,9 @@ logger = logging.getLogger(__name__)
 # Code for building of the dataframe report based on Event table
 ######################################
 
+
 class DataframeContentUsage(Base):
-    LOG_PREFIX = "[AAPBillingReport] "
+    LOG_PREFIX = '[AAPBillingReport] '
 
     def build_dataframe(self):
         # A monthly rollup dataframe
@@ -45,37 +45,30 @@ class DataframeContentUsage(Base):
                 events['task_action'] = events.resolved_action.fillna(events.task_action).astype(str)
                 events['role'] = events.resolved_role.fillna(events.role).astype(str)
                 # Only get valid role names into role name
-                events["role"] = events["role"].apply(
-                    lambda x: self.extract_role_name(x))
+                events['role'] = events['role'].apply(lambda x: self.extract_role_name(x))
 
                 # Rename columns to match the reality, they are just names, not normalized cols anymore
-                events.rename(columns={
-                    'task_action': 'module_name',
-                    'role': 'role_name'
-                }, inplace=True)
+                events.rename(columns={'task_action': 'module_name', 'role': 'role_name'}, inplace=True)
 
-                events['collection_name'] = events['module_name'].apply(
-                    self.extract_collection_name)
+                events['collection_name'] = events['module_name'].apply(self.extract_collection_name)
 
                 # Final cleanup if some module names didn't connect, otherwise this will fail
                 # to insert with not null constraint on module_name
                 events = events[events['module_name'].notnull()]
 
                 # Set a human readable values for missing role and collection name
-                events['role_name'] = events['role_name'].fillna("No role used").astype(str)
-                events['collection_name'] = events['collection_name'].fillna("No collection used").astype(str)
+                events['role_name'] = events['role_name'].fillna('No role used').astype(str)
+                events['collection_name'] = events['collection_name'].fillna('No collection used').astype(str)
 
                 ################################
                 # Do the aggregation
                 ################################
                 print_debug(f'\nComputing data batch for {date}')
-                print_data(events, "Events data")
-                events_group = events.groupby(
-                    self.unique_index_columns(), dropna=False
-                ).agg(
-                    task_runs=('module_name', 'count'),
-                    duration=('duration', "sum"))
-                print_data(events, "Aggregated Events data")
+                print_data(events, 'Events data')
+                events_group = events.groupby(self.unique_index_columns(), dropna=False).agg(
+                    task_runs=('module_name', 'count'), duration=('duration', 'sum')
+                )
+                print_data(events, 'Aggregated Events data')
 
                 # Duration is null in older versions of Controller
                 events_group['duration'] = events_group.duration.fillna(0)
@@ -90,17 +83,13 @@ class DataframeContentUsage(Base):
                 else:
                     # Multipart collection, merge the dataframes and sum counts
                     content_explorer_rollup = pd.merge(
-                        content_explorer_rollup.loc[:, ],
-                        events_group.loc[:, ],
-                        on=self.unique_index_columns(),
-                        how='outer')
+                        content_explorer_rollup.loc[:,], events_group.loc[:,], on=self.unique_index_columns(), how='outer'
+                    )
 
-                    content_explorer_rollup = self.summarize_merged_dataframes(
-                        content_explorer_rollup, self.data_columns())
+                    content_explorer_rollup = self.summarize_merged_dataframes(content_explorer_rollup, self.data_columns())
 
                     # Tweak types to match the table
-                    content_explorer_rollup = self.cast_dataframe(
-                        content_explorer_rollup, self.cast_types())
+                    content_explorer_rollup = self.cast_dataframe(content_explorer_rollup, self.cast_types())
 
         if content_explorer_rollup is None:
             return None
@@ -123,7 +112,7 @@ class DataframeContentUsage(Base):
         m = re.match(DataframeContentUsage.collection_regexp(), x)
 
         if m:
-            return f"{m.groups()[0]}.{m.groups()[1]}"
+            return f'{m.groups()[0]}.{m.groups()[1]}'
         else:
             return None
 
@@ -136,9 +125,9 @@ class DataframeContentUsage(Base):
         standalone_role = re.match(DataframeContentUsage.standalone_role_regexp(), x)
 
         if collection_role:
-            return f"{collection_role.groups()[0]}.{collection_role.groups()[1]}.{collection_role.groups()[2]}"
+            return f'{collection_role.groups()[0]}.{collection_role.groups()[1]}.{collection_role.groups()[2]}'
         elif standalone_role:
-            return f"{standalone_role.groups()[0]}.{standalone_role.groups()[1]}"
+            return f'{standalone_role.groups()[0]}.{standalone_role.groups()[1]}'
         else:
             return None
 
@@ -148,10 +137,8 @@ class DataframeContentUsage(Base):
 
     @staticmethod
     def data_columns():
-        return ["task_runs", "duration"]
+        return ['task_runs', 'duration']
 
     @staticmethod
     def cast_types():
-        return {
-            'duration': 'float64',
-            'task_runs': 'int64'}
+        return {'duration': 'float64', 'task_runs': 'int64'}
