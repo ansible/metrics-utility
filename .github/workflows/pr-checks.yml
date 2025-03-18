@@ -20,9 +20,12 @@ jobs:
 
       - name: "Check for changes in uv.lock"
         run: |
-          # fail if uv sync had to change uv.lock
           uv sync
-          git diff --exit-code uv.lock
+          if ! git diff --quiet uv.lock; then
+            echo "uv.lock has changed. Run 'uv sync' locally and commit the updated lock file."
+            git diff uv.lock
+            exit 1  # Fail the job
+          fi
 
       - name: "Run ruff check"
         run: |

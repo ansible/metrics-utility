@@ -74,7 +74,11 @@ jobs:
           sed -i '/USER/s/myuser/awx/' mock_awx/settings/__init__.py
           sed -i '/PASSWORD/s/mypassword/awx/' mock_awx/settings/__init__.py
 
-      - name: "Run pytest"
+      - name: Run pytest
+        run: uv run pytest -s -v  --cov=. --cov-report=xml
+
+      - name: Send code coverage report to Sonar Cloud
+        uses: SonarSource/sonarqube-scan-action@v4
         env:
           METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
           METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
@@ -82,5 +86,20 @@ jobs:
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
-        run: |
-          uv run pytest -s -v
+          SONAR_PROJECT_KEY: ansible_metrics-utility
+          SONAR_ORGANIZATION: ansible
+          SONAR_HOST_URL: https://sonarcloud.io
+          SONAR_TOKEN: ${{ secrets.CICD_ORG_SONAR_TOKEN_CICD_BOT }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.projectKey=ansible_metrics-utility
+            -Dsonar.organization=ansible
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dsonar.pullrequest.provider=github
+
+
