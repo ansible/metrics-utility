@@ -249,6 +249,7 @@ Environment vars:
                 self.concat('main_host', data['main_host'])
                 self.concat('main_indirectmanagednodeaudit', data['indirect_nodes'])
                 self.concat('main_jobevent', data['main_jobevent'])
+                self.config_json = data['config']
 
         if self.verbose:
             print('loaded', self.loaded)
@@ -266,30 +267,37 @@ Environment vars:
         with tarfile.open(filename, 'w:gz') as tar:
             if 'job_host_summary' in self.loaded:
                 out = job_host_summary_data(self.loaded['job_host_summary'], self.job_host_summary, self.output_from, self.output_to)
-                self.add_to_tar('job_host_summary.csv', out, tar, self.output_to)
+                self.csv_to_tar('job_host_summary.csv', out, tar, self.output_to)
             if 'main_host' in self.loaded:
                 out = main_host_data(self.loaded['main_host'], self.main_host, self.output_from, self.output_to)
-                self.add_to_tar('main_host.csv', out, tar, self.output_to)
+                self.csv_to_tar('main_host.csv', out, tar, self.output_to)
             if 'main_indirectmanagednodeaudit' in self.loaded:
                 out = main_indirectmanagednodeaudit_data(
                     self.loaded['main_indirectmanagednodeaudit'], self.main_indirectmanagednodeaudit, self.output_from, self.output_to
                 )
-                self.add_to_tar('main_indirectmanagednodeaudit.csv', out, tar, self.output_to)
+                self.csv_to_tar('main_indirectmanagednodeaudit.csv', out, tar, self.output_to)
             if 'main_jobevent' in self.loaded:
                 out = main_jobevent_data(self.loaded['main_jobevent'], self.main_jobevent, self.output_from, self.output_to)
-                self.add_to_tar('main_jobevent.csv', out, tar, self.output_to)
+                self.csv_to_tar('main_jobevent.csv', out, tar, self.output_to)
             # always
             out = data_collection_status_data(self.selected, self.output_from, self.output_to)
-            self.add_to_tar('data_collection_status.csv', out, tar, self.output_to)
+            self.csv_to_tar('data_collection_status.csv', out, tar, self.output_to)
+            self.json_to_tar('config.json', self.config_json, tar, self.output_to)
 
         if self.verbose:
             print(f'created {filename}')
 
+    def csv_to_tar(self, filename, content, tar, timestamp):
+        return self.add_to_tar(filename, content.to_csv(index=False), tar, timestamp)
+
+    def json_to_tar(self, filename, content, tar, timestamp):
+        return self.add_to_tar(filename, json.dumps(content), tar, timestamp)
+
     def add_to_tar(self, filename, content, tar, timestamp):
         if self.verbose:
-            print(filename, content.to_csv(index=False))
+            print(filename, content)
 
-        buf = content.to_csv(index=False).encode('utf-8')
+        buf = content.encode('utf-8')
         info = tarfile.TarInfo(f'./{filename}')
         info.size = len(buf)
         info.mtime = timestamp.timestamp()
