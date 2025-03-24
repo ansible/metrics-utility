@@ -1,18 +1,17 @@
 import glob
 import os
-import subprocess
-import sys
 
 from datetime import datetime
 
 import pytest
+
+from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
 env_vars = {
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
-    'AWX_LOGGING_MODE': 'stdout',
 }
 
 year = datetime.now().strftime('%Y')
@@ -36,15 +35,20 @@ def cleanup_glob():
 def test_command(cleanup_glob):
     """Build xlsx report using build command and test its contents."""
 
-    python_executable = sys.executable
-    result = subprocess.run(
-        [python_executable, 'manage.py', 'gather_automation_controller_billing_data', '--ship', '--until=10m', '--force'],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env_vars,
-    )
+    run_gather_ext(env_vars, ['--ship', '--until=10m'])
 
-    assert result.returncode == 0
+    validate_exists(file_glob)
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_import(cleanup_glob):
+    # test_command doesn't collect coverage
+    run_gather_int(
+        env_vars,
+        {
+            'ship': True,
+            'until': '10m',
+        },
+    )
 
     validate_exists(file_glob)

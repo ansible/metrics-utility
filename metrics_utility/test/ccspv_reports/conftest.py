@@ -1,24 +1,11 @@
 import os
 
-from contextlib import contextmanager
 from datetime import datetime
 
 import openpyxl
 import pytest
 
 from openpyxl import Workbook
-
-
-@contextmanager
-def temporary_env(new_env):
-    """Temporarily update os.environ with new_env."""
-    original = os.environ.copy()
-    os.environ.update(new_env)
-    try:
-        yield
-    finally:
-        os.environ.clear()
-        os.environ.update(original)
 
 
 def validate_sheet_tab_names(file_path, expected_sheets):

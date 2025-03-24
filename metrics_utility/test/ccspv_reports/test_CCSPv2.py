@@ -1,11 +1,10 @@
-import subprocess
-import sys
-
 from datetime import datetime
 
 import pytest
 
 from conftest import validate_sheet_columns, validate_sheet_tab_names
+
+from metrics_utility.test.util import run_build_ext, run_build_int
 
 
 env_vars = {
@@ -24,7 +23,6 @@ env_vars = {
     'METRICS_UTILITY_REPORT_SKU': 'MCT3752MO',
     'METRICS_UTILITY_REPORT_EMAIL': 'email@email.com',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
-    'AWX_LOGGING_MODE': 'stdout',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2024/02/CCSPv2-2024-02.xlsx'
@@ -143,16 +141,30 @@ expected_sheets = {
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
-    python_executable = sys.executable
-    result = subprocess.run(
-        [python_executable, 'manage.py', 'build_report', '--month=2024-02', '--force'],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=env_vars,
-    )
+    run_build_ext(env_vars, ['--month=2024-02', '--force'])
 
-    assert result.returncode == 0
+    validate_sheet_columns(file_path, expected_sheets, 6)
+    validate_sheet_tab_names(file_path, expected_sheets)
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+@pytest.mark.parametrize(
+    'cleanup',
+    [
+        file_path,
+    ],
+    indirect=True,
+)
+def test_import(cleanup):
+    """Build xlsx report using build command and test its contents."""
+
+    run_build_int(
+        env_vars,
+        {
+            'month': '2024-02',
+            'force': True,
+        },
+    )
 
     validate_sheet_columns(file_path, expected_sheets, 6)
     validate_sheet_tab_names(file_path, expected_sheets)

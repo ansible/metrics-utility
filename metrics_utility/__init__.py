@@ -6,9 +6,7 @@ import sys
 from metrics_utility.management_utility import ManagementUtility
 
 
-def manage():
-    """Run a ManagementUtility."""
-
+def prepare():
     # Tries to find awx modules. They are either in venv, or can be configured through AWX_PATH ENV
     spec = importlib.util.find_spec('awx')
     if spec is None:
@@ -29,6 +27,11 @@ def manage():
 
     prepare_env()
     django.setup()
+
+
+def manage():
+    """Run a ManagementUtility."""
+    prepare()
 
     utility = ManagementUtility(sys.argv)
     utility.execute()

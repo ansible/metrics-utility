@@ -4,10 +4,10 @@ import openpyxl
 import pandas
 import pytest
 
-from conftest import temporary_env, transform_sheet
+from conftest import transform_sheet
 from pandas import Timestamp
 
-from metrics_utility.management.commands.build_report import Command
+from metrics_utility.test.util import run_build_int
 
 
 env_vars = {
@@ -46,20 +46,16 @@ date_today = datetime.now().strftime('%b %d, %Y')
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
-    with temporary_env(env_vars):
-        options = {
+    run_build_int(
+        env_vars,
+        {
             'since': '2025-02-13',
             'until': '2025-02-13',
             'ephemeral': None,
             'force': True,
             'verbose': False,
-        }
-
-        # Instantiate your command
-        command = Command()
-
-        # Call the handle() method directly with the options.
-        command.handle(**options)
+        },
+    )
 
     try:
         workbook = openpyxl.load_workbook(filename=file_path)

@@ -161,10 +161,8 @@ def run_snapshot_definition(data: DataShape) -> str:
     """
     env_vars = copy.deepcopy(data['env_vars'])
     env_vars['AWX_LOGGING_MODE'] = 'stdout'
-    python_executable = sys.executable
 
-    params = []
-    params.append(python_executable)
+    params = [sys.executable]
     params.extend(data['params'])
 
     # Runs command, in future, we want to support also calling the test function directly due to mocking datetime.now
