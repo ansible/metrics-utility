@@ -237,7 +237,11 @@ Environment vars:
         if self.verbose:
             print('loaded', self.loaded)
 
-        tarballs = glob.glob(self.source_tarballs, recursive=True)
+        if os.path.isdir(self.source_tarballs):
+            tarballs = glob.glob(os.path.join(self.source_tarballs, '**/*.tar.gz'), recursive=True)
+        else:
+            tarballs = glob.glob(self.source_tarballs, recursive=True)
+
         if self.verbose:
             print('tarballs', tarballs)
 
