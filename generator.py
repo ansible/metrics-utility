@@ -2,6 +2,7 @@
 import datetime
 import glob
 import io
+import json
 import math
 import numpy as np
 import os
@@ -10,7 +11,7 @@ import pathlib
 import random
 import tarfile
 import tempfile
-from metrics_utility.automation_controller_billing.extract.extractor_common import process_tarballs
+from metrics_utility.automation_controller_billing.extract.base import Base
 
 
 def parse_date(str):
@@ -120,6 +121,20 @@ def data_collection_status_data(selected, output_from, output_to):
             )
         )
     )
+
+
+def process_tarballs(path, temp_dir, enabled_set):
+    class ProcessTarballs(Base):
+        # load config.json
+        def load_config(self, file_path):
+            with open(file_path) as f:
+                return json.loads(f.read())
+
+        # extract csv based on generator SELECTED_DATA
+        def csv_enabled(self, name):
+            return name in enabled_set
+
+    return ProcessTarballs().process_tarballs(path, temp_dir)
 
 
 class Main:

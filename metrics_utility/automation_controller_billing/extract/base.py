@@ -3,6 +3,38 @@ import os
 import tarfile
 
 
+CSV_SHEETS = {
+    'job_host_summary': [
+        'ccsp_summary',
+        'indirectly_managed_nodes',
+        'inventory_scope',
+        'managed_nodes',
+        'managed_nodes_by_organizations',
+        'usage_by_organizations',
+    ],
+    'main_host': [
+        'inventory_scope',
+        'jobs',
+        'managed_nodes',
+        'managed_nodes_by_organizations',
+        'usage_by_collections',
+        'usage_by_modules',
+        'usage_by_roles',
+    ],
+    'main_indirectmanagednodeaudit': [
+        'indirectly_managed_nodes',
+        'managed_nodes',
+        'usage_by_organizations',
+    ],
+    'main_jobevent': [
+        'usage_by_collections',
+        'usage_by_modules',
+        'usage_by_organizations',
+        'usage_by_roles',
+    ],
+}
+
+
 class Base:
     def process_tarballs(self, path, temp_dir):
         _safe_extract(path, temp_dir)
@@ -22,35 +54,17 @@ class Base:
             'main_jobevent': empty_dataframe,
             'main_host': empty_dataframe,
         }
-        if self.required_sheets(
-            [
-                'ccsp_summary',
-                'managed_nodes',
-                'indirectly_managed_nodes',
-                'inventory_scope',
-                'usage_by_organizations',
-                'managed_nodes_by_organizations',
-            ]
-        ):
+
+        if self.csv_enabled('job_host_summary'):
             needed_data['job_host_summary'] = self.build_data_batch(temp_dir, 'job_host_summary')
 
-        if self.required_sheets(['managed_nodes', 'indirectly_managed_nodes', 'usage_by_organizations']):
+        if self.csv_enabled('main_indirectmanagednodeaudit'):
             needed_data['indirect_nodes'] = self.build_data_batch(temp_dir, 'main_indirectmanagednodeaudit')
 
-        if self.required_sheets(['usage_by_collections', 'usage_by_roles', 'usage_by_modules', 'usage_by_organizations']):
+        if self.csv_enabled('main_jobevent'):
             needed_data['main_jobevent'] = self.build_data_batch(temp_dir, 'main_jobevent')
 
-        if self.required_sheets(
-            [
-                'jobs',
-                'managed_nodes_by_organizations',
-                'managed_nodes',
-                'inventory_scope',
-                'usage_by_collections',
-                'usage_by_modules',
-                'managed_nodes',
-            ]
-        ):
+        if self.csv_enabled('main_host'):
             needed_data['main_host'] = self.build_data_batch(temp_dir, 'main_host')
 
         return needed_data
@@ -65,7 +79,11 @@ class Base:
         else:
             return pd.DataFrame([{}])
 
-    def required_sheets(self, sheets_required):
+    def csv_enabled(self, name):
+        """Enable CSV extraction based on list of rendered sheets"""
+        return self.sheet_enabled(CSV_SHEETS[name])
+
+    def sheet_enabled(self, sheets_required):
         """
         Checks for METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS values and return those values.
         If none found, give it the default CCSP report sheet options.
