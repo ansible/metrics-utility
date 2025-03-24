@@ -40,27 +40,32 @@ playful proud quick quiet shiny strong swift thoughtful vibrant warm witty'
     return f'{adjective}-{noun}-{number}'
 
 
-# repeat each line enough times we reach target_size
 def rule_multiply(df, target_size):
+    """repeat each line enough times we reach target_size"""
     return df.loc[np.repeat(df.index, math.ceil(target_size / len(df)))].reset_index(drop=True)
 
 
-# change each field to a random date between from, to
+def rule_crop(df, target_size):
+    """remove every row after target_size"""
+    return df.loc[: (target_size - 1)]
+
+
 def rule_dates(df, fields, output_from, output_to):
+    """change each field to a random date between from, to"""
     for f in fields:
         df[f] = df[f].apply(lambda _old: random_date(output_from, output_to))
     return df
 
 
-# change each field to a sequential number
 def rule_ids(df, fields):
+    """change each field to a sequential number"""
     for f in fields:
         df[f] = range(len(df))
     return df
 
 
-# change each field to a random hostname-like string
 def rule_hostname(df, fields):
+    """change each field to a random hostname-like string"""
     for f in fields:
         df[f] = df[f].apply(lambda _old: random_hostname())
     return df
@@ -71,6 +76,7 @@ def job_host_summary_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
     df = rule_multiply(df, config[0])  # total
+    df = rule_crop(df, config[0])  # total
     df = rule_ids(df, ['id'])
     df = rule_dates(df, ['created', 'modified', 'job_created'], output_from, output_to)
     return df
@@ -81,6 +87,7 @@ def main_host_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
     df = rule_multiply(df, config[0])  # total
+    df = rule_crop(df, config[0])  # total
     df = rule_ids(df, ['host_id'])
     df = rule_dates(df, ['last_automation'], output_from, output_to)
     return df
@@ -91,6 +98,7 @@ def main_indirectmanagednodeaudit_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
     df = rule_multiply(df, config[0])  # total
+    df = rule_crop(df, config[0])  # total
     df = rule_ids(df, ['id'])
     df = rule_dates(df, ['created', 'job_created'], output_from, output_to)
     return df
@@ -101,6 +109,7 @@ def main_jobevent_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
     df = rule_multiply(df, config[0])  # total
+    df = rule_crop(df, config[0])  # total
     df = rule_ids(df, ['main_jobhostsummary_id'])
     df = rule_dates(df, ['main_jobhostsummary_created', 'created', 'modified', 'job_created'], output_from, output_to)
     return df
