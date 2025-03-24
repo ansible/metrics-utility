@@ -55,12 +55,12 @@ extend-select = [
 #   "N",
 # Python syntax upgrades
 #   "UP",
+# Sort imports
+    "I",
 ]
 
 [tool.ruff.lint.isort]
 # Separate direct imports from 'from' imports
 lines-between-types = 1
-# Order alphabetically and by case
-order-by-type = true
 # Use a single line after each import block
-lines-after-imports = 1
+lines-after-imports = 2
