@@ -13,12 +13,12 @@ dependencies = [
     "django==4.2.16",
     "insights-analytics-collector==0.3.2",
     "openpyxl==3.1.2",
-    "pandas==2.2.1",
+    "pandas>=2.2.3",
     "psycopg==3.2.3",
     "requests==2.32.3",
     "setuptools==70.3.0",
 ]
-requires-python = ">=3.11, <3.13"
+requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
