@@ -1,7 +1,9 @@
 import os
-import pytest
 import subprocess
 import sys
+
+import pytest
+
 
 env_vars = {
     'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'myuseraccesskey',

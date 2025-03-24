@@ -1,13 +1,14 @@
-from conftest import transform_sheet, temporary_env
 from datetime import datetime
-from metrics_utility.management.commands.build_report import Command
 
 import openpyxl
 import pandas
-
-from pandas import Timestamp, NaT
-
 import pytest
+
+from conftest import temporary_env, transform_sheet
+from pandas import NaT, Timestamp
+
+from metrics_utility.management.commands.build_report import Command
+
 
 env_vars = {
     'METRICS_UTILITY_SHIP_TARGET': 'directory',

@@ -4,6 +4,7 @@ import os.path
 import platform
 
 import distro
+
 from awx.conf.license import get_license
 from awx.main.utils import datetime_hook, get_awx_version
 from django.conf import settings
@@ -15,8 +16,8 @@ from django.utils.translation import gettext_lazy as _
 from insights_analytics_collector import register  # , CsvFileSplitter
 
 from metrics_utility.automation_controller_billing.csv_file_splitter import CsvFileSplitter
-
 from metrics_utility.metric_utils import get_optional_collectors
+
 
 """
 This module is used to define metrics collected by

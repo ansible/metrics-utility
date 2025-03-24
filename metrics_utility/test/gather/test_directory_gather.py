@@ -1,9 +1,12 @@
 import glob
 import os
-import pytest
 import subprocess
 import sys
+
 from datetime import datetime
+
+import pytest
+
 
 env_vars = {
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',

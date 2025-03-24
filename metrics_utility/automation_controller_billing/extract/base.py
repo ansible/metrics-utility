@@ -1,6 +1,7 @@
-import pandas as pd
 import os
 import tarfile
+
+import pandas as pd
 
 
 class Base:

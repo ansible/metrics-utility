@@ -1,11 +1,13 @@
 import datetime
 import json
+
+from datetime import timezone
+from itertools import chain
+
 import pandas as pd
 
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from datetime import timezone
-from itertools import chain
 
 from metrics_utility.exceptions import UnparsableParameter
 

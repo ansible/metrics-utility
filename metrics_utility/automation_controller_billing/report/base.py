@@ -6,7 +6,8 @@ import json
 from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
-from metrics_utility.automation_controller_billing.helpers import merge_json_sets, merge_arrays
+
+from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
 
 
 class Base:

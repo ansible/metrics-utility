@@ -3,6 +3,7 @@ import os
 
 import insights_analytics_collector as base
 import requests
+
 from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
 

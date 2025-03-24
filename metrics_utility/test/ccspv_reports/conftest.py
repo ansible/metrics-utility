@@ -1,9 +1,12 @@
 import os
-import pytest
-import openpyxl
-from openpyxl import Workbook
-from datetime import datetime
+
 from contextlib import contextmanager
+from datetime import datetime
+
+import openpyxl
+import pytest
+
+from openpyxl import Workbook
 
 
 @contextmanager

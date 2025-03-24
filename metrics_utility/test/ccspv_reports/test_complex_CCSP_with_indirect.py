@@ -1,13 +1,14 @@
-from conftest import transform_sheet, temporary_env
 from datetime import datetime
-from metrics_utility.management.commands.build_report import Command
 
 import openpyxl
 import pandas
+import pytest
 
+from conftest import temporary_env, transform_sheet
 from pandas import Timestamp
 
-import pytest
+from metrics_utility.management.commands.build_report import Command
+
 
 env_vars = {
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',

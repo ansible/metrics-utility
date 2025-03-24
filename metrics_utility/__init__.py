@@ -24,6 +24,7 @@ def manage():
             logger.setLevel(logging.DEBUG)  # Ensure the logger captures all messages
 
     import django
+
     from awx import prepare_env
 
     prepare_env()

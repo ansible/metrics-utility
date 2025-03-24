@@ -1,6 +1,8 @@
-from .. import snapshot_utils
-import pytest
 import os
+
+import pytest
+
+from .. import snapshot_utils
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')

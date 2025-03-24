@@ -1,10 +1,13 @@
-from conftest import transform_sheet, temporary_env
 from datetime import datetime
-from metrics_utility.management.commands.build_report import Command
 
 import openpyxl
 import pandas
 import pytest
+
+from conftest import temporary_env, transform_sheet
+
+from metrics_utility.management.commands.build_report import Command
+
 
 # This test will run on all data, making sure we're backwards compatible and will generate all
 # sheets. Just checking the report generation doesn't fail

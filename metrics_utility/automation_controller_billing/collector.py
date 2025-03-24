@@ -3,6 +3,8 @@ import json
 import logging
 
 import insights_analytics_collector as base
+
+from awx.main.utils import datetime_hook
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
@@ -11,10 +13,8 @@ from django.db import connection
 # from awx.main.models import Job
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
-
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
 
-from awx.main.utils import datetime_hook
 
 # work around https://github.com/ansible/awx/pull/15676
 try:

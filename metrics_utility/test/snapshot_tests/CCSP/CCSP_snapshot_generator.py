@@ -1,6 +1,9 @@
-from .. import snapshot_utils
-from datetime import datetime
 import copy
+
+from datetime import datetime
+
+from .. import snapshot_utils
+
 
 # You can run this script by using:
 # uv run python -m metrics_utility.test.snapshot_tests.CCSP.CCSP_snapshot_generator
