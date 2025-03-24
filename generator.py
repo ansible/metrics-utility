@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 import datetime
 import glob
+import io
 import math
 import numpy as np
 import os
 import pandas as pd
+import pathlib
 import random
+import tarfile
 import tempfile
 from metrics_utility.automation_controller_billing.extract.extractor_common import process_tarballs
 
@@ -22,15 +25,14 @@ def random_date(earliest, latest):
 
 
 def random_hostname():
-    nouns = 'armadillo axolotl badger beetle bison buffalo capybara caribou cassowary chameleon cheetah cobra coyote dolphin eagle elephant falcon ferret flamingo fox gazelle giraffe hippo ibex jaguar kangaroo koala lemur leopard lynx macaw meerkat narwhal octopus orangutan otter owl panda panther peacock pelican penguin pigeon puma rabbit raven rhino sparrow tiger toucan turtle whale wolf wombat zebra'.split(
-        ' '
-    )
-    adjectives = 'bold brave bright calm cheerful clever eager gentle graceful happy honest jolly kind lively lucky merry nice noble peaceful playful proud quick quiet shiny strong swift thoughtful vibrant warm witty'.split(
-        ' '
-    )
+    nouns = 'armadillo axolotl badger beetle bison buffalo capybara caribou cassowary chameleon cheetah cobra coyote dolphin eagle elephant falcon \
+ferret flamingo fox gazelle giraffe hippo ibex jaguar kangaroo koala lemur leopard lynx macaw meerkat narwhal octopus orangutan otter owl panda \
+panther peacock pelican penguin pigeon puma rabbit raven rhino sparrow tiger toucan turtle whale wolf wombat zebra'
+    adjectives = 'bold brave bright calm cheerful clever eager gentle graceful happy honest jolly kind lively lucky merry nice noble peaceful \
+playful proud quick quiet shiny strong swift thoughtful vibrant warm witty'
 
-    adjective = random.choice(adjectives)
-    noun = random.choice(nouns)
+    adjective = random.choice(adjectives.split(' '))
+    noun = random.choice(nouns.split(' '))
     number = random.randint(100, 999)
 
     return f'{adjective}-{noun}-{number}'
@@ -147,6 +149,7 @@ class Main:
 
         # source tarball glob
         self.source_tarballs = os.getenv('SOURCE_DATA_PATH', f'./metrics_utility/test/test_data/data/{year}/**/*.tar.gz')
+        self.output_data_path = os.getenv('OUTPUT_DATA_PATH', './metrics_utility/test/test_data/data/')
 
         # input and output date range
         self.input_from = parse_date(os.getenv('INPUT_DATE_FROM', f'{year - 1}-01-01'))
@@ -193,24 +196,44 @@ class Main:
         print('loaded', self.loaded)
 
     def save(self):
-        if 'job_host_summary' in self.loaded:
-            out = job_host_summary_data(self.loaded['job_host_summary'], self.job_host_summary, self.output_from, self.output_to)
-            print('job_host_summary.csv', out.to_csv(index=False))
-        if 'main_host' in self.loaded:
-            out = main_host_data(self.loaded['main_host'], self.main_host, self.output_from, self.output_to)
-            print('main_host.csv', out.to_csv(index=False))
-        if 'main_indirectmanagednodeaudit' in self.loaded:
-            out = main_indirectmanagednodeaudit_data(
-                self.loaded['main_indirectmanagednodeaudit'], self.main_indirectmanagednodeaudit, self.output_from, self.output_to
-            )
-            print('main_indirectmanagednodeaudit.csv', out.to_csv(index=False))
-        if 'main_jobevent' in self.loaded:
-            out = main_jobevent_data(self.loaded['main_jobevent'], self.main_jobevent, self.output_from, self.output_to)
-            print('main_jobevent.csv', out.to_csv(index=False))
-        # always
-        out = data_collection_status_data(self.selected, self.output_from, self.output_to)
-        print('data_collection_status.csv', out.to_csv(index=False))
-        # TODO: tar.add
+        target = pathlib.Path(self.output_data_path).joinpath(self.output_to.strftime('%Y/%m/%d'))
+        os.makedirs(target, exist_ok=True)
+
+        uuid = '00000000-0000-0000-0000-000000000000'
+        name_base = f'{uuid}-{self.output_from.strftime("%Y-%m-%d-%H%M%S%z")}-{self.output_to.strftime("%Y-%m-%d-%H%M%S%z")}'
+        index = len(list(target.glob(f'{name_base}-*.*')))
+        tarname = f'{name_base}-{index}.tar.gz'
+
+        filename = target.joinpath(tarname)
+        with tarfile.open(filename, 'w:gz') as tar:
+            if 'job_host_summary' in self.loaded:
+                out = job_host_summary_data(self.loaded['job_host_summary'], self.job_host_summary, self.output_from, self.output_to)
+                self.add_to_tar('job_host_summary.csv', out, tar, self.output_to)
+            if 'main_host' in self.loaded:
+                out = main_host_data(self.loaded['main_host'], self.main_host, self.output_from, self.output_to)
+                self.add_to_tar('main_host.csv', out, tar, self.output_to)
+            if 'main_indirectmanagednodeaudit' in self.loaded:
+                out = main_indirectmanagednodeaudit_data(
+                    self.loaded['main_indirectmanagednodeaudit'], self.main_indirectmanagednodeaudit, self.output_from, self.output_to
+                )
+                self.add_to_tar('main_indirectmanagednodeaudit.csv', out, tar, self.output_to)
+            if 'main_jobevent' in self.loaded:
+                out = main_jobevent_data(self.loaded['main_jobevent'], self.main_jobevent, self.output_from, self.output_to)
+                self.add_to_tar('main_jobevent.csv', out, tar, self.output_to)
+            # always
+            out = data_collection_status_data(self.selected, self.output_from, self.output_to)
+            self.add_to_tar('data_collection_status.csv', out, tar, self.output_to)
+
+        print(f'created {filename}')
+
+    def add_to_tar(self, filename, content, tar, timestamp):
+        print(filename, content.to_csv(index=False))
+
+        buf = content.to_csv(index=False).encode('utf-8')
+        info = tarfile.TarInfo(f'./{filename}')
+        info.size = len(buf)
+        info.mtime = timestamp.timestamp()
+        tar.addfile(info, fileobj=io.BytesIO(buf))
 
 
 if __name__ == '__main__':
