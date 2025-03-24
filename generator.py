@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import datetime
 import glob
 import io
@@ -139,9 +140,13 @@ def process_tarballs(path, temp_dir, enabled_set):
 
 class Main:
     def __init__(self):
-        self.set_config()
+        self.parse_env()
+        self.parse_args()
 
-    def set_config(self):
+        if self.verbose:
+            print('config', vars(self))
+
+    def parse_env(self):
         year = datetime.datetime.now(tz=datetime.timezone.utc).year
 
         # data_collection_status = ()
@@ -177,7 +182,33 @@ class Main:
             filter(bool, os.getenv('SELECTED_DATA', 'job_host_summary,main_host,main_indirectmanagednodeaudit,main_jobevent').split(','))
         )
 
-        print('config', vars(self))
+    def parse_args(self):
+        parser = argparse.ArgumentParser(
+            prog='generator',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""
+Environment vars:
+    MAIN_JOBHOSTSUMMARY_SIZE (default: 10000)
+    MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE (default: 2000)
+    MAIN_HOST_SIZE (default: 10000)
+    MAIN_HOST_UNIQUE_SIZE (default: 2000)
+    MAIN_INDIRECT_SIZE (default: 10000)
+    MAIN_INDIRECT_UNIQUE_SIZE (default: 2000)
+    MAIN_JOBEVENT_SIZE (default: 10000)
+    MAIN_JOBEVENT_UNIQUE_SIZE (default: 2000)
+    SOURCE_DATA_PATH (default: ./metrics_utility/test/test_data/data/{year}/**/*.tar.gz)
+    OUTPUT_DATA_PATH (default: ./metrics_utility/test/test_data/data/)
+    INPUT_DATE_FROM (default: lastyear-01-01)
+    INPUT_DATE_TO (default: year-01-01)
+    OUTPUT_DATE_FROM (default: year-01-01)
+    OUTPUT_DATE_TO (default: nextyear-01-01)
+    SELECTED_DATA (default: job_host_summary,main_host,main_indirectmanagednodeaudit,main_jobevent)
+        """,
+        )
+        parser.add_argument('-v', '--verbose', action='store_true')
+        args = parser.parse_args()
+
+        self.verbose = args.verbose
 
     def concat(self, name, data):
         if name not in self.selected:
@@ -194,10 +225,12 @@ class Main:
 
     def load(self):
         self.loaded = dict((s, None) for s in self.selected)
-        print('loaded', self.loaded)
+        if self.verbose:
+            print('loaded', self.loaded)
 
         tarballs = glob.glob(self.source_tarballs, recursive=True)
-        print('tarballs', tarballs)
+        if self.verbose:
+            print('tarballs', tarballs)
 
         for file in tarballs:
             with tempfile.TemporaryDirectory(prefix='metrics-generator') as temp_dir:
@@ -208,7 +241,8 @@ class Main:
                 self.concat('main_indirectmanagednodeaudit', data['indirect_nodes'])
                 self.concat('main_jobevent', data['main_jobevent'])
 
-        print('loaded', self.loaded)
+        if self.verbose:
+            print('loaded', self.loaded)
 
     def save(self):
         target = pathlib.Path(self.output_data_path).joinpath(self.output_to.strftime('%Y/%m/%d'))
@@ -239,10 +273,12 @@ class Main:
             out = data_collection_status_data(self.selected, self.output_from, self.output_to)
             self.add_to_tar('data_collection_status.csv', out, tar, self.output_to)
 
-        print(f'created {filename}')
+        if self.verbose:
+            print(f'created {filename}')
 
     def add_to_tar(self, filename, content, tar, timestamp):
-        print(filename, content.to_csv(index=False))
+        if self.verbose:
+            print(filename, content.to_csv(index=False))
 
         buf = content.to_csv(index=False).encode('utf-8')
         info = tarfile.TarInfo(f'./{filename}')
