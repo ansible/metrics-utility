@@ -64,4 +64,5 @@ def run_gather_int(env, options):
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
     with temporary_env(env):
-        Command().handle(**options)
+        # .handle does exit(0), breaking tests
+        Command()._handle(**options)
