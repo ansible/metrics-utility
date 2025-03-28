@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import tempfile
@@ -11,12 +10,11 @@ class ExtractorS3(Base):
     LOG_PREFIX = '[ExtractorS3]'
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
-        super().__init__()
+        super().__init__(logger=logger)
 
         self.extension = 'parquet'
         self.path = extra_params['ship_path']
         self.extra_params = extra_params
-        self.logger = logger
 
         self.s3_handler = S3Handler(params=self.extra_params)
 
@@ -63,15 +61,6 @@ class ExtractorS3(Base):
 
                 except Exception as e:
                     self.logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {s3_path} failed with {e}')
-
-    def load_config(self, file_path):
-        try:
-            with open(file_path) as f:
-                config_data = json.loads(f.read())
-            return config_data
-        except FileNotFoundError:
-            self.logger.warn(f'{self.LOG_PREFIX} missing required file under path: {self.path} and date: {self.date}')
-            # raise MissingRequiredFile(self.filename) from e
 
     def fetch_partition_paths(self, date):
         prefix = self._get_path_prefix(date)

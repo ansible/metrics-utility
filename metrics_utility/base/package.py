@@ -8,6 +8,9 @@ from abc import abstractmethod
 
 import requests
 
+from .collection_data_status import CollectionDataStatus
+from .collection_manifest import CollectionManifest
+
 
 class Package:
     """
@@ -44,9 +47,9 @@ class Package:
         self.collector = collector
         self.collections = []
         self.collection_keys = []
-        self.data_collection_status = self.collector.collection_data_status_class()(self.collector, self)
+        self.data_collection_status = CollectionDataStatus(self.collector, self)
         self.logger = collector.logger
-        self.manifest = collector.collection_manifest_class()(collector)
+        self.manifest = CollectionManifest(collector)
         self.processed = False
         self.shipping_successful = None
         self.tar_path = None

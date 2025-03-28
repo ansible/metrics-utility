@@ -13,9 +13,7 @@ from django.utils.timezone import now, timedelta
 
 from .collection import Collection
 from .collection_csv import CollectionCSV
-from .collection_data_status import CollectionDataStatus
 from .collection_json import CollectionJSON
-from .collection_manifest import CollectionManifest
 from .package import Package
 
 
@@ -24,8 +22,6 @@ class Collector:
        from awx to cloud.
     Abstract and following methods has to be implemented:
     - _package_class() - reference to your implementation of Package
-    - _collection_json_class() - optional, if class inherited fromCollectionJSON is used
-    - _collection_csv_class() - optional, if class inherited from CollectionCSV is used
 
     There are several params:
     - collection_type:
@@ -459,9 +455,9 @@ class Collector:
         data_type = fnc_collecting.__insights_analytics_type__
         collection = None
         if data_type == 'json':
-            collection = self._collection_json_class()(self, fnc_collecting)
+            collection = CollectionJSON(self, fnc_collecting)
         elif data_type == 'csv':
-            collection = self._collection_csv_class()(self, fnc_collecting)
+            collection = CollectionCSV(self, fnc_collecting)
 
         if collection is None:
             raise RuntimeError(f'Collection of type {data_type} not implemented')
@@ -476,24 +472,6 @@ class Collector:
     def _package_class():
         """Has to be redefined by your Package implementation"""
         return Package
-
-    @staticmethod
-    def _collection_json_class():
-        """Can be redefined by your CollectionJSON implementation"""
-        return CollectionJSON
-
-    @staticmethod
-    def _collection_csv_class():
-        """Can be redefined by your CollectionCSV implementation"""
-        return CollectionCSV
-
-    @staticmethod
-    def collection_data_status_class():
-        return CollectionDataStatus
-
-    @staticmethod
-    def collection_manifest_class():
-        return CollectionManifest
 
     def _reset_collections_and_packages(self):
         self.collections = {

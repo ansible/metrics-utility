@@ -4,6 +4,7 @@ import datetime
 import glob
 import io
 import json
+import logging
 import math
 import os
 import pathlib
@@ -15,6 +16,15 @@ import numpy as np
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.extract.base import Base
+from metrics_utility.base import CsvFileSplitter
+
+
+logging.basicConfig(format='%(asctime)s(+%(relativeCreated)d): %(message)s', level=logging.WARNING)
+logger = logging.getLogger(__name__)
+
+
+def now():
+    return datetime.datetime.now(tz=datetime.timezone.utc)
 
 
 def parse_date(str):
@@ -29,15 +39,15 @@ def random_date(earliest, latest):
 
 
 def random_hostname():
-    nouns = 'armadillo axolotl badger beetle bison buffalo capybara caribou cassowary chameleon cheetah cobra coyote dolphin eagle elephant falcon \
-ferret flamingo fox gazelle giraffe hippo ibex jaguar kangaroo koala lemur leopard lynx macaw meerkat narwhal octopus orangutan otter owl panda \
-panther peacock pelican penguin pigeon puma rabbit raven rhino sparrow tiger toucan turtle whale wolf wombat zebra'
-    adjectives = 'bold brave bright calm cheerful clever eager gentle graceful happy honest jolly kind lively lucky merry nice noble peaceful \
-playful proud quick quiet shiny strong swift thoughtful vibrant warm witty'
+    nouns = 'armadillo axolotl badger beetle bison buffalo capybara cat caribou cassowary chameleon cheetah cobra coyote dolphin eagle elephant \
+falcon ferret flamingo fox gazelle giraffe hippo ibex jaguar kangaroo koala lemur leopard lion lynx macaw manul meerkat narwhal octopus orangutan \
+otter owl panda panther peacock pelican penguin pigeon puma rabbit raven rhino salmon sparrow tiger toucan turtle whale wolf wombat zebra'
+    adjectives = 'bold brave bright calm cheerful clever cozy eager exuberant gentle graceful happy honest honorable jolly kind lively lucky merry \
+nice noble peaceful playful proud quick quiet shiny strong swift thoughtful vibrant warm wise witty'
 
     adjective = random.choice(adjectives.split(' '))
     noun = random.choice(nouns.split(' '))
-    number = random.randint(100, 999)
+    number = format(random.randrange(1000000), '06')
 
     return f'{adjective}-{noun}-{number}'
 
@@ -73,10 +83,17 @@ def rule_hostname(df, fields):
     return df
 
 
-# ? host_remote_id ? ansible_host_variable ?
+def rule_hostname_or_null(df, fields):
+    """change each field to a random hostname-like string or null"""
+    for f in fields:
+        df[f] = df[f].apply(lambda _old: random_hostname() if random.choice([True, False]) else None)
+    return df
+
+
 def job_host_summary_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
+    df = rule_hostname_or_null(df, ['ansible_host_variable'])
     df = rule_multiply(df, config[0])  # total
     df = rule_crop(df, config[0])  # total
     df = rule_ids(df, ['id'])
@@ -84,10 +101,10 @@ def job_host_summary_data(df, config, output_from, output_to):
     return df
 
 
-# ? ansible_host_variable ? canonical_facts ? facts ?
 def main_host_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
+    df = rule_hostname_or_null(df, ['ansible_host_variable'])
     df = rule_multiply(df, config[0])  # total
     df = rule_crop(df, config[0])  # total
     df = rule_ids(df, ['host_id'])
@@ -95,7 +112,6 @@ def main_host_data(df, config, output_from, output_to):
     return df
 
 
-# ? host_remote_id ? canonical_facts ? facts ?
 def main_indirectmanagednodeaudit_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
@@ -106,7 +122,6 @@ def main_indirectmanagednodeaudit_data(df, config, output_from, output_to):
     return df
 
 
-# ? main_jobhostsummary_id ?
 def main_jobevent_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
@@ -122,7 +137,7 @@ def data_collection_status_data(selected, output_from, output_to):
         list(
             map(
                 lambda file: {
-                    'collection_start_timestamp': datetime.datetime.now(tz=datetime.timezone.utc).isoformat(),
+                    'collection_start_timestamp': now().isoformat(),
                     'since': output_from.isoformat(),
                     'until': output_to.isoformat(),
                     'file_name': f'{file}.csv',
@@ -149,6 +164,27 @@ def process_tarballs(path, temp_dir, enabled_set):
     return ProcessTarballs().process_tarballs(path, temp_dir)
 
 
+# metrics_utility.automation_controller_billing.collectors daily_slicing, but without the awx imports
+def daily_slicing(**kwargs):
+    since, until = kwargs.get('since', None), kwargs.get('until', now())
+    if since is None:
+        return
+
+    start, end = since, None
+    start_beginning_of_next_day = start.replace(hour=0, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+
+    # If the date range is over one day, we want first interval to contain the rest of the day
+    # then we'll cycle by full days
+    if until > start_beginning_of_next_day:
+        yield (start, start_beginning_of_next_day)
+        start = start_beginning_of_next_day
+
+    while start < until:
+        end = min(start + datetime.timedelta(days=1), until)
+        yield (start, end)
+        start = end
+
+
 class Main:
     def __init__(self):
         self.parse_env()
@@ -156,9 +192,10 @@ class Main:
 
         if self.verbose:
             print('config', vars(self))
+            logger.setLevel(logging.INFO)
 
     def parse_env(self):
-        year = datetime.datetime.now(tz=datetime.timezone.utc).year
+        year = now().year
 
         # data_collection_status = ()
         self.job_host_summary = (
@@ -248,7 +285,7 @@ Environment vars:
             print('tarballs', tarballs)
 
         for file in tarballs:
-            with tempfile.TemporaryDirectory(prefix='metrics-generator') as temp_dir:
+            with tempfile.TemporaryDirectory(prefix='metrics-generator-load') as temp_dir:
                 data = process_tarballs(file, temp_dir, enabled_set=self.selected)
 
                 self.concat('job_host_summary', data['job_host_summary'])
@@ -260,44 +297,99 @@ Environment vars:
         if self.verbose:
             print('loaded', self.loaded)
 
-    def save(self):
-        target = pathlib.Path(self.output_data_path).joinpath(self.output_to.strftime('%Y/%m/%d'))
+    def gen_df(self, table, fn, settings):
+        if table not in self.loaded:
+            return
+
+        logger.info(f'{table} - loaded')
+        self.generated[table] = fn(self.loaded[table], settings, self.output_from, self.output_to)
+        logger.info(f'{table} - duplicated')
+
+    def process(self):
+        self.generated = dict((s, None) for s in self.selected)
+
+        self.gen_df('job_host_summary', job_host_summary_data, self.job_host_summary)
+        self.gen_df('main_host', main_host_data, self.main_host)
+        self.gen_df('main_indirectmanagednodeaudit', main_indirectmanagednodeaudit_data, self.main_indirectmanagednodeaudit)
+        self.gen_df('main_jobevent', main_jobevent_data, self.main_jobevent)
+
+    def save_csvs(self, table, temp_dir, df):
+        logger.info(f'{table} - to_csv')
+        splitter = CsvFileSplitter(filespec=f'{temp_dir}/{table}.csv')
+        df.to_csv(index=False, path_or_buf=splitter)
+        return splitter.file_list(keep_empty=True)
+
+    def tarify(self, table, since, until, file):
+        logger.info(f'{table} - add_to_tar {file}')
+
+        target = pathlib.Path(self.output_data_path).joinpath(since.strftime('%Y/%m/%d'))
         os.makedirs(target, exist_ok=True)
 
         uuid = '00000000-0000-0000-0000-000000000000'
-        name_base = f'{uuid}-{self.output_from.strftime("%Y-%m-%d-%H%M%S%z")}-{self.output_to.strftime("%Y-%m-%d-%H%M%S%z")}'
+        frm = since.strftime('%Y-%m-%d-%H%M%S%z')
+        to = until.strftime('%Y-%m-%d-%H%M%S%z')
+        name_base = f'{uuid}-{frm}-{to}'
+
         index = len(list(target.glob(f'{name_base}-*.*')))
         tarname = f'{name_base}-{index}.tar.gz'
 
         filename = target.joinpath(tarname)
         with tarfile.open(filename, 'w:gz') as tar:
-            if 'job_host_summary' in self.loaded:
-                out = job_host_summary_data(self.loaded['job_host_summary'], self.job_host_summary, self.output_from, self.output_to)
-                self.csv_to_tar('job_host_summary.csv', out, tar, self.output_to)
-            if 'main_host' in self.loaded:
-                out = main_host_data(self.loaded['main_host'], self.main_host, self.output_from, self.output_to)
-                self.csv_to_tar('main_host.csv', out, tar, self.output_to)
-            if 'main_indirectmanagednodeaudit' in self.loaded:
-                out = main_indirectmanagednodeaudit_data(
-                    self.loaded['main_indirectmanagednodeaudit'], self.main_indirectmanagednodeaudit, self.output_from, self.output_to
-                )
-                self.csv_to_tar('main_indirectmanagednodeaudit.csv', out, tar, self.output_to)
-            if 'main_jobevent' in self.loaded:
-                out = main_jobevent_data(self.loaded['main_jobevent'], self.main_jobevent, self.output_from, self.output_to)
-                self.csv_to_tar('main_jobevent.csv', out, tar, self.output_to)
             # always
-            out = data_collection_status_data(self.selected, self.output_from, self.output_to)
-            self.csv_to_tar('data_collection_status.csv', out, tar, self.output_to)
-            self.json_to_tar('config.json', self.config_json, tar, self.output_to)
+            out = data_collection_status_data([table], since, until)
+            self.csv_to_tar('data_collection_status.csv', out, tar, until)
+            self.json_to_tar('config.json', self.config_json, tar, until)
+
+            # table
+            tar.add(file, arcname=f'./{table}.csv')
 
         if self.verbose:
             print(f'created {filename}')
 
+    def save_tarballs(self, table):
+        """creates and saves all tarballs for table"""
+        if table not in self.generated:
+            return
+
+        df = self.generated[table]
+        if df.empty:
+            return
+
+        if table == 'main_host':
+            # main_host - only generate csvs once, not filtered by since/until; use for each daily tarball
+            with tempfile.TemporaryDirectory(prefix=f'metrics-generator-save-{table}') as temp_dir:
+                file_list = self.save_csvs(table, temp_dir, df)
+
+                for since, until in daily_slicing(since=self.output_from, until=self.output_to):
+                    logger.info(f'{table} - {since}-{until}')
+                    for file in file_list:
+                        self.tarify(table, since, until, file)
+        else:
+            # generate csvs daily, filtered by since/until
+            for since, until in daily_slicing(since=self.output_from, until=self.output_to):
+                logger.info(f'{table} - {since}-{until}')
+                filtered_df = df[(df['created'] >= since) & (df['created'] <= until)]
+
+                if filtered_df.empty:
+                    continue
+
+                with tempfile.TemporaryDirectory(prefix=f'metrics-generator-save-{table}') as temp_dir:
+                    file_list = self.save_csvs(table, temp_dir, filtered_df)
+
+                    for file in file_list:
+                        self.tarify(table, since, until, file)
+
+    def save(self):
+        self.save_tarballs('job_host_summary')
+        self.save_tarballs('main_host')
+        self.save_tarballs('main_indirectmanagednodeaudit')
+        self.save_tarballs('main_jobevent')
+
     def csv_to_tar(self, filename, content, tar, timestamp):
-        return self.add_to_tar(filename, content.to_csv(index=False), tar, timestamp)
+        self.add_to_tar(filename, content.to_csv(index=False), tar, timestamp)
 
     def json_to_tar(self, filename, content, tar, timestamp):
-        return self.add_to_tar(filename, json.dumps(content), tar, timestamp)
+        self.add_to_tar(filename, json.dumps(content), tar, timestamp)
 
     def add_to_tar(self, filename, content, tar, timestamp):
         if self.verbose:
@@ -313,4 +405,5 @@ Environment vars:
 if __name__ == '__main__':
     main = Main()
     main.load()
+    main.process()
     main.save()

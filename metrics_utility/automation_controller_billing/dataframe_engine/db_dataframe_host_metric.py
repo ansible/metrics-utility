@@ -28,7 +28,7 @@ class DBDataframeHostMetric(Base):
                 continue
 
             # host_metric['install_uuid'] = data['config']['install_uuid']
-            host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'])
+            host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'], format='ISO8601')
 
             if host_metric_concat is None:
                 host_metric_concat = host_metric

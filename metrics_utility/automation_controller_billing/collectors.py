@@ -12,10 +12,7 @@ from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 
-from metrics_utility.automation_controller_billing.csv_file_splitter import CsvFileSplitter
-
-# TODO: enhance the CsvFileSplitter base class and use that
-from metrics_utility.base import register  # , CsvFileSplitter
+from metrics_utility.base import CsvFileSplitter, register
 from metrics_utility.metric_utils import get_optional_collectors
 
 
@@ -150,7 +147,7 @@ def _copy_table(table, query, path, prepend_query=None):
         else:
             _copy_table_aap_2_5_and_above(cursor, query, file)
 
-    return file.file_list()
+    return file.file_list(keep_empty=True)
 
 
 def _copy_table_aap_2_4_and_below(cursor, query, file):

@@ -51,9 +51,9 @@ class ReportRenewalGuidance(Base):
         # Fix host names in the event data, to take in account the variables
         host_metric_dataframe = self.dataframe[0]
         # Spreadsheet doesn't support timezones
-        host_metric_dataframe['first_automation'] = pd.to_datetime(host_metric_dataframe['first_automation']).dt.tz_localize(None)
-        host_metric_dataframe['last_automation'] = pd.to_datetime(host_metric_dataframe['last_automation']).dt.tz_localize(None)
-        host_metric_dataframe['last_deleted'] = pd.to_datetime(host_metric_dataframe['last_deleted']).dt.tz_localize(None)
+        host_metric_dataframe['first_automation'] = pd.to_datetime(host_metric_dataframe['first_automation'], format='ISO8601').dt.tz_localize(None)
+        host_metric_dataframe['last_automation'] = pd.to_datetime(host_metric_dataframe['last_automation'], format='ISO8601').dt.tz_localize(None)
+        host_metric_dataframe['last_deleted'] = pd.to_datetime(host_metric_dataframe['last_deleted'], format='ISO8601').dt.tz_localize(None)
 
         # Run the host deduplication first
         host_metric_dataframe = Dedup(host_metric_dataframe, extra_params=self.extra_params).run_deduplication()
@@ -129,7 +129,7 @@ class ReportRenewalGuidance(Base):
             # Ephemeral threshold, host's first automation must be older than ephemeral threshold
             # to be considered as ephemeral
             ephemeral_threshold = (
-                pd.to_datetime(datetime.datetime.now() - datetime.timedelta(days=ephemeral_days - 1))
+                pd.to_datetime(datetime.datetime.now() - datetime.timedelta(days=ephemeral_days - 1), format='ISO8601')
                 .replace(hour=0, minute=0, second=0, microsecond=0)
                 .tz_localize(None)
             )
@@ -157,8 +157,12 @@ class ReportRenewalGuidance(Base):
 
     def compute_ephemeral_intervals(self, host_metric_dataframe):
         # Convert input date strings to datetime objects
-        start_date = pd.to_datetime(self.extra_params['since_date']).tz_localize(None)
-        end_date = pd.to_datetime(self.extra_params['until_date']).tz_localize(None) + datetime.timedelta(days=1) - datetime.timedelta(microseconds=1)
+        start_date = pd.to_datetime(self.extra_params['since_date'], format='ISO8601').tz_localize(None)
+        end_date = (
+            pd.to_datetime(self.extra_params['until_date'], format='ISO8601').tz_localize(None)
+            + datetime.timedelta(days=1)
+            - datetime.timedelta(microseconds=1)
+        )
 
         ephemeral_days = parse_number_of_days(self.extra_params.get('opt_ephemeral'))
         ephemeral_usage_intervals = []

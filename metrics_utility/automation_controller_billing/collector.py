@@ -30,9 +30,9 @@ logger = logging.getLogger('metrics_utility.collector')
 
 class Collector(base.Collector):
     def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
-        from metrics_utility.automation_controller_billing import collectors
-
         if collector_module is None:
+            from metrics_utility.automation_controller_billing import collectors
+
             collector_module = collectors
 
         self.ship_target = ship_target

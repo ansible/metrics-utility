@@ -31,6 +31,7 @@ until pg_isready -h localhost; do
   tries=`expr "$tries" - 1`
 done
 
+/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py build_report --since=12months --ephemeral=1month --force "$@"
 
 podman stop "$NAME"

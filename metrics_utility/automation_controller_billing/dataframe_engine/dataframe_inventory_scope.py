@@ -48,7 +48,7 @@ class DataframeInventoryScope(Base):
                     # what is in ansible_host_variable should be the actual host we count
                     billing_data['host_name'] = billing_data['ansible_host_variable']
 
-                billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation']).dt.tz_localize(None)
+                billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
                 ################################
                 # Do the aggregation

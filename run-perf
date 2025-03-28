@@ -1,0 +1,118 @@
+#!/bin/sh
+set -e
+cd "`dirname "$0"`"
+
+## cleanup
+rm -rf metrics_utility/test/test_data/data/2026/
+
+
+## generator
+echo gen 10,000
+export MAIN_JOBHOSTSUMMARY_SIZE=10000
+export MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE=2000
+export MAIN_HOST_SIZE=10000
+export MAIN_HOST_UNIQUE_SIZE=2000
+export MAIN_INDIRECT_SIZE=10000
+export MAIN_INDIRECT_UNIQUE_SIZE=2000
+export MAIN_JOBEVENT_SIZE=10000
+export MAIN_JOBEVENT_UNIQUE_SIZE=2000
+
+export OUTPUT_DATE_FROM=2026-01-01
+export OUTPUT_DATE_TO=2026-02-01
+
+/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+uv run ./generator.py
+
+echo gen 100,000
+export MAIN_JOBHOSTSUMMARY_SIZE=100000
+export MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE=20000
+export MAIN_HOST_SIZE=100000
+export MAIN_HOST_UNIQUE_SIZE=20000
+export MAIN_INDIRECT_SIZE=100000
+export MAIN_INDIRECT_UNIQUE_SIZE=20000
+export MAIN_JOBEVENT_SIZE=100000
+export MAIN_JOBEVENT_UNIQUE_SIZE=20000
+
+export OUTPUT_DATE_FROM=2026-02-01
+export OUTPUT_DATE_TO=2026-03-01
+
+/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+uv run ./generator.py
+
+# ~5 minutes
+echo gen 1,000,000
+export MAIN_JOBHOSTSUMMARY_SIZE=1000000
+export MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE=200000
+export MAIN_HOST_SIZE=1000000
+export MAIN_HOST_UNIQUE_SIZE=200000
+export MAIN_INDIRECT_SIZE=1000000
+export MAIN_INDIRECT_UNIQUE_SIZE=200000
+export MAIN_JOBEVENT_SIZE=1000000
+export MAIN_JOBEVENT_UNIQUE_SIZE=200000
+
+export OUTPUT_DATE_FROM=2026-03-01
+export OUTPUT_DATE_TO=2026-04-01
+
+/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+uv run ./generator.py
+
+## ~50 minutes
+#echo gen 10,000,000
+#export MAIN_JOBHOSTSUMMARY_SIZE=10000000
+#export MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE=2000000
+#export MAIN_HOST_SIZE=10000000
+#export MAIN_HOST_UNIQUE_SIZE=2000000
+#export MAIN_INDIRECT_SIZE=10000000
+#export MAIN_INDIRECT_UNIQUE_SIZE=2000000
+#export MAIN_JOBEVENT_SIZE=10000000
+#export MAIN_JOBEVENT_UNIQUE_SIZE=2000000
+#
+#export OUTPUT_DATE_FROM=2026-04-01
+#export OUTPUT_DATE_TO=2026-05-01
+#
+#/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+#uv run ./generator.py
+
+
+## build_report
+export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
+export METRICS_UTILITY_SHIP_PATH="./metrics_utility/test/test_data/"
+export METRICS_UTILITY_SHIP_TARGET="directory"
+
+run_default_sheets() {
+  unset METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
+  export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
+
+  echo default sheets
+  /usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+  uv run ./manage.py build_report --force "$@"
+}
+
+run_all_sheets() {
+  export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS=ccsp_summary,indirectly_managed_nodes,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles
+
+  echo all sheets
+  /usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+  uv run ./manage.py build_report --force "$@"
+}
+
+echo build 10,000
+run_default_sheets --month=2026-01
+run_all_sheets --month=2026-01
+
+echo build 100,000
+run_default_sheets --month=2026-02
+run_all_sheets --month=2026-02
+
+echo build 1,000,000
+run_default_sheets --month=2026-03
+run_all_sheets --month=2026-03
+
+#echo build 10,000,000
+#run_default_sheets --month=2026-04
+#run_all_sheets --month=2026-04
+
+
+## checkup
+set -x
+ls -l metrics_utility/test/test_data/reports/2026/*

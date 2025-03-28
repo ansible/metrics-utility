@@ -85,10 +85,10 @@ class DataframeJobhostSummaryUsage(Base):
                 # Load the events array safely
                 billing_data['events'] = billing_data['events'].apply(parse_json_array)
 
-                billing_data['created'] = pd.to_datetime(billing_data['created']).dt.tz_localize(None)
+                billing_data['created'] = pd.to_datetime(billing_data['created'], format='ISO8601').dt.tz_localize(None)
 
                 if 'job_created' in billing_data:
-                    billing_data['job_created'] = pd.to_datetime(billing_data['job_created']).dt.tz_localize(None)
+                    billing_data['job_created'] = pd.to_datetime(billing_data['job_created'], format='ISO8601').dt.tz_localize(None)
                 else:
                     billing_data['job_created'] = pd.NaT
 

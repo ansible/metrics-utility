@@ -54,6 +54,7 @@ class Collection:
         try:
             # More collections with the same key (and different since/until)
             # have the same file names => overwriting! [error]
+            # This runs a collector function registered with `@register`
             result = self.fnc_collecting(
                 since=self.since,
                 until=self.until,

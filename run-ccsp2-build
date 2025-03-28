@@ -19,6 +19,7 @@ export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 
+/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py build_report --month=2024-04 --force "$@"
 
 set -x

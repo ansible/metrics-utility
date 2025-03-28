@@ -18,12 +18,14 @@ class CsvFileSplitter(io.StringIO):
         self.currentfile = None
         self.header = None
         self.counter = 0
+
         self.cycle_file()
 
     def cycle_file(self):
         """Closes current file, opens new one and writes CSV header"""
         if self.currentfile:
             self.currentfile.close()
+
         self.counter = 0
         fname = '{}_split{}'.format(self.filespec, len(self.files))
         self.currentfile = open(fname, 'w', encoding='utf-8')
@@ -31,19 +33,22 @@ class CsvFileSplitter(io.StringIO):
         if self.header:
             self.counter += self.currentfile.write('{}\n'.format(self.header))
 
-    def file_list(self):
+    def file_list(self, keep_empty=False):
         """Returns list of written files"""
         self.currentfile.close()
+
         # Check for an empty dump
-        if len(self.header) + 1 == self.counter:
+        if not keep_empty and (len(self.header) + 1 == self.counter):
             os.remove(self.files[-1])
             self.files = self.files[:-1]
+
         # If we only have one file, remove the suffix
         if len(self.files) == 1:
             filename = self.files.pop()
             new_filename = filename.replace('_split0', '')
             os.rename(filename, new_filename)
             self.files.append(new_filename)
+
         return self.files
 
     def write(self, s):

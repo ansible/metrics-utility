@@ -1,7 +1,11 @@
+import json
+import logging
 import os
 import tarfile
 
 import pandas as pd
+
+from metrics_utility.debug_utils import print_debug
 
 
 CSV_SHEETS = {
@@ -37,6 +41,18 @@ CSV_SHEETS = {
 
 
 class Base:
+    LOG_PREFIX = '[ExtractorBase]'
+
+    def __init__(self, logger=logging.getLogger(__name__)):
+        self.logger = logger
+
+    def load_config(self, file_path):
+        try:
+            with open(file_path) as f:
+                return json.loads(f.read())
+        except FileNotFoundError:
+            self.logger.warn(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
+
     def process_tarballs(self, path, temp_dir):
         _safe_extract(path, temp_dir)
         config = self.load_config(os.path.join(temp_dir, 'config.json'))
@@ -101,11 +117,14 @@ def _write_member(member_path, file_obj, max_size, total_extracted_size):
             data = file_obj.read(chunk_size)
             if not data:
                 break
+
             total_extracted_size += len(data)
             if total_extracted_size > max_size:
                 # Stop if we exceed total extraction size
                 raise ValueError('Extraction aborted: Maximum total size exceeded.')
+
             out_f.write(data)
+
     return total_extracted_size
 
 
@@ -164,4 +183,4 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
             extracted_files += 1
 
-    print(f'Extraction complete. Files extracted: {extracted_files}, Total size: {total_extracted_size} bytes.')
+    print_debug(f'Extraction complete. Files extracted: {extracted_files}, Total size: {total_extracted_size} bytes.')
