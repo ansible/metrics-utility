@@ -9,6 +9,9 @@ import pytest
 from metrics_utility import prepare
 
 
+prepare()
+
+
 @contextmanager
 def temporary_env(new_env):
     """Temporarily update os.environ with new_env."""
@@ -52,7 +55,6 @@ def run_gather_ext(env, args):
 
 
 def run_build_int(env, options):
-    prepare()
     from metrics_utility.management.commands.build_report import Command
 
     with temporary_env(env):
@@ -60,7 +62,6 @@ def run_build_int(env, options):
 
 
 def run_gather_int(env, options):
-    prepare()
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
     with temporary_env(env):
