@@ -1,4 +1,4 @@
-from insights_analytics_collector import Collector
+from metrics_utility.insights_analytics_collector import Collector
 from tests.classes.package import Package
 
 

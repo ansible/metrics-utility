@@ -1,6 +1,6 @@
 import os
 
-import insights_analytics_collector as base
+import metrics_utility.insights_analytics_collector as base
 
 from django.conf import settings
 

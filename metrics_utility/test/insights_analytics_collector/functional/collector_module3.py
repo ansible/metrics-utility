@@ -1,6 +1,6 @@
 from tests.functional.helpers import simple_csv, trivial_slicing
 
-from insights_analytics_collector import register
+from metrics_utility.insights_analytics_collector import register
 
 
 @register('config', '1.0', description='CONFIG', config=True)
