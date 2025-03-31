@@ -2,7 +2,7 @@ import os
 
 from django.utils.timezone import now, timedelta
 
-from metrics_utility.insights_analytics_collector import CsvFileSplitter
+from metrics_utility.base import CsvFileSplitter
 
 
 TIMESTAMP_CSV_LINE_LENGTH = 40

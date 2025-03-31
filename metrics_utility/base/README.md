@@ -90,7 +90,7 @@ It should contain functions returning data either in `dict` format or list of CS
 
 Function is registered by `@register` decorator:
 ```python
-from metrics_utility.insights_analytics_collector import register
+from metrics_utility.base import register
 
 @register('json_data', '1.0', format='json', description="Data description")
 def json_data(**kwargs):

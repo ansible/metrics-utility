@@ -5,7 +5,7 @@ from base.functional.helpers import (
     timestamp_csv,
 )
 
-from metrics_utility.insights_analytics_collector import register
+from metrics_utility.base import register
 
 
 @register('config', '1.0', description='CONFIG', config=True)

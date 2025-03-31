@@ -1,7 +1,7 @@
 import os
 import shutil
 
-import metrics_utility.insights_analytics_collector as base
+import metrics_utility.base as base
 
 from django.conf import settings
 

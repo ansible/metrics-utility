@@ -13,7 +13,7 @@ from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 
 # TODO: enhance the CsvFIleSplitter base class and use that
-from metrics_utility.insights_analytics_collector import register  # , CsvFileSplitter
+from metrics_utility.base import register  # , CsvFileSplitter
 
 from metrics_utility.automation_controller_billing.csv_file_splitter import CsvFileSplitter
 from metrics_utility.metric_utils import get_optional_collectors

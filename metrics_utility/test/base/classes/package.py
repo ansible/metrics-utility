@@ -1,4 +1,4 @@
-from metrics_utility.insights_analytics_collector import Package as InsightsAnalyticsPackage
+from metrics_utility.base import Package as InsightsAnalyticsPackage
 
 
 class Package(InsightsAnalyticsPackage):

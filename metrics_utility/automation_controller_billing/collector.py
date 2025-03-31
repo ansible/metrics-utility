@@ -2,7 +2,7 @@ import contextlib
 import json
 import logging
 
-import metrics_utility.insights_analytics_collector as base
+import metrics_utility.base as base
 
 from awx.main.utils import datetime_hook
 from django.conf import settings

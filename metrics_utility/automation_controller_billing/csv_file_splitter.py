@@ -1,6 +1,6 @@
 import os
 
-from metrics_utility.insights_analytics_collector import CsvFileSplitter as BaseCsvFileSplitter
+from metrics_utility.base import CsvFileSplitter as BaseCsvFileSplitter
 
 
 class CsvFileSplitter(BaseCsvFileSplitter):
