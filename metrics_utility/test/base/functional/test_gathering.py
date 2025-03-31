@@ -3,18 +3,18 @@ import logging
 import tarfile
 
 import pytest
-import tests.functional.collector_module
-import tests.functional.collector_module2
-import tests.functional.collector_module3
+import base.functional.collector_module
+import base.functional.collector_module2
+import base.functional.collector_module3
 
-from tests.classes.analytics_collector import AnalyticsCollector
-from tests.functional.helpers import assert_common_files, decode_csv_line
+from base.classes.analytics_collector import AnalyticsCollector
+from base.functional.helpers import assert_common_files, decode_csv_line
 
 
 @pytest.fixture
 def collector(mocker):
     collector = AnalyticsCollector(
-        collector_module=tests.functional.collector_module,
+        collector_module=base.functional.collector_module,
         collection_type=AnalyticsCollector.DRY_RUN,
     )
     mocker.patch.object(collector, '_is_valid_license', return_value=True)
@@ -125,7 +125,7 @@ def test_one_csv_collection_splitted_by_size(collector):
 
 
 def test_multiple_collections_multiple_tarballs(mocker, collector):
-    mocker.patch('tests.classes.package.Package.MAX_DATA_SIZE', 1000)
+    mocker.patch('base.classes.package.Package.MAX_DATA_SIZE', 1000)
 
     tgz_files = collector.gather(subset=['config', 'big_table_2', 'csv_collection_1', 'csv_collection_2'])
 
@@ -159,7 +159,7 @@ def test_multiple_collections_and_distributions(collector):
     - CSVs with no slicing start at index 0
     - CSVs with slicing start after index next to previous slice
     """
-    collector.collector_module = tests.functional.collector_module3
+    collector.collector_module = base.functional.collector_module3
     tgz_files = collector.gather()
 
     assert len(tgz_files) == 13
@@ -220,7 +220,7 @@ def test_multiple_collections_and_distributions(collector):
 
 
 def test_manifest_and_status(collector):
-    collector.collector_module = tests.functional.collector_module2
+    collector.collector_module = base.functional.collector_module2
     tgz_files = collector.gather()
 
     assert len(tgz_files) == 1

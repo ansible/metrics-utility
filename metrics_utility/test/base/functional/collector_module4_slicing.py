@@ -1,4 +1,4 @@
-from tests.functional.helpers import (
+from base.functional.helpers import (
     TIMESTAMP_CSV_LINE_LENGTH,
     full_sync_slicing,
     one_day_slicing,

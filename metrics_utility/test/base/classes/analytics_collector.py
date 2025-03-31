@@ -1,5 +1,5 @@
 from metrics_utility.insights_analytics_collector import Collector
-from tests.classes.package import Package
+from base.classes.package import Package
 
 
 class AnalyticsCollector(Collector):

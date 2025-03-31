@@ -3,11 +3,11 @@ import tarfile
 
 import pytest
 import pytz
-import tests.functional.collector_module4_slicing
+import base.functional.collector_module4_slicing
 
 from django.utils.timezone import now, timedelta
-from tests.classes.analytics_collector import AnalyticsCollector
-from tests.functional.helpers import assert_common_files, decode_csv_line
+from base.classes.analytics_collector import AnalyticsCollector
+from base.functional.helpers import assert_common_files, decode_csv_line
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def collector(mocker):
     It's designed to use non-trivial slicing functions
     """
     collector = AnalyticsCollector(
-        collector_module=tests.functional.collector_module4_slicing,
+        collector_module=base.functional.collector_module4_slicing,
         collection_type=AnalyticsCollector.DRY_RUN,
     )
     mocker.patch.object(collector, '_is_valid_license', return_value=True)

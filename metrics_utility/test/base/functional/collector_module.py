@@ -1,4 +1,4 @@
-from tests.functional.helpers import simple_csv, trivial_slicing
+from base.functional.helpers import simple_csv, trivial_slicing
 
 from metrics_utility.insights_analytics_collector import register
 
