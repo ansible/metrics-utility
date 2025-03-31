@@ -3,9 +3,11 @@ import tarfile
 
 import pytest
 import pytz
-import base.functional.collector_module4_slicing
 
 from django.utils.timezone import now, timedelta
+
+import base.functional.collector_module4_slicing
+
 from base.classes.analytics_collector import AnalyticsCollector
 from base.functional.helpers import assert_common_files, decode_csv_line
 

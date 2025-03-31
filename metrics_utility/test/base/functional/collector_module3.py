@@ -1,5 +1,4 @@
 from base.functional.helpers import simple_csv, trivial_slicing
-
 from metrics_utility.base import register
 
 

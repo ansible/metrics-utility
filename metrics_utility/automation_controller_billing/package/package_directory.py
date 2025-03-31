@@ -1,9 +1,9 @@
 import os
 import shutil
 
-import metrics_utility.base as base
-
 from django.conf import settings
+
+import metrics_utility.base as base
 
 
 class PackageDirectory(base.Package):

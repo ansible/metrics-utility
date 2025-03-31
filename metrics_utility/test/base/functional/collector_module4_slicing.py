@@ -4,7 +4,6 @@ from base.functional.helpers import (
     one_day_slicing,
     timestamp_csv,
 )
-
 from metrics_utility.base import register
 
 

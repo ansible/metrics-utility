@@ -2,12 +2,13 @@ import contextlib
 import json
 import logging
 
-import metrics_utility.base as base
-
 from awx.main.utils import datetime_hook
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
+
+import metrics_utility.base as base
+
 
 # from awx.conf.license import get_license
 # from awx.main.models import Job

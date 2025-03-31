@@ -1,5 +1,6 @@
-from metrics_utility.base import Collector
 from base.classes.package import Package
+
+from metrics_utility.base import Collector
 
 
 class AnalyticsCollector(Collector):

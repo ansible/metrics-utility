@@ -1,11 +1,12 @@
 import json
 import os
 
-import metrics_utility.base as base
 import requests
 
 from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
+
+import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
 

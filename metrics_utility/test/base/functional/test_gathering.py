@@ -3,6 +3,7 @@ import logging
 import tarfile
 
 import pytest
+
 import base.functional.collector_module
 import base.functional.collector_module2
 import base.functional.collector_module3
