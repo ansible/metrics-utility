@@ -46,7 +46,7 @@ class PackageCRC(base.Package):
         return self.SHIPPING_AUTH_SERVICE_ACCOUNT
 
     def is_shipping_configured(self):
-        # TODO: move to insights-analytics-collector
+        # TODO: move to base
         ret = super()
         if ret is False:
             return False
@@ -70,7 +70,7 @@ class PackageCRC(base.Package):
         return True
 
     def _send_data(self, url, files, session):
-        # TODO: move to insights-analytics-collector
+        # TODO: move to base
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             sso_url = self.get_sso_url()
             headers = {'Content-Type': 'application/x-www-form-urlencoded'}

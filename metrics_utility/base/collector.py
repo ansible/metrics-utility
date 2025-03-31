@@ -53,7 +53,7 @@ class Collector:
         self.packages = {}
 
         self.last_gathered_entries = None
-        self.logger = logger or logging.getLogger('insights-analytics-collector.collector')
+        self.logger = logger or logging.getLogger('metrics_utility.base.collector')
         self.log_level = logging.ERROR if self.collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
 
         self.tmp_dir = None
