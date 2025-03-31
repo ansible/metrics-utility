@@ -2,7 +2,7 @@ from insights_analytics_collector import Package as InsightsAnalyticsPackage
 
 
 class Package(InsightsAnalyticsPackage):
-    PAYLOAD_CONTENT_TYPE = "application/vnd.redhat.test.test_payload+tgz"
+    PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.test.test_payload+tgz'
     MAX_DATA_SIZE = 1000
 
     def _tarname_base(self):
@@ -13,13 +13,13 @@ class Package(InsightsAnalyticsPackage):
         return None
 
     def _get_rh_user(self):
-        return ""
+        return ''
 
     def _get_rh_password(self):
-        return ""
+        return ''
 
     def _get_x_rh_identity(self):
-        return ""
+        return ''
 
     def _get_http_request_headers(self):
         return {}

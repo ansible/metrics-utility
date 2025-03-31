@@ -2,10 +2,10 @@ def register(
     key,
     version,
     description=None,
-    format="json",
+    format='json',
     config=False,
     fnc_slicing=None,
-    shipping_group="default",
+    shipping_group='default',
     full_sync_interval_days=None,
 ):
     """

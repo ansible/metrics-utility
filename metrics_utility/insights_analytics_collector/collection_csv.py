@@ -23,10 +23,8 @@ class CollectionCSV(Collection):
 
     def add_to_tar(self, tar):
         """Adds CSV file to the tar(tgz) archive"""
-        self.logger.debug(
-            f"CollectionCSV._add_to_tar: | {self.key}.csv | Size: {self.data_size()}"
-        )
-        tar.add(self.target(), arcname=f"./{self.filename}")
+        self.logger.debug(f'CollectionCSV._add_to_tar: | {self.key}.csv | Size: {self.data_size()}')
+        tar.add(self.target(), arcname=f'./{self.filename}')
 
     def cleanup(self):
         """Removes CSV files from /tmp"""

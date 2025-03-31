@@ -10,7 +10,7 @@ class CollectionManifest(CollectionJSON):
         self.since = collector.gather_since
         self.until = collector.gather_until
 
-    @register("manifest", "1.0", format="json", description="Manifest file")
+    @register('manifest', '1.0', format='json', description='Manifest file')
     def collecting(self, **kwargs):
         """Collecting function is skipped"""
         return self.data

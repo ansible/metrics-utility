@@ -5,12 +5,13 @@ from .csv_file_splitter import CsvFileSplitter
 from .decorators import register, slicing
 from .package import Package
 
+
 __all__ = [
-    "Collector",
-    "Package",
-    "CsvFileSplitter",
-    "CollectionCSV",
-    "CollectionJSON",
-    "register",
-    "slicing",
+    'Collector',
+    'Package',
+    'CsvFileSplitter',
+    'CollectionCSV',
+    'CollectionJSON',
+    'register',
+    'slicing',
 ]

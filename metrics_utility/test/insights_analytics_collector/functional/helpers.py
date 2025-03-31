@@ -1,7 +1,9 @@
 import os
 
 from django.utils.timezone import now, timedelta
+
 from insights_analytics_collector import CsvFileSplitter
+
 
 TIMESTAMP_CSV_LINE_LENGTH = 40
 
@@ -53,32 +55,32 @@ def csv_generator(full_path, file_name, files_cnt, max_data_size, header, line):
 
 def simple_csv(full_path, file_name, files_cnt, max_data_size):
     """CSVs with line length 10 bytes"""
-    header = "Col1,Col2\n"  # 10 chars
-    line = "1234,6789\n"  # 10 chars
+    header = 'Col1,Col2\n'  # 10 chars
+    line = '1234,6789\n'  # 10 chars
     return csv_generator(full_path, file_name, files_cnt, max_data_size, header, line)
 
 
 def timestamp_csv(full_path, file_name, files_cnt, max_data_size, since, until):
     """CSVs with line length 40 bytes"""
-    header = "since______________,until______________\n"  # 40 chars
+    header = 'since______________,until______________\n'  # 40 chars
     line = [
-        since.strftime("%Y,%m,%d,%H,00,00"),  # 19 chars
-        until.strftime("%Y,%m,%d,%H,00,00"),
+        since.strftime('%Y,%m,%d,%H,00,00'),  # 19 chars
+        until.strftime('%Y,%m,%d,%H,00,00'),
     ]  # 19 chars
-    line = f"{','.join(line)}\n"  # +2 = 40 chars
+    line = f'{",".join(line)}\n'  # +2 = 40 chars
 
     return csv_generator(full_path, file_name, files_cnt, max_data_size, header, line)
 
 
 def get_file_path(path, table):
-    return os.path.join(path, table + "_table.csv")
+    return os.path.join(path, table + '_table.csv')
 
 
 def decode_csv_line(line):
-    return line.decode("utf-8").replace("\r", "").replace("\n", "").split(",")
+    return line.decode('utf-8').replace('\r', '').replace('\n', '').split(',')
 
 
 def assert_common_files(files):
-    assert "./config.json" in files.keys()
-    assert "./manifest.json" in files.keys()
-    assert "./data_collection_status.csv" in files.keys()
+    assert './config.json' in files.keys()
+    assert './manifest.json' in files.keys()
+    assert './data_collection_status.csv' in files.keys()

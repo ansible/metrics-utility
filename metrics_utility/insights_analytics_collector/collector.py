@@ -6,6 +6,7 @@ import os
 import pathlib
 import shutil
 import tempfile
+
 from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
@@ -40,13 +41,11 @@ class Collector:
     Data are gathered maximally 4 weeks ago and can be set to less (see gather(since, until,..))
     """
 
-    MANUAL_COLLECTION = "manual"
-    DRY_RUN = "dry-run"
-    SCHEDULED_COLLECTION = "scheduled"
+    MANUAL_COLLECTION = 'manual'
+    DRY_RUN = 'dry-run'
+    SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(
-        self, collection_type=DRY_RUN, collector_module=None, logger=None, licensed=True
-    ):
+    def __init__(self, collection_type=DRY_RUN, collector_module=None, logger=None, licensed=True):
         self.licensed = licensed
         self.collector_module = collector_module
         self.collection_type = collection_type
@@ -54,14 +53,8 @@ class Collector:
         self.packages = {}
 
         self.last_gathered_entries = None
-        self.logger = logger or logging.getLogger(
-            "insights-analytics-collector.collector"
-        )
-        self.log_level = (
-            logging.ERROR
-            if self.collection_type != self.SCHEDULED_COLLECTION
-            else logging.DEBUG
-        )
+        self.logger = logger or logging.getLogger('insights-analytics-collector.collector')
+        self.log_level = logging.ERROR if self.collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
 
         self.tmp_dir = None
         self.gather_dir = None
@@ -79,12 +72,12 @@ class Collector:
         """
         return {
             func.__insights_analytics_key__: {
-                "name": func.__insights_analytics_key__,
-                "version": func.__insights_analytics_version__,
-                "description": func.__insights_analytics_description__ or "",
+                'name': func.__insights_analytics_key__,
+                'version': func.__insights_analytics_version__,
+                'description': func.__insights_analytics_description__ or '',
             }
             for name, func in inspect.getmembers(module)
-            if inspect.isfunction(func) and hasattr(func, "__insights_analytics_key__")
+            if inspect.isfunction(func) and hasattr(func, '__insights_analytics_key__')
         }
 
     #
@@ -96,7 +89,7 @@ class Collector:
         :return: bool
         """
 
-        return self.collections.get("config") is not None
+        return self.collections.get('config') is not None
 
     @staticmethod
     @abstractmethod
@@ -121,11 +114,9 @@ class Collector:
         if not self.is_enabled():
             return None
 
-        with self._pg_advisory_lock("gather_analytics_lock", wait=False) as acquired:
+        with self._pg_advisory_lock('gather_analytics_lock', wait=False) as acquired:
             if not acquired:
-                self.logger.log(
-                    self.log_level, "Not gathering analytics, another task holds lock"
-                )
+                self.logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
                 return None
 
             self._gather_initialize(dest, subset, since, until)
@@ -151,9 +142,7 @@ class Collector:
     def is_enabled(self):
         """Checks for license and shipping data (like credentials)"""
         if not self._is_valid_license() and self.licensed:
-            self.logger.log(
-                self.log_level, "Invalid License provided, or No License Provided"
-            )
+            self.logger.log(self.log_level, 'Invalid License provided, or No License Provided')
             return False
 
         if self.is_shipping_enabled():
@@ -171,9 +160,7 @@ class Collector:
     def all_tar_paths(self):
         tar_paths = []
         for _, packages in self.packages.items():
-            new_paths = [
-                package.tar_path for package in packages if package.tar_path is not None
-            ]
+            new_paths = [package.tar_path for package in packages if package.tar_path is not None]
             tar_paths += new_paths
         return tar_paths or []
 
@@ -190,14 +177,10 @@ class Collector:
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
             until = _now
-            self.logger.warning(
-                f"End of the collection interval is in the future, setting to {_now}."
-            )
+            self.logger.warning(f'End of the collection interval is in the future, setting to {_now}.')
         if since is not None and since > _now:
             since = _now
-            self.logger.warning(
-                f"Start of the collection interval is in the future, setting to {_now}."
-            )
+            self.logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
 
         # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
         # set it to `now`, but only if that isn't more than 4 weeks ahead of a passed-in
@@ -206,18 +189,14 @@ class Collector:
             if until is not None:
                 if until > since + timedelta(weeks=4):
                     until = since + timedelta(weeks=4)
-                    self.logger.warning(
-                        f"End of the collection interval is greater than 4 weeks from start, setting end to {until}."
-                    )
+                    self.logger.warning(f'End of the collection interval is greater than 4 weeks from start, setting end to {until}.')
             else:  # until is None
                 until = min(since + timedelta(weeks=4), _now)
         elif until is None:
             until = _now
 
         if since and since >= until:
-            self.logger.warning(
-                "Start of the collection interval is later than the end, ignoring request."
-            )
+            self.logger.warning('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
         # The ultimate beginning of the interval needs to be compared to 4 weeks prior to
@@ -227,16 +206,12 @@ class Collector:
         horizon = until - timedelta(weeks=4)
         if since is not None and since < horizon:
             since = horizon
-            self.logger.warning(
-                f"Start of the collection interval is more than 4 weeks prior to {until}, setting to {horizon}."
-            )
+            self.logger.warning(f'Start of the collection interval is more than 4 weeks prior to {until}, setting to {horizon}.')
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            self.logger.warning(
-                f"Last analytics run was more than 4 weeks prior to {until}, using {horizon} instead."
-            )
+            self.logger.warning(f'Last analytics run was more than 4 weeks prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until
@@ -254,11 +229,7 @@ class Collector:
         available_package = None
 
         for package in self.packages.get(group) or []:
-            if (
-                package.has_free_space(requested_size)
-                and not package.is_key_used(key)
-                and not package.processed
-            ):
+            if package.has_free_space(requested_size) and not package.is_key_used(key) and not package.processed:
                 available_package = package
                 break
 
@@ -270,7 +241,7 @@ class Collector:
         return available_package
 
     def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        self.logger.debug(f"Last analytics run was: {self._last_gathering()}")
+        self.logger.debug(f'Last analytics run was: {self._last_gathering()}')
 
         self._init_tmp_dir(tmp_root_dir)
 
@@ -290,7 +261,7 @@ class Collector:
             self.logger.log(self.log_level, "'config' collector data is missing")
             return False
         else:
-            self.collections["config"].gather(self._package_class().max_data_size())
+            self.collections['config'].gather(self._package_class().max_data_size())
             return True
 
     def _gather_json_collections(self):
@@ -322,9 +293,7 @@ class Collector:
 
     def _add_collection_to_package(self, collection):
         """Adds collection to package and ships it if collection has slicing"""
-        package = self._find_available_package(
-            collection.shipping_group, collection.key, collection.data_size()
-        )
+        package = self._find_available_package(collection.shipping_group, collection.key, collection.data_size())
         package.add_collection(collection)
         if collection.ship_immediately():
             self._process_package(package)
@@ -344,13 +313,13 @@ class Collector:
 
             try:
                 if wait:
-                    cursor.execute("SELECT pg_advisory_lock(%s);", (resource_key,))
+                    cursor.execute('SELECT pg_advisory_lock(%s);', (resource_key,))
                 else:
-                    cursor.execute("SELECT pg_try_advisory_lock(%s);", (resource_key,))
+                    cursor.execute('SELECT pg_try_advisory_lock(%s);', (resource_key,))
                 acquired = cursor.fetchall()[0][0]
                 yield acquired
             finally:
-                cursor.execute("SELECT pg_advisory_unlock(%s);", (resource_key,))
+                cursor.execute('SELECT pg_advisory_unlock(%s);', (resource_key,))
                 cursor.close()
 
     def _process_packages(self):
@@ -383,17 +352,13 @@ class Collector:
 
     def _gather_cleanup(self):
         """Deleting temp files"""
-        shutil.rmtree(
-            self.tmp_dir, ignore_errors=True
-        )  # clean up individual artifact files
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)  # clean up individual artifact files
         if not self.is_dry_run():
             self.delete_tarballs()
 
     def _init_tmp_dir(self, tmp_root_dir=None):
-        self.tmp_dir = pathlib.Path(
-            tmp_root_dir or tempfile.mkdtemp(prefix="awx_analytics-")
-        )
-        self.gather_dir = self.tmp_dir.joinpath("stage")
+        self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
+        self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
 
     @abstractmethod
@@ -428,7 +393,7 @@ class Collector:
         pass
 
     def _update_last_gathered_entries(self):
-        last_gathered_updates = {"keys": {}, "locked": set()}
+        last_gathered_updates = {'keys': {}, 'locked': set()}
 
         for _, packages in self.packages.items():
             for package in packages:
@@ -436,10 +401,10 @@ class Collector:
 
         # Locked key means that gathering wasn't successful at least once.
         # Full sync timestamp can't be updated (if present)
-        for unsuccessful_key in last_gathered_updates["locked"]:
-            last_gathered_updates.pop(f"{unsuccessful_key}_full", None)
+        for unsuccessful_key in last_gathered_updates['locked']:
+            last_gathered_updates.pop(f'{unsuccessful_key}_full', None)
 
-        self.last_gathered_entries.update(last_gathered_updates["keys"])
+        self.last_gathered_entries.update(last_gathered_updates['keys'])
 
         self._save_last_gathered_entries(self.last_gathered_entries)
 
@@ -473,8 +438,8 @@ class Collector:
         for name, fnc in inspect.getmembers(self.collector_module):
             if (
                 inspect.isfunction(fnc)  # noqa
-                and hasattr(fnc, "__insights_analytics_key__")  # noqa
-                and hasattr(fnc, "__insights_analytics_type__")  # noqa
+                and hasattr(fnc, '__insights_analytics_key__')  # noqa
+                and hasattr(fnc, '__insights_analytics_type__')  # noqa
                 and (not subset or name in subset)  # noqa
             ):
                 # Create collection by type
@@ -493,13 +458,13 @@ class Collector:
     def _create_collection(self, fnc_collecting):
         data_type = fnc_collecting.__insights_analytics_type__
         collection = None
-        if data_type == "json":
+        if data_type == 'json':
             collection = self._collection_json_class()(self, fnc_collecting)
-        elif data_type == "csv":
+        elif data_type == 'csv':
             collection = self._collection_csv_class()(self, fnc_collecting)
 
         if collection is None:
-            raise RuntimeError(f"Collection of type {data_type} not implemented")
+            raise RuntimeError(f'Collection of type {data_type} not implemented')
 
         return collection
 

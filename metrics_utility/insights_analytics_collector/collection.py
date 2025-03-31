@@ -8,9 +8,9 @@ class Collection:
     Functions decorated with @register are wrapped by kind of this object.
     """
 
-    COLLECTION_TYPE_CONFIG = "config"
-    COLLECTION_TYPE_JSON = "json"
-    COLLECTION_TYPE_CSV = "csv"
+    COLLECTION_TYPE_CONFIG = 'config'
+    COLLECTION_TYPE_JSON = 'json'
+    COLLECTION_TYPE_CSV = 'csv'
 
     def __init__(self, collector, fnc_collecting):
         self.collector = collector
@@ -19,19 +19,17 @@ class Collection:
         self.fnc_slicing = fnc_collecting.__insights_analytics_fnc_slicing__
         self.is_config = fnc_collecting.__insights_analytics_config__
 
-        self.description = fnc_collecting.__insights_analytics_description__ or ""
+        self.description = fnc_collecting.__insights_analytics_description__ or ''
         self.key = fnc_collecting.__insights_analytics_key__
         self.shipping_group = fnc_collecting.__insights_analytics_shipping_group__
         self.version = fnc_collecting.__insights_analytics_version__
 
         self.data_type = fnc_collecting.__insights_analytics_type__
-        self.filename = f"{self.key}.{self.data_type}"
+        self.filename = f'{self.key}.{self.data_type}'
         # either since/until or full sync(if enabled)
         self.since = None  # set by Collector._create_collections()
         self.until = None  # set by Collector._create_collections()
-        self.full_sync_enabled = self._is_full_sync_enabled(
-            fnc_collecting.__insights_analytics_full_sync_interval_days__
-        )
+        self.full_sync_enabled = self._is_full_sync_enabled(fnc_collecting.__insights_analytics_full_sync_interval_days__)
 
         self.gathering_started_at = None
         self.gathering_finished_at = None
@@ -67,7 +65,7 @@ class Collection:
 
             self.gathering_successful = True
         except Exception as e:
-            self.logger.exception(f"Could not generate metric {self.filename}: {e}")
+            self.logger.exception(f'Could not generate metric {self.filename}: {e}')
             self.gathering_successful = False
         finally:
             self._set_gathering_finished()
@@ -89,9 +87,7 @@ class Collection:
             if self.full_sync_enabled:
                 slices = self.fnc_slicing(self.key, last_gather, full_sync_enabled=True)
             else:
-                slices = self.fnc_slicing(
-                    self.key, last_gather, since=since, until=until
-                )
+                slices = self.fnc_slicing(self.key, last_gather, since=since, until=until)
         else:
             slices = [(self._gather_since(), self._gather_until())]
 
@@ -111,40 +107,36 @@ class Collection:
         pass
 
     def update_last_gathered_entries(self, updates_dict):
-        if self.key in updates_dict["locked"]:
+        if self.key in updates_dict['locked']:
             return
 
         if self.gathering_successful:
             self._update_last_gathered_key(updates_dict, self.key, self.until)
 
             if self.full_sync_enabled:
-                self._update_last_gathered_key(
-                    updates_dict, f"{self.key}_full", self.gathering_finished_at
-                )
+                self._update_last_gathered_key(updates_dict, f'{self.key}_full', self.gathering_finished_at)
         else:
             # collections are ordered by time slices.
             # in case of error all collections with newer timestamp are ignored
-            updates_dict["locked"].add(self.key)
+            updates_dict['locked'].add(self.key)
 
     #
     # Private methods ---------------------------
     #
     @staticmethod
     def _update_last_gathered_key(updates_dict, key, timestamp):
-        previous = updates_dict["keys"].get(key, None)
+        previous = updates_dict['keys'].get(key, None)
         if previous is None:
-            updates_dict["keys"][key] = timestamp
+            updates_dict['keys'][key] = timestamp
         else:
-            updates_dict["keys"][key] = max(previous, timestamp)
+            updates_dict['keys'][key] = max(previous, timestamp)
 
     def _is_full_sync_enabled(self, interval_days):
         if not interval_days:
             return False
 
-        last_full_sync = self.collector.last_gathered_entry_for(f"{self.key}_full")
-        return not last_full_sync or last_full_sync < now() - timedelta(
-            days=interval_days
-        )
+        last_full_sync = self.collector.last_gathered_entry_for(f'{self.key}_full')
+        return not last_full_sync or last_full_sync < now() - timedelta(days=interval_days)
 
     def _gather_since(self):
         """Start of gathering based on settings excluding slices"""

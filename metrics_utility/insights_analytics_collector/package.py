@@ -3,6 +3,7 @@ import json
 import os
 import pathlib
 import tarfile
+
 from abc import abstractmethod
 
 import requests
@@ -20,17 +21,17 @@ class Package:
     See the README.md and tests/functional/test_gathering.py to see how are packages used
     """
 
-    CERT_PATH = "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem"
+    CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
     # i.e. "application/vnd.redhat.tower.tower_payload+tgz"
-    PAYLOAD_CONTENT_TYPE = "application/vnd.redhat.TODO+tgz"
+    PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.TODO+tgz'
 
-    SHIPPING_AUTH_USERPASS = "user-pass"
-    SHIPPING_AUTH_S3_USERPASS = "user-pass-s3"
-    SHIPPING_AUTH_IDENTITY = "x-rh-identity"  # Development mode only
-    SHIPPING_AUTH_CERTIFICATES = "mutual-tls"  # Mutual TLS
+    SHIPPING_AUTH_USERPASS = 'user-pass'
+    SHIPPING_AUTH_S3_USERPASS = 'user-pass-s3'
+    SHIPPING_AUTH_IDENTITY = 'x-rh-identity'  # Development mode only
+    SHIPPING_AUTH_CERTIFICATES = 'mutual-tls'  # Mutual TLS
 
-    DEFAULT_RHSM_CERT_FILE = "/etc/pki/consumer/cert.pem"
-    DEFAULT_RHSM_KEY_FILE = "/etc/pki/consumer/key.pem"
+    DEFAULT_RHSM_CERT_FILE = '/etc/pki/consumer/cert.pem'
+    DEFAULT_RHSM_KEY_FILE = '/etc/pki/consumer/key.pem'
 
     """
     Some tables can be *very* large, and we have a 100MB upload limit.
@@ -43,9 +44,7 @@ class Package:
         self.collector = collector
         self.collections = []
         self.collection_keys = []
-        self.data_collection_status = self.collector.collection_data_status_class()(
-            self.collector, self
-        )
+        self.data_collection_status = self.collector.collection_data_status_class()(self.collector, self)
         self.logger = collector.logger
         self.manifest = collector.collection_manifest_class()(collector)
         self.processed = False
@@ -84,50 +83,48 @@ class Package:
 
     def is_shipping_configured(self):
         if not self.tar_path:
-            self.logger.error("Insights for Ansible Automation Platform TAR not found")
+            self.logger.error('Insights for Ansible Automation Platform TAR not found')
             return False
 
         if not os.path.exists(self.tar_path):
-            self.logger.error(
-                f"Insights for Ansible Automation Platform TAR {self.tar_path} not found"
-            )
+            self.logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
-        if "Error:" in str(self.tar_path):
+        if 'Error:' in str(self.tar_path):
             return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
             if not self.get_ingress_url():
-                self.logger.error("AUTOMATION_ANALYTICS_URL is not set")
+                self.logger.error('AUTOMATION_ANALYTICS_URL is not set')
                 return False
 
             if not self._get_rh_user():
-                self.logger.error("REDHAT_USERNAME is not set")
+                self.logger.error('REDHAT_USERNAME is not set')
                 return False
 
             if not self._get_rh_password():
-                self.logger.error("REDHAT_PASSWORD is not set")
+                self.logger.error('REDHAT_PASSWORD is not set')
                 return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_S3_USERPASS:
             if not self.get_s3_configured():
-                self.logger.error("S3 configuration is not set")
+                self.logger.error('S3 configuration is not set')
                 return False
 
             if not self._get_rh_user():
-                self.logger.error("aws_access_key_id is not set")
+                self.logger.error('aws_access_key_id is not set')
                 return False
 
             if not self._get_rh_password():
-                self.logger.error("aws_secret_access_key is not set")
+                self.logger.error('aws_secret_access_key is not set')
                 return False
 
             if not self._get_rh_region():
-                self.logger.error("aws_region is not set")
+                self.logger.error('aws_region is not set')
                 return False
 
             if not self._get_rh_bucket():
-                self.logger.error("aws_bucket is not set")
+                self.logger.error('aws_bucket is not set')
                 return False
 
         return True
@@ -137,10 +134,10 @@ class Package:
         try:
             tarname_base = self._tarname_base()
             path = pathlib.Path(target)
-            index = len(list(path.glob(f"{tarname_base}-*.*")))
-            tarname = f"{tarname_base}-{index}.tar.gz"
+            index = len(list(path.glob(f'{tarname_base}-*.*')))
+            tarname = f'{tarname_base}-{index}.tar.gz'
 
-            with tarfile.open(target.joinpath(tarname), "w:gz") as f:
+            with tarfile.open(target.joinpath(tarname), 'w:gz') as f:
                 for collection in self.collections:
                     self._collection_to_tar(f, collection)
 
@@ -153,7 +150,7 @@ class Package:
                 self.tar_path = f.name
             return True
         except Exception as e:
-            self.logger.exception(f"Failed to write analytics archive file: {e}")
+            self.logger.exception(f'Failed to write analytics archive file: {e}')
             return False
 
     def ship(self):
@@ -164,11 +161,11 @@ class Package:
             self.shipping_successful = False
             return False
 
-        self.logger.debug(f"shipping analytics file: {self.tar_path}")
+        self.logger.debug(f'shipping analytics file: {self.tar_path}')
 
-        with open(self.tar_path, "rb") as f:
+        with open(self.tar_path, 'rb') as f:
             files = {
-                "file": (
+                'file': (
                     os.path.basename(self.tar_path),
                     f,
                     self._payload_content_type(),
@@ -181,10 +178,10 @@ class Package:
                 s.cert = self._get_client_certificates()
 
             s.headers = self._get_http_request_headers()
-            s.headers.pop("Content-Type")
+            s.headers.pop('Content-Type')
 
             if self.shipping_auth_mode() == self.SHIPPING_AUTH_IDENTITY:
-                s.headers["x-rh-identity"] = self._get_x_rh_identity()
+                s.headers['x-rh-identity'] = self._get_x_rh_identity()
 
             url = self.get_ingress_url()
             self.shipping_successful = self._send_data(url, files, s)
@@ -209,9 +206,7 @@ class Package:
                 collection.add_to_tar(tar)
                 self.manifest.add_collection(collection)
         except Exception as e:
-            self.logger.exception(
-                f"Could not generate metric {collection.filename}: {e}"
-            )
+            self.logger.exception(f'Could not generate metric {collection.filename}: {e}')
             return None
 
     def _send_data(self, url, files, session):
@@ -225,29 +220,21 @@ class Package:
                 timeout=(31, 31),
             )
         else:
-            response = session.post(
-                url, files=files, headers=session.headers, timeout=(31, 31)
-            )
+            response = session.post(url, files=files, headers=session.headers, timeout=(31, 31))
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
-            self.logger.error(
-                "Upload failed with status {}, {}".format(
-                    response.status_code, response.text
-                )
-            )
+            self.logger.error('Upload failed with status {}, {}'.format(response.status_code, response.text))
             return False
 
         return True
 
     def _config_to_tar(self, tar):
-        if self.collector.collections["config"] is None:
-            self.logger.error(
-                "'config' collector data is missing, and is required to ship."
-            )
+        if self.collector.collections['config'] is None:
+            self.logger.error("'config' collector data is missing, and is required to ship.")
             return False
         else:
-            self._collection_to_tar(tar, self.collector.collections["config"])
+            self._collection_to_tar(tar, self.collector.collections['config'])
 
         return True
 
@@ -293,14 +280,14 @@ class Package:
         Optional, if shipping_auth_mode() redefined to SHIPPING_AUTH_IDENTITY
         """
         identity = {
-            "identity": {
-                "type": "User",
-                "account_number": "0000001",
-                "user": {"is_org_admin": True},
-                "internal": {"org_id": "000001"},
+            'identity': {
+                'type': 'User',
+                'account_number': '0000001',
+                'user': {'is_org_admin': True},
+                'internal': {'org_id': '000001'},
             }
         }
-        identity = base64.b64encode(json.dumps(identity).encode("utf8"))
+        identity = base64.b64encode(json.dumps(identity).encode('utf8'))
         return identity
 
     def _data_collection_status_to_tar(self, tar):
@@ -309,9 +296,7 @@ class Package:
             self.data_collection_status.add_to_tar(tar)
             self.manifest.add_collection(self.data_collection_status)
         except Exception as e:
-            self.logger.exception(
-                f"Could not generate {self.data_collection_status.filename}: {e}"
-            )
+            self.logger.exception(f'Could not generate {self.data_collection_status.filename}: {e}')
 
     def _manifest_to_tar(self, tar):
         try:
@@ -319,7 +304,7 @@ class Package:
             self.manifest.add_to_tar(tar)
             self.add_collection(self.manifest)
         except Exception as e:
-            self.logger.exception(f"Could not generate {self.manifest.filename}: {e}")
+            self.logger.exception(f'Could not generate {self.manifest.filename}: {e}')
 
     def _payload_content_type(self):
         return self.PAYLOAD_CONTENT_TYPE
