@@ -7,8 +7,11 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout metrics-utility (${{ github.ref }})"
+      - name: "Checkout metrics-utility (${{ github.event.pull_request.head.ref }})"
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: "Install uv"
         uses: astral-sh/setup-uv@v5
@@ -77,29 +80,18 @@ jobs:
       - name: Run pytest
         run: uv run pytest -s -v  --cov=. --cov-report=xml
 
-      - name: Send code coverage report to Sonar Cloud
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
-          METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
-          METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-          METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
-          METRICS_UTILITY_DB_HOST: "localhost"
-          SONAR_PROJECT_KEY: ansible_metrics-utility
-          SONAR_ORGANIZATION: ansible
-          SONAR_HOST_URL: https://sonarcloud.io
-          SONAR_TOKEN: ${{ secrets.CICD_ORG_SONAR_TOKEN_CICD_BOT }}
+      - name: Inject PR number into coverage.xml
+        run: sed -i '2i <!-- PR ${{ github.event.number }} -->' coverage.xml
+
+      - name: Upload coverage as artifact
+        uses: actions/upload-artifact@v4
+
         with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.projectKey=ansible_metrics-utility
-            -Dsonar.organization=ansible
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
-            -Dsonar.pullrequest.branch=${{ github.head_ref }}
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
-            -Dsonar.pullrequest.provider=github
+          name: coverage
+          path: coverage.xml
 
-
+      - name: SonarCloud Scan (on push)
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
