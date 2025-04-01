@@ -78,7 +78,7 @@ jobs:
         run: uv run pytest -s -v  --cov=. --cov-report=xml
 
       - name: Send code coverage report to Sonar Cloud
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
           METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
