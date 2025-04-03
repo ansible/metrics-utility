@@ -2,6 +2,7 @@ name: "Pytest tests"
 
 on:
   push:
+    branches: ['devel']
   pull_request_target:
 
 jobs:
