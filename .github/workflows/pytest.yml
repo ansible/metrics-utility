@@ -8,8 +8,13 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
+      - name: "Checkout metrics-utility (${{ github.ref }})"
+        uses: actions/checkout@v4
+        if: ${{ ! github.base_ref }}
+
       - name: "Checkout metrics-utility (${{ github.event.pull_request.head.ref }})"
         uses: actions/checkout@v4
+        if: ${{ github.base_ref }}
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
@@ -91,6 +96,7 @@ jobs:
 
       - name: "Send code coverage report to Sonar Cloud"
         uses: SonarSource/sonarqube-scan-action@v5
+        if: ${{ github.base_ref }}
         env:
           SONAR_HOST_URL: https://sonarcloud.io
           SONAR_ORGANIZATION: ansible
@@ -99,11 +105,27 @@ jobs:
         with:
           projectBaseDir: .
           args: >
-            -Dsonar.projectKey=ansible_metrics-utility
-            -Dsonar.organization=ansible
             -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
-            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.organization=ansible
+            -Dsonar.projectKey=ansible_metrics-utility
             -Dsonar.pullrequest.base=${{ github.base_ref }}
+            -Dsonar.pullrequest.branch=${{ github.head_ref }}
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
             -Dsonar.pullrequest.provider=github
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+
+      - name: "Send code coverage report to Sonar Cloud"
+        uses: SonarSource/sonarqube-scan-action@v5
+        if: ${{ ! github.base_ref }}
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+          SONAR_ORGANIZATION: ansible
+          SONAR_PROJECT_KEY: ansible_metrics-utility
+          SONAR_TOKEN: ${{ secrets.CICD_ORG_SONAR_TOKEN_CICD_BOT }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.organization=ansible
+            -Dsonar.projectKey=ansible_metrics-utility
+            -Dsonar.python.coverage.reportPaths=coverage.xml
