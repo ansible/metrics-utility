@@ -14,7 +14,6 @@ class ExtractorDirectory(Base):
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         super().__init__(logger=logger)
 
-        self.extension = 'parquet'
         self.path = extra_params['ship_path']
         self.extra_params = extra_params
 
@@ -92,14 +91,6 @@ class ExtractorDirectory(Base):
                 self.logger.error(f'ERROR: {obj} failed with {e}')
             if raise_exception:
                 raise e
-
-    def read_parquet_files(self, objs, columns=None, raise_exception=False, silence_exception=False):
-        dfs = [self.read_parquet_file(obj, columns, raise_exception, silence_exception) for obj in objs if obj is not None]
-        dfs = [df for df in dfs if df is not None]
-        if len(dfs) > 0:
-            return pd.concat(dfs, ignore_index=True)
-        else:
-            return None
 
     @staticmethod
     def batch_size():

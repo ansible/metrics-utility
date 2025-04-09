@@ -28,8 +28,6 @@ env_vars = {
 file_path = './metrics_utility/test/test_data/reports/2024/02/CCSPv2-2024-02.xlsx'
 
 
-date_today = datetime.now().strftime('%b %d, %Y')
-
 expected_sheets = {
     'Usage Reporting': [
         {

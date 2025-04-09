@@ -730,7 +730,7 @@ class ReportCCSPv2(Base):
             row_counter += 1
 
         # Generate 5 more blank rows at the end
-        for r_counter in range(5):
+        for _counter in range(5):
             # Set bigger height of the data columns
             r_idx = current_row + row_counter
             rd = ws.row_dimensions[r_idx]

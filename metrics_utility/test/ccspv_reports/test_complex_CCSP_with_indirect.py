@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import openpyxl
 import pandas
 import pytest
@@ -18,8 +16,6 @@ env_vars = {
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/02/CCSP-2025-02-25--2025-02-26.xlsx'
-
-date_today = datetime.now().strftime('%b %d, %Y')
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')

@@ -1,11 +1,7 @@
 import os
 
-from datetime import datetime
-
 import openpyxl
 import pytest
-
-from openpyxl import Workbook
 
 
 def validate_sheet_tab_names(file_path, expected_sheets):
@@ -87,43 +83,6 @@ def cleanup(request):
     # Cleanup at the end
     if os.path.exists(file_path):
         os.remove(file_path)
-
-
-def validate_column(workbook: Workbook, sheet_name, column_name, row_id, expected_values):
-    actual_row_id = row_id - 1
-
-    sheet = workbook[sheet_name]
-
-    for exp in expected_values:
-        expected_value = exp
-        actual_row_id += 1
-        addr = column_name + str(actual_row_id)
-
-        real_value = sheet[addr].value
-
-        if isinstance(real_value, str):
-            real_value = real_value.replace('\n', ' ')
-
-        if isinstance(expected_value, int):
-            expected_value = str(expected_value)
-
-        if isinstance(real_value, int):
-            real_value = str(real_value)
-
-        if isinstance(real_value, datetime):
-            real_value = real_value.strftime('%Y-%m-%d %H:%M:%S')
-
-        equals = real_value == expected_value
-
-        if isinstance(real_value, float):
-            if isinstance(expected_value, str):
-                expected_value = float(expected_value)
-
-            equals = pytest.approx(real_value) == expected_value
-
-        assert equals, (
-            f'Column names do not match for sheet name: {sheet_name}. Address {addr}. Actual value = {real_value}, expected value = {expected_value}'
-        )
 
 
 def transform_sheet(sheet):

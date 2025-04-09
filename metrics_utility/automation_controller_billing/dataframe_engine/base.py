@@ -118,7 +118,7 @@ class Base:
         else:
             # Composite index branch
             # Casting index field to object
-            for index, level in enumerate(df.index.levels):
+            for index, _level in enumerate(df.index.levels):
                 casted_level = df.index.levels[index].astype(object)
                 levels.append(casted_level)
 
@@ -143,10 +143,6 @@ class Base:
             del df[f'{col}_x']
             del df[f'{col}_y']
         return df
-
-    @staticmethod
-    def get_logger():
-        return logging.getLogger(__name__)
 
     @staticmethod
     def unique_index_columns():

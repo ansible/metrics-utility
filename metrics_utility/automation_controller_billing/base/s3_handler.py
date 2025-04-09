@@ -17,8 +17,6 @@ class S3Handler:
         self._session = None
 
         self.s3 = self.get_s3_resource()
-        self.s3_bucket = self.get_s3_bucket()
-        self.s3_client = self.get_s3_client
 
     @property
     def session(self):
@@ -34,12 +32,6 @@ class S3Handler:
 
     def get_s3_resource(self):
         return self.session.resource('s3', endpoint_url=self.bucket_endpoint)
-
-    def get_s3_client(self):
-        return self.session.client('s3', endpoint_url=self.bucket_endpoint)
-
-    def get_s3_bucket(self):
-        return self.get_s3_resource().Bucket(self.bucket_name)
 
     def upload_file(self, file_name, object_name=None):
         """Upload a file to an S3 bucket
@@ -89,11 +81,3 @@ class S3Handler:
         for resp in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
             for ret_value in resp.get('Contents', []):
                 yield ret_value['Key']
-
-    def list_subdirs(self, prefix):
-        s3_resource = self.get_s3_resource()
-
-        paginator = s3_resource.meta.client.get_paginator('list_objects')
-        for resp in paginator.paginate(Bucket=self.bucket_name, Delimiter='/', Prefix=prefix):
-            for ret_value in resp.get('CommonPrefixes', []):
-                yield ret_value
