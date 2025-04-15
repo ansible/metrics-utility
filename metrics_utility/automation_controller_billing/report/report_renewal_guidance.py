@@ -8,7 +8,6 @@ import pandas as pd
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.helpers import parse_number_of_days
@@ -71,45 +70,38 @@ class ReportRenewalGuidance(Base):
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
-        self.wb.create_sheet(title='Usage Reporting')
 
         # First sheet with billing
-        ws = self.wb.worksheets[0]
-
-        self._init_dimensions(ws)
+        sheet_index = 0
+        ws = self.add_sheet('Usage Reporting', sheet_index, self.config['column_widths'])
         current_row = self._build_heading_h1(1, ws)
         current_row = self._build_header(current_row, ws)
 
         current_row = self._build_updated_timestamp(current_row, ws)
         self._build_data_section(current_row, ws, host_metric_dataframe, ephemeral_usage_dataframe)
+        sheet_index += 1
 
         # Add optional sheets
-        sheet_index = 1
         if 'managed_nodes' in self.optional_report_sheets():
             # Sheet with list of managed nodes
             if self.extra_params.get('opt_ephemeral') is None:
-                self.wb.create_sheet(title='Managed nodes')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe))
                 sheet_index += 1
             else:
-                self.wb.create_sheet(title='Managed nodes')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=False))
                 sheet_index += 1
 
-                self.wb.create_sheet(title='Managed nodes ephemeral')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Managed nodes ephemeral', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
                 sheet_index += 1
 
-                self.wb.create_sheet(title='Managed nodes ephemeral usage')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Managed nodes ephemeral usage', sheet_index, self.config['uniform_column_widths'])
                 self._build_data_section_ephemeral_usage(1, ws, ephemeral_usage_dataframe)
                 sheet_index += 1
 
-            self.wb.create_sheet(title='Deleted Managed nodes')
-            ws = self.wb.worksheets[sheet_index]
+            ws = self.add_sheet('Deleted Managed nodes', sheet_index, self.config['data_column_widths'])
             self._build_data_section_host_metrics(1, ws, self.df_deleted_managed_nodes_query(host_metric_dataframe))
             sheet_index += 1
 
@@ -181,10 +173,6 @@ class ReportRenewalGuidance(Base):
             )
 
         return pd.DataFrame(ephemeral_usage_intervals)
-
-    def _init_dimensions(self, ws):
-        for key, value in self.config['column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
 
     def _build_data_section(self, current_row, ws, dataframe, ephemeral_usage_dataframe):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
@@ -294,9 +282,6 @@ class ReportRenewalGuidance(Base):
         return current_row + row_counter
 
     def _build_data_section_host_metrics(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -361,9 +346,6 @@ class ReportRenewalGuidance(Base):
         return current_row + row_counter
 
     def _build_data_section_ephemeral_usage(self, current_row, ws, dataframe):
-        for key, value in self.config['uniform_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 

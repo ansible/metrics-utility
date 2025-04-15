@@ -88,8 +88,6 @@ def combine_json_values(val1, val2):
 
 
 class Base:
-    LOG_PREFIX = '[AAPBillingReport] '
-
     def __init__(self, extractor, month, extra_params):
         self.logger = logger
 

@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class DataframeContentUsage(Base):
-    LOG_PREFIX = '[AAPBillingReport] '
-
     def build_dataframe(self):
         # A monthly rollup dataframe
         content_explorer_rollup = None

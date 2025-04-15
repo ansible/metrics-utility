@@ -7,8 +7,6 @@ from django.db import connection
 
 
 class ExtractorControllerDB:
-    LOG_PREFIX = '[ExtractorDirectory]'
-
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         super().__init__()
 

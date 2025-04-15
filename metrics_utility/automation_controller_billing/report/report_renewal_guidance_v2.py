@@ -7,7 +7,6 @@ import pandas as pd
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
@@ -80,62 +79,52 @@ class ReportRenewalGuidanceV2(Base):
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
-        self.wb.create_sheet(title='Usage Reporting')
 
         # First sheet with billing
-        ws = self.wb.worksheets[0]
-
-        self._init_dimensions(ws)
+        sheet_index = 0
+        ws = self.add_sheet('Usage Reporting', sheet_index, self.config['column_widths'])
         current_row = self._build_heading_h1(1, ws)
         current_row = self._build_header(current_row, ws)
         current_row = self._build_po_number(current_row, ws)
         current_row = self._build_updated_timestamp(current_row, ws)
         self._build_data_section(current_row, ws, job_host_summary_dataframe)
+        sheet_index += 1
 
         # Add optional sheets
-        sheet_index = 1
         if 'managed_nodes' in self.optional_report_sheets():
             # Sheet with list of managed nodes
-            self.wb.create_sheet(title='Managed nodes')
-            ws = self.wb.worksheets[sheet_index]
+            ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
             self._build_data_section_usage_by_node(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if 'usage_by_organizations' in self.optional_report_sheets():
             # Sheet with usage by org
-            self.wb.create_sheet(title='Usage by organizations')
-            ws = self.wb.worksheets[sheet_index]
+            ws = self.add_sheet('Usage by organizations', sheet_index, self.config['data_column_widths'])
             self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
         if events_dataframe is not None:
             if 'usage_by_collections' in self.optional_report_sheets():
                 # Sheet with usage by collections
-                self.wb.create_sheet(title='Usage by collections')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_usage_by_collections(1, ws, events_dataframe)
                 sheet_index += 1
 
             if 'usage_by_roles' in self.optional_report_sheets():
                 # Sheet with usage by roles
-                self.wb.create_sheet(title='Usage by roles')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Usage by roles', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_usage_by_roles(1, ws, events_dataframe)
                 sheet_index += 1
 
             if 'usage_by_modules' in self.optional_report_sheets():
                 # Sheet with usage by modules
-                self.wb.create_sheet(title='Usage by modules')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Usage by modules', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_usage_by_modules(1, ws, events_dataframe)
                 sheet_index += 1
 
         return self.wb
 
     def _build_data_section_usage_by_org(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -174,10 +163,6 @@ class ReportRenewalGuidanceV2(Base):
             row_counter += 1
 
         return current_row + row_counter
-
-    def _init_dimensions(self, ws):
-        for key, value in self.config['column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
 
     def _build_heading_h1(self, current_row, ws):
         # Merge cells and insert the h1 heading

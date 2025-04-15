@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class DBDataframeHostMetric(Base):
-    LOG_PREFIX = '[AAPBillingReport] '
-
     def build_dataframe(self):
         host_metric_concat = None
 

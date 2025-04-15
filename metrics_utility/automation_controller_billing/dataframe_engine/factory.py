@@ -34,26 +34,20 @@ class Factory:
             raise NotSupportedFactory(f'Factory for {self.ship_target} not supported')
 
     def _get_dataframe_jobhost_summary_usage(self):
-        # Return default S3 loader
         return DataframeJobhostSummaryUsage(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
 
     def _get_dataframe_content_usage(self):
-        # Return default S3 loader
         return DataframeContentUsage(
-            # return DataframeSummarizedByOrgAndHostv2(
             extractor=self.extractor,
             month=self.month,
             extra_params=self.extra_params,
         )
 
     def _get_dataframe_inventory_scope(self):
-        # Return dataframe
         return DataframeInventoryScope(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
 
     def _get_db_dataframe_host_metric_usage(self):
-        # Return default S3 loader
         return DBDataframeHostMetric(
-            # return DataframeSummarizedByOrgAndHostv2(
             extractor=self.extractor,
             month=self.month,
             extra_params=self.extra_params,

@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class DataframeInventoryScope(Base):
-    LOG_PREFIX = '[AAPBillingReport] '
-
     def build_dataframe(self):
         # A daily rollup dataframe
 

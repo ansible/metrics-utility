@@ -3,8 +3,6 @@ import os
 
 
 class ReportSaverDirectory:
-    LOG_PREFIX = '[ExtractorDirectory]'
-
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         self.extra_params = extra_params
 

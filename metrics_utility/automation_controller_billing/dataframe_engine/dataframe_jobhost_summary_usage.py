@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class DataframeJobhostSummaryUsage(Base):
-    LOG_PREFIX = '[AAPBillingReport] '
-
     def build_dataframe(self):
         # A daily rollup dataframe
         billing_data_monthly_rollup = None

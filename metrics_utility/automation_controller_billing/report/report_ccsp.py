@@ -3,7 +3,6 @@
 ######################################
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
@@ -11,13 +10,6 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
 class ReportCCSP(Base):
-    BLACK_COLOR_HEX = '00000000'
-    WHITE_COLOR_HEX = '00FFFFFF'
-    BLUE_COLOR_HEX = '000000FF'
-    GREEN_COLOR_HEX = '0000FF00'
-    FONT = 'Arial'
-    PRICE_FORMAT = '$#,##0.00'
-
     def __init__(self, dataframe, report_period, extra_params):
         # Create the workbook and worksheet
         self.wb = Workbook()
@@ -102,38 +94,33 @@ class ReportCCSP(Base):
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
-        self.wb.create_sheet(title='Usage Reporting')
 
         # First sheet with billing
-        ws = self.wb.worksheets[0]
-
-        self._init_dimensions(ws)
+        sheet_index = 0
+        ws = self.add_sheet('Usage Reporting', sheet_index, self.config['column_widths'])
         current_row = self._build_heading_h1(1, ws)
         current_row = self._build_header(current_row, ws)
         current_row = self._build_heading_h2(current_row, ws)
         current_row = self._build_sku_description(current_row, ws)
         self._build_data_section(current_row, ws, job_host_summary_dataframe)
+        sheet_index += 1
 
         # Add optional sheets
-        sheet_index = 1
         if 'managed_nodes' in self.optional_report_sheets():
             # Sheet with list of managed nodes
-            self.wb.create_sheet(title='Managed nodes')
-            ws = self.wb.worksheets[sheet_index]
+            ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
             directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
             self._build_data_section_usage_by_node(1, ws, directs, managed_node_type='direct')
             sheet_index += 1
 
         if 'indirectly_managed_nodes' in self.optional_report_sheets():
-            self.wb.create_sheet(title='Indirectly Managed nodes')
-            ws = self.wb.worksheets[sheet_index]
+            ws = self.add_sheet('Indirectly Managed nodes', sheet_index, self.config['data_column_widths'])
             indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1
 
         if 'inventory_scope' in self.optional_report_sheets():
-            self.wb.create_sheet(title='Inventory Scope')
-            ws = self.wb.worksheets[sheet_index]
+            ws = self.add_sheet('Inventory Scope', sheet_index, self.config['data_column_widths'])
             scope = scope_dataframe
             self._build_data_section_scope(1, ws, scope)
             sheet_index += 1
@@ -141,30 +128,23 @@ class ReportCCSP(Base):
         if events_dataframe is not None:
             if 'usage_by_collections' in self.optional_report_sheets():
                 # Sheet with usage by collections
-                self.wb.create_sheet(title='Usage by collections')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_usage_by_collections(1, ws, events_dataframe)
                 sheet_index += 1
 
             if 'usage_by_roles' in self.optional_report_sheets():
                 # Sheet with usage by roles
-                self.wb.create_sheet(title='Usage by roles')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Usage by roles', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_usage_by_roles(1, ws, events_dataframe)
                 sheet_index += 1
 
             if 'usage_by_modules' in self.optional_report_sheets():
                 # Sheet with usage by modules
-                self.wb.create_sheet(title='Usage by modules')
-                ws = self.wb.worksheets[sheet_index]
+                ws = self.add_sheet('Usage by modules', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_usage_by_modules(1, ws, events_dataframe)
                 sheet_index += 1
 
         return self.wb
-
-    def _init_dimensions(self, ws):
-        for key, value in self.config['column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
 
     def _build_heading_h1(self, current_row, ws):
         # Merge cells and insert the h1 heading

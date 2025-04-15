@@ -122,7 +122,7 @@ class Command(BaseCommand):
 
         report_dataframe = DataframeEngineFactory(extractor=extractor, month=month, extra_params=extra_params).create()
 
-        if report_dataframe[0] is None or report_dataframe[0].empty:
+        if all(item is None or item.empty for item in report_dataframe):
             if opt_since is not None:
                 self.logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
             else:

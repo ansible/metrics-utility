@@ -17,6 +17,8 @@ class Base:
     RED_COLOR_HEX = 'FF0000'
     LIGHT_BLUE_COLOR_HEX = 'd4eaf3'
     GREEN_COLOR_HEX = '92d050'
+    YELLOW_WARNING_COLOR_HEX = 'FFCC17'
+
     FONT = 'Arial'
     PRICE_FORMAT = '$#,##0.00'
     HOST_NAME = 'Host name'
@@ -44,6 +46,17 @@ class Base:
         # Otherwise, return the cell unchanged.
         return cell
 
+    def add_sheet(self, title, sheet_index, widths=None):
+        self.wb.create_sheet(title=title)
+        ws = self.wb.worksheets[sheet_index]
+        if widths:
+            self.set_widths(ws, widths)
+        return ws
+
+    def set_widths(self, ws, widths):
+        for key, value in widths.items():
+            ws.column_dimensions[get_column_letter(key)].width = value
+
     def _fix_event_host_names(self, mapping_dataframe, destination_dataframe):
         if destination_dataframe is None:
             return None
@@ -67,142 +80,7 @@ class Base:
 
         return destination_dataframe
 
-    def _build_data_section_usage_by_node_with_org_details(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
-        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
-        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
-
-        # Rename the columns based on the template
-        ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(
-            organizations=('organization_name', 'nunique'),
-            host_runs=('host_name', 'count'),
-            task_runs=('task_runs', 'sum'),
-            first_automation=('first_automation', 'min'),
-            last_automation=('last_automation', 'max'),
-        )
-        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-        columns = [
-            'host_name',
-            'organizations',
-            'host_runs',
-            'task_runs',
-            'first_automation',
-            'last_automation',
-        ]
-        if mode == 'by_organization':
-            # Filter some columns out based on mode
-            columns = [col for col in columns if col not in ['organizations']]
-
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(columns=columns)
-
-        # Create dataframe with hostname and orgs as columns, having last automation for each host
-        pivoted_dataframe = dataframe.pivot_table(
-            index='host_name',
-            columns='organization_name',
-            values='last_automation',
-            aggfunc='max',  # You can use 'max', 'min', 'mean', etc., depending on your needs
-        )
-
-        # Set index on host_name for join
-        ccsp_report_dataframe.set_index('host_name', inplace=True)
-
-        # Join the list of orgs to the pivoted_dataframe having org last updated as columns
-        ccsp_report_dataframe = ccsp_report_dataframe.join(pivoted_dataframe, how='left')
-        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-
-        labels = {
-            'host_name': self.HOST_NAME,
-            'organizations': 'Automated by\norganizations',
-            'host_runs': self.JOB_RUNS,  # Job runs is the same as host_runs, Non-unique managed nodes automated
-            'task_runs': self.NUM_OF_TASKS_OR_RUNS,
-            'first_automation': 'First\nautomation',
-            'last_automation': 'Last\nautomation',
-        }
-        labels = {k: v for k, v in labels.items() if k in columns}
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)
-
-        row_counter = 0
-        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
-        for r_idx, row in enumerate(rows, current_row):
-            for c_idx, value in enumerate(row, 1):
-                cell = ws.cell(row=r_idx, column=c_idx)
-                cell.value = value
-
-                if row_counter == 0:
-                    # set header style
-                    cell.font = header_font
-                    rd = ws.row_dimensions[r_idx]
-                    rd.height = 25
-                else:
-                    # set value style
-                    cell.font = value_font
-
-            row_counter += 1
-
-        return current_row + row_counter
-
-    def _build_data_section_usage_by_job(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
-        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
-        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
-
-        dataframe['job_remote_id_install_uuid'] = list(zip(dataframe['job_remote_id'], dataframe['install_uuid']))
-
-        # Rename the columns based on the template
-        ccsp_report_dataframe = dataframe.groupby(['organization_name', 'job_template_name'], dropna=False).agg(
-            job_runs=('job_remote_id_install_uuid', 'nunique'),
-            host_runs_unique=('host_name', 'nunique'),
-            host_runs=('host_name', 'count'),
-            task_runs=('task_runs', 'sum'),
-            first_run=('job_created', 'min'),
-            last_run=('job_created', 'max'),
-        )
-        ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=['job_template_name', 'organization_name', 'job_runs', 'host_runs_unique', 'host_runs', 'task_runs', 'first_run', 'last_run']
-        )
-
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                'job_template_name': 'Job template\nname',
-                'organization_name': 'Organization\nname',
-                'job_runs': self.JOB_RUNS,
-                'host_runs_unique': self.HOST_RUNS_UNIQUE,
-                'host_runs': self.HOST_RUNS,
-                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
-                'first_run': 'First\nrun',
-                'last_run': 'Last\nrun',
-            }
-        )
-
-        row_counter = 0
-        rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
-        for r_idx, row in enumerate(rows, current_row):
-            for c_idx, value in enumerate(row, 1):
-                cell = ws.cell(row=r_idx, column=c_idx)
-                cell.value = value
-
-                if row_counter == 0:
-                    # set header style
-                    cell.font = header_font
-                    rd = ws.row_dimensions[r_idx]
-                    rd.height = 25
-                else:
-                    # set value style
-                    cell.font = value_font
-
-            row_counter += 1
-
-        return current_row + row_counter
-
     def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -256,9 +134,6 @@ class Base:
         return current_row + row_counter
 
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -340,9 +215,6 @@ class Base:
         return current_row + row_counter
 
     def _build_data_section_usage_by_collections(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -388,9 +260,6 @@ class Base:
         return current_row + row_counter
 
     def _build_data_section_usage_by_roles(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -437,9 +306,6 @@ class Base:
         return current_row + row_counter
 
     def _build_data_section_usage_by_modules(self, current_row, ws, dataframe):
-        for key, value in self.config['data_column_widths'].items():
-            ws.column_dimensions[get_column_letter(key)].width = value
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
