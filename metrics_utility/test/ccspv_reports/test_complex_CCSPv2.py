@@ -27,7 +27,7 @@ env_vars = {
     'METRICS_UTILITY_REPORT_EMAIL': 'email@email.com',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,usage_by_organizations,'
-    'usage_by_collections,usage_by_roles,usage_by_modules',
+    'usage_by_collections,usage_by_roles,usage_by_modules,data_collection_status',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13--2025-02-13.xlsx'

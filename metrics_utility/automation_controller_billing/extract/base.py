@@ -38,6 +38,9 @@ CSV_SHEETS = {
         'usage_by_organizations',
         'usage_by_roles',
     ],
+    'data_collection_status': [
+        'data_collection_status',
+    ],
 }
 
 
@@ -67,11 +70,15 @@ class Base:
         empty_dataframe = pd.DataFrame([{}])
         needed_data = {
             'config': config,
+            'data_collection_status': empty_dataframe,
             'indirect_nodes': empty_dataframe,
             'job_host_summary': empty_dataframe,
             'main_host': empty_dataframe,
             'main_jobevent': empty_dataframe,
         }
+
+        if self.csv_enabled('data_collection_status'):
+            needed_data['data_collection_status'] = self.build_data_batch(temp_dir, 'data_collection_status')
 
         if self.csv_enabled('job_host_summary'):
             needed_data['job_host_summary'] = self.build_data_batch(temp_dir, 'job_host_summary')

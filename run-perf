@@ -89,7 +89,7 @@ run_default_sheets() {
 }
 
 run_all_sheets() {
-  export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS=ccsp_summary,indirectly_managed_nodes,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles
+  export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS=ccsp_summary,indirectly_managed_nodes,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles,data_collection_status
 
   echo all sheets
   /usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \

@@ -24,3 +24,7 @@ uv run ./manage.py build_report --month=2024-04 --force "$@"
 
 set -x
 ls -l metrics_utility/test/test_data/reports/2024/04/
+
+if which xlsx2csv; then
+  xlsx2csv -a ./metrics_utility/test/test_data//reports/2024/04/CCSPv2-2024-04.xlsx
+fi

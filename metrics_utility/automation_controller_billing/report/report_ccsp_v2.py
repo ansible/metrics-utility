@@ -70,9 +70,12 @@ class ReportCCSPv2(Base):
 
         default_data_column_widths = {1: 40, 2: 20, 3: 20, 4: 20, 5: 20, 6: 20}
 
+        default_status_column_widths = {1: 36, 2: 20, 3: 20, 4: 36, 5: 15, 6: 15, 7: 20}
+
         self.config['sku_description'] = default_sku_description
         self.config['column_widths'] = default_column_widths
         self.config['data_column_widths'] = default_data_column_widths
+        self.config['status_column_widths'] = default_status_column_widths
 
     def _apply_filter(self, job_host_summary_dataframe, events_dataframe):
         if self.extra_params['report_organization_filter'] is not None:
@@ -88,6 +91,7 @@ class ReportCCSPv2(Base):
         job_host_summary_dataframe = self.dataframe[0]
         events_dataframe = self.dataframe[1]
         scope_dataframe = self.dataframe[2]
+        status_dataframe = self.dataframe[3]
 
         # Fix host names in the event data, to take in account the variables
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
@@ -178,7 +182,99 @@ class ReportCCSPv2(Base):
                 self._build_data_section_usage_by_node(1, ws, filtered_job_host_summary_dataframe, mode='by_organization')
                 sheet_index += 1
 
+        if 'data_collection_status' in self.optional_report_sheets():
+            ws = self.add_sheet('Data collection status', sheet_index, self.config['status_column_widths'])
+            current_row = self._build_data_section_collection_missing(1, ws, status_dataframe)
+            current_row += 1  # gap
+            self._build_data_section_collection_status(current_row, ws, status_dataframe)
+            sheet_index += 1
+
         return self.wb
+
+    def _build_table(self, current_row, ws, rows):
+        row_counter = 0
+
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+            row_counter += 1
+
+        return current_row + row_counter
+
+    def _build_data_section_collection_missing(self, current_row, ws, df):
+        # skip failed collects
+        df = df[df['status'] == 'ok']
+
+        # find gaps between until -> next since
+        df = df.sort_values(['file_name', 'collection_start_timestamp']).reset_index(drop=True)
+        df['next_since'] = df.groupby('file_name')['since'].shift(-1)
+        df['gap'] = df['next_since'] - df['until']
+
+        # skip if under 2 seconds
+        threshold = timedelta(seconds=2)
+        dataframe = df[df['gap'] > threshold].copy()
+
+        dataframe = dataframe[['file_name', 'until', 'next_since', 'gap']]
+        dataframe = dataframe.rename(
+            columns={
+                'file_name': 'CSV filename',
+                'until': 'Missing from',
+                'next_since': 'Missing until',
+                'gap': 'Gap in seconds',
+            }
+        )
+
+        rows = dataframe_to_rows(dataframe, index=False)
+        return self._build_table(current_row, ws, rows)
+
+    def _build_data_section_collection_status(self, first_row, ws, df):
+        # time difference between the current and previous row with the same file_name & sort
+        df = df.sort_values(['file_name', 'collection_start_timestamp']).reset_index(drop=True)
+        df['time_diff'] = df.groupby('file_name')['collection_start_timestamp'].diff()
+        df = df.sort_values('collection_start_timestamp').reset_index(drop=True)
+
+        median_diff = df['time_diff'].median()
+
+        dataframe = df.rename(
+            columns={
+                'collection_start_timestamp': 'Collection timestamp',
+                'since': 'Filter since',
+                'until': 'Filter until',
+                'file_name': 'CSV filename',
+                'status': 'Status',
+                'elapsed': 'Elapsed',
+                'time_diff': 'Time since\nprevious collection',  # col_index
+            }
+        )
+
+        rows = dataframe_to_rows(dataframe, index=False)
+        next_row = self._build_table(first_row, ws, rows)
+
+        # apply styling to highlight unusual collection intervals
+
+        success_background = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+        warning_background = PatternFill('solid', fgColor=self.YELLOW_WARNING_COLOR_HEX)
+        danger_background = PatternFill('solid', fgColor=self.RED_COLOR_HEX)
+
+        threshold_warning = 2 * median_diff
+        threshold_danger = 3 * median_diff
+
+        col_index = df.columns.to_list().index('time_diff')
+
+        rows = ws.iter_rows(min_row=first_row + 1, max_row=next_row, min_col=col_index + 1, max_col=col_index + 1)
+        for row in rows:
+            for cell in row:
+                if cell.value is None or pd.isnull(cell.value):
+                    continue
+                if cell.value >= threshold_danger:
+                    cell.fill = danger_background
+                elif cell.value >= threshold_warning:
+                    cell.fill = warning_background
+                else:
+                    cell.fill = success_background
+
+        return next_row
 
     def _build_data_section_usage_by_node_with_org_details(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
