@@ -203,6 +203,8 @@ class ReportCCSPv2(Base):
         return current_row + row_counter
 
     def _build_data_section_collection_missing(self, current_row, ws, df):
+        """builds a table showing any gaps not covered by any since-until collection interval"""
+
         # skip failed collects
         df = df[df['status'] == 'ok']
 
@@ -254,7 +256,7 @@ class ReportCCSPv2(Base):
         # apply styling to highlight unusual collection intervals
 
         success_background = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
-        warning_background = PatternFill('solid', fgColor=self.YELLOW_WARNING_COLOR_HEX)
+        warning_background = PatternFill('solid', fgColor=self.YELLOW_COLOR_HEX)
         danger_background = PatternFill('solid', fgColor=self.RED_COLOR_HEX)
 
         threshold_warning = 2 * median_diff

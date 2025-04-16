@@ -17,7 +17,7 @@ class Base:
     RED_COLOR_HEX = 'FF0000'
     LIGHT_BLUE_COLOR_HEX = 'd4eaf3'
     GREEN_COLOR_HEX = '92d050'
-    YELLOW_WARNING_COLOR_HEX = 'FFCC17'
+    YELLOW_COLOR_HEX = 'ffcc17'
 
     FONT = 'Arial'
     PRICE_FORMAT = '$#,##0.00'
