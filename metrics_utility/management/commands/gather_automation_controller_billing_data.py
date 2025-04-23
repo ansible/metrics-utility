@@ -11,6 +11,10 @@ from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, FailedT
 from metrics_utility.management.validation import handle_crc_ship_target, handle_directory_ship_target, handle_s3_ship_target
 
 
+help_since = 'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
+help_until = 'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
+
+
 class Command(BaseCommand):
     """
     Gather Automation Controller billing data
@@ -26,17 +30,13 @@ class Command(BaseCommand):
             '--since',
             dest='since',
             action='store',
-            help='Start date for collection including (e.g. --since=2023-12-20), or dynamic '
-            'format <X>d marking X days ago (e.g. collecting yesterday woul be '
-            '--since=2d --until=1d)',
+            help=help_since,
         )
         parser.add_argument(
             '--until',
             dest='until',
             action='store',
-            help='End date for collection excluding (e.g. --since=2023-12-21), or dynamic '
-            'format <X>d marking X days ago (e.g. collecting yesterday woul be '
-            '--since=2d --until=1d)',
+            help=help_until,
         )
 
     def init_logging(self):
@@ -98,33 +98,36 @@ class Command(BaseCommand):
         else:
             raise BadShipTarget('Unexpected value for METRICS_UTILITY_SHIP_TARGET env var, allowed values are [crc, s3, directory]')
 
+    def _handle_datelike(self, value, help=''):
+        if not value:
+            return None
+
+        if value.isdigit():
+            raise Exception(f'Bare numbers are not valid ({help})')
+
+        # Process ret argument
+        ret = None
+
+        if value.endswith('d'):
+            days_ago = int(value[0:-1])
+            ret = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        elif value.endswith('m'):
+            minutes_ago = int(value[0:-1])
+            ret = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
+        else:
+            ret = parser.parse(value)
+
+        # Add default utc timezone
+        if ret and ret.tzinfo is None:
+            ret = ret.replace(tzinfo=timezone.utc)
+
+        return ret
+
     def _handle_interval(self, opt_since, opt_until):
         # Process since argument
-        since = None
-        if opt_since and opt_since.endswith('d'):
-            days_ago = int(opt_since[0:-1])
-            since = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        elif opt_since and opt_since.endswith('m'):
-            minutes_ago = int(opt_since[0:-1])
-            since = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
-        else:
-            since = parser.parse(opt_since) if opt_since else None
-        # Add default utc timezone
-        if since and since.tzinfo is None:
-            since = since.replace(tzinfo=timezone.utc)
+        since = self._handle_datelike(opt_since, help=help_since)
 
         # Process until argument
-        until = None
-        if opt_until and opt_until.endswith('d'):
-            days_ago = int(opt_until[0:-1])
-            until = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        elif opt_until and opt_until.endswith('m'):
-            minutes_ago = int(opt_until[0:-1])
-            until = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
-        else:
-            until = parser.parse(opt_until) if opt_until else None
-        # Add default utc timezone
-        if until and until.tzinfo is None:
-            until = until.replace(tzinfo=timezone.utc)
+        until = self._handle_datelike(opt_until, help=help_until)
 
         return since, until
