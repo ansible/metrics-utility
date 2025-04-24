@@ -587,7 +587,9 @@ class ReportCCSPv2(Base):
         )
 
         ccsp_report = {}
-        quantity_consumed = dataframe['host_name'].nunique()
+        filtered_df = dataframe[dataframe['manage_node_types'].apply(lambda x: 'DIRECT' in x)]
+        quantity_consumed = filtered_df['host_name'].nunique()
+
         if quantity_consumed > 0:
             # COmpute the unique hostnam count that are in the df index
             ccsp_report['end_user_company_name'] = self.extra_params['report_end_user_company_name']
