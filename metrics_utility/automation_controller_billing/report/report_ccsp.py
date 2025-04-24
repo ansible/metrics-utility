@@ -255,7 +255,18 @@ class ReportCCSP(Base):
             bottom=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
         )
 
-        ccsp_report = dataframe.reset_index().groupby('organization_name', dropna=False).agg(quantity_consumed=('host_name', 'nunique'))
+        direct_only = dataframe[
+            dataframe['manage_node_types']
+                    .apply(lambda s: 'DIRECT' in s)
+        ]
+
+        ccsp_report = (
+            direct_only
+            .reset_index()
+            .groupby('organization_name', dropna=False)
+            .agg(quantity_consumed=('host_name', 'nunique'))
+        )
+
         ccsp_report['mark_x'] = ''
         ccsp_report['unit_price'] = round(self.price_per_node, 2)
         ccsp_report['extended_unit_price'] = round((ccsp_report['quantity_consumed'] * ccsp_report['unit_price']), 2)
