@@ -92,9 +92,9 @@ class ReportCCSP(Base):
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
         scope_dataframe = self.dataframe[2]
 
-        directs = job_host_summary_dataframe[job_host_summary_dataframe['manage_node_types'].apply(lambda x: 'DIRECT' in x)]
-        indirects = job_host_summary_dataframe[job_host_summary_dataframe['manage_node_types'].apply(lambda x: 'INDIRECT' in x)]
-
+        directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
+        indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
+        
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
 
