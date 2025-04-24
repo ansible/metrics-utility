@@ -105,7 +105,7 @@ class ReportCCSPv2(Base):
         sheet_index = 0
         directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
         indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
-        
+
         if 'ccsp_summary' in self.optional_report_sheets():
             ws = self.add_sheet('Usage Reporting', sheet_index, self.config['column_widths'])
             current_row = self._build_heading_h1(1, ws)

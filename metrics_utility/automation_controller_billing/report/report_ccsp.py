@@ -94,7 +94,7 @@ class ReportCCSP(Base):
 
         directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
         indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
-        
+
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
 
