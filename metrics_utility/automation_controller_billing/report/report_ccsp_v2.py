@@ -103,6 +103,8 @@ class ReportCCSPv2(Base):
 
         # First sheet index
         sheet_index = 0
+        directs = job_host_summary_dataframe[job_host_summary_dataframe['manage_node_types'].apply(lambda x: 'DIRECT' in x)]
+        indirects = job_host_summary_dataframe[job_host_summary_dataframe['manage_node_types'].apply(lambda x: 'INDIRECT' in x)]
 
         if 'ccsp_summary' in self.optional_report_sheets():
             ws = self.add_sheet('Usage Reporting', sheet_index, self.config['column_widths'])
@@ -110,7 +112,7 @@ class ReportCCSPv2(Base):
             current_row = self._build_header(current_row, ws)
             current_row = self._build_po_number(current_row, ws)
             current_row = self._build_updated_timestamp(current_row, ws)
-            self._build_data_section(current_row, ws, job_host_summary_dataframe)
+            self._build_data_section(current_row, ws, directs)
             sheet_index += 1
 
         if 'jobs' in self.optional_report_sheets():
@@ -127,13 +129,11 @@ class ReportCCSPv2(Base):
         if 'managed_nodes' in self.optional_report_sheets():
             # Sheet with list of managed nodes
             ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
-            directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
             func(1, ws, directs, managed_node_type='direct')
             sheet_index += 1
 
         if 'indirectly_managed_nodes' in self.optional_report_sheets():
             ws = self.add_sheet('Indirectly Managed nodes', sheet_index, self.config['data_column_widths'])
-            indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
             ## This function creates the correct columns for this sheet.  Using the func variable from above
             ## can result in the wrong columns for this sheet if `managed_nodes_by_organization`
             ## exists in the METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS env var.
@@ -587,8 +587,7 @@ class ReportCCSPv2(Base):
         )
 
         ccsp_report = {}
-        filtered_df = dataframe[dataframe['manage_node_types'].apply(lambda x: 'DIRECT' in x)]
-        quantity_consumed = filtered_df['host_name'].nunique()
+        quantity_consumed = dataframe['host_name'].nunique()
 
         if quantity_consumed > 0:
             # COmpute the unique hostnam count that are in the df index

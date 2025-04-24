@@ -92,6 +92,9 @@ class ReportCCSP(Base):
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
         scope_dataframe = self.dataframe[2]
 
+        directs = job_host_summary_dataframe[job_host_summary_dataframe['manage_node_types'].apply(lambda x: 'DIRECT' in x)]
+        indirects = job_host_summary_dataframe[job_host_summary_dataframe['manage_node_types'].apply(lambda x: 'INDIRECT' in x)]
+
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
 
@@ -102,20 +105,18 @@ class ReportCCSP(Base):
         current_row = self._build_header(current_row, ws)
         current_row = self._build_heading_h2(current_row, ws)
         current_row = self._build_sku_description(current_row, ws)
-        self._build_data_section(current_row, ws, job_host_summary_dataframe)
+        self._build_data_section(current_row, ws, directs)
         sheet_index += 1
 
         # Add optional sheets
         if 'managed_nodes' in self.optional_report_sheets():
             # Sheet with list of managed nodes
             ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
-            directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
             self._build_data_section_usage_by_node(1, ws, directs, managed_node_type='direct')
             sheet_index += 1
 
         if 'indirectly_managed_nodes' in self.optional_report_sheets():
             ws = self.add_sheet('Indirectly Managed nodes', sheet_index, self.config['data_column_widths'])
-            indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1
 
@@ -255,18 +256,7 @@ class ReportCCSP(Base):
             bottom=Side(border_style='dotted', color=self.BLACK_COLOR_HEX),
         )
 
-        direct_only = dataframe[
-            dataframe['manage_node_types']
-                    .apply(lambda s: 'DIRECT' in s)
-        ]
-
-        ccsp_report = (
-            direct_only
-            .reset_index()
-            .groupby('organization_name', dropna=False)
-            .agg(quantity_consumed=('host_name', 'nunique'))
-        )
-
+        ccsp_report = dataframe.reset_index().groupby('organization_name', dropna=False).agg(quantity_consumed=('host_name', 'nunique'))
         ccsp_report['mark_x'] = ''
         ccsp_report['unit_price'] = round(self.price_per_node, 2)
         ccsp_report['extended_unit_price'] = round((ccsp_report['quantity_consumed'] * ccsp_report['unit_price']), 2)
