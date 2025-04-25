@@ -14,7 +14,7 @@ env_vars = {
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
-    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'managed_nodes,indirectly_managed_nodes,usage_by_organizations',
+    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,indirectly_managed_nodes,usage_by_organizations',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-25--2025-02-26.xlsx'
@@ -49,6 +49,7 @@ def test_command(cleanup):
         # test workbook is openable with the lib we're creating it with
         workbook = openpyxl.load_workbook(filename=file_path)
 
+        validate_usage_reporting(workbook)
         validate_managed_nodes(file_path)
         validate_indirect_managed_nodes(file_path)
         validate_usage_by_organization(file_path)
@@ -56,6 +57,12 @@ def test_command(cleanup):
     finally:
         workbook.close()
 
+def validate_usage_reporting(workbook):
+    sheet = workbook['Usage Reporting']
+
+    # We have to count only direct hosts, not indirects
+    value = sheet['G7'].value
+    assert value == 3
 
 def validate_managed_nodes(file_path):
     sheet = pandas.read_excel(file_path, sheet_name='Managed nodes')
