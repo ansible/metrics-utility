@@ -57,12 +57,14 @@ def test_command(cleanup):
     finally:
         workbook.close()
 
+
 def validate_usage_reporting(workbook):
     sheet = workbook['Usage Reporting']
 
     # We have to count only direct hosts, not indirects
     value = sheet['G7'].value
     assert value == 3
+
 
 def validate_managed_nodes(file_path):
     sheet = pandas.read_excel(file_path, sheet_name='Managed nodes')
