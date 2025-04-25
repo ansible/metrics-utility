@@ -143,7 +143,7 @@ class Base:
             'task_runs': ('task_runs', 'sum'),
             'first_automation': ('first_automation', 'min'),
             'last_automation': ('last_automation', 'max'),
-            'manage_node_types': ('manage_node_types', lambda x: merge_arrays(x)),
+            'managed_node_types_set': ('managed_node_types_set', lambda x: merge_arrays(x)),
             'events': ('events', lambda x: merge_arrays(x)),
             'canonical_facts': ('canonical_facts', lambda x: merge_json_sets(x)),
             'facts': ('facts', lambda x: merge_json_sets(x)),
@@ -153,7 +153,7 @@ class Base:
         ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(**agg_dict)
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
-        for col in ['manage_node_types', 'events', 'canonical_facts', 'facts']:
+        for col in ['managed_node_types_set', 'events', 'canonical_facts', 'facts']:
             ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
@@ -166,7 +166,7 @@ class Base:
             'last_automation',
         ]
         if managed_node_type == 'indirect':
-            columns += ['manage_node_types', 'canonical_facts', 'facts', 'events']
+            columns += ['managed_node_types_set', 'canonical_facts', 'facts', 'events']
 
         if mode == 'by_organization':
             # Filter some columns out based on mode
@@ -184,7 +184,7 @@ class Base:
         if managed_node_type == 'indirect':
             labels.update(
                 {
-                    'manage_node_types': 'Manage\nNode\nTypes',
+                    'managed_node_types_set': 'Manage\nNode\nTypes',
                     'canonical_facts': 'Canonical\nFacts',
                     'facts': 'Facts',
                     'events': 'Events',
