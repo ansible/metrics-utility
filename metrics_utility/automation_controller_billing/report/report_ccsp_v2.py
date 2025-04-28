@@ -205,11 +205,33 @@ class ReportCCSPv2(Base):
     def _build_data_section_collection_missing(self, current_row, ws, df):
         """builds a table showing any gaps not covered by any since-until collection interval"""
 
+        # add artificial 0-interval collects at start & end - to detect gaps between opt_since & first since, and last until & opt_until
+        opt_since = self.extra_params['opt_since'] or self.extra_params['month_since']
+        opt_until = self.extra_params['opt_until'] or self.extra_params['month_until']
+        for file_name in df['file_name'].unique().tolist():
+            start = {
+                'collection_start_timestamp': None,
+                'since': opt_since,
+                'until': opt_since,  # NOT until
+                'file_name': file_name,
+                'status': 'ok',
+                'elapsed': None,
+            }
+            end = {
+                'collection_start_timestamp': None,
+                'since': opt_until,  # NOT since
+                'until': opt_until,
+                'file_name': file_name,
+                'status': 'ok',
+                'elapsed': None,
+            }
+            df = pd.concat([pd.DataFrame([start, end]), df], ignore_index=True)
+
         # skip failed collects
         df = df[df['status'] == 'ok']
 
         # find gaps between until -> next since
-        df = df.sort_values(['file_name', 'collection_start_timestamp']).reset_index(drop=True)
+        df = df.sort_values(['file_name', 'since', 'until']).reset_index(drop=True)
         df['next_since'] = df.groupby('file_name')['since'].shift(-1)
         df['gap'] = df['next_since'] - df['until']
 
