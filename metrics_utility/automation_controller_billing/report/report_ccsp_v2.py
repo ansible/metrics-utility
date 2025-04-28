@@ -3,7 +3,7 @@
 ######################################
 import time
 
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 import pandas as pd
 
@@ -206,8 +206,8 @@ class ReportCCSPv2(Base):
         """builds a table showing any gaps not covered by any since-until collection interval"""
 
         # add artificial 0-interval collects at start & end - to detect gaps between opt_since & first since, and last until & opt_until
-        opt_since = self.extra_params['opt_since'] or self.extra_params['month_since']
-        opt_until = self.extra_params['opt_until'] or self.extra_params['month_until']
+        opt_since = (self.extra_params['opt_since'] or self.extra_params['month_since']).replace(tz=timezone.utc)
+        opt_until = (self.extra_params['opt_until'] or self.extra_params['month_until']).replace(tz=timezone.utc)
         for file_name in df['file_name'].unique().tolist():
             start = {
                 'collection_start_timestamp': None,
