@@ -7,7 +7,14 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from metrics_utility.automation_controller_billing.collector import Collector
-from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, FailedToUploadPayload, MissingRequiredEnvVar, NoAnalyticsCollected
+from metrics_utility.exceptions import (
+    BadRequiredEnvVar,
+    BadShipTarget,
+    FailedToUploadPayload,
+    MissingRequiredEnvVar,
+    NoAnalyticsCollected,
+    UnparsableParameter,
+)
 from metrics_utility.management.validation import handle_crc_ship_target, handle_directory_ship_target, handle_s3_ship_target
 
 
@@ -103,7 +110,7 @@ class Command(BaseCommand):
             return None
 
         if value.isdigit():
-            raise Exception(f'Bare numbers are not valid ({help})')
+            raise UnparsableParameter(f'Bare numbers are not valid ({help})')
 
         # Process ret argument
         ret = None
