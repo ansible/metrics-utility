@@ -231,7 +231,7 @@ class ReportCCSPv2(Base):
         df = df[df['status'] == 'ok']
 
         # find gaps between until -> next since
-        df = df.sort_values(['file_name', 'since', 'until']).reset_index(drop=True)
+        df = df.sort_values(['file_name', 'since']).reset_index(drop=True)
         df['next_since'] = df.groupby('file_name')['since'].shift(-1)
         df['gap'] = df['next_since'] - df['until']
 
