@@ -1,14 +1,13 @@
-import os
-import subprocess
-
 import openpyxl
 import pytest
+
+from metrics_utility.test.util import run_build_ext
 
 
 # Define reports, date ranges, and sheet options
 reports = [
-    'CCSPv2',
     'CCSP',
+    'CCSPv2',
 ]
 
 ranges = [
@@ -18,18 +17,18 @@ ranges = [
     ['2025-04-01', '2025-04-03'],  # all of the above
 ]
 
-options = [
+sheets = [
     'ccsp_summary',
-    'managed_nodes',
+    'data_collection_status',
     'indirectly_managed_nodes',
     'inventory_scope',
-    'usage_by_organizations',
-    'usage_by_collections',
-    'usage_by_roles',
-    'usage_by_modules',
-    'managed_nodes_by_organizations',
     'jobs',
-    'data_collection_status',
+    'managed_nodes',
+    'managed_nodes_by_organizations',
+    'usage_by_collections',
+    'usage_by_modules',
+    'usage_by_organizations',
+    'usage_by_roles',
 ]
 
 
@@ -39,58 +38,35 @@ def build_file_path(report, date_range):
 
 
 # Build all combinations of parameters
-param_values = [
-    (report, date_range, option, build_file_path(report, date_range)) for report in reports for date_range in ranges for option in options
-]
+param_values = [(report, date_range, sheet, build_file_path(report, date_range)) for report in reports for date_range in ranges for sheet in sheets]
 
-id_list = [f'{report}-{date_range[0]}--{date_range[1]}-{option}' for report, date_range, option, _ in param_values]
+id_list = [f'{report}-{date_range[0]}--{date_range[1]}-{sheet}' for report, date_range, sheet, _ in param_values]
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 @pytest.mark.parametrize(
-    'report,date_range,option,cleanup',
+    'report,date_range,sheet,cleanup',
     param_values,
     indirect=['cleanup'],
     ids=id_list,
 )
-def test_empty_data(report, date_range, option, cleanup):
+def test_empty_data(report, date_range, sheet, cleanup):
     since, until = date_range
-
-    # Prepare the environment overrides
-    overrides = {
+    env = {
+        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': sheet,
+        'METRICS_UTILITY_REPORT_TYPE': report,
         'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
-        'METRICS_UTILITY_REPORT_TYPE': report,
-        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': option,
     }
-    env = os.environ.copy()
-    env.update(overrides)
-
-    # Build the command
-    cmd = [
-        'uv',
-        'run',
-        './manage.py',
-        'build_report',
+    args = [
         f'--since={since}',
         f'--until={until}',
         '--force',
     ]
+    env_str = ' '.join(f'{k}={v!r}' for k, v in env.items())
+    command_text = f'{env_str} uv run ./manage.py build_report {" ".join(args)}'
 
-    # Inline the environment vars into the command text for diagnostics
-    env_str = ' '.join(f'{k}={v!r}' for k, v in overrides.items())
-    command_text = f'Command was:\n{env_str} {" ".join(cmd)}'
-
-    # Run the command
-    result = subprocess.run(
-        cmd,
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-
-    # Verify exit code
-    assert result.returncode == 0, f'Build report failed.\n{command_text}\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}'
+    result = run_build_ext(env, args, helptext=command_text)
 
     if 'No billing data for input date range' not in result.stderr:
         file_name = build_file_path(report, date_range)
@@ -99,6 +75,5 @@ def test_empty_data(report, date_range, option, cleanup):
         workbook = openpyxl.load_workbook(filename=file_name)
         try:
             assert workbook is not None, f'Workbook load failed.\n{command_text}'
-            # TODO: further sheet/field-level assertions as needed
         finally:
             workbook.close()
