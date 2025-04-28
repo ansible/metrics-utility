@@ -3,7 +3,7 @@
 ######################################
 import time
 
-from datetime import timedelta, timezone
+from datetime import timedelta
 
 import pandas as pd
 
@@ -206,8 +206,8 @@ class ReportCCSPv2(Base):
         """builds a table showing any gaps not covered by any since-until collection interval"""
 
         # add artificial 0-interval collects at start & end - to detect gaps between opt_since & first since, and last until & opt_until
-        opt_since = (self.extra_params['opt_since'] or self.extra_params['month_since']).replace(tzinfo=timezone.utc)
-        opt_until = (self.extra_params['opt_until'] or self.extra_params['month_until']).replace(tzinfo=timezone.utc)
+        opt_since = (self.extra_params['opt_since'] or self.extra_params['month_since']).replace(tzinfo=None)
+        opt_until = (self.extra_params['opt_until'] or self.extra_params['month_until']).replace(tzinfo=None)
         for file_name in df['file_name'].unique().tolist():
             start = {
                 'collection_start_timestamp': None,
@@ -225,7 +225,9 @@ class ReportCCSPv2(Base):
                 'status': 'ok',
                 'elapsed': None,
             }
-            df = pd.concat([pd.DataFrame([start, end]), df], ignore_index=True)
+
+            synthetic = pd.DataFrame([start, end])
+            df = pd.concat([synthetic, df], ignore_index=True)
 
         # skip failed collects
         df = df[df['status'] == 'ok']
