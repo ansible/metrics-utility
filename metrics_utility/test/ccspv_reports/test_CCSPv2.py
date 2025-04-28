@@ -127,6 +127,27 @@ expected_sheets = {
         {'Non-unique managed nodes automated': [2, 4]},
         {'Number of task runs': [4, 8]},
     ],
+    'Usage by collections': [
+        {'Collection name': []},
+        {'Unique managed nodes\nautomated': []},
+        {'Non-unique managed\nnodes automated': []},
+        {'Number of task\nruns': []},
+        {'Duration of task\nruns [seconds]': []},
+    ],
+    'Usage by roles': [
+        {'Role name': []},
+        {'Unique managed nodes\nautomated': []},
+        {'Non-unique managed\nnodes automated': []},
+        {'Number of task\nruns': []},
+        {'Duration of task\nruns [seconds]': []},
+    ],
+    'Usage by modules': [
+        {'Module name': []},
+        {'Unique managed nodes\nautomated': []},
+        {'Non-unique managed\nnodes automated': []},
+        {'Number of task\nruns': []},
+        {'Duration of task\nruns [seconds]': []},
+    ],
 }
 
 
