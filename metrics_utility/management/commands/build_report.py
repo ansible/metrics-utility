@@ -210,11 +210,6 @@ class Command(BaseCommand):
         )
         return base
 
-    def _next_month(self, date):
-        if date.month == 12:
-            return date.replace(month=1, year=date.year + 1)
-        return date.replace(month=date.month + 1)
-
     def _handle_month(self, month):
         # Process month argument
         if month is not None:
@@ -228,4 +223,4 @@ class Command(BaseCommand):
             m = date.strftime('%m')
             month = f'{y}-{m}'
 
-        return month, date, self._next_month(date)
+        return month, date, date + relativedelta(months=1)
