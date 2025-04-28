@@ -27,7 +27,7 @@ def temporary_env(new_env):
 # Running a command as an external command, to test we can
 
 
-def _run_ext(env, name, args, helptext=None):
+def _run_ext(env, name, args):
     result = subprocess.run(
         [sys.executable, 'manage.py', name, *args],
         text=True,
@@ -39,15 +39,12 @@ def _run_ext(env, name, args, helptext=None):
     status = result.returncode
     if status != 0:
         pytest.fail(result.stderr)
-        if helptext:
-            pytest.fail(helptext)
 
     assert status == 0
-    return result
 
 
-def run_build_ext(env, args, helptext=None):
-    return _run_ext(env, 'build_report', args, helptext)
+def run_build_ext(env, args):
+    _run_ext(env, 'build_report', args)
 
 
 def run_gather_ext(env, args):

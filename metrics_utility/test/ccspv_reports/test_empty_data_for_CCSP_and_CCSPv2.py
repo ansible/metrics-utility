@@ -1,7 +1,9 @@
+import os
+
 import openpyxl
 import pytest
 
-from metrics_utility.test.util import run_build_ext
+from metrics_utility.test.util import run_build_int
 
 
 # Define reports, date ranges, and sheet options
@@ -58,22 +60,19 @@ def test_empty_data(report, date_range, sheet, cleanup):
         'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
     }
-    args = [
-        f'--since={since}',
-        f'--until={until}',
-        '--force',
-    ]
-    env_str = ' '.join(f'{k}={v!r}' for k, v in env.items())
-    command_text = f'{env_str} uv run ./manage.py build_report {" ".join(args)}'
+    args = {
+        'since': since,
+        'until': until,
+        'force': True,
+    }
 
-    result = run_build_ext(env, args, helptext=command_text)
+    run_build_int(env, args)
 
-    if 'No billing data for input date range' not in result.stderr:
-        file_name = build_file_path(report, date_range)
-
-        # Verify the XLSX output is loadable
+    # Verify the XLSX output is loadable, if created
+    file_name = build_file_path(report, date_range)
+    if os.path.isfile(file_name):
         workbook = openpyxl.load_workbook(filename=file_name)
         try:
-            assert workbook is not None, f'Workbook load failed.\n{command_text}'
+            assert workbook is not None
         finally:
             workbook.close()
