@@ -202,9 +202,13 @@ def validate_usage_by_modules(file_path):
 
 
 def load_data_collection_status(file_path):
-    rows = 3  # size of first table, including headers
+    # find the first empty row - gap between 2 tables
+    sheet_both = pandas.read_excel(file_path, sheet_name='Data collection status')
+    rows = sheet_both.index[sheet_both.isnull().all(axis=1)][0] + 1
+
     sheet_missing = pandas.read_excel(file_path, sheet_name='Data collection status', nrows=rows)
     sheet_status = pandas.read_excel(file_path, sheet_name='Data collection status', skiprows=rows + 1)
+
     return sheet_missing, sheet_status
 
 
@@ -219,10 +223,22 @@ def validate_data_collection_status(file_path):
             'Missing until': Timestamp('2025-02-13 11:49:17.200000'),
         },
         1: {
+            'CSV filename': 'job_host_summary.csv',
+            'Gap in seconds': datetime.time(11, 10, 42, 798000),
+            'Missing from': Timestamp('2025-02-13 12:49:17.202000'),
+            'Missing until': Timestamp('2025-02-14 00:00:00'),
+        },
+        2: {
             'CSV filename': 'main_jobevent.csv',
             'Gap in seconds': datetime.time(11, 49, 17, 200000),
             'Missing from': Timestamp('2025-02-13 00:00:00'),
             'Missing until': Timestamp('2025-02-13 11:49:17.200000'),
+        },
+        3: {
+            'CSV filename': 'main_jobevent.csv',
+            'Gap in seconds': datetime.time(11, 10, 42, 798000),
+            'Missing from': Timestamp('2025-02-13 12:49:17.202000'),
+            'Missing until': Timestamp('2025-02-14 00:00:00'),
         },
     }
 

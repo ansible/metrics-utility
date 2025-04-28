@@ -202,25 +202,41 @@ class ReportCCSPv2(Base):
 
         return current_row + row_counter
 
+    def _since_until(self):
+        # either --month was used, then use [month_since, month_until)
+        # or --since & --until was used, then until means end of that day, not start
+        since, until = None, None
+
+        if self.extra_params['opt_since']:
+            since = self.extra_params['opt_since'].replace(tzinfo=None)
+        elif self.extra_params['month_since']:
+            since = self.extra_params['month_since'].replace(tzinfo=None)
+
+        if self.extra_params['opt_until']:
+            until = self.extra_params['opt_until'].replace(tzinfo=None) + timedelta(days=1)
+        elif self.extra_params['month_until']:
+            until = self.extra_params['month_until'].replace(tzinfo=None)
+
+        return since, until
+
     def _build_data_section_collection_missing(self, current_row, ws, df):
         """builds a table showing any gaps not covered by any since-until collection interval"""
 
         # add artificial 0-interval collects at start & end - to detect gaps between opt_since & first since, and last until & opt_until
-        opt_since = (self.extra_params['opt_since'] or self.extra_params['month_since']).replace(tzinfo=None)
-        opt_until = (self.extra_params['opt_until'] or self.extra_params['month_until']).replace(tzinfo=None)
+        since, until = self._since_until()
         for file_name in df['file_name'].unique().tolist():
             start = {
                 'collection_start_timestamp': None,
-                'since': opt_since,
-                'until': opt_since,  # NOT until
+                'since': since,
+                'until': since,  # NOT until
                 'file_name': file_name,
                 'status': 'ok',
                 'elapsed': None,
             }
             end = {
                 'collection_start_timestamp': None,
-                'since': opt_until,  # NOT since
-                'until': opt_until,
+                'since': until,  # NOT since
+                'until': until,
                 'file_name': file_name,
                 'status': 'ok',
                 'elapsed': None,
