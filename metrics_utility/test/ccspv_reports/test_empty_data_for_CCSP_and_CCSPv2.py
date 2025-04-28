@@ -1,8 +1,9 @@
 import os
 import subprocess
 
-import pytest
 import openpyxl
+import pytest
+
 
 # Define reports, date ranges, and sheet options
 reports = [
@@ -31,25 +32,19 @@ options = [
     'data_collection_status',
 ]
 
+
 def build_file_path(report, date_range):
     year, month, _ = date_range[1].split('-')
-    return (
-        f'./metrics_utility/test/test_data/reports/'
-        f'{year}/{month}/{report}-{date_range[0]}--{date_range[1]}.xlsx'
-    )
+    return f'./metrics_utility/test/test_data/reports/{year}/{month}/{report}-{date_range[0]}--{date_range[1]}.xlsx'
+
 
 # Build all combinations of parameters
 param_values = [
-    (report, date_range, option, build_file_path(report, date_range))
-    for report in reports
-    for date_range in ranges
-    for option in options
+    (report, date_range, option, build_file_path(report, date_range)) for report in reports for date_range in ranges for option in options
 ]
 
-id_list = [
-    f"{report}-{date_range[0]}--{date_range[1]}-{option}"
-    for report, date_range, option, _ in param_values
-]
+id_list = [f'{report}-{date_range[0]}--{date_range[1]}-{option}' for report, date_range, option, _ in param_values]
+
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 @pytest.mark.parametrize(
@@ -73,15 +68,18 @@ def test_empty_data(report, date_range, option, cleanup):
 
     # Build the command
     cmd = [
-        'uv', 'run', './manage.py', 'build_report',
+        'uv',
+        'run',
+        './manage.py',
+        'build_report',
         f'--since={since}',
         f'--until={until}',
         '--force',
     ]
 
     # Inline the environment vars into the command text for diagnostics
-    env_str = ' '.join(f"{k}={v!r}" for k, v in overrides.items())
-    command_text = f"Command was:\n{env_str} {' '.join(cmd)}"
+    env_str = ' '.join(f'{k}={v!r}' for k, v in overrides.items())
+    command_text = f'Command was:\n{env_str} {" ".join(cmd)}'
 
     # Run the command
     result = subprocess.run(
@@ -92,23 +90,15 @@ def test_empty_data(report, date_range, option, cleanup):
     )
 
     # Verify exit code
-    assert result.returncode == 0, (
-        f"Build report failed.\n"
-        f"{command_text}\n"
-        f"Stdout:\n{result.stdout}\n"
-        f"Stderr:\n{result.stderr}"
-    )
+    assert result.returncode == 0, f'Build report failed.\n{command_text}\nStdout:\n{result.stdout}\nStderr:\n{result.stderr}'
 
-    if "No billing data for input date range" not in result.stderr:
+    if 'No billing data for input date range' not in result.stderr:
         file_name = build_file_path(report, date_range)
 
         # Verify the XLSX output is loadable
         workbook = openpyxl.load_workbook(filename=file_name)
         try:
-            assert workbook is not None, (
-                "Workbook load failed.\n"
-                f"{command_text}"
-            )
+            assert workbook is not None, f'Workbook load failed.\n{command_text}'
             # TODO: further sheet/field-level assertions as needed
         finally:
             workbook.close()
