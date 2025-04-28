@@ -144,7 +144,7 @@ class DataframeJobhostSummaryUsage(Base):
                 print_data(billing_data_monthly_rollup, 'Actual global data')
 
         if billing_data_monthly_rollup is None or billing_data_monthly_rollup.empty:
-            return pd.DataFrame(columns=self.data_columns())
+            return pd.DataFrame(columns=self.data_columns() + self.unique_index_columns())
 
         return billing_data_monthly_rollup.reset_index()
 

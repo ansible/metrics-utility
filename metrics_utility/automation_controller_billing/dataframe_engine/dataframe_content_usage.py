@@ -91,7 +91,7 @@ class DataframeContentUsage(Base):
                     content_explorer_rollup = self.cast_dataframe(content_explorer_rollup, self.cast_types())
 
         if content_explorer_rollup is None or content_explorer_rollup.empty:
-            return pd.DataFrame(columns=self.data_columns())
+            return pd.DataFrame(columns=self.data_columns() + self.unique_index_columns())
 
         return content_explorer_rollup.reset_index()
 
