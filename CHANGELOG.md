@@ -44,6 +44,7 @@
 - Fix return codes
 
 ## 0.4.0
+
 - Adding RENEWAL_GUIDANCE reports having host fact based dedup and detection of ephemeral hosts
 - removing obsolete host_metric command
 - adding organization usage details into CCSPv2 report
@@ -53,7 +54,19 @@
 - introducing S3 adapter for CCSP types of reports
 
 ## 0.4.1
+
 - relax boto3 requirement so it builds with any version available
 
-## 0.4.2 (unreleased)
-- allow importing pglock from either awx or django-ansible-base
+## 0.4.2
+
+- add indirectly managed nodes support, sheets
+- count only reachable hosts into ccsp
+- add optional collector coverage sheet
+- allow importing pglock from either awx or django-ansible-base (2.4/2.5 compatibility)
+- perf: reduce need to load data only used by optional sheets
+- handle missing job_created for older job_host_summary data
+- basic param validation for --since, --until
+- better error handling for missing data
+- dev: added tests, mock data generator, scripts, docs, linters, workflows
+- dev: standalone mode with just postgres; python 3.13
+- dev: merge in insights-analytics-generator base lib
