@@ -60,6 +60,7 @@
 ## 0.4.2
 
 - add indirectly managed nodes support, sheets
+- add scope (hosts across all inventories) support, sheets
 - count only reachable hosts into ccsp
 - add optional collector coverage sheet
 - allow importing pglock from either awx or django-ansible-base (2.4/2.5 compatibility)
