@@ -57,7 +57,7 @@
 
 - relax boto3 requirement so it builds with any version available
 
-## 0.4.2
+## 0.5.0
 
 - add indirectly managed nodes support, sheets
 - add scope (hosts across all inventories) support, sheets
