@@ -71,3 +71,7 @@
 - dev: added tests, mock data generator, scripts, docs, linters, workflows
 - dev: standalone mode with just postgres; python 3.13
 - dev: merge in insights-analytics-generator base lib
+
+## 0.5.1dev
+
+- TODO

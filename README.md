@@ -170,6 +170,13 @@ Please note that this is the upstream documentation for the metrics-utility proj
 
 As the project grows, more guides and references will be added to the `/docs` folder.
 
+## Version mapping
+
+|metrics-utility version|AAP version|
+|-|-|
+|0.4.1|2.4\*|
+|0.5.0|2.5-20250507|
+
 ## Contributing
 
 Please follow our [Contributor's Guide](./docs/contributing/CONTRIBUTING.md) for details on submitting changes and documentation standards.
