@@ -19,7 +19,7 @@ podman run --name "$NAME" --replace \
     -v "$ROLES":/docker-entrypoint-initdb.d/init-roles.sql:ro \
     -v "$SCHEMA":/docker-entrypoint-initdb.d/init-schema.sql:ro \
     -p 5432:5432 \
-    -d quay.io/cloudservices/postgres
+    -d mirror.gcr.io/postgres
 
 tries=5
 until pg_isready -h localhost; do

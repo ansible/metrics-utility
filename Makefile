@@ -1,5 +1,5 @@
 help:
-	@echo help sync test coverage lint fix
+	@echo help sync test coverage lint fix compose
 
 sync:
 	uv run sync
@@ -18,4 +18,7 @@ fix:
 	uv run ruff check --fix
 	uv run ruff format
 
-.PHONY: help sync test coverage lint fix
+compose:
+	docker compose -f tools/docker/docker-compose.yaml up
+
+.PHONY: help sync test coverage lint fix compose

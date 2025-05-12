@@ -36,7 +36,7 @@ For more about the development setup, see the [Developer Setup Guide](./docs/dev
 
 ### Tests (standalone)
 
-Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one. You may need to `docker login quay.io` first.
+Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one.
 
 You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`.
 For more flexibility, use:
