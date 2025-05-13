@@ -20,7 +20,7 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=2000
 export OUTPUT_DATE_FROM=2026-01-01
 export OUTPUT_DATE_TO=2026-02-01
 
-TIME=`which gtime && echo 'gtime' || echo 'time'`
+TIME=`which gtime && echo 'gtime' || echo '/usr/bin/time'`
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 
@@ -36,8 +36,6 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=20000
 
 export OUTPUT_DATE_FROM=2026-02-01
 export OUTPUT_DATE_TO=2026-03-01
-
-TIME=`which gtime && echo 'gtime' || echo 'time'`
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 
@@ -55,7 +53,6 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=200000
 export OUTPUT_DATE_FROM=2026-03-01
 export OUTPUT_DATE_TO=2026-04-01
 
-TIME=`which gtime && echo 'gtime' || echo 'time'`
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 
@@ -73,7 +70,7 @@ uv run ./generator.py
 #export OUTPUT_DATE_FROM=2026-04-01
 #export OUTPUT_DATE_TO=2026-05-01
 #
-#TIME=`which gtime && echo 'gtime' || echo 'time'`
+# $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 #uv run ./generator.py
 
 
@@ -87,7 +84,6 @@ run_default_sheets() {
   export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
 
   echo default sheets
-  TIME=`which gtime && echo 'gtime' || echo 'time'`
   $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
   uv run ./manage.py build_report --force "$@"
 }
@@ -96,7 +92,6 @@ run_all_sheets() {
   export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS=ccsp_summary,indirectly_managed_nodes,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles,data_collection_status
 
   echo all sheets
-  TIME=`which gtime && echo 'gtime' || echo 'time'`
   $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
   uv run ./manage.py build_report --force "$@"
 }
