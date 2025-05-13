@@ -20,7 +20,8 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=2000
 export OUTPUT_DATE_FROM=2026-01-01
 export OUTPUT_DATE_TO=2026-02-01
 
-/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+TIME=`which gtime && echo 'gtime' || echo 'time'`
+$TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 
 echo gen 100,000
@@ -36,7 +37,8 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=20000
 export OUTPUT_DATE_FROM=2026-02-01
 export OUTPUT_DATE_TO=2026-03-01
 
-/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+TIME=`which gtime && echo 'gtime' || echo 'time'`
+$TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 
 # ~5 minutes
@@ -53,7 +55,8 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=200000
 export OUTPUT_DATE_FROM=2026-03-01
 export OUTPUT_DATE_TO=2026-04-01
 
-/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+TIME=`which gtime && echo 'gtime' || echo 'time'`
+$TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 
 ## ~50 minutes
@@ -70,7 +73,7 @@ uv run ./generator.py
 #export OUTPUT_DATE_FROM=2026-04-01
 #export OUTPUT_DATE_TO=2026-05-01
 #
-#/usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+#TIME=`which gtime && echo 'gtime' || echo 'time'`
 #uv run ./generator.py
 
 
@@ -84,7 +87,8 @@ run_default_sheets() {
   export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
 
   echo default sheets
-  /usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+  TIME=`which gtime && echo 'gtime' || echo 'time'`
+  $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
   uv run ./manage.py build_report --force "$@"
 }
 
@@ -92,7 +96,8 @@ run_all_sheets() {
   export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS=ccsp_summary,indirectly_managed_nodes,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles,data_collection_status
 
   echo all sheets
-  /usr/bin/time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+  TIME=`which gtime && echo 'gtime' || echo 'time'`
+  $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
   uv run ./manage.py build_report --force "$@"
 }
 
