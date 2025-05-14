@@ -20,7 +20,7 @@ export MAIN_JOBEVENT_UNIQUE_SIZE=2000
 export OUTPUT_DATE_FROM=2026-01-01
 export OUTPUT_DATE_TO=2026-02-01
 
-TIME=`which gtime && echo 'gtime' || echo '/usr/bin/time'`
+TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./generator.py
 

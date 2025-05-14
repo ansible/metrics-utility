@@ -19,6 +19,8 @@ export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 
+TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
+
 SCHEMA=`realpath "tools/docker/latest.sql"`
 ROLES=`realpath "tools/docker/roles.sql"`
 NAME=ccsp2-gather-`basename "$SCHEMA" .sql`
@@ -43,8 +45,6 @@ until pg_isready -h localhost; do
 
   tries=`expr "$tries" - 1`
 done
-
-TIME=`which gtime && echo 'gtime' || echo '/usr/bin/time'`
 
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force "$@"
