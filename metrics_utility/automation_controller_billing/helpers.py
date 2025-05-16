@@ -1,11 +1,9 @@
 import datetime
 import json
-
 from datetime import timezone
 from itertools import chain
 
 import pandas as pd
-
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 
@@ -47,7 +45,7 @@ def merge_json_sets(json_values):
             for key, value in d.items():
                 # Ignore null (None) or empty string values.
                 # We also want to ignore NA value used when facts are not available
-                if value is not None and value != '' and value != 'NA':
+                if value is not None and value != "" and value != "NA":
                     if isinstance(value, set):
                         merged.setdefault(key, set()).update(value)
                     else:
@@ -66,47 +64,68 @@ def merge_arrays(values):
 
 def parse_date_param(date_option):
     parsed_date = None
-    if date_option and date_option.endswith('d'):
+    now_utc = datetime.datetime.now(timezone.utc)  # Use timezone-aware now
+
+    if date_option and date_option.endswith("d"):
         days_ago = int(date_option[0:-1])
-        parsed_date = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option and (date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months')):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
+        parsed_date = (now_utc - datetime.timedelta(days=days_ago - 1)).replace(
+            hour=23, minute=59, second=59, microsecond=999999
+        )  # End of day UTC
+    elif date_option and (
+        date_option.endswith("mo")
+        or date_option.endswith("month")
+        or date_option.endswith("months")
+    ):
+        suffix_length = (
+            len("mo")
+            if date_option.endswith("mo")
+            else len("month") if date_option.endswith("month") else len("months")
+        )
         months_ago = int(date_option[0:-suffix_length])
-        parsed_date = (datetime.datetime.now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option and date_option.endswith('m'):
+        parsed_date = (now_utc - relativedelta(months=months_ago)).replace(
+            hour=23, minute=59, second=59, microsecond=999999
+        )  # End of month/relative time UTC
+    elif date_option and date_option.endswith("m"):
         minutes_ago = int(date_option[0:-1])
-        parsed_date = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
-    else:
-        parsed_date = parser.parse(date_option) if date_option else None
-    # Add default utc timezone
-    if parsed_date and parsed_date.tzinfo is None:
-        parsed_date = parsed_date.replace(tzinfo=timezone.utc)
+        parsed_date = now_utc - datetime.timedelta(
+            minutes=minutes_ago
+        )  # Already timezone-aware
+    elif date_option:
+        try:
+            parsed_date = parser.parse(date_option)
+            if parsed_date and parsed_date.tzinfo is None:
+                parsed_date = parsed_date.replace(tzinfo=timezone.utc)
+        except ValueError:
+            parsed_date = None
 
     return parsed_date
 
 
 def parse_number_of_days(date_option):
-    if date_option and (date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days')):
-        if date_option.endswith('d'):
-            suffix_length = len('d')
-        elif date_option.endswith('day'):
-            suffix_length = len('day')
-        elif date_option.endswith('days'):
-            suffix_length = len('days')
+    if date_option and (
+        date_option.endswith("d")
+        or date_option.endswith("day")
+        or date_option.endswith("days")
+    ):
+        if date_option.endswith("d"):
+            suffix_length = len("d")
+        elif date_option.endswith("day"):
+            suffix_length = len("day")
+        elif date_option.endswith("days"):
+            suffix_length = len("days")
 
         days = int(date_option[0:-suffix_length])
-    elif date_option and (date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months')):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
+    elif date_option and (
+        date_option.endswith("mo")
+        or date_option.endswith("month")
+        or date_option.endswith("months")
+    ):
+        if date_option.endswith("mo"):
+            suffix_length = len("mo")
+        elif date_option.endswith("month"):
+            suffix_length = len("month")
+        elif date_option.endswith("months"):
+            suffix_length = len("months")
 
         days = int(date_option[0:-suffix_length]) * 30  # using 30 days per month
     else:

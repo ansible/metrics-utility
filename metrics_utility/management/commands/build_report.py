@@ -99,22 +99,22 @@ class Command(BaseCommand):
         opt_ephemeral = None
 
         opt_since = options.get("since") or None
-        opt_since = parse_date_param(opt_since)
+        if opt_since:
+            opt_since = parse_date_param(opt_since)
 
         opt_until = options.get("until") or None
         if opt_until is None:
-            date_now = datetime.datetime.now(timezone.utc).date()
-            opt_until = date_now
+            opt_until = datetime.datetime.now(timezone.utc).replace(
+                hour=23, minute=59, second=59, microsecond=999999
+            )  # Default to end of current day UTC
             self.logger.info(
-                f"--until parameter not provided, defaulting to: {date_now}"
+                f"--until parameter not provided, defaulting to: {opt_until}"
             )
         else:
             opt_until = parse_date_param(opt_until)
 
         opt_ephemeral = options.get("ephemeral") or None
-
         opt_force = options.get("force")
-
         ship_target = os.getenv("METRICS_UTILITY_SHIP_TARGET", None)
         extra_params = self._handle_extra_params(ship_target)
         extra_params["opt_since"] = opt_since
@@ -127,13 +127,9 @@ class Command(BaseCommand):
 
         # Determine destination path for generated report and skip processing if it exists
         if opt_since is not None:
-            now = datetime.datetime.now().replace(
-                second=0, microsecond=0, tzinfo=timezone.utc
-            )
+            now = datetime.datetime.now(timezone.utc).replace(second=0, microsecond=0)
             extra_params["since_date"] = opt_since.date()
-            extra_params["until_date"] = (
-                opt_until if isinstance(opt_until, datetime.date) else opt_until.date()
-            )
+            extra_params["until_date"] = opt_until.date() if opt_until else now.date()
 
             extra_params["report_period_range"] = (
                 f'{extra_params["since_date"]}, {extra_params["until_date"]}'
