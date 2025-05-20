@@ -75,8 +75,7 @@ class Command(BaseCommand):
         opt_ephemeral = None
 
         opt_since = options.get('since') or None
-        if opt_since:
-            opt_since = parse_date_param(opt_since)
+        opt_since = parse_date_param(opt_since)
 
         opt_until = options.get('until') or None
         if opt_until is None:
@@ -99,8 +98,9 @@ class Command(BaseCommand):
 
         # Determine destination path for generated report and skip processing if it exists
         if opt_since is not None:
+            now = datetime.datetime.now().replace(second=0, microsecond=0, tzinfo=timezone.utc)
             extra_params['since_date'] = opt_since.date()
-            extra_params['until_date'] = opt_until.date() if opt_until else datetime.datetime.now(timezone.utc).date()
+            extra_params['until_date'] = opt_until.date() if opt_until else now.date()
 
             extra_params['report_period_range'] = f'{extra_params["since_date"]}, {extra_params["until_date"]}'
 
