@@ -77,14 +77,21 @@ class Command(BaseCommand):
         opt_since = options.get('since') or None
         opt_since = parse_date_param(opt_since)
 
-        opt_until = options.get('until') or None
-        if opt_until is None:
-            opt_until = datetime.datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-            self.logger.info(f'--until parameter not provided, defaulting to: {opt_until}')
-        else:
-            opt_until = parse_date_param(opt_until)
-
         opt_ephemeral = options.get('ephemeral') or None
+
+        opt_until = None  # Initialize opt_until to None
+
+        if opt_since is not None:
+            # If --since was provided, then process --until
+            user_provided_until = options.get('until')
+            if user_provided_until is None:
+                # default --until to today
+                opt_until = datetime.datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+                self.logger.info(f'--until parameter not provided with --since, defaulting to: {opt_until.date()}')
+            else:
+                # If --since and --until were both provided, parse the user's --until
+                opt_until = parse_date_param(user_provided_until)
+
         opt_force = options.get('force')
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_extra_params(ship_target)
