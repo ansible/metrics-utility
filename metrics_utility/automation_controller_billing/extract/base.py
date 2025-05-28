@@ -55,7 +55,7 @@ class Base:
             with open(file_path) as f:
                 return json.loads(f.read())
         except FileNotFoundError:
-            self.logger.warn(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
+            self.logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
 
     def process_tarballs(self, path, temp_dir):
         _safe_extract(path, temp_dir)
