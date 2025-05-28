@@ -14,7 +14,7 @@ from metrics_utility.automation_controller_billing.helpers import parse_date_par
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
-from metrics_utility.management.validation import handle_directory_ship_target, handle_s3_ship_target
+from metrics_utility.management.validation import handle_directory_ship_target, handle_not_crc, handle_not_s3, handle_not_ship, handle_s3_ship_target
 from metrics_utility.metric_utils import get_optional_collectors
 
 
@@ -155,17 +155,19 @@ class Command(BaseCommand):
 
     def _handle_ship_target(self, ship_target):
         if ship_target == 'controller_db':
-            return {}
+            handle_not_crc()
+            handle_not_s3()
+            return {} # ship_path set in handle_extra_params
         elif ship_target == 'directory':
-            return handle_directory_ship_target(ship_target)
+            handle_not_crc()
+            handle_not_s3()
+            return handle_directory_ship_target()
         elif ship_target == 's3':
-            return handle_s3_ship_target(ship_target)
+            handle_not_crc()
+            return handle_s3_ship_target()
         else:
-            raise BadShipTarget(
-                'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var'
-                ', allowed value for local report generation are '
-                "['s3', 'directory', 'controller_db']"
-            )
+            allowed = ', '.join(['controller_db', 'directory', 's3'])
+            raise BadShipTarget(f'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var ({ship_target}), allowed values: {allowed}')
 
     def _handle_extra_params(self, ship_target=None):
         base = self._handle_ship_target(ship_target)
@@ -174,6 +176,7 @@ class Command(BaseCommand):
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
+        # FIXME: already checked inside handle_ .. except crc (not here) / controller_db .. but required there?
         if not ship_path:
             raise MissingRequiredEnvVar(
                 'Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination for the generated data and for the built reports'
