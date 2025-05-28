@@ -30,8 +30,6 @@ class Factory:
             )
         elif self.report_type == 'RENEWAL_GUIDANCE':
             return (self._get_db_dataframe_host_metric_usage().build_dataframe(),)
-        elif self.report_type == 'RENEWAL_GUIDANCEv2':
-            return (self._get_dataframe_jobhost_summary_usage().build_dataframe(), self._get_dataframe_content_usage().build_dataframe())
         else:
             raise NotSupportedFactory(f'Factory for {self.ship_target} not supported')
 

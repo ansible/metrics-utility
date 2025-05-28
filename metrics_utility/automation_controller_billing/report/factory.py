@@ -24,8 +24,6 @@ class Factory:
             return self._get_report_ccsp_v2()
         elif self.report_type == 'RENEWAL_GUIDANCE':
             return self._get_report_renewal_guidance()
-        elif self.report_type == 'RENEWAL_GUIDANCEv2':
-            return self._get_report_renewal_guidance()
 
     def _get_report_ccsp(self):
         # Return default S3 loader
