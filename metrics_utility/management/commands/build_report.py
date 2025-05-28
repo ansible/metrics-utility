@@ -208,12 +208,7 @@ class Command(BaseCommand):
                 # Renewal guidance specific params
                 'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
                 'report_organization_filter': os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER', None),
-                # S3 specific options
-                's3_bucket_name': os.getenv('METRICS_UTILITY_BUCKET_NAME', None),
-                's3_bucket_endpoint': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', None),
-                's3_bucket_region': os.getenv('METRICS_UTILITY_BUCKET_REGION', None),
-                's3_bucket_id': os.getenv('METRICS_UTILITY_BUCKET_ID', None),
-                's3_bucket_key': os.getenv('METRICS_UTILITY_BUCKET_KEY', None),
+                # optional bits
                 'optional_collectors': get_optional_collectors(),
                 'optional_sheets': os.getenv(
                     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
