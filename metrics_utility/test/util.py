@@ -6,11 +6,6 @@ from contextlib import contextmanager
 
 import pytest
 
-from metrics_utility import prepare
-
-
-prepare()
-
 
 @contextmanager
 def temporary_env(new_env):
