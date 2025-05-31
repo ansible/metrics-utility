@@ -6,12 +6,14 @@ from metrics_utility.exceptions import MissingRequiredEnvVar
 
 logger = logging.getLogger(__name__)
 
+ship_path_description = 'place for collected data and built reports'
+
 
 def handle_directory_ship_target():
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
 
     if not ship_path:
-        raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_SHIP_PATH - destination for the generated data')
+        raise MissingRequiredEnvVar(f'Missing required env variable METRICS_UTILITY_SHIP_PATH - {ship_path_description}')
 
     return {'ship_path': ship_path}
 
@@ -36,7 +38,7 @@ def handle_s3_ship_target():
     if not bucket_secret_key:
         missing += ['METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key']
     if not ship_path:
-        missing += ['METRICS_UTILITY_SHIP_PATH - destination for the generated data']
+        missing += [f'METRICS_UTILITY_SHIP_PATH - {ship_path_description}']
     # bucket_region is optional
 
     if missing:

@@ -14,7 +14,7 @@ from metrics_utility.automation_controller_billing.helpers import parse_date_par
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
-from metrics_utility.management.validation import handle_directory_ship_target, handle_not_crc, handle_not_s3, handle_not_ship, handle_s3_ship_target
+from metrics_utility.management.validation import handle_directory_ship_target, handle_not_crc, handle_not_s3, handle_s3_ship_target
 from metrics_utility.metric_utils import get_optional_collectors
 
 
@@ -154,11 +154,8 @@ class Command(BaseCommand):
         self.logger.info(f'Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}')
 
     def _handle_ship_target(self, ship_target):
-        if ship_target == 'controller_db':
-            handle_not_crc()
-            handle_not_s3()
-            return {} # ship_path set in handle_extra_params
-        elif ship_target == 'directory':
+        if ship_target in ['controller_db', 'directory']:
+            # controller_db is just directory but with different extractor
             handle_not_crc()
             handle_not_s3()
             return handle_directory_ship_target()
@@ -172,26 +169,19 @@ class Command(BaseCommand):
     def _handle_extra_params(self, ship_target=None):
         base = self._handle_ship_target(ship_target)
 
-        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
-        # FIXME: already checked inside handle_ .. except crc (not here) / controller_db .. but required there?
-        if not ship_path:
-            raise MissingRequiredEnvVar(
-                'Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination for the generated data and for the built reports'
-            )
-
         if not report_type:
             raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_REPORT_TYPE.')
-        elif report_type not in ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']:
+
+        if report_type not in ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']:
             raise BadRequiredEnvVar(
                 "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']"
             )
 
         base.update(
             {
-                'ship_path': ship_path,
                 'report_type': report_type,
                 'price_per_node': price_per_node,
                 # XLSX specific params

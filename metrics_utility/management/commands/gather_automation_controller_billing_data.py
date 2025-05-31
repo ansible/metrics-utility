@@ -20,7 +20,6 @@ from metrics_utility.management.validation import (
     handle_directory_ship_target,
     handle_not_crc,
     handle_not_s3,
-    handle_not_ship,
     handle_s3_ship_target,
 )
 
