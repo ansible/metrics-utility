@@ -1,0 +1,339 @@
+import copy
+import datetime as dt_actual
+
+from unittest.mock import ANY, MagicMock, patch
+
+import pandas as pd
+import pytest
+
+from openpyxl import Workbook as ActualOpenpyxlWorkbook
+
+from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric import DBDataframeHostMetric
+from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup as ActualDedup
+from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
+from metrics_utility.test.util import generate_renewal_guidance_dataframe
+
+
+# 1. Define a fixed datetime for testing
+@pytest.fixture
+def fixed_now():
+    return dt_actual.datetime(2025, 6, 3, 10, 0, 0, tzinfo=dt_actual.timezone.utc)
+
+
+# 2. Fixture to set up the processed DataFrame from DBDataframeHostMetric
+@pytest.fixture
+def setup_processed_dataframe(fixed_now):
+    """
+    Sets up the processed DataFrame by mocking DBDataframeHostMetric's extractor.
+    """
+    mock_full_dataframe_raw = generate_renewal_guidance_dataframe(is_empty=False, current_datetime=fixed_now)
+
+    mock_df_for_batch_processed = mock_full_dataframe_raw.copy()
+    for col in ['first_automation', 'last_automation']:
+        mock_df_for_batch_processed[col] = pd.to_datetime(mock_df_for_batch_processed[col], utc=True).dt.tz_localize(None)
+
+    mock_df_for_batch_processed['last_deleted'] = mock_df_for_batch_processed['last_deleted'].apply(
+        lambda x: (x.isoformat(timespec='seconds') if pd.notna(x) and isinstance(x, dt_actual.datetime) else None)
+    )
+
+    mock_batches = [{'host_metric': mock_df_for_batch_processed}]
+
+    mock_extractor = MagicMock()
+    mock_extractor.iter_batches.return_value = (batch for batch in mock_batches)
+
+    db_host_metric_instance = DBDataframeHostMetric(
+        extractor=mock_extractor,
+        month=fixed_now.strftime('%Y-%m'),
+        extra_params={},
+    )
+
+    processed_df = db_host_metric_instance.build_dataframe()
+
+    assert processed_df is not None, 'Fixture: build_dataframe should return a DataFrame'
+    assert not processed_df.empty, 'Fixture: DataFrame should not be empty'
+    assert len(processed_df) == len(mock_full_dataframe_raw), 'Fixture: DataFrame should contain all mock rows'
+    assert pd.api.types.is_datetime64_any_dtype(processed_df['first_automation'])
+    assert pd.api.types.is_datetime64_any_dtype(processed_df['last_automation'])
+    assert pd.api.types.is_datetime64_any_dtype(processed_df['last_deleted'])
+
+    yield processed_df
+
+
+# 3. Fixture to set up all mocks for build_spreadsheet's dependencies
+@pytest.fixture
+def setup_build_spreadsheet_mocks(fixed_now):
+    """
+    Prepares all mocks needed for the build_spreadsheet method.
+    """
+    mock_wb = MagicMock(spec=ActualOpenpyxlWorkbook)
+    mock_active_ws = MagicMock()
+    mock_wb.active = mock_active_ws
+    mock_wb.remove.return_value = None
+
+    mock_ws_list = [MagicMock(), MagicMock(), MagicMock(), MagicMock(), MagicMock()]
+    mock_wb.create_sheet.side_effect = mock_ws_list
+
+    mock_cell = MagicMock()
+
+    mock_dedup_instance = MagicMock(spec=ActualDedup)
+    mock_dedup_class = MagicMock(return_value=mock_dedup_instance)
+
+    mock_time_module = MagicMock()
+    mock_time_module.strftime.return_value = 'Jun 03, 2025'
+
+    mocks_for_instance = {
+        '_build_heading_h1': MagicMock(return_value=2),
+        '_build_header': MagicMock(return_value=3),
+        '_build_data_section': MagicMock(),
+        '_build_data_section_host_metrics': MagicMock(),
+        '_build_data_section_ephemeral_usage': MagicMock(),
+        'compute_ephemeral_intervals': MagicMock(return_value=pd.DataFrame()),
+        'optional_report_sheets': MagicMock(return_value=['managed_nodes']),
+        'dataframe_to_rows_func': MagicMock(return_value=[['mock_header'], ['mock_data']]),
+    }
+
+    yield {
+        'openpyxl_wb_mock': mock_wb,
+        'dedup_class_mock': mock_dedup_class,
+        'time_module_mock': mock_time_module,
+        'dedup_instance_mock': mock_dedup_instance,
+        'mocks_for_instance': mocks_for_instance,
+        'mock_cell': mock_cell,
+        'mock_ws_list': mock_ws_list,
+    }
+
+
+# 4. Fixture to set up a ReportRenewalGuidance instance for tests
+@pytest.fixture
+def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mocks, setup_processed_dataframe):
+    patch_target_datetime = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.datetime'
+    patch_target_workbook = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.Workbook'
+    patch_target_dedup_class = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.Dedup'
+    patch_target_time = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.time'
+    patch_target_dataframe_to_rows = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.dataframe_to_rows'
+
+    with (
+        patch(patch_target_datetime) as mock_datetime_module,
+        patch(patch_target_workbook, new=setup_build_spreadsheet_mocks['openpyxl_wb_mock']),
+        patch(patch_target_dedup_class, new=setup_build_spreadsheet_mocks['dedup_class_mock']),
+        patch(patch_target_time, new=setup_build_spreadsheet_mocks['time_module_mock']),
+        patch(patch_target_dataframe_to_rows, new=setup_build_spreadsheet_mocks['mocks_for_instance']['dataframe_to_rows_func']),
+    ):
+        mock_datetime_module.datetime.now.return_value = fixed_now
+        mock_datetime_module.datetime.utcnow.return_value = fixed_now.replace(tzinfo=None)
+        mock_datetime_module.timedelta = dt_actual.timedelta
+        mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
+        mock_datetime_module.timezone.utc = dt_actual.timezone.utc
+
+        test_ephemeral_days = 30
+        report_period_range = '2025-01-01,2025-06-03'
+        test_extra_params = {
+            'opt_ephemeral': f'{test_ephemeral_days} days',
+            'price_per_node': 0.1,
+            'report_period_range': report_period_range,
+            'since_date': '2025-01-01',
+            'until_date': '2025-06-03',
+        }
+
+        report_instance = ReportRenewalGuidance(
+            dataframe=[setup_processed_dataframe],
+            report_period=report_period_range,
+            extra_params=test_extra_params,
+        )
+
+        report_instance.wb = setup_build_spreadsheet_mocks['openpyxl_wb_mock']
+
+        for attr, mock_obj in setup_build_spreadsheet_mocks['mocks_for_instance'].items():
+            if attr == 'dataframe_to_rows_func':
+                continue
+            setattr(report_instance, attr, mock_obj)
+
+        yield {
+            'report_instance': report_instance,
+            'test_extra_params': test_extra_params,
+            'processed_df': setup_processed_dataframe,
+            'mocks': setup_build_spreadsheet_mocks,
+        }
+
+
+def test_build_spreadsheet_with_ephemeral_data(
+    setup_report_renewal_guidance_instance,
+):
+    """
+    Tests the build_spreadsheet method when 'opt_ephemeral' is set,
+    expecting all ephemeral-related sheets and calculations.
+    """
+    fixture_context = setup_report_renewal_guidance_instance
+    report_instance = fixture_context['report_instance']
+    processed_df = fixture_context['processed_df']
+    mocks = fixture_context['mocks']
+
+    deduped_df = processed_df.copy()
+    mocks['dedup_instance_mock'].run_deduplication.return_value = deduped_df
+
+    mock_ephemeral_usage_df = pd.DataFrame(
+        {
+            'window_start': [dt_actual.datetime(2025, 1, 1)],
+            'window_end': [dt_actual.datetime(2025, 1, 30)],
+            'ephemeral_hosts': [5],
+        }
+    )
+    mocks['mocks_for_instance']['compute_ephemeral_intervals'].return_value = mock_ephemeral_usage_df
+    mocks['mocks_for_instance']['optional_report_sheets'].return_value = ['managed_nodes']
+
+    result_wb = report_instance.build_spreadsheet()
+
+    mocks['dedup_class_mock'].assert_called_once()
+    mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
+
+    dedup_call_df = mocks['dedup_class_mock'].call_args[0][0]
+    expected_df_before_dedup = processed_df.copy()
+    expected_df_before_dedup['first_automation'] = expected_df_before_dedup['first_automation'].dt.tz_localize(None)
+    expected_df_before_dedup['last_automation'] = expected_df_before_dedup['last_automation'].dt.tz_localize(None)
+    expected_df_before_dedup['last_deleted'] = expected_df_before_dedup['last_deleted'].dt.tz_localize(None)
+    expected_df_before_dedup['days_automated'] = (expected_df_before_dedup['last_automation'] - expected_df_before_dedup['first_automation']).dt.days
+    expected_df_before_dedup['days_automated'] = expected_df_before_dedup['days_automated'].apply(lambda x: x if x > 0 else 0)
+    pd.testing.assert_frame_equal(
+        dedup_call_df,
+        expected_df_before_dedup,
+        check_dtype=False,
+        check_index_type=False,
+        check_names=False,
+    )
+
+    mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
+
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Usage Reporting')
+
+    mocks['mocks_for_instance']['_build_heading_h1'].assert_called_once_with(1, ANY)
+    mocks['mocks_for_instance']['_build_header'].assert_called_once_with(ANY, ANY)
+    mocks['mocks_for_instance']['_build_data_section'].assert_called_once_with(
+        ANY,
+        ANY,
+        deduped_df,
+        mock_ephemeral_usage_df,
+    )
+    mocks['time_module_mock'].strftime.assert_called_once_with('%b %d, %Y')
+
+    mocks['mocks_for_instance']['compute_ephemeral_intervals'].assert_called_once()
+
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Managed nodes')
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Managed nodes ephemeral')
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Managed nodes ephemeral usage')
+    mocks['mocks_for_instance']['_build_data_section_host_metrics'].assert_any_call(ANY, ANY, ANY)
+    mocks['mocks_for_instance']['_build_data_section_ephemeral_usage'].assert_called_once_with(ANY, ANY, mock_ephemeral_usage_df)
+
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Deleted Managed nodes')
+    mocks['mocks_for_instance']['_build_data_section_host_metrics'].assert_any_call(ANY, ANY, ANY)
+
+    assert result_wb is mocks['openpyxl_wb_mock']
+
+    mocks['mocks_for_instance']['optional_report_sheets'].assert_called_once()
+
+
+def test_build_spreadsheet_without_ephemeral_data(
+    setup_report_renewal_guidance_instance,
+):
+    """
+    Tests the build_spreadsheet method when 'opt_ephemeral' is None,
+    expecting no ephemeral-related sheets or calculations.
+    """
+    fixture_context = setup_report_renewal_guidance_instance
+    # Extract common context
+    processed_df = fixture_context['processed_df']
+    mocks = fixture_context['mocks']
+
+    # --- Crucial change for this test: Modify test_extra_params safely ---
+    # Get the original extra_params dictionary from the fixture context
+    original_extra_params = fixture_context['test_extra_params']
+
+    # Create a deep copy to modify it without affecting other tests
+    modified_extra_params = copy.deepcopy(original_extra_params)
+
+    # Set opt_ephemeral to None for this test scenario
+    modified_extra_params['opt_ephemeral'] = None
+
+    # Instantiate ReportRenewalGuidance with the modified extra_params
+    report_instance = ReportRenewalGuidance(
+        dataframe=[processed_df],
+        report_period=modified_extra_params['report_period_range'],  # Use the modified params' report_period
+        extra_params=modified_extra_params,  # Use the modified extra_params for the instance
+    )
+
+    # Re-set internal helper mocks on this new instance (as it's a new instance)
+    for attr, mock_obj in mocks['mocks_for_instance'].items():
+        if attr == 'dataframe_to_rows_func':
+            continue
+        setattr(report_instance, attr, mock_obj)
+    report_instance.wb = mocks['openpyxl_wb_mock']
+
+    # --- Configure specific mock return values for this test scenario ---
+    deduped_df = processed_df.copy()
+    mocks['dedup_instance_mock'].run_deduplication.return_value = deduped_df
+
+    # We do NOT configure compute_ephemeral_intervals return value here,
+    # as it should not be called in this scenario.
+
+    mocks['mocks_for_instance']['optional_report_sheets'].return_value = ['managed_nodes']
+
+    # --- Execute the method under test ---
+    result_wb = report_instance.build_spreadsheet()
+
+    # --- Assertions: Verify build_spreadsheet's orchestration ---
+
+    # 1. Verify initial DataFrame processing steps (within build_spreadsheet)
+    mocks['dedup_class_mock'].assert_called_once()
+    mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
+
+    dedup_call_df = mocks['dedup_class_mock'].call_args[0][0]
+    expected_df_before_dedup = processed_df.copy()
+    expected_df_before_dedup['first_automation'] = expected_df_before_dedup['first_automation'].dt.tz_localize(None)
+    expected_df_before_dedup['last_automation'] = expected_df_before_dedup['last_automation'].dt.tz_localize(None)
+    expected_df_before_dedup['last_deleted'] = expected_df_before_dedup['last_deleted'].dt.tz_localize(None)
+    expected_df_before_dedup['days_automated'] = (expected_df_before_dedup['last_automation'] - expected_df_before_dedup['first_automation']).dt.days
+    expected_df_before_dedup['days_automated'] = expected_df_before_dedup['days_automated'].apply(lambda x: x if x > 0 else 0)
+    pd.testing.assert_frame_equal(
+        dedup_call_df,
+        expected_df_before_dedup,
+        check_dtype=False,
+        check_index_type=False,
+        check_names=False,
+    )
+
+    # 2. Verify OpenPyXL workbook setup
+    mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
+
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Usage Reporting')
+
+    # 3. Verify core helper method calls
+    mocks['mocks_for_instance']['_build_heading_h1'].assert_called_once_with(1, ANY)
+    mocks['mocks_for_instance']['_build_header'].assert_called_once_with(ANY, ANY)
+    mocks['mocks_for_instance']['_build_updated_timestamp'].assert_called_once_with(ANY, ANY)
+    mocks['mocks_for_instance']['_build_data_section'].assert_called_once_with(
+        ANY,  # current_row
+        ANY,  # ws
+        deduped_df,  # host_metric_dataframe after deduplication
+        None,  # ephemeral_usage_dataframe should be None here
+    )
+    mocks['time_module_mock'].strftime.assert_called_once_with('%b %d, %Y')
+
+    # 4. Verify NO ephemeral calculations and sheets (since opt_ephemeral is None)
+    mocks['mocks_for_instance']['compute_ephemeral_intervals'].assert_not_called()
+
+    # Assert only non-ephemeral 'Managed nodes' sheet added
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Managed nodes')
+    # Assert ephemeral sheets are NOT called
+    mocks['openpyxl_wb_mock'].create_sheet.assert_not_called_with(title='Managed nodes ephemeral')
+    mocks['openpyxl_wb_mock'].create_sheet.assert_not_called_with(title='Managed nodes ephemeral usage')
+
+    mocks['mocks_for_instance']['_build_data_section_host_metrics'].assert_any_call(ANY, ANY, ANY)
+    mocks['mocks_for_instance']['_build_data_section_ephemeral_usage'].assert_not_called()
+
+    # 5. Verify 'Deleted Managed nodes' sheet (always added if optional sheets enabled)
+    mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Deleted Managed nodes')
+    mocks['mocks_for_instance']['_build_data_section_host_metrics'].assert_any_call(ANY, ANY, ANY)
+
+    # 6. Final return value
+    assert result_wb is mocks['openpyxl_wb_mock']
+
+    mocks['mocks_for_instance']['optional_report_sheets'].assert_called_once()
