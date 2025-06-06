@@ -131,8 +131,12 @@ def test_build_s3():
         MissingRequiredEnvVar,
     )
     assert (
-        e.name
-        == 'Missing some required env variables for S3 configuration, namely: METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, METRICS_UTILITY_SHIP_PATH - place for collected data and built reports.'
+        e.name == 'Missing some required env variables for S3 configuration, namely: '
+        'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, '
+        'METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, '
+        'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, '
+        'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, '
+        'METRICS_UTILITY_SHIP_PATH - place for collected data and built reports.'
     )
 
     e = expect_build_error(
@@ -171,8 +175,12 @@ def test_gather_s3():
         MissingRequiredEnvVar,
     )
     assert (
-        e.name
-        == 'Missing some required env variables for S3 configuration, namely: METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, METRICS_UTILITY_SHIP_PATH - place for collected data and built reports.'
+        e.name == 'Missing some required env variables for S3 configuration, namely: '
+        'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, '
+        'METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, '
+        'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, '
+        'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, '
+        'METRICS_UTILITY_SHIP_PATH - place for collected data and built reports.'
     )
 
     run_gather_int(
