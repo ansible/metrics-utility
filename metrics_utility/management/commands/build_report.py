@@ -14,7 +14,7 @@ from metrics_utility.automation_controller_billing.helpers import parse_date_par
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
-from metrics_utility.management.validation import handle_env_validation, handle_directory_ship_target, handle_s3_ship_target
+from metrics_utility.management.validation import handle_directory_ship_target, handle_env_validation, handle_s3_ship_target
 from metrics_utility.metric_utils import get_optional_collectors
 
 
@@ -36,9 +36,9 @@ class Command(BaseCommand):
             "generated if it doesn't exists already.",
         )
         parser.add_argument(
-            '--since', 
-            dest='since', 
-            action='store', 
+            '--since',
+            dest='since',
+            action='store',
             help='Date or number of days/months ago we want to generate the reports for.')
         parser.add_argument(
             '--until',
@@ -58,9 +58,9 @@ class Command(BaseCommand):
             action='store_true',
             help='With this option, the existing reports will be overwritten if running this command again.',
         )
-        parser.add_argument('--verbose', 
-                            dest='verbose', 
-                            action='store_true', 
+        parser.add_argument('--verbose',
+                            dest='verbose',
+                            action='store_true',
                             help='Starts to print debug information to terminal.')
 
     def init_logging(self):

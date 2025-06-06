@@ -2,6 +2,7 @@ import os
 
 from metrics_utility.exceptions import MissingRequiredEnvVar
 
+
 # Constants for valid values
 VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
 VALID_SHEETS = {

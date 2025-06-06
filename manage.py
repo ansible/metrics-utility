@@ -2,6 +2,7 @@
 """Django's command-line utility for administrative tasks."""
 
 import sys
+
 from metrics_utility.exceptions import MissingRequiredEnvVar
 
 
