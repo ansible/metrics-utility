@@ -2,6 +2,27 @@ import os
 
 from metrics_utility.exceptions import MissingRequiredEnvVar
 
+# Constants for valid values
+VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
+VALID_SHEETS = {
+    'CCSP': {
+        'ccsp_summary', 'managed_nodes', 'indirectly_managed_nodes',
+        'inventory_scope', 'usage_by_collections', 'usage_by_roles',
+        'usage_by_modules'
+    },
+    'CCSPv2': {
+        'ccsp_summary', 'jobs', 'managed_nodes',
+        'indirectly_managed_nodes', 'inventory_scope',
+        'usage_by_organizations', 'usage_by_collections',
+        'usage_by_roles', 'usage_by_modules',
+        'managed_nodes_by_organization', 'data_collection_status'
+    }
+}
+VALID_COLLECTORS = {
+    'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit'
+}
+VALID_SHIP_PATHS = {'directory', 's3', 'crc'}
+
 
 def handle_directory_ship_target(ship_target):
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
@@ -58,3 +79,76 @@ def handle_crc_ship_target(ship_target):
         billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
     return billing_provider_params
+
+
+def validate_report_type(errors):
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+    if report_type and report_type not in VALID_REPORT_TYPES:
+        errors.append(
+            f"Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. "
+            f"Valid values: {', '.join(VALID_REPORT_TYPES)}"
+        )
+    return report_type
+
+
+def validate_ccsp_report_sheets(errors, report_type):
+    ccsp_sheets = os.getenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', None)
+    if ccsp_sheets and report_type:
+        ccsp_sheets_set = set(
+            [s.strip() for s in ccsp_sheets.split(',') if s.strip()]
+        )
+        if report_type in VALID_SHEETS:
+            invalid = ccsp_sheets_set - VALID_SHEETS[report_type]
+            if invalid:
+                errors.append(
+                    f"Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS for "
+                    f"{report_type}: {', '.join(invalid)}. Valid values: "
+                    f"{', '.join(VALID_SHEETS[report_type])}"
+                )
+
+
+def validate_collectors(errors):
+    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', None)
+    if collectors:
+        collectors_set = set(
+            [c.strip() for c in collectors.split(',') if c.strip()]
+        )
+        invalid = collectors_set - VALID_COLLECTORS
+        if invalid:
+            errors.append(
+                f"Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: "
+                f"{', '.join(invalid)}. Valid values: "
+                f"{', '.join(VALID_COLLECTORS)}"
+            )
+
+
+def validate_ship_path(errors):
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
+    if ship_path and ship_path not in VALID_SHIP_PATHS:
+        errors.append(
+            f"Invalid METRICS_UTILITY_SHIP_PATH: {ship_path}. Valid values: "
+            f"{', '.join(VALID_SHIP_PATHS)}"
+        )
+    return ship_path
+
+
+def validate_ship_target(errors, ship_path):
+    ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
+    if ship_path == 'directory' and ship_target:
+        if not os.path.isdir(ship_target):
+            errors.append(
+                f"Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target} "
+                f"is not an existing directory."
+            )
+
+
+def handle_env_validation():
+    errors = []
+    report_type = validate_report_type(errors)
+    validate_ccsp_report_sheets(errors, report_type)
+    validate_collectors(errors)
+    ship_path = validate_ship_path(errors)
+    validate_ship_target(errors, ship_path)
+    if errors:
+        raise MissingRequiredEnvVar("\n".join(errors))
+

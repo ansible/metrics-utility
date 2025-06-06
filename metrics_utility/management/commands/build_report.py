@@ -14,7 +14,7 @@ from metrics_utility.automation_controller_billing.helpers import parse_date_par
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
-from metrics_utility.management.validation import handle_directory_ship_target, handle_s3_ship_target
+from metrics_utility.management.validation import handle_env_validation, handle_directory_ship_target, handle_s3_ship_target
 from metrics_utility.metric_utils import get_optional_collectors
 
 
@@ -26,6 +26,7 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
 
     def add_arguments(self, parser):
+        handle_env_validation()
         parser.add_argument(
             '--month',
             dest='month',
@@ -34,7 +35,11 @@ class Command(BaseCommand):
             "If this params isn't provided, previou month report will be"
             "generated if it doesn't exists already.",
         )
-        parser.add_argument('--since', dest='since', action='store', help='Date or number of days/months ago we want to generate the reports for.')
+        parser.add_argument(
+            '--since', 
+            dest='since', 
+            action='store', 
+            help='Date or number of days/months ago we want to generate the reports for.')
         parser.add_argument(
             '--until',
             dest='until',
@@ -53,7 +58,10 @@ class Command(BaseCommand):
             action='store_true',
             help='With this option, the existing reports will be overwritten if running this command again.',
         )
-        parser.add_argument('--verbose', dest='verbose', action='store_true', help='Starts to print debug information to terminal.')
+        parser.add_argument('--verbose', 
+                            dest='verbose', 
+                            action='store_true', 
+                            help='Starts to print debug information to terminal.')
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
@@ -65,7 +73,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.init_logging()
-
         # parse params
         opt_month = options.get('month') or None
         opt_month, month, next_month = self._handle_month(opt_month)
