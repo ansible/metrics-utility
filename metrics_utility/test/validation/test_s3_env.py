@@ -4,10 +4,19 @@ from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.test.util import run_build_int, run_gather_int
 
 
+unset = {
+    'METRICS_UTILITY_BUCKET_ACCESS_KEY': None,
+    'METRICS_UTILITY_BUCKET_ENDPOINT': None,
+    'METRICS_UTILITY_BUCKET_NAME': None,
+    'METRICS_UTILITY_BUCKET_REGION': None,
+    'METRICS_UTILITY_BUCKET_SECRET_KEY': None,
+}
+
+
 def expect_build_error(env, klass):
     with pytest.raises(klass) as e:
         run_build_int(
-            env,
+            {**unset, **env},
             {
                 'month': '2022-01',
             },
@@ -18,7 +27,7 @@ def expect_build_error(env, klass):
 def expect_gather_error(env, klass):
     with pytest.raises(klass) as e:
         run_gather_int(
-            env,
+            {**unset, **env},
             {
                 'dry-run': True,
             },
@@ -68,6 +77,7 @@ def test_build_controller_db():
 def test_gather_crc(caplog):
     run_gather_int(
         {
+            **unset,
             'METRICS_UTILITY_SHIP_TARGET': 'crc',
             'METRICS_UTILITY_BILLING_PROVIDER': 'aws',
             'METRICS_UTILITY_BILLING_ACCOUNT_ID': '123456789012',
@@ -114,6 +124,7 @@ def test_gather_directory():
 
     run_gather_int(
         {
+            **unset,
             'METRICS_UTILITY_SHIP_TARGET': 'directory',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
         },
@@ -185,6 +196,7 @@ def test_gather_s3():
 
     run_gather_int(
         {
+            **unset,
             'METRICS_UTILITY_SHIP_TARGET': 's3',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
             'METRICS_UTILITY_BUCKET_NAME': 'something',
@@ -199,6 +211,7 @@ def test_gather_s3():
 
     run_gather_int(
         {
+            **unset,
             'METRICS_UTILITY_SHIP_TARGET': 's3',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
             'METRICS_UTILITY_BUCKET_NAME': 'something',
