@@ -42,8 +42,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./roles.sql:/docker-entrypoint-initdb.d/init-roles.sql
-      - ./latest.sql:/docker-entrypoint-initdb.d/init-schema.sql
+      - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql
+      - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql
+      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-2-hostmetric.sql
 
   postgres-wait:
     image: "mirror.gcr.io/postgres"

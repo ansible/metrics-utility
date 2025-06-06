@@ -42,7 +42,7 @@ jobs:
 
       - name: "Import SQL dump"
         run: |
-          cat tools/docker/{roles,latest}.sql | sudo su - postgres -c psql
+          cat tools/docker/{roles,latest,main_hostmetric}.sql | sudo su - postgres -c psql
 
       - name: "Set up minio"
         env:
