@@ -35,11 +35,7 @@ class Command(BaseCommand):
             "If this params isn't provided, previou month report will be"
             "generated if it doesn't exists already.",
         )
-        parser.add_argument(
-            '--since',
-            dest='since',
-            action='store',
-            help='Date or number of days/months ago we want to generate the reports for.')
+        parser.add_argument('--since', dest='since', action='store', help='Date or number of days/months ago we want to generate the reports for.')
         parser.add_argument(
             '--until',
             dest='until',
@@ -58,10 +54,7 @@ class Command(BaseCommand):
             action='store_true',
             help='With this option, the existing reports will be overwritten if running this command again.',
         )
-        parser.add_argument('--verbose',
-                            dest='verbose',
-                            action='store_true',
-                            help='Starts to print debug information to terminal.')
+        parser.add_argument('--verbose', dest='verbose', action='store_true', help='Starts to print debug information to terminal.')
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
