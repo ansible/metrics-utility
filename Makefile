@@ -21,4 +21,10 @@ fix:
 compose:
 	docker compose -f tools/docker/docker-compose.yaml up
 
+# This will populate the main_hostmetric table in the db with data. The database must be up and running first.
+populate_host_metrics:
+	docker cp tools/docker/main_hostmetric.sql postgres:/main_hostmetric.sql
+	docker exec postgres psql -U myuser -d awx -f /main_hostmetric.sql
+
+
 .PHONY: help sync test coverage lint fix compose
