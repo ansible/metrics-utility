@@ -70,11 +70,14 @@ def merge_arrays(values):
 
 
 def parse_date_param(date_option):
+    if not date_option:
+        return None
+
     parsed_date = None
-    if date_option and date_option.endswith('d'):
+    if date_option.endswith('d'):
         days_ago = int(date_option[0:-1])
         parsed_date = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option and (date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months')):
+    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
         if date_option.endswith('mo'):
             suffix_length = len('mo')
         elif date_option.endswith('month'):
@@ -83,12 +86,13 @@ def parse_date_param(date_option):
             suffix_length = len('months')
         months_ago = int(date_option[0:-suffix_length])
         parsed_date = (datetime.datetime.now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option and date_option.endswith('m'):
+    elif date_option.endswith('m'):
         minutes_ago = int(date_option[0:-1])
         parsed_date = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
     else:
-        parsed_date = parser.parse(date_option) if date_option else None
-    # Add default utc timezone
+        parsed_date = parser.parse(date_option)
+
+    # Set timezone to UTC when missing
     if parsed_date and parsed_date.tzinfo is None:
         parsed_date = parsed_date.replace(tzinfo=timezone.utc)
 
