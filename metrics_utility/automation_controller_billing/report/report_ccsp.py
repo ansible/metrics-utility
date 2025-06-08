@@ -10,14 +10,15 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
 class ReportCCSP(Base):
-    def __init__(self, dataframe, report_period, extra_params):
+    def __init__(self, dataframe, extra_params):
         # Create the workbook and worksheet
         self.wb = Workbook()
 
         self.dataframe = dataframe
-        self.report_period = report_period
         self.extra_params = extra_params
+
         self.price_per_node = extra_params['price_per_node']
+        self.report_period = extra_params['report_period']
 
         self.config = {
             'sku': extra_params['report_sku'],

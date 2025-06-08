@@ -79,18 +79,16 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
 
         test_ephemeral_days = 30
-        report_period_range = '2025-01-01,2025-06-03'
         test_extra_params = {
             'opt_ephemeral': f'{test_ephemeral_days} days',
             'price_per_node': 0.1,
-            'report_period_range': report_period_range,
+            'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
             'until_date': '2025-06-03',
         }
 
         report_instance = ReportRenewalGuidance(
             dataframe=[setup_processed_dataframe],
-            report_period=report_period_range,
             extra_params=test_extra_params,
         )
 
@@ -203,7 +201,6 @@ def test_build_spreadsheet_without_ephemeral_data(
 
     report_instance = ReportRenewalGuidance(
         dataframe=[processed_df],
-        report_period=modified_extra_params['report_period_range'],
         extra_params=modified_extra_params,
     )
 

@@ -4,16 +4,11 @@ from metrics_utility.automation_controller_billing.report.report_renewal_guidanc
 
 
 class Factory:
-    def __init__(self, report_period, report_dataframe, extra_params):
-        if extra_params.get('report_period_range') is not None:
-            self.report_period = extra_params.get('report_period_range')
-        else:
-            self.report_period = report_period
-
+    def __init__(self, report_dataframe, extra_params):
         self.report_dataframe = report_dataframe
+        self.extra_params = extra_params
 
         self.report_type = extra_params['report_type']
-        self.extra_params = extra_params
 
     def create(self):
         if self.report_type == 'CCSP':
@@ -25,12 +20,12 @@ class Factory:
 
     def _get_report_ccsp(self):
         # Return default S3 loader
-        return ReportCCSP(self.report_dataframe, self.report_period, self.extra_params)
+        return ReportCCSP(self.report_dataframe, self.extra_params)
 
     def _get_report_ccsp_v2(self):
         # Return default S3 loader
-        return ReportCCSPv2(self.report_dataframe, self.report_period, self.extra_params)
+        return ReportCCSPv2(self.report_dataframe, self.extra_params)
 
     def _get_report_renewal_guidance(self):
         # Return default S3 loader
-        return ReportRenewalGuidance(self.report_dataframe, self.report_period, self.extra_params)
+        return ReportRenewalGuidance(self.report_dataframe, self.extra_params)

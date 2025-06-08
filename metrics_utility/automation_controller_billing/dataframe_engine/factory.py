@@ -12,26 +12,26 @@ class Factory:
         self.month = month
         self.extra_params = extra_params
 
-        self.report_type = extra_params['report_type']
-
     def create(self):
-        if self.report_type == 'CCSP':
+        report_type = self.extra_params['report_type']
+
+        if report_type == 'CCSP':
             return (
                 self._get_dataframe_jobhost_summary_usage().build_dataframe(),
                 self._get_dataframe_content_usage().build_dataframe(),
                 self._get_dataframe_inventory_scope().build_dataframe(),
             )
-        elif self.report_type == 'CCSPv2':
+        elif report_type == 'CCSPv2':
             return (
                 self._get_dataframe_jobhost_summary_usage().build_dataframe(),
                 self._get_dataframe_content_usage().build_dataframe(),
                 self._get_dataframe_inventory_scope().build_dataframe(),
                 self._get_dataframe_collection_status().build_dataframe(),
             )
-        elif self.report_type == 'RENEWAL_GUIDANCE':
+        elif report_type == 'RENEWAL_GUIDANCE':
             return (self._get_db_dataframe_host_metric_usage().build_dataframe(),)
         else:
-            raise NotSupportedFactory(f'Factory for {self.report_type} not supported')
+            raise NotSupportedFactory(f'Factory for {report_type} not supported')
 
     def _get_dataframe_collection_status(self):
         return DataframeCollectionStatus(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
