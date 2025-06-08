@@ -63,17 +63,38 @@ class HelpText:
 
 class Command(BaseCommand):
     """
-    Gather Automation Controller billing data
+    Build a XLSX report
     """
 
-    help = 'Gather Automation Controller billing data'
+    help = 'Build a XLSX report'
 
     def add_arguments(self, parser):
-        parser.add_argument('--ephemeral', dest='ephemeral', action='store', help=HelpText.ephemeral)
-        parser.add_argument('--force', dest='force', action='store_true', help=HelpText.force)
-        parser.add_argument('--month', dest='month', action='store', help=HelpText.month)
-        parser.add_argument('--since', dest='since', action='store', help=HelpText.since)
-        parser.add_argument('--until', dest='until', action='store', help=HelpText.until)
+        report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+        allowed = ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']
+        current = 'none' if report_type not in allowed else report_type
+
+        group = parser.add_argument_group(
+            'Note',
+            f'The availability of some arguments depends on METRICS_UTILITY_REPORT_TYPE. Allowed values: {", ".join(allowed)}; current: {current}',
+        )
+
+        if report_type in ['CCSP', 'CCSPv2']:
+            # since and month are mutually exclusive
+            exclusive = group.add_mutually_exclusive_group(required=False)
+            exclusive.add_argument('--month', dest='month', action='store', help=HelpText.month)
+        else:
+            exclusive = group
+
+        exclusive.add_argument('--since', dest='since', action='store', help=HelpText.since)
+
+        if report_type in ['CCSP', 'CCSPv2']:
+            group.add_argument('--until', dest='until', action='store', help=HelpText.until)
+
+        if report_type in ['RENEWAL_GUIDANCE']:
+            group.add_argument('--ephemeral', dest='ephemeral', action='store', help=HelpText.ephemeral)
+
+        group.add_argument('--force', dest='force', action='store_true', help=HelpText.force)
+
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=HelpText.verbose)
 
     def init_logging(self):
