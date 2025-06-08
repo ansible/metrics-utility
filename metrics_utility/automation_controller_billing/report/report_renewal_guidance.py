@@ -422,7 +422,7 @@ class ReportRenewalGuidance(Base):
             if header_row['label'] == 'Report Period (YYYY-MM-DD, YYYY-MM-DD)':
                 # Insert dynamic report period into the specific header column
                 cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
-                cell.value = self.extra_params['report_period_range']
+                cell.value = self.report_period
             else:
                 cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
                 cell.value = header_row['value']
