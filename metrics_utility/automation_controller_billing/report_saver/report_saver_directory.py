@@ -5,15 +5,12 @@ import os
 class ReportSaverDirectory:
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         self.extra_params = extra_params
-
         self.logger = logger
 
         self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
 
     def report_exist(self):
-        if os.path.exists(self.report_spreadsheet_destination_path):
-            return True
-        return False
+        return os.path.exists(self.report_spreadsheet_destination_path)
 
     def save(self, report_spreadsheet):
         # Create the dir structure for the final report

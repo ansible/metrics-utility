@@ -10,16 +10,14 @@ class ReportSaverS3:
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         self.extra_params = extra_params
-        self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
-
         self.logger = logger
+
+        self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
 
         self.s3_handler = S3Handler(params=self.extra_params)
 
     def report_exist(self):
-        if len([file for file in self.s3_handler.list_files(self.report_spreadsheet_destination_path)]) > 0:
-            return True
-        return False
+        return len([file for file in self.s3_handler.list_files(self.report_spreadsheet_destination_path)]) > 0
 
     def save(self, report_spreadsheet):
         with tempfile.TemporaryDirectory(prefix='report_saver_billing_data_') as temp_dir:
