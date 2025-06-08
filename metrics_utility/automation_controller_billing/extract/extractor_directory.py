@@ -9,21 +9,7 @@ class ExtractorDirectory(Base):
     LOG_PREFIX = '[ExtractorDirectory]'
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
-        super().__init__(logger=logger)
-
-        self.path = extra_params['ship_path']
-        self.extra_params = extra_params
-
-    def _get_path_prefix(self, date):
-        path_prefix = f'{self.path}/data'
-
-        year = date.strftime('%Y')
-        month = date.strftime('%m')
-        day = date.strftime('%d')
-
-        path = f'{path_prefix}/{year}/{month}/{day}'
-
-        return path
+        super().__init__(extra_params, logger)
 
     def iter_batches(self, date, columns=None, batch_size=None):
         if batch_size is None:
@@ -48,7 +34,7 @@ class ExtractorDirectory(Base):
                     self.logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {path} failed with {e}')
 
     def fetch_partition_paths(self, date):
-        prefix = self._get_path_prefix(date)
+        prefix = self.get_path_prefix(date)
 
         try:
             paths = [os.path.join(prefix, f) for f in os.listdir(prefix) if os.path.isfile(os.path.join(prefix, f))]

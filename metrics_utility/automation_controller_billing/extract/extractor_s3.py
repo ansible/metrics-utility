@@ -10,27 +10,9 @@ class ExtractorS3(Base):
     LOG_PREFIX = '[ExtractorS3]'
 
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
-        super().__init__(logger=logger)
-
-        self.path = extra_params['ship_path']
-        self.extra_params = extra_params
+        super().__init__(extra_params, logger)
 
         self.s3_handler = S3Handler(params=self.extra_params)
-
-    def _create_date_string(self, date):
-        year = date.strftime('%Y')
-        month = date.strftime('%m')
-        day = date.strftime('%d')
-
-        return {year, month, day}
-
-    def _get_path_prefix(self, date):
-        data_path_prefix = f'{self.path}/data'
-
-        year, month, day = self._create_date_string(date)
-        path = f'{data_path_prefix}/{year}/{month}/{day}'
-
-        return path
 
     def iter_batches(self, date, columns=None, batch_size=None):
         if batch_size is None:
@@ -54,7 +36,7 @@ class ExtractorS3(Base):
                     self.logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {s3_path} failed with {e}')
 
     def fetch_partition_paths(self, date):
-        prefix = self._get_path_prefix(date)
+        prefix = self.get_path_prefix(date)
 
         paths = [file for file in self.s3_handler.list_files(prefix)]
         return paths

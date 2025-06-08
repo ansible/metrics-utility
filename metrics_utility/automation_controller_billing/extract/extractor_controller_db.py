@@ -10,9 +10,7 @@ class ExtractorControllerDB:
     def __init__(self, extra_params, logger=logging.getLogger(__name__)):
         super().__init__()
 
-        self.path = extra_params['ship_path']
         self.extra_params = extra_params
-
         self.logger = logger
 
     def iter_batches(self):

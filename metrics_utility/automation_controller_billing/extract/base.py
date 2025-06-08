@@ -47,7 +47,8 @@ CSV_SHEETS = {
 class Base:
     LOG_PREFIX = '[ExtractorBase]'
 
-    def __init__(self, logger=logging.getLogger(__name__)):
+    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
+        self.extra_params = extra_params
         self.logger = logger
 
     def load_config(self, file_path):
@@ -107,6 +108,16 @@ class Base:
     def csv_enabled(self, name):
         """Enable CSV extraction based on list of rendered sheets"""
         return self.sheet_enabled(CSV_SHEETS[name])
+
+    def get_path_prefix(self, date):
+        """Return the data/Y/m/d path"""
+        ship_path = self.extra_params['ship_path']
+
+        year = date.strftime('%Y')
+        month = date.strftime('%m')
+        day = date.strftime('%d')
+
+        return f'{ship_path}/data/{year}/{month}/{day}'
 
     def sheet_enabled(self, sheets_required):
         """
