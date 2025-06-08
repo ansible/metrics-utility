@@ -32,14 +32,6 @@ class ExtractorS3(Base):
 
         return path
 
-    def get_report_path(self, date):
-        report_path_prefix = f'{self.path}/reports'
-
-        year, month = self._create_date_string(date)
-        path = f'{report_path_prefix}/{year}/{month}'
-
-        return path
-
     def iter_batches(self, date, columns=None, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size()

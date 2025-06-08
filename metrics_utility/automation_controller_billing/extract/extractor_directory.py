@@ -25,16 +25,6 @@ class ExtractorDirectory(Base):
 
         return path
 
-    def get_report_path(self, date):
-        path_prefix = f'{self.path}/reports'
-
-        year = date.strftime('%Y')
-        month = date.strftime('%m')
-
-        path = f'{path_prefix}/{year}/{month}'
-
-        return path
-
     def iter_batches(self, date, columns=None, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size()
