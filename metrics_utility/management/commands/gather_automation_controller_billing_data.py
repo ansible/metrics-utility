@@ -43,10 +43,13 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
 
     def add_arguments(self, parser):
-        parser.add_argument('--dry-run', dest='dry-run', action='store_true', help=HelpText.dry_run)
-        parser.add_argument('--ship', dest='ship', action='store_true', help=HelpText.ship)
         parser.add_argument('--since', dest='since', action='store', help=HelpText.since)
         parser.add_argument('--until', dest='until', action='store', help=HelpText.until)
+
+        # dry-run and ship are mutually exclusive
+        exclusive = parser.add_mutually_exclusive_group(required=False)
+        exclusive.add_argument('--dry-run', dest='dry-run', action='store_true', help=HelpText.dry_run)
+        exclusive.add_argument('--ship', dest='ship', action='store_true', help=HelpText.ship)
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
