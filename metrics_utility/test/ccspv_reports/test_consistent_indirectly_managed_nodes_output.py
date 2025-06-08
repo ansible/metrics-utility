@@ -48,9 +48,7 @@ def test_command(cleanup):
         options = {
             'since': '2025-02-25',
             'until': '2025-02-26',
-            'ephemeral': None,
             'force': True,
-            'verbose': False,
         }
 
         run_build_int(

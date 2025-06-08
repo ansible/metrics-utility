@@ -35,9 +35,7 @@ def test_command(cleanup):
         {
             'since': '2025-03-01',
             'until': '2025-03-02',
-            'ephemeral': None,
             'force': True,
-            'verbose': False,
         },
     )
 
