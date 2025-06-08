@@ -30,6 +30,13 @@ from metrics_utility.management.validation import (
 from metrics_utility.metric_utils import get_optional_collectors
 
 
+def get_report_path(ship_path, date):
+    year = date.strftime('%Y')
+    month = date.strftime('%m')
+
+    return f'{ship_path}/reports/{year}/{month}'
+
+
 class Command(BaseCommand):
     """
     Build Report
@@ -124,13 +131,13 @@ class Command(BaseCommand):
 
             extra_params['report_period'] = f'{extra_params["since_date"]}, {extra_params["until_date"]}'
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
-                extractor.get_report_path(extra_params['until_date']),
-                f'{extra_params["report_type"]}-{opt_since.date()}--{extra_params["until_date"]}.xlsx',
+                get_report_path(extra_params['ship_path'], extra_params['until_date']),
+                f'{extra_params["report_type"]}-{extra_params["since_date"]}--{extra_params["until_date"]}.xlsx',
             )
         else:
             extra_params['report_period'] = opt_month
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
-                extractor.get_report_path(month),
+                get_report_path(extra_params['ship_path'], month),
                 f'{extra_params["report_type"]}-{opt_month}.xlsx',
             )
 

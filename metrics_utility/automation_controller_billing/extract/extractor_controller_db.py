@@ -15,16 +15,6 @@ class ExtractorControllerDB:
 
         self.logger = logger
 
-    def get_report_path(self, date):
-        path_prefix = f'{self.path}/reports'
-
-        year = date.strftime('%Y')
-        month = date.strftime('%m')
-
-        path = f'{path_prefix}/{year}/{month}'
-
-        return path
-
     def iter_batches(self):
         with connection.cursor() as cursor:
             cursor.execute(self.pg_functions())
