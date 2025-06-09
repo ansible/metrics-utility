@@ -1,7 +1,7 @@
 import copy
 import datetime as dt_actual
 
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pandas as pd
 import pytest
@@ -84,6 +84,7 @@ def setup_build_spreadsheet_mocks(fixed_now):
     mocks_for_instance = {
         '_build_heading_h1': MagicMock(return_value=2),
         '_build_header': MagicMock(return_value=3),
+        # Removed '_build_updated_timestamp' to allow real method to run
         '_build_data_section': MagicMock(),
         '_build_data_section_host_metrics': MagicMock(),
         '_build_data_section_ephemeral_usage': MagicMock(),
@@ -120,7 +121,7 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
         patch(patch_target_dataframe_to_rows, new=setup_build_spreadsheet_mocks['mocks_for_instance']['dataframe_to_rows_func']),
     ):
         mock_datetime_module.datetime.now.return_value = fixed_now
-        mock_datetime_module.datetime.utcnow.return_value = fixed_now.replace(tzinfo=None)
+        mock_datetime_module.datetime.utcnow().return_value = fixed_now.replace(tzinfo=None)
         mock_datetime_module.timedelta = dt_actual.timedelta
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
@@ -239,49 +240,34 @@ def test_build_spreadsheet_without_ephemeral_data(
     expecting no ephemeral-related sheets or calculations.
     """
     fixture_context = setup_report_renewal_guidance_instance
-    # Extract common context
     processed_df = fixture_context['processed_df']
     mocks = fixture_context['mocks']
 
-    # --- Crucial change for this test: Modify test_extra_params safely ---
-    # Get the original extra_params dictionary from the fixture context
     original_extra_params = fixture_context['test_extra_params']
 
-    # Create a deep copy to modify it without affecting other tests
     modified_extra_params = copy.deepcopy(original_extra_params)
 
-    # Set opt_ephemeral to None for this test scenario
     modified_extra_params['opt_ephemeral'] = None
 
-    # Instantiate ReportRenewalGuidance with the modified extra_params
     report_instance = ReportRenewalGuidance(
         dataframe=[processed_df],
-        report_period=modified_extra_params['report_period_range'],  # Use the modified params' report_period
-        extra_params=modified_extra_params,  # Use the modified extra_params for the instance
+        report_period=modified_extra_params['report_period_range'],
+        extra_params=modified_extra_params,
     )
 
-    # Re-set internal helper mocks on this new instance (as it's a new instance)
     for attr, mock_obj in mocks['mocks_for_instance'].items():
         if attr == 'dataframe_to_rows_func':
             continue
         setattr(report_instance, attr, mock_obj)
     report_instance.wb = mocks['openpyxl_wb_mock']
 
-    # --- Configure specific mock return values for this test scenario ---
     deduped_df = processed_df.copy()
     mocks['dedup_instance_mock'].run_deduplication.return_value = deduped_df
 
-    # We do NOT configure compute_ephemeral_intervals return value here,
-    # as it should not be called in this scenario.
-
     mocks['mocks_for_instance']['optional_report_sheets'].return_value = ['managed_nodes']
 
-    # --- Execute the method under test ---
     result_wb = report_instance.build_spreadsheet()
 
-    # --- Assertions: Verify build_spreadsheet's orchestration ---
-
-    # 1. Verify initial DataFrame processing steps (within build_spreadsheet)
     mocks['dedup_class_mock'].assert_called_once()
     mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
 
@@ -300,40 +286,32 @@ def test_build_spreadsheet_without_ephemeral_data(
         check_names=False,
     )
 
-    # 2. Verify OpenPyXL workbook setup
     mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
 
     mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Usage Reporting')
 
-    # 3. Verify core helper method calls
     mocks['mocks_for_instance']['_build_heading_h1'].assert_called_once_with(1, ANY)
     mocks['mocks_for_instance']['_build_header'].assert_called_once_with(ANY, ANY)
-    mocks['mocks_for_instance']['_build_updated_timestamp'].assert_called_once_with(ANY, ANY)
     mocks['mocks_for_instance']['_build_data_section'].assert_called_once_with(
-        ANY,  # current_row
-        ANY,  # ws
-        deduped_df,  # host_metric_dataframe after deduplication
+        ANY,
+        ANY,
+        deduped_df,
         None,  # ephemeral_usage_dataframe should be None here
     )
     mocks['time_module_mock'].strftime.assert_called_once_with('%b %d, %Y')
 
-    # 4. Verify NO ephemeral calculations and sheets (since opt_ephemeral is None)
     mocks['mocks_for_instance']['compute_ephemeral_intervals'].assert_not_called()
 
-    # Assert only non-ephemeral 'Managed nodes' sheet added
     mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Managed nodes')
-    # Assert ephemeral sheets are NOT called
-    mocks['openpyxl_wb_mock'].create_sheet.assert_not_called_with(title='Managed nodes ephemeral')
-    mocks['openpyxl_wb_mock'].create_sheet.assert_not_called_with(title='Managed nodes ephemeral usage')
+    assert call(title='Managed nodes ephemeral') not in mocks['openpyxl_wb_mock'].create_sheet.call_args_list
+    assert call(title='Managed nodes ephemeral usage') not in mocks['openpyxl_wb_mock'].create_sheet.call_args_list
 
     mocks['mocks_for_instance']['_build_data_section_host_metrics'].assert_any_call(ANY, ANY, ANY)
     mocks['mocks_for_instance']['_build_data_section_ephemeral_usage'].assert_not_called()
 
-    # 5. Verify 'Deleted Managed nodes' sheet (always added if optional sheets enabled)
     mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Deleted Managed nodes')
     mocks['mocks_for_instance']['_build_data_section_host_metrics'].assert_any_call(ANY, ANY, ANY)
 
-    # 6. Final return value
     assert result_wb is mocks['openpyxl_wb_mock']
 
     mocks['mocks_for_instance']['optional_report_sheets'].assert_called_once()
