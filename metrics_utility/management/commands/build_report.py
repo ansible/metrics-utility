@@ -14,7 +14,13 @@ from metrics_utility.automation_controller_billing.helpers import parse_date_par
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
-from metrics_utility.management.validation import handle_directory_ship_target, handle_env_validation, handle_not_crc, handle_not_s3, handle_s3_ship_target
+from metrics_utility.management.validation import (
+    handle_directory_ship_target,
+    handle_env_validation,
+    handle_not_crc,
+    handle_not_s3,
+    handle_s3_ship_target,
+)
 from metrics_utility.metric_utils import get_optional_collectors
 
 
@@ -66,6 +72,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.init_logging()
+
         # parse params
         opt_month = options.get('month') or None
         opt_month, month, next_month = self._handle_month(opt_month)

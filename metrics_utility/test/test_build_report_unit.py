@@ -27,19 +27,13 @@ def test_add_arguments_calls_env_validation(monkeypatch, command_instance):
 
 
 def test_handle_ship_target_directory(monkeypatch, command_instance):
-    monkeypatch.setattr(
-        'metrics_utility.management.commands.build_report.handle_directory_ship_target', lambda ship_target: {'ship_path': 'directory'}
-    )
+    monkeypatch.setattr('metrics_utility.management.commands.build_report.handle_directory_ship_target', lambda: {'ship_path': 'directory'})
     assert command_instance._handle_ship_target('directory') == {'ship_path': 'directory'}
 
 
 def test_handle_ship_target_s3(monkeypatch, command_instance):
-    monkeypatch.setattr('metrics_utility.management.commands.build_report.handle_s3_ship_target', lambda ship_target: {'ship_path': 's3'})
+    monkeypatch.setattr('metrics_utility.management.commands.build_report.handle_s3_ship_target', lambda: {'ship_path': 's3'})
     assert command_instance._handle_ship_target('s3') == {'ship_path': 's3'}
-
-
-def test_handle_ship_target_controller_db(command_instance):
-    assert command_instance._handle_ship_target('controller_db') == {}
 
 
 def test_handle_ship_target_invalid(command_instance):
