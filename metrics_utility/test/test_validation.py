@@ -46,7 +46,7 @@ def test_validate_report_type_invalid(monkeypatch):
 
 
 def test_validate_ccsp_report_sheets_valid(monkeypatch):
-    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary, managed_nodes')
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary,managed_nodes')
     errors = []
     validate_ccsp_report_sheets(errors, 'CCSP')
     assert not errors
@@ -121,15 +121,29 @@ def test_handle_env_validation_all_valid(monkeypatch):
 
 def test_handle_env_validation_raises(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'INVALID')
-    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'egg')
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'egg,fried')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'invalid,page')
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid_path')
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/non/existing/dir')
     with pytest.raises(MissingRequiredEnvVar) as excinfo:
         handle_env_validation()
     msg = str(excinfo.value)
-    print(msg)
+    print(f'full message: {msg}')
     assert 'Invalid METRICS_UTILITY_REPORT_TYPE' in msg
-    # assert "Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS" in msg
+    assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in msg
+    assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg
+
+
+def test_handle_env_validation_raises_valid_report_type(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'egg,fried')
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'invalid,page')
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid_path')
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/non/existing/dir')
+    with pytest.raises(MissingRequiredEnvVar) as excinfo:
+        handle_env_validation()
+    msg = str(excinfo.value)
+    print(f'full message: {msg}')
+    assert 'Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' in msg
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in msg
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg

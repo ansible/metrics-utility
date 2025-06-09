@@ -91,17 +91,52 @@ def handle_crc_ship_target(ship_target):
 
 
 def validate_report_type(errors):
+    """
+    Validates the 'METRICS_UTILITY_REPORT_TYPE' environment variable against a set of valid report types.
+
+    If the environment variable is set and its value is not in the list of valid report types,
+    an error message is appended to the provided errors list.
+
+    Args:
+        errors (list): A list to which error messages will be appended if validation fails.
+
+    Returns:
+        str or None: The value of the 'METRICS_UTILITY_REPORT_TYPE' environment variable if set, otherwise None.
+    """
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
     if report_type and report_type not in VALID_REPORT_TYPES:
-        errors.append(f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}')
+        errors.append(
+            f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
+            f'Please note these values are case sensitive'
+        )
     return report_type
 
 
 def validate_ccsp_report_sheets(errors, report_type):
-    # TODO fix up the option is none for a full report or certain sheets for each type
-    ccsp_sheets = os.getenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', None)
+    """
+    Validates the optional CCSP report sheets specified in the environment variable
+    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' for a given report type.
+
+    Args:
+        errors (list): A list to which error messages will be appended if invalid sheets are found.
+        report_type (str): The type of report for which to validate the optional sheets.
+
+    Side Effects:
+        Appends error messages to the 'errors' list if any specified sheets are not valid for the given report type.
+
+    Environment Variables:
+        METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: A comma-separated string of optional sheet names to validate.
+
+    Notes:
+        - If 'ccsp_sheets' is not set or 'report_type' is None, no validation is performed.
+        - The set of valid sheets for each report type is defined in the global 'VALID_SHEETS' dictionary.
+    """
+    ccsp_sheets = os.getenv(
+        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
+        'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
+    ).split(',')
     if ccsp_sheets and report_type:
-        ccsp_sheets_set = set([s.strip() for s in ccsp_sheets.split(',') if s.strip()])
+        ccsp_sheets_set = set(ccsp_sheets)
         if report_type in VALID_SHEETS:
             invalid = ccsp_sheets_set - VALID_SHEETS[report_type]
             if invalid:
@@ -113,16 +148,52 @@ def validate_ccsp_report_sheets(errors, report_type):
 
 
 def validate_collectors(errors):
-    # TODO Optional Default is main_jobevent
-    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', None)
+    """
+    Validates the list of optional collectors specified in the
+    METRICS_UTILITY_OPTIONAL_COLLECTORS environment variable against a set
+    of valid collectors.
+
+    If any invalid collectors are found, an error message is appended to the
+    provided errors list.
+
+    Args:
+        errors (list): A list to which error messages will be appended if
+            invalid collectors are found.
+
+    Environment Variables:
+        METRICS_UTILITY_OPTIONAL_COLLECTORS (str, optional): Comma-separated
+            list of collector names. Defaults to 'main_jobevent' if not set.
+
+    Notes:
+        - The set of valid collectors is defined by the global variable
+          VALID_COLLECTORS.
+        - Error messages include the invalid collector names and the list of
+          valid values.
+    """
+    collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
     if collectors:
-        collectors_set = set([c.strip() for c in collectors.split(',') if c.strip()])
-        invalid = collectors_set - VALID_COLLECTORS
+        invalid = set(collectors) - VALID_COLLECTORS
         if invalid:
             errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
 
 
 def validate_ship_target(errors):
+    """
+    Validates the 'METRICS_UTILITY_SHIP_TARGET' environment variable against a set of valid ship targets.
+
+    If the environment variable is set and its value is not in the list of valid ship targets,
+    an error message is appended to the provided errors list.
+
+    Args:
+        errors (list): A list to which error messages will be appended if validation fails.
+
+    Returns:
+        str or None: The value of the 'METRICS_UTILITY_SHIP_TARGET' environment variable if set, otherwise None.
+
+    Notes:
+        - The set of valid ship targets is defined by the global variable VALID_SHIP_TARGET.
+        - Error messages include the invalid ship target and the list of valid values.
+    """
     ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
     if ship_target and ship_target not in VALID_SHIP_TARGET:
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(VALID_SHIP_TARGET)}')
@@ -130,6 +201,17 @@ def validate_ship_target(errors):
 
 
 def validate_ship_path(errors, ship_target):
+    """
+    Validates the ship path environment variable based on the ship target.
+
+    Args:
+        errors (list): A list to which error messages will be appended if validation fails.
+        ship_target (str): The value of the METRICS_UTILITY_SHIP_TARGET environment variable.
+
+    Notes:
+        - For 'directory' ship target, checks if METRICS_UTILITY_SHIP_PATH is an existing directory.
+        - Appends an error message to 'errors' if the directory does not exist.
+    """
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
     if ship_target == 'directory' and ship_target:
         if not os.path.isdir(ship_path):
@@ -137,6 +219,30 @@ def validate_ship_path(errors, ship_target):
 
 
 def handle_env_validation():
+    """
+    Validates required environment variables and configuration for the application.
+
+    This function performs a series of validation checks on environment variables and configuration
+    settings required for the application to run correctly. It collects any validation errors and
+    raises a `MissingRequiredEnvVar` exception if any issues are found.
+
+    Validation steps include:
+    - Validating the report type.
+    - Validating CCSP report sheets based on the report type.
+    - Validating collectors.
+    - Validating the ship target.
+    - Validating the ship path based on the ship target.
+
+    Notes:
+        - The function accumulates all errors before raising an exception, providing a comprehensive
+          error message.
+        - The specific validation functions (`validate_report_type`, `validate_ccsp_report_sheets`,
+          `validate_collectors`, `validate_ship_target`, `validate_ship_path`) are expected to
+          append error messages to the provided `errors` list.
+        - Raises:
+            MissingRequiredEnvVar: If any required environment variable or configuration is missing
+            or invalid.
+    """
     errors = []
     report_type = validate_report_type(errors)
     validate_ccsp_report_sheets(errors, report_type)
