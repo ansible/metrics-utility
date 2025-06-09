@@ -291,6 +291,7 @@ def handle_env_validation():
     if errors:
         raise MissingRequiredEnvVar('\n'.join(errors))
 
+
 def handle_not_crc():
     surplus = []
 
