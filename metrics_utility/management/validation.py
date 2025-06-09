@@ -14,6 +14,7 @@ VALID_SHEETS = {
         'usage_by_collections',
         'usage_by_roles',
         'usage_by_modules',
+        'usage_by_organizations',
     },
     'CCSPv2': {
         'ccsp_summary',
