@@ -11,7 +11,14 @@ import pytest
 def temporary_env(new_env):
     """Temporarily update os.environ with new_env."""
     original = os.environ.copy()
-    os.environ.update(new_env)
+
+    # os.environ.update(new_env), but removing keys with None as value
+    for k, v in new_env.items():
+        if v is None:
+            os.environ.pop(k, None)
+        else:
+            os.environ[k] = v
+
     try:
         yield
     finally:

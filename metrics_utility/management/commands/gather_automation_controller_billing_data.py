@@ -15,7 +15,13 @@ from metrics_utility.exceptions import (
     NoAnalyticsCollected,
     UnparsableParameter,
 )
-from metrics_utility.management.validation import handle_crc_ship_target, handle_directory_ship_target, handle_s3_ship_target
+from metrics_utility.management.validation import (
+    handle_crc_ship_target,
+    handle_directory_ship_target,
+    handle_not_crc,
+    handle_not_s3,
+    handle_s3_ship_target,
+)
 
 
 help_since = 'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
@@ -97,13 +103,18 @@ class Command(BaseCommand):
 
     def _handle_ship_target(self, ship_target):
         if ship_target == 'crc':
-            return handle_crc_ship_target(ship_target)
+            handle_not_s3()
+            return handle_crc_ship_target()
         elif ship_target == 'directory':
-            return handle_directory_ship_target(ship_target)
+            handle_not_crc()
+            handle_not_s3()
+            return handle_directory_ship_target()
         elif ship_target == 's3':
-            return handle_s3_ship_target(ship_target)
+            handle_not_crc()
+            return handle_s3_ship_target()
         else:
-            raise BadShipTarget('Unexpected value for METRICS_UTILITY_SHIP_TARGET env var, allowed values are [crc, s3, directory]')
+            allowed = ', '.join(['crc', 'directory', 's3'])
+            raise BadShipTarget(f'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var ({ship_target}), allowed values: {allowed}')
 
     def _handle_datelike(self, value, help=''):
         if not value:

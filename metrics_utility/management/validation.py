@@ -1,36 +1,50 @@
+import logging
 import os
 
 from metrics_utility.exceptions import MissingRequiredEnvVar
 
 
-def handle_directory_ship_target(ship_target):
+logger = logging.getLogger(__name__)
+
+ship_path_description = 'place for collected data and built reports'
+
+
+def handle_directory_ship_target():
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
 
     if not ship_path:
-        raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination for the generated data')
+        raise MissingRequiredEnvVar(f'Missing required env variable METRICS_UTILITY_SHIP_PATH - {ship_path_description}')
 
     return {'ship_path': ship_path}
 
 
-def handle_s3_ship_target(ship_target):
+def handle_s3_ship_target():
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
     bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME', None)
     bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', None)
-    bucket_region = os.getenv('METRICS_UTILITY_BUCKET_REGION', None)
-    # Define S3 credentials
+    bucket_region = os.getenv('METRICS_UTILITY_BUCKET_REGION', None)  # optional
+
+    # S3 credentials
     bucket_access_key = os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', None)
     bucket_secret_key = os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY', None)
 
+    missing = []
+    if not bucket_name:
+        missing += ['METRICS_UTILITY_BUCKET_NAME - name of S3 bucket']
+    if not bucket_endpoint:
+        missing += ['METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com']
+    if not bucket_access_key:
+        missing += ['METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key']
+    if not bucket_secret_key:
+        missing += ['METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key']
     if not ship_path:
-        raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_SHIP_PATH, having destination for the generated data')
+        missing += [f'METRICS_UTILITY_SHIP_PATH - {ship_path_description}']
+    # bucket_region is optional
 
-    if not bucket_name or not bucket_endpoint or not bucket_access_key or not bucket_secret_key:
-        raise MissingRequiredEnvVar(
-            'Missing one of required env variables for S3 configuration, namely: METRICS_UTILITY_BUCKET_NAME,'
-            'METRICS_UTILITY_BUCKET_ENDPOINT, METRICS_UTILITY_BUCKET_ACCESS_KEY '
-            'and METRICS_UTILITY_BUCKET_SECRET_KEY.'
-        )
+    if missing:
+        raise MissingRequiredEnvVar(f'Missing some required env variables for S3 configuration, namely: {", ".join(missing)}.')
 
+    # S3Handler params
     return {
         'ship_path': ship_path,
         'bucket_name': bucket_name,
@@ -41,7 +55,25 @@ def handle_s3_ship_target(ship_target):
     }
 
 
-def handle_crc_ship_target(ship_target):
+def handle_not_s3():
+    surplus = []
+
+    if os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', None):
+        surplus += ['METRICS_UTILITY_BUCKET_ACCESS_KEY']
+    if os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', None):
+        surplus += ['METRICS_UTILITY_BUCKET_ENDPOINT']
+    if os.getenv('METRICS_UTILITY_BUCKET_NAME', None):
+        surplus += ['METRICS_UTILITY_BUCKET_NAME']
+    if os.getenv('METRICS_UTILITY_BUCKET_REGION', None):
+        surplus += ['METRICS_UTILITY_BUCKET_REGION']
+    if os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY', None):
+        surplus += ['METRICS_UTILITY_BUCKET_SECRET_KEY']
+
+    if surplus:
+        logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="s3": {", ".join(surplus)}')
+
+
+def handle_crc_ship_target():
     billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
     red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID', None)
 
@@ -57,4 +89,24 @@ def handle_crc_ship_target(ship_target):
     if red_hat_org_id:
         billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
+    # only used for the other modes
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
+    if ship_path:
+        allowed = '", "'.join(['controller_db', 'directory', 's3'])
+        logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
+
     return billing_provider_params
+
+
+def handle_not_crc():
+    surplus = []
+
+    if os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', None):
+        surplus += ['METRICS_UTILITY_BILLING_ACCOUNT_ID']
+    if os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None):
+        surplus += ['METRICS_UTILITY_BILLING_PROVIDER']
+    if os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID', None):
+        surplus += ['METRICS_UTILITY_RED_HAT_ORG_ID']
+
+    if surplus:
+        logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="crc": {", ".join(surplus)}')
