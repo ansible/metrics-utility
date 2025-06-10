@@ -270,8 +270,12 @@ def handle_env_validation(method: str):
     - Validating the report type.
     - Validating CCSP report sheets based on the report type.
     - Validating collectors.
-    - Validating the ship target.
+    - Validating the ship target (uses the `method` argument to determine which set of valid targets to check).
     - Validating the ship path based on the ship target.
+
+    Args:
+        method (str): Determines which set of valid ship targets to use for validation.
+            Should be either 'gather' or another supported method.
 
     Notes:
         - The function accumulates all errors before raising an exception, providing a comprehensive
@@ -279,6 +283,7 @@ def handle_env_validation(method: str):
         - The specific validation functions (`validate_report_type`, `validate_ccsp_report_sheets`,
           `validate_collectors`, `validate_ship_target`, `validate_ship_path`) are expected to
           append error messages to the provided `errors` list.
+        - The `method` parameter controls which ship target validation set is used.
         - Raises:
             MissingRequiredEnvVar: If any required environment variable or configuration is missing
             or invalid.
