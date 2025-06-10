@@ -14,11 +14,7 @@ from metrics_utility.automation_controller_billing.helpers import (
 )
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
-from metrics_utility.exceptions import (
-    BadRequiredEnvVar,
-    BadShipTarget,
-    MissingRequiredEnvVar,
-)
+from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.management.validation import (
     handle_directory_ship_target,
     handle_env_validation,
@@ -27,7 +23,6 @@ from metrics_utility.management.validation import (
     handle_s3_ship_target,
     validate_build_extra_params,
 )
-from metrics_utility.metric_utils import get_optional_collectors
 
 
 def get_report_path(ship_path, date):
@@ -217,7 +212,6 @@ class Command(BaseCommand):
                 'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
                 'report_organization_filter': os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER', None),
                 # optional bits
-                'optional_collectors': get_optional_collectors(),
                 'optional_sheets': os.getenv(
                     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
                     'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
