@@ -33,7 +33,7 @@ VALID_SHEETS = {
 }
 VALID_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit'}
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
-VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc', 'controller_db'}
+VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
 
 logger = logging.getLogger(__name__)
@@ -130,7 +130,7 @@ def handle_crc_ship_target():
     return billing_provider_params
 
 
-def validate_report_type(errors):
+def validate_report_type(errors, method):
     """
     Validates the 'METRICS_UTILITY_REPORT_TYPE' environment variable against a set of valid report types.
 
@@ -149,6 +149,11 @@ def validate_report_type(errors):
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
         )
+        if method == 'build' and report_type is None:
+            errors.append(
+                f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
+                f'Please note these values are case sensitive'
+            )
     return report_type
 
 
@@ -235,12 +240,14 @@ def validate_ship_target(errors, ship_target_type):
         - Error messages include the invalid ship target and the list of valid values.
     """
     ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
+    if ship_target is None:
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is Empty. Valid values: {", ".join(ship_target_type)}')
     if ship_target and ship_target not in ship_target_type:
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(ship_target_type)}')
     return ship_target
 
 
-def validate_ship_path(errors, ship_target):
+def validate_ship_path(errors, ship_target, method):
     """
     Validates the ship path environment variable based on the ship target.
 
@@ -253,9 +260,14 @@ def validate_ship_path(errors, ship_target):
         - Appends an error message to 'errors' if the directory does not exist.
     """
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
-    if ship_target == 'directory' and ship_target:
+    dir_paths = VALID_SHIP_TARGET_BUILD
+    if 's3' in dir_paths:
+        dir_paths.remove('s3')
+    if ship_target and ship_target in dir_paths and method == 'build':
         if not os.path.isdir(ship_path):
             errors.append(f'Invalid METRICS_UTILITY_SHIP_PATH: {ship_path} is not an existing directory.')
+    if method == 'gather' and ship_target == 'directory':
+        logger.info('No directory set under METRICS_UTILITY_SHIP_PATH. A directory will be created')
 
 
 def handle_env_validation(method: str):
@@ -289,14 +301,14 @@ def handle_env_validation(method: str):
             or invalid.
     """
     errors = []
-    report_type = validate_report_type(errors)
-    validate_ccsp_report_sheets(errors, report_type)
+    report_type = validate_report_type(errors, method)
     validate_collectors(errors)
-    if method == 'gather':
-        ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER)
-    else:
+    if method == 'build':
+        validate_ccsp_report_sheets(errors, report_type)
         ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
-    validate_ship_path(errors, ship_target)
+    else:
+        ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER)
+    validate_ship_path(errors, ship_target, method)
     if errors:
         raise MissingRequiredEnvVar('\n'.join(errors))
 

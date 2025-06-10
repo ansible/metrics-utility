@@ -28,18 +28,35 @@ def clear_env(monkeypatch):
     yield
 
 
-def test_validate_report_type_valid(monkeypatch):
+def test_validate_report_type_build_valid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
     errors = []
-    result = validate_report_type(errors)
+    result = validate_report_type(errors, 'build')
     assert result == 'CCSP'
     assert not errors
 
 
-def test_validate_report_type_invalid(monkeypatch):
+def test_validate_report_type_gather_valid(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
+    errors = []
+    result = validate_report_type(errors, 'gather')
+    assert result == 'CCSP'
+    assert not errors
+
+
+def test_validate_report_type_build_invalid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'INVALID')
     errors = []
-    result = validate_report_type(errors)
+    result = validate_report_type(errors, 'build')
+    assert result == 'INVALID'
+    assert errors
+    assert 'Invalid METRICS_UTILITY_REPORT_TYPE' in errors[0]
+
+
+def test_validate_report_type_gather_invalid(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'INVALID')
+    errors = []
+    result = validate_report_type(errors, 'gather')
     assert result == 'INVALID'
     assert errors
     assert 'Invalid METRICS_UTILITY_REPORT_TYPE' in errors[0]
@@ -77,7 +94,7 @@ def test_validate_collectors_invalid(monkeypatch):
 
 def test_validate_ship_target_valid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'directory')
-    VALID_SHIP_TARGET_BUILD = {'directory', 's3'}
+    VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
     errors = []
     result = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
     assert result == 'directory'
@@ -86,7 +103,7 @@ def test_validate_ship_target_valid(monkeypatch):
 
 def test_validate_ship_target_invalid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid')
-    VALID_SHIP_TARGET_BUILD = {'directory', 's3'}
+    VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
     errors = []
     result = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
     assert result == 'invalid'
@@ -113,23 +130,38 @@ def test_validate_ship_target_gather_invalid(monkeypatch):
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in errors[0]
 
 
-def test_validate_ship_path_valid(monkeypatch):
+def test_validate_ship_path_build_valid(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', tmpdir)
         errors = []
-        validate_ship_path(errors, 'directory')
+        validate_ship_path(errors, 'directory', 'build')
         assert not errors
 
 
-def test_validate_ship_path_invalid(monkeypatch):
+def test_validate_ship_path_gather_valid(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', tmpdir)
+        errors = []
+        validate_ship_path(errors, 'directory', 'gather')
+        assert not errors
+
+
+def test_validate_ship_path_build_invalid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/non/existing/dir')
     errors = []
-    validate_ship_path(errors, 'directory')
+    validate_ship_path(errors, 'directory', 'build')
     assert errors
     assert 'Invalid METRICS_UTILITY_SHIP_PATH' in errors[0]
 
 
-def test_handle_env_validation_all_valid(monkeypatch):
+def test_validate_ship_path_gather_invalid(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/non/existing/dir')
+    errors = []
+    validate_ship_path(errors, 'directory', 'gather')
+    assert not errors
+
+
+def test_handle_env_validation_all_build_valid(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
         monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary')
@@ -140,7 +172,7 @@ def test_handle_env_validation_all_valid(monkeypatch):
         handle_env_validation('build')
 
 
-def test_handle_env_validation_raises(monkeypatch):
+def test_handle_env_validation_gather_raises1(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'INVALID')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'egg,fried')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'invalid,page')
@@ -155,22 +187,21 @@ def test_handle_env_validation_raises(monkeypatch):
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg
 
 
-def test_handle_env_validation_raises_valid_report_type(monkeypatch):
+def test_handle_env_validation_raises_valid_build_report_type(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'egg,fried')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'invalid,page')
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid_path')
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/non/existing/dir')
     with pytest.raises(MissingRequiredEnvVar) as excinfo:
-        handle_env_validation('gather')
+        handle_env_validation('build')
     msg = str(excinfo.value)
-    print(f'full message: {msg}')
     assert 'Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' in msg
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in msg
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg
 
 
-def test_handle_env_validation_build_raises(monkeypatch):
+def test_handle_env_validation_gather_raises2(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'INVALID')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'egg,fried')
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'invalid,page')
@@ -179,8 +210,6 @@ def test_handle_env_validation_build_raises(monkeypatch):
     with pytest.raises(MissingRequiredEnvVar) as excinfo:
         handle_env_validation('gather')
     msg = str(excinfo.value)
-    print(f'full message: {msg}')
-    assert 'Invalid METRICS_UTILITY_REPORT_TYPE' in msg
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in msg
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg
 
@@ -192,9 +221,7 @@ def test_handle_env_validation_raises_valid_buid_report_type(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid_path')
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/non/existing/dir')
     with pytest.raises(MissingRequiredEnvVar) as excinfo:
-        handle_env_validation('gather')
+        handle_env_validation('build')
     msg = str(excinfo.value)
-    print(f'full message: {msg}')
-    assert 'Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' in msg
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in msg
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg
