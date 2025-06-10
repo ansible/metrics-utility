@@ -32,8 +32,8 @@ VALID_SHEETS = {
     },
 }
 VALID_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit'}
-VALID_SHIP_TARGET_BUILD = {'directory', 's3'}
-VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
+VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
+VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc', 'controller_db'}
 
 
 logger = logging.getLogger(__name__)
