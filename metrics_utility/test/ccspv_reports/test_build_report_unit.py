@@ -14,7 +14,7 @@ def command_instance():
 def test_add_arguments_calls_env_validation(monkeypatch, command_instance):
     called = {}
 
-    def fake_handle_env_validation():
+    def fake_handle_env_validation(build):
         called['called'] = True
 
     monkeypatch.setattr(

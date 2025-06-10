@@ -32,7 +32,7 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
 
     def add_arguments(self, parser):
-        handle_env_validation()
+        handle_env_validation('build')
         parser.add_argument(
             '--month',
             dest='month',

@@ -32,7 +32,8 @@ VALID_SHEETS = {
     },
 }
 VALID_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit'}
-VALID_SHIP_TARGET = {'directory', 's3', 'crc'}
+VALID_SHIP_TARGET_BUILD = {'directory', 's3'}
+VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
 
 logger = logging.getLogger(__name__)
@@ -216,7 +217,7 @@ def validate_collectors(errors):
             errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
 
 
-def validate_ship_target(errors):
+def validate_ship_target(errors, ship_target_type):
     """
     Validates the 'METRICS_UTILITY_SHIP_TARGET' environment variable against a set of valid ship targets.
 
@@ -234,8 +235,8 @@ def validate_ship_target(errors):
         - Error messages include the invalid ship target and the list of valid values.
     """
     ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
-    if ship_target and ship_target not in VALID_SHIP_TARGET:
-        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(VALID_SHIP_TARGET)}')
+    if ship_target and ship_target not in ship_target_type:
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(ship_target_type)}')
     return ship_target
 
 
@@ -257,7 +258,7 @@ def validate_ship_path(errors, ship_target):
             errors.append(f'Invalid METRICS_UTILITY_SHIP_PATH: {ship_path} is not an existing directory.')
 
 
-def handle_env_validation():
+def handle_env_validation(method: str):
     """
     Validates required environment variables and configuration for the application.
 
@@ -286,7 +287,10 @@ def handle_env_validation():
     report_type = validate_report_type(errors)
     validate_ccsp_report_sheets(errors, report_type)
     validate_collectors(errors)
-    ship_target = validate_ship_target(errors)
+    if method == 'gather':
+        ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER)
+    else:
+        ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
     validate_ship_path(errors, ship_target)
     if errors:
         raise MissingRequiredEnvVar('\n'.join(errors))

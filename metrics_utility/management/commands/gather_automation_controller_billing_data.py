@@ -18,6 +18,7 @@ from metrics_utility.exceptions import (
 from metrics_utility.management.validation import (
     handle_crc_ship_target,
     handle_directory_ship_target,
+    handle_env_validation,
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
@@ -36,6 +37,7 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
 
     def add_arguments(self, parser):
+        handle_env_validation('gather')
         parser.add_argument('--dry-run', dest='dry-run', action='store_true', help='Gather billing metrics without shipping.')
         parser.add_argument('--ship', dest='ship', action='store_true', help='Enable shipping of billing metrics to the console.redhat.com')
 
