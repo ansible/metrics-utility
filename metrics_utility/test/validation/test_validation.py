@@ -138,6 +138,19 @@ def test_validate_ship_path_build_valid(monkeypatch):
         assert not errors
 
 
+def test_validate_ship_path_build_empty_build_valid(monkeypatch):
+    errors = []
+    validate_ship_path(errors, 'directory', 'build')
+    assert errors
+    assert 'Invalid METRICS_UTILITY_SHIP_PATH' in errors[0]
+
+
+def test_validate_ship_path_build_empty_gather_valid(monkeypatch):
+    errors = []
+    validate_ship_path(errors, 'directory', 'gather')
+    assert not errors
+
+
 def test_validate_ship_path_gather_valid(monkeypatch):
     with tempfile.TemporaryDirectory() as tmpdir:
         monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', tmpdir)

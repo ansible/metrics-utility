@@ -259,15 +259,16 @@ def validate_ship_path(errors, ship_target, method):
         - For 'directory' ship target, checks if METRICS_UTILITY_SHIP_PATH is an existing directory.
         - Appends an error message to 'errors' if the directory does not exist.
     """
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
+    no_path = 'No Path Provided'
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', no_path)
     dir_paths = VALID_SHIP_TARGET_BUILD
     if 's3' in dir_paths:
         dir_paths.remove('s3')
     if ship_target and ship_target in dir_paths and method == 'build':
         if not os.path.isdir(ship_path):
             errors.append(f'Invalid METRICS_UTILITY_SHIP_PATH: {ship_path} is not an existing directory.')
-    if method == 'gather' and ship_target == 'directory':
-        logger.info('No directory set under METRICS_UTILITY_SHIP_PATH. A directory will be created')
+    if ship_path == no_path and method == 'gather' and ship_target == 'directory':
+        logger.info('No path set under METRICS_UTILITY_SHIP_PATH. A directory will be created')
 
 
 def handle_env_validation(method: str):
