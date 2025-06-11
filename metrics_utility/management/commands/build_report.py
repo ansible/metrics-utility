@@ -48,16 +48,26 @@ class Command(BaseCommand):
         super().__init__()
 
         self.help = {
-            'since': """Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m),
-              a number of days ago (--since=5d), or a number of months (--since=2m).""",
-            'until': 'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
-            'a number of days ago (--until=5d), or a number of months (--until=2m).',
-            'time_frame_extra_params': 'Missing required parameter --month, --until, or --since. Metrics utility requires a value for at least '
-            'one of the following: month, since, until.',
-            'month': """Month the report will be generated for, with format YYYY-MM. If this params is not provided, previous month report
-             will be generated if it doesn't exists already.""",
-            'ephemeral': """Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration.
-            Example: --ephemeral=3months, or --ephemeral=3days""",
+            'since': (
+                'Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m), '
+                'a number of days ago (--since=5d), or a number of months (--since=2m).'
+            ),
+            'until': (
+                'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
+                'a number of days ago (--until=5d), or a number of months (--until=2m).'
+            ),
+            'time_frame_extra_params': (
+                'Missing required parameter --month, --until, or --since. Metrics utility requires a value for at least '
+                'one of the following: month, since, until.'
+            ),
+            'month': (
+                'Month the report will be generated for, with format YYYY-MM. If this params is not provided, '
+                "previous month report will be generated if it doesn't exists already."
+            ),
+            'ephemeral': (
+                'Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration. '
+                'Example: --ephemeral=3months, or --ephemeral=3days'
+            ),
         }
 
     def add_arguments(self, parser):

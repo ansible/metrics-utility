@@ -417,7 +417,7 @@ def validate_renewal_guidance_params(since, until, help_text):
         raise BadParameter('The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE')
 
     if since:
-        raise MissingRequiredParameter(f"""{help_text.time_frame_extra_params} \n\n{since_help} \n{until_help} \n{help_text.month}""")
+        raise MissingRequiredParameter(f"{help_text.time_frame_extra_params}\n\n{since_help}\n{until_help}\n{help_text.month}")
 
 
 def handle_validate_ephemeral_param(value, help):

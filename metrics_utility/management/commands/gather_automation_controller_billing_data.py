@@ -35,10 +35,8 @@ class Command(BaseCommand):
                 'or a number of months (--since=2m).'
             ),
             'until': (
-                'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
-            ),
-            'time_frame_extra_params': (
-                'Missing required parameter --until, or --since. Metrics utility requires a value for at least one of the following: since, until.'
+                'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), '
+                'or a number of months (--until=2m).'
             ),
         }
 
