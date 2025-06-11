@@ -373,17 +373,15 @@ def match_gather_date_param_regex(date):
     return re.match(SINCE_AND_UNTIL_GATHER_PATTERN, date)
 
 
-def validate_build_extra_params(help_text, options):
+def validate_build_extra_params(HelpText, options):
     opt_month = options.get('month') or None
-    # since = None
-    until = options.get('until', None)
+
     since = options.get('since', None)
-    since_help = help_text.get('since')
-    until_help = help_text.get('until')
-    # until = None
-    handle_validate_ephemeral_param(options.get('ephemeral', None), help_text.get('ephemeral'))
-    handle_validate_date_param(since, since_help, 'build')
-    handle_validate_date_param(until, until_help, 'build')
+    until = options.get('until', None)
+
+    handle_validate_ephemeral_param(options.get('ephemeral', None), HelpText.ephemeral)
+    handle_validate_date_param(since, HelpText.since, 'build')
+    handle_validate_date_param(until, HelpText.until, 'build')
 
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
     if report_type is None:
@@ -395,7 +393,7 @@ def validate_build_extra_params(help_text, options):
     has_since = since is not None
     has_until = until is not None
 
-    validate_renewal_guidance_params(has_since, has_until, help_text)
+    validate_renewal_guidance_params(has_since, has_until, HelpText)
 
     if (has_since and has_until) and until < since:
         raise UnparsableParameter('The date for --until cannot be before the date for --since.')

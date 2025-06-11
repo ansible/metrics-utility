@@ -37,6 +37,27 @@ def get_report_path(ship_path, date):
     return f'{ship_path}/reports/{year}/{month}'
 
 
+class HelpText:
+    since = (
+        'Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m), '
+        'a number of days ago (--since=5d), or a number of months (--since=2m).'
+    )
+    until = (
+        'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
+        'a number of days ago (--until=5d), or a number of months (--until=2m).'
+    )
+    month = (
+        'Month the report will be generated for, with format YYYY-MM. If this params is not provided, '
+        "previous month report will be generated if it doesn't exists already."
+    )
+    ephemeral = (
+        'Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration. '
+        'Example: --ephemeral=3months, or --ephemeral=3days'
+    )
+    force = 'With this option, the existing reports will be overwritten if running this command again.'
+    verbose = 'Starts to print debug information to terminal.'
+
+
 class Command(BaseCommand):
     """
     Gather Automation Controller billing data
@@ -44,54 +65,15 @@ class Command(BaseCommand):
 
     help = 'Gather Automation Controller billing data'
 
-    def __init__(self):
-        super().__init__()
-        self.help = {
-            'since': (
-                'Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m), '
-                'a number of days ago (--since=5d), or a number of months (--since=2m).'
-            ),
-            'until': (
-                'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
-                'a number of days ago (--until=5d), or a number of months (--until=2m).'
-            ),
-            'time_frame_extra_params': (
-                'Missing required parameter --month, --until, or --since. Metrics utility requires a value for at least '
-                'one of the following: month, since, until.'
-            ),
-            'month': (
-                'Month the report will be generated for, with format YYYY-MM. If this params is not provided, '
-                "previous month report will be generated if it doesn't exists already."
-            ),
-            'ephemeral': (
-                'Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration. '
-                'Example: --ephemeral=3months, or --ephemeral=3days'
-            ),
-        }
-
     def add_arguments(self, parser):
         handle_env_validation('build')
-        parser.add_argument('--month', dest='month', action='store', help=self.help.get('month'))
-        parser.add_argument('--since', dest='since', action='store', help=self.help.get('since'))
-        parser.add_argument(
-            '--until',
-            dest='until',
-            action='store',
-            help=self.help.get('until'),
-        )
-        parser.add_argument(
-            '--ephemeral',
-            dest='ephemeral',
-            action='store',
-            help=self.help.get('ephemeral'),
-        )
-        parser.add_argument(
-            '--force',
-            dest='force',
-            action='store_true',
-            help='With this option, the existing reports will be overwritten if running this command again.',
-        )
-        parser.add_argument('--verbose', dest='verbose', action='store_true', help='Starts to print debug information to terminal.')
+
+        parser.add_argument('--ephemeral', dest='ephemeral', action='store', help=HelpText.ephemeral)
+        parser.add_argument('--force', dest='force', action='store_true', help=HelpText.force)
+        parser.add_argument('--month', dest='month', action='store', help=HelpText.month)
+        parser.add_argument('--since', dest='since', action='store', help=HelpText.since)
+        parser.add_argument('--until', dest='until', action='store', help=HelpText.until)
+        parser.add_argument('--verbose', dest='verbose', action='store_true', help=HelpText.verbose)
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
@@ -115,7 +97,7 @@ class Command(BaseCommand):
         self.init_logging()
         og_month, month, next_month = handle_month(options.get('month') or None)
 
-        validate_build_extra_params(self.help, options)
+        validate_build_extra_params(HelpText, options)
         opt_month = og_month if options.get('month') else None
         opt_until = self._parse_param('until', options)
         opt_since = self._parse_param('since', options)

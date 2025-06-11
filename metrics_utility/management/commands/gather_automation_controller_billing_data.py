@@ -22,6 +22,13 @@ from metrics_utility.management.validation import (
 )
 
 
+class HelpText:
+    since = 'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
+    until = 'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
+    dry_run = 'Gather billing metrics without shipping.'
+    ship = 'Enable shipping of billing metrics to the console.redhat.com.'
+
+
 class Command(BaseCommand):
     """
     Gather Automation Controller billing data
@@ -29,36 +36,13 @@ class Command(BaseCommand):
 
     help = 'Gather Automation Controller billing data'
 
-    def __init__(self):
-        super().__init__()
-        self.help = {
-            'since': (
-                'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), '
-                'or a number of months (--since=2m).'
-            ),
-            'until': (
-                'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), '
-                'or a number of months (--until=2m).'
-            ),
-        }
-
     def add_arguments(self, parser):
         handle_env_validation('gather')
-        parser.add_argument('--dry-run', dest='dry-run', action='store_true', help='Gather billing metrics without shipping.')
-        parser.add_argument('--ship', dest='ship', action='store_true', help='Enable shipping of billing metrics to the console.redhat.com')
 
-        parser.add_argument(
-            '--since',
-            dest='since',
-            action='store',
-            help=self.help.get('since'),
-        )
-        parser.add_argument(
-            '--until',
-            dest='until',
-            action='store',
-            help=self.help.get('until'),
-        )
+        parser.add_argument('--dry-run', dest='dry-run', action='store_true', help=HelpText.dry_run)
+        parser.add_argument('--ship', dest='ship', action='store_true', help=HelpText.ship)
+        parser.add_argument('--since', dest='since', action='store', help=HelpText.since)
+        parser.add_argument('--until', dest='until', action='store', help=HelpText.until)
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
@@ -71,8 +55,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.init_logging()
 
-        handle_validate_date_param(options.get('since', None), self.help.get('since'), 'gather')
-        handle_validate_date_param(options.get('until', None), self.help.get('until'), 'gather')
+        handle_validate_date_param(options.get('since', None), HelpText.since, 'gather')
+        handle_validate_date_param(options.get('until', None), HelpText.until, 'gather')
 
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
@@ -138,8 +122,8 @@ class Command(BaseCommand):
 
     def _handle_interval(self, opt_since, opt_until):
         # Process since argument
-        since = self._handle_datelike(opt_since, help=self.help.get('since'))
+        since = self._handle_datelike(opt_since, help=HelpText.since)
 
         # Process until argument
-        until = self._handle_datelike(opt_until, help=self.help.get('until'))
+        until = self._handle_datelike(opt_until, help=HelpText.until)
         return since, until
