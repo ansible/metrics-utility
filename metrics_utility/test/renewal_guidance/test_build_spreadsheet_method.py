@@ -8,58 +8,11 @@ import pytest
 
 from openpyxl import Workbook as ActualOpenpyxlWorkbook
 
-from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric import DBDataframeHostMetric
 from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup as ActualDedup
 from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
-from metrics_utility.test.util import generate_renewal_guidance_dataframe
 
 
-# 1. Define a fixed datetime for testing
-@pytest.fixture
-def fixed_now():
-    return dt_actual.datetime(2025, 6, 3, 10, 0, 0, tzinfo=dt_actual.timezone.utc)
-
-
-# 2. Fixture to set up the processed DataFrame from DBDataframeHostMetric
-@pytest.fixture
-def setup_processed_dataframe(fixed_now):
-    """
-    Sets up the processed DataFrame by mocking DBDataframeHostMetric's extractor.
-    """
-    mock_full_dataframe_raw = generate_renewal_guidance_dataframe(is_empty=False, current_datetime=fixed_now)
-
-    mock_df_for_batch_processed = mock_full_dataframe_raw.copy()
-    for col in ['first_automation', 'last_automation']:
-        mock_df_for_batch_processed[col] = pd.to_datetime(mock_df_for_batch_processed[col], utc=True).dt.tz_localize(None)
-
-    mock_df_for_batch_processed['last_deleted'] = mock_df_for_batch_processed['last_deleted'].apply(
-        lambda x: (x.isoformat(timespec='seconds') if pd.notna(x) and isinstance(x, dt_actual.datetime) else None)
-    )
-
-    mock_batches = [{'host_metric': mock_df_for_batch_processed}]
-
-    mock_extractor = MagicMock()
-    mock_extractor.iter_batches.return_value = (batch for batch in mock_batches)
-
-    db_host_metric_instance = DBDataframeHostMetric(
-        extractor=mock_extractor,
-        month=fixed_now.strftime('%Y-%m'),
-        extra_params={},
-    )
-
-    processed_df = db_host_metric_instance.build_dataframe()
-
-    assert processed_df is not None, 'Fixture: build_dataframe should return a DataFrame'
-    assert not processed_df.empty, 'Fixture: DataFrame should not be empty'
-    assert len(processed_df) == len(mock_full_dataframe_raw), 'Fixture: DataFrame should contain all mock rows'
-    assert pd.api.types.is_datetime64_any_dtype(processed_df['first_automation'])
-    assert pd.api.types.is_datetime64_any_dtype(processed_df['last_automation'])
-    assert pd.api.types.is_datetime64_any_dtype(processed_df['last_deleted'])
-
-    yield processed_df
-
-
-# 3. Fixture to set up all mocks for build_spreadsheet's dependencies
+# 1. Fixture to set up all mocks for build_spreadsheet's dependencies
 @pytest.fixture
 def setup_build_spreadsheet_mocks(fixed_now):
     """
@@ -84,7 +37,6 @@ def setup_build_spreadsheet_mocks(fixed_now):
     mocks_for_instance = {
         '_build_heading_h1': MagicMock(return_value=2),
         '_build_header': MagicMock(return_value=3),
-        # Removed '_build_updated_timestamp' to allow real method to run
         '_build_data_section': MagicMock(),
         '_build_data_section_host_metrics': MagicMock(),
         '_build_data_section_ephemeral_usage': MagicMock(),
