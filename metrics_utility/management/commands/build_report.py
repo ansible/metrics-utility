@@ -128,14 +128,13 @@ class Command(BaseCommand):
             extra_params['since_date'] = opt_since.date()
             extra_params['until_date'] = opt_until.date() if opt_until else now.date()
 
-            report_period = f'{extra_params["since_date"]}, {extra_params["until_date"]}'
-
+            extra_params['report_period'] = f'{extra_params["since_date"]}, {extra_params["until_date"]}'
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
                 get_report_path(extra_params['ship_path'], extra_params['until_date']),
                 f'{extra_params["report_type"]}-{extra_params["since_date"]}--{extra_params["until_date"]}.xlsx',
             )
         else:
-            report_period = opt_month
+            extra_params['report_period'] = opt_month
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
                 get_report_path(extra_params['ship_path'], month),
                 f'{extra_params["report_type"]}-{opt_month}.xlsx',
@@ -161,12 +160,7 @@ class Command(BaseCommand):
                 self.logger.info(f'No billing data for month {opt_month}')
             return
 
-        report_engine = ReportFactory(
-            report_period=report_period,
-            report_dataframe=report_dataframe,
-            ship_target=ship_target,
-            extra_params=extra_params,
-        ).create()
+        report_engine = ReportFactory(report_dataframe=report_dataframe, extra_params=extra_params).create()
         report_spreadsheet = report_engine.build_spreadsheet()
 
         # Save the report to the configured destination

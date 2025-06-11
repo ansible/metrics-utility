@@ -25,17 +25,15 @@ def setup_report_renewal_guidance_instance(fixed_now):
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
 
         test_ephemeral_days = 30
-        report_period_range = '2025-01-01,2025-06-03'
         test_extra_params = {
             'opt_ephemeral': f'{test_ephemeral_days} days',
             'price_per_node': 0.1,
-            'report_period_range': report_period_range,
+            'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
             'until_date': '2025-06-03',
         }
 
         yield {
-            'report_period': report_period_range,
             'extra_params': test_extra_params,
         }
 
@@ -51,7 +49,6 @@ def test_renewal_guidance_queries_with_mocked_data(setup_report_renewal_guidance
 
     report_instance = ReportRenewalGuidance(
         dataframe=[processed_df],
-        report_period=report_instance_params['report_period'],
         extra_params=report_instance_params['extra_params'],
     )
 
@@ -103,11 +100,10 @@ def test_renewal_guidance_queries_with_empty_data(fixed_now):
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
 
         test_ephemeral_days = 30
-        report_period_range = '2025-01-01,2025-06-03'
         test_extra_params = {
             'opt_ephemeral': f'{test_ephemeral_days} days',
             'price_per_node': 0.1,
-            'report_period_range': report_period_range,
+            'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
             'until_date': '2025-06-03',
         }
@@ -126,7 +122,6 @@ def test_renewal_guidance_queries_with_empty_data(fixed_now):
 
         report_renewal_guidance_instance_empty = ReportRenewalGuidance(
             dataframe=[empty_df_with_cols],
-            report_period=report_period_range,
             extra_params=test_extra_params,
         )
 

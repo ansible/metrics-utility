@@ -16,13 +16,14 @@ from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup
 
 
 class ReportRenewalGuidance(Base):
-    def __init__(self, dataframe, report_period, extra_params):
+    def __init__(self, dataframe, extra_params):
         self.wb = Workbook()
 
         self.dataframe = dataframe
-        self.report_period = report_period
         self.extra_params = extra_params
+
         self.price_per_node = extra_params['price_per_node']
+        self.report_period = extra_params['report_period']
 
         self.config = {
             'h1_heading': {
