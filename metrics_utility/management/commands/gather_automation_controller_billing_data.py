@@ -27,6 +27,8 @@ class Command(BaseCommand):
     Gather Automation Controller billing data
     """
 
+    help = 'Gather Automation Controller billing data'
+
     def __init__(self):
         super().__init__()
         self.help = {

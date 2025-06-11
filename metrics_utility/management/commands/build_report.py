@@ -46,7 +46,6 @@ class Command(BaseCommand):
 
     def __init__(self):
         super().__init__()
-
         self.help = {
             'since': (
                 'Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m), '
