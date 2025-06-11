@@ -23,10 +23,16 @@ from metrics_utility.management.validation import (
 
 
 class HelpText:
-    since = 'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
-    until = 'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
+    since = (
+        'Start date for collection (including) as an absolute date (in YYYY-MM-DD format, e.g. --since=2024-12-31) or a relative offset '
+        '(e.g. --since=5d for five days ago, --since=5mo for five months ago, --since=5m for five minutes ago).'
+    )
+    until = (
+        'End date for collection (including) as an absolute date (in YYYY-MM-DD format, e.g. --until=2024-12-31) or a relative offset '
+        '(e.g. --until=5d for five days ago, --until=5mo for five months ago, --until=5m for five minutes ago). '
+    )
     dry_run = 'Gather billing metrics without shipping.'
-    ship = 'Enable shipping of billing metrics to the console.redhat.com.'
+    ship = 'Enable shipping of billing metrics to console.redhat.com.'
 
 
 class Command(BaseCommand):

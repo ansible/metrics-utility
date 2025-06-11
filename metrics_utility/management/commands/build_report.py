@@ -38,24 +38,27 @@ def get_report_path(ship_path, date):
 
 
 class HelpText:
+    month = (
+        'Month for which the report will be generated, in YYYY-MM format. '
+        'If neither --month nor --since are provided, a report for the previous month will be generated. ',
+        'Not available for renewal guidance report.',
+    )
     since = (
-        'Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m), '
-        'a number of days ago (--since=5d), or a number of months (--since=2m).'
+        'Start date for the report as an absolute date (in YYYY-MM-DD format, e.g. --since=2024-12-31) or a relative offset '
+        '(e.g. --since=5d for five days ago, --since=5mo for five months ago, --since=5m for five minutes ago).'
     )
     until = (
-        'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
-        'a number of days ago (--until=5d), or a number of months (--until=2m).'
-    )
-    month = (
-        'Month the report will be generated for, with format YYYY-MM. If this params is not provided, '
-        "previous month report will be generated if it doesn't exists already."
+        'End date for the report as an absolute date (in YYYY-MM-DD format, e.g. --until=2024-12-31) or a relative offset '
+        '(e.g. --until=5d for five days ago, --until=5mo for five months ago, --until=5m for five minutes ago). '
+        'Defaults to today. Ignored without --since. Not available for renewal guidance report.'
     )
     ephemeral = (
-        'Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration. '
-        'Example: --ephemeral=3months, or --ephemeral=3days'
+        'Duration in months or days used to determine if a host is considered ephemeral '
+        '(e.g. --ephemeral=3months, or --ephemeral=3days). Months are treated as 30-day periods. '
+        'Only available for renewal guidance report.'
     )
-    force = 'With this option, the existing reports will be overwritten if running this command again.'
-    verbose = 'Starts to print debug information to terminal.'
+    force = 'Overwrite existing reports when the command is re-run.'
+    verbose = 'Print debug information to console.'
 
 
 class Command(BaseCommand):
