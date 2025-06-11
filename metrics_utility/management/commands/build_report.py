@@ -111,8 +111,8 @@ class Command(BaseCommand):
         validate_build_extra_params(HelpText, options)
 
         opt_month, month, next_month = handle_month(options.get('month') or None)
-        opt_since = parse_date_param(options.get('since') or None) if not opt_month
-        opt_until = parse_date_param(options.get('until') or None) if not opt_month and opt_since
+        opt_since = parse_date_param(options.get('since') or None, HelpText.since) if not opt_month else None
+        opt_until = parse_date_param(options.get('until') or None, HelpText.until) if not opt_month and opt_since else None
 
         opt_force = options.get('force')
 

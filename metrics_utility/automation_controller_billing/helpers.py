@@ -1,7 +1,7 @@
-import datetime
 import json
+import re
 
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from itertools import chain
 
 import pandas as pd
@@ -64,30 +64,40 @@ def merge_arrays(values):
     return list(unique)
 
 
-def parse_date_param(date_option):
-    if not date_option:
+def parse_date_param(value, help=''):
+    if not value:
         return None
 
-    parsed_date = None
-    if date_option.endswith('d'):
-        days_ago = int(date_option[0:-1])
-        parsed_date = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
-        months_ago = int(date_option[0:-suffix_length])
-        parsed_date = (datetime.datetime.now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option.endswith('m'):
-        minutes_ago = int(date_option[0:-1])
-        parsed_date = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
-    else:
-        parsed_date = parser.parse(date_option)
+    value = value.strip().lower()
+    if value.isdigit():
+        raise UnparsableParameter(f'Bare numbers are not valid ({help})')
 
-    # Set timezone to UTC when missing
+    now = datetime.now()
+    parsed_date = None
+
+    # N days ago, start of day
+    match = re.fullmatch(r'(\d+)\s*(d|da|day|days)', value)
+    if match:
+        days_ago = int(match.group(1))
+        parsed_date = (now - timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # N months ago, start of day
+    match = re.fullmatch(r'(\d+)\s*(mo|mon|mont|month|months)', value)
+    if match:
+        months_ago = int(match.group(1))
+        parsed_date = (now - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # N minutes ago
+    match = re.fullmatch(r'(\d+)\s*(m|mi|min|minu|minut|minute|minutes)', value)
+    if match:
+        minutes_ago = int(match.group(1))
+        parsed_date = now - timedelta(minutes=minutes_ago)
+
+    # actual date
+    if not parsed_date:
+        parsed_date = parser.parse(value)
+
+    # Add default UTC timezone
     if parsed_date and parsed_date.tzinfo is None:
         parsed_date = parsed_date.replace(tzinfo=timezone.utc)
 
