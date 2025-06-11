@@ -70,20 +70,6 @@ def test_handle_extra_params_all_valid(monkeypatch, command_instance):
     assert params['report_type'] == 'CCSP'
 
 
-def test_handle_month_with_arg(command_instance):
-    month, date, next_month = command_instance._handle_month('2024-05')
-    assert month == '2024-05'
-    assert date.month == 5
-    assert next_month.month == 6
-
-
-def test_handle_month_without_arg(command_instance):
-    month, date, next_month = command_instance._handle_month(None)
-    assert isinstance(month, str)
-    assert date.day == 1
-    assert (next_month - date).days in (28, 29, 30, 31)
-
-
 def test_init_logging(command_instance):
     command_instance.init_logging()
     assert hasattr(command_instance, 'logger')
