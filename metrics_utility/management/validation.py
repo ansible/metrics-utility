@@ -158,11 +158,11 @@ def validate_report_type(errors, method):
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
         )
-        if method == 'build' and report_type is None:
-            errors.append(
-                f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
-                f'Please note these values are case sensitive'
-            )
+    if method == 'build' and report_type is None:
+        errors.append(
+            f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
+            f'Please note these values are case sensitive'
+        )
     return report_type
 
 
