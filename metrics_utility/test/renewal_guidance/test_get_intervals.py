@@ -29,7 +29,7 @@ class TestGetIntervals:
         )
 
         extra_params = {
-            'opt_ephemeral': '7days',
+            'ephemeral_days': 7,
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
@@ -92,7 +92,7 @@ class TestGetIntervals:
         )
 
         extra_params = {
-            'opt_ephemeral': '7days',
+            'ephemeral_days': 7,
             'price_per_node': 0.1,
             'report_period': '2025-04-28,2025-05-12',
             'since_date': '2025-04-28',
@@ -106,9 +106,8 @@ class TestGetIntervals:
 
         start_date = dt_actual.datetime(2025, 4, 28, 0, 0, 0)
         end_date = dt_actual.datetime(2025, 5, 12, 23, 59, 59, 999999)
-        ephemeral_days = 7
 
-        intervals = instance.get_intervals(start_date, end_date, ephemeral_days)
+        intervals = instance.get_intervals(start_date, end_date, extra_params['ephemeral_days'])
 
         assert len(intervals) == 9
 
@@ -228,7 +227,7 @@ class TestGetIntervals:
         )
 
         extra_params = {
-            'opt_ephemeral': '7days',
+            'ephemeral_days': 7,
             'price_per_node': 0.1,
             'report_period': '2025-04-10,2025-05-12',
             'since_date': '2025-04-10',
@@ -242,9 +241,8 @@ class TestGetIntervals:
 
         start_date = dt_actual.datetime(2025, 4, 10, 0, 0, 0)
         end_date = dt_actual.datetime(2025, 5, 12, 23, 59, 59, 999999)
-        ephemeral_days = 7
 
-        intervals = production_instance.get_intervals(start_date, end_date, ephemeral_days)
+        intervals = production_instance.get_intervals(start_date, end_date, extra_params['ephemeral_days'])
 
         assert len(intervals) == 27
 

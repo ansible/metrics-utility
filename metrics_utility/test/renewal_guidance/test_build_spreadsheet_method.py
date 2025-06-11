@@ -78,9 +78,8 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
 
-        test_ephemeral_days = 30
         test_extra_params = {
-            'opt_ephemeral': f'{test_ephemeral_days}days',
+            'ephemeral_days': 30,
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
@@ -111,7 +110,7 @@ def test_build_spreadsheet_with_ephemeral_data(
     setup_report_renewal_guidance_instance,
 ):
     """
-    Tests the build_spreadsheet method when 'opt_ephemeral' is set,
+    Tests the build_spreadsheet method when 'ephemeral_days' is set,
     expecting all ephemeral-related sheets and calculations.
     """
     fixture_context = setup_report_renewal_guidance_instance
@@ -186,7 +185,7 @@ def test_build_spreadsheet_without_ephemeral_data(
     setup_report_renewal_guidance_instance,
 ):
     """
-    Tests the build_spreadsheet method when 'opt_ephemeral' is None,
+    Tests the build_spreadsheet method when 'ephemeral_days' is None,
     expecting no ephemeral-related sheets or calculations.
     """
     fixture_context = setup_report_renewal_guidance_instance
@@ -197,7 +196,7 @@ def test_build_spreadsheet_without_ephemeral_data(
 
     modified_extra_params = copy.deepcopy(original_extra_params)
 
-    modified_extra_params['opt_ephemeral'] = None
+    modified_extra_params['ephemeral_days'] = None
 
     report_instance = ReportRenewalGuidance(
         dataframe=[processed_df],

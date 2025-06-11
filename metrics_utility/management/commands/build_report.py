@@ -11,6 +11,7 @@ from metrics_utility.automation_controller_billing.extract.factory import Factor
 from metrics_utility.automation_controller_billing.helpers import (
     handle_month,
     parse_date_param,
+    parse_number_of_days,
 )
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
@@ -106,13 +107,14 @@ class Command(BaseCommand):
         opt_month, month, next_month = handle_month(options.get('month') or None)
         opt_since = parse_date_param(options.get('since'))
         opt_until = parse_date_param(options.get('until'))
+        opt_ephemeral = parse_number_of_days(options.get('ephemeral'))
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_extra_params(ship_target)
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
-        extra_params['opt_ephemeral'] = options.get('ephemeral') or None
+        extra_params['ephemeral_days'] = opt_ephemeral
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
 

@@ -10,7 +10,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-from metrics_utility.automation_controller_billing.helpers import parse_number_of_days
 from metrics_utility.automation_controller_billing.report.base import Base
 from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup
 
@@ -22,6 +21,7 @@ class ReportRenewalGuidance(Base):
         self.dataframe = dataframe
         self.extra_params = extra_params
 
+        self.ephemeral_days = extra_params['ephemeral_days']
         self.price_per_node = extra_params['price_per_node']
         self.report_period = extra_params['report_period']
 
@@ -62,7 +62,7 @@ class ReportRenewalGuidance(Base):
         host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(lambda x: x if x > 0 else 0)
 
         ephemeral_usage_dataframe = None
-        if self.extra_params.get('opt_ephemeral') is not None:
+        if self.ephemeral_days:
             # Looking at the historical ephemeral usage, so we want to looks also at records that
             # were soft-deleted already.
             ephemeral_usage_dataframe = self.compute_ephemeral_intervals(
@@ -85,7 +85,7 @@ class ReportRenewalGuidance(Base):
         # Add optional sheets
         if 'managed_nodes' in self.optional_report_sheets():
             # Sheet with list of managed nodes
-            if self.extra_params.get('opt_ephemeral') is None:
+            if not self.ephemeral_days:
                 ws = self.add_sheet('Managed nodes', sheet_index, self.config['data_column_widths'])
                 self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe))
                 sheet_index += 1
@@ -111,26 +111,24 @@ class ReportRenewalGuidance(Base):
     def df_managed_nodes_query(self, dataframe, ephemeral=None, with_deleted=False):
         if ephemeral is None:
             return dataframe[~dataframe['deleted']]
-        else:
-            # Take only non deleted
-            if not with_deleted:
-                dataframe = dataframe[~dataframe['deleted']]
 
-            # Filter ephemeral based on number of automated days
-            ephemeral_days = parse_number_of_days(self.extra_params.get('opt_ephemeral'))
+        # Take only non deleted
+        if not with_deleted:
+            dataframe = dataframe[~dataframe['deleted']]
 
-            # Ephemeral threshold, host's first automation must be older than ephemeral threshold
-            # to be considered as ephemeral
-            ephemeral_threshold = (
-                pd.to_datetime(datetime.datetime.now() - datetime.timedelta(days=ephemeral_days - 1), format='ISO8601')
-                .replace(hour=0, minute=0, second=0, microsecond=0)
-                .tz_localize(None)
-            )
+        # Ephemeral threshold, host's first automation must be older than ephemeral threshold
+        # to be considered as ephemeral
+        ephemeral_threshold = (
+            pd.to_datetime(datetime.datetime.now() - datetime.timedelta(days=self.ephemeral_days - 1), format='ISO8601')
+            .replace(hour=0, minute=0, second=0, microsecond=0)
+            .tz_localize(None)
+        )
 
-            if ephemeral is True:
-                return dataframe[(dataframe['days_automated'] <= ephemeral_days) & (dataframe['first_automation'] <= ephemeral_threshold)]
-            if ephemeral is False:
-                return dataframe[(dataframe['days_automated'] > ephemeral_days) | (dataframe['first_automation'] > ephemeral_threshold)]
+        # Filter ephemeral based on number of automated days
+        if ephemeral is True:
+            return dataframe[(dataframe['days_automated'] <= self.ephemeral_days) & (dataframe['first_automation'] <= ephemeral_threshold)]
+        if ephemeral is False:
+            return dataframe[(dataframe['days_automated'] > self.ephemeral_days) | (dataframe['first_automation'] > ephemeral_threshold)]
 
     def df_deleted_managed_nodes_query(self, dataframe):
         return dataframe[dataframe['deleted']]
@@ -157,9 +155,8 @@ class ReportRenewalGuidance(Base):
             - datetime.timedelta(microseconds=1)
         )
 
-        ephemeral_days = parse_number_of_days(self.extra_params.get('opt_ephemeral'))
         ephemeral_usage_intervals = []
-        intervals = self.get_intervals(start_date, end_date, ephemeral_days)
+        intervals = self.get_intervals(start_date, end_date, self.ephemeral_days)
         for window_start, window_end in intervals:
             # print(f"Processing {window_start}, {window_end}")
             filtered = host_metric_dataframe[
@@ -201,7 +198,7 @@ class ReportRenewalGuidance(Base):
 
         ccsp_report = []
 
-        if self.extra_params.get('opt_ephemeral') is None:
+        if not self.ephemeral_days:
             # Automated hosts
             ccsp_report_item = {'description': 'Automated hosts', 'quantity_consumed': self.df_managed_nodes_query(dataframe)['hostname'].nunique()}
             ccsp_report.append(ccsp_report_item)
