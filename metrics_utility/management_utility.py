@@ -1,9 +1,15 @@
+import logging
 import os
 import sys
 
 from importlib import import_module
 
 import django.core.management as management
+
+from metrics_utility.exceptions import MetricsException
+
+
+logger = logging.getLogger(__name__)
 
 
 class ManagementUtility(management.ManagementUtility):
@@ -52,9 +58,7 @@ class ManagementUtility(management.ManagementUtility):
         elif self.argv[1:] in (['--help'], ['-h']):
             sys.stdout.write(self.main_help_text() + '\n')
         else:
-            # from metrics_utility.management.commands.host_metric import Command
-            # Command().run_from_argv(self.argv)
-            self.fetch_command(subcommand).run_from_argv(self.argv)
+            self.run_subcommand(subcommand, self.argv)
 
     def fetch_command(self, subcommand):
         module = import_module(f'metrics_utility.management.commands.{subcommand}')
@@ -66,3 +70,13 @@ class ManagementUtility(management.ManagementUtility):
         path = os.path.join(os.path.dirname(__file__), 'management')
         commands.update({name: 'metrics_utility' for name in management.find_commands(path)})
         return commands
+
+    def run_subcommand(self, subcommand, argv):
+        try:
+            self.fetch_command(subcommand).run_from_argv(argv)
+        except MetricsException as e:
+            logger.error(e.name)
+            exit(1)
+        except Exception as e:
+            logger.exception(e)
+            exit(1)

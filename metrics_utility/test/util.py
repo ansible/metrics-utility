@@ -64,15 +64,14 @@ def run_build_int(env, options):
     from metrics_utility.management.commands.build_report import Command
 
     with temporary_env(env):
-        Command()._handle(**options)
+        Command().handle(**options)
 
 
 def run_gather_int(env, options):
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
     with temporary_env(env):
-        # .handle does exit(0), breaking tests
-        Command()._handle(**options)
+        Command().handle(**options)
 
 
 def generate_renewal_guidance_dataframe(is_empty=False, current_datetime=None):

@@ -8,12 +8,8 @@ from django.utils import timezone
 
 from metrics_utility.automation_controller_billing.collector import Collector
 from metrics_utility.exceptions import (
-    BadRequiredEnvVar,
     BadShipTarget,
-    FailedToUploadPayload,
-    MissingRequiredEnvVar,
     NoAnalyticsCollected,
-    UnparsableParameter,
 )
 from metrics_utility.management.validation import (
     handle_crc_ship_target,
@@ -70,17 +66,6 @@ class Command(BaseCommand):
         self.logger.propagate = False
 
     def handle(self, *args, **options):
-        try:
-            self._handle(self, *args, **options)
-            exit(0)
-        except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload, UnparsableParameter) as e:
-            self.logger.error(e.name)
-            exit(1)
-        except Exception as e:
-            self.logger.exception(e)
-            exit(1)
-
-    def _handle(self, *args, **options):
         self.init_logging()
         handle_env_validation('gather')
 

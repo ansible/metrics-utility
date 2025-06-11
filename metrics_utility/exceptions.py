@@ -1,48 +1,43 @@
-class BadShipTarget(Exception):
+class MetricsException(Exception):
     def __init__(self, message):
         self.name = message
 
 
-class MissingRequiredEnvVar(Exception):
-    def __init__(self, message):
-        self.name = message
+class BadParameter(MetricsException):
+    pass
 
 
-class BadRequiredEnvVar(Exception):
-    def __init__(self, message):
-        self.name = message
+class BadRequiredEnvVar(MetricsException):
+    pass
 
 
-class FailedToUploadPayload(Exception):
-    def __init__(self, message):
-        self.name = message
+class BadShipTarget(MetricsException):
+    pass
 
 
-class NoAnalyticsCollected(Exception):
-    def __init__(self, message):
-        self.name = message
+class DateFormatError(MetricsException):
+    pass
 
 
-class UnparsableParameter(Exception):
-    def __init__(self, message):
-        self.name = message
+class FailedToUploadPayload(MetricsException):
+    pass
 
 
-class NotSupportedFactory(Exception):
-    def __init__(self, message):
-        self.name = message
+class MissingRequiredEnvVar(MetricsException):
+    pass
 
 
-class MissingRequiredParameter(Exception):
-    def __init__(self, message):
-        self.name = message
+class MissingRequiredParameter(MetricsException):
+    pass
 
 
-class BadParameter(Exception):
-    def __init__(self, message):
-        self.name = message
+class NoAnalyticsCollected(MetricsException):
+    pass
 
 
-class DateFormatError(Exception):
-    def __init__(self, message):
-        self.name = message
+class NotSupportedFactory(MetricsException):
+    pass
+
+
+class UnparsableParameter(MetricsException):
+    pass
