@@ -52,3 +52,15 @@ def test_import(cleanup_glob):
     )
 
     validate_exists(file_glob)
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_assert_no_since_or_until_needed(cleanup_glob):
+    run_gather_int(
+        env_vars,
+        {
+            'ship': True,
+        },
+    )
+
+    validate_exists(file_glob)

@@ -31,3 +31,18 @@ class UnparsableParameter(Exception):
 class NotSupportedFactory(Exception):
     def __init__(self, message):
         self.name = message
+
+
+class MissingRequiredParameter(Exception):
+    def __init__(self, message):
+        self.name = message
+
+
+class BadParameter(Exception):
+    def __init__(self, message):
+        self.name = message
+
+
+class DateFormatError(Exception):
+    def __init__(self, message):
+        self.name = message

@@ -4,22 +4,32 @@ import os
 
 from datetime import timezone
 
-from dateutil.parser import parse as date_parse
-from dateutil.relativedelta import relativedelta
 from django.core.management.base import BaseCommand
 
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
-from metrics_utility.automation_controller_billing.helpers import parse_date_param
+from metrics_utility.automation_controller_billing.helpers import (
+    handle_month,
+    parse_date_param,
+)
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
-from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.exceptions import (
+    BadParameter,
+    BadRequiredEnvVar,
+    BadShipTarget,
+    DateFormatError,
+    MissingRequiredEnvVar,
+    MissingRequiredParameter,
+    UnparsableParameter,
+)
 from metrics_utility.management.validation import (
     handle_directory_ship_target,
     handle_env_validation,
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
+    validate_build_extra_params,
 )
 from metrics_utility.metric_utils import get_optional_collectors
 
@@ -31,28 +41,37 @@ class Command(BaseCommand):
 
     help = 'Gather Automation Controller billing data'
 
+    def __init__(self):
+        super().__init__()
+
+        self.help = {
+            'since': """Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m),
+              a number of days ago (--since=5d), or a number of months (--since=2m).""",
+            'until': 'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
+            'a number of days ago (--until=5d), or a number of months (--until=2m).',
+            'time_frame_extra_params': 'Missing required parameter --month, --until, or --since. Metrics utility requires a value for at least '
+            'one of the following: month, since, until.',
+            'month': """Month the report will be generated for, with format YYYY-MM. If this params is not provided, previous month report
+             will be generated if it doesn't exists already.""",
+            'ephemeral': """Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration.
+            Example: --ephemeral=3months, or --ephemeral=3days""",
+        }
+
     def add_arguments(self, parser):
         handle_env_validation('build')
-        parser.add_argument(
-            '--month',
-            dest='month',
-            action='store',
-            help='Month the report will be generated for, with format YYYY-MM. '
-            "If this params isn't provided, previou month report will be"
-            "generated if it doesn't exists already.",
-        )
-        parser.add_argument('--since', dest='since', action='store', help='Date or number of days/months ago we want to generate the reports for.')
+        parser.add_argument('--month', dest='month', action='store', help=self.help.get('month'))
+        parser.add_argument('--since', dest='since', action='store', help=self.help.get('since'))
         parser.add_argument(
             '--until',
             dest='until',
             action='store',
-            help='Date or number of days/months ago we want to generate the reports until. Not available for renewal guidance report',
+            help=self.help.get('until'),
         )
         parser.add_argument(
             '--ephemeral',
             dest='ephemeral',
             action='store',
-            help='Duration in months or days to determine if host is ephemeral. Months are takenas 30days duration.',
+            help=self.help.get('ephemeral'),
         )
         parser.add_argument(
             '--force',
@@ -68,43 +87,33 @@ class Command(BaseCommand):
         handler.setLevel(logging.DEBUG)
         handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(handler)
-        self.logger.propagate = False
+        self.logger.propagate = True
 
-    def handle(self, *args, **options):
+    def _parse_param(
+        self,
+        param_name,
+        options,
+    ):
+        param = options.get(param_name)
+        if options.get('month') is not None or param is None:
+            return None
+        return parse_date_param(param)
+
+    def _handle(self, *args, **options):
         self.init_logging()
+        og_month, month, next_month = handle_month(options.get('month') or None)
 
-        # parse params
-        opt_month = options.get('month') or None
-        opt_month, month, next_month = self._handle_month(opt_month)
-
-        # Since and ephemenral params are specific to subset of reports
-        opt_since = None
-        opt_ephemeral = None
-
-        opt_since = options.get('since') or None
-        opt_since = parse_date_param(opt_since)
-
-        opt_ephemeral = options.get('ephemeral') or None
-
-        opt_until = None  # Initialize opt_until to None
-
-        if opt_since is not None:
-            # If --since was provided, then process --until
-            user_provided_until = options.get('until')
-            if user_provided_until is None:
-                # default --until to today
-                opt_until = datetime.datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-                self.logger.info(f'--until parameter not provided with --since, defaulting to: {opt_until.date()}')
-            else:
-                # If --since and --until were both provided, parse the user's --until
-                opt_until = parse_date_param(user_provided_until)
-
+        validate_build_extra_params(self.help, options)
+        opt_month = og_month if options.get('month') else None
+        opt_until = self._parse_param('until', options)
+        opt_since = self._parse_param('since', options)
         opt_force = options.get('force')
+
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_extra_params(ship_target)
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
-        extra_params['opt_ephemeral'] = opt_ephemeral
+        extra_params['opt_ephemeral'] = options.get('ephemeral') or None
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
 
@@ -159,6 +168,24 @@ class Command(BaseCommand):
         # Save the report to the configured destination
         report_saver_engine.save(report_spreadsheet)
         self.logger.info(f'Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}')
+
+    def handle(self, *args, **options):
+        try:
+            self._handle(*args, **options)
+        except (
+            BadShipTarget,
+            MissingRequiredEnvVar,
+            BadRequiredEnvVar,
+            MissingRequiredParameter,
+            UnparsableParameter,
+            BadParameter,
+            DateFormatError,
+        ) as e:
+            self.logger.error(str(e))
+            exit(1)
+        except Exception as e:
+            self.logger.exception(e)
+            exit(1)
 
     def _handle_ship_target(self, ship_target):
         if ship_target in ['controller_db', 'directory']:
@@ -217,18 +244,3 @@ class Command(BaseCommand):
             }
         )
         return base
-
-    def _handle_month(self, month):
-        # Process month argument
-        if month is not None:
-            date = date_parse(f'{month}-01')
-        else:
-            # Return last month if no month was passed
-            beginning_of_the_month = datetime.date.today().replace(day=1)
-            beginning_of_the_previous_month = beginning_of_the_month - relativedelta(months=1)
-            date = beginning_of_the_previous_month
-            y = date.strftime('%Y')
-            m = date.strftime('%m')
-            month = f'{y}-{m}'
-
-        return month, date, date + relativedelta(months=1)

@@ -64,7 +64,7 @@ def run_build_int(env, options):
     from metrics_utility.management.commands.build_report import Command
 
     with temporary_env(env):
-        Command().handle(**options)
+        Command()._handle(**options)
 
 
 def run_gather_int(env, options):
