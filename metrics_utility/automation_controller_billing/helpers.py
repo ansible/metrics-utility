@@ -133,12 +133,12 @@ def handle_month(month):
     """Process month argument"""
     if month is not None:
         try:
-            date = datetime.datetime.strptime(f'{month}', '%Y-%m')
+            date = datetime.strptime(f'{month}', '%Y-%m')
         except ValueError:
             raise DateFormatError('Invalid --month format. Supported date format: YYYY-MM')
     else:
         """Return last month if no month was passed"""
-        beginning_of_the_month = datetime.datetime.today().replace(day=1)
+        beginning_of_the_month = datetime.today().replace(day=1)
         beginning_of_the_previous_month = beginning_of_the_month - relativedelta(months=1)
         date = beginning_of_the_previous_month
         y = date.strftime('%Y')
