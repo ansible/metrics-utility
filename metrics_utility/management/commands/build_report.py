@@ -15,13 +15,9 @@ from metrics_utility.automation_controller_billing.helpers import (
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import (
-    BadParameter,
     BadRequiredEnvVar,
     BadShipTarget,
-    DateFormatError,
     MissingRequiredEnvVar,
-    MissingRequiredParameter,
-    UnparsableParameter,
 )
 from metrics_utility.management.validation import (
     handle_directory_ship_target,
@@ -87,7 +83,7 @@ class Command(BaseCommand):
         handler.setLevel(logging.DEBUG)
         handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(handler)
-        self.logger.propagate = True
+        self.logger.propagate = False
 
     def _parse_param(
         self,
@@ -99,7 +95,7 @@ class Command(BaseCommand):
             return None
         return parse_date_param(param)
 
-    def _handle(self, *args, **options):
+    def handle(self, *args, **options):
         self.init_logging()
         og_month, month, next_month = handle_month(options.get('month') or None)
 
@@ -168,24 +164,6 @@ class Command(BaseCommand):
         # Save the report to the configured destination
         report_saver_engine.save(report_spreadsheet)
         self.logger.info(f'Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}')
-
-    def handle(self, *args, **options):
-        try:
-            self._handle(*args, **options)
-        except (
-            BadShipTarget,
-            MissingRequiredEnvVar,
-            BadRequiredEnvVar,
-            MissingRequiredParameter,
-            UnparsableParameter,
-            BadParameter,
-            DateFormatError,
-        ) as e:
-            self.logger.error(str(e))
-            exit(1)
-        except Exception as e:
-            self.logger.exception(e)
-            exit(1)
 
     def _handle_ship_target(self, ship_target):
         if ship_target in ['controller_db', 'directory']:
