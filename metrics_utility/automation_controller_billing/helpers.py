@@ -64,6 +64,7 @@ def merge_arrays(values):
     return list(unique)
 
 
+# should also suport quarters, start/end of month ("4mo_ago_beginning" vs "1 mo ago end"), but doesn't yet
 def parse_date_param(value, help=''):
     if not value:
         return None
@@ -76,19 +77,19 @@ def parse_date_param(value, help=''):
     parsed_date = None
 
     # N days ago, start of day
-    match = re.fullmatch(r'(\d+)\s*(d|da|day|days)', value)
+    match = re.fullmatch(r'(\d+)\s*(d|da|day|days)([_\s]ago)?', value)
     if match:
         days_ago = int(match.group(1))
         parsed_date = (now - timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     # N months ago, start of day
-    match = re.fullmatch(r'(\d+)\s*(mo|mon|mont|month|months)', value)
+    match = re.fullmatch(r'(\d+)\s*(mo|mon|mont|month|months)([_\s]ago)?', value)
     if match:
         months_ago = int(match.group(1))
         parsed_date = (now - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     # N minutes ago
-    match = re.fullmatch(r'(\d+)\s*(m|mi|min|minu|minut|minute|minutes)', value)
+    match = re.fullmatch(r'(\d+)\s*(m|mi|min|minu|minut|minute|minutes)([_\s]ago)?', value)
     if match:
         minutes_ago = int(match.group(1))
         parsed_date = now - timedelta(minutes=minutes_ago)
@@ -104,29 +105,25 @@ def parse_date_param(value, help=''):
     return parsed_date
 
 
-def parse_number_of_days(date_option):
-    if date_option and (date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days')):
-        if date_option.endswith('d'):
-            suffix_length = len('d')
-        elif date_option.endswith('day'):
-            suffix_length = len('day')
-        elif date_option.endswith('days'):
-            suffix_length = len('days')
+def parse_number_of_days(value, help=''):
+    if not value:
+        return None
 
-        days = int(date_option[0:-suffix_length])
-    elif date_option and (date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months')):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
+    value = value.strip().lower()
+    if value.isdigit():
+        raise UnparsableParameter(f'Bare numbers are not valid ({help})')
 
-        days = int(date_option[0:-suffix_length]) * 30  # using 30 days per month
-    else:
-        raise UnparsableParameter(f"Can't parse parameter value {date_option}")
+    # N days ago
+    match = re.fullmatch(r'(\d+)\s*(d|da|day|days)', value)
+    if match:
+        return int(match.group(1))
 
-    return days
+    # N months ago - using 30 days per month
+    match = re.fullmatch(r'(\d+)\s*(m|mo|mon|mont|month|months)', value)
+    if match:
+        return int(match.group(1)) * 30
+
+    raise UnparsableParameter(f"Can't parse parameter value {value} ({help})")
 
 
 def handle_month(month):

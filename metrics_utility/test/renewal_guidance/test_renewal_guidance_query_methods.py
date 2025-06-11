@@ -24,9 +24,8 @@ def setup_report_renewal_guidance_instance(fixed_now):
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
 
-        test_ephemeral_days = 30
         test_extra_params = {
-            'opt_ephemeral': f'{test_ephemeral_days}days',
+            'ephemeral_days': 30,
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
@@ -99,9 +98,8 @@ def test_renewal_guidance_queries_with_empty_data(fixed_now):
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
 
-        test_ephemeral_days = 30
         test_extra_params = {
-            'opt_ephemeral': f'{test_ephemeral_days}days',
+            'ephemeral_days': 30,
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
