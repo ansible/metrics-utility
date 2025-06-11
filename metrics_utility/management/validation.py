@@ -393,7 +393,8 @@ def validate_build_extra_params(HelpText, options):
     has_since = since is not None
     has_until = until is not None
 
-    validate_renewal_guidance_params(has_since, has_until, HelpText)
+    if report_type == 'RENEWAL_GUIDANCE':
+        validate_renewal_guidance_params(has_since, has_until, HelpText.since)
 
     if (has_since and has_until) and until < since:
         raise UnparsableParameter('The date for --until cannot be before the date for --since.')
@@ -402,27 +403,23 @@ def validate_build_extra_params(HelpText, options):
         raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
 
 
-def validate_renewal_guidance_params(since, until, help_text):
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    is_renewal = report_type.startswith('RENEWAL_GUIDANCE')
-    if not is_renewal:
-        return
+def validate_renewal_guidance_params(has_since, has_until, since_help):
+    if has_until:
+        raise BadParameter('The --until parameter is not allowed when METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE')
 
-    since_help = help_text.get('since')
-    until_help = help_text.get('until')
-    if until:
-        raise BadParameter('The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE')
-
-    if since:
-        raise MissingRequiredParameter(f"{help_text.time_frame_extra_params}\n\n{since_help}\n{until_help}\n{help_text.month}")
+    if not has_since:
+        raise MissingRequiredParameter(f'Missing --since parameter, required when METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE: {since_help}')
 
 
 def handle_validate_ephemeral_param(value, help):
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
     if not value:
         return
-    if not report_type.startswith('RENEWAL_GUIDANCE'):
+
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+    if report_type != 'RENEWAL_GUIDANCE':
         raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
+
     if re.match(ALLOWED_EPHEMERAL_PATTERN, value):
         return
+
     raise UnparsableParameter(help)
