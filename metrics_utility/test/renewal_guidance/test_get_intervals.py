@@ -29,7 +29,7 @@ class TestGetIntervals:
         )
 
         extra_params = {
-            'opt_ephemeral': '7 days',
+            'opt_ephemeral': '7days',
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
@@ -92,7 +92,7 @@ class TestGetIntervals:
         )
 
         extra_params = {
-            'opt_ephemeral': '7 days',
+            'opt_ephemeral': '7days',
             'price_per_node': 0.1,
             'report_period': '2025-04-28,2025-05-12',
             'since_date': '2025-04-28',
@@ -228,7 +228,7 @@ class TestGetIntervals:
         )
 
         extra_params = {
-            'opt_ephemeral': '7 days',
+            'opt_ephemeral': '7days',
             'price_per_node': 0.1,
             'report_period': '2025-04-10,2025-05-12',
             'since_date': '2025-04-10',

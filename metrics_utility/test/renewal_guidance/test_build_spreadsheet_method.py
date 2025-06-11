@@ -80,7 +80,7 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
 
         test_ephemeral_days = 30
         test_extra_params = {
-            'opt_ephemeral': f'{test_ephemeral_days} days',
+            'opt_ephemeral': f'{test_ephemeral_days}days',
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
             'since_date': '2025-01-01',
