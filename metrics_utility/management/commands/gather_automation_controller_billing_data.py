@@ -37,8 +37,6 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
 
     def add_arguments(self, parser):
-        handle_env_validation('gather')
-
         parser.add_argument('--dry-run', dest='dry-run', action='store_true', help=HelpText.dry_run)
         parser.add_argument('--ship', dest='ship', action='store_true', help=HelpText.ship)
         parser.add_argument('--since', dest='since', action='store', help=HelpText.since)
@@ -54,6 +52,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.init_logging()
+
+        handle_env_validation('gather')
 
         handle_validate_date_param(options.get('since', None), HelpText.since, 'gather')
         handle_validate_date_param(options.get('until', None), HelpText.until, 'gather')

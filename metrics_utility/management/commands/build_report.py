@@ -66,8 +66,6 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
 
     def add_arguments(self, parser):
-        handle_env_validation('build')
-
         parser.add_argument('--ephemeral', dest='ephemeral', action='store', help=HelpText.ephemeral)
         parser.add_argument('--force', dest='force', action='store_true', help=HelpText.force)
         parser.add_argument('--month', dest='month', action='store', help=HelpText.month)
@@ -95,6 +93,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.init_logging()
+
+        handle_env_validation('build')
+
         og_month, month, next_month = handle_month(options.get('month') or None)
 
         validate_build_extra_params(HelpText, options)
