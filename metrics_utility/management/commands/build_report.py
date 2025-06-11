@@ -82,10 +82,9 @@ class Command(BaseCommand):
             # since and month are mutually exclusive
             exclusive = group.add_mutually_exclusive_group(required=False)
             exclusive.add_argument('--month', dest='month', action='store', help=HelpText.month)
+            exclusive.add_argument('--since', dest='since', action='store', help=HelpText.since)
         else:
-            exclusive = group
-
-        exclusive.add_argument('--since', dest='since', action='store', help=HelpText.since)
+            group.add_argument('--since', dest='since', action='store', help=HelpText.since, required=(report_type in ['RENEWAL_GUIDANCE']))
 
         if report_type in ['CCSP', 'CCSPv2']:
             group.add_argument('--until', dest='until', action='store', help=HelpText.until)
