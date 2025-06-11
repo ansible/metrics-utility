@@ -4,14 +4,13 @@ import re
 
 from dateutil import parser
 
-from metrics_utility.automation_controller_billing.helpers import (
-    ALLOWED_EPHEMERAL_PATTERN,
-    SINCE_AND_UNTIL_BUILD_PATTERN,
-    SINCE_AND_UNTIL_GATHER_PATTERN,
-    parse_date_param,
-)
+from metrics_utility.automation_controller_billing.helpers import parse_date_param
 from metrics_utility.exceptions import BadParameter, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 
+
+ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
+SINCE_AND_UNTIL_GATHER_PATTERN = r'^\d+[dm]$|^\d{4}-\d{2}-\d{2}$'
+SINCE_AND_UNTIL_BUILD_PATTERN = r'^\d+(d|mo|month|months|m)$|^\d{4}-\d{2}-\d{2}$'
 
 # Constants for valid values
 VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
