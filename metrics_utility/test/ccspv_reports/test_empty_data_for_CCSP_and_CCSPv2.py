@@ -21,10 +21,8 @@ ranges = [
 
 sheets = [
     'ccsp_summary',
-    'data_collection_status',
     'indirectly_managed_nodes',
     'inventory_scope',
-    'jobs',
     'managed_nodes',
     'managed_nodes_by_organizations',
     'usage_by_collections',

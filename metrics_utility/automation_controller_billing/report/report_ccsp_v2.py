@@ -135,7 +135,7 @@ class ReportCCSPv2(Base):
         if 'indirectly_managed_nodes' in self.optional_report_sheets():
             ws = self.add_sheet('Indirectly Managed nodes', sheet_index, self.config['data_column_widths'])
             ## This function creates the correct columns for this sheet.  Using the func variable from above
-            ## can result in the wrong columns for this sheet if `managed_nodes_by_organization`
+            ## can result in the wrong columns for this sheet if `managed_nodes_by_organizations`
             ## exists in the METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS env var.
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1

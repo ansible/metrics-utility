@@ -1,5 +1,3 @@
-from unittest import mock
-
 import pytest
 
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
@@ -9,21 +7,6 @@ from metrics_utility.management.commands.build_report import Command
 @pytest.fixture
 def command_instance():
     return Command()
-
-
-def test_add_arguments_calls_env_validation(monkeypatch, command_instance):
-    called = {}
-
-    def fake_handle_env_validation(build):
-        called['called'] = True
-
-    monkeypatch.setattr(
-        'metrics_utility.management.commands.build_report.handle_env_validation',
-        fake_handle_env_validation,
-    )
-    parser = mock.Mock()
-    command_instance.add_arguments(parser)
-    assert called['called']
 
 
 def test_handle_ship_target_directory(monkeypatch, command_instance):

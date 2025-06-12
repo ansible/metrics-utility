@@ -79,7 +79,7 @@ def test_invalid_build_report_argument_format():
         for arg in args:
             cmd = Command()
 
-            help_text = cmd.help[arg]
+            help_text = cmd.help_texts[arg]
             if bad_input == '2':
                 help_text = 'Integers are not allowed for parameters --since and --until.'
             e = handle_build_exception(env_vars, {arg: bad_input}, UnparsableParameter)
@@ -101,8 +101,9 @@ def test_ephemeral_allowed():
     for value in illegal_values:
         e = handle_build_exception(env_vars, {'ephemeral': value}, UnparsableParameter)
         expected = (
-            'Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration. '
-            'Example: --ephemeral=3months, or --ephemeral=3days'
+            'Duration in months or days to determine if host is ephemeral.'
+            ' Months are considered as 30 days in duration. Example: --ephemeral=3months, or'
+            ' --ephemeral=3days'
         )
         actual = ' '.join(e.name.split())
         assert actual == expected
@@ -130,7 +131,7 @@ def test_invalid_gather_argument_format():
         for arg in args:
             cmd = Command()
 
-            help_text = cmd.help[arg]
+            help_text = cmd.argument_help[arg]
             if bad_input == '2':
                 help_text = 'Integers are not allowed for parameters --since and --until.'
             e = handle_gather_exception(env_vars, {arg: bad_input}, UnparsableParameter)

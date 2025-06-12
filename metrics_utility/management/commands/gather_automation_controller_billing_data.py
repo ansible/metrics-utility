@@ -33,7 +33,8 @@ class Command(BaseCommand):
 
     def __init__(self):
         super().__init__()
-        self.help = {
+        self.help = 'Gather Automation Controller billing data.'
+        self.argument_help = {
             'since': (
                 'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), '
                 'or a number of months (--since=2m).'
@@ -47,7 +48,6 @@ class Command(BaseCommand):
         }
 
     def add_arguments(self, parser):
-        handle_env_validation('gather')
         parser.add_argument('--dry-run', dest='dry-run', action='store_true', help='Gather billing metrics without shipping.')
         parser.add_argument('--ship', dest='ship', action='store_true', help='Enable shipping of billing metrics to the console.redhat.com')
 
@@ -55,13 +55,13 @@ class Command(BaseCommand):
             '--since',
             dest='since',
             action='store',
-            help=self.help.get('since'),
+            help=self.argument_help.get('since'),
         )
         parser.add_argument(
             '--until',
             dest='until',
             action='store',
-            help=self.help.get('until'),
+            help=self.argument_help.get('until'),
         )
 
     def init_logging(self):
@@ -74,9 +74,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
+            handle_env_validation('gather')
             self._handle(self, *args, **options)
             exit(0)
-        except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload, UnparsableParameter) as e:
+        except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload, UnparsableParameter, MissingRequiredEnvVar) as e:
             self.logger.error(e.name)
             exit(1)
         except Exception as e:
@@ -86,8 +87,8 @@ class Command(BaseCommand):
     def _handle(self, *args, **options):
         self.init_logging()
 
-        handle_validate_date_param(options.get('since', None), self.help.get('since'), 'gather')
-        handle_validate_date_param(options.get('until', None), self.help.get('until'), 'gather')
+        handle_validate_date_param(options.get('since', None), self.argument_help.get('since'), 'gather')
+        handle_validate_date_param(options.get('until', None), self.argument_help.get('until'), 'gather')
 
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
@@ -153,8 +154,8 @@ class Command(BaseCommand):
 
     def _handle_interval(self, opt_since, opt_until):
         # Process since argument
-        since = self._handle_datelike(opt_since, help=self.help.get('since'))
+        since = self._handle_datelike(opt_since, help=self.argument_help.get('since'))
 
         # Process until argument
-        until = self._handle_datelike(opt_until, help=self.help.get('until'))
+        until = self._handle_datelike(opt_until, help=self.argument_help.get('until'))
         return since, until

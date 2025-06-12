@@ -36,42 +36,56 @@ from metrics_utility.metric_utils import get_optional_collectors
 
 class Command(BaseCommand):
     """
-    Gather Automation Controller billing data
+    Build Report
     """
 
-    help = 'Gather Automation Controller billing data'
+    help = 'Build Report'
 
     def __init__(self):
         super().__init__()
 
-        self.help = {
-            'since': """Start date for collection including (e.g. --since=2023-12-20), a number of minutes ago (--until=2m),
-              a number of days ago (--since=5d), or a number of months (--since=2m).""",
-            'until': 'End date for collection including (e.g. --until=2023-12-21), a number of minutes (--until=2m), '
-            'a number of days ago (--until=5d), or a number of months (--until=2m).',
-            'time_frame_extra_params': 'Missing required parameter --month, --until, or --since. Metrics utility requires a value for at least '
-            'one of the following: month, since, until.',
-            'month': """Month the report will be generated for, with format YYYY-MM. If this params is not provided, previous month report
-             will be generated if it doesn't exists already.""",
-            'ephemeral': """Duration in months or days to determine if host is ephemeral. Months are taken as 30days duration.
-            Example: --ephemeral=3months, or --ephemeral=3days""",
+        self.help_texts = {
+            'since': (
+                'Start date for collection (e.g. --since=2023-12-20), '
+                'a number of minutes ago (--since=2m), '
+                'a number of days ago (--since=5d), or '
+                'a number of months ago (--since=2m).'
+            ),
+            'until': (
+                'End date for collection (e.g. --until=2023-12-21), '
+                'a number of minutes ago (--until=2m), '
+                'a number of days ago (--until=5d), or '
+                'a number of months ago (--until=2m).'
+            ),
+            'time_frame_extra_params': (
+                'Missing required parameter --month, --until, or --since. '
+                'Metrics utility requires a value for at least one of the following: month, since, until.'
+            ),
+            'month': (
+                'Month the report will be generated for, with format YYYY-MM. '
+                "If this parameter is not provided, the previous month's report will be generated if it does not already exist."
+            ),
+            'ephemeral': (
+                'Duration in months or days to determine if host is ephemeral. '
+                'Months are considered as 30 days in duration. '
+                'Example: --ephemeral=3months, or --ephemeral=3days'
+            ),
         }
 
     def add_arguments(self, parser):
-        handle_env_validation('build')
-        parser.add_argument('--month', dest='month', action='store', help=self.help.get('month'))
-        parser.add_argument('--since', dest='since', action='store', help=self.help.get('since'))
+        parser.add_argument('--month', dest='month', action='store', help=self.help_texts.get('month'))
+        parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
         parser.add_argument(
             '--until',
             dest='until',
             action='store',
-            help=self.help.get('until'),
+            help=self.help_texts.get('until'),
         )
         parser.add_argument(
             '--ephemeral',
             dest='ephemeral',
             action='store',
-            help=self.help.get('ephemeral'),
+            help=self.help_texts.get('ephemeral'),
         )
         parser.add_argument(
             '--force',
@@ -101,9 +115,10 @@ class Command(BaseCommand):
 
     def _handle(self, *args, **options):
         self.init_logging()
+        # handle_env_validation('build')
         og_month, month, next_month = handle_month(options.get('month') or None)
 
-        validate_build_extra_params(self.help, options)
+        validate_build_extra_params(self.help_texts, options)
         opt_month = og_month if options.get('month') else None
         opt_until = self._parse_param('until', options)
         opt_since = self._parse_param('since', options)
@@ -171,6 +186,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
+            handle_env_validation('build')
             self._handle(*args, **options)
         except (
             BadShipTarget,

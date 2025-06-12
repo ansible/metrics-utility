@@ -25,6 +25,7 @@ VALID_SHEETS = {
         'usage_by_roles',
         'usage_by_modules',
         'usage_by_organizations',
+        'managed_nodes_by_organizations',
     },
     'CCSPv2': {
         'ccsp_summary',
@@ -36,8 +37,8 @@ VALID_SHEETS = {
         'usage_by_collections',
         'usage_by_roles',
         'usage_by_modules',
-        'managed_nodes_by_organization',
         'data_collection_status',
+        'managed_nodes_by_organizations',
     },
 }
 VALID_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit'}
@@ -231,7 +232,7 @@ def validate_collectors(errors):
             errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
 
 
-def validate_ship_target(errors, ship_target_type):
+def validate_ship_target(errors, method):
     """
     Validates the 'METRICS_UTILITY_SHIP_TARGET' environment variable against a set of valid ship targets.
 
@@ -249,6 +250,9 @@ def validate_ship_target(errors, ship_target_type):
         - Error messages include the invalid ship target and the list of valid values.
     """
     ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
+    ship_target_type = VALID_SHIP_TARGET_BUILD
+    if method == 'gather':
+        ship_target_type = VALID_SHIP_TARGET_GATHER
     if ship_target is None:
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is Empty. Valid values: {", ".join(ship_target_type)}')
     if ship_target and ship_target not in ship_target_type:
@@ -315,9 +319,9 @@ def handle_env_validation(method: str):
     validate_collectors(errors)
     if method == 'build':
         validate_ccsp_report_sheets(errors, report_type)
-        ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
+        ship_target = validate_ship_target(errors, method)
     else:
-        ship_target = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER)
+        ship_target = validate_ship_target(errors, method)
     validate_ship_path(errors, ship_target, method)
     if errors:
         raise MissingRequiredEnvVar('\n'.join(errors))
