@@ -19,10 +19,23 @@ ranges = [
     ['2025-04-01', '2025-04-03'],  # all of the above
 ]
 
-sheets = [
+sheets_ccsp = [
     'ccsp_summary',
     'indirectly_managed_nodes',
     'inventory_scope',
+    'managed_nodes',
+    'managed_nodes_by_organizations',
+    'usage_by_collections',
+    'usage_by_modules',
+    'usage_by_organizations',
+    'usage_by_roles',
+]
+sheets_ccspv2 = [
+    'ccsp_summary',
+    'data_collection_status',
+    'indirectly_managed_nodes',
+    'inventory_scope',
+    'jobs',
     'managed_nodes',
     'managed_nodes_by_organizations',
     'usage_by_collections',
@@ -37,8 +50,18 @@ def build_file_path(report, date_range):
     return f'./metrics_utility/test/test_data/reports/{year}/{month}/{report}-{date_range[0]}--{date_range[1]}.xlsx'
 
 
-# Build all combinations of parameters
-param_values = [(report, date_range, sheet, build_file_path(report, date_range)) for report in reports for date_range in ranges for sheet in sheets]
+# Build all combinations of parameters, using correct sheets per report
+param_values = []
+for report in ['CCSP', 'CCSPv2']:
+    report_sheets = sheets_ccspv2 if report == 'CCSPv2' else sheets_ccsp
+    for date_range in [
+        ['2025-04-02', '2025-04-02'],
+        ['2025-04-03', '2025-04-03'],
+        ['2025-04-01', '2025-04-01'],
+        ['2025-04-01', '2025-04-03'],
+    ]:
+        for sheet in report_sheets:
+            param_values.append((report, date_range, sheet, build_file_path(report, date_range)))
 
 id_list = [f'{report}-{date_range[0]}--{date_range[1]}-{sheet}' for report, date_range, sheet, _ in param_values]
 
