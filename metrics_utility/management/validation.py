@@ -339,6 +339,10 @@ def handle_not_crc():
         logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="crc": {", ".join(surplus)}')
 
 
+def now():
+    return datetime.now(tz=timezone.utc)
+
+
 def validate_build_params(options, HelpText):
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     # report_type value validation in validate_report_type
@@ -361,7 +365,7 @@ def validate_build_params(options, HelpText):
     since = None
     if opt_since:
         since = parse_date_param(opt_since, help=HelpText.since)
-        if since > datetime.now():
+        if since > now():
             logger.warning('The date for --since is in the future.')
     elif report_type == 'RENEWAL_GUIDANCE':
         raise MissingRequiredParameter(f'Missing --since parameter, required when METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE": {HelpText.since}')
@@ -375,7 +379,7 @@ def validate_build_params(options, HelpText):
             raise BadParameter('--until is not allowed without --since.')
 
         until = parse_date_param(opt_until, help=HelpText.until)
-        if until > datetime.now():
+        if until > now():
             logger.warning('The date for --until is in the future.')
 
         if since > until:
@@ -403,13 +407,13 @@ def validate_gather_params(options, HelpText):
     since = None
     if opt_since:
         since = parse_date_param(opt_since, help=HelpText.since)
-        if since > datetime.now():
+        if since > now():
             logger.warning('The date for --since is in the future.')
 
     until = None
     if opt_until:
         until = parse_date_param(opt_until, help=HelpText.until)
-        if until > datetime.now():
+        if until > now():
             logger.warning('The date for --until is in the future.')
 
     return since, until
@@ -424,26 +428,25 @@ def parse_date_param(value, help=''):
     if value.isdigit():
         raise UnparsableParameter(f'Bare numbers are not valid ({help})')
 
-    now = datetime.now()
     parsed_date = None
 
     # N days ago, start of day
     match = re.fullmatch(r'(\d+)\s*_*(d|da|day|days)(\s*_*ago)?', value)
     if match:
         days_ago = int(match.group(1))
-        parsed_date = (now - timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        parsed_date = (now() - timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     # N months ago, start of day
     match = re.fullmatch(r'(\d+)\s*_*(mo|mon|mont|month|months)(\s*_*ago)?', value)
     if match:
         months_ago = int(match.group(1))
-        parsed_date = (now - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
+        parsed_date = (now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     # N minutes ago
     match = re.fullmatch(r'(\d+)\s*_*(m|mi|min|minu|minut|minute|minutes)(\s*_*ago)?', value)
     if match:
         minutes_ago = int(match.group(1))
-        parsed_date = now - timedelta(minutes=minutes_ago)
+        parsed_date = now() - timedelta(minutes=minutes_ago)
 
     # actual date
     if not parsed_date:
