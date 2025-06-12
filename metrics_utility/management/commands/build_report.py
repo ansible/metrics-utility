@@ -8,11 +8,6 @@ from django.core.management.base import BaseCommand
 
 from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
-from metrics_utility.automation_controller_billing.helpers import (
-    handle_month,
-    parse_date_param,
-    parse_number_of_days,
-)
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import (
@@ -26,7 +21,7 @@ from metrics_utility.management.validation import (
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
-    validate_build_extra_params,
+    validate_build_params,
 )
 from metrics_utility.metric_utils import get_optional_collectors
 
@@ -109,19 +104,18 @@ class Command(BaseCommand):
         self.init_logging()
 
         handle_env_validation('build')
-        validate_build_extra_params(HelpText, options)
+        parsed = validate_build_params(options, HelpText)
 
-        opt_month, month, next_month = handle_month(options.get('month') or None)
-        opt_since = parse_date_param(options.get('since') or None, HelpText.since) if not opt_month else None
-        opt_until = parse_date_param(options.get('until') or None, HelpText.until) if not opt_month and opt_since else None
-        opt_ephemeral = parse_number_of_days(options.get('ephemeral') or None, HelpText.ephemeral)
+        opt_month, month, next_month = parsed['month']
+        opt_since = parsed['since']
+        opt_until = parsed['until']
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         extra_params = self._handle_extra_params(ship_target)
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
-        extra_params['ephemeral_days'] = opt_ephemeral
+        extra_params['ephemeral_days'] = parsed['ephemeral_days']
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
 

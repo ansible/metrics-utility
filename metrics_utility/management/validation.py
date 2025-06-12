@@ -1,16 +1,11 @@
 import logging
 import os
-import re
 
-from dateutil import parser
+from datetime import datetime
 
-from metrics_utility.automation_controller_billing.helpers import parse_date_param
+from metrics_utility.automation_controller_billing.helpers import parse_date_param, parse_month, parse_number_of_days
 from metrics_utility.exceptions import BadParameter, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 
-
-ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
-SINCE_AND_UNTIL_GATHER_PATTERN = r'^\d+[dm]$|^\d{4}-\d{2}-\d{2}$'
-SINCE_AND_UNTIL_BUILD_PATTERN = r'^\d+(d|mo|month|months|m)$|^\d{4}-\d{2}-\d{2}$'
 
 # Constants for valid values
 VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
@@ -157,11 +152,16 @@ def validate_report_type(errors, method):
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
         )
+
     if method == 'build' and report_type is None:
         errors.append(
             f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
         )
+
+    if method == 'gather' and report_type is not None:
+        logger.warning('Ignoring METRICS_UTILITY_REPORT_TYPE used without build_report')
+
     return report_type
 
 
@@ -336,90 +336,77 @@ def handle_not_crc():
         logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="crc": {", ".join(surplus)}')
 
 
-def handle_validate_date_param(param, help_text, command):
-    exceptions = []
+def validate_build_params(options, HelpText):
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
+    # report_type value validation in validate_report_type
 
-    if param is None:
-        return
+    opt_month = options.get('month', None) or None
+    opt_since = options.get('since', None) or None
+    opt_until = options.get('until', None) or None
+    opt_ephemeral = options.get('ephemeral', None) or None
 
-    if param.isdigit():
-        """If the value is a digit stop execution and render the failure message."""
-        exceptions.append('isdigit')
-        help_text = 'Integers are not allowed for parameters --since and --until.'
-        raise UnparsableParameter(help_text)
+    if opt_month:
+        if opt_since or opt_until:
+            raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
 
-    try:
-        """Try to parse the date, and if it fails go to next loop iteration.  Then, determine if we need to render the failure message."""
-        parser.parse(param)
-    except Exception:
-        exceptions.append(help_text)
+        if report_type == 'RENEWAL_GUIDANCE':
+            raise BadParameter('The --month parameter is not allowed when METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE"')
 
-        """Try to parse the date, and if it fails go to next loop iteration.  Then, determine if we need to render the failure message."""
-    if command == 'build':
-        match = match_build_date_param_regex(param)
-    elif command == 'gather':
-        match = match_gather_date_param_regex(param)
-    if match is None:
-        exceptions.append(help_text)
-    if len(exceptions) > 1:
-        raise UnparsableParameter(help_text)
+    # has defaults if empty
+    month = parse_month(opt_month)
 
+    since = None
+    if opt_since:
+        since = parse_date_param(opt_since, help=HelpText.since)
+        if since > datetime.now():
+            logger.warning('The date for --since is in the future.')
+    elif report_type == 'RENEWAL_GUIDANCE':
+        raise MissingRequiredParameter(f'Missing --since parameter, required when METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE": {HelpText.since}')
 
-def match_build_date_param_regex(date):
-    return re.match(SINCE_AND_UNTIL_BUILD_PATTERN, date)
+    until = None
+    if opt_until:
+        if report_type == 'RENEWAL_GUIDANCE':
+            raise BadParameter('The --until parameter is not allowed when METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE"')
 
+        if not opt_since:
+            raise BadParameter('--until is not allowed without --since.')
 
-def match_gather_date_param_regex(date):
-    return re.match(SINCE_AND_UNTIL_GATHER_PATTERN, date)
+        until = parse_date_param(opt_until, help=HelpText.until)
+        if until > datetime.now():
+            logger.warning('The date for --until is in the future.')
 
+        if since > until:
+            raise UnparsableParameter('The date for --until cannot be before the date for --since.')
 
-def validate_build_extra_params(HelpText, options):
-    opt_month = options.get('month') or None
+    ephemeral_days = None
+    if opt_ephemeral:
+        if report_type != 'RENEWAL_GUIDANCE':
+            raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE="{report_type}" does not allow --ephemeral.')
 
-    since = options.get('since', None)
-    until = options.get('until', None)
+        ephemeral_days = parse_number_of_days(opt_ephemeral, help=HelpText.ephemeral)
 
-    handle_validate_ephemeral_param(options.get('ephemeral', None), HelpText.ephemeral)
-    handle_validate_date_param(since, HelpText.since, 'build')
-    handle_validate_date_param(until, HelpText.until, 'build')
-
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    if report_type is None:
-        return
-
-    until = parse_date_param(until)
-    since = parse_date_param(since)
-
-    has_since = since is not None
-    has_until = until is not None
-
-    if report_type == 'RENEWAL_GUIDANCE':
-        validate_renewal_guidance_params(has_since, has_until, HelpText.since)
-
-    if (has_since and has_until) and until < since:
-        raise UnparsableParameter('The date for --until cannot be before the date for --since.')
-
-    if (has_since or has_until) and opt_month is not None:
-        raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
+    return {
+        'month': month,
+        'since': since,
+        'until': until,
+        'ephemeral_days': ephemeral_days,
+    }
 
 
-def validate_renewal_guidance_params(has_since, has_until, since_help):
-    if has_until:
-        raise BadParameter('The --until parameter is not allowed when METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE')
+def validate_gather_params(options, HelpText):
+    opt_since = options.get('since', None) or None
+    opt_until = options.get('until', None) or None
 
-    if not has_since:
-        raise MissingRequiredParameter(f'Missing --since parameter, required when METRICS_UTILITY_REPORT_TYPE=RENEWAL_GUIDANCE: {since_help}')
+    since = None
+    if opt_since:
+        since = parse_date_param(opt_since, help=HelpText.since)
+        if since > datetime.now():
+            logger.warning('The date for --since is in the future.')
 
+    until = None
+    if opt_until:
+        until = parse_date_param(opt_until, help=HelpText.until)
+        if until > datetime.now():
+            logger.warning('The date for --until is in the future.')
 
-def handle_validate_ephemeral_param(value, help):
-    if not value:
-        return
-
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    if report_type != 'RENEWAL_GUIDANCE':
-        raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
-
-    if re.match(ALLOWED_EPHEMERAL_PATTERN, value):
-        return
-
-    raise UnparsableParameter(help)
+    return since, until

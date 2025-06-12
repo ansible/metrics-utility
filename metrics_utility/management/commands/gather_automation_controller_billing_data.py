@@ -4,7 +4,6 @@ import os
 from django.core.management.base import BaseCommand
 
 from metrics_utility.automation_controller_billing.collector import Collector
-from metrics_utility.automation_controller_billing.helpers import parse_date_param
 from metrics_utility.exceptions import (
     BadShipTarget,
     NoAnalyticsCollected,
@@ -16,7 +15,7 @@ from metrics_utility.management.validation import (
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
-    handle_validate_date_param,
+    validate_gather_params,
 )
 
 
@@ -61,17 +60,10 @@ class Command(BaseCommand):
         self.init_logging()
 
         handle_env_validation('gather')
-
-        opt_since = options.get('since') or None
-        opt_until = options.get('until') or None
-        handle_validate_date_param(opt_since, HelpText.since, 'gather')
-        handle_validate_date_param(opt_until, HelpText.until, 'gather')
+        since, until = validate_gather_params(options, HelpText)
 
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
-
-        since = parse_date_param(opt_since, help=HelpText.since)
-        until = parse_date_param(opt_until, help=HelpText.until)
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         billing_provider_params = self._handle_ship_target(ship_target)

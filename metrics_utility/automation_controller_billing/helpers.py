@@ -126,7 +126,7 @@ def parse_number_of_days(value, help=''):
     raise UnparsableParameter(f"Can't parse parameter value {value} ({help})")
 
 
-def handle_month(month):
+def parse_month(month):
     """Process month argument"""
     if month is not None:
         try:
