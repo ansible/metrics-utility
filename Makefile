@@ -26,5 +26,9 @@ populate_host_metrics:
 	docker cp tools/docker/main_hostmetric.sql postgres:/main_hostmetric.sql
 	docker exec postgres psql -U myuser -d awx -f /main_hostmetric.sql
 
+populate_job_host:
+	docker cp tools/docker/main_jobhostsummary.sql postgres:/main_jobhostsummary.sql
+	docker exec postgres psql -U myuser -d awx -f /main_jobhostsummary.sql
+
 
 .PHONY: help sync test coverage lint fix compose
