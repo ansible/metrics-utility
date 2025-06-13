@@ -17,6 +17,7 @@ DECLARE
   host_ids          INTEGER[] := ARRAY[]::INTEGER[];
   host_id           INTEGER;
   i                 INTEGER;
+  host_name         TEXT;
   --
   -- unified jobs
   unified_jobs      INTEGER[] := ARRAY[]::INTEGER[];
@@ -147,8 +148,8 @@ BEGIN
   --
   -- Fill hosts in loop
   --
-  -- LOOP TO INSERT 20 HOSTS
-  FOR i IN 1..20 LOOP
+  -- LOOP TO INSERT HOSTS
+  FOR i IN 1..3 LOOP
     INSERT INTO public.main_host (
       created,
       modified,
@@ -436,6 +437,58 @@ BEGIN
                array_length(unified_jobs,1),
                unified_jobs;
   --
+  -- Job Host Summaries
+  --
+  -- For each job in unified_jobs and each host in host_ids,
+  -- insert a zeroed-out summary row dated 2025-06-13 00:00:00.
+  --
+  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
+    unified_job_id := unified_jobs[i];
+    FOREACH host_id IN ARRAY host_ids LOOP
+      -- fetch the host's name
+      SELECT name
+        INTO host_name
+      FROM public.main_host
+      WHERE id = host_id;
+      --
+      INSERT INTO public.main_jobhostsummary (
+        created,
+        modified,
+        host_name,
+        changed,
+        dark,
+        failures,
+        ok,
+        processed,
+        skipped,
+        failed,
+        host_id,
+        job_id,
+        ignored,
+        rescued
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 00:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 00:00:00+00',
+        host_name,
+        0,   -- changed
+        0,   -- dark
+        0,   -- failures
+        0,   -- ok
+        0,   -- processed
+        0,   -- skipped
+        false, -- failed
+        host_id,
+        unified_job_id,
+        0,   -- ignored
+        0   -- rescued
+      );
+    END LOOP;
+  END LOOP;
+  --
+  RAISE NOTICE 'Inserted %×% job-host summary rows', 
+               array_length(unified_jobs,1),
+               array_length(host_ids,1);
+
 END
 $$;
 
