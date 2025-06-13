@@ -77,7 +77,7 @@ class Command(BaseCommand):
             handle_env_validation('gather')
             self._handle(self, *args, **options)
             exit(0)
-        except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload, UnparsableParameter, MissingRequiredEnvVar) as e:
+        except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload, UnparsableParameter) as e:
             self.logger.error(e.name)
             exit(1)
         except Exception as e:

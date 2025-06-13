@@ -138,6 +138,7 @@ def test_handle_known_exceptions(monkeypatch, command_instance, exc):
             errors.append(msg)
 
         def exception(self, msg):
+            # used in tests
             pass
 
     command_instance.logger = Logger()
@@ -162,6 +163,7 @@ def test_handle_unexpected_exception(monkeypatch, command_instance):
 
     class Logger:
         def error(self, msg):
+            # Used in Tests
             pass
 
         def exception(self, msg):
