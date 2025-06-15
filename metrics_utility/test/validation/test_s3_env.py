@@ -25,7 +25,7 @@ def expect_build_error(env, klass, mocked):
         run_build_int(
             {**unset, **env},
             {
-                'month': '2022-01',
+                'since': '2022-01-01',
             },
         )
     return e.value
@@ -69,6 +69,7 @@ def test_gather_bad_target():
 def test_build_controller_db():
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'RENEWAL_GUIDANCE',
             'METRICS_UTILITY_SHIP_TARGET': 'controller_db',
         },
         MissingRequiredEnvVar,
@@ -104,6 +105,7 @@ def test_gather_crc(caplog):
 def test_build_directory(caplog):
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
             'METRICS_UTILITY_SHIP_TARGET': 'directory',
         },
         MissingRequiredEnvVar,
@@ -148,6 +150,7 @@ def test_gather_directory():
 def test_build_s3():
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
             'METRICS_UTILITY_SHIP_TARGET': 's3',
         },
         MissingRequiredEnvVar,
