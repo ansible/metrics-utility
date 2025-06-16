@@ -34,7 +34,7 @@ class Command(BaseCommand):
     def __init__(self):
         super().__init__()
         self.help = 'Gather Automation Controller billing data.'
-        self.argument_help = {
+        self.help_texts = {
             'since': (
                 'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), '
                 'or a number of months (--since=2m).'
@@ -55,13 +55,13 @@ class Command(BaseCommand):
             '--since',
             dest='since',
             action='store',
-            help=self.argument_help.get('since'),
+            help=self.help_texts.get('since'),
         )
         parser.add_argument(
             '--until',
             dest='until',
             action='store',
-            help=self.argument_help.get('until'),
+            help=self.help_texts.get('until'),
         )
 
     def init_logging(self):
@@ -87,8 +87,8 @@ class Command(BaseCommand):
     def _handle(self, *args, **options):
         self.init_logging()
 
-        handle_validate_date_param(options.get('since', None), self.argument_help.get('since'), 'gather')
-        handle_validate_date_param(options.get('until', None), self.argument_help.get('until'), 'gather')
+        handle_validate_date_param(options.get('since', None), self.help_texts.get('since'), 'gather')
+        handle_validate_date_param(options.get('until', None), self.help_texts.get('until'), 'gather')
 
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
@@ -154,8 +154,8 @@ class Command(BaseCommand):
 
     def _handle_interval(self, opt_since, opt_until):
         # Process since argument
-        since = self._handle_datelike(opt_since, help=self.argument_help.get('since'))
+        since = self._handle_datelike(opt_since, help=self.help_texts.get('since'))
 
         # Process until argument
-        until = self._handle_datelike(opt_until, help=self.argument_help.get('until'))
+        until = self._handle_datelike(opt_until, help=self.help_texts.get('until'))
         return since, until

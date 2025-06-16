@@ -49,13 +49,13 @@ class Command(BaseCommand):
                 'Start date for collection (e.g. --since=2023-12-20), '
                 'a number of minutes ago (--since=2m), '
                 'a number of days ago (--since=5d), or '
-                'a number of months ago (--since=2mo).'
+                'a number of months ago (--since=2mo | 2 month | 2 months).'
             ),
             'until': (
                 'End date for collection (e.g. --until=2023-12-21), '
                 'a number of minutes ago (--until=2m), '
                 'a number of days ago (--until=5d), or '
-                'a number of months ago (--until=2mo).'
+                'a number of months ago (--since=2mo | 2 month | 2 months).'
             ),
             'time_frame_extra_params': (
                 'Missing required parameter --month, --until, or --since. '
@@ -115,7 +115,6 @@ class Command(BaseCommand):
 
     def _handle(self, *args, **options):
         self.init_logging()
-        # handle_env_validation('build')
         og_month, month, next_month = handle_month(options.get('month') or None)
 
         validate_build_extra_params(self.help_texts, options)
