@@ -131,7 +131,7 @@ def test_invalid_gather_argument_format():
         for arg in args:
             cmd = Command()
 
-            help_text = cmd.argument_help[arg]
+            help_text = cmd.help_texts[arg]
             if bad_input == '2':
                 help_text = 'Integers are not allowed for parameters --since and --until.'
             e = handle_gather_exception(env_vars, {arg: bad_input}, UnparsableParameter)
