@@ -57,10 +57,6 @@ class Command(BaseCommand):
                 'a number of days ago (--until=5d), or '
                 'a number of months ago (--since=2mo | 2 month | 2 months).'
             ),
-            'time_frame_extra_params': (
-                'Missing required parameter --month, --until, or --since. '
-                'Metrics utility requires a value for at least one of the following: month, since, until.'
-            ),
             'month': (
                 'Month the report will be generated for, with format YYYY-MM. '
                 "If this parameter is not provided, the previous month's report will be generated if it does not already exist."
