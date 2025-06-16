@@ -82,7 +82,8 @@ def test_invalid_build_report_argument_format():
             help_text = cmd.help_texts[arg]
             if bad_input == '2':
                 help_text = 'Integers are not allowed for parameters --since and --until.'
-            e = handle_build_exception(env_vars, {arg: bad_input}, UnparsableParameter)
+            # either {'since': bad_input} or {'since': (valid), 'until': bad_input}
+            e = handle_build_exception(env_vars, {'since': '2024-01-01', arg: bad_input}, UnparsableParameter)
             assert e.name == help_text
 
 
@@ -99,7 +100,7 @@ def test_ephemeral_allowed():
     env_vars['METRICS_UTILITY_REPORT_TYPE'] = 'RENEWAL_GUIDANCE'
 
     for value in illegal_values:
-        e = handle_build_exception(env_vars, {'ephemeral': value}, UnparsableParameter)
+        e = handle_build_exception(env_vars, {'since': '2024-01-01', 'ephemeral': value}, UnparsableParameter)
         expected = (
             'Duration in months or days to determine if host is ephemeral.'
             ' Months are considered as 30 days in duration. Example: --ephemeral=3months, or'
