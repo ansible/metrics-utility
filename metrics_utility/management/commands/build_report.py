@@ -101,7 +101,7 @@ class Command(BaseCommand):
         handler.setLevel(logging.DEBUG)
         handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(handler)
-        self.logger.propagate = True
+        self.logger.propagate = False
 
     def _parse_param(
         self,
