@@ -379,57 +379,53 @@ def match_gather_date_param_regex(date):
 
 
 def validate_build_extra_params(help_text, options):
-    opt_month = options.get('month') or None
-    # since = None
-    until = options.get('until', None)
-    since = options.get('since', None)
-    since_help = help_text.get('since')
-    until_help = help_text.get('until')
-    # until = None
-    handle_validate_ephemeral_param(options.get('ephemeral', None), help_text.get('ephemeral'))
-    handle_validate_date_param(since, since_help, 'build')
-    handle_validate_date_param(until, until_help, 'build')
-
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    if report_type is None:
+    if not report_type:
         return
 
-    until = parse_date_param(until)
-    since = parse_date_param(since)
+    opt_month = options.get('month', None)
+    opt_since = options.get('since', None)
+    opt_until = options.get('until', None)
+    opt_ephemeral = options.get('ephemeral', None)
 
-    has_since = since is not None
-    has_until = until is not None
+    help_since = help_text.get('since')
+    help_until = help_text.get('until')
+    help_ephemeral = help_text.get('ephemeral')
 
-    validate_renewal_guidance_params(has_since, has_until, help_text)
+    if report_type in {'CCSP', 'CCSPv2'}:
+        # bad type
+        if opt_ephemeral:
+            raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
+
+        # bad combos
+        if opt_month and (opt_since or opt_until):
+            raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
+        if opt_until and not opt_since:
+            raise BadParameter('The --until parameter is ignored without --since.')
+
+    if report_type in {'RENEWAL_GUIDANCE'}:
+        # bad type
+        if opt_month:
+            raise BadParameter('The --month parameter is not allowed for renewal guidance.')
+        if opt_until:
+            raise BadParameter('The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE')
+
+        # required
+        if not opt_since:
+            raise MissingRequiredParameter('The --since parameter is required for renewal guidance.')
+
+        # validation
+        if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
+            raise UnparsableParameter(help_ephemeral)
+
+    handle_validate_date_param(opt_since, help_since, 'build')
+    handle_validate_date_param(opt_until, help_until, 'build')
+
+    since = parse_date_param(opt_since)
+    until = parse_date_param(opt_until)
+
+    has_since = opt_since is not None
+    has_until = opt_until is not None
 
     if (has_since and has_until) and until < since:
         raise UnparsableParameter('The date for --until cannot be before the date for --since.')
-
-    if (has_since or has_until) and opt_month is not None:
-        raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
-
-
-def validate_renewal_guidance_params(since, until, help_text):
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    is_renewal = report_type.startswith('RENEWAL_GUIDANCE')
-    if not is_renewal:
-        return
-
-    since_help = help_text.get('since')
-    until_help = help_text.get('until')
-    if until:
-        raise BadParameter('The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE')
-
-    if since:
-        raise MissingRequiredParameter(f"""{help_text.time_frame_extra_params} \n\n{since_help} \n{until_help} \n{help_text.month}""")
-
-
-def handle_validate_ephemeral_param(value, help):
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    if not value:
-        return
-    if not report_type.startswith('RENEWAL_GUIDANCE'):
-        raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
-    if re.match(ALLOWED_EPHEMERAL_PATTERN, value):
-        return
-    raise UnparsableParameter(help)
