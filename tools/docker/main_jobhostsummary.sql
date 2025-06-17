@@ -118,7 +118,7 @@ BEGIN
     health_check_started,
     managed
   ) VALUES (
-    default_instance_uuid,                          -- generate UUID here
+    default_instance_uuid,                      -- generate UUID here
     'default_host_instance_' || random_suffix,  -- hostname
     now(),                                      -- created
     now(),                                      -- modified
@@ -164,21 +164,22 @@ BEGIN
       now(),
       now(),
       '',                                            -- non‐null description
-      'default_host_' || i || '_' || random_suffix,  -- unique name
+      'default_host_' || i || '_' || random_suffix, -- unique name
       true,
       default_instance_uuid::text,
-      '
-      ansible_host: "default_ansible_host"
-      ansible_connection: "default_ansible_connection"
-      ansible_user: "default_ansible_user"
-      ansible_port: 22
-      ansible_ssh_private_key_file: "/home/default/.ssh/id_rsa"
-      max_retries: 3
-      retry_interval: 5
-      timeout: 30
-      deploy_env: "production"
-      log_level: "INFO"
-      ',                                             -- non‐null variables
+-- This must not be moved right, otherwise it will break
+$yaml$
+ansible_host: "default_ansible_host"
+ansible_connection: "default_ansible_connection"
+ansible_user: "default_ansible_user"
+ansible_port: 22
+ansible_ssh_private_key_file: "/home/default/.ssh/id_rsa"
+max_retries: 3
+retry_interval: 5
+timeout: 30
+deploy_env: "production"
+log_level: "INFO"
+$yaml$,
       default_inventory_id,
       '{}'::jsonb                                    -- non‐null ansible_facts
     )
