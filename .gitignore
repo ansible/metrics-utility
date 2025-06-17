@@ -43,6 +43,3 @@ metrics_utility/test/test_data/data/**/*.json
 
 # Shipped data and out - for regular usage during developement
 /shipped_data/
-/out/
-# For gather test
-/test_shipped_data/

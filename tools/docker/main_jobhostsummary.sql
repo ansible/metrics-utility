@@ -5,7 +5,9 @@ DECLARE
   default_instance_id                               INTEGER;
   default_instance_uuid UUID := gen_random_uuid();
   default_unified_job_template_id                   INTEGER;
-  random_suffix    TEXT := substring(md5(random()::text), 1, 5);
+  -- enable for testing purposes for being able to repeatedly insert data
+  --random_suffix    TEXT := substring(md5(random()::text), 1, 5);
+  random_suffix                   TEXT := '2025-06-13';
   --
   random_ip        TEXT := 
      (floor(random()*256)::int)::text
@@ -149,7 +151,7 @@ BEGIN
   -- Fill hosts in loop
   --
   -- LOOP TO INSERT HOSTS
-  FOR i IN 1..3 LOOP
+  FOR i IN 1..2 LOOP
     INSERT INTO public.main_host (
       created,
       modified,
@@ -351,7 +353,7 @@ $yaml$,
   --
   -- Unified Jobs
   -- Loop to create unified jobs
-  FOR i IN 1..5 LOOP
+  FOR i IN 1..3 LOOP
     INSERT INTO public.main_unifiedjob (
       created,
       modified,
