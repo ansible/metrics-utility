@@ -345,7 +345,7 @@ $yaml$,
       now(),                                  -- created
       now(),                                  -- modified
       ''::text,                               -- description
-      'default_job_' || i,                    -- name
+      'default_unified_job_' || random_suffix, -- name
       'manual',                               -- launch_type
       false,                                  -- cancel_flag
       'pending',                              -- status
