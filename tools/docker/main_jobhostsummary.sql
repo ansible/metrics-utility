@@ -219,6 +219,44 @@ $yaml$,
                'default_job_template_' || random_suffix,
                default_unified_job_template_id;
   --
+  -- Project
+  --
+  INSERT INTO public.main_project (
+      unifiedjobtemplate_ptr_id,
+      local_path,
+      scm_type,
+      scm_url,
+      scm_branch,
+      scm_clean,
+      scm_delete_on_update,
+      scm_update_on_launch,
+      scm_update_cache_timeout,
+      timeout,
+      scm_revision,
+      playbook_files,
+      inventory_files,
+      scm_refspec,
+      allow_override,
+      scm_track_submodules
+  ) VALUES (
+      default_unified_job_template_id,
+      'LOCAL_PATH',                    
+      'SCM_TYPE',                      
+      'SCM_URL',                       
+      'SCM_BRANCH',                   
+      TRUE,                           
+      FALSE,                           
+      TRUE,                            
+      0,                               
+      0,                               
+      'SCM_REVISION',                  
+      '{}'::jsonb,                   
+      '{}'::jsonb,   
+      'SCM_REFSPEC',                   
+      TRUE,                            
+      FALSE                            
+  );
+  --
   -- Job Template
   --
   INSERT INTO public.main_jobtemplate (
@@ -391,6 +429,7 @@ $yaml$,
       become_enabled,
       inventory_id,
       job_template_id,
+      project_id,
       allow_simultaneous,
       artifacts,
       timeout,
@@ -418,6 +457,7 @@ $yaml$,
       '',                           -- start_at_task
       false,                        -- become_enabled
       default_inventory_id,         -- from your DECLARE
+      default_unified_job_template_id, -- from your DECLARE
       default_unified_job_template_id, -- from your DECLARE
       false,                        -- allow_simultaneous
       '{}'::text,                   -- artifacts
