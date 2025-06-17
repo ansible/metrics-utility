@@ -467,8 +467,8 @@ BEGIN
         ignored,
         rescued
       ) VALUES (
-        TIMESTAMP WITH TIME ZONE '2025-06-13 00:00:00+00',
-        TIMESTAMP WITH TIME ZONE '2025-06-13 00:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         host_name,
         0,   -- changed
         0,   -- dark
