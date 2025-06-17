@@ -13,13 +13,13 @@ env_vars = {
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
 }
 
-file_name = '00000000-0000-0000-0000-000000000000-2025-06-13-000000+0000-2025-06-14-000000+0000-6.tar.gz'
-file_path = './metrics_utility/test/test_data/data/2025/06/13/' + file_name
+# file_name = '00000000-0000-0000-0000-000000000000-2025-06-13-000000+0000-2025-06-14-000000+0000-6.tar.gz'
+# file_path = './metrics_utility/test/test_data/data/2025/06/13/' + file_name
 
-year = 2025
 uuid = '00000000-0000-0000-0000-000000000000'  # mock_awx INSTALL_UUID setting
 
-file_glob = f'./metrics_utility/test/test_data/data/{year}/*/*/{uuid}-*.tar.gz'
+file_glob = f'./metrics_utility/test/test_data/data/2025/06/*/{uuid}-*.tar.gz'
+file_paths = f'./metrics_utility/test/test_data/data/2025/06/13/{uuid}-*.tar.gz'
 
 
 @pytest.fixture
@@ -74,22 +74,27 @@ def test_command(cleanup_glob):
 
     run_gather_ext(env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
-    with tarfile.open(file_path, 'r:gz') as tar:
-        # List all files
-        for member in tar.getmembers():
-            if member.name.endswith('job_host_summary.csv'):
-                # Extract file object
-                f = tar.extractfile(member)
-                if f:
-                    content = f.read().decode('utf-8')
-                    lines = content.strip().split('\n')
-                    i = -1
-                    assert len(lines) == len(test_lines), f'\nLine count mismatch: expected {len(test_lines)} lines, got {len(lines)}'
+    jobhost_found = False
+    for file_path in glob.glob(file_paths):
+        with tarfile.open(file_path, 'r:gz') as tar:
+            # print(f'Inspecting {file_path}')
+            # List all files
+            for member in tar.getmembers():
+                if member.name.endswith('job_host_summary.csv'):
+                    # print(f'job_host_summary file found in {file_path}')
+                    # Extract file object
+                    jobhost_found = True
+                    f = tar.extractfile(member)
+                    if f:
+                        content = f.read().decode('utf-8')
+                        lines = content.strip().split('\n')
+                        i = -1
+                        assert len(lines) == len(test_lines), f'\nLine count mismatch: expected {len(test_lines)} lines, got {len(lines)}'
 
-                    for line in lines:
-                        i += 1
-                        test_line = test_lines[i]
-                        assert test_line == line, f'\nExpected lines to match but got:\nExpected:\n {test_line}\nActual:\n   {line}'
-                break
-        else:
-            print('job_host_summary.csv not found.')
+                        for line in lines:
+                            i += 1
+                            test_line = test_lines[i]
+                            assert test_line == line, f'\nExpected lines to match but got:\nExpected:\n {test_line}\nActual:\n   {line}'
+                    break
+    if not jobhost_found:
+        pytest.fail('job_host_summary.csv not found in any tarballs.')
