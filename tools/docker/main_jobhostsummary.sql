@@ -37,8 +37,8 @@ BEGIN
     max_hosts
   )
   VALUES (
-    now(),                             -- created
-    now(),                             -- modified
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                             -- created
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                             -- modified
     '',                                -- description
     'default_org_' || random_suffix,   -- name w/ random suffix
     0                                  -- max_hosts
@@ -71,8 +71,8 @@ BEGIN
     prevent_instance_group_fallback
   )
   VALUES (
-    now(),                                  -- created
-    now(),                                  -- modified
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- modified
     '',                                     -- description
     'default_inventory_' || random_suffix,  -- name w/ same suffix
     '{}',                                   -- variables (empty JSON)
@@ -122,8 +122,8 @@ BEGIN
   ) VALUES (
     default_instance_uuid,                      -- generate UUID here
     'default_host_instance_' || random_suffix,  -- hostname
-    now(),                                      -- created
-    now(),                                      -- modified
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- created
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- modified
     0,                                          -- capacity
     '1.0',                                      -- version
     1.00,                                       -- capacity_adjustment
@@ -135,11 +135,11 @@ BEGIN
     false,                                      -- managed_by_policy
     random_ip,                                  -- ip_address
     'default',                                  -- node_type
-    now(),                                      -- last_seen
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- last_seen
     '',                                         -- errors
-    now(),                                      -- last_health_check
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- last_health_check
     'running',                                  -- node_state
-    now(),                                      -- health_check_started
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- health_check_started
     true                                        -- managed
   )
   RETURNING id INTO default_instance_id;
@@ -163,8 +163,8 @@ BEGIN
       inventory_id,
       ansible_facts
     ) VALUES (
-      now(),
-      now(),
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
       '',                                            -- non‐null description
       'default_host_' || i || '_' || random_suffix, -- unique name
       true,
@@ -205,8 +205,8 @@ $yaml$,
     organization_id
     )
   VALUES (
-    now(),                                          -- created
-    now(),                                          -- modified
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                          -- created
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                          -- modified
     '',                                             -- description
     'default_unified_job_template_' || random_suffix,  -- name w/ random suffix
     0,                                              -- old_pk (must be >= 0)
@@ -382,8 +382,8 @@ $yaml$,
       job_env
     )
     VALUES (
-      now(),                                  -- created
-      now(),                                  -- modified
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- modified
       ''::text,                               -- description
       'default_unified_job_' || random_suffix, -- name
       'manual',                               -- launch_type
