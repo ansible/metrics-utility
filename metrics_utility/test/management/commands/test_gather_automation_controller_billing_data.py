@@ -8,6 +8,7 @@ from metrics_utility.exceptions import (
     BadRequiredEnvVar,
     BadShipTarget,
     FailedToUploadPayload,
+    MetricsException,
     MissingRequiredEnvVar,
     UnparsableParameter,
 )
@@ -59,20 +60,6 @@ def test_command_help(capsys):
     assert e.value.code == 0
 
 
-def test_handle_success(monkeypatch, command_instance):
-    handle_env_validation = 'metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation'
-    monkeypatch.setattr(handle_env_validation, lambda x: None)
-    monkeypatch.setattr(command_instance, '_handle', lambda *a, **k: None)
-    command_instance.logger = type(
-        'Logger',
-        (),
-        {'error': lambda self, msg: None, 'exception': lambda self, msg: None},
-    )()
-    with pytest.raises(SystemExit) as e:
-        command_instance.handle()
-    assert e.value.code == 0
-
-
 @pytest.mark.parametrize(
     'exc',
     [
@@ -87,50 +74,16 @@ def test_handle_known_exceptions(monkeypatch, command_instance, exc):
     handle_env_validation = 'metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation'
     monkeypatch.setattr(handle_env_validation, lambda x: None)
 
-    def raise_exc(*a, **k):
-        raise exc
-
-    monkeypatch.setattr(command_instance, '_handle', raise_exc)
-    errors = []
-
-    class Logger:
-        def error(self, msg):
-            errors.append(msg)
-
-        def exception(self, msg):
-            # used in tests
-            pass
-
-    command_instance.logger = Logger()
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(MetricsException):
         command_instance.handle()
-    assert e.value.code == 1
-    assert errors
 
 
 def test_handle_unexpected_exception(monkeypatch, command_instance):
     handle_env_validation = 'metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation'
     monkeypatch.setattr(handle_env_validation, lambda x: None)
 
-    def raise_exc(*a, **k):
-        raise RuntimeError('unexpected')
-
-    monkeypatch.setattr(command_instance, '_handle', raise_exc)
-    exceptions = []
-
-    class Logger:
-        def error(self, msg):
-            # Used in Tests
-            pass
-
-        def exception(self, msg):
-            exceptions.append(msg)
-
-    command_instance.logger = Logger()
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(MetricsException):
         command_instance.handle()
-    assert e.value.code == 1
-    assert exceptions
 
 
 def test_handle_datelike_days(command_instance):

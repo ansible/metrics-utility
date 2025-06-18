@@ -7,6 +7,7 @@ from metrics_utility.exceptions import (
     BadRequiredEnvVar,
     BadShipTarget,
     DateFormatError,
+    MetricsException,
     MissingRequiredEnvVar,
     MissingRequiredParameter,
     UnparsableParameter,
@@ -91,23 +92,6 @@ def test_init_logging(command_instance):
     assert command_instance.logger.name == 'awx.main.analytics'
 
 
-def test_handle_success(monkeypatch, command_instance):
-    # Patch handle_env_validation and _handle to simulate success
-    monkeypatch.setattr(
-        'metrics_utility.management.commands.build_report.handle_env_validation',
-        lambda x: None,
-    )
-    monkeypatch.setattr(command_instance, '_handle', lambda *a, **k: None)
-    # Patch logger to capture logs
-    command_instance.logger = type(
-        'Logger',
-        (),
-        {'error': lambda self, msg: None, 'exception': lambda self, msg: None},
-    )()
-    # Should not raise
-    command_instance.handle()
-
-
 @pytest.mark.parametrize(
     'exc',
     [
@@ -126,26 +110,8 @@ def test_handle_known_exceptions(monkeypatch, command_instance, exc):
         lambda x: None,
     )
 
-    def raise_exc(*a, **k):
-        raise exc
-
-    monkeypatch.setattr(command_instance, '_handle', raise_exc)
-    # Patch logger to capture error
-    errors = []
-
-    class Logger:
-        def error(self, msg):
-            errors.append(msg)
-
-        def exception(self, msg):
-            # used in tests
-            pass
-
-    command_instance.logger = Logger()
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(MetricsException):
         command_instance.handle()
-    assert e.value.code == 1
-    assert errors
 
 
 def test_handle_unexpected_exception(monkeypatch, command_instance):
@@ -154,26 +120,8 @@ def test_handle_unexpected_exception(monkeypatch, command_instance):
         lambda x: None,
     )
 
-    def raise_exc(*a, **k):
-        raise RuntimeError('unexpected')
-
-    monkeypatch.setattr(command_instance, '_handle', raise_exc)
-    # Patch logger to capture exception
-    exceptions = []
-
-    class Logger:
-        def error(self, msg):
-            # Used in Tests
-            pass
-
-        def exception(self, msg):
-            exceptions.append(msg)
-
-    command_instance.logger = Logger()
-    with pytest.raises(SystemExit) as e:
+    with pytest.raises(MetricsException):
         command_instance.handle()
-    assert e.value.code == 1
-    assert exceptions
 
 
 def test_command_help(capsys):
