@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 
+from argparse import RawDescriptionHelpFormatter
 from datetime import timezone
 
 from django.core.management.base import BaseCommand
@@ -67,6 +68,25 @@ class Command(BaseCommand):
                 'Example: --ephemeral=3months, or --ephemeral=3days'
             ),
         }
+
+    def create_parser(self, prog_name, subcommand, **kwargs):
+        return super().create_parser(
+            prog_name,
+            subcommand,
+            # ensure newlines are preserved in descriptions and epilog
+            formatter_class=RawDescriptionHelpFormatter,
+            epilog='\n'.join(
+                [
+                    'ENVIRONMENT',
+                    "    METRICS_UTILITY_REPORT_TYPE (required, case sensitive): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE'",
+                    "        determines which kind of report we're generating",
+                    '',
+                    "    METRICS_UTILITY_DEDUPLICATOR (optional): one of 'ccsp', 'renewal', 'experimental'",
+                    "        choice of deduplication algorithm, defaults to 'ccsp' or 'renewal' based on the chosen report type",
+                ]
+            ),
+            **kwargs,
+        )
 
     def add_arguments(self, parser):
         parser.add_argument('--month', dest='month', action='store', help=self.help_texts.get('month'))
