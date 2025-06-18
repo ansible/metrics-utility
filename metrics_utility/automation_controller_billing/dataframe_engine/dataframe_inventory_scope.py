@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
+from metrics_utility.automation_controller_billing.dedup.ccsp import DedupCCSP
 from metrics_utility.automation_controller_billing.helpers import merge_json_sets
 from metrics_utility.debug_utils import print_data, print_debug
 
@@ -37,14 +38,8 @@ class DataframeInventoryScope(Base):
                 billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
                 billing_data['install_uuid'] = data['config']['install_uuid']
 
-                # Store the original host name for mapping purposes
-                billing_data['original_host_name'] = billing_data['host_name']
-                if 'ansible_host_variable' in billing_data.columns:
-                    # Replace missing ansible_host_variable with host name
-                    billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
-                    # And use the new ansible_host_variable instead of host_name, since
-                    # what is in ansible_host_variable should be the actual host we count
-                    billing_data['host_name'] = billing_data['ansible_host_variable']
+                # apply deduplication step, creates original_host_name
+                DedupCCSP.do(billing_data)
 
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
