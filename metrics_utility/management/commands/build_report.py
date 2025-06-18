@@ -99,24 +99,14 @@ class Command(BaseCommand):
         self.logger.addHandler(handler)
         self.logger.propagate = False
 
-    def _parse_param(
-        self,
-        param_name,
-        options,
-    ):
-        param = options.get(param_name)
-        if options.get('month') is not None or param is None:
-            return None
-        return parse_date_param(param)
-
     def _handle(self, *args, **options):
         self.init_logging()
 
         validate_build_extra_params(self.help_texts, options)
 
         opt_month, month, next_month = handle_month(options.get('month') or None)
-        opt_until = self._parse_param('until', options)
-        opt_since = self._parse_param('since', options)
+        opt_since = parse_date_param(options.get('since'))
+        opt_until = parse_date_param(options.get('until'))
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
