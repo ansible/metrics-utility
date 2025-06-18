@@ -111,10 +111,10 @@ class Command(BaseCommand):
 
     def _handle(self, *args, **options):
         self.init_logging()
-        og_month, month, next_month = handle_month(options.get('month') or None)
 
         validate_build_extra_params(self.help_texts, options)
-        opt_month = og_month if options.get('month') else None
+
+        opt_month, month, next_month = handle_month(options.get('month') or None)
         opt_until = self._parse_param('until', options)
         opt_since = self._parse_param('since', options)
         opt_force = options.get('force')
