@@ -71,7 +71,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            handle_env_validation('gather')
             self._handle(self, *args, **options)
             exit(0)
         except (BadShipTarget, MissingRequiredEnvVar, BadRequiredEnvVar, FailedToUploadPayload, UnparsableParameter) as e:
@@ -83,6 +82,7 @@ class Command(BaseCommand):
 
     def _handle(self, *args, **options):
         self.init_logging()
+        handle_env_validation('gather')
 
         handle_validate_date_param(options.get('since', None), self.help_texts.get('since'), 'gather')
         handle_validate_date_param(options.get('until', None), self.help_texts.get('until'), 'gather')

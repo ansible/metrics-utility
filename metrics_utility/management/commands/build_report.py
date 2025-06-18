@@ -102,6 +102,7 @@ class Command(BaseCommand):
     def _handle(self, *args, **options):
         self.init_logging()
 
+        handle_env_validation('build')
         validate_build_extra_params(self.help_texts, options)
 
         opt_month, month, next_month = handle_month(options.get('month') or None)
@@ -171,7 +172,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            handle_env_validation('build')
             self._handle(*args, **options)
         except (
             BadShipTarget,
