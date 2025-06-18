@@ -161,7 +161,6 @@ class Command(BaseCommand):
         report_engine = ReportFactory(
             report_period=opt_month,
             report_dataframe=report_dataframe,
-            ship_target=ship_target,
             extra_params=extra_params,
         ).create()
         report_spreadsheet = report_engine.build_spreadsheet()

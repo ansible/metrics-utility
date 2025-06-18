@@ -31,7 +31,7 @@ class Factory:
         elif self.report_type == 'RENEWAL_GUIDANCE':
             return (self._get_db_dataframe_host_metric_usage().build_dataframe(),)
         else:
-            raise NotSupportedFactory(f'Factory for {self.ship_target} not supported')
+            raise NotSupportedFactory(f'Factory for {self.report_type} not supported')
 
     def _get_dataframe_collection_status(self):
         return DataframeCollectionStatus(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
