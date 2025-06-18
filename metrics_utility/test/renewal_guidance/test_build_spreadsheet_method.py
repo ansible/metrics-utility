@@ -8,7 +8,7 @@ import pytest
 
 from openpyxl import Workbook as ActualOpenpyxlWorkbook
 
-from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup as ActualDedup
+from metrics_utility.automation_controller_billing.dedup.renewal_guidance import DedupRenewal
 from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
 
 
@@ -28,7 +28,7 @@ def setup_build_spreadsheet_mocks(fixed_now):
 
     mock_cell = MagicMock()
 
-    mock_dedup_instance = MagicMock(spec=ActualDedup)
+    mock_dedup_instance = MagicMock(spec=DedupRenewal)
     mock_dedup_class = MagicMock(return_value=mock_dedup_instance)
 
     mock_time_module = MagicMock()
@@ -61,7 +61,7 @@ def setup_build_spreadsheet_mocks(fixed_now):
 def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mocks, setup_processed_dataframe):
     patch_target_datetime = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.datetime'
     patch_target_workbook = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.Workbook'
-    patch_target_dedup_class = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.Dedup'
+    patch_target_dedup_class = 'metrics_utility.automation_controller_billing.dedup.factory.DedupRenewal'
     patch_target_time = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.time'
     patch_target_dataframe_to_rows = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.dataframe_to_rows'
 
@@ -81,6 +81,8 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
         test_ephemeral_days = 30
         report_period_range = '2025-01-01,2025-06-03'
         test_extra_params = {
+            'report_type': 'RENEWAL_GUIDANCE',
+            'deduplicator': None,
             'opt_ephemeral': f'{test_ephemeral_days} days',
             'price_per_node': 0.1,
             'report_period_range': report_period_range,
@@ -139,7 +141,7 @@ def test_build_spreadsheet_with_ephemeral_data(
     mocks['dedup_class_mock'].assert_called_once()
     mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
 
-    dedup_call_df = mocks['dedup_class_mock'].call_args[0][0]
+    dedup_call_df = mocks['dedup_class_mock'].call_args[1]['dataframes'][0]
     expected_df_before_dedup = processed_df.copy()
     expected_df_before_dedup['first_automation'] = expected_df_before_dedup['first_automation'].dt.tz_localize(None)
     expected_df_before_dedup['last_automation'] = expected_df_before_dedup['last_automation'].dt.tz_localize(None)
@@ -223,7 +225,7 @@ def test_build_spreadsheet_without_ephemeral_data(
     mocks['dedup_class_mock'].assert_called_once()
     mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
 
-    dedup_call_df = mocks['dedup_class_mock'].call_args[0][0]
+    dedup_call_df = mocks['dedup_class_mock'].call_args[1]['dataframes'][0]
     expected_df_before_dedup = processed_df.copy()
     expected_df_before_dedup['first_automation'] = expected_df_before_dedup['first_automation'].dt.tz_localize(None)
     expected_df_before_dedup['last_automation'] = expected_df_before_dedup['last_automation'].dt.tz_localize(None)

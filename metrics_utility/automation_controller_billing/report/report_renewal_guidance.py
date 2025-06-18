@@ -10,9 +10,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+from metrics_utility.automation_controller_billing.dedup.factory import Factory as DedupFactory
 from metrics_utility.automation_controller_billing.helpers import parse_number_of_days
 from metrics_utility.automation_controller_billing.report.base import Base
-from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup
 
 
 class ReportRenewalGuidance(Base):
@@ -55,7 +55,7 @@ class ReportRenewalGuidance(Base):
         host_metric_dataframe['last_deleted'] = pd.to_datetime(host_metric_dataframe['last_deleted'], format='ISO8601').dt.tz_localize(None)
 
         # Run the host deduplication first
-        host_metric_dataframe = Dedup(host_metric_dataframe, extra_params=self.extra_params).run_deduplication()
+        host_metric_dataframe = DedupFactory(dataframes=(host_metric_dataframe,), extra_params=self.extra_params).create().run_deduplication()
 
         host_metric_dataframe['days_automated'] = (host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
         host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(lambda x: x if x > 0 else 0)

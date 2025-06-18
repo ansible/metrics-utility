@@ -137,6 +137,7 @@ class Command(BaseCommand):
         extra_params['opt_ephemeral'] = options.get('ephemeral') or None
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
+        extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR', None) or None
 
         extractor = ExtractorFactory(ship_target, extra_params).create()
 

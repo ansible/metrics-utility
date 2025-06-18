@@ -1,9 +1,9 @@
 import pandas as pd
 
 
-class Dedup:
-    def __init__(self, dataframe, extra_params):
-        self.dataframe = dataframe
+class DedupRenewal:
+    def __init__(self, dataframes, extra_params):
+        self.dataframe = dataframes[0]
         self.extra_params = extra_params
 
     def run_deduplication(self):
@@ -67,6 +67,7 @@ class Dedup:
                 }
             )
 
+        # FIXME: dataframes obj
         return pd.DataFrame(deduped_list)
 
     def stringify(self, value):
