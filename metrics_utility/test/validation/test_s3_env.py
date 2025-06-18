@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 
 from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
@@ -13,7 +15,12 @@ unset = {
 }
 
 
-def expect_build_error(env, klass):
+# workaround, until we merge env var handling between _handle_* and handle_env_validation
+# this test was written in a world without handle_env_validation, mocking it out
+@patch('metrics_utility.management.commands.build_report.handle_env_validation')
+def expect_build_error(env, klass, mocked):
+    mocked.return_value = None
+
     with pytest.raises(klass) as e:
         run_build_int(
             {**unset, **env},
@@ -24,7 +31,10 @@ def expect_build_error(env, klass):
     return e.value
 
 
-def expect_gather_error(env, klass):
+@patch('metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation')
+def expect_gather_error(env, klass, mocked):
+    mocked.return_value = None
+
     with pytest.raises(klass) as e:
         run_gather_int(
             {**unset, **env},
@@ -38,6 +48,7 @@ def expect_gather_error(env, klass):
 def test_build_bad_target():
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
             'METRICS_UTILITY_SHIP_TARGET': 'crc',
         },
         BadShipTarget,
