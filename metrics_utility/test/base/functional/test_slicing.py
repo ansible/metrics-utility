@@ -2,7 +2,6 @@ import datetime
 import tarfile
 
 import pytest
-import pytz
 
 from django.utils.timezone import now, timedelta
 
@@ -62,7 +61,7 @@ def test_slices_by_date(collector):
                 int(row[3]),
                 int(row[4]),
                 int(row[5]),
-                tzinfo=pytz.utc,
+                tzinfo=datetime.timezone.utc,
             )
             csv_until = datetime.datetime(
                 int(row[6]),
@@ -71,7 +70,7 @@ def test_slices_by_date(collector):
                 int(row[9]),
                 int(row[10]),
                 int(row[11]),
-                tzinfo=pytz.utc,
+                tzinfo=datetime.timezone.utc,
             )
 
             assert csv_since == since
