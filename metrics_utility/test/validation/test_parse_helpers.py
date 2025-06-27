@@ -4,11 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from metrics_utility.automation_controller_billing.helpers import (
+from metrics_utility.exceptions import MetricsException
+from metrics_utility.management.validation import (
     parse_date_param,
     parse_number_of_days,
 )
-from metrics_utility.exceptions import MetricsException
 
 
 def test_parse_date_param():
@@ -19,7 +19,7 @@ def test_parse_date_param():
     assert parse_date_param('2024-01-01') == datetime.datetime(2024, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)
 
     # patch now() to be 2024-02-29 13:59:00 (w/o tz)
-    with patch('metrics_utility.automation_controller_billing.helpers.now') as mock:
+    with patch('metrics_utility.management.validation.now') as mock:
         mock.return_value = datetime.datetime(2024, 2, 29, 13, 59, 0)
 
         assert parse_date_param('1d') == datetime.datetime(2024, 2, 29, 0, 0, tzinfo=datetime.timezone.utc)
