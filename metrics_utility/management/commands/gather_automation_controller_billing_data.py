@@ -27,18 +27,15 @@ class Command(BaseCommand):
     Gather Automation Controller billing data
     """
 
-    def __init__(self):
-        super().__init__()
-        self.help = 'Gather Automation Controller billing data.'
-        self.help_texts = {
-            'since': (
-                'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), '
-                'or a number of months (--since=2m).'
-            ),
-            'until': (
-                'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
-            ),
-        }
+    help = 'Gather Automation Controller billing data'
+    help_texts = {
+        'since': (
+            'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
+        ),
+        'until': (
+            'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
+        ),
+    }
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', dest='dry-run', action='store_true', help='Gather billing metrics without shipping.')

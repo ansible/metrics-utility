@@ -39,33 +39,29 @@ class Command(BaseCommand):
     """
 
     help = 'Build Report'
-
-    def __init__(self):
-        super().__init__()
-
-        self.help_texts = {
-            'since': (
-                'Start date for collection (e.g. --since=2023-12-20), '
-                'a number of minutes ago (--since=2m), '
-                'a number of days ago (--since=5d), or '
-                'a number of months ago (--since=2mo | 2 month | 2 months).'
-            ),
-            'until': (
-                'End date for collection (e.g. --until=2023-12-21), '
-                'a number of minutes ago (--until=2m), '
-                'a number of days ago (--until=5d), or '
-                'a number of months ago (--since=2mo | 2 month | 2 months).'
-            ),
-            'month': (
-                'Month the report will be generated for, with format YYYY-MM. '
-                "If this parameter is not provided, the previous month's report will be generated if it does not already exist."
-            ),
-            'ephemeral': (
-                'Duration in months or days to determine if host is ephemeral. '
-                'Months are considered as 30 days in duration. '
-                'Example: --ephemeral=3months, or --ephemeral=3days'
-            ),
-        }
+    help_texts = {
+        'since': (
+            'Start date for collection (e.g. --since=2023-12-20), '
+            'a number of minutes ago (--since=2m), '
+            'a number of days ago (--since=5d), or '
+            'a number of months ago (--since=2mo | 2 month | 2 months).'
+        ),
+        'until': (
+            'End date for collection (e.g. --until=2023-12-21), '
+            'a number of minutes ago (--until=2m), '
+            'a number of days ago (--until=5d), or '
+            'a number of months ago (--since=2mo | 2 month | 2 months).'
+        ),
+        'month': (
+            'Month the report will be generated for, with format YYYY-MM. '
+            "If this parameter is not provided, the previous month's report will be generated if it does not already exist."
+        ),
+        'ephemeral': (
+            'Duration in months or days to determine if host is ephemeral. '
+            'Months are considered as 30 days in duration. '
+            'Example: --ephemeral=3months, or --ephemeral=3days'
+        ),
+    }
 
     def add_arguments(self, parser):
         parser.add_argument('--month', dest='month', action='store', help=self.help_texts.get('month'))
