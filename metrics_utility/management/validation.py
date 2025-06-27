@@ -520,10 +520,10 @@ def handle_datelike(value, help=''):
     # Process ret argument
     if value.endswith('d'):
         days_ago = int(value[0:-1])
-        ret = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        ret = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
     elif value.endswith('m'):
         minutes_ago = int(value[0:-1])
-        ret = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
+        ret = now() - datetime.timedelta(minutes=minutes_ago)
     else:
         ret = parser.parse(value)
 
