@@ -511,3 +511,24 @@ def handle_month(month):
         month = f'{y}-{m}'
 
     return month, date, date + relativedelta(months=1)
+
+
+def handle_datelike(value, help=''):
+    if not value:
+        return None
+
+    # Process ret argument
+    if value.endswith('d'):
+        days_ago = int(value[0:-1])
+        ret = (datetime.datetime.now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif value.endswith('m'):
+        minutes_ago = int(value[0:-1])
+        ret = datetime.datetime.now() - datetime.timedelta(minutes=minutes_ago)
+    else:
+        ret = parser.parse(value)
+
+    # Add default utc timezone
+    if ret and ret.tzinfo is None:
+        ret = ret.replace(tzinfo=datetime.timezone.utc)
+
+    return ret
