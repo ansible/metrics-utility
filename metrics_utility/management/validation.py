@@ -513,7 +513,7 @@ def handle_month(month):
     return month, date, date + relativedelta(months=1)
 
 
-def handle_datelike(value, help=''):
+def handle_datelike(value):
     if not value:
         return None
 

@@ -72,8 +72,8 @@ class Command(BaseCommand):
         handle_validate_date_param(opt_since, self.help_texts.get('since'), 'gather')
         handle_validate_date_param(opt_until, self.help_texts.get('until'), 'gather')
 
-        since = handle_datelike(opt_since, self.help_texts.get('since'))
-        until = handle_datelike(opt_until, self.help_texts.get('until'))
+        since = handle_datelike(opt_since)
+        until = handle_datelike(opt_until)
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         billing_provider_params = self._handle_ship_target(ship_target)
