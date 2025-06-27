@@ -96,7 +96,10 @@ def parse_date_param(date_option):
 
 
 def parse_number_of_days(date_option):
-    if date_option and (date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days')):
+    if not date_option:
+        return None
+
+    if date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days'):
         if date_option.endswith('d'):
             suffix_length = len('d')
         elif date_option.endswith('day'):
@@ -105,7 +108,7 @@ def parse_number_of_days(date_option):
             suffix_length = len('days')
 
         days = int(date_option[0:-suffix_length])
-    elif date_option and (date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months')):
+    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
         if date_option.endswith('mo'):
             suffix_length = len('mo')
         elif date_option.endswith('month'):
