@@ -380,6 +380,57 @@ def handle_validate_date_param(param, help_text, command):
         return handle_datelike(param)
 
 
+def parse_date_param(date_option):
+    if not date_option:
+        return None
+
+    parsed_date = None
+    if date_option.endswith('d'):
+        days_ago = int(date_option[0:-1])
+        parsed_date = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
+        if date_option.endswith('mo'):
+            suffix_length = len('mo')
+        elif date_option.endswith('month'):
+            suffix_length = len('month')
+        elif date_option.endswith('months'):
+            suffix_length = len('months')
+        months_ago = int(date_option[0:-suffix_length])
+        parsed_date = (now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif date_option.endswith('m'):
+        minutes_ago = int(date_option[0:-1])
+        parsed_date = now() - datetime.timedelta(minutes=minutes_ago)
+    else:
+        parsed_date = parser.parse(date_option)
+
+    # Set timezone to UTC when missing
+    if parsed_date and parsed_date.tzinfo is None:
+        parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)
+
+    return parsed_date
+
+
+def handle_datelike(value):
+    if not value:
+        return None
+
+    # Process ret argument
+    if value.endswith('d'):
+        days_ago = int(value[0:-1])
+        ret = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif value.endswith('m'):
+        minutes_ago = int(value[0:-1])
+        ret = now() - datetime.timedelta(minutes=minutes_ago)
+    else:
+        ret = parser.parse(value)
+
+    # Add default utc timezone
+    if ret and ret.tzinfo is None:
+        ret = ret.replace(tzinfo=datetime.timezone.utc)
+
+    return ret
+
+
 def validate_build_extra_params(help_text, options):
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
     if not report_type:
@@ -432,36 +483,6 @@ def validate_build_extra_params(help_text, options):
     return since, until
 
 
-def parse_date_param(date_option):
-    if not date_option:
-        return None
-
-    parsed_date = None
-    if date_option.endswith('d'):
-        days_ago = int(date_option[0:-1])
-        parsed_date = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
-        months_ago = int(date_option[0:-suffix_length])
-        parsed_date = (now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option.endswith('m'):
-        minutes_ago = int(date_option[0:-1])
-        parsed_date = now() - datetime.timedelta(minutes=minutes_ago)
-    else:
-        parsed_date = parser.parse(date_option)
-
-    # Set timezone to UTC when missing
-    if parsed_date and parsed_date.tzinfo is None:
-        parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)
-
-    return parsed_date
-
-
 def parse_number_of_days(date_option):
     if not date_option:
         return None
@@ -507,24 +528,3 @@ def handle_month(month):
         month = f'{y}-{m}'
 
     return month, date, date + relativedelta(months=1)
-
-
-def handle_datelike(value):
-    if not value:
-        return None
-
-    # Process ret argument
-    if value.endswith('d'):
-        days_ago = int(value[0:-1])
-        ret = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif value.endswith('m'):
-        minutes_ago = int(value[0:-1])
-        ret = now() - datetime.timedelta(minutes=minutes_ago)
-    else:
-        ret = parser.parse(value)
-
-    # Add default utc timezone
-    if ret and ret.tzinfo is None:
-        ret = ret.replace(tzinfo=datetime.timezone.utc)
-
-    return ret
