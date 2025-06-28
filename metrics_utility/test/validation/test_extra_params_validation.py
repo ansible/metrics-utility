@@ -58,7 +58,7 @@ def test_renewal_guidance_fails_with_until_params():
     ]
     for arg in command_args:
         e = handle_build_exception({**env_vars, 'METRICS_UTILITY_REPORT_TYPE': 'RENEWAL_GUIDANCE'}, arg['args'], BadParameter)
-        assert e.name == 'The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE'
+        assert e.name == 'The --until parameter is not allowed for renewal guidance report.'
 
 
 def test_invalid_month_format():

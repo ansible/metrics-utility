@@ -406,13 +406,13 @@ def validate_build_extra_params(help_text, options):
     if report_type in {'RENEWAL_GUIDANCE'}:
         # bad type
         if opt_month:
-            raise BadParameter('The --month parameter is not allowed for renewal guidance.')
+            raise BadParameter('The --month parameter is not allowed for renewal guidance report.')
         if opt_until:
-            raise BadParameter('The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE')
+            raise BadParameter('The --until parameter is not allowed for renewal guidance report.')
 
         # required
         if not opt_since:
-            raise MissingRequiredParameter('The --since parameter is required for renewal guidance.')
+            raise MissingRequiredParameter('The --since parameter is required for renewal guidance report.')
 
         # validation
         if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
