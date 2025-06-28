@@ -341,6 +341,11 @@ def handle_not_crc():
         logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="crc": {", ".join(surplus)}')
 
 
+# patchable in tests
+def now():
+    return datetime.datetime.now()
+
+
 def handle_validate_date_param(param, help_text, command):
     exceptions = []
 
@@ -353,29 +358,26 @@ def handle_validate_date_param(param, help_text, command):
         help_text = 'Integers are not allowed for parameters --since and --until.'
         raise UnparsableParameter(help_text)
 
+    """Try to parse the date two ways, fail if both fail."""
     try:
-        """Try to parse the date, and if it fails go to next loop iteration.  Then, determine if we need to render the failure message."""
         parser.parse(param)
     except Exception:
         exceptions.append(help_text)
 
-        """Try to parse the date, and if it fails go to next loop iteration.  Then, determine if we need to render the failure message."""
     if command == 'build':
-        match = match_build_date_param_regex(param)
+        match = re.match(SINCE_AND_UNTIL_BUILD_PATTERN, param)
     elif command == 'gather':
-        match = match_gather_date_param_regex(param)
+        match = re.match(SINCE_AND_UNTIL_GATHER_PATTERN, param)
     if match is None:
         exceptions.append(help_text)
+
     if len(exceptions) > 1:
         raise UnparsableParameter(help_text)
 
-
-def match_build_date_param_regex(date):
-    return re.match(SINCE_AND_UNTIL_BUILD_PATTERN, date)
-
-
-def match_gather_date_param_regex(date):
-    return re.match(SINCE_AND_UNTIL_GATHER_PATTERN, date)
+    if command == 'build':
+        return parse_date_param(param)
+    if command == 'gather':
+        return handle_datelike(param)
 
 
 def validate_build_extra_params(help_text, options):
@@ -418,11 +420,8 @@ def validate_build_extra_params(help_text, options):
         if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
             raise UnparsableParameter(help_ephemeral)
 
-    handle_validate_date_param(opt_since, help_since, 'build')
-    handle_validate_date_param(opt_until, help_until, 'build')
-
-    since = parse_date_param(opt_since)
-    until = parse_date_param(opt_until)
+    since = handle_validate_date_param(opt_since, help_since, 'build')
+    until = handle_validate_date_param(opt_until, help_until, 'build')
 
     has_since = opt_since is not None
     has_until = opt_until is not None
@@ -430,10 +429,7 @@ def validate_build_extra_params(help_text, options):
     if (has_since and has_until) and until < since:
         raise UnparsableParameter('The date for --until cannot be before the date for --since.')
 
-
-# patchable in tests
-def now():
-    return datetime.datetime.now()
+    return since, until
 
 
 def parse_date_param(date_option):

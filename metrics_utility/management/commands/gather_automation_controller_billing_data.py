@@ -10,7 +10,6 @@ from metrics_utility.exceptions import (
 )
 from metrics_utility.management.validation import (
     handle_crc_ship_target,
-    handle_datelike,
     handle_directory_ship_target,
     handle_env_validation,
     handle_not_crc,
@@ -28,6 +27,7 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
     help_texts = {
         'since': (
+            # FIXME - not months 2m
             'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
         ),
         'until': (
@@ -60,11 +60,8 @@ class Command(BaseCommand):
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
 
-        handle_validate_date_param(opt_since, self.help_texts.get('since'), 'gather')
-        handle_validate_date_param(opt_until, self.help_texts.get('until'), 'gather')
-
-        since = handle_datelike(opt_since)
-        until = handle_datelike(opt_until)
+        since = handle_validate_date_param(opt_since, self.help_texts.get('since'), 'gather')
+        until = handle_validate_date_param(opt_until, self.help_texts.get('until'), 'gather')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         billing_provider_params = self._handle_ship_target(ship_target)
