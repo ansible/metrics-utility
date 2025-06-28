@@ -16,7 +16,7 @@ from metrics_utility.management.validation import (
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
-    handle_validate_date_param,
+    parse_date_param,
 )
 
 
@@ -56,8 +56,8 @@ class Command(BaseCommand):
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
 
-        since = handle_validate_date_param(opt_since, self.help_texts, 'since')
-        until = handle_validate_date_param(opt_until, self.help_texts, 'until')
+        since = parse_date_param(opt_since, self.help_texts, 'since')
+        until = parse_date_param(opt_until, self.help_texts, 'until')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         billing_provider_params = self._handle_ship_target(ship_target)

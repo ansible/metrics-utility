@@ -3,7 +3,6 @@ import logging
 import os
 import re
 
-from dateutil import parser
 from dateutil.relativedelta import relativedelta
 
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
@@ -355,54 +354,52 @@ def startofday(dt):
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def handle_validate_date_param(param, help_texts, name):
-    if not param:
+def parse_date_param(value, help_texts={None: ''}, name=None):
+    if not value:
         return None
 
     help_text = help_texts.get(name)
 
-    if param.isdigit():
+    if value.isdigit():
         raise UnparsableParameter(f'Bare integers are not allowed for --{name}: {help_text}')
 
-    ret = None
+    parsed = None
     try:
         # N days ago, start of day
-        match = re.fullmatch(r'(\d+)(d|day|days)', param)
+        match = re.fullmatch(r'(\d+)(d|day|days)', value)
         if match:
             days_ago = int(match.group(1))
-            ret = startofday(now() - datetime.timedelta(days=days_ago - 1))
+            parsed = startofday(now() - datetime.timedelta(days=days_ago - 1))
 
         # N months ago, start of day
-        match = re.fullmatch(r'(\d+)(mo|mon|month|months)', param)
+        match = re.fullmatch(r'(\d+)(mo|mon|month|months)', value)
         if match:
             months_ago = int(match.group(1))
-            ret = startofday(now() - relativedelta(months=months_ago))
+            parsed = startofday(now() - relativedelta(months=months_ago))
 
         # N minutes ago
-        match = re.fullmatch(r'(\d+)(m|min|minute|minutes)', param)
+        match = re.fullmatch(r'(\d+)(m|min|minute|minutes)', value)
         if match:
             minutes_ago = int(match.group(1))
-            ret = now() - datetime.timedelta(minutes=minutes_ago)
+            parsed = now() - datetime.timedelta(minutes=minutes_ago)
 
         # actual date
-        if not ret:
-            # FIXME strptime?
-            ret = parser.parse(param)
+        if not parsed:
+            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.timezone.utc)
     except Exception as e:
-        breakpoint()
-        raise UnparsableParameter(f'{help_text} {e}')
+        raise UnparsableParameter(f'{str(e)}: {help_text}')
 
     # Set timezone to UTC when missing
-    if ret and ret.tzinfo is None:
-        ret = ret.replace(tzinfo=datetime.timezone.utc)
+    if parsed and parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
 
-    return ret
+    return parsed
 
 
 def validate_build_extra_params(help_texts, options):
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
     if not report_type:
-        return
+        return None, None
 
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
@@ -435,8 +432,8 @@ def validate_build_extra_params(help_texts, options):
         if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
             raise UnparsableParameter(help_texts.get('ephemeral'))
 
-    since = handle_validate_date_param(opt_since, help_texts, 'since')
-    until = handle_validate_date_param(opt_until, help_texts, 'until')
+    since = parse_date_param(opt_since, help_texts, 'since')
+    until = parse_date_param(opt_until, help_texts, 'until')
 
     has_since = opt_since is not None
     has_until = opt_until is not None
