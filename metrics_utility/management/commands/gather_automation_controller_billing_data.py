@@ -33,24 +33,15 @@ class Command(BaseCommand):
         'until': (
             'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
         ),
+        'dry-run': ('Gather billing metrics without shipping.'),
+        'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
     }
 
     def add_arguments(self, parser):
-        parser.add_argument('--dry-run', dest='dry-run', action='store_true', help='Gather billing metrics without shipping.')
-        parser.add_argument('--ship', dest='ship', action='store_true', help='Enable shipping of billing metrics to the console.redhat.com')
-
-        parser.add_argument(
-            '--since',
-            dest='since',
-            action='store',
-            help=self.help_texts.get('since'),
-        )
-        parser.add_argument(
-            '--until',
-            dest='until',
-            action='store',
-            help=self.help_texts.get('until'),
-        )
+        parser.add_argument('--dry-run', dest='dry-run', action='store_true', help=self.help_texts.get('dry-run'))
+        parser.add_argument('--ship', dest='ship', action='store_true', help=self.help_texts.get('ship'))
+        parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
+        parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')

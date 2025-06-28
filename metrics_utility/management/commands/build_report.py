@@ -59,30 +59,17 @@ class Command(BaseCommand):
             'Months are considered as 30 days in duration. '
             'Example: --ephemeral=3months, or --ephemeral=3days'
         ),
+        'force': ('With this option, the existing reports will be overwritten if running this command again.'),
+        'verbose': ('Starts to print debug information to terminal.'),
     }
 
     def add_arguments(self, parser):
         parser.add_argument('--month', dest='month', action='store', help=self.help_texts.get('month'))
         parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
-        parser.add_argument(
-            '--until',
-            dest='until',
-            action='store',
-            help=self.help_texts.get('until'),
-        )
-        parser.add_argument(
-            '--ephemeral',
-            dest='ephemeral',
-            action='store',
-            help=self.help_texts.get('ephemeral'),
-        )
-        parser.add_argument(
-            '--force',
-            dest='force',
-            action='store_true',
-            help='With this option, the existing reports will be overwritten if running this command again.',
-        )
-        parser.add_argument('--verbose', dest='verbose', action='store_true', help='Starts to print debug information to terminal.')
+        parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
+        parser.add_argument('--ephemeral', dest='ephemeral', action='store', help=self.help_texts.get('ephemeral'))
+        parser.add_argument('--force', dest='force', action='store_true', help=self.help_texts.get('force'))
+        parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
     def init_logging(self):
         self.logger = logging.getLogger('awx.main.analytics')
