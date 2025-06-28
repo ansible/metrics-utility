@@ -56,8 +56,8 @@ class Command(BaseCommand):
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
 
-        since = handle_validate_date_param(opt_since, self.help_texts.get('since'), 'gather')
-        until = handle_validate_date_param(opt_until, self.help_texts.get('until'), 'gather')
+        since = handle_validate_date_param(opt_since, self.help_texts, 'since')
+        until = handle_validate_date_param(opt_until, self.help_texts, 'until')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         billing_provider_params = self._handle_ship_target(ship_target)

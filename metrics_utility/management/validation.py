@@ -17,8 +17,6 @@ date_format_text = (
 )
 
 ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
-SINCE_AND_UNTIL_GATHER_PATTERN = r'^\d+[dm]$|^\d{4}-\d{1,2}-\d{1,2}$'
-SINCE_AND_UNTIL_BUILD_PATTERN = r'^\d+(d|mo|month|months|m)$|^\d{4}-\d{1,2}-\d{1,2}$'
 
 # Constants for valid values
 VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
@@ -353,92 +351,55 @@ def now():
     return datetime.datetime.now()
 
 
-def handle_validate_date_param(param, help_text, command):
-    exceptions = []
+def startofday(dt):
+    return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    if param is None:
-        return
+
+def handle_validate_date_param(param, help_texts, name):
+    if not param:
+        return None
+
+    help_text = help_texts.get(name)
 
     if param.isdigit():
-        """If the value is a digit stop execution and render the failure message."""
-        exceptions.append('isdigit')
-        help_text = 'Integers are not allowed for parameters --since and --until.'
-        raise UnparsableParameter(help_text)
+        raise UnparsableParameter(f'Bare integers are not allowed for --{name}: {help_text}')
 
-    """Try to parse the date two ways, fail if both fail."""
+    ret = None
     try:
-        parser.parse(param)
-    except Exception:
-        exceptions.append(help_text)
+        # N days ago, start of day
+        match = re.fullmatch(r'(\d+)(d|day|days)', param)
+        if match:
+            days_ago = int(match.group(1))
+            ret = startofday(now() - datetime.timedelta(days=days_ago - 1))
 
-    if command == 'build':
-        match = re.match(SINCE_AND_UNTIL_BUILD_PATTERN, param)
-    elif command == 'gather':
-        match = re.match(SINCE_AND_UNTIL_GATHER_PATTERN, param)
-    if match is None:
-        exceptions.append(help_text)
+        # N months ago, start of day
+        match = re.fullmatch(r'(\d+)(mo|mon|month|months)', param)
+        if match:
+            months_ago = int(match.group(1))
+            ret = startofday(now() - relativedelta(months=months_ago))
 
-    if len(exceptions) > 1:
-        raise UnparsableParameter(help_text)
+        # N minutes ago
+        match = re.fullmatch(r'(\d+)(m|min|minute|minutes)', param)
+        if match:
+            minutes_ago = int(match.group(1))
+            ret = now() - datetime.timedelta(minutes=minutes_ago)
 
-    if command == 'build':
-        return parse_date_param(param)
-    if command == 'gather':
-        return handle_datelike(param)
-
-
-def parse_date_param(date_option):
-    if not date_option:
-        return None
-
-    parsed_date = None
-    if date_option.endswith('d'):
-        days_ago = int(date_option[0:-1])
-        parsed_date = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
-        months_ago = int(date_option[0:-suffix_length])
-        parsed_date = (now() - relativedelta(months=months_ago)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif date_option.endswith('m'):
-        minutes_ago = int(date_option[0:-1])
-        parsed_date = now() - datetime.timedelta(minutes=minutes_ago)
-    else:
-        parsed_date = parser.parse(date_option)
+        # actual date
+        if not ret:
+            # FIXME strptime?
+            ret = parser.parse(param)
+    except Exception as e:
+        breakpoint()
+        raise UnparsableParameter(f'{help_text} {e}')
 
     # Set timezone to UTC when missing
-    if parsed_date and parsed_date.tzinfo is None:
-        parsed_date = parsed_date.replace(tzinfo=datetime.timezone.utc)
-
-    return parsed_date
-
-
-def handle_datelike(value):
-    if not value:
-        return None
-
-    # Process ret argument
-    if value.endswith('d'):
-        days_ago = int(value[0:-1])
-        ret = (now() - datetime.timedelta(days=days_ago - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    elif value.endswith('m'):
-        minutes_ago = int(value[0:-1])
-        ret = now() - datetime.timedelta(minutes=minutes_ago)
-    else:
-        ret = parser.parse(value)
-
-    # Add default utc timezone
     if ret and ret.tzinfo is None:
         ret = ret.replace(tzinfo=datetime.timezone.utc)
 
     return ret
 
 
-def validate_build_extra_params(help_text, options):
+def validate_build_extra_params(help_texts, options):
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
     if not report_type:
         return
@@ -447,10 +408,6 @@ def validate_build_extra_params(help_text, options):
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
     opt_ephemeral = options.get('ephemeral', None)
-
-    help_since = help_text.get('since')
-    help_until = help_text.get('until')
-    help_ephemeral = help_text.get('ephemeral')
 
     if report_type in {'CCSP', 'CCSPv2'}:
         # bad type
@@ -476,10 +433,10 @@ def validate_build_extra_params(help_text, options):
 
         # validation
         if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
-            raise UnparsableParameter(help_ephemeral)
+            raise UnparsableParameter(help_texts.get('ephemeral'))
 
-    since = handle_validate_date_param(opt_since, help_since, 'build')
-    until = handle_validate_date_param(opt_until, help_until, 'build')
+    since = handle_validate_date_param(opt_since, help_texts, 'since')
+    until = handle_validate_date_param(opt_until, help_texts, 'until')
 
     has_since = opt_since is not None
     has_until = opt_until is not None
