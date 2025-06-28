@@ -9,6 +9,7 @@ from metrics_utility.exceptions import (
     NoAnalyticsCollected,
 )
 from metrics_utility.management.validation import (
+    date_format_text,
     handle_crc_ship_target,
     handle_directory_ship_target,
     handle_env_validation,
@@ -26,13 +27,8 @@ class Command(BaseCommand):
 
     help = 'Gather Automation Controller billing data'
     help_texts = {
-        'since': (
-            # FIXME - not months 2m .. minutes supported .. but add months
-            'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
-        ),
-        'until': (
-            'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
-        ),
+        'since': (f'Start date for collection, including. {date_format_text.format(name="since")}'),
+        'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
         'dry-run': ('Gather billing metrics without shipping.'),
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
     }

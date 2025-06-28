@@ -12,6 +12,7 @@ from metrics_utility.automation_controller_billing.report.factory import Factory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.management.validation import (
+    date_format_text,
     handle_directory_ship_target,
     handle_env_validation,
     handle_month,
@@ -37,18 +38,8 @@ class Command(BaseCommand):
 
     help = 'Build Report'
     help_texts = {
-        'since': (
-            'Start date for collection (e.g. --since=2023-12-20), '
-            'a number of minutes ago (--since=2m), '
-            'a number of days ago (--since=5d), or '
-            'a number of months ago (--since=2mo | 2 month | 2 months).'
-        ),
-        'until': (
-            'End date for collection (e.g. --until=2023-12-21), '
-            'a number of minutes ago (--until=2m), '
-            'a number of days ago (--until=5d), or '
-            'a number of months ago (--since=2mo | 2 month | 2 months).'
-        ),
+        'since': (f'Start date for collection, including. {date_format_text.format(name="since")}'),
+        'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
         'month': (
             'Month the report will be generated for, with format YYYY-MM. '
             "If this parameter is not provided, the previous month's report will be generated if it does not already exist."

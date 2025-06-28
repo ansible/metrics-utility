@@ -9,6 +9,13 @@ from dateutil.relativedelta import relativedelta
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 
 
+date_format_text = (
+    'An absolute date (--{name}=2023-12-20) (start of day, UTC), '
+    'a number of minutes ago (--{name}=2m) (m, minute, minutes; relative to now), '
+    'a number of days ago (--{name}=5d) (d, day, days; start of day, UTC), or '
+    'a number of months ago (--{name}=2mo) (mo, month, months; start of day, UTC).'
+)
+
 ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
 SINCE_AND_UNTIL_GATHER_PATTERN = r'^\d+[dm]$|^\d{4}-\d{1,2}-\d{1,2}$'
 SINCE_AND_UNTIL_BUILD_PATTERN = r'^\d+(d|mo|month|months|m)$|^\d{4}-\d{1,2}-\d{1,2}$'
