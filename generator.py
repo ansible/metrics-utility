@@ -151,6 +151,8 @@ def data_collection_status_data(selected, output_from, output_to):
 
 
 def process_tarballs(path, temp_dir, enabled_set):
+    logger.info(f'Processing {path}')
+
     class ProcessTarballs(Base):
         # load config.json
         def load_config(self, file_path):
@@ -161,7 +163,7 @@ def process_tarballs(path, temp_dir, enabled_set):
         def csv_enabled(self, name):
             return name in enabled_set
 
-    return ProcessTarballs().process_tarballs(path, temp_dir)
+    return ProcessTarballs(extra_params=dict()).process_tarballs(path, temp_dir)
 
 
 # metrics_utility.automation_controller_billing.collectors daily_slicing, but without the awx imports
