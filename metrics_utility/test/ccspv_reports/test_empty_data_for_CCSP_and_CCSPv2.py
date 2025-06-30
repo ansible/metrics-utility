@@ -78,7 +78,7 @@ def test_empty_data(report, date_range, sheet, cleanup):
     env = {
         'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': sheet,
         'METRICS_UTILITY_REPORT_TYPE': report,
-        'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
+        'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/ccspv_reports/empty-data',
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
     }
     args = {
