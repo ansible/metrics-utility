@@ -396,52 +396,70 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
     return parsed
 
 
-def validate_build_extra_params(help_texts, options):
+def validate_ccsp_params(options):
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
-    if not report_type:
-        return None, None
-
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
     opt_ephemeral = options.get('ephemeral', None)
 
-    if report_type in {'CCSP', 'CCSPv2'}:
-        # bad type
-        if opt_ephemeral:
-            raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
+    # bad type
+    if opt_ephemeral:
+        raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
 
-        # bad combos
-        if opt_month and (opt_since or opt_until):
-            raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
-        if opt_until and not opt_since:
-            raise BadParameter('The --until parameter is ignored without --since.')
+    # bad combos
+    if opt_month and (opt_since or opt_until):
+        raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
+    if opt_until and not opt_since:
+        raise BadParameter('The --until parameter is ignored without --since.')
 
-    if report_type in {'RENEWAL_GUIDANCE'}:
-        # bad type
-        if opt_month:
-            raise BadParameter('The --month parameter is not allowed for renewal guidance report.')
-        if opt_until:
-            raise BadParameter('The --until parameter is not allowed for renewal guidance report.')
 
-        # required
-        if not opt_since:
-            raise MissingRequiredParameter('The --since parameter is required for renewal guidance report.')
+def validate_renewal_params(options, help_texts):
+    opt_month = options.get('month', None)
+    opt_since = options.get('since', None)
+    opt_until = options.get('until', None)
+    opt_ephemeral = options.get('ephemeral', None)
 
-        # validation
-        if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
-            raise UnparsableParameter(help_texts.get('ephemeral'))
+    # bad type
+    if opt_month:
+        raise BadParameter('The --month parameter is not allowed for renewal guidance report.')
+    if opt_until:
+        raise BadParameter('The --until parameter is not allowed for renewal guidance report.')
+
+    # required
+    if not opt_since:
+        raise MissingRequiredParameter('The --since parameter is required for renewal guidance report.')
+
+    # validation
+    if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
+        raise UnparsableParameter(help_texts.get('ephemeral'))
+
+
+def parse_since_until(options, help_texts):
+    opt_since = options.get('since', None)
+    opt_until = options.get('until', None)
 
     since = parse_date_param(opt_since, help_texts, 'since')
     until = parse_date_param(opt_until, help_texts, 'until')
 
-    has_since = opt_since is not None
-    has_until = opt_until is not None
-
-    if (has_since and has_until) and until < since:
+    if (opt_since and opt_until) and until < since:
         raise UnparsableParameter('The date for --until cannot be before the date for --since.')
 
     return since, until
+
+
+def validate_build_params(options, help_texts):
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+    if not report_type:
+        return None, None
+
+    if report_type in {'CCSP', 'CCSPv2'}:
+        validate_ccsp_params(options)
+
+    if report_type in {'RENEWAL_GUIDANCE'}:
+        validate_renewal_params(options, help_texts)
+
+    return parse_since_until(options, help_texts)
 
 
 def parse_number_of_days(date_option):

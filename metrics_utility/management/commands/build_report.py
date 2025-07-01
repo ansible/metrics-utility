@@ -20,7 +20,7 @@ from metrics_utility.management.validation import (
     handle_not_s3,
     handle_s3_ship_target,
     parse_number_of_days,
-    validate_build_extra_params,
+    validate_build_params,
 )
 
 
@@ -73,7 +73,7 @@ class Command(BaseCommand):
         self.init_logging()
         handle_env_validation('build')
 
-        opt_since, opt_until = validate_build_extra_params(self.help_texts, options)
+        opt_since, opt_until = validate_build_params(options, self.help_texts)
 
         opt_month, month, next_month = handle_month(options.get('month') or None)
         opt_ephemeral = parse_number_of_days(options.get('ephemeral'))
