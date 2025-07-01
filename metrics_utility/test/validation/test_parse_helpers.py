@@ -37,11 +37,11 @@ def test_parse_date_param():
 
     # bare number invalid
     with pytest.raises(MetricsException):
-        parse_number_of_days('3')
+        parse_date_param('3')
 
     # unknown suffix
     with pytest.raises(MetricsException):
-        parse_number_of_days('4x')
+        parse_date_param('4x')
 
 
 def test_parse_number_of_days():
