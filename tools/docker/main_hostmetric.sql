@@ -193,7 +193,7 @@ BEGIN
   --
   RAISE NOTICE 'Inserted % hosts with IDs: %', array_length(host_ids,1), host_ids;
 
-  INSERT INTO main_hostmetric(
+  INSERT INTO public.main_hostmetric(
      hostname,
      first_automation,
      last_automation,

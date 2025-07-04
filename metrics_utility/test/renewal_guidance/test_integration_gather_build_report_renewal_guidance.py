@@ -11,7 +11,7 @@ from metrics_utility.test.util import run_build_int
 
 # Get current date and time
 now = datetime.now()
-diff_months = 20
+diff_months = 500
 
 # Extract current date components with leading zeros
 current_month = f'{now.month:02}'
@@ -336,8 +336,8 @@ def test_import(cleanup):
             'force': True,
         },
     )
-
     validate_sheet_columns(file_path, expected_sheets, 6)
+
     validate_sheet_tab_names(file_path, expected_sheets, ['Usage Reporting'])
 
     wb = openpyxl.load_workbook(file_path)
