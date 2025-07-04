@@ -171,8 +171,7 @@ BEGIN
         true,
         default_instance_uuid::text,
     -- This must not be moved right, otherwise it will break
-    $yaml$
-    ansible_host: "default_ansible_host"
+    $yaml$ansible_host: "default_ansible_host"
     ansible_connection: "default_ansible_connection"
     ansible_user: "default_ansible_user"
     ansible_port: 22
@@ -194,44 +193,25 @@ BEGIN
   --
   RAISE NOTICE 'Inserted % hosts with IDs: %', array_length(host_ids,1), host_ids;
 
-  i := 0;
-  -- Loop over each distinct host name whose id is in the host_ids array
-  FOR host_rec IN
-    SELECT DISTINCT name
-      FROM public.main_host
-     WHERE id = ANY(host_ids)
-     ORDER BY name
-  LOOP
-    -- host_rec.name is your current host name
-    RAISE NOTICE 'About to process host: %', host_rec.name;
-
-    -- ←── INSERT your per-host code here, using host_rec.name
-    INSERT INTO public.main_hostmetric (
-    hostname,
-    first_automation,
-    last_automation,
-    last_deleted,
-    automated_counter,
-    deleted_counter,
-    deleted,
-    used_in_inventories
-) VALUES
-(
-    host_rec.name, 
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00', 
-    TIMESTAMP WITH TIME ZONE '2025-06-14 10:00:00+00', 
-    CASE 
-      WHEN (i % 3 = 0) 
-      THEN TIMESTAMPTZ '2025-06-14 10:00:00+00'  
-      ELSE NULL
-    END,
-    i, 
-    i, 
-    (i % 3 = 0), 
-    3
-);
-
-  i := i + 1;  
-  END LOOP;
+  INSERT INTO main_hostmetric(
+     hostname,
+     first_automation,
+     last_automation,
+     last_deleted,
+     automated_counter,
+     deleted_counter,
+     deleted,
+     used_in_inventories
+ ) VALUES
+ ('default_host_hostmetric_1', '2025-06-01T08:00:00+00', '2025-06-10T14:30:00+00', NULL, 12, 0, false, 3),
+ ('default_host_hostmetric_2', '2025-06-28T09:15:00+00', '2025-06-12T16:00:00+00', '2025-06-20T10:00:00+00', 5, 1, true, 1),
+ ('default_host_hostmetric_3', '2025-06-03T12:00:00+00', '2025-06-11T13:45:00+00', NULL, 7, 0, false, 2),
+ ('default_host_hostmetric_4', '2025-06-02T07:30:00+00', '2025-06-09T15:30:00+00', NULL, 10, 0, false, 5),
+ ('default_host_hostmetric_5', '2025-06-30T10:00:00+00', '2025-06-08T11:00:00+00', '2025-06-15T12:00:00+00', 3, 2, true, 0),
+ ('default_host_hostmetric_6', '2025-06-01T06:45:00+00', '2025-06-06T13:15:00+00', NULL, 6, 1, true, 1),
+ ('default_host_hostmetric_7', '2025-06-04T10:30:00+00', '2025-06-10T12:30:00+00', NULL, 8, 0, false, 4),
+ ('default_host_hostmetric_8', '2025-06-29T09:45:00+00', '2025-06-07T14:00:00+00', '2025-06-13T09:30:00+00', 4, 1, true, 2),
+ ('default_host_hostmetric_9', '2025-06-05T08:30:00+00', '2025-06-10T16:00:00+00', NULL, 9, 0, false, 3),
+ ('default_host_hostmetric_10', '2025-06-03T11:15:00+00', '2025-06-11T10:45:00+00', NULL, 11, 0, false, 2);
 END
 $$;
