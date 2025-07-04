@@ -11,7 +11,7 @@ from metrics_utility.test.util import run_build_int
 
 # Get current date and time
 now = datetime.now()
-diff_months = 2000
+diff_months = 20
 
 # Extract current date components with leading zeros
 current_month = f'{now.month:02}'
