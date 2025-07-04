@@ -64,12 +64,17 @@ def setup_processed_dataframe(fixed_now):
 
     yield processed_df
 
-def validate_sheet_tab_names(file_path, expected_sheets):
+
+def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets):
     """Test the sheet names in the Excel file."""
+
+    if excluded_sheets is None:
+        excluded_sheets = []
 
     wb = openpyxl.load_workbook(file_path)
     try:
         actual_tab_names = wb.sheetnames
+        actual_tab_names = [name for name in actual_tab_names if name not in excluded_sheets]
         assert actual_tab_names == list(expected_sheets.keys()), 'Sheet names do not match.'
     finally:
         wb.close()
@@ -109,6 +114,11 @@ def validate_sheet_columns(file_path, expected_sheets, usage_reporting_min_row):
             # Call the get_column_headers() method and assign return value to expected_column_headers.
             expected_column_headers = get_column_headers(expected_column_data)
 
+            print('actual colum headers')
+            print(actual_column_headers)
+            print('expected colum headers')
+            print(expected_column_headers)
+
             # Assert the actual headers equal expected headers.
             assert actual_column_headers == expected_column_headers, f'Column names do not match for sheet: {sheet_name}'
 
@@ -123,6 +133,12 @@ def validate_sheet_columns(file_path, expected_sheets, usage_reporting_min_row):
 
                     # Extract actual values for this column (skip the header).
                     actual_column_values = [cell.value for row in sheet.iter_rows(min_row=2, min_col=col_index, max_col=col_index) for cell in row]
+
+                    print('\n')
+                    print('actual column values')
+                    print(actual_column_values)
+                    print('expected column values')
+                    print(expected_column_values)
 
                     # Assert that the actual column values equal the expected column values.
                     assert actual_column_values == expected_column_values, (
@@ -169,3 +185,9 @@ def transform_sheet(sheet):
             # Set the value for the column in that row
             rows[row_index][col] = value
     return rows
+
+
+def validate_cell(wb, sheet_name, address, value):
+    sheet = wb[sheet_name]
+    print(f'{address} = {sheet[address].value}')
+    assert sheet[address].value == value, f'Sheet: {sheet_name}, cell: {address}, expected value: {value}, actual value: {sheet[address].value}'
