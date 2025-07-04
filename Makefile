@@ -1,5 +1,5 @@
 help:
-	@echo help sync test coverage lint fix compose
+	@echo help sync test coverage lint fix compose psql
 
 sync:
 	uv run sync
@@ -21,4 +21,7 @@ fix:
 compose:
 	docker compose -f tools/docker/docker-compose.yaml up
 
-.PHONY: help sync test coverage lint fix compose
+psql:
+	docker compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx
+
+.PHONY: help sync test coverage lint fix compose psql
