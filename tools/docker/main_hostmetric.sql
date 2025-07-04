@@ -211,7 +211,6 @@ BEGIN
  ('default_host_hostmetric_6', '2025-06-01T06:45:00+00', '2025-06-06T13:15:00+00', NULL, 6, 1, true, 1),
  ('default_host_hostmetric_7', '2025-06-04T10:30:00+00', '2025-06-10T12:30:00+00', NULL, 8, 0, false, 4),
  ('default_host_hostmetric_8', '2025-06-29T09:45:00+00', '2025-06-07T14:00:00+00', '2025-06-13T09:30:00+00', 4, 1, true, 2),
- ('default_host_hostmetric_9', '2025-06-05T08:30:00+00', '2025-06-10T16:00:00+00', NULL, 9, 0, false, 3),
- ('default_host_hostmetric_10', '2025-06-03T11:15:00+00', '2025-06-11T10:45:00+00', NULL, 11, 0, false, 2);
+ ('default_host_hostmetric_9', '2025-06-05T08:30:00+00', '2025-06-10T16:00:00+00', NULL, 9, 0, false, 3);
 END
 $$;
