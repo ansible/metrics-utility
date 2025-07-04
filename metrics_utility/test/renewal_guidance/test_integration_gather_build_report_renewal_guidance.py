@@ -326,6 +326,7 @@ expected_sheets = convert_datetime_strings(expected_sheets)
     indirect=True,
 )
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
+@pytest.mark.skip(reason="Skipping this test until PR with data is merged")
 def test_import(cleanup):
     """Build xlsx report using build command and test its contents."""
 
