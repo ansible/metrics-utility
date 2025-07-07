@@ -3,10 +3,10 @@ import pandas as pd
 
 class DedupRenewal:
     def __init__(self, dataframes, extra_params):
-        self.dataframe = dataframes[0]
+        self.dataframe = dataframes['host_metric'].build_dataframe()
         self.extra_params = extra_params
 
-    def run_deduplication(self):
+    def run(self):
         # Cleanup the null like values first
         self.dataframe['ansible_host_variable'] = self.dataframe['ansible_host_variable'].replace('', None)
 
@@ -67,7 +67,7 @@ class DedupRenewal:
                 }
             )
 
-        return pd.DataFrame(deduped_list)
+        return {'host_metric': pd.DataFrame(deduped_list)}
 
     def stringify(self, value):
         return ', '.join([v for v in list(value) if v is not None])

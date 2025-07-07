@@ -6,7 +6,8 @@ from datetime import timezone
 
 from django.core.management.base import BaseCommand
 
-from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
+from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeFactory
+from metrics_utility.automation_controller_billing.dedup.factory import Factory as DedupFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
@@ -119,16 +120,19 @@ class Command(BaseCommand):
             )
             return
 
-        report_dataframe = DataframeEngineFactory(extractor=extractor, month=month, extra_params=extra_params).create()
+        dataframes = DataframeFactory(extractor=extractor, month=month, extra_params=extra_params).create()
 
-        if all(item is None or item.empty for item in report_dataframe):
+        dedup = DedupFactory(dataframes=dataframes, extra_params=extra_params).create()
+        dataframes = dedup.run()
+
+        if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes):
             if opt_since is not None:
                 self.logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
             else:
                 self.logger.info(f'No billing data for month {opt_month}')
             return
 
-        report_engine = ReportFactory(report_dataframe=report_dataframe, extra_params=extra_params).create()
+        report_engine = ReportFactory(dataframes=dataframes, extra_params=extra_params).create()
         report_spreadsheet = report_engine.build_spreadsheet()
 
         # Save the report to the configured destination

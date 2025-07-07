@@ -16,10 +16,10 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
 class ReportCCSPv2(Base):
-    def __init__(self, dataframe, extra_params):
+    def __init__(self, dataframes, extra_params):
         self.wb = Workbook()
 
-        self.dataframe = dataframe
+        self.dataframes = dataframes
         self.extra_params = extra_params
 
         self.price_per_node = extra_params['price_per_node']
@@ -89,10 +89,10 @@ class ReportCCSPv2(Base):
         return job_host_summary_dataframe, events_dataframe
 
     def build_spreadsheet(self):
-        job_host_summary_dataframe = self.dataframe[0]
-        events_dataframe = self.dataframe[1]
-        scope_dataframe = self.dataframe[2]
-        status_dataframe = self.dataframe[3]
+        job_host_summary_dataframe = self.dataframes['job_host_summary']
+        events_dataframe = self.dataframes['main_jobevent']
+        scope_dataframe = self.dataframes['main_host']
+        status_dataframe = self.dataframes['data_collection_status']
 
         # Fix host names in the event data, to take in account the variables
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)

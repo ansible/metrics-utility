@@ -3,7 +3,7 @@ from metrics_utility.automation_controller_billing.dedup.renewal_guidance import
 from metrics_utility.exceptions import NotSupportedFactory
 
 
-class Factory:
+class Factory:  # DedupFactory
     def __init__(self, dataframes, extra_params):
         self.dataframes = dataframes
         self.extra_params = extra_params
@@ -29,5 +29,10 @@ class Factory:
             return DedupCCSP(**kwargs)
         if deduplicator == 'renewal':
             return DedupRenewal(**kwargs)
+
+        if deduplicator == 'ccsp-experimental':
+            if report_type not in {'CCSP', 'CCSPv2'}:
+                raise NotSupportedFactory(f'Unknown report type: {report_type}')
+            return DedupCCSP(**kwargs, experimental=True)
 
         raise NotSupportedFactory(f'Factory for {deduplicator} not supported')
