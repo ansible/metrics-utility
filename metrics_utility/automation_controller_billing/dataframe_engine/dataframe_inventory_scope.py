@@ -3,10 +3,17 @@ import logging
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
-from metrics_utility.automation_controller_billing.helpers import merge_json_sets
+from metrics_utility.automation_controller_billing.helpers import merge_json_sets, parse_json
 
 
 logger = logging.getLogger(__name__)
+
+
+def compute_serial(row):
+    facts = parse_json(row['canonical_facts'])
+    if pd.isnull(facts['ansible_product_serial']) or pd.isnull(facts['ansible_machine_id']):
+        return None
+    return facts['ansible_product_serial'] + '/' + facts['ansible_machine_id']
 
 
 # dataframe for main_host
@@ -41,6 +48,8 @@ class DataframeInventoryScope(Base):
 
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
+                billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
+
                 ################################
                 # Do the aggregation
                 ################################
@@ -66,6 +75,7 @@ class DataframeInventoryScope(Base):
             canonical_facts=('canonical_facts', merge_json_sets),
             facts=('facts', merge_json_sets),
             last_automation=('last_automation', 'max'),
+            serials=('serial', set),
         )
         return self.cast_dataframe(group, self.cast_types())
 
@@ -77,6 +87,7 @@ class DataframeInventoryScope(Base):
             canonical_facts=('canonical_facts', merge_setdicts),
             facts=('facts', merge_setdicts),
             last_automation=('last_automation', 'max'),
+            serials=('serials', merge_sets),
         )
 
     @staticmethod
@@ -85,7 +96,7 @@ class DataframeInventoryScope(Base):
 
     @staticmethod
     def data_columns():
-        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts']
+        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials']
 
     @staticmethod
     def cast_types():
@@ -99,4 +110,5 @@ class DataframeInventoryScope(Base):
             'inventories': 'combine_set',
             'canonical_facts': 'combine_json_values',
             'facts': 'combine_json_values',
+            'serials': 'combine_set',
         }
