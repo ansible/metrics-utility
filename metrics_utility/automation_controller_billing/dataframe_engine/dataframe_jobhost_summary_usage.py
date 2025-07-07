@@ -10,7 +10,7 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 logger = logging.getLogger(__name__)
 
 
-# dataframe for job_host_summary
+# dataframe for job_host_summary / indirect_nodes
 class DataframeJobhostSummaryUsage(Base):
     def build_dataframe(self):
         # A daily rollup dataframe
