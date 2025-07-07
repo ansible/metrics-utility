@@ -125,7 +125,7 @@ class Command(BaseCommand):
         dedup = DedupFactory(dataframes=dataframes, extra_params=extra_params).create()
         dataframes = dedup.run()
 
-        if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes):
+        if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes.items()):
             if opt_since is not None:
                 self.logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
             else:

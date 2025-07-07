@@ -9,16 +9,21 @@ class DedupCCSP:
 
     def run(self):
         new = {}
-        for name, dataframe in self.dataframes:
+        for name, dataframe in self.dataframes.items():
             new[name] = dataframe.build_dataframe()
 
         dedup_info = new['main_host']
-        if dedup_info is None or dedup_info.empty or not self.experimental:
+        if dedup_info is None or dedup_info.empty:
+            return new
+
+        if not self.experimental:
+            del dedup_info['serials']
             return new
 
         # each host_name in dedup_info has a list of combined serials
         # convert to a mapping from any hostname with that serial to a canonical hostname
         mapping = self.df_to_mapping(dedup_info)
+        del dedup_info['serials']
 
         for v in ['job_host_summary', 'main_jobevent']:
             new[v] = self.dataframes[v].dedup(new[v], mapping)
