@@ -50,10 +50,6 @@ class ReportRenewalGuidance(Base):
     def build_spreadsheet(self):
         # Fix host names in the event data, to take in account the variables
         host_metric_dataframe = self.dataframe[0]
-        # Spreadsheet doesn't support timezones
-        host_metric_dataframe['first_automation'] = pd.to_datetime(host_metric_dataframe['first_automation'], format='ISO8601').dt.tz_localize(None)
-        host_metric_dataframe['last_automation'] = pd.to_datetime(host_metric_dataframe['last_automation'], format='ISO8601').dt.tz_localize(None)
-        host_metric_dataframe['last_deleted'] = pd.to_datetime(host_metric_dataframe['last_deleted'], format='ISO8601').dt.tz_localize(None)
 
         # Run the host deduplication first
         host_metric_dataframe = DedupFactory(dataframes=(host_metric_dataframe,), extra_params=self.extra_params).create().run_deduplication()
