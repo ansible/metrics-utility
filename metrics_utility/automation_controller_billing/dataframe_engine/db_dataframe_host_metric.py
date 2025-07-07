@@ -7,11 +7,8 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 
 logger = logging.getLogger(__name__)
 
-#######################################
-# Code for building of the dataframe report based on HostMetric table
-######################################
 
-
+# dataframe for host_metric
 class DBDataframeHostMetric(Base):
     def build_dataframe(self):
         host_metric_concat = None

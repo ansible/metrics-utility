@@ -1,19 +1,13 @@
 import logging
 import re
 
-import pandas as pd
-
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
-from metrics_utility.debug_utils import print_data, print_debug
 
 
 logger = logging.getLogger(__name__)
 
-#######################################
-# Code for building of the dataframe report based on Event table
-######################################
 
-
+# dataframe for main_jobevent
 class DataframeContentUsage(Base):
     def build_dataframe(self):
         # A monthly rollup dataframe
@@ -62,38 +56,39 @@ class DataframeContentUsage(Base):
                 ################################
                 # Do the aggregation
                 ################################
-                print_debug(f'\nComputing data batch for {date}')
-                print_data(events, 'Events data')
-                events_group = events.groupby(self.unique_index_columns(), dropna=False).agg(
-                    task_runs=('module_name', 'count'), duration=('duration', 'sum')
-                )
-                print_data(events, 'Aggregated Events data')
 
-                # Duration is null in older versions of Controller
-                events_group['duration'] = events_group.duration.fillna(0)
-                # Tweak types to match the table
-                events_group = self.cast_dataframe(events_group, self.cast_types())
+                events_group = self.group(events)
 
                 ################################
                 # Merge aggregations of multiple batches
                 ################################
-                if content_explorer_rollup is None:
-                    content_explorer_rollup = events_group
-                else:
-                    # Multipart collection, merge the dataframes and sum counts
-                    content_explorer_rollup = pd.merge(
-                        content_explorer_rollup.loc[:,], events_group.loc[:,], on=self.unique_index_columns(), how='outer'
-                    )
 
-                    content_explorer_rollup = self.summarize_merged_dataframes(content_explorer_rollup, self.data_columns())
-
-                    # Tweak types to match the table
-                    content_explorer_rollup = self.cast_dataframe(content_explorer_rollup, self.cast_types())
+                content_explorer_rollup = self.merge(content_explorer_rollup, events_group)
 
         if content_explorer_rollup is None or content_explorer_rollup.empty:
-            return pd.DataFrame(columns=self.data_columns() + self.unique_index_columns())
+            return self.empty()
 
         return content_explorer_rollup.reset_index()
+
+    # Do the aggregation
+    def group(self, dataframe):
+        group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
+            task_runs=('module_name', 'count'),
+            duration=('duration', 'sum'),
+        )
+
+        # Duration is null in older versions of Controller
+        group['duration'] = group.duration.fillna(0)
+
+        # Tweak types to match the table
+        return self.cast_dataframe(group, self.cast_types())
+
+    # Merge pre-aggregated
+    def regroup(self, dataframe):
+        return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
+            task_runs=('task_runs', 'sum'),
+            duration=('duration', 'sum'),
+        )
 
     @staticmethod
     def collection_regexp():
@@ -141,3 +136,7 @@ class DataframeContentUsage(Base):
     @staticmethod
     def cast_types():
         return {'duration': 'float64', 'task_runs': 'int64'}
+
+    @staticmethod
+    def operations():
+        return {}
