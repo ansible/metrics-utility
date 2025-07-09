@@ -20,6 +20,11 @@ DECLARE
   host_id           INTEGER;
   i                 INTEGER;
   host_name         TEXT;
+  -- do not format this, it will break the generator script that uses text replacement
+  -- script name: generate_ccsp.py
+  -- if you change this, you need to change the generator script
+  host_count INTEGER := 2;
+  job_count INTEGER := 3;
   --
   -- unified jobs
   unified_jobs      INTEGER[] := ARRAY[]::INTEGER[];
@@ -151,7 +156,7 @@ BEGIN
   -- Fill hosts in loop
   --
   -- LOOP TO INSERT HOSTS
-  FOR i IN 1..2 LOOP
+  FOR i IN 1..host_count LOOP
     INSERT INTO public.main_host (
       created,
       modified,
@@ -353,7 +358,7 @@ $yaml$,
   --
   -- Unified Jobs
   -- Loop to create unified jobs
-  FOR i IN 1..3 LOOP
+  FOR i IN 1..job_count LOOP
     INSERT INTO public.main_unifiedjob (
       created,
       modified,
@@ -513,17 +518,17 @@ $yaml$,
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         host_name,
-        0,   -- changed
-        0,   -- dark
-        0,   -- failures
-        0,   -- ok
-        0,   -- processed
-        0,   -- skipped
-        false, -- failed
+        0,-- changed
+        0,-- dark
+        0,-- failures
+        0,-- ok
+        0,-- processed
+        0,-- skipped
+        false,-- failed
         host_id,
         unified_job_id,
-        0,   -- ignored
-        0   -- rescued
+        0,-- ignored
+        0-- rescued
       );
     END LOOP;
   END LOOP;
