@@ -304,7 +304,7 @@ expected_sheets = {
 
 expected_sheets = convert_datetime_strings(expected_sheets)
 
-"""
+
 @pytest.mark.parametrize(
     'cleanup',
     [
@@ -312,11 +312,8 @@ expected_sheets = convert_datetime_strings(expected_sheets)
     ],
     indirect=True,
 )
-"""
-
-
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
-def test_import():
+def test_import(cleanup):
     """Build xlsx report using build command and test its contents."""
 
     run_build_int(
