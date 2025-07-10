@@ -25,6 +25,8 @@ class Collection:
         self.version = fnc_collecting.__insights_analytics_version__
 
         self.data_type = fnc_collecting.__insights_analytics_type__
+        self.cls = fnc_collecting.__insights_analytics_cls__
+        
         self.filename = f'{self.key}.{self.data_type}'
         # either since/until or full sync(if enabled)
         self.since = None  # set by Collector._create_collections()

@@ -16,7 +16,7 @@ class CollectionJSON(Collection):
         self.data = None  # gathered data
 
     def _save_gathering(self, data):
-        self.data = json.dumps(data)
+        self.data = json.dumps(data, cls=self.cls)
 
     def data_size(self):
         return len(self.data) if self.data else 0

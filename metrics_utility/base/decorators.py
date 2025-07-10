@@ -3,6 +3,7 @@ def register(
     version,
     description=None,
     format='json',
+    cls=None,
     config=False,
     fnc_slicing=None,
     shipping_group='default',
@@ -27,6 +28,7 @@ def register(
         f.__insights_analytics_version__ = version
         f.__insights_analytics_description__ = description
         f.__insights_analytics_type__ = format  # 'csv' | 'json' (default)
+        f.__insights_analytics_cls__ = cls
         f.__insights_analytics_config__ = config  # True | False (default)
         f.__insights_analytics_fnc_slicing__ = fnc_slicing
         f.__insights_analytics_shipping_group__ = shipping_group

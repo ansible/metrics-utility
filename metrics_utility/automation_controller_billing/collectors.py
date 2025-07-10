@@ -3,6 +3,9 @@ import os
 import os.path
 import platform
 
+from datetime import datetime
+from typing import List
+
 import distro
 
 from awx.conf.license import get_license
@@ -11,6 +14,7 @@ from django.conf import settings
 from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
+from kubernetes import client, config
 
 from metrics_utility.base import CsvFileSplitter, register
 
@@ -464,3 +468,77 @@ def main_host_table(since, full_path, until, **kwargs):
     return _copy_table(
         table='main_host', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=yaml_and_json_parsing_functions()
     )
+
+class Node:
+  def __init__(self, name: str, cpu: int):
+      self.name = name
+      self.cpu = cpu
+  
+  def __repr__(self):
+      return f"Node(name='{self.name}', cpu={self.cpu})"
+
+class Nodes:
+  def __init__(self, total: int, timestamp: datetime, nodes: List[Node]):
+      self.total = total
+      self.timestamp = timestamp
+      self.nodes = nodes
+  
+  def __repr__(self):
+      return f"Nodes(total={self.total}, timestamp={self.timestamp}, nodes={self.nodes})"
+
+class NodesJSONEncoder(json.JSONEncoder):
+  """Custom JSON encoder for Nodes objects"""
+  
+  def default(self, obj):
+      if isinstance(obj, datetime):
+          return obj.isoformat()
+      elif isinstance(obj, Node):
+          return {
+              'name': obj.name,
+              'cpu': obj.cpu
+          }
+      elif isinstance(obj, Nodes):
+          return {
+              'total': obj.total,
+              'timestamp': obj.timestamp,
+              'nodes': obj.nodes
+          }
+      return super().default(obj)
+
+@register('total_workers_vcpu', '1.0', format='json', cls=NodesJSONEncoder, description=_('Total workers vCPU'))
+def total_workers_vcpu(since, full_path, until, **kwargs):
+  if 'total_workers_vcpu' not in get_optional_collectors():
+      return None
+  
+  """
+  Retrieves detailed information about a specific Kubernetes node,
+  similar to 'kubectl describe node <node-name>'.
+  """
+  try:
+      config.load_incluster_config()
+  except config.ConfigException:
+      try:
+          config.load_kube_config()
+      except config.ConfigException:
+          raise Exception("Could not configure Kubernetes Python client")
+  # Create a CoreV1Api client
+  api_instance = client.CoreV1Api()
+
+  nodes = api_instance.list_node()
+
+  calculated_nodes = calculate_total_cpu(nodes)
+
+  return calculated_nodes
+
+def calculate_total_cpu(nodes) -> Nodes:
+  total = 0
+  nodes_cpu = []
+  for node_info in nodes.items:
+      for resource, value in node_info.status.capacity.items():
+          if resource == 'cpu':
+              nodes_cpu.append(Node(node_info.metadata.name, int(value)))
+              total += int(value)
+
+  now = datetime.now()
+
+  return Nodes(total, now, nodes_cpu)
