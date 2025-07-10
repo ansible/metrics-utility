@@ -2,11 +2,9 @@
 # Code for building the spreadsheet
 ######################################
 import time
-
 from datetime import timedelta
 
 import pandas as pd
-
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -17,6 +15,7 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 class ReportCCSPv2(Base):
     def __init__(self, dataframes, extra_params):
+        super().__init__()
         self.wb = Workbook()
 
         self.dataframes = dataframes
@@ -107,6 +106,12 @@ class ReportCCSPv2(Base):
         directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
         indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
 
+          # --- Define font objects here (already added in previous step) ---
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+        bold_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        # --- END Font Definitions ---
+
         if 'ccsp_summary' in self.optional_report_sheets():
             ws = self.add_sheet('Usage Reporting', sheet_index, self.config['column_widths'])
             current_row = self._build_heading_h1(1, ws)
@@ -140,6 +145,54 @@ class ReportCCSPv2(Base):
             ## exists in the METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS env var.
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1
+
+            # --- NEW TAB: Device Type and Infrastructure Counts (Data Population) ---
+            new_sheet_column_widths = {
+                1: 30,  # Column A (Category) width
+                2: 15   # Column B (Count) width
+            }
+            ws_counts = self.add_sheet('Device & Infra Counts', sheet_index, new_sheet_column_widths)
+
+            # Write headers for the new sheet
+            headers = ['Category', 'Count']
+            current_row = 1 # Start headers at row 1 for this new sheet
+            for c_idx, value in enumerate(headers, 1):
+                cell = ws_counts.cell(row=current_row, column=c_idx)
+                cell.value = value
+                cell.font = header_font # Use the defined header_font
+            ws_counts.row_dimensions[current_row].height = 25 # Set header row height
+            current_row += 1 # Move to the next row for data
+
+            # --- DEBUGGING job_host_summary_dataframe content ---
+            print("\n--- DEBUGGING: job_host_summary_dataframe for Device Type Counts ---")
+            print(f"DEBUG: Total rows in job_host_summary_dataframe: {len(job_host_summary_dataframe)}")
+            print(f"DEBUG: Unique device_types and their counts:\n{job_host_summary_dataframe['device_type'].value_counts(dropna=False).to_markdown()}")
+            print(f"DEBUG: Unique managed_node_types and their counts:\n{job_host_summary_dataframe['managed_node_type'].value_counts(dropna=False).to_markdown()}")
+            print(f"DEBUG: job_host_summary_dataframe head:\n{job_host_summary_dataframe.head().to_markdown(index=False)}")
+            print("--- END DEBUGGING: job_host_summary_dataframe for Device Type Counts ---\n")
+            # --- END DEBUGGING ---
+
+            # Aggregate by device_type and count host_runs (unique hosts)
+            device_type_counts_df = job_host_summary_dataframe.groupby('device_type')['host_runs'].sum().reset_index()
+            device_type_counts_df = device_type_counts_df.dropna(subset=['device_type'])
+
+            # --- DEBUGGING device_type_counts_df (already there, but confirm it's after this new debug) ---
+            print("\n--- DEBUGGING: Device Type Counts DataFrame (AFTER AGGREGATION) ---")
+            print(f"DEBUG: device_type_counts_df is empty: {device_type_counts_df.empty}")
+            print(f"DEBUG: device_type_counts_df content:\n{device_type_counts_df.to_markdown(index=False)}")
+            print("--- END DEBUGGING: Device Type Counts DataFrame (AFTER AGGREGATION) ---\n")
+            # --- END DEBUGGING ---
+
+            rows_to_write = dataframe_to_rows(device_type_counts_df, index=False, header=False)
+            current_row = self._build_table(current_row, ws_counts, rows_to_write)
+
+            # Add a blank row for separation
+            if not device_type_counts_df.empty:
+                current_row += 1
+
+            sheet_index += 1
+            # --- END NEW TAB ---
+
 
         if 'inventory_scope' in self.optional_report_sheets():
             ws = self.add_sheet('Inventory Scope', sheet_index, self.config['data_column_widths'])

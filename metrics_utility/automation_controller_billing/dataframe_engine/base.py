@@ -1,12 +1,9 @@
 import datetime
 import logging
-
 from functools import reduce
 
 import pandas as pd
-
 from dateutil.relativedelta import relativedelta
-
 
 logger = logging.getLogger(__name__)
 
@@ -139,22 +136,80 @@ class Base:
         return df.astype(types)
 
     def summarize_merged_dataframes(self, df, columns, operations={}):
+        print("\n--- DEBUGGING: summarize_merged_dataframes ---")
+        print(f"DEBUG: Input DataFrame columns:\n{df.columns.tolist()}")
+        print(f"DEBUG: Data columns to process: {columns}")
+        print(f"DEBUG: Operations dictionary: {operations}")
+
+        # Create a copy of the DataFrame to avoid SettingWithCopyWarning
+        # and ensure consistent behavior during column dropping.
+        # This is a good practice, though not directly related to the KeyError root cause.
+        df_copy = df.copy()
+
         for col in columns:
-            if operations.get(col) == 'min':
-                df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
-            elif operations.get(col) == 'max':
-                df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
-            elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            elif operations.get(col) == 'combine_json':
-                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+            col_x = f'{col}_x'
+            col_y = f'{col}_y'
+
+            print(f"\nDEBUG: Processing column: '{col}' (looking for '{col_x}' and '{col_y}')")
+            print(f"DEBUG: Does '{col_x}' exist in df columns? {col_x in df_copy.columns}")
+            print(f"DEBUG: Does '{col_y}' exist in df columns? {col_y in df_copy.columns}")
+
+            # Determine the operation for the current column
+            operation_type = operations.get(col, 'sum') # Default to 'sum' if no specific operation
+            print(f"DEBUG: Operation for '{col}': '{operation_type}'")
+
+            # Check if both _x and _y columns exist before attempting to access them
+            if col_x in df_copy.columns and col_y in df_copy.columns:
+                if operation_type == 'min':
+                    df_copy[col] = df_copy[[col_x, col_y]].min(axis=1)
+                elif operation_type == 'max':
+                    df_copy[col] = df_copy[[col_x, col_y]].max(axis=1)
+                elif operation_type == 'combine_set':
+                    # Assuming combine_set can handle None/NaN from .get() gracefully
+                    df_copy[col] = df_copy.apply(lambda row: combine_set(row.get(col_x), row.get(col_y)), axis=1)
+                elif operation_type == 'combine_json':
+                    # Assuming combine_json can handle None/NaN from .get() gracefully
+                    df_copy[col] = df_copy.apply(lambda row: combine_json(row.get(col_x), row.get(col_y)), axis=1)
+                elif operation_type == 'combine_json_values':
+                    # Assuming combine_json_values can handle None/NaN from .get() gracefully
+                    df_copy[col] = df_copy.apply(lambda row: combine_json_values(row.get(col_x), row.get(col_y)), axis=1)
+                elif operation_type == 'first_non_null': # Added this back based on your DataframeJobhostSummaryUsage.operations
+                    print(f"DEBUG: Applying 'first_non_null' for {col}")
+                    df_copy[col] = df_copy[col_x].fillna(df_copy[col_y])
+                else: # Default for 'sum' and any other unhandled operation_type
+                    print(f"DEBUG: Applying default 'sum' (or unhandled operation) for {col}")
+                    # Ensure numeric conversion for sum, as per previous discussions for robustness
+                    df_copy[col_x] = pd.to_numeric(df_copy[col_x], errors='coerce').fillna(0)
+                    df_copy[col_y] = pd.to_numeric(df_copy[col_y], errors='coerce').fillna(0)
+                    df_copy[col] = df_copy[col_x] + df_copy[col_y]
+
+                # Only attempt to delete if columns exist
+                if col_x in df_copy.columns:
+                    del df_copy[col_x]
+                if col_y in df_copy.columns:
+                    del df_copy[col_y]
+            elif col_x in df_copy.columns:
+                print(f"DEBUG: Only '{col_x}' found for '{col}'. Keeping '{col_x}'.")
+                df_copy[col] = df_copy[col_x]
+                del df_copy[col_x]
+            elif col_y in df_copy.columns:
+                print(f"DEBUG: Only '{col_y}' found for '{col}'. Keeping '{col_y}'.")
+                df_copy[col] = df_copy[col_y]
+                del df_copy[col_y]
             else:
-                df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
-            del df[f'{col}_x']
-            del df[f'{col}_y']
-        return df
+                # If neither _x nor _y exists for a column in data_columns,
+                # it means this column was not part of the merge result for these batches.
+                # Ensure it exists in the final DataFrame.
+                print(f"DEBUG: Neither '{col_x}' nor '{col_y}' found for '{col}'.")
+                if col not in df_copy.columns:
+                    print(f"DEBUG: '{col}' not in columns, setting to None.")
+                    df_copy[col] = None # Or pd.NA for explicit missing data
+                else:
+                    print(f"DEBUG: '{col}' already exists (from earlier iteration), skipping assignment.")
+
+
+        print("--- END DEBUGGING: summarize_merged_dataframes ---")
+        return df_copy
 
     def empty(self):
         return pd.DataFrame(columns=self.unique_index_columns() + self.data_columns())
