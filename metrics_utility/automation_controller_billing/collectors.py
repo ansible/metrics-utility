@@ -213,8 +213,8 @@ def yaml_and_json_parsing_functions():
 
 @register('job_host_summary', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
-    if 'job_host_summary' not in get_mandatory_collectors():
-        return None
+    # if 'job_host_summary' not in get_mandatory_collectors():
+    #     return None
 
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     prepend_query = """
@@ -482,16 +482,16 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if 'total_workers_vcpu' not in get_optional_collectors():
         return None
 
-    cluster_name = os.environ.get('METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME')
+    cluster_name = os.environ.get('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME')
     if not cluster_name:
-        raise Exception('environment variable METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+        raise Exception('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
 
     now = datetime.now(timezone.utc)
 
     info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
 
-    # If METRIC_UTILITY_VCPU_COUNT_ENABLED is not set or not set to true then it returns 1
-    vcpu_count_enabled_str = os.environ.get('METRIC_UTILITY_VCPU_COUNT_ENABLED')
+    # If METRICS_UTILITY_VCPU_COUNT_ENABLED is not set or not set to true then it returns 1
+    vcpu_count_enabled_str = os.environ.get('METRICS_UTILITY_VCPU_COUNT_ENABLED')
     vcpu_count_enabled = False
     if vcpu_count_enabled_str and (vcpu_count_enabled_str.lower() == 'true'):
         vcpu_count_enabled = True
