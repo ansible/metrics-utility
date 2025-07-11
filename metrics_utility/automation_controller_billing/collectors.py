@@ -13,7 +13,7 @@ from django.conf import settings
 from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
-from kubernetes import client, config
+from kubernetes import client, config as kube_config
 
 from metrics_utility.base import CsvFileSplitter, register
 
@@ -472,18 +472,28 @@ def main_host_table(since, full_path, until, **kwargs):
 def total_workers_vcpu(since, full_path, until, **kwargs):
   if 'total_workers_vcpu' not in get_optional_collectors():
       return None
-  
-  """
-  Retrieves detailed information about a specific Kubernetes node,
-  similar to 'kubectl describe node <node-name>'.
-  """
+
+  cluster_name = os.environ.get("METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME")
+  if not cluster_name:
+      raise Exception("environment variable METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set")
+
+  info = {"cluster_name":"TOBEADDED",
+          "timestamp": now.isoformat(),
+          "nodes": []}
+
+  if os.environ.get("METRIC_UTILITY_VCPU_COUNT_OVERWRITE"):
+      return {"cluster_name": info["cluster_name"],
+          "total_workers_vcpu": os.environ.get("METRIC_UTILITY_VCPU_COUNT_OVERWRITE")
+        }  
+
   try:
-    config.load_incluster_config()
-  except config.ConfigException:
+    kube_config.load_incluster_config()
+  except kube_config.ConfigException:
     try:
-        config.load_kube_config()
-    except config.ConfigException:
+        kube_config.load_kube_config()
+    except kube_config.ConfigException:
         raise Exception("Could not configure Kubernetes Python client")
+
   # Create a CoreV1Api client
   api_instance = client.CoreV1Api()
 
@@ -494,17 +504,18 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
   info = {"cluster_name":"TOBEADDED",
           "timestamp": now.isoformat(),
           "nodes": []}
-  cluster_vcpu = 0
+
+  total_workers_vcpu = 0
   for node_info in nodes.items:
       for resource, value in node_info.status.capacity.items():
           if resource == 'cpu':
               info["nodes"].append({node_info.metadata.name: int(value)})
-              cluster_vcpu += int(value)
-  
-  info["cluster_vcpu"] = cluster_vcpu
+              total_workers_vcpu += int(value)
+
+  info["total_workers_vcpu"] = total_workers_vcpu
 
   print(json.dumps(info, indent=2))
 
   return {"cluster_name": info["cluster_name"],
-          "cluster_vcpu": info["cluster_vcpu"]
+          "total_workers_vcpu": info["total_workers_vcpu"]
         }
