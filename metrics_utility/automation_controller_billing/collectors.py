@@ -490,8 +490,13 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
 
-    if os.environ.get('METRIC_UTILITY_VCPU_COUNT_OVERWRITE'):
-        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': os.environ.get('METRIC_UTILITY_VCPU_COUNT_OVERWRITE')}
+    # If METRIC_UTILITY_VCPU_COUNT_ENABLED is not set or not set to true then it returns 1
+    vcpu_count_enabled_str = os.environ.get('METRIC_UTILITY_VCPU_COUNT_ENABLED')
+    vcpu_count_enabled = False
+    if vcpu_count_enabled_str and (vcpu_count_enabled_str.lower() == 'true'):
+        vcpu_count_enabled = True
+    if vcpu_count_enabled:
+        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': '1'}
 
     try:
         kube_config.load_incluster_config()
