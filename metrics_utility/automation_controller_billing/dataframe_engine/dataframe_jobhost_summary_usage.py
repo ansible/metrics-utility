@@ -2,19 +2,15 @@ import logging
 
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
+from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets, parse_json_array
-from metrics_utility.debug_utils import print_data, print_debug
 from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
 logger = logging.getLogger(__name__)
 
-#######################################
-# Code for building of the dataframe report based on JobhostSummary table
-######################################
 
-
+# dataframe for job_host_summary / indirect_nodes
 class DataframeJobhostSummaryUsage(Base):
     def build_dataframe(self):
         # A daily rollup dataframe
@@ -38,9 +34,6 @@ class DataframeJobhostSummaryUsage(Base):
 
                 billing_data['managed_node_type'] = managed_node_type
                 billing_data['managed_node_type_string'] = MANAGED_NODE_TYPES[managed_node_type]
-
-                print_debug(f'\nComputing data batch for {date}')
-                print_data(billing_data, 'Newly loaded data')
 
                 billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
                 billing_data['install_uuid'] = data['config']['install_uuid']
@@ -70,14 +63,13 @@ class DataframeJobhostSummaryUsage(Base):
                     billing_data['reachable_task_runs'] = billing_data.apply(sum_reachable_columns, axis=1)
                     billing_data = billing_data[billing_data['reachable_task_runs'] > 0].copy()
 
+                    # not collected for direct hosts
                     billing_data['facts'] = None
                     billing_data['canonical_facts'] = None
                     billing_data['events'] = None
                 elif managed_node_type == INDIRECT:
-                    pass
-
-                # Load the events array safely
-                billing_data['events'] = billing_data['events'].apply(parse_json_array)
+                    # Load the events array safely
+                    billing_data['events'] = billing_data['events'].apply(parse_json_array)
 
                 billing_data['created'] = pd.to_datetime(billing_data['created'], format='ISO8601').dt.tz_localize(None)
 
@@ -90,63 +82,51 @@ class DataframeJobhostSummaryUsage(Base):
                 # Do the aggregation
                 ################################
 
-                print_data(billing_data, 'New loaded data batch')
-                billing_data_group = billing_data.groupby(self.unique_index_columns(), dropna=False).agg(
-                    task_runs=('task_runs', 'sum'),
-                    host_runs=('host_name', 'count'),
-                    first_automation=('created', 'min'),
-                    last_automation=('created', 'max'),
-                    job_created=('job_created', 'max'),
-                    managed_node_type=('managed_node_type', 'min'),
-                    managed_node_types_set=('managed_node_type_string', lambda x: set(x)),
-                    # TODO: optimize the aggregation to keep less rows around
-                    # job_ids=('inventory_name', lambda x: set(x)),
-                    events=('events', lambda x: merge_arrays(x)),
-                    canonical_facts=('canonical_facts', lambda x: merge_json_sets(x)),
-                    facts=('facts', lambda x: merge_json_sets(x)),
-                )
-
-                print_data(billing_data_group, 'New data batch after aggregation')
-
-                # Tweak types to match the table
-                billing_data_group = self.cast_dataframe(billing_data_group, self.cast_types())
+                billing_data_group = self.group(billing_data)
 
                 ################################
                 # Merge aggregations of multiple batches
                 ################################
-                if billing_data_monthly_rollup is None:
-                    billing_data_monthly_rollup = billing_data_group
-                else:
-                    # Multipart collection, merge the dataframes and sum counts
-                    billing_data_monthly_rollup = pd.merge(
-                        billing_data_monthly_rollup.loc[:,], billing_data_group.loc[:,], on=self.unique_index_columns(), how='outer'
-                    )
-                    print_data(billing_data_monthly_rollup, 'Global data outer join batch data')
 
-                    billing_data_monthly_rollup = self.summarize_merged_dataframes(
-                        billing_data_monthly_rollup,
-                        self.data_columns(),
-                        operations={
-                            'first_automation': 'min',
-                            'last_automation': 'max',
-                            'job_created': 'max',
-                            'managed_node_type': 'min',
-                            'managed_node_types_set': 'combine_set',
-                            'events': 'combine_set',
-                            'canonical_facts': 'combine_json_values',
-                            'facts': 'combine_json_values',
-                        },
-                    )
-
-                    # Tweak types to match the table
-                    billing_data_monthly_rollup = self.cast_dataframe(billing_data_monthly_rollup, self.cast_types())
-
-                print_data(billing_data_monthly_rollup, 'Actual global data')
+                billing_data_monthly_rollup = self.merge(billing_data_monthly_rollup, billing_data_group)
 
         if billing_data_monthly_rollup is None or billing_data_monthly_rollup.empty:
-            return pd.DataFrame(columns=self.data_columns() + self.unique_index_columns())
+            return self.empty()
 
         return billing_data_monthly_rollup.reset_index()
+
+    # Do the aggregation
+    def group(self, dataframe):
+        group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
+            task_runs=('task_runs', 'sum'),
+            host_runs=('host_name', 'count'),
+            first_automation=('created', 'min'),
+            last_automation=('created', 'max'),
+            job_created=('job_created', 'max'),
+            managed_node_type=('managed_node_type', 'min'),
+            managed_node_types_set=('managed_node_type_string', set),
+            # TODO: optimize the aggregation to keep less rows around
+            # job_ids=('inventory_name', set),
+            events=('events', merge_arrays),
+            canonical_facts=('canonical_facts', merge_json_sets),
+            facts=('facts', merge_json_sets),
+        )
+        return self.cast_dataframe(group, self.cast_types())
+
+    # Merge pre-aggregated
+    def regroup(self, dataframe):
+        return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
+            task_runs=('task_runs', 'sum'),
+            host_runs=('host_runs', 'sum'),
+            first_automation=('first_automation', 'min'),
+            last_automation=('last_automation', 'max'),
+            job_created=('job_created', 'max'),
+            managed_node_type=('managed_node_type', 'min'),
+            managed_node_types_set=('managed_node_types_set', merge_sets),
+            events=('events', merge_arrays),
+            canonical_facts=('canonical_facts', merge_setdicts),
+            facts=('facts', merge_setdicts),
+        )
 
     @staticmethod
     def unique_index_columns():
@@ -176,4 +156,17 @@ class DataframeJobhostSummaryUsage(Base):
             'first_automation': 'datetime64[ns]',
             'last_automation': 'datetime64[ns]',
             'job_created': 'datetime64[ns]',
+        }
+
+    @staticmethod
+    def operations():
+        return {
+            'first_automation': 'min',
+            'last_automation': 'max',
+            'job_created': 'max',
+            'managed_node_type': 'min',
+            'managed_node_types_set': 'combine_set',
+            'events': 'combine_set',
+            'canonical_facts': 'combine_json_values',
+            'facts': 'combine_json_values',
         }

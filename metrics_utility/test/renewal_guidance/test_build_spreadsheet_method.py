@@ -8,7 +8,6 @@ import pytest
 
 from openpyxl import Workbook as ActualOpenpyxlWorkbook
 
-from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup as ActualDedup
 from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
 
 
@@ -28,9 +27,6 @@ def setup_build_spreadsheet_mocks(fixed_now):
 
     mock_cell = MagicMock()
 
-    mock_dedup_instance = MagicMock(spec=ActualDedup)
-    mock_dedup_class = MagicMock(return_value=mock_dedup_instance)
-
     mock_time_module = MagicMock()
     mock_time_module.strftime.return_value = 'Jun 03, 2025'
 
@@ -47,9 +43,7 @@ def setup_build_spreadsheet_mocks(fixed_now):
 
     yield {
         'openpyxl_wb_mock': mock_wb,
-        'dedup_class_mock': mock_dedup_class,
         'time_module_mock': mock_time_module,
-        'dedup_instance_mock': mock_dedup_instance,
         'mocks_for_instance': mocks_for_instance,
         'mock_cell': mock_cell,
         'mock_ws_list': mock_ws_list,
@@ -61,14 +55,12 @@ def setup_build_spreadsheet_mocks(fixed_now):
 def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mocks, setup_processed_dataframe):
     patch_target_datetime = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.datetime'
     patch_target_workbook = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.Workbook'
-    patch_target_dedup_class = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.Dedup'
     patch_target_time = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.time'
     patch_target_dataframe_to_rows = 'metrics_utility.automation_controller_billing.report.report_renewal_guidance.dataframe_to_rows'
 
     with (
         patch(patch_target_datetime) as mock_datetime_module,
         patch(patch_target_workbook, new=setup_build_spreadsheet_mocks['openpyxl_wb_mock']),
-        patch(patch_target_dedup_class, new=setup_build_spreadsheet_mocks['dedup_class_mock']),
         patch(patch_target_time, new=setup_build_spreadsheet_mocks['time_module_mock']),
         patch(patch_target_dataframe_to_rows, new=setup_build_spreadsheet_mocks['mocks_for_instance']['dataframe_to_rows_func']),
     ):
@@ -82,12 +74,13 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
             'ephemeral_days': 30,
             'price_per_node': 0.1,
             'report_period': '2025-01-01,2025-06-03',
+            'report_type': 'RENEWAL_GUIDANCE',
             'since_date': '2025-01-01',
             'until_date': '2025-06-03',
         }
 
         report_instance = ReportRenewalGuidance(
-            dataframe=[setup_processed_dataframe],
+            dataframes={'host_metric': setup_processed_dataframe},
             extra_params=test_extra_params,
         )
 
@@ -118,9 +111,6 @@ def test_build_spreadsheet_with_ephemeral_data(
     processed_df = fixture_context['processed_df']
     mocks = fixture_context['mocks']
 
-    deduped_df = processed_df.copy()
-    mocks['dedup_instance_mock'].run_deduplication.return_value = deduped_df
-
     mock_ephemeral_usage_df = pd.DataFrame(
         {
             'window_start': [dt_actual.datetime(2025, 1, 1)],
@@ -133,24 +123,6 @@ def test_build_spreadsheet_with_ephemeral_data(
 
     result_wb = report_instance.build_spreadsheet()
 
-    mocks['dedup_class_mock'].assert_called_once()
-    mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
-
-    dedup_call_df = mocks['dedup_class_mock'].call_args[0][0]
-    expected_df_before_dedup = processed_df.copy()
-    expected_df_before_dedup['first_automation'] = expected_df_before_dedup['first_automation'].dt.tz_localize(None)
-    expected_df_before_dedup['last_automation'] = expected_df_before_dedup['last_automation'].dt.tz_localize(None)
-    expected_df_before_dedup['last_deleted'] = expected_df_before_dedup['last_deleted'].dt.tz_localize(None)
-    expected_df_before_dedup['days_automated'] = (expected_df_before_dedup['last_automation'] - expected_df_before_dedup['first_automation']).dt.days
-    expected_df_before_dedup['days_automated'] = expected_df_before_dedup['days_automated'].apply(lambda x: x if x > 0 else 0)
-    pd.testing.assert_frame_equal(
-        dedup_call_df,
-        expected_df_before_dedup,
-        check_dtype=False,
-        check_index_type=False,
-        check_names=False,
-    )
-
     mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
 
     mocks['openpyxl_wb_mock'].create_sheet.assert_any_call(title='Usage Reporting')
@@ -160,7 +132,7 @@ def test_build_spreadsheet_with_ephemeral_data(
     mocks['mocks_for_instance']['_build_data_section'].assert_called_once_with(
         ANY,
         ANY,
-        deduped_df,
+        processed_df,
         mock_ephemeral_usage_df,
     )
     mocks['time_module_mock'].strftime.assert_called_once_with('%b %d, %Y')
@@ -199,7 +171,7 @@ def test_build_spreadsheet_without_ephemeral_data(
     modified_extra_params['ephemeral_days'] = None
 
     report_instance = ReportRenewalGuidance(
-        dataframe=[processed_df],
+        dataframes={'host_metric': processed_df},
         extra_params=modified_extra_params,
     )
 
@@ -209,30 +181,9 @@ def test_build_spreadsheet_without_ephemeral_data(
         setattr(report_instance, attr, mock_obj)
     report_instance.wb = mocks['openpyxl_wb_mock']
 
-    deduped_df = processed_df.copy()
-    mocks['dedup_instance_mock'].run_deduplication.return_value = deduped_df
-
     mocks['mocks_for_instance']['optional_report_sheets'].return_value = ['managed_nodes']
 
     result_wb = report_instance.build_spreadsheet()
-
-    mocks['dedup_class_mock'].assert_called_once()
-    mocks['dedup_instance_mock'].run_deduplication.assert_called_once()
-
-    dedup_call_df = mocks['dedup_class_mock'].call_args[0][0]
-    expected_df_before_dedup = processed_df.copy()
-    expected_df_before_dedup['first_automation'] = expected_df_before_dedup['first_automation'].dt.tz_localize(None)
-    expected_df_before_dedup['last_automation'] = expected_df_before_dedup['last_automation'].dt.tz_localize(None)
-    expected_df_before_dedup['last_deleted'] = expected_df_before_dedup['last_deleted'].dt.tz_localize(None)
-    expected_df_before_dedup['days_automated'] = (expected_df_before_dedup['last_automation'] - expected_df_before_dedup['first_automation']).dt.days
-    expected_df_before_dedup['days_automated'] = expected_df_before_dedup['days_automated'].apply(lambda x: x if x > 0 else 0)
-    pd.testing.assert_frame_equal(
-        dedup_call_df,
-        expected_df_before_dedup,
-        check_dtype=False,
-        check_index_type=False,
-        check_names=False,
-    )
 
     mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
 
@@ -243,7 +194,7 @@ def test_build_spreadsheet_without_ephemeral_data(
     mocks['mocks_for_instance']['_build_data_section'].assert_called_once_with(
         ANY,
         ANY,
-        deduped_df,
+        processed_df,
         None,  # ephemeral_usage_dataframe should be None here
     )
     mocks['time_module_mock'].strftime.assert_called_once_with('%b %d, %Y')

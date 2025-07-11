@@ -9,14 +9,14 @@ from metrics_utility.exceptions import (
     NoAnalyticsCollected,
 )
 from metrics_utility.management.validation import (
+    date_format_text,
     handle_crc_ship_target,
-    handle_datelike,
     handle_directory_ship_target,
     handle_env_validation,
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
-    handle_validate_date_param,
+    parse_date_param,
 )
 
 
@@ -27,12 +27,8 @@ class Command(BaseCommand):
 
     help = 'Gather Automation Controller billing data'
     help_texts = {
-        'since': (
-            'Start date for collection including (e.g. --since=2023-12-20), a number of days ago (--since=5d), or a number of months (--since=2m).'
-        ),
-        'until': (
-            'End date for collection including (e.g. --until=2023-12-21), a number of days ago (--until=5d), or a number of months (--until=2m).'
-        ),
+        'since': (f'Start date for collection, including. {date_format_text.format(name="since")}'),
+        'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
         'dry-run': ('Gather billing metrics without shipping.'),
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
     }
@@ -60,11 +56,8 @@ class Command(BaseCommand):
         opt_ship = options.get('ship')
         opt_dry_run = options.get('dry-run')
 
-        handle_validate_date_param(opt_since, self.help_texts.get('since'), 'gather')
-        handle_validate_date_param(opt_until, self.help_texts.get('until'), 'gather')
-
-        since = handle_datelike(opt_since)
-        until = handle_datelike(opt_until)
+        since = parse_date_param(opt_since, self.help_texts, 'since')
+        until = parse_date_param(opt_until, self.help_texts, 'until')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
         billing_provider_params = self._handle_ship_target(ship_target)

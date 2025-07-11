@@ -47,7 +47,7 @@ def test_renewal_guidance_queries_with_mocked_data(setup_report_renewal_guidance
     report_instance_params = setup_report_renewal_guidance_instance
 
     report_instance = ReportRenewalGuidance(
-        dataframe=[processed_df],
+        dataframes={'host_metric': processed_df},
         extra_params=report_instance_params['extra_params'],
     )
 
@@ -119,7 +119,7 @@ def test_renewal_guidance_queries_with_empty_data(fixed_now):
         )
 
         report_renewal_guidance_instance_empty = ReportRenewalGuidance(
-            dataframe=[empty_df_with_cols],
+            dataframes={'host_metric': empty_df_with_cols},
             extra_params=test_extra_params,
         )
 

@@ -1,6 +1,10 @@
 import datetime
 import logging
 
+from functools import reduce
+
+import pandas as pd
+
 from dateutil.relativedelta import relativedelta
 
 
@@ -69,6 +73,14 @@ def combine_set(set1, set2):
 
     # Return the union of both sets.
     return set1.union(set2)
+
+
+def merge_sets(x):
+    return set().union(*x)
+
+
+def merge_setdicts(x):
+    return reduce(combine_json_values, x, {})
 
 
 # Helper function to combine two JSON values.
@@ -144,6 +156,36 @@ class Base:
             del df[f'{col}_y']
         return df
 
+    def empty(self):
+        return pd.DataFrame(columns=self.unique_index_columns() + self.data_columns())
+
+    # Multipart collection, merge the dataframes and sum counts
+    def merge(self, rollup, new_group):
+        if rollup is None:
+            return new_group
+
+        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+        rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
+        return self.cast_dataframe(rollup, self.cast_types())
+
+    def dedup(self, dataframe, hostname_mapping=None):
+        if dataframe is None or dataframe.empty:
+            return self.empty()
+
+        if not hostname_mapping:
+            return dataframe
+
+        # map hostnames to canonical value
+        df = dataframe.copy()
+        df['host_name'] = df['host_name'].map(hostname_mapping).fillna(df['host_name'])
+
+        # multiple rows can now have the same hostname, regroup
+        df_grouped = self.regroup(df)
+
+        # cast types to match the table
+        df_grouped = self.cast_dataframe(df_grouped, self.cast_types())
+        return df_grouped.reset_index()
+
     @staticmethod
     def unique_index_columns():
         pass
@@ -154,4 +196,8 @@ class Base:
 
     @staticmethod
     def cast_types():
+        pass
+
+    @staticmethod
+    def operations():
         pass

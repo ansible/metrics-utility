@@ -2,25 +2,27 @@ import datetime
 import logging
 import os
 
+from argparse import RawDescriptionHelpFormatter
 from datetime import timezone
 
 from django.core.management.base import BaseCommand
 
-from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeEngineFactory
+from metrics_utility.automation_controller_billing.dataframe_engine.factory import Factory as DataframeFactory
+from metrics_utility.automation_controller_billing.dedup.factory import Factory as DedupFactory
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.management.validation import (
+    date_format_text,
     handle_directory_ship_target,
     handle_env_validation,
     handle_month,
     handle_not_crc,
     handle_not_s3,
     handle_s3_ship_target,
-    parse_date_param,
     parse_number_of_days,
-    validate_build_extra_params,
+    validate_build_params,
 )
 
 
@@ -38,18 +40,8 @@ class Command(BaseCommand):
 
     help = 'Build Report'
     help_texts = {
-        'since': (
-            'Start date for collection (e.g. --since=2023-12-20), '
-            'a number of minutes ago (--since=2m), '
-            'a number of days ago (--since=5d), or '
-            'a number of months ago (--since=2mo | 2 month | 2 months).'
-        ),
-        'until': (
-            'End date for collection (e.g. --until=2023-12-21), '
-            'a number of minutes ago (--until=2m), '
-            'a number of days ago (--until=5d), or '
-            'a number of months ago (--since=2mo | 2 month | 2 months).'
-        ),
+        'since': (f'Start date for collection, including. {date_format_text.format(name="since")}'),
+        'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
         'month': (
             'Month the report will be generated for, with format YYYY-MM. '
             "If this parameter is not provided, the previous month's report will be generated if it does not already exist."
@@ -62,6 +54,31 @@ class Command(BaseCommand):
         'force': ('With this option, the existing reports will be overwritten if running this command again.'),
         'verbose': ('Starts to print debug information to terminal.'),
     }
+
+    def create_parser(self, prog_name, subcommand, **kwargs):
+        return super().create_parser(
+            prog_name,
+            subcommand,
+            # ensure newlines are preserved in descriptions and epilog
+            formatter_class=RawDescriptionHelpFormatter,
+            epilog='\n'.join(
+                [
+                    'ENVIRONMENT',
+                    "    METRICS_UTILITY_REPORT_TYPE (required, case sensitive): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE'",
+                    "        determines which kind of report we're generating",
+                    '',
+                    "    METRICS_UTILITY_SHIP_TARGET (required): one of 'directory', 's3', 'controller_db'",
+                    '        input/output mechanism',
+                    '',
+                    '    METRICS_UTILITY_SHIP_PATH (required): a path',
+                    '        local or s3 directory path, input tarballs in path/data/, output xlsx in path/reports/',
+                    '',
+                    "    METRICS_UTILITY_DEDUPLICATOR (optional): one of 'ccsp', 'renewal', 'ccsp-experimental'",
+                    "        choice of deduplication algorithm, defaults to 'ccsp' or 'renewal' based on the chosen report type",
+                ]
+            ),
+            **kwargs,
+        )
 
     def add_arguments(self, parser):
         parser.add_argument('--month', dest='month', action='store', help=self.help_texts.get('month'))
@@ -83,11 +100,9 @@ class Command(BaseCommand):
         self.init_logging()
         handle_env_validation('build')
 
-        validate_build_extra_params(self.help_texts, options)
+        opt_since, opt_until = validate_build_params(options, self.help_texts)
 
         opt_month, month, next_month = handle_month(options.get('month') or None)
-        opt_since = parse_date_param(options.get('since'))
-        opt_until = parse_date_param(options.get('until'))
         opt_ephemeral = parse_number_of_days(options.get('ephemeral'))
         opt_force = options.get('force')
 
@@ -98,6 +113,7 @@ class Command(BaseCommand):
         extra_params['ephemeral_days'] = opt_ephemeral
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
+        extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR', None) or None
 
         extractor = ExtractorFactory(ship_target, extra_params).create()
 
@@ -130,16 +146,19 @@ class Command(BaseCommand):
             )
             return
 
-        report_dataframe = DataframeEngineFactory(extractor=extractor, month=month, extra_params=extra_params).create()
+        dataframes = DataframeFactory(extractor=extractor, month=month, extra_params=extra_params).create()
 
-        if all(item is None or item.empty for item in report_dataframe):
+        dedup = DedupFactory(dataframes=dataframes, extra_params=extra_params).create()
+        dataframes = dedup.run()
+
+        if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes.items()):
             if opt_since is not None:
                 self.logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
             else:
                 self.logger.info(f'No billing data for month {opt_month}')
             return
 
-        report_engine = ReportFactory(report_dataframe=report_dataframe, extra_params=extra_params).create()
+        report_engine = ReportFactory(dataframes=dataframes, extra_params=extra_params).create()
         report_spreadsheet = report_engine.build_spreadsheet()
 
         # Save the report to the configured destination

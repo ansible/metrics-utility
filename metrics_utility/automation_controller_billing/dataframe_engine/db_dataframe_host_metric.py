@@ -7,11 +7,8 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 
 logger = logging.getLogger(__name__)
 
-#######################################
-# Code for building of the dataframe report based on HostMetric table
-######################################
 
-
+# dataframe for host_metric
 class DBDataframeHostMetric(Base):
     def build_dataframe(self):
         host_metric_concat = None
@@ -25,8 +22,10 @@ class DBDataframeHostMetric(Base):
             if host_metric.empty:
                 continue
 
-            # host_metric['install_uuid'] = data['config']['install_uuid']
-            host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'], format='ISO8601')
+            # Spreadsheet doesn't support timezones
+            host_metric['first_automation'] = pd.to_datetime(host_metric['first_automation'], format='ISO8601').dt.tz_localize(None)
+            host_metric['last_automation'] = pd.to_datetime(host_metric['last_automation'], format='ISO8601').dt.tz_localize(None)
+            host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'], format='ISO8601').dt.tz_localize(None)
 
             if host_metric_concat is None:
                 host_metric_concat = host_metric

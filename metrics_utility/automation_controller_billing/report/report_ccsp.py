@@ -10,11 +10,11 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
 class ReportCCSP(Base):
-    def __init__(self, dataframe, extra_params):
+    def __init__(self, dataframes, extra_params):
         # Create the workbook and worksheet
         self.wb = Workbook()
 
-        self.dataframe = dataframe
+        self.dataframes = dataframes
         self.extra_params = extra_params
 
         self.price_per_node = extra_params['price_per_node']
@@ -88,10 +88,10 @@ class ReportCCSP(Base):
         self.config['data_column_widths'] = default_data_column_widths
 
     def build_spreadsheet(self):
-        job_host_summary_dataframe = self.dataframe[0]
-        events_dataframe = self.dataframe[1]
+        job_host_summary_dataframe = self.dataframes['job_host_summary']
+        events_dataframe = self.dataframes['main_jobevent']
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
-        scope_dataframe = self.dataframe[2]
+        scope_dataframe = self.dataframes['main_host']
 
         directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
         indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]

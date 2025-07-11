@@ -3,7 +3,7 @@ import pandas as pd
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 
 
-# dataframe for data_collection_status.csv
+# dataframe for data_collection_status
 class DataframeCollectionStatus(Base):
     def build_dataframe(self):
         # all-rows dataframe, no aggregation

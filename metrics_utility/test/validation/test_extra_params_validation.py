@@ -58,7 +58,7 @@ def test_renewal_guidance_fails_with_until_params():
     ]
     for arg in command_args:
         e = handle_build_exception({**env_vars, 'METRICS_UTILITY_REPORT_TYPE': 'RENEWAL_GUIDANCE'}, arg['args'], BadParameter)
-        assert e.name == 'The --until parameter is not allowed when environment variable METRICS_UTILITY_REPORT_TYPE is RENEWAL_GUIDANCE'
+        assert e.name == 'The --until parameter is not allowed for renewal guidance report.'
 
 
 def test_invalid_month_format():
@@ -75,16 +75,27 @@ def test_invalid_build_report_argument_format():
     bad_inputs = ['2', '2y', 'mo3', '3weeks', '3w']
     args = ['until', 'since']
 
-    for bad_input in bad_inputs:
-        for arg in args:
+    inp_errors = [
+        'Bare integers are not allowed',
+        "Invalid isoformat string: '2y'",
+        None,
+        None,
+        None,
+    ]
+    arg_errors = [
+        'End date for collection',
+        'Start date for collection',
+    ]
+
+    for bad_input, err_input in zip(bad_inputs, inp_errors):
+        for arg, err_arg in zip(args, arg_errors):
             cmd = Command()
 
-            help_text = cmd.help_texts[arg]
-            if bad_input == '2':
-                help_text = 'Integers are not allowed for parameters --since and --until.'
             # either {'since': bad_input} or {'since': (valid), 'until': bad_input}
             e = handle_build_exception(env_vars, {'since': '2024-01-01', arg: bad_input}, UnparsableParameter)
-            assert e.name == help_text
+
+            assert (err_input or cmd.help_texts[arg]) in e.name
+            assert err_arg in e.name
 
 
 def test_ephemeral_allowed():
@@ -119,21 +130,26 @@ def handle_gather_exception(env_vars, params, klass):
 def test_invalid_gather_argument_format():
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
-    bad_inputs = [
-        '2',
-        '2mo',
-        '1day',
-        '2min',
-        '2mins',
-    ]
+    bad_inputs = ['2', '2y', 'mo3', '3weeks', '3w']
     args = ['until', 'since']
 
-    for bad_input in bad_inputs:
-        for arg in args:
+    inp_errors = [
+        'Bare integers are not allowed',
+        "Invalid isoformat string: '2y'",
+        None,
+        None,
+        None,
+    ]
+    arg_errors = [
+        'End date for collection',
+        'Start date for collection',
+    ]
+
+    for bad_input, err_input in zip(bad_inputs, inp_errors):
+        for arg, err_arg in zip(args, arg_errors):
             cmd = Command()
 
-            help_text = cmd.help_texts[arg]
-            if bad_input == '2':
-                help_text = 'Integers are not allowed for parameters --since and --until.'
             e = handle_gather_exception(env_vars, {arg: bad_input}, UnparsableParameter)
-            assert e.name == help_text
+
+            assert (err_input or cmd.help_texts[arg]) in e.name
+            assert err_arg in e.name

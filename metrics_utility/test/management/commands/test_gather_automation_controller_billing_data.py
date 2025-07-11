@@ -1,5 +1,3 @@
-import datetime
-
 from argparse import ArgumentParser
 
 import pytest
@@ -13,7 +11,6 @@ from metrics_utility.exceptions import (
     UnparsableParameter,
 )
 from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
-from metrics_utility.management.validation import handle_datelike
 
 
 @pytest.fixture
@@ -83,29 +80,6 @@ def test_handle_unexpected_exception(monkeypatch, command_instance):
 
     with pytest.raises(MetricsException):
         command_instance.handle()
-
-
-def test_handle_datelike_days():
-    days = 2
-    val = f'{days}d'
-    dt = handle_datelike(val)
-    assert isinstance(dt, datetime.datetime)
-    assert dt.tzinfo is not None
-
-
-def test_handle_datelike_minutes():
-    mins = 5
-    val = f'{mins}m'
-    dt = handle_datelike(val)
-    assert isinstance(dt, datetime.datetime)
-    assert dt.tzinfo is not None
-
-
-def test_handle_datelike_iso():
-    val = '2024-01-01T00:00:00Z'
-    dt = handle_datelike(val)
-    assert isinstance(dt, datetime.datetime)
-    assert dt.tzinfo is not None
 
 
 def test_handle_ship_target_crc(monkeypatch, command_instance):

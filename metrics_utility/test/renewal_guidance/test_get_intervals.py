@@ -3,9 +3,7 @@ import datetime as dt_actual
 import pandas as pd
 import pytest
 
-from metrics_utility.automation_controller_billing.report.report_renewal_guidance import (
-    ReportRenewalGuidance,
-)
+from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
 
 
 class TestGetIntervals:
@@ -37,7 +35,7 @@ class TestGetIntervals:
         }
 
         return ReportRenewalGuidance(
-            dataframe=[mock_df],
+            dataframes={'host_metric': mock_df},
             extra_params=extra_params,
         )
 
@@ -100,7 +98,7 @@ class TestGetIntervals:
         }
 
         instance = ReportRenewalGuidance(
-            dataframe=[realistic_df],
+            dataframes={'host_metric': realistic_df},
             extra_params=extra_params,
         )
 
@@ -235,7 +233,7 @@ class TestGetIntervals:
         }
 
         production_instance = ReportRenewalGuidance(
-            dataframe=[production_df],
+            dataframes={'host_metric': production_df},
             extra_params=extra_params,
         )
 

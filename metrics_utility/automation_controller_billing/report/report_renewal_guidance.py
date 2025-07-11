@@ -11,14 +11,13 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
-from metrics_utility.automation_controller_billing.report.renewal_guidance.dedup import Dedup
 
 
 class ReportRenewalGuidance(Base):
-    def __init__(self, dataframe, extra_params):
+    def __init__(self, dataframes, extra_params):
         self.wb = Workbook()
 
-        self.dataframe = dataframe
+        self.dataframes = dataframes
         self.extra_params = extra_params
 
         self.ephemeral_days = extra_params['ephemeral_days']
@@ -49,14 +48,7 @@ class ReportRenewalGuidance(Base):
 
     def build_spreadsheet(self):
         # Fix host names in the event data, to take in account the variables
-        host_metric_dataframe = self.dataframe[0]
-        # Spreadsheet doesn't support timezones
-        host_metric_dataframe['first_automation'] = pd.to_datetime(host_metric_dataframe['first_automation'], format='ISO8601').dt.tz_localize(None)
-        host_metric_dataframe['last_automation'] = pd.to_datetime(host_metric_dataframe['last_automation'], format='ISO8601').dt.tz_localize(None)
-        host_metric_dataframe['last_deleted'] = pd.to_datetime(host_metric_dataframe['last_deleted'], format='ISO8601').dt.tz_localize(None)
-
-        # Run the host deduplication first
-        host_metric_dataframe = Dedup(host_metric_dataframe, extra_params=self.extra_params).run_deduplication()
+        host_metric_dataframe = self.dataframes['host_metric']
 
         host_metric_dataframe['days_automated'] = (host_metric_dataframe['last_automation'] - host_metric_dataframe['first_automation']).dt.days
         host_metric_dataframe['days_automated'] = host_metric_dataframe['days_automated'].apply(lambda x: x if x > 0 else 0)

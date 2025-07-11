@@ -6,7 +6,7 @@ from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe
 from metrics_utility.exceptions import NotSupportedFactory
 
 
-class Factory:
+class Factory:  # DataframeFactory
     def __init__(self, extractor, month, extra_params):
         self.extractor = extractor
         self.month = month
@@ -15,43 +15,28 @@ class Factory:
     def create(self):
         report_type = self.extra_params['report_type']
 
+        kwargs = {
+            'extractor': self.extractor,
+            'month': self.month,
+            'extra_params': self.extra_params,
+        }
+
         if report_type == 'CCSP':
-            return (
-                self._get_dataframe_jobhost_summary_usage().build_dataframe(),
-                self._get_dataframe_content_usage().build_dataframe(),
-                self._get_dataframe_inventory_scope().build_dataframe(),
-            )
-        elif report_type == 'CCSPv2':
-            return (
-                self._get_dataframe_jobhost_summary_usage().build_dataframe(),
-                self._get_dataframe_content_usage().build_dataframe(),
-                self._get_dataframe_inventory_scope().build_dataframe(),
-                self._get_dataframe_collection_status().build_dataframe(),
-            )
-        elif report_type == 'RENEWAL_GUIDANCE':
-            return (self._get_db_dataframe_host_metric_usage().build_dataframe(),)
-        else:
-            raise NotSupportedFactory(f'Factory for {report_type} not supported')
+            return {
+                'job_host_summary': DataframeJobhostSummaryUsage(**kwargs),
+                'main_jobevent': DataframeContentUsage(**kwargs),
+                'main_host': DataframeInventoryScope(**kwargs),
+            }
 
-    def _get_dataframe_collection_status(self):
-        return DataframeCollectionStatus(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
+        if report_type == 'CCSPv2':
+            return {
+                'job_host_summary': DataframeJobhostSummaryUsage(**kwargs),
+                'main_jobevent': DataframeContentUsage(**kwargs),
+                'main_host': DataframeInventoryScope(**kwargs),
+                'data_collection_status': DataframeCollectionStatus(**kwargs),
+            }
 
-    def _get_dataframe_jobhost_summary_usage(self):
-        return DataframeJobhostSummaryUsage(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
+        if report_type == 'RENEWAL_GUIDANCE':
+            return {'host_metric': DBDataframeHostMetric(**kwargs)}
 
-    def _get_dataframe_content_usage(self):
-        return DataframeContentUsage(
-            extractor=self.extractor,
-            month=self.month,
-            extra_params=self.extra_params,
-        )
-
-    def _get_dataframe_inventory_scope(self):
-        return DataframeInventoryScope(extractor=self.extractor, month=self.month, extra_params=self.extra_params)
-
-    def _get_db_dataframe_host_metric_usage(self):
-        return DBDataframeHostMetric(
-            extractor=self.extractor,
-            month=self.month,
-            extra_params=self.extra_params,
-        )
+        raise NotSupportedFactory(f'Factory for {report_type} not supported')

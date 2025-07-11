@@ -11,7 +11,7 @@ from metrics_utility.test.util import run_build_int
 
 # Get current date and time
 now = datetime.now()
-diff_months = 500
+diff_months = 2000
 
 # Extract current date components with leading zeros
 current_month = f'{now.month:02}'
@@ -60,11 +60,11 @@ expected_sheets = {
     'Managed nodes': [
         {
             'Host name': [
-                'default_host_hostmetric_1',
-                'default_host_hostmetric_3',
-                'default_host_hostmetric_4',
-                'default_host_hostmetric_7',
-                'default_host_hostmetric_9',
+                'default_host_hostmetric_1_2025-06-13',
+                'default_host_hostmetric_3_2025-06-13',
+                'default_host_hostmetric_4_2025-06-13',
+                'default_host_hostmetric_7_2025-06-13',
+                'default_host_hostmetric_9_2025-06-13',
             ]
         },
         {
@@ -87,11 +87,11 @@ expected_sheets = {
         },
         {
             'Number of\nAutomations': [
-                12,
-                7,
-                10,
-                8,
-                9,
+                36,
+                21,
+                30,
+                24,
+                27,
             ]
         },
         {
@@ -150,11 +150,11 @@ expected_sheets = {
         },
         {
             'Host names': [
-                'default_host_hostmetric_1',
-                'default_host_hostmetric_3',
-                'default_host_hostmetric_4',
-                'default_host_hostmetric_7',
-                'default_host_hostmetric_9',
+                'default_host_hostmetric_1_2025-06-13',
+                'default_host_hostmetric_3_2025-06-13',
+                'default_host_hostmetric_4_2025-06-13',
+                'default_host_hostmetric_7_2025-06-13',
+                'default_host_hostmetric_9_2025-06-13',
             ]
         },
         {
@@ -188,10 +188,10 @@ expected_sheets = {
     'Deleted Managed nodes': [
         {
             'Host name': [
-                'default_host_hostmetric_2',
-                'default_host_hostmetric_5',
-                'default_host_hostmetric_6',
-                'default_host_hostmetric_8',
+                'default_host_hostmetric_2_2025-06-13',
+                'default_host_hostmetric_5_2025-06-13',
+                'default_host_hostmetric_6_2025-06-13',
+                'default_host_hostmetric_8_2025-06-13',
             ]
         },
         {
@@ -212,10 +212,10 @@ expected_sheets = {
         },
         {
             'Number of\nAutomations': [
-                5,
-                3,
-                6,
-                4,
+                15,
+                9,
+                18,
+                12,
             ]
         },
         {
@@ -228,10 +228,10 @@ expected_sheets = {
         },
         {
             'Number of\nDeletions': [
-                1,
-                2,
-                1,
-                1,
+                3,
+                6,
+                3,
+                3,
             ]
         },
         {
@@ -268,10 +268,10 @@ expected_sheets = {
         },
         {
             'Host names': [
-                'default_host_hostmetric_2',
-                'default_host_hostmetric_5',
-                'default_host_hostmetric_6',
-                'default_host_hostmetric_8',
+                'default_host_hostmetric_2_2025-06-13',
+                'default_host_hostmetric_5_2025-06-13',
+                'default_host_hostmetric_6_2025-06-13',
+                'default_host_hostmetric_8_2025-06-13',
             ]
         },
         {
