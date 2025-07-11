@@ -13,7 +13,8 @@ from django.conf import settings
 from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
-from kubernetes import client, config as kube_config
+from kubernetes import client
+from kubernetes import config as kube_config
 
 from metrics_utility.base import CsvFileSplitter, register
 
@@ -468,54 +469,47 @@ def main_host_table(since, full_path, until, **kwargs):
         table='main_host', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=yaml_and_json_parsing_functions()
     )
 
+
 @register('total_workers_vcpu', '1.0', format='json', description=_('Total workers vCPU'))
 def total_workers_vcpu(since, full_path, until, **kwargs):
-  if 'total_workers_vcpu' not in get_optional_collectors():
-      return None
+    if 'total_workers_vcpu' not in get_optional_collectors():
+        return None
 
-  cluster_name = os.environ.get("METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME")
-  if not cluster_name:
-      raise Exception("environment variable METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set")
+    cluster_name = os.environ.get('METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME')
+    if not cluster_name:
+        raise Exception('environment variable METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
 
-  info = {"cluster_name":"TOBEADDED",
-          "timestamp": now.isoformat(),
-          "nodes": []}
+    info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
 
-  if os.environ.get("METRIC_UTILITY_VCPU_COUNT_OVERWRITE"):
-      return {"cluster_name": info["cluster_name"],
-          "total_workers_vcpu": os.environ.get("METRIC_UTILITY_VCPU_COUNT_OVERWRITE")
-        }  
+    if os.environ.get('METRIC_UTILITY_VCPU_COUNT_OVERWRITE'):
+        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': os.environ.get('METRIC_UTILITY_VCPU_COUNT_OVERWRITE')}
 
-  try:
-    kube_config.load_incluster_config()
-  except kube_config.ConfigException:
     try:
-        kube_config.load_kube_config()
+        kube_config.load_incluster_config()
     except kube_config.ConfigException:
-        raise Exception("Could not configure Kubernetes Python client")
+        try:
+            kube_config.load_kube_config()
+        except kube_config.ConfigException:
+            raise Exception('Could not configure Kubernetes Python client')
 
-  # Create a CoreV1Api client
-  api_instance = client.CoreV1Api()
+    # Create a CoreV1Api client
+    api_instance = client.CoreV1Api()
 
-  nodes = api_instance.list_node()
+    nodes = api_instance.list_node()
 
-  now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc)
 
-  info = {"cluster_name":"TOBEADDED",
-          "timestamp": now.isoformat(),
-          "nodes": []}
+    info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
 
-  total_workers_vcpu = 0
-  for node_info in nodes.items:
-      for resource, value in node_info.status.capacity.items():
-          if resource == 'cpu':
-              info["nodes"].append({node_info.metadata.name: int(value)})
-              total_workers_vcpu += int(value)
+    total_workers_vcpu = 0
+    for node_info in nodes.items:
+        for resource, value in node_info.status.capacity.items():
+            if resource == 'cpu':
+                info['nodes'].append({node_info.metadata.name: int(value)})
+                total_workers_vcpu += int(value)
 
-  info["total_workers_vcpu"] = total_workers_vcpu
+    info['total_workers_vcpu'] = total_workers_vcpu
 
-  print(json.dumps(info, indent=2))
+    print(json.dumps(info, indent=2))
 
-  return {"cluster_name": info["cluster_name"],
-          "total_workers_vcpu": info["total_workers_vcpu"]
-        }
+    return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
