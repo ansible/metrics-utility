@@ -479,6 +479,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if not cluster_name:
         raise Exception('environment variable METRIC_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
 
+    now = datetime.now(timezone.utc)
+
     info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
 
     if os.environ.get('METRIC_UTILITY_VCPU_COUNT_OVERWRITE'):
@@ -496,8 +498,6 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     api_instance = client.CoreV1Api()
 
     nodes = api_instance.list_node()
-
-    now = datetime.now(timezone.utc)
 
     info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
 
