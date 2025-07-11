@@ -40,8 +40,10 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 def get_mandatory_collectors():
     return os.environ.get('METRICS_UTILITY_MANDATORY_COLLECTORS', 'main_jobevent').split(',')
 
+
 def get_optional_collectors():
     return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+
 
 def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
