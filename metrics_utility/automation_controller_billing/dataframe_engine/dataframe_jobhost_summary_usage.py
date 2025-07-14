@@ -59,8 +59,6 @@ class DataframeJobhostSummaryUsage(Base):
         if not events_list:
             return 'Unknown Infrastructure'
 
-        # Define a simple priority order if a host has events from multiple infra types
-        # You can adjust this priority as needed based on your business logic.
         priority_order = ['Public Cloud', 'Private Cloud', 'Networking', 'Storage', 'Database']
 
         found_infrastructures = []
@@ -100,14 +98,9 @@ class DataframeJobhostSummaryUsage(Base):
         return {}
 
     def build_dataframe(self):
-        # A daily rollup dataframe
         billing_data_monthly_rollup = None
 
         for date in self.dates():
-            ###############################
-            # Generate the monthly dataset for report
-            ###############################
-
             for data in self.extractor.iter_batches(date=date):
                 billing_data = data['job_host_summary']
                 managed_node_type = DIRECT
@@ -125,28 +118,23 @@ class DataframeJobhostSummaryUsage(Base):
                 billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
                 billing_data['install_uuid'] = data['config']['install_uuid']
 
-                # Store the original host name for mapping purposes
                 billing_data['original_host_name'] = billing_data['host_name']
                 if 'ansible_host_variable' in billing_data.columns:
-                    # Replace missing ansible_host_variable with host name
                     billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
-                    # And use the new ansible_host_variable instead of host_name, since
-                    # what is in ansible_host_variable should be the actual host we count
                     billing_data['host_name'] = billing_data['ansible_host_variable']
 
-                # Summarize all task counts into 1 col
+                # Summarize all task counts into 1 col (for use in DIRECT branch)
                 def sum_columns(row):
-                    # Ensure columns exist before summing, or default to 0
                     cols = ['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']
                     return sum(row.get(i, 0) for i in cols)
 
-                # Summarize all reachable task counts into 1 col
+                # Summarize all reachable task counts into 1 col (for use in DIRECT branch)
                 def sum_reachable_columns(row):
-                    # Ensure columns exist before summing, or default to 0
                     cols = ['failures', 'ok', 'skipped', 'ignored', 'rescued']
                     return sum(row.get(i, 0) for i in cols)
 
-                # Common initialization and parsing for ALL hosts (DIRECT and INDIRECT) ---
+
+                # --- START: COMMON INITIALIZATION & PARSING FOR ALL hosts (DIRECT and INDIRECT) ---
                 # 1. Ensure core columns exist as pd.Series (fill with None if missing or entirely null)
                 if 'facts' not in billing_data.columns or billing_data['facts'].isnull().all():
                     billing_data['facts'] = pd.Series([None] * len(billing_data), index=billing_data.index)
@@ -155,7 +143,7 @@ class DataframeJobhostSummaryUsage(Base):
                 if 'events' not in billing_data.columns or billing_data['events'].isnull().all():
                     billing_data['events'] = pd.Series([None] * len(billing_data), index=billing_data.index)
 
-                # 2. Parse raw data into Python objects for all hosts (DIRECT and INDIRECT)
+                # 2. Parse raw data into Python objects for ALL hosts (DIRECT and INDIRECT)
                 billing_data['facts'] = billing_data['facts'].apply(self._parse_facts_column_value)
                 billing_data['canonical_facts'] = billing_data['canonical_facts'].apply(self._parse_facts_column_value)
                 billing_data['events'] = billing_data['events'].apply(parse_json_array)
@@ -165,25 +153,51 @@ class DataframeJobhostSummaryUsage(Base):
                     lambda x: x.get('device_type') if isinstance(x, dict) else None
                 )
                 billing_data[INFRASTRUCTURE_COL] = billing_data['events'].apply(self._get_infrastructure_from_events)
+                # --- END: Common initialization and parsing ---
 
+
+                # --- START: MANAGED_NODE_TYPE SPECIFIC LOGIC AND TASK_RUNS CALCULATION/FILTERING ---
                 if managed_node_type == DIRECT:
-                    # These columns ('dark', 'failures', etc.) are expected in DIRECT data.
-                    # This block applies calculations for DIRECT hosts.
+                    # These calculations are specifically for DIRECT hosts using their detailed task counts
                     billing_data['task_runs'] = billing_data.apply(sum_columns, axis=1)
                     billing_data['reachable_task_runs'] = billing_data.apply(sum_reachable_columns, axis=1)
-                    billing_data = billing_data[billing_data['reachable_task_runs'] > 0].copy()
+                    billing_data = billing_data[billing_data['reachable_task_runs'] > 0].copy() # Filter unreachable DIRECT hosts
 
                     # Apply DIRECT-specific defaults (Physical Server, On-Premise)
                     billing_data[DEVICE_TYPE_COL] = billing_data[DEVICE_TYPE_COL].fillna('Physical Server')
                     billing_data[INFRASTRUCTURE_COL] = billing_data[INFRASTRUCTURE_COL].replace('Unknown Infrastructure', 'On-Premise')
 
                 elif managed_node_type == INDIRECT:
-                    # Ensure task_runs are handled for INDIRECT if they exist or default to 0
+                    # For INDIRECT, task_runs might come directly from the raw 'task_runs' column if it exists in indirect_nodes,
+                    # or default to 0 if not. No detailed counts (dark, ok, etc.) are available for summing.
+                    # Ensure task_runs and reachable_task_runs exist as columns for consistency.
                     if 'task_runs' not in billing_data.columns:
-                        billing_data['task_runs'] = 0 # Default to 0 task_runs for INDIRECT if not present
+                        billing_data['task_runs'] = 0 # Default if indirect_nodes doesn't have it
                     if 'reachable_task_runs' not in billing_data.columns:
-                        billing_data['reachable_task_runs'] = 0 # Default to 0
-                    # The filter billing_data[billing_data['reachable_task_runs'] > 0].copy() still applies
+                        billing_data['reachable_task_runs'] = 0 # Default if indirect_nodes doesn't have it
+                    # No filter based on reachable_task_runs > 0 for INDIRECT, as it may lose valid hosts
+                    # If INDIRECT hosts have their own criteria for being 'reachable' or counted, apply it here.
+                    # For now, assuming all INDIRECT hosts passed to this point are 'countable' if they have task_runs > 0,
+                    # but not filtering based on reachable_task_runs for INDIRECT.
+                    # If you explicitly want to filter INDIRECT hosts with 0 task_runs, add:
+                    # billing_data = billing_data[billing_data['task_runs'] > 0].copy()
+                # --- END: MANAGED_NODE_TYPE SPECIFIC LOGIC ---
+
+
+                # --- DEBUGGING WITH PRINT STATEMENTS (from previous step - keep or remove) ---
+                print(f"--- DEBUGGING FOR DATE: {date} ---")
+                print(f"DEBUG: 'facts' column head (after _parse_facts_column_value):\n{billing_data['facts'].head().to_markdown(index=False)}")
+                print(f"DEBUG: 'canonical_facts' column head (after _parse_facts_column_value):\n{billing_data['canonical_facts'].head().to_markdown(index=False)}")
+                print(f"DEBUG: 'events' column head (after parse_json_array):\n{billing_data['events'].head().to_markdown(index=False)}")
+                print(f"--- END DEBUGGING FOR DATE: {date} ---\n")
+
+                print(f"\n--- DEBUGGING billing_data before self.group() for date {date} ({'DIRECT' if managed_node_type == DIRECT else 'INDIRECT'}) ---")
+                print(f"DEBUG: billing_data head (relevant cols):\n{billing_data[['host_name', 'managed_node_type', DEVICE_TYPE_COL, INFRASTRUCTURE_COL, 'facts', 'events', 'task_runs']].head().to_markdown(index=False)}")
+                print(f"DEBUG: Unique device_types in this batch:\n{billing_data[DEVICE_TYPE_COL].value_counts(dropna=False).to_markdown()}")
+                print(f"DEBUG: Unique infrastructure in this batch:\n{billing_data[INFRASTRUCTURE_COL].value_counts(dropna=False).to_markdown()}")
+                print(f"DEBUG: Total rows in this batch: {len(billing_data)}")
+                print("--- END DEBUGGING billing_data before self.group() ---\n")
+                # --- END DEBUGGING ---
 
                 billing_data['created'] = pd.to_datetime(billing_data['created'], format='ISO8601').dt.tz_localize(None)
                 if 'job_created' in billing_data:
@@ -207,6 +221,14 @@ class DataframeJobhostSummaryUsage(Base):
         return billing_data_monthly_rollup.reset_index()
 
     def group(self, dataframe):
+        # --- DEBUGGING: group method input for this batch ---
+        print(f"\n--- DEBUGGING: group method input for this batch ---")
+        print(f"DEBUG: Input dataframe head (for grouping):\n{dataframe[['host_name', 'managed_node_type', DEVICE_TYPE_COL, INFRASTRUCTURE_COL, 'facts', 'events']].head().to_markdown(index=False)}")
+        print(f"DEBUG: Unique device_types in input to group():\n{dataframe[DEVICE_TYPE_COL].value_counts(dropna=False).to_markdown()}")
+        print(f"DEBUG: Unique infrastructure in input to group():\n{dataframe[INFRASTRUCTURE_COL].value_counts(dropna=False).to_markdown()}")
+        print(f"DEBUG: Unique managed_node_types in input to group():\n{dataframe['managed_node_type'].value_counts(dropna=False).to_markdown()}")
+        print("--- END DEBUGGING: group method input ---\n")
+
         group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
             task_runs=('task_runs', 'sum'),
             host_runs=('host_name', 'count'),
@@ -221,14 +243,31 @@ class DataframeJobhostSummaryUsage(Base):
             device_type=(DEVICE_TYPE_COL, lambda x: x.dropna().iloc[0] if not x.dropna().empty else None),
             infrastructure=(INFRASTRUCTURE_COL, lambda x: x.dropna().iloc[0] if not x.dropna().empty else 'Unknown Infrastructure'),
         )
+        # --- DEBUGGING: group method output for this batch ---
+        print(f"\n--- DEBUGGING: group method output for this batch ---")
+        print(f"DEBUG: Grouped DataFrame columns: {group.columns.tolist()}")
+        print(f"DEBUG: Grouped DataFrame index levels: {group.index.names}")
+        print(f"DEBUG: Grouped DataFrame head:\n{group.head().to_markdown()}")
 
+        if DEVICE_TYPE_COL in group.columns:
+            print(f"DEBUG: Unique device_types in grouped output:\n{group[DEVICE_TYPE_COL].value_counts(dropna=False).to_markdown()}")
+        else:
+            print(f"DEBUG: {DEVICE_TYPE_COL} not found in columns in grouped output.")
+
+        if INFRASTRUCTURE_COL in group.columns:
+            print(f"DEBUG: Unique infrastructure in grouped output:\n{group[INFRASTRUCTURE_COL].value_counts(dropna=False).to_markdown()}")
+        else:
+            print(f"DEBUG: {INFRASTRUCTURE_COL} not found in columns in grouped output.")
+
+        print(f"DEBUG: Grouped DataFrame dtypes:\n{group.dtypes.to_markdown()}")
+        print("--- END DEBUGGING: group method output ---\n")
         return self.cast_dataframe(group, self.cast_types())
 
     def regroup(self, dataframe):
         return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
             task_runs=('task_runs', 'sum'),
             host_runs=('host_runs', 'sum'),
-            first_automation=('first_automation', 'min'),
+            first_automation=('first_automation', 'min'), # <--- This line should only appear ONCE
             last_automation=('last_automation', 'max'),
             job_created=('job_created', 'max'),
             managed_node_type=('managed_node_type', 'min'),

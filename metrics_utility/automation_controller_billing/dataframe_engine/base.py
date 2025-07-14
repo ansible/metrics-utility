@@ -139,7 +139,7 @@ class Base:
         return df.astype(types)
 
     def summarize_merged_dataframes(self, df, columns, operations={}):
-        df_copy = df.copy() # Work on a copy
+        df_copy = df.copy()
 
         for col in columns:
             col_x = f'{col}_x'
@@ -149,29 +149,38 @@ class Base:
 
             # Handle column existence before any operation to avoid Type and Key errors
             if col_x in df_copy.columns and col_y in df_copy.columns:
-                # All operations that need both _x and _y branches
                 if operation_type == 'min':
                     df_copy[col] = df_copy[[col_x, col_y]].min(axis=1)
                 elif operation_type == 'max':
                     df_copy[col] = df_copy[[col_x, col_y]].max(axis=1)
                 elif operation_type == 'combine_set':
-                    # Filter None/NaN before passing to helper
+                    # --- CRITICAL FIX: Use pd.isnull() to filter out both None and NaN ---
                     if col == 'events':
-                        df_copy[col] = df_copy.apply(lambda row: merge_arrays([item for item in [row.get(col_x), row.get(col_y)] if item is not None]), axis=1)
+                        df_copy[col] = df_copy.apply(
+                            lambda row: merge_arrays([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]),
+                            axis=1
+                        )
                     elif col == 'managed_node_types_set':
-                        df_copy[col] = df_copy.apply(lambda row: merge_sets([item for item in [row.get(col_x), row.get(col_y)] if item is not None]), axis=1)
+                        df_copy[col] = df_copy.apply(
+                            lambda row: merge_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]),
+                            axis=1
+                        )
                     else:
-                        pass
+                        pass # Fallback for other combine_set types if any
+
                 elif operation_type == 'combine_json_values':
-                    # Filter None/NaN before passing to helper ---
+                    # --- CRITICAL FIX: Use pd.isnull() to filter out both None and NaN ---
                     if col == 'facts' or col == 'canonical_facts':
-                        df_copy[col] = df_copy.apply(lambda row: merge_json_sets([item for item in [row.get(col_x), row.get(col_y)] if item is not None]), axis=1)
+                        df_copy[col] = df_copy.apply(
+                            lambda row: merge_json_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]),
+                            axis=1
+                        )
                     else:
-                        pass
-                elif operation_type == 'first_non_null': # Added for device_type, infrastructure
+                        pass # Fallback for other combine_json_values types if any
+
+                elif operation_type == 'first_non_null':
                     df_copy[col] = df_copy[col_x].fillna(df_copy[col_y])
                 else:
-                    # Numeric conversion and NaN filling for 'sum'
                     df_copy[col_x] = pd.to_numeric(df_copy[col_x], errors='coerce').fillna(0)
                     df_copy[col_y] = pd.to_numeric(df_copy[col_y], errors='coerce').fillna(0)
                     df_copy[col] = df_copy[col_x] + df_copy[col_y]
