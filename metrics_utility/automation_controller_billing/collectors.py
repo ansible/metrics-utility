@@ -213,8 +213,8 @@ def yaml_and_json_parsing_functions():
 
 @register('job_host_summary', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
-    # if 'job_host_summary' not in get_mandatory_collectors():
-    #     return None
+    if 'job_host_summary' not in get_mandatory_collectors():
+        return None
 
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     prepend_query = """
