@@ -45,9 +45,9 @@ class DataframeInventoryScope(Base):
 
                 billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
 
-                # Ensure host_name_before_dedup column exists for consistent structure
-                if 'host_name_before_dedup' not in billing_data.columns:
-                    billing_data['host_name_before_dedup'] = None
+                # Ensure host_names_before_dedup column exists for consistent structure
+                if 'host_names_before_dedup' not in billing_data.columns:
+                    billing_data['host_names_before_dedup'] = None
 
                 ################################
                 # Do the aggregation
@@ -77,11 +77,11 @@ class DataframeInventoryScope(Base):
             'serials': ('serial', set),
         }
 
-        # Add host_name_before_dedup if it exists (after experimental deduplication)
-        if 'host_name_before_dedup' in dataframe.columns:
+        # Add host_names_before_dedup if it exists (after experimental deduplication)
+        if 'host_names_before_dedup' in dataframe.columns:
             # Create a set from the values, properly handling both individual items and collections
-            agg_dict['host_name_before_dedup'] = (
-                'host_name_before_dedup',
+            agg_dict['host_names_before_dedup'] = (
+                'host_names_before_dedup',
                 lambda x: set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None]),
             )
 
@@ -102,8 +102,8 @@ class DataframeInventoryScope(Base):
         if 'serials' in dataframe.columns:
             agg_dict['serials'] = ('serials', merge_sets)
 
-        # Add host_name_before_dedup if it exists (after experimental deduplication)
-        if 'host_name_before_dedup' in dataframe.columns:
+        # Add host_names_before_dedup if it exists (after experimental deduplication)
+        if 'host_names_before_dedup' in dataframe.columns:
             # Create a safe merge function that treats strings as single items
             def merge_hostname_sets(x):
                 result_set = set()
@@ -116,7 +116,7 @@ class DataframeInventoryScope(Base):
                             result_set.add(item)
                 return result_set
 
-            agg_dict['host_name_before_dedup'] = ('host_name_before_dedup', merge_hostname_sets)
+            agg_dict['host_names_before_dedup'] = ('host_names_before_dedup', merge_hostname_sets)
 
         return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
 
@@ -126,7 +126,7 @@ class DataframeInventoryScope(Base):
 
     @staticmethod
     def data_columns():
-        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials', 'host_name_before_dedup']
+        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials', 'host_names_before_dedup']
 
     @staticmethod
     def cast_types():
@@ -141,5 +141,5 @@ class DataframeInventoryScope(Base):
             'canonical_facts': 'combine_json_values',
             'facts': 'combine_json_values',
             'serials': 'combine_set',
-            'host_name_before_dedup': 'combine_set',
+            'host_names_before_dedup': 'combine_set',
         }

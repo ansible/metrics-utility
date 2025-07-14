@@ -29,8 +29,57 @@ class Base:
     HOST_RUNS = 'Non-unique managed\nnodes automated'
     DURATION = 'Duration of task\nruns [seconds]'
 
+    # Deduplication column labels
+    DEDUP_COLUMN_LABELS = {
+        'host_names_before_dedup': 'Host names\nbefore\ndeduplication',
+        'host_names_before_dedup_count': 'Host names\nbefore\ndeduplication\ncount',
+    }
+
     def optional_report_sheets(self):
         return self.extra_params.get('optional_sheets')
+
+    def has_dedup_enabled(self):
+        """Check if experimental deduplication is enabled."""
+        return self.extra_params.get('deduplicator') == 'ccsp-experimental'
+
+    def calculate_dedup_count(self, series):
+        """Calculate count for dedup column more efficiently."""
+        return series.map(lambda x: len(x) if isinstance(x, (set, list)) else 1)
+
+    def add_dedup_count_column(self, dataframe, base_col_name, count_col_name):
+        """Add deduplication count column if base column exists."""
+        if base_col_name in dataframe.columns:
+            dataframe[count_col_name] = self.calculate_dedup_count(dataframe[base_col_name])
+        return dataframe
+
+    def handle_dedup_columns_for_scope(self, dataframe, columns, convert_cols):
+        """Handle deduplication columns for inventory scope if experimental dedup is enabled."""
+        if self.has_dedup_enabled() and 'host_names_before_dedup' in dataframe.columns:
+            convert_cols.append('host_names_before_dedup')
+            self.add_dedup_count_column(dataframe, 'host_names_before_dedup', 'host_names_before_dedup_count')
+            columns += ['host_names_before_dedup', 'host_names_before_dedup_count']
+        return columns, convert_cols
+
+    def handle_dedup_aggregation(self, agg_dict):
+        """Add deduplication aggregation if experimental dedup is enabled."""
+        if self.has_dedup_enabled():
+            agg_dict['host_names_before_dedup'] = ('hostname_before_dedup', merge_arrays)
+        return agg_dict
+
+    def handle_dedup_columns_for_usage(self, dataframe, columns, convert_cols):
+        """Handle deduplication columns for usage tables if experimental dedup is enabled."""
+        if self.has_dedup_enabled():
+            self.add_dedup_count_column(dataframe, 'host_names_before_dedup', 'host_names_before_dedup_count')
+            columns += ['host_names_before_dedup', 'host_names_before_dedup_count']
+            if 'host_names_before_dedup' in dataframe.columns:
+                convert_cols.append('host_names_before_dedup')
+        return columns, convert_cols
+
+    def add_dedup_labels_if_needed(self, labels, column_names):
+        """Add deduplication labels for specified columns if experimental dedup is enabled."""
+        if self.has_dedup_enabled():
+            labels.update({k: v for k, v in self.DEDUP_COLUMN_LABELS.items() if k in column_names})
+        return labels
 
     def convert_cell(self, cell):
         # If the cell is a dictionary, convert each set value to a sorted list, then dump as a JSON string.
@@ -88,28 +137,10 @@ class Base:
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
-        # Check if experimental deduplication is enabled
-        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
-
         ccsp_report_dataframe = dataframe.copy()
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
         convert_cols = ['organizations', 'inventories', 'canonical_facts', 'facts']
-        if experimental_dedup and 'host_name_before_dedup' in ccsp_report_dataframe.columns:
-            convert_cols.append('host_name_before_dedup')
-            # Add count column
-            ccsp_report_dataframe['host_name_before_dedup_count'] = ccsp_report_dataframe['host_name_before_dedup'].apply(
-                lambda x: len(x) if isinstance(x, (set, list)) else 1
-            )
-
-        for col in convert_cols:
-            if col in ccsp_report_dataframe.columns:
-                ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
-
-        # We're not showing cluster/install_uuid until we support multi-cluster view officially
-        if 'install_uuid' in ccsp_report_dataframe.columns:
-            del ccsp_report_dataframe['install_uuid']
-
         columns = [
             'host_name',
             'last_automation',
@@ -119,9 +150,16 @@ class Base:
             'facts',
         ]
 
-        # Add deduplication columns when experimental dedup is enabled
-        if experimental_dedup and 'host_name_before_dedup' in dataframe.columns:
-            columns += ['host_name_before_dedup', 'host_name_before_dedup_count']
+        # Handle deduplication columns if enabled
+        columns, convert_cols = self.handle_dedup_columns_for_scope(ccsp_report_dataframe, columns, convert_cols)
+
+        for col in convert_cols:
+            if col in ccsp_report_dataframe.columns:
+                ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
+
+        # We're not showing cluster/install_uuid until we support multi-cluster view officially
+        if 'install_uuid' in ccsp_report_dataframe.columns:
+            del ccsp_report_dataframe['install_uuid']
 
         labels = {
             'host_name': self.HOST_NAME,
@@ -130,9 +168,10 @@ class Base:
             'inventories': 'Inventories',
             'canonical_facts': 'Canonical Facts',
             'facts': 'Facts',
-            'host_name_before_dedup': 'Host names before\ndeduplication',
-            'host_name_before_dedup_count': 'Host names before\ndeduplication count',
         }
+
+        # Add dedup labels if needed
+        self.add_dedup_labels_if_needed(labels, ['host_names_before_dedup', 'host_names_before_dedup_count'])
 
         # Filter columns that exist
         columns = [col for col in columns if col in ccsp_report_dataframe.columns]
@@ -289,9 +328,6 @@ class Base:
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
-        # Check if experimental deduplication is enabled
-        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
-
         agg_dict = {
             'organizations': ('organization_name', 'nunique'),
             'host_runs': ('host_name', 'count'),
@@ -304,33 +340,14 @@ class Base:
             'facts': ('facts', lambda x: merge_json_sets(x)),
         }
 
-        # Add deduplication fields when experimental dedup is enabled
-        if experimental_dedup:
-            agg_dict.update(
-                {
-                    'hostnames_before_dedup': (
-                        'hostname_before_dedup',
-                        lambda x: merge_arrays(x),
-                    ),
-                }
-            )
+        # Handle deduplication aggregation if enabled
+        self.handle_dedup_aggregation(agg_dict)
 
         # Now pass this dictionary into .agg()
         ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(**agg_dict)
 
-        # Add count field after aggregation
-        if experimental_dedup and 'hostnames_before_dedup' in ccsp_report_dataframe.columns:
-            ccsp_report_dataframe['hostnames_before_dedup_count'] = ccsp_report_dataframe['hostnames_before_dedup'].apply(
-                lambda x: len(x) if isinstance(x, (list, set)) else 0
-            )
-
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
         convert_cols = ['managed_node_types_set', 'events', 'canonical_facts', 'facts']
-        if experimental_dedup:
-            convert_cols.append('hostnames_before_dedup')
-        for col in convert_cols:
-            if col in ccsp_report_dataframe.columns:
-                ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
         columns = [
@@ -344,15 +361,18 @@ class Base:
 
         # Add facts and canonical facts for managed nodes (direct) when experimental dedup is enabled
         # or always for indirect nodes
-        if managed_node_type == 'indirect' or (managed_node_type == 'direct' and experimental_dedup):
+        if managed_node_type == 'indirect' or (managed_node_type == 'direct' and self.has_dedup_enabled()):
             columns += ['canonical_facts', 'facts']
 
         if managed_node_type == 'indirect':
             columns += ['managed_node_types_set', 'events']
 
-        # Add deduplication fields when experimental dedup is enabled
-        if experimental_dedup:
-            columns += ['hostnames_before_dedup', 'hostnames_before_dedup_count']
+        # Handle deduplication columns if enabled
+        columns, convert_cols = self.handle_dedup_columns_for_usage(ccsp_report_dataframe, columns, convert_cols)
+
+        for col in convert_cols:
+            if col in ccsp_report_dataframe.columns:
+                ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
         if mode == 'by_organization':
             # Filter some columns out based on mode
@@ -377,14 +397,8 @@ class Base:
                 }
             )
 
-        # Add deduplication labels when experimental dedup is enabled
-        if experimental_dedup:
-            labels.update(
-                {
-                    'hostnames_before_dedup': 'Host names\nbefore\ndeduplication',
-                    'hostnames_before_dedup_count': 'Host names\nbefore\ndeduplication\ncount',
-                }
-            )
+        # Add deduplication labels if needed
+        self.add_dedup_labels_if_needed(labels, ['host_names_before_dedup', 'host_names_before_dedup_count'])
 
         labels = {k: v for k, v in labels.items() if k in columns}
         ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)

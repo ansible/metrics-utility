@@ -1,7 +1,10 @@
 Host name,"Last
-Automation",Organizations,Inventories,Canonical Facts,Facts,"Host names before
-deduplication","Host names before
-deduplication count"
+Automation",Organizations,Inventories,Canonical Facts,Facts,"Host names
+before
+deduplication","Host names
+before
+deduplication
+count"
 app01.cluster,2025-07-09 17:20:15.000,"[""Development"", ""Production"", ""Staging""]","[""Cross-Org Inventory"", ""Development Inventory"", ""Production Inventory"", ""Staging Inventory""]","{""ansible_host"": [""app01.cluster""], ""ansible_machine_id"": [""machine123""], ""ansible_port"": [22], ""ansible_product_serial"": [""HP-ProLiant-DL380""], ""host_name"": [""app01.cluster""]}","{""ansible_connection_variable"": [""ssh""]}","[""app01.cluster""]",1
 app01.failover,2025-07-09 17:30:12.000,"[""Production""]","[""Production Inventory""]","{""ansible_host"": [""app01.failover""], ""ansible_machine_id"": [""machine456""], ""ansible_port"": [22], ""ansible_product_serial"": [""HP-ProLiant-DL380""], ""host_name"": [""app01.failover""]}","{""ansible_connection_variable"": [""ssh""]}","[""app01.failover""]",1
 cache01.internal,2025-07-09 14:25:30.000,"[""Development"", ""Production""]","[""Development Inventory"", ""Production Inventory""]","{""ansible_host"": [""cache01.internal""], ""ansible_machine_id"": [""xyz789""], ""ansible_port"": [6379], ""host_name"": [""cache01.internal""]}","{""ansible_connection_variable"": [""ssh""]}","[""cache01.internal""]",1

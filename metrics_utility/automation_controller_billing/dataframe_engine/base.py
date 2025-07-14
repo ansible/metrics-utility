@@ -177,10 +177,10 @@ class Base:
 
         # Store original host names before deduplication
         if experimental_dedup:
-            df['host_name_before_dedup'] = df['host_name']
+            df['host_names_before_dedup'] = df['host_name']
         else:
             # Always create the column for consistent structure, but keep it empty when dedup is not enabled
-            df['host_name_before_dedup'] = None
+            df['host_names_before_dedup'] = None
 
         df['host_name'] = df['host_name'].map(hostname_mapping).fillna(df['host_name'])
 

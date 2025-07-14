@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import sys
@@ -45,6 +46,61 @@ def transform_sheet(sheet):
             # Set the value for the column in that row
             rows[row_index][col] = value
     return rows
+
+
+def get_xlsx_content_hash(file_path):
+    """Calculate hash of XLSX content (excluding metadata like timestamps)."""
+    try:
+        workbook = openpyxl.load_workbook(filename=file_path, data_only=True)
+        hash_sha256 = hashlib.sha256()
+
+        # Hash all sheet names and their content
+        for sheet_name in sorted(workbook.sheetnames):
+            hash_sha256.update(sheet_name.encode('utf-8'))
+            sheet = workbook[sheet_name]
+
+            # Hash all cell values
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value is not None:
+                        hash_sha256.update(str(cell.value).encode('utf-8'))
+
+        workbook.close()
+        return hash_sha256.hexdigest()
+    except Exception:
+        # Fallback to file hash if XLSX parsing fails
+        return get_file_hash(file_path)
+
+
+def get_file_hash(file_path):
+    """Calculate SHA256 hash of file content."""
+    hash_sha256 = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b''):
+            hash_sha256.update(chunk)
+    return hash_sha256.hexdigest()
+
+
+def copy_if_content_changed(source_path, dest_path):
+    """Copy file only if content has changed based on XLSX content comparison."""
+    import shutil
+
+    # If destination doesn't exist, copy the file
+    if not dest_path.exists():
+        shutil.copy2(source_path, dest_path)
+        print(f'Created test report: {dest_path}')
+        return
+
+    # Calculate content hashes of both XLSX files (ignoring metadata)
+    source_hash = get_xlsx_content_hash(source_path)
+    dest_hash = get_xlsx_content_hash(dest_path)
+
+    # Only copy if content is different
+    if source_hash != dest_hash:
+        shutil.copy2(source_path, dest_path)
+        print(f'Updated test report (content changed): {dest_path}')
+    else:
+        print(f'Test report unchanged: {dest_path}')
 
 
 env_vars = {
@@ -112,10 +168,9 @@ def test_command_with_extended_canonical_facts(cleanup, request):
         reports_dir = test_dir / 'reports'
         reports_dir.mkdir(exist_ok=True)
         test_report_path = reports_dir / 'CCSPv2-2025-07-08--2025-07-11.xlsx'
-        import shutil
 
-        shutil.copy2(file_path, test_report_path)
-        print(f'Saved test report to: {test_report_path}')
+        # Only copy if content has changed
+        copy_if_content_changed(file_path, test_report_path)
 
         # First, analyze and generate all possible outputs
         analyze_and_generate_all_outputs(file_path, request)
