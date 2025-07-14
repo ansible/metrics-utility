@@ -1,0 +1,10 @@
+Organization name,Job runs,"Unique managed nodes
+automated","Non-unique managed
+nodes automated","Unique indirect managed nodes
+automated","Non-unique indirect managed
+nodes automated","Number of task
+runs"
+Default,3,0,0,3,3,3
+Development,4,4,4,0,0,24
+Production,12,8,13,0,0,97
+Staging,3,3,3,0,0,16

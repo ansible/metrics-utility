@@ -476,24 +476,30 @@ class ReportCCSPv2(Base):
         ccsp_report_dataframe = dataframe.groupby('organization_name', dropna=False).agg(**agg_dict)
 
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=['organization_name', 'job_runs', 'host_runs_unique', 'host_runs', 'indirect_host_runs_unique', 'indirect_host_runs', 'task_runs']
-        )
+
+        # Build columns list dynamically
+        columns = ['organization_name', 'job_runs', 'host_runs_unique', 'host_runs']
+        if 'indirectly_managed_nodes' in self.optional_report_sheets():
+            columns.extend(['indirect_host_runs_unique', 'indirect_host_runs'])
+        columns.append('task_runs')
+
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(columns=columns)
 
         if 'indirectly_managed_nodes' not in self.optional_report_sheets():
-            ccsp_report_dataframe.drop(['indirect_host_runs_unique', 'indirect_host_runs'], axis=1, inplace=True)
+            drop_cols = ['indirect_host_runs_unique', 'indirect_host_runs']
+            ccsp_report_dataframe.drop([col for col in drop_cols if col in ccsp_report_dataframe.columns], axis=1, inplace=True)
 
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                'organization_name': 'Organization name',
-                'job_runs': 'Job runs',
-                'host_runs_unique': 'Unique managed nodes\nautomated',
-                'host_runs': 'Non-unique managed\nnodes automated',
-                'indirect_host_runs_unique': 'Unique indirect managed nodes\nautomated',
-                'indirect_host_runs': 'Non-unique indirect managed\nnodes automated',
-                'task_runs': 'Number of task\nruns',
-            }
-        )
+        rename_columns = {
+            'organization_name': 'Organization name',
+            'job_runs': 'Job runs',
+            'host_runs_unique': 'Unique managed nodes\nautomated',
+            'host_runs': 'Non-unique managed\nnodes automated',
+            'indirect_host_runs_unique': 'Unique indirect managed nodes\nautomated',
+            'indirect_host_runs': 'Non-unique indirect managed\nnodes automated',
+            'task_runs': 'Number of task\nruns',
+        }
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=rename_columns)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)

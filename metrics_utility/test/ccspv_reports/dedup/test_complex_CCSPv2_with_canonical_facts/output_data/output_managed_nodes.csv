@@ -1,0 +1,22 @@
+Host name,"Automated by
+organizations",Job runs,"Number of task
+runs","First
+automation","Last
+automation","Canonical
+Facts",Facts,"Host names
+before
+deduplication","Host names
+before
+deduplication
+count"
+app01.cluster,3,4,26,2025-07-10 17:00:00.000,2025-07-10 17:20:00.000,"{""ansible_host"": [""app01.cluster""], ""ansible_machine_id"": [""machine123""], ""ansible_port"": [22], ""ansible_product_serial"": [""HP-ProLiant-DL380""], ""host_name"": [""app01.cluster""]}","{""ansible_connection_variable"": [""ssh""]}","[""app01.cluster""]",1
+app01.failover,1,1,4,2025-07-10 17:30:00.000,2025-07-10 17:30:00.000,"{""ansible_host"": [""app01.failover""], ""ansible_machine_id"": [""machine456""], ""ansible_port"": [22], ""ansible_product_serial"": [""HP-ProLiant-DL380""], ""host_name"": [""app01.failover""]}","{""ansible_connection_variable"": [""ssh""]}","[""app01.failover""]",1
+cache01.internal,2,2,19,2025-07-09 14:20:15.000,2025-07-09 14:25:15.000,"{""ansible_host"": [""cache01.internal""], ""ansible_machine_id"": [""xyz789""], ""ansible_port"": [6379], ""host_name"": [""cache01.internal""]}","{""ansible_connection_variable"": [""ssh""]}","[""cache01.internal""]",1
+db01.company.com,1,1,8,2025-07-09 13:36:04.823,2025-07-09 13:36:04.823,"{""ansible_host"": [""db01.company.com""], ""ansible_port"": [22], ""ansible_product_serial"": [""Dell-PowerEdge-R740""], ""host_name"": [""db01.company.com""]}","{""ansible_connection_variable"": [""ssh""]}","[""db01.company.com""]",1
+db02.dev,2,2,11,2025-07-09 13:40:04.000,2025-07-09 13:45:04.000,"{""ansible_host"": [""db02.company.com""], ""ansible_machine_id"": [""db02-machine-id""], ""ansible_port"": [22], ""ansible_product_serial"": [""Dell-PowerEdge-R750""], ""host_name"": [""db02.dev"", ""db02.staging""]}","{""ansible_connection_variable"": [""ssh""]}","[""db02.dev""]",1
+log01.company.com,1,1,4,2025-07-09 14:10:30.123,2025-07-09 14:10:30.123,"{""ansible_host"": [""log01.company.com""], ""ansible_port"": [514], ""host_name"": [""log01.company.com""]}","{""ansible_connection_variable"": [""tcp""]}","[""log01.company.com""]",1
+web01.internal,1,3,22,2025-07-09 10:50:58.950,2025-07-09 11:15:20.123,"{""ansible_host"": [""web01.internal"", ""web01.prod.company.com""], ""ansible_machine_id"": [""3a2f8c9b123456789012345678901234""], ""ansible_port"": [22, 2222], ""ansible_product_serial"": [""VMware-56 4d 3a 2f 8c 9b 12 34-56 78 90 ab cd ef 12 34""], ""host_name"": [""web01.internal"", ""web01.prod.company.com""]}","{""ansible_connection_variable"": [""ssh""]}","[""web01.internal""]",1
+web02.external,1,2,16,2025-07-09 16:00:00.000,2025-07-09 16:30:00.000,"{""ansible_host"": [""web02.external"", ""web02.internal""], ""ansible_machine_id"": [""def789ghi012""], ""ansible_port"": [443], ""ansible_product_serial"": [""VMware-ab cd ef 12 34 56 78 90-12 34 56 78 90 ab cd ef""], ""host_name"": [""web02.external"", ""web02.internal""]}","{""ansible_connection_variable"": [""ssh""]}","[""web02.external""]",1
+web03.internal,1,2,14,2025-07-09 18:00:00.000,2025-07-09 18:05:00.000,"{""ansible_host"": [""web03.company.com""], ""ansible_machine_id"": [""web03-machine-id""], ""ansible_port"": [22, 2223], ""ansible_product_serial"": [""VMware-12 34 56 78 90 ab cd ef-ab cd ef 12 34 56 78 90""], ""host_name"": [""web03.internal"", ""web03.prod.internal""]}","{""ansible_connection_variable"": [""ssh""]}","[""web03.internal""]",1
+web04.dev,1,1,7,2025-07-09 19:00:00.000,2025-07-09 19:00:00.000,"{""ansible_host"": [""web04.company.com""], ""ansible_machine_id"": [""web04-dev-machine""], ""ansible_port"": [22], ""ansible_product_serial"": [""VMware-dev-01-02-03-04-05-06-07-08-09-10-11-12""], ""host_name"": [""web04.dev""]}","{""ansible_connection_variable"": [""ssh""]}","[""web04.dev""]",1
+web04.staging,1,1,6,2025-07-09 19:05:00.000,2025-07-09 19:05:00.000,"{""ansible_host"": [""web04.company.com""], ""ansible_machine_id"": [""web04-staging-machine""], ""ansible_port"": [22], ""ansible_product_serial"": [""VMware-stg-01-02-03-04-05-06-07-08-09-10-11-12""], ""host_name"": [""web04.staging""]}","{""ansible_connection_variable"": [""ssh""]}","[""web04.staging""]",1

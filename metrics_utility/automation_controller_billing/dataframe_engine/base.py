@@ -171,6 +171,14 @@ class Base:
 
         # map hostnames to canonical value
         df = dataframe.copy()
+
+        # Check if experimental deduplication is enabled
+        experimental_dedup = getattr(self, 'extra_params', {}).get('deduplicator') == 'ccsp-experimental'
+
+        # Store original host names before deduplication if experimental dedup is enabled
+        if experimental_dedup:
+            df['host_name_before_dedup'] = df['host_name']
+
         df['host_name'] = df['host_name'].map(hostname_mapping).fillna(df['host_name'])
 
         # multiple rows can now have the same hostname, regroup

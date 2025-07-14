@@ -64,26 +64,38 @@ class DataframeInventoryScope(Base):
 
     # Do the aggregation
     def group(self, dataframe):
-        group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
-            organizations=('organization_name', set),
-            inventories=('inventory_name', set),
-            canonical_facts=('canonical_facts', merge_json_sets),
-            facts=('facts', merge_json_sets),
-            last_automation=('last_automation', 'max'),
-            serials=('serial', set),
-        )
+        agg_dict = {
+            'organizations': ('organization_name', set),
+            'inventories': ('inventory_name', set),
+            'canonical_facts': ('canonical_facts', merge_json_sets),
+            'facts': ('facts', merge_json_sets),
+            'last_automation': ('last_automation', 'max'),
+            'serials': ('serial', set),
+        }
+
+        # Add host_name_before_dedup if it exists (after experimental deduplication)
+        if 'host_name_before_dedup' in dataframe.columns:
+            agg_dict['host_name_before_dedup'] = ('host_name_before_dedup', set)
+
+        group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
         return self.cast_dataframe(group, self.cast_types())
 
     # Merge pre-aggregated
     def regroup(self, dataframe):
-        return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
-            organizations=('organizations', merge_sets),
-            inventories=('inventories', merge_sets),
-            canonical_facts=('canonical_facts', merge_setdicts),
-            facts=('facts', merge_setdicts),
-            last_automation=('last_automation', 'max'),
-            serials=('serials', merge_sets),
-        )
+        agg_dict = {
+            'organizations': ('organizations', merge_sets),
+            'inventories': ('inventories', merge_sets),
+            'canonical_facts': ('canonical_facts', merge_setdicts),
+            'facts': ('facts', merge_setdicts),
+            'last_automation': ('last_automation', 'max'),
+            'serials': ('serials', merge_sets),
+        }
+
+        # Add host_name_before_dedup if it exists (after experimental deduplication)
+        if 'host_name_before_dedup' in dataframe.columns:
+            agg_dict['host_name_before_dedup'] = ('host_name_before_dedup', merge_sets)
+
+        return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
 
     @staticmethod
     def unique_index_columns():
@@ -91,7 +103,7 @@ class DataframeInventoryScope(Base):
 
     @staticmethod
     def data_columns():
-        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials']
+        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials', 'host_name_before_dedup']
 
     @staticmethod
     def cast_types():
@@ -106,4 +118,5 @@ class DataframeInventoryScope(Base):
             'canonical_facts': 'combine_json_values',
             'facts': 'combine_json_values',
             'serials': 'combine_set',
+            'host_name_before_dedup': 'combine_set',
         }

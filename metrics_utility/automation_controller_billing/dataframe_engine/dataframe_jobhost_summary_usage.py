@@ -35,12 +35,16 @@ class DataframeJobhostSummaryUsage(Base):
 
                 # Store the original host name for mapping purposes
                 billing_data['original_host_name'] = billing_data['host_name']
+
                 if 'ansible_host_variable' in billing_data.columns:
                     # Replace missing ansible_host_variable with host name
                     billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
                     # And use the new ansible_host_variable instead of host_name, since
                     # what is in ansible_host_variable should be the actual host we count
                     billing_data['host_name'] = billing_data['ansible_host_variable']
+
+                # Store ansible_host || hostname for tracking deduplication impact
+                billing_data['hostname_before_dedup'] = billing_data['host_name']
 
                 # Summarize all task counts into 1 col
                 def sum_columns(row):
@@ -58,9 +62,9 @@ class DataframeJobhostSummaryUsage(Base):
                     billing_data['reachable_task_runs'] = billing_data.apply(sum_reachable_columns, axis=1)
                     billing_data = billing_data[billing_data['reachable_task_runs'] > 0].copy()
 
-                    # not collected for direct hosts
-                    billing_data['facts'] = None
-                    billing_data['canonical_facts'] = None
+                    # Initialize with empty dicts - will be populated during deduplication if experimental dedup is enabled
+                    billing_data['facts'] = {}
+                    billing_data['canonical_facts'] = {}
                     billing_data['events'] = None
                 elif managed_node_type == INDIRECT:
                     # Load the events array safely
@@ -105,6 +109,7 @@ class DataframeJobhostSummaryUsage(Base):
             events=('events', merge_arrays),
             canonical_facts=('canonical_facts', merge_json_sets),
             facts=('facts', merge_json_sets),
+            hostname_before_dedup=('hostname_before_dedup', set),
         )
         return self.cast_dataframe(group, self.cast_types())
 
@@ -121,6 +126,7 @@ class DataframeJobhostSummaryUsage(Base):
             events=('events', merge_arrays),
             canonical_facts=('canonical_facts', merge_setdicts),
             facts=('facts', merge_setdicts),
+            hostname_before_dedup=('hostname_before_dedup', merge_sets),
         )
 
     @staticmethod
@@ -140,6 +146,7 @@ class DataframeJobhostSummaryUsage(Base):
             'canonical_facts',
             'facts',
             'events',
+            'hostname_before_dedup',
         ]
 
     @staticmethod
@@ -164,4 +171,42 @@ class DataframeJobhostSummaryUsage(Base):
             'events': 'combine_set',
             'canonical_facts': 'combine_json_values',
             'facts': 'combine_json_values',
+            'hostname_before_dedup': 'combine_set',
         }
+
+    def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None):
+        """
+        Override dedup method to enrich canonical facts and facts from scope_dataframe
+        when experimental deduplication is enabled.
+        """
+        if dataframe is None or dataframe.empty:
+            return self.empty()
+
+        if not hostname_mapping:
+            return dataframe
+
+        # Enrich direct managed nodes with canonical facts and facts from scope data
+        # when experimental deduplication is enabled
+        experimental_dedup = getattr(self, 'extra_params', {}).get('deduplicator') == 'ccsp-experimental'
+
+        if experimental_dedup and scope_dataframe is not None and not scope_dataframe.empty:
+            # Create a mapping from host_name to canonical_facts and facts
+            if 'canonical_facts' in scope_dataframe.columns and 'facts' in scope_dataframe.columns:
+                # Filter to only direct managed nodes for enrichment
+                from metrics_utility.metric_utils import DIRECT
+
+                direct_mask = dataframe['managed_node_type'] == DIRECT  # DIRECT = 0
+
+                if direct_mask.any():
+                    host_facts_mapping = scope_dataframe.set_index('host_name')[['canonical_facts', 'facts']].to_dict('index')
+
+                    # Enrich canonical_facts and facts for direct managed nodes
+                    dataframe.loc[direct_mask, 'canonical_facts'] = dataframe.loc[direct_mask, 'host_name'].map(
+                        lambda x: host_facts_mapping.get(x, {}).get('canonical_facts', {})
+                    )
+                    dataframe.loc[direct_mask, 'facts'] = dataframe.loc[direct_mask, 'host_name'].map(
+                        lambda x: host_facts_mapping.get(x, {}).get('facts', {})
+                    )
+
+        # Call the parent dedup method to perform the actual deduplication
+        return super().dedup(dataframe, hostname_mapping)

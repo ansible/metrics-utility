@@ -1,0 +1,28 @@
+"Job template
+name","Organization
+name",Job runs,"Unique managed nodes
+automated","Non-unique managed
+nodes automated","Number of task
+runs","First
+run","Last
+run"
+Kubernetes Template,Default,1,1,1,1,2025-07-08 10:00:00.000,2025-07-08 10:00:00.000
+VMware Template,Default,1,1,1,1,2025-07-08 09:22:20.674,2025-07-08 09:22:20.674
+VMware_Template2,Default,1,1,1,1,2025-07-08 09:42:03.436,2025-07-08 09:42:03.436
+Dev Cache Management,Development,1,1,1,5,2025-07-09 14:25:15.000,2025-07-09 14:25:15.000
+Dev Database Setup,Development,1,1,1,6,2025-07-09 13:40:04.000,2025-07-09 13:40:04.000
+Dev Multi-Node App,Development,1,1,1,6,2025-07-10 17:05:00.000,2025-07-10 17:05:00.000
+Web04 Dev Deploy,Development,1,1,1,7,2025-07-09 19:00:00.000,2025-07-09 19:00:00.000
+Cache Management,Production,1,1,1,14,2025-07-09 14:20:15.000,2025-07-09 14:20:15.000
+Cross-Org App Deploy,Production,1,1,1,7,2025-07-10 17:20:00.000,2025-07-10 17:20:00.000
+Cross-Org Web Deploy,Production,1,1,1,4,2025-07-09 10:55:58.000,2025-07-09 10:55:58.000
+Database Backup,Production,1,1,1,8,2025-07-09 13:36:04.823,2025-07-09 13:36:04.823
+Deploy Web Application,Production,1,1,2,18,2025-07-09 10:50:58.950,2025-07-09 11:15:20.123
+Log Management,Production,1,1,1,4,2025-07-09 14:10:30.123,2025-07-09 14:10:30.123
+Multi-Node App,Production,2,2,2,12,2025-07-10 17:00:00.000,2025-07-10 17:30:00.000
+Web Deployment,Production,2,1,2,16,2025-07-09 16:00:00.000,2025-07-09 16:30:00.000
+Web03 Deploy,Production,1,1,1,8,2025-07-09 18:00:00.000,2025-07-09 18:00:00.000
+Web03 Prod Deploy,Production,1,1,1,6,2025-07-09 18:05:00.000,2025-07-09 18:05:00.000
+Staging Database Setup,Staging,1,1,1,5,2025-07-09 13:45:04.000,2025-07-09 13:45:04.000
+Staging Multi-Node App,Staging,1,1,1,5,2025-07-10 17:10:00.000,2025-07-10 17:10:00.000
+Web04 Staging Deploy,Staging,1,1,1,6,2025-07-09 19:05:00.000,2025-07-09 19:05:00.000

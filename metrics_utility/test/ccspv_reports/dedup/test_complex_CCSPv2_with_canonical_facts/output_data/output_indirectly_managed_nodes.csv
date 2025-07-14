@@ -1,0 +1,16 @@
+Host name,"Automated by
+organizations",Job runs,"Number of task
+runs","First
+automation","Last
+automation","Canonical
+Facts",Facts,"Manage
+Node
+Types",Events,"Host names
+before
+deduplication","Host names
+before
+deduplication
+count"
+k8s-worker-01.internal,1,1,1,2025-07-08 10:00:10.000,2025-07-08 10:00:10.000,"{""ansible_kubernetes_node_id"": [""node-12345""], ""ansible_port"": [22]}","{""platform"": [""kubernetes""]}","[""INDIRECT""]",[],"[""k8s-worker-01.internal""]",1
+vcenter-vm-01.internal,1,1,1,2025-07-08 09:33:11.557,2025-07-08 09:33:11.557,"{""ansible_port"": [22], ""ansible_vmware_bios_uuid"": [""420b1367-1e11-c9d7-4d0f-c3b3cba9ae16""], ""ansible_vmware_instance_uuid"": [""500b3d2e-9abe-8ee1-98ea-bf67b591c104""], ""ansible_vmware_moid"": [""vm-87212""]}","{""device_type"": [""VM""]}","[""INDIRECT""]",[],"[""vcenter-vm-01.internal""]",1
+vcenter-vm-02.internal,1,1,1,2025-07-08 09:44:27.147,2025-07-08 09:44:27.147,"{""ansible_port"": [443], ""ansible_vmware_bios_uuid"": [""420ba1d2-3793-215c-30f0-5957a405d4e6""], ""ansible_vmware_instance_uuid"": [""500b1a63-d55d-bf21-c104-1617888dd7d2""], ""ansible_vmware_moid"": [""vm-87213""]}","{""device_type"": [""VM""]}","[""INDIRECT""]",[],"[""vcenter-vm-02.internal""]",1

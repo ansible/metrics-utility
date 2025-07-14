@@ -85,14 +85,27 @@ class Base:
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
-        ccsp_report_dataframe = dataframe
+        # Check if experimental deduplication is enabled
+        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+
+        ccsp_report_dataframe = dataframe.copy()
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
-        for col in ['organizations', 'inventories', 'canonical_facts', 'facts']:
-            ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
+        convert_cols = ['organizations', 'inventories', 'canonical_facts', 'facts']
+        if experimental_dedup and 'host_name_before_dedup' in ccsp_report_dataframe.columns:
+            convert_cols.append('host_name_before_dedup')
+            # Add count column
+            ccsp_report_dataframe['host_name_before_dedup_count'] = ccsp_report_dataframe['host_name_before_dedup'].apply(
+                lambda x: len(x) if isinstance(x, (set, list)) else 1
+            )
+
+        for col in convert_cols:
+            if col in ccsp_report_dataframe.columns:
+                ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
         # We're not showing cluster/install_uuid until we support multi-cluster view officially
-        del ccsp_report_dataframe['install_uuid']
+        if 'install_uuid' in ccsp_report_dataframe.columns:
+            del ccsp_report_dataframe['install_uuid']
 
         columns = [
             'host_name',
@@ -103,14 +116,25 @@ class Base:
             'facts',
         ]
 
+        # Add deduplication columns when experimental dedup is enabled
+        if experimental_dedup and 'host_name_before_dedup' in dataframe.columns:
+            columns += ['host_name_before_dedup', 'host_name_before_dedup_count']
+
         labels = {
             'host_name': self.HOST_NAME,
             'last_automation': 'Last\nAutomation',
             'organizations': 'Organizations',
-            'inventories': 'Inventories',  # Job runs is the same as host_runs, Non-unique managed nodes automated
+            'inventories': 'Inventories',
             'canonical_facts': 'Canonical Facts',
             'facts': 'Facts',
+            'host_name_before_dedup': 'Host names before\ndeduplication',
+            'host_name_before_dedup_count': 'Host names before\ndeduplication count',
         }
+
+        # Filter columns that exist
+        columns = [col for col in columns if col in ccsp_report_dataframe.columns]
+        ccsp_report_dataframe = ccsp_report_dataframe[columns]
+
         labels = {k: v for k, v in labels.items() if k in columns}
         ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=labels)
 
@@ -262,6 +286,9 @@ class Base:
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
+        # Check if experimental deduplication is enabled
+        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+
         agg_dict = {
             'organizations': ('organization_name', 'nunique'),
             'host_runs': ('host_name', 'count'),
@@ -274,12 +301,25 @@ class Base:
             'facts': ('facts', lambda x: merge_json_sets(x)),
         }
 
+        # Add deduplication fields when experimental dedup is enabled
+        if experimental_dedup:
+            agg_dict.update(
+                {
+                    'hostnames_before_dedup': ('host_name', lambda x: list(set(x))),
+                    'hostnames_before_dedup_count': ('host_name', lambda x: len(set(x))),
+                }
+            )
+
         # Now pass this dictionary into .agg()
         ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(**agg_dict)
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
-        for col in ['managed_node_types_set', 'events', 'canonical_facts', 'facts']:
-            ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
+        convert_cols = ['managed_node_types_set', 'events', 'canonical_facts', 'facts']
+        if experimental_dedup:
+            convert_cols.append('hostnames_before_dedup')
+        for col in convert_cols:
+            if col in ccsp_report_dataframe.columns:
+                ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
 
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
         columns = [
@@ -290,8 +330,18 @@ class Base:
             'first_automation',
             'last_automation',
         ]
+
+        # Add facts and canonical facts for managed nodes (direct) when experimental dedup is enabled
+        # or always for indirect nodes
+        if managed_node_type == 'indirect' or (managed_node_type == 'direct' and experimental_dedup):
+            columns += ['canonical_facts', 'facts']
+
         if managed_node_type == 'indirect':
-            columns += ['managed_node_types_set', 'canonical_facts', 'facts', 'events']
+            columns += ['managed_node_types_set', 'events']
+
+        # Add deduplication fields when experimental dedup is enabled
+        if experimental_dedup:
+            columns += ['hostnames_before_dedup', 'hostnames_before_dedup_count']
 
         if mode == 'by_organization':
             # Filter some columns out based on mode
@@ -305,14 +355,23 @@ class Base:
             'task_runs': self.NUM_OF_TASKS_OR_RUNS,
             'first_automation': 'First\nautomation',
             'last_automation': 'Last\nautomation',
+            'canonical_facts': 'Canonical\nFacts',
+            'facts': 'Facts',
         }
         if managed_node_type == 'indirect':
             labels.update(
                 {
                     'managed_node_types_set': 'Manage\nNode\nTypes',
-                    'canonical_facts': 'Canonical\nFacts',
-                    'facts': 'Facts',
                     'events': 'Events',
+                }
+            )
+
+        # Add deduplication labels when experimental dedup is enabled
+        if experimental_dedup:
+            labels.update(
+                {
+                    'hostnames_before_dedup': 'Host names\nbefore\ndeduplication',
+                    'hostnames_before_dedup_count': 'Host names\nbefore\ndeduplication\ncount',
                 }
             )
 
@@ -344,25 +403,27 @@ class Base:
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         # Take the content explorer dataframe and extract specific group by
-        ccsp_report_dataframe = dataframe.groupby(['collection_name'], dropna=False).agg(
-            host_runs_unique=('host_name', 'nunique'),
-            host_runs=('host_composite_id', 'nunique'),
-            task_runs=('task_runs', 'sum'),
-            duration=('duration', 'sum'),
-        )
+        agg_dict = {
+            'host_runs_unique': ('host_name', 'nunique'),
+            'host_runs': ('host_composite_id', 'nunique'),
+            'task_runs': ('task_runs', 'sum'),
+            'duration': ('duration', 'sum'),
+        }
+
+        ccsp_report_dataframe = dataframe.groupby(['collection_name'], dropna=False).agg(**agg_dict)
 
         # Rename the columns based on the template
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                'collection_name': 'Collection name',
-                'host_runs_unique': self.HOST_RUNS_UNIQUE,
-                'host_runs': self.HOST_RUNS,
-                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
-                'duration': self.DURATION,
-            }
-        )
+        rename_columns = {
+            'collection_name': 'Collection name',
+            'host_runs_unique': self.HOST_RUNS_UNIQUE,
+            'host_runs': self.HOST_RUNS,
+            'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+            'duration': self.DURATION,
+        }
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=rename_columns)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
@@ -389,25 +450,27 @@ class Base:
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
         # Take the content explorer dataframe and extract specific group by
-        ccsp_report_dataframe = dataframe.groupby(['role_name'], dropna=False).agg(
-            host_runs_unique=('host_name', 'nunique'),
-            host_runs=('host_composite_id', 'nunique'),
-            task_runs=('task_runs', 'sum'),
-            duration=('duration', 'sum'),
-        )
+        agg_dict = {
+            'host_runs_unique': ('host_name', 'nunique'),
+            'host_runs': ('host_composite_id', 'nunique'),
+            'task_runs': ('task_runs', 'sum'),
+            'duration': ('duration', 'sum'),
+        }
+
+        ccsp_report_dataframe = dataframe.groupby(['role_name'], dropna=False).agg(**agg_dict)
 
         # Rename the columns based on the template
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                'role_name': 'Role name',
-                'host_runs_unique': self.HOST_RUNS_UNIQUE,
-                'host_runs': self.HOST_RUNS,
-                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
-                'duration': self.DURATION,
-            }
-        )
+        rename_columns = {
+            'role_name': 'Role name',
+            'host_runs_unique': self.HOST_RUNS_UNIQUE,
+            'host_runs': self.HOST_RUNS,
+            'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+            'duration': self.DURATION,
+        }
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=rename_columns)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
@@ -434,25 +497,28 @@ class Base:
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
-        ccsp_report_dataframe = dataframe.groupby(['module_name'], dropna=False).agg(
-            host_runs_unique=('host_name', 'nunique'),
-            host_runs=('host_composite_id', 'nunique'),
-            task_runs=('task_runs', 'sum'),
-            duration=('duration', 'sum'),
-        )
+        # Take the content explorer dataframe and extract specific group by
+        agg_dict = {
+            'host_runs_unique': ('host_name', 'nunique'),
+            'host_runs': ('host_composite_id', 'nunique'),
+            'task_runs': ('task_runs', 'sum'),
+            'duration': ('duration', 'sum'),
+        }
+
+        ccsp_report_dataframe = dataframe.groupby(['module_name'], dropna=False).agg(**agg_dict)
 
         # Rename the columns based on the template
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
 
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                'module_name': 'Module name',
-                'host_runs_unique': self.HOST_RUNS_UNIQUE,
-                'host_runs': self.HOST_RUNS,
-                'task_runs': self.NUM_OF_TASKS_OR_RUNS,
-                'duration': self.DURATION,
-            }
-        )
+        rename_columns = {
+            'module_name': 'Module name',
+            'host_runs_unique': self.HOST_RUNS_UNIQUE,
+            'host_runs': self.HOST_RUNS,
+            'task_runs': self.NUM_OF_TASKS_OR_RUNS,
+            'duration': self.DURATION,
+        }
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=rename_columns)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
