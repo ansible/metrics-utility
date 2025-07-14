@@ -43,6 +43,9 @@ class Base:
         # If the cell is a list, convert any set elements inside to sorted lists and dump as a JSON string.
         elif isinstance(cell, list):
             new_cell = [sorted(list(item)) if isinstance(item, set) else item for item in cell]
+            # Sort the list itself if it contains strings
+            if new_cell and all(isinstance(item, str) for item in new_cell):
+                new_cell = sorted(new_cell)
             return json.dumps(new_cell)
         # Otherwise, return the cell unchanged.
         return cell
@@ -307,17 +310,19 @@ class Base:
                 {
                     'hostnames_before_dedup': (
                         'hostname_before_dedup',
-                        lambda x: list(set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None])),
-                    ),
-                    'hostnames_before_dedup_count': (
-                        'hostname_before_dedup',
-                        lambda x: len(set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None])),
+                        lambda x: merge_arrays(x),
                     ),
                 }
             )
 
         # Now pass this dictionary into .agg()
         ccsp_report_dataframe = dataframe.groupby('host_name', dropna=False).agg(**agg_dict)
+
+        # Add count field after aggregation
+        if experimental_dedup and 'hostnames_before_dedup' in ccsp_report_dataframe.columns:
+            ccsp_report_dataframe['hostnames_before_dedup_count'] = ccsp_report_dataframe['hostnames_before_dedup'].apply(
+                lambda x: len(x) if isinstance(x, (list, set)) else 0
+            )
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
         convert_cols = ['managed_node_types_set', 'events', 'canonical_facts', 'facts']

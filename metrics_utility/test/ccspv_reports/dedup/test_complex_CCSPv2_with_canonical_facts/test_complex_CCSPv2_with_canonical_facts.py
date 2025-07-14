@@ -340,7 +340,7 @@ def validate_managed_nodes(file_path):
                 '"host_name": ["web01.internal", "web01.prod.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
-            'Host names before deduplication': '["web01.prod.company.com", "web01.internal"]',
+            'Host names before deduplication': '["web01.internal", "web01.prod.company.com"]',
             'Host names before deduplication count': 2,
         },
         7: {
@@ -433,6 +433,7 @@ def validate_inventory_scope(file_path):
     expected = {
         0: {
             'Host name': 'app01.cluster',
+            'Last Automation': Timestamp('2025-07-09 17:20:15'),
             'Organizations': '["Development", "Production", "Staging"]',
             'Inventories': '["Cross-Org Inventory", "Development Inventory", "Production Inventory", "Staging Inventory"]',
             'Canonical Facts': (
@@ -448,6 +449,7 @@ def validate_inventory_scope(file_path):
         },
         1: {
             'Host name': 'app01.failover',
+            'Last Automation': Timestamp('2025-07-09 17:30:12'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
@@ -463,13 +465,11 @@ def validate_inventory_scope(file_path):
         },
         2: {
             'Host name': 'cache01.internal',
+            'Last Automation': Timestamp('2025-07-09 14:25:30'),
             'Organizations': '["Development", "Production"]',
             'Inventories': '["Development Inventory", "Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["cache01.internal"], '
-                '"ansible_machine_id": ["xyz789"], '
-                '"ansible_port": [6379], '
-                '"host_name": ["cache01.internal"]}'
+                '{"ansible_host": ["cache01.internal"], "ansible_machine_id": ["xyz789"], "ansible_port": [6379], "host_name": ["cache01.internal"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
             'Host names before deduplication': '["cache01.internal"]',
@@ -477,6 +477,7 @@ def validate_inventory_scope(file_path):
         },
         3: {
             'Host name': 'db01.company.com',
+            'Last Automation': Timestamp('2025-07-09 13:36:08.627000'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
@@ -492,6 +493,7 @@ def validate_inventory_scope(file_path):
         4: {
             # db02.dev represents the deduplicated entry for db02.dev + db02.staging
             'Host name': 'db02.dev',
+            'Last Automation': Timestamp('2025-07-09 13:45:08'),
             'Organizations': '["Development", "Staging"]',
             'Inventories': '["Development Inventory", "Staging Inventory"]',
             'Canonical Facts': (
@@ -507,13 +509,10 @@ def validate_inventory_scope(file_path):
         },
         5: {
             'Host name': 'log01.company.com',
+            'Last Automation': Timestamp('2025-07-09 14:10:35.988000'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
-            'Canonical Facts': (
-                '{"ansible_host": ["log01.company.com"], '
-                '"ansible_port": [514], '
-                '"host_name": ["log01.company.com"]}'
-            ),
+            'Canonical Facts': ('{"ansible_host": ["log01.company.com"], "ansible_port": [514], "host_name": ["log01.company.com"]}'),
             'Facts': '{"ansible_connection_variable": ["tcp"]}',
             'Host names before deduplication': '["log01.company.com"]',
             'Host names before deduplication count': 1,
@@ -521,6 +520,7 @@ def validate_inventory_scope(file_path):
         6: {
             # web01.internal represents the deduplicated entry for web01.internal + web01.prod.company.com
             'Host name': 'web01.internal',
+            'Last Automation': Timestamp('2025-07-09 11:15:25.988000'),
             'Organizations': '["Production"]',
             'Inventories': '["Cross-Org Inventory", "Production Inventory"]',
             'Canonical Facts': (
@@ -531,12 +531,13 @@ def validate_inventory_scope(file_path):
                 '"host_name": ["web01.internal", "web01.prod.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
-            'Host names before deduplication': '["web01.prod.company.com", "web01.internal"]',
+            'Host names before deduplication': '["web01.internal", "web01.prod.company.com"]',
             'Host names before deduplication count': 2,
         },
         7: {
             # web02.external represents the deduplicated entry for web02.external + web02.internal
             'Host name': 'web02.external',
+            'Last Automation': Timestamp('2025-07-09 16:30:08'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
@@ -553,6 +554,7 @@ def validate_inventory_scope(file_path):
         8: {
             # web03.internal represents the deduplicated entry for web03.internal + web03.prod.internal
             'Host name': 'web03.internal',
+            'Last Automation': Timestamp('2025-07-09 18:05:00'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
@@ -568,6 +570,7 @@ def validate_inventory_scope(file_path):
         },
         9: {
             'Host name': 'web04.dev',
+            'Last Automation': Timestamp('2025-07-09 19:00:00'),
             'Organizations': '["Development"]',
             'Inventories': '["Development Inventory"]',
             'Canonical Facts': (
@@ -583,6 +586,7 @@ def validate_inventory_scope(file_path):
         },
         10: {
             'Host name': 'web04.staging',
+            'Last Automation': Timestamp('2025-07-09 19:05:00'),
             'Organizations': '["Staging"]',
             'Inventories': '["Staging Inventory"]',
             'Canonical Facts': (

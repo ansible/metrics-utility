@@ -45,6 +45,10 @@ class DataframeInventoryScope(Base):
 
                 billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
 
+                # Ensure host_name_before_dedup column exists for consistent structure
+                if 'host_name_before_dedup' not in billing_data.columns:
+                    billing_data['host_name_before_dedup'] = None
+
                 ################################
                 # Do the aggregation
                 ################################
