@@ -75,7 +75,11 @@ class DataframeInventoryScope(Base):
 
         # Add host_name_before_dedup if it exists (after experimental deduplication)
         if 'host_name_before_dedup' in dataframe.columns:
-            agg_dict['host_name_before_dedup'] = ('host_name_before_dedup', set)
+            # Create a set from the values, properly handling both individual items and collections
+            agg_dict['host_name_before_dedup'] = (
+                'host_name_before_dedup',
+                lambda x: set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None]),
+            )
 
         group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
         return self.cast_dataframe(group, self.cast_types())
@@ -88,12 +92,27 @@ class DataframeInventoryScope(Base):
             'canonical_facts': ('canonical_facts', merge_setdicts),
             'facts': ('facts', merge_setdicts),
             'last_automation': ('last_automation', 'max'),
-            'serials': ('serials', merge_sets),
         }
+
+        # Add serials if it exists (gets removed after deduplication mapping is created)
+        if 'serials' in dataframe.columns:
+            agg_dict['serials'] = ('serials', merge_sets)
 
         # Add host_name_before_dedup if it exists (after experimental deduplication)
         if 'host_name_before_dedup' in dataframe.columns:
-            agg_dict['host_name_before_dedup'] = ('host_name_before_dedup', merge_sets)
+            # Create a safe merge function that treats strings as single items
+            def merge_hostname_sets(x):
+                result_set = set()
+                for item in x:
+                    if item is not None:
+                        if isinstance(item, (set, list)):
+                            result_set.update(item)
+                        else:
+                            # Treat as single item (string)
+                            result_set.add(item)
+                return result_set
+
+            agg_dict['host_name_before_dedup'] = ('host_name_before_dedup', merge_hostname_sets)
 
         return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
 

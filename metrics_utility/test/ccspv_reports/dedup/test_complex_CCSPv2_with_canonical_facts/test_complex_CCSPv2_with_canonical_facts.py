@@ -308,8 +308,8 @@ def validate_managed_nodes(file_path):
                 '"host_name": ["db02.dev", "db02.staging"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
-            'Host names before deduplication': '["db02.dev"]',
-            'Host names before deduplication count': 1,
+            'Host names before deduplication': '["db02.dev", "db02.staging"]',
+            'Host names before deduplication count': 2,
         },
         5: {
             # log01.company.com: NOT deduplicated (missing both serial and machine_id)
@@ -325,7 +325,7 @@ def validate_managed_nodes(file_path):
             'Host names before deduplication count': 1,
         },
         6: {
-            # web01.internal + web01.prod.company.com: 3 entries deduplicated (same VMware serial + machine_id)
+            # web01.internal + web01.prod.company.com: 2 entries deduplicated (same VMware serial + machine_id)
             'Host name': 'web01.internal',
             'Automated by organizations': 1,  # Only Production (all entries from same org)
             'Job runs': 3,  # Combined from all deduplicated entries
@@ -340,8 +340,8 @@ def validate_managed_nodes(file_path):
                 '"host_name": ["web01.internal", "web01.prod.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
-            'Host names before deduplication': '["web01.internal"]',
-            'Host names before deduplication count': 1,
+            'Host names before deduplication': '["web01.prod.company.com", "web01.internal"]',
+            'Host names before deduplication count': 2,
         },
         7: {
             # web02.external + web02.internal: 2 entries deduplicated (same VMware serial + machine_id)
@@ -359,8 +359,8 @@ def validate_managed_nodes(file_path):
                 '"host_name": ["web02.external", "web02.internal"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
-            'Host names before deduplication': '["web02.external"]',
-            'Host names before deduplication count': 1,
+            'Host names before deduplication': '["web02.external", "web02.internal"]',
+            'Host names before deduplication count': 2,
         },
         8: {
             # web03.internal + web03.prod.internal: 2 entries deduplicated (same VMware serial + machine_id)
@@ -378,8 +378,8 @@ def validate_managed_nodes(file_path):
                 '"host_name": ["web03.internal", "web03.prod.internal"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"]}',
-            'Host names before deduplication': '["web03.internal"]',
-            'Host names before deduplication count': 1,
+            'Host names before deduplication': '["web03.internal", "web03.prod.internal"]',
+            'Host names before deduplication count': 2,
         },
         9: {
             # web04.dev: NOT deduplicated (unique machine_id=web04-dev-machine)
@@ -426,27 +426,180 @@ def validate_managed_nodes(file_path):
 
 
 def validate_inventory_scope(file_path):
-    """Validate that inventory scope sheet shows extended canonical facts including ansible_host and host_name."""
+    """Validate inventory scope sheet shows all hosts with deduplication information."""
     sheet = pandas.read_excel(file_path, sheet_name='Inventory Scope')
     actual = transform_sheet(sheet.to_dict())
 
-    # Inventory scope shows all hosts without deduplication
-    # Validate that we have data and proper structure
-    assert actual is not None
-    assert len(actual) > 0
+    expected = {
+        0: {
+            'Host name': 'app01.cluster',
+            'Organizations': '["Development", "Production", "Staging"]',
+            'Inventories': '["Cross-Org Inventory", "Development Inventory", "Production Inventory", "Staging Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["app01.cluster"], '
+                '"ansible_machine_id": ["machine123"], '
+                '"ansible_port": [22], '
+                '"ansible_product_serial": ["HP-ProLiant-DL380"], '
+                '"host_name": ["app01.cluster"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["app01.cluster"]',
+            'Host names before deduplication count': 1,
+        },
+        1: {
+            'Host name': 'app01.failover',
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["app01.failover"], '
+                '"ansible_machine_id": ["machine456"], '
+                '"ansible_port": [22], '
+                '"ansible_product_serial": ["HP-ProLiant-DL380"], '
+                '"host_name": ["app01.failover"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["app01.failover"]',
+            'Host names before deduplication count': 1,
+        },
+        2: {
+            'Host name': 'cache01.internal',
+            'Organizations': '["Development", "Production"]',
+            'Inventories': '["Development Inventory", "Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["cache01.internal"], '
+                '"ansible_machine_id": ["xyz789"], '
+                '"ansible_port": [6379], '
+                '"host_name": ["cache01.internal"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["cache01.internal"]',
+            'Host names before deduplication count': 1,
+        },
+        3: {
+            'Host name': 'db01.company.com',
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["db01.company.com"], '
+                '"ansible_port": [22], '
+                '"ansible_product_serial": ["Dell-PowerEdge-R740"], '
+                '"host_name": ["db01.company.com"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["db01.company.com"]',
+            'Host names before deduplication count': 1,
+        },
+        4: {
+            # db02.dev represents the deduplicated entry for db02.dev + db02.staging
+            'Host name': 'db02.dev',
+            'Organizations': '["Development", "Staging"]',
+            'Inventories': '["Development Inventory", "Staging Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["db02.company.com"], '
+                '"ansible_machine_id": ["db02-machine-id"], '
+                '"ansible_port": [22], '
+                '"ansible_product_serial": ["Dell-PowerEdge-R750"], '
+                '"host_name": ["db02.dev", "db02.staging"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["db02.dev", "db02.staging"]',
+            'Host names before deduplication count': 2,
+        },
+        5: {
+            'Host name': 'log01.company.com',
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["log01.company.com"], '
+                '"ansible_port": [514], '
+                '"host_name": ["log01.company.com"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["tcp"]}',
+            'Host names before deduplication': '["log01.company.com"]',
+            'Host names before deduplication count': 1,
+        },
+        6: {
+            # web01.internal represents the deduplicated entry for web01.internal + web01.prod.company.com
+            'Host name': 'web01.internal',
+            'Organizations': '["Production"]',
+            'Inventories': '["Cross-Org Inventory", "Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["web01.internal", "web01.prod.company.com"], '
+                '"ansible_machine_id": ["3a2f8c9b123456789012345678901234"], '
+                '"ansible_port": [22, 2222], '
+                '"ansible_product_serial": ["VMware-56 4d 3a 2f 8c 9b 12 34-56 78 90 ab cd ef 12 34"], '
+                '"host_name": ["web01.internal", "web01.prod.company.com"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["web01.prod.company.com", "web01.internal"]',
+            'Host names before deduplication count': 2,
+        },
+        7: {
+            # web02.external represents the deduplicated entry for web02.external + web02.internal
+            'Host name': 'web02.external',
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["web02.external", "web02.internal"], '
+                '"ansible_machine_id": ["def789ghi012"], '
+                '"ansible_port": [443], '
+                '"ansible_product_serial": ["VMware-ab cd ef 12 34 56 78 90-12 34 56 78 90 ab cd ef"], '
+                '"host_name": ["web02.external", "web02.internal"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["web02.external", "web02.internal"]',
+            'Host names before deduplication count': 2,
+        },
+        8: {
+            # web03.internal represents the deduplicated entry for web03.internal + web03.prod.internal
+            'Host name': 'web03.internal',
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["web03.company.com"], '
+                '"ansible_machine_id": ["web03-machine-id"], '
+                '"ansible_port": [22, 2223], '
+                '"ansible_product_serial": ["VMware-12 34 56 78 90 ab cd ef-ab cd ef 12 34 56 78 90"], '
+                '"host_name": ["web03.internal", "web03.prod.internal"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["web03.internal", "web03.prod.internal"]',
+            'Host names before deduplication count': 2,
+        },
+        9: {
+            'Host name': 'web04.dev',
+            'Organizations': '["Development"]',
+            'Inventories': '["Development Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["web04.company.com"], '
+                '"ansible_machine_id": ["web04-dev-machine"], '
+                '"ansible_port": [22], '
+                '"ansible_product_serial": ["VMware-dev-01-02-03-04-05-06-07-08-09-10-11-12"], '
+                '"host_name": ["web04.dev"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["web04.dev"]',
+            'Host names before deduplication count': 1,
+        },
+        10: {
+            'Host name': 'web04.staging',
+            'Organizations': '["Staging"]',
+            'Inventories': '["Staging Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["web04.company.com"], '
+                '"ansible_machine_id": ["web04-staging-machine"], '
+                '"ansible_port": [22], '
+                '"ansible_product_serial": ["VMware-stg-01-02-03-04-05-06-07-08-09-10-11-12"], '
+                '"host_name": ["web04.staging"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"]}',
+            'Host names before deduplication': '["web04.staging"]',
+            'Host names before deduplication count': 1,
+        },
+    }
 
-    # Check that first entry has expected columns
-    first_row = actual[0]
-    # TODO: Inventory scope should have deduplication fields when experimental dedup is enabled
-    # but it's not currently working. For now, just check the basic columns.
-    basic_columns = {'Host name', 'Organizations', 'Inventories', 'Canonical Facts', 'Facts', 'Last Automation'}
-    assert basic_columns.issubset(set(first_row.keys()))
-
-    print(f'✓ Inventory scope validation passed ({len(actual)} entries)')
-
-    # Verify that canonical facts include the extended fields
-    canonical_facts = first_row['Canonical Facts']
-    assert 'ansible_host' in canonical_facts or 'ansible_port' in canonical_facts or 'host_name' in canonical_facts
+    # Assert sorted JSON for consistent comparison
+    assert sort_json_fields(actual) == sort_json_fields(expected)
 
 
 def validate_usage_by_organizations(file_path):

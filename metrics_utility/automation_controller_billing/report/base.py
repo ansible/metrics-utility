@@ -305,8 +305,14 @@ class Base:
         if experimental_dedup:
             agg_dict.update(
                 {
-                    'hostnames_before_dedup': ('host_name', lambda x: list(set(x))),
-                    'hostnames_before_dedup_count': ('host_name', lambda x: len(set(x))),
+                    'hostnames_before_dedup': (
+                        'hostname_before_dedup',
+                        lambda x: list(set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None])),
+                    ),
+                    'hostnames_before_dedup_count': (
+                        'hostname_before_dedup',
+                        lambda x: len(set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None])),
+                    ),
                 }
             )
 

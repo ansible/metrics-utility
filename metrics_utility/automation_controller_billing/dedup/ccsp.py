@@ -23,15 +23,20 @@ class DedupCCSP:
 
         # each host_name in dedup_info has a list of combined serials
         # convert to a mapping from any hostname with that serial to a canonical hostname
-        mapping = self.df_to_mapping(dedup_info)
-        if 'serials' in dedup_info.columns:
-            del dedup_info['serials']
+        # Make a copy to avoid modifying the original dataframe
+        dedup_info_copy = dedup_info.copy()
+        mapping = self.df_to_mapping(dedup_info_copy)
+        if 'serials' in dedup_info_copy.columns:
+            del dedup_info_copy['serials']
 
-        for v in ['job_host_summary', 'main_jobevent']:
+        for v in ['job_host_summary', 'main_jobevent', 'main_host']:
             if v in new and new[v] is not None and not new[v].empty:
                 # Pass main_host dataframe to job_host_summary for canonical facts enrichment
                 if v == 'job_host_summary':
-                    new[v] = self.dataframes[v].dedup(new[v], mapping, scope_dataframe=dedup_info)
+                    new[v] = self.dataframes[v].dedup(new[v], mapping, scope_dataframe=dedup_info_copy)
+                elif v == 'main_host':
+                    # Deduplicate the inventory scope (main_host) dataframe
+                    new[v] = self.dataframes[v].dedup(new[v], mapping)
                 else:
                     new[v] = self.dataframes[v].dedup(new[v], mapping)
         # no dedup on data_collection_status
