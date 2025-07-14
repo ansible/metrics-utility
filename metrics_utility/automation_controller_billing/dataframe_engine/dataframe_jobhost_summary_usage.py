@@ -44,7 +44,12 @@ class DataframeJobhostSummaryUsage(Base):
                     billing_data['host_name'] = billing_data['ansible_host_variable']
 
                 # Store ansible_host || hostname for tracking deduplication impact
-                billing_data['hostname_before_dedup'] = billing_data['host_name']
+                experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+                if experimental_dedup:
+                    billing_data['hostname_before_dedup'] = billing_data['host_name']
+                else:
+                    # Always create the column for consistent structure, but keep it empty when dedup is not enabled
+                    billing_data['hostname_before_dedup'] = None
 
                 # Summarize all task counts into 1 col
                 def sum_columns(row):
