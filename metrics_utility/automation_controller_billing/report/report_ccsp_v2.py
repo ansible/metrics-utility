@@ -146,53 +146,71 @@ class ReportCCSPv2(Base):
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1
 
-            # --- NEW TAB: Device Type and Infrastructure Counts (Data Population) ---
+
             new_sheet_column_widths = {
-                1: 30,  # Column A (Category) width
+                1: 30,  # Column A (Device Type) width
                 2: 15   # Column B (Count) width
             }
-            ws_counts = self.add_sheet('Device & Infra Counts', sheet_index, new_sheet_column_widths)
+            ws_counts = self.add_sheet('Usage Report', sheet_index, new_sheet_column_widths)
 
-            # Write headers for the new sheet
-            headers = ['Category', 'Count']
-            current_row = 1 # Start headers at row 1 for this new sheet
-            for c_idx, value in enumerate(headers, 1):
-                cell = ws_counts.cell(row=current_row, column=c_idx)
-                cell.value = value
-                cell.font = header_font # Use the defined header_font
-            ws_counts.row_dimensions[current_row].height = 25 # Set header row height
-            current_row += 1 # Move to the next row for data
+            current_row = 1 # Start at row 1, as there are no headers.
 
-            # --- DEBUGGING job_host_summary_dataframe content ---
-            print("\n--- DEBUGGING: job_host_summary_dataframe for Device Type Counts ---")
-            print(f"DEBUG: Total rows in job_host_summary_dataframe: {len(job_host_summary_dataframe)}")
-            print(f"DEBUG: Unique device_types and their counts:\n{job_host_summary_dataframe['device_type'].value_counts(dropna=False).to_markdown()}")
-            print(f"DEBUG: Unique managed_node_types and their counts:\n{job_host_summary_dataframe['managed_node_type'].value_counts(dropna=False).to_markdown()}")
-            print(f"DEBUG: job_host_summary_dataframe head:\n{job_host_summary_dataframe.head().to_markdown(index=False)}")
-            print("--- END DEBUGGING: job_host_summary_dataframe for Device Type Counts ---\n")
-            # --- END DEBUGGING ---
+            # --- Data Population Logic Starts Here ---
 
-            # Aggregate by device_type and count host_runs (unique hosts)
-            device_type_counts_df = job_host_summary_dataframe.groupby('device_type')['host_runs'].sum().reset_index()
-            device_type_counts_df = device_type_counts_df.dropna(subset=['device_type'])
+            # Get all unique infrastructure types (including 'Unknown Infrastructure')
+            all_infrastructure_types = job_host_summary_dataframe['infrastructure'].dropna().unique().tolist()
+            sorted_infrastructures = sorted([infra for infra in all_infrastructure_types if infra != 'Unknown Infrastructure'])
+            if 'Unknown Infrastructure' in all_infrastructure_types:
+                sorted_infrastructures.append('Unknown Infrastructure')
 
-            # --- DEBUGGING device_type_counts_df (already there, but confirm it's after this new debug) ---
-            print("\n--- DEBUGGING: Device Type Counts DataFrame (AFTER AGGREGATION) ---")
-            print(f"DEBUG: device_type_counts_df is empty: {device_type_counts_df.empty}")
-            print(f"DEBUG: device_type_counts_df content:\n{device_type_counts_df.to_markdown(index=False)}")
-            print("--- END DEBUGGING: Device Type Counts DataFrame (AFTER AGGREGATION) ---\n")
-            # --- END DEBUGGING ---
+            # Iterate through each infrastructure type to create sections
+            for infra_type in sorted_infrastructures:
+                # Filter data for the current infrastructure type
+                infra_filtered_df = job_host_summary_dataframe[
+                    job_host_summary_dataframe['infrastructure'] == infra_type
+                ]
 
-            rows_to_write = dataframe_to_rows(device_type_counts_df, index=False, header=False)
-            current_row = self._build_table(current_row, ws_counts, rows_to_write)
+                # Conditional display for infrastructure section
+                # Only display infrastructure heading and its devices if there's actual data for it (host_runs > 0)
+                if infra_filtered_df['host_runs'].sum() == 0: # Check if total count for this infra is 0
+                    continue # Skip this infrastructure if no hosts belong to it
 
-            # Add a blank row for separation
-            if not device_type_counts_df.empty:
+                # Write the infrastructure category heading (e.g., 'Private Cloud (vmware, ..)')
+                ws_counts.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=2)
+                cell_infra_heading = ws_counts.cell(row=current_row, column=1)
+                cell_infra_heading.value = f'{infra_type}'
+                cell_infra_heading.font = bold_font
+                cell_infra_heading.alignment = Alignment(horizontal='left') # Align to left
                 current_row += 1
 
-            sheet_index += 1
-            # --- END NEW TAB ---
+                # Group by device_type within this infrastructure type and sum host_runs
+                infra_device_breakdown_df = infra_filtered_df.groupby('device_type')['host_runs'].sum().reset_index()
 
+                # Conditional display for unknown device_type and filter zero counts ---
+                # Replace None device_type with 'Unknown Device Type' string for consistent filtering
+                infra_device_breakdown_df['device_type'] = infra_device_breakdown_df['device_type'].fillna('Unknown Device Type')
+
+                # Now, filter out rows where the 'Unknown Device Type' or any other device type has a zero count
+                infra_device_breakdown_df = infra_device_breakdown_df[
+                    (infra_device_breakdown_df['host_runs'] > 0)
+                ]
+
+                if not infra_device_breakdown_df.empty:
+                    for _, row_data in infra_device_breakdown_df.iterrows():
+                        cell_device_name = ws_counts.cell(row=current_row, column=1)
+                        cell_count_value = ws_counts.cell(row=current_row, column=2)
+
+                        cell_device_name.value = f'  {row_data["device_type"]}'
+                        cell_count_value.value = row_data["host_runs"]
+
+                        cell_device_name.font = value_font
+                        cell_count_value.font = value_font
+                        current_row += 1
+
+                current_row += 1 # Add a blank row after each infrastructure section
+
+
+            sheet_index += 1
 
         if 'inventory_scope' in self.optional_report_sheets():
             ws = self.add_sheet('Inventory Scope', sheet_index, self.config['data_column_widths'])

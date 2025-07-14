@@ -1,0 +1,29 @@
+#Map Ansible collection names to infrastructure types.
+
+infrastructure_map:
+  Public Cloud:
+    - amazon.aws
+    - google.cloud
+    - azure.azcollection
+    - openstack.cloud
+    - ibm.cloudcollection
+  Private Cloud:
+    - ovirt.ovirt
+    - vmware.vmware_rest
+    - redhat.openshift
+    - community.vmware
+    - kubevirt.kubevirt
+    - vmware.vmware.guest_info
+  Networking:
+    - cisco.ios
+    - cisco.nxos
+    - juniper.junos
+    - arista.eos
+    - f5networks.f5_modules
+    - vyos.vyos
+  Storage:
+    - netapp.ontap
+    - purestorage.flasharray
+    - hpe.nimble
+    - dell.emc
+    - ibm.storage_virtualize
