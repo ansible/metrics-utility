@@ -1,10 +1,7 @@
 import json
-import os
 
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
 from metrics_utility.test.util import temporary_env

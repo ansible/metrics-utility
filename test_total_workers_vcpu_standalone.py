@@ -22,7 +22,6 @@ def test_config_exception_fix():
         patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
         patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
         patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
     ):
         # Import the function after setting up the mocks
         from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
