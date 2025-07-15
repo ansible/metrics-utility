@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import os.path
 import platform
@@ -18,6 +19,9 @@ from kubernetes import config as kube_config
 
 from metrics_utility.base import CsvFileSplitter, register
 
+
+logging.basicConfig(format='%(asctime)s(+%(relativeCreated)d): %(message)s', level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 """
 This module is used to define metrics collected by
@@ -484,7 +488,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     cluster_name = os.environ.get('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME')
     if not cluster_name:
-        raise Exception('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+        logger.error('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+        return None
 
     now = datetime.now(timezone.utc)
 
@@ -503,8 +508,9 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     except kube_config.ConfigException:
         try:
             kube_config.load_kube_config()
-        except kube_config.ConfigException:
-            raise Exception('Could not configure Kubernetes Python client')
+        except kube_config.ConfigException as e:
+            logger.error(f'Could not configure Kubernetes Python client ERROR: {e}')
+            return None
 
     # Create a CoreV1Api client
     api_instance = client.CoreV1Api()
@@ -522,6 +528,9 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info['total_workers_vcpu'] = total_workers_vcpu
 
-    print(json.dumps(info, indent=2))
+    logger_info = logging.getLogger(__name__)
+    logger_info.setLevel(logging.INFO)
+
+    logger_info.info(json.dumps(info, indent=2))
 
     return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
