@@ -13,8 +13,7 @@ from django.conf import settings
 from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
-from kubernetes import client
-from kubernetes import config as kube_config
+from kubernetes import client, config as kube_config
 
 from metrics_utility.base import CsvFileSplitter, register
 
@@ -38,7 +37,7 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 
 
 def get_mandatory_collectors():
-    return os.environ.get('METRICS_UTILITY_MANDATORY_COLLECTORS', 'main_jobevent').split(',')
+    return os.environ.get('METRICS_UTILITY_MANDATORY_COLLECTORS', 'job_host_summary').split(',')
 
 
 def get_optional_collectors():
