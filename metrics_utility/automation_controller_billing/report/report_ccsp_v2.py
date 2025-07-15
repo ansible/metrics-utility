@@ -148,8 +148,9 @@ class ReportCCSPv2(Base):
 
 
             new_sheet_column_widths = {
-                1: 30,  # Column A (Device Type) width
-                2: 15   # Column B (Count) width
+                1: 25,  # Column A (Category) width
+                2: 30,  # Column B (Device Type) width
+                3: 15   # Column C (Count) width
             }
             ws_counts = self.add_sheet('Usage Report', sheet_index, new_sheet_column_widths)
 
@@ -175,37 +176,57 @@ class ReportCCSPv2(Base):
                 if infra_filtered_df['host_runs'].sum() == 0: # Check if total count for this infra is 0
                     continue # Skip this infrastructure if no hosts belong to it
 
-                # Write the infrastructure category heading (e.g., 'Private Cloud (vmware, ..)')
-                ws_counts.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=2)
+                # Write the infrastructure category heading (e.g., 'PublicCloud')
+                ws_counts.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=3)
                 cell_infra_heading = ws_counts.cell(row=current_row, column=1)
                 cell_infra_heading.value = f'{infra_type}'
                 cell_infra_heading.font = bold_font
                 cell_infra_heading.alignment = Alignment(horizontal='left') # Align to left
                 current_row += 1
 
-                # Group by device_type within this infrastructure type and sum host_runs
-                infra_device_breakdown_df = infra_filtered_df.groupby('device_type')['host_runs'].sum().reset_index()
+                # Group by category and device_type within this infrastructure type
+                # First get all unique categories within this infrastructure
+                all_categories = infra_filtered_df['category'].dropna().unique().tolist()
+                sorted_categories = sorted([cat for cat in all_categories if cat != 'Unknown Category'])
+                if 'Unknown Category' in all_categories:
+                    sorted_categories.append('Unknown Category')
 
-                # Conditional display for unknown device_type and filter zero counts ---
-                # Replace None device_type with 'Unknown Device Type' string for consistent filtering
-                infra_device_breakdown_df['device_type'] = infra_device_breakdown_df['device_type'].fillna('Unknown Device Type')
+                # Iterate through each category within this infrastructure
+                for category in sorted_categories:
+                    # Filter data for the current category within this infrastructure
+                    category_filtered_df = infra_filtered_df[
+                        infra_filtered_df['category'] == category
+                    ]
 
-                # Now, filter out rows where the 'Unknown Device Type' or any other device type has a zero count
-                infra_device_breakdown_df = infra_device_breakdown_df[
-                    (infra_device_breakdown_df['host_runs'] > 0)
-                ]
+                    # Group by device_type within this category
+                    category_device_breakdown_df = category_filtered_df.groupby('device_type')['host_runs'].sum().reset_index()
 
-                if not infra_device_breakdown_df.empty:
-                    for _, row_data in infra_device_breakdown_df.iterrows():
-                        cell_device_name = ws_counts.cell(row=current_row, column=1)
-                        cell_count_value = ws_counts.cell(row=current_row, column=2)
+                    # Replace None device_type with 'Unknown Device Type' string
+                    category_device_breakdown_df['device_type'] = category_device_breakdown_df['device_type'].fillna('Unknown Device Type')
 
-                        cell_device_name.value = f'  {row_data["device_type"]}'
-                        cell_count_value.value = row_data["host_runs"]
+                    # Filter out rows with zero counts
+                    category_device_breakdown_df = category_device_breakdown_df[
+                        category_device_breakdown_df['host_runs'] > 0
+                    ]
 
-                        cell_device_name.font = value_font
-                        cell_count_value.font = value_font
+                    if not category_device_breakdown_df.empty:
+                        # Write category heading
+                        cell_category_name = ws_counts.cell(row=current_row, column=1)
+                        cell_category_name.value = f'  {category}'
+                        cell_category_name.font = bold_font
                         current_row += 1
+
+                        # Write device types under this category
+                        for _, row_data in category_device_breakdown_df.iterrows():
+                            cell_device_name = ws_counts.cell(row=current_row, column=2)
+                            cell_count_value = ws_counts.cell(row=current_row, column=3)
+
+                            cell_device_name.value = f'    {row_data["device_type"]}'
+                            cell_count_value.value = row_data["host_runs"]
+
+                            cell_device_name.font = value_font
+                            cell_count_value.font = value_font
+                            current_row += 1
 
                 current_row += 1 # Add a blank row after each infrastructure section
 
