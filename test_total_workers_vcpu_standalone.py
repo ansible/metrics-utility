@@ -13,21 +13,23 @@ from unittest.mock import MagicMock, patch
 # Add the metrics_utility directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'metrics_utility'))
 
+
 def test_config_exception_fix():
     """Test that ConfigException is properly handled in the mock setup."""
 
     # Mock the collectors module functions
-    with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get, \
-         patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config, \
-         patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client:
-
+    with (
+        patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+        patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
+        patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+    ):
         # Import the function after setting up the mocks
         from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
 
         # Set up the mocks
         mock_get.return_value = ['total_workers_vcpu']
         mock_kube_config.ConfigException = Exception  # Mock the exception class
-        mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException("not in cluster")
+        mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException('not in cluster')
         mock_kube_config.load_kube_config.return_value = None
 
         # Mock the API instance and nodes
@@ -56,15 +58,15 @@ def test_config_exception_fix():
                 result = total_workers_vcpu(None, None, None)
 
             # Verify the result
-            assert result is not None, "Function returned None instead of expected result"
+            assert result is not None, 'Function returned None instead of expected result'
             assert result == {'cluster_name': 'TOBEADDED', 'total_workers_vcpu': 6}
-            print("✅ ConfigException test passed!")
+            print('✅ ConfigException test passed!')
 
         finally:
             # Clean up environment variables
             os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     test_config_exception_fix()
-    print("All tests passed!")
+    print('All tests passed!')
