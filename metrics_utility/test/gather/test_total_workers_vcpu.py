@@ -155,7 +155,7 @@ class TestTotalWorkersVcpu:
 
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster'}):
                 result = total_workers_vcpu(None, None, None)
-                
+
                 expected_total = 16 + 8 + 4  # 28 vCPUs
                 assert result == {'cluster_name': 'TOBEADDED', 'total_workers_vcpu': expected_total}
 
@@ -281,14 +281,14 @@ class TestTotalWorkersVcpu:
                 mock_logging.getLogger.assert_called_with('metrics_utility.automation_controller_billing.collectors')
                 mock_logger_info.setLevel.assert_called_with(mock_logging.INFO)
                 mock_logger_info.info.assert_called_once()
-                
+
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert 'timestamp' in logged_json
                 assert logged_json['timestamp'] == '2023-12-25T15:30:45+00:00'
                 assert logged_json['cluster_name'] == 'TOBEADDED'
                 assert logged_json['total_workers_vcpu'] == 4
                 assert 'nodes' in logged_json
-                
+
                 # Also verify the return value
                 assert result == {'cluster_name': 'TOBEADDED', 'total_workers_vcpu': 4}
 
