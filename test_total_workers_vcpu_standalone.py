@@ -90,7 +90,7 @@ def test_kubernetes_config_failure():
         try:
             exception_raised = False
             try:
-                result = total_workers_vcpu(None, None, None)
+                total_workers_vcpu(None, None, None)
             except Exception as e:
                 exception_raised = True
                 assert 'Could not configure Kubernetes Python client' in str(e)
@@ -124,7 +124,7 @@ def test_cluster_name_not_set():
         try:
             exception_raised = False
             try:
-                result = total_workers_vcpu(None, None, None)
+                total_workers_vcpu(None, None, None)
             except Exception as e:
                 exception_raised = True
                 assert 'environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set' in str(e)
