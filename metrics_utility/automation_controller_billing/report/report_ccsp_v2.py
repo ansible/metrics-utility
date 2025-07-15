@@ -539,9 +539,12 @@ class ReportCCSPv2(Base):
         current_row += 1
         return current_row
 
+    def current_date(self):
+        return time.strftime('%b %d, %Y')
+
     def _build_updated_timestamp(self, current_row, ws):
         cell = ws.cell(row=1, column=8)
-        cell.value = f'Updated: {time.strftime("%b %d, %Y")}'
+        cell.value = f'Updated: {self.current_date()}'
 
         return current_row
 

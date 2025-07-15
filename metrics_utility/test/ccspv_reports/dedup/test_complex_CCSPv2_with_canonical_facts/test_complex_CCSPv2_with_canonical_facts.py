@@ -5,6 +5,7 @@ import tarfile
 import tempfile
 
 from pathlib import Path
+from unittest.mock import patch
 
 import openpyxl
 import pandas
@@ -63,25 +64,25 @@ def test_command_with_extended_canonical_facts(cleanup, request):
     mock data with proper serial computation.
     """
 
-    # Clean CSV directories to ensure fresh generation
-    clean_csv_directories()
-
     # Extract CSVs from tarballs for human review
     extract_csvs_from_tarballs()
 
-    # Running a command python way, so we can work with debugger in the code
-    run_build_int(
-        env_vars,
-        {
-            'since': '2025-07-08',
-            'until': '2025-07-11',
-            'force': True,
-        },
-    )
+    # Mock the current_date method to return consistent date
+    with patch('metrics_utility.automation_controller_billing.report.report_ccsp_v2.ReportCCSPv2.current_date', return_value='Jul 14, 2025'):
+        # Running a command python way, so we can work with debugger in the code
+        run_build_int(
+            env_vars,
+            {
+                'since': '2025-07-08',
+                'until': '2025-07-11',
+                'force': True,
+            },
+        )
 
     # Simple verification that CSV files can be opened after generation
     verify_csv_files_can_open()
 
+    workbook = None
     try:
         # test workbook is openable with the lib we're creating it with
         workbook = openpyxl.load_workbook(filename=file_path)
@@ -111,7 +112,8 @@ def test_command_with_extended_canonical_facts(cleanup, request):
         validate_data_collection_status(file_path)
 
     finally:
-        workbook.close()
+        if workbook:
+            workbook.close()
 
 
 def validate_managed_nodes(file_path):
@@ -1050,25 +1052,6 @@ def verify_csv_files_can_open():
         print('⚠ Output data directory not found')
 
 
-def clean_csv_directories():
-    """Clean up input and output CSV directories to ensure fresh generation."""
-    test_dir = get_test_dir()
-
-    # Clean input CSVs
-    input_data_dir = test_dir / 'input_data'
-    if input_data_dir.exists():
-        for csv_file in input_data_dir.glob('*.csv'):
-            csv_file.unlink()
-            print(f'🗑️ Removed {csv_file.name}')
-
-    # Clean output CSVs
-    output_data_dir = test_dir / 'output_data'
-    if output_data_dir.exists():
-        for csv_file in output_data_dir.glob('*.csv'):
-            csv_file.unlink()
-            print(f'🗑️ Removed {csv_file.name}')
-
-
 def extract_csvs_from_tarballs():
     """Extract and merge CSV files from test tarballs for human review."""
     test_dir = get_test_dir()
@@ -1119,9 +1102,21 @@ def extract_csvs_from_tarballs():
 
             # Save to input_data directory
             output_file = input_data_dir / f'input_{csv_type}.csv'
-            merged_df.to_csv(output_file, index=False)
+
+            # Create a temporary file first
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.csv', delete=False) as tmp_file:
+                merged_df.to_csv(tmp_file.name, index=False)
+
+                # Only update if content has changed
+                if copy_if_content_changed(tmp_file.name, output_file):
+                    print(f'\n💾 Updated {output_file.name} (content changed, {len(merged_df)} total rows)')
+                else:
+                    print(f'\n✓ {output_file.name} unchanged ({len(merged_df)} total rows)')
+
+                # Clean up temp file
+                os.unlink(tmp_file.name)
+
             saved_files.append(output_file.name)
-            print(f'\n💾 Saved merged {output_file.name} ({len(merged_df)} total rows)')
 
     print(f'\n📥 Total processed: {extracted_count} CSV files')
     print(f'📁 Saved: {len(saved_files)} merged CSV files')
