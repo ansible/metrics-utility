@@ -156,24 +156,28 @@ class Base:
                 elif operation_type == 'max':
                     df_copy[col] = df_copy[[col_x, col_y]].max(axis=1)
                 elif operation_type == 'combine_set':
-                    # --- CRITICAL FIX: Use pd.isnull() to filter out both None and NaN ---
                     if col == 'events':
-                        df_copy[col] = df_copy.apply(
-                            lambda row: merge_arrays([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]), axis=1
-                        )
+                        def safe_merge_arrays(row):
+                            items = [row.get(col_x), row.get(col_y)]
+                            valid_items = [item for item in items if not pd.isnull(item) and item is not None]
+                            return merge_arrays(valid_items) if valid_items else []
+                        df_copy[col] = df_copy.apply(safe_merge_arrays, axis=1)
                     elif col == 'managed_node_types_set':
-                        df_copy[col] = df_copy.apply(
-                            lambda row: merge_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]), axis=1
-                        )
+                        def safe_merge_sets(row):
+                            items = [row.get(col_x), row.get(col_y)]
+                            valid_items = [item for item in items if not pd.isnull(item) and item is not None]
+                            return merge_sets(valid_items) if valid_items else set()
+                        df_copy[col] = df_copy.apply(safe_merge_sets, axis=1)
                     else:
                         pass  # Fallback for other combine_set types if any
 
                 elif operation_type == 'combine_json_values':
-                    # --- CRITICAL FIX: Use pd.isnull() to filter out both None and NaN ---
                     if col == 'facts' or col == 'canonical_facts':
-                        df_copy[col] = df_copy.apply(
-                            lambda row: merge_json_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]), axis=1
-                        )
+                        def safe_merge_json_sets(row):
+                            items = [row.get(col_x), row.get(col_y)]
+                            valid_items = [item for item in items if not pd.isnull(item) and item is not None]
+                            return merge_json_sets(valid_items) if valid_items else {}
+                        df_copy[col] = df_copy.apply(safe_merge_json_sets, axis=1)
                     else:
                         pass  # Fallback for other combine_json_values types if any
 
