@@ -489,7 +489,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     cluster_name = os.environ.get('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME')
     if not cluster_name:
         logger.error('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
-        return None
+        raise Exception('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
 
     now = datetime.now(timezone.utc)
 
@@ -510,7 +510,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
             kube_config.load_kube_config()
         except kube_config.ConfigException as e:
             logger.error(f'Could not configure Kubernetes Python client ERROR: {e}')
-            return None
+            raise Exception(f'Could not configure Kubernetes Python client ERROR: {e}')
 
     # Create a CoreV1Api client
     api_instance = client.CoreV1Api()

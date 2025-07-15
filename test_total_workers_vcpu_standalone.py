@@ -67,13 +67,12 @@ def test_config_exception_fix():
 
 
 def test_kubernetes_config_failure():
-    """Test that the function returns None when Kubernetes configuration fails."""
+    """Test that the function raises exception when Kubernetes configuration fails."""
 
     # Mock the collectors module functions
     with (
         patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
         patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-        patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
     ):
         # Import the function after setting up the mocks
         from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
@@ -89,15 +88,15 @@ def test_kubernetes_config_failure():
         os.environ.pop('METRICS_UTILITY_VCPU_COUNT_ENABLED', None)  # Ensure it's not set
 
         try:
-            result = total_workers_vcpu(None, None, None)
+            exception_raised = False
+            try:
+                result = total_workers_vcpu(None, None, None)
+            except Exception as e:
+                exception_raised = True
+                assert 'Could not configure Kubernetes Python client' in str(e)
 
-            # Verify the result
-            assert result is None, 'Function should return None when Kubernetes config fails'
-
-            # Verify that an error was logged
-            mock_logger.error.assert_called_once()
-            error_msg = mock_logger.error.call_args[0][0]
-            assert 'Could not configure Kubernetes Python client ERROR:' in error_msg
+            # Verify that an exception was raised
+            assert exception_raised, 'Function should raise exception when Kubernetes config fails'
 
             print('✅ Kubernetes config failure test passed!')
 
@@ -107,12 +106,11 @@ def test_kubernetes_config_failure():
 
 
 def test_cluster_name_not_set():
-    """Test that the function returns None when cluster name is not set."""
+    """Test that the function raises exception when cluster name is not set."""
 
     # Mock the collectors module functions
     with (
         patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-        patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
     ):
         # Import the function after setting up the mocks
         from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
@@ -124,13 +122,15 @@ def test_cluster_name_not_set():
         os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
 
         try:
-            result = total_workers_vcpu(None, None, None)
+            exception_raised = False
+            try:
+                result = total_workers_vcpu(None, None, None)
+            except Exception as e:
+                exception_raised = True
+                assert 'environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set' in str(e)
 
-            # Verify the result
-            assert result is None, 'Function should return None when cluster name is not set'
-
-            # Verify that an error was logged
-            mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+            # Verify that an exception was raised
+            assert exception_raised, 'Function should raise exception when cluster name is not set'
 
             print('✅ Cluster name not set test passed!')
 

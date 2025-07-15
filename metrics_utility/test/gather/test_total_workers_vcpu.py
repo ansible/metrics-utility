@@ -3,6 +3,8 @@ import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
 from metrics_utility.test.util import temporary_env
 
@@ -17,17 +19,16 @@ class TestTotalWorkersVcpu:
             result = total_workers_vcpu(None, None, None)
             assert result is None
 
-    def test_returns_none_when_cluster_name_not_set(self):
-        """Test that the function returns None and logs error when METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set."""
+    def test_raises_exception_when_cluster_name_not_set(self):
+        """Test that the function raises exception when METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': None}):
-                result = total_workers_vcpu(None, None, None)
-                assert result is None
-                mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+                with pytest.raises(Exception) as exc_info:
+                    total_workers_vcpu(None, None, None)
+                assert 'environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set' in str(exc_info.value)
 
     def test_returns_hardcoded_value_when_vcpu_count_enabled_true(self):
         """Test that the function returns hardcoded value when METRICS_UTILITY_VCPU_COUNT_ENABLED is true."""
@@ -110,7 +111,6 @@ class TestTotalWorkersVcpu:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             mock_kube_config.ConfigException = Exception  # Mock the exception class
@@ -118,12 +118,9 @@ class TestTotalWorkersVcpu:
             mock_kube_config.load_kube_config.side_effect = mock_kube_config.ConfigException('no kube config')
 
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'false'}):
-                result = total_workers_vcpu(None, None, None)
-                assert result is None
-                mock_logger.error.assert_called_once()
-                # Check that the error message contains the expected text
-                error_call_args = mock_logger.error.call_args[0][0]
-                assert 'Could not configure Kubernetes Python client ERROR:' in error_call_args
+                with pytest.raises(Exception) as exc_info:
+                    total_workers_vcpu(None, None, None)
+                assert 'Could not configure Kubernetes Python client' in str(exc_info.value)
 
     def test_successful_kubernetes_api_call_with_multiple_nodes(self):
         """Test successful K8s API call with multiple nodes and CPU calculation."""
@@ -158,7 +155,7 @@ class TestTotalWorkersVcpu:
 
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster'}):
                 result = total_workers_vcpu(None, None, None)
-
+                
                 expected_total = 16 + 8 + 4  # 28 vCPUs
                 assert result == {'cluster_name': 'TOBEADDED', 'total_workers_vcpu': expected_total}
 
@@ -284,14 +281,14 @@ class TestTotalWorkersVcpu:
                 mock_logging.getLogger.assert_called_with('metrics_utility.automation_controller_billing.collectors')
                 mock_logger_info.setLevel.assert_called_with(mock_logging.INFO)
                 mock_logger_info.info.assert_called_once()
-
+                
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert 'timestamp' in logged_json
                 assert logged_json['timestamp'] == '2023-12-25T15:30:45+00:00'
                 assert logged_json['cluster_name'] == 'TOBEADDED'
                 assert logged_json['total_workers_vcpu'] == 4
                 assert 'nodes' in logged_json
-
+                
                 # Also verify the return value
                 assert result == {'cluster_name': 'TOBEADDED', 'total_workers_vcpu': 4}
 
