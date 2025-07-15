@@ -7,6 +7,7 @@ from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
+from metrics_utility.automation_controller_billing.dataframe_engine.base import merge_sets
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
 from metrics_utility.metric_utils import INDIRECT
 
@@ -63,7 +64,8 @@ class Base:
     def handle_dedup_aggregation(self, agg_dict):
         """Add deduplication aggregation if experimental dedup is enabled."""
         if self.has_dedup_enabled():
-            agg_dict['host_names_before_dedup'] = ('hostname_before_dedup', merge_arrays)
+            # Use merge_sets since the data already contains sets from initial aggregation
+            agg_dict['host_names_before_dedup'] = ('host_names_before_dedup', merge_sets)
         return agg_dict
 
     def handle_dedup_columns_for_usage(self, dataframe, columns, convert_cols):

@@ -46,10 +46,10 @@ class DataframeJobhostSummaryUsage(Base):
                 # Store ansible_host || hostname for tracking deduplication impact
                 experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
                 if experimental_dedup:
-                    billing_data['hostname_before_dedup'] = billing_data['host_name']
+                    billing_data['host_names_before_dedup'] = billing_data['host_name']
                 else:
                     # Always create the column for consistent structure, but keep it empty when dedup is not enabled
-                    billing_data['hostname_before_dedup'] = None
+                    billing_data['host_names_before_dedup'] = None
 
                 # Summarize all task counts into 1 col
                 def sum_columns(row):
@@ -114,7 +114,7 @@ class DataframeJobhostSummaryUsage(Base):
             events=('events', merge_arrays),
             canonical_facts=('canonical_facts', merge_json_sets),
             facts=('facts', merge_json_sets),
-            hostname_before_dedup=('hostname_before_dedup', set),
+            host_names_before_dedup=('host_names_before_dedup', set),
         )
         return self.cast_dataframe(group, self.cast_types())
 
@@ -131,7 +131,7 @@ class DataframeJobhostSummaryUsage(Base):
             events=('events', merge_arrays),
             canonical_facts=('canonical_facts', merge_setdicts),
             facts=('facts', merge_setdicts),
-            hostname_before_dedup=('hostname_before_dedup', merge_sets),
+            host_names_before_dedup=('host_names_before_dedup', merge_sets),
         )
 
     @staticmethod
@@ -151,7 +151,7 @@ class DataframeJobhostSummaryUsage(Base):
             'canonical_facts',
             'facts',
             'events',
-            'hostname_before_dedup',
+            'host_names_before_dedup',
         ]
 
     @staticmethod
@@ -176,7 +176,7 @@ class DataframeJobhostSummaryUsage(Base):
             'events': 'combine_set',
             'canonical_facts': 'combine_json_values',
             'facts': 'combine_json_values',
-            'hostname_before_dedup': 'combine_set',
+            'host_names_before_dedup': 'combine_set',
         }
 
     def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None):

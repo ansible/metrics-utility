@@ -45,8 +45,11 @@ class DataframeInventoryScope(Base):
 
                 billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
 
-                # Ensure host_names_before_dedup column exists for consistent structure
-                if 'host_names_before_dedup' not in billing_data.columns:
+                experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+                if experimental_dedup:
+                    billing_data['host_names_before_dedup'] = billing_data['host_name']
+                else:
+                    # Always create the column for consistent structure, but keep it empty when dedup is not enabled
                     billing_data['host_names_before_dedup'] = None
 
                 ################################
@@ -68,57 +71,28 @@ class DataframeInventoryScope(Base):
 
     # Do the aggregation
     def group(self, dataframe):
-        agg_dict = {
-            'organizations': ('organization_name', set),
-            'inventories': ('inventory_name', set),
-            'canonical_facts': ('canonical_facts', merge_json_sets),
-            'facts': ('facts', merge_json_sets),
-            'last_automation': ('last_automation', 'max'),
-            'serials': ('serial', set),
-        }
-
-        # Add host_names_before_dedup if it exists (after experimental deduplication)
-        if 'host_names_before_dedup' in dataframe.columns:
-            # Create a set from the values, properly handling both individual items and collections
-            agg_dict['host_names_before_dedup'] = (
-                'host_names_before_dedup',
-                lambda x: set().union(*[item if isinstance(item, (set, list)) else {item} for item in x if item is not None]),
-            )
-
-        group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
+        group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
+            organizations=('organization_name', set),
+            inventories=('inventory_name', set),
+            canonical_facts=('canonical_facts', merge_json_sets),
+            facts=('facts', merge_json_sets),
+            last_automation=('last_automation', 'max'),
+            serials=('serial', set),
+            host_names_before_dedup=('host_names_before_dedup', set),
+        )
         return self.cast_dataframe(group, self.cast_types())
 
     # Merge pre-aggregated
     def regroup(self, dataframe):
-        agg_dict = {
-            'organizations': ('organizations', merge_sets),
-            'inventories': ('inventories', merge_sets),
-            'canonical_facts': ('canonical_facts', merge_setdicts),
-            'facts': ('facts', merge_setdicts),
-            'last_automation': ('last_automation', 'max'),
-        }
-
-        # Add serials if it exists (gets removed after deduplication mapping is created)
-        if 'serials' in dataframe.columns:
-            agg_dict['serials'] = ('serials', merge_sets)
-
-        # Add host_names_before_dedup if it exists (after experimental deduplication)
-        if 'host_names_before_dedup' in dataframe.columns:
-            # Create a safe merge function that treats strings as single items
-            def merge_hostname_sets(x):
-                result_set = set()
-                for item in x:
-                    if item is not None:
-                        if isinstance(item, (set, list)):
-                            result_set.update(item)
-                        else:
-                            # Treat as single item (string)
-                            result_set.add(item)
-                return result_set
-
-            agg_dict['host_names_before_dedup'] = ('host_names_before_dedup', merge_hostname_sets)
-
-        return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(**agg_dict)
+        return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
+            organizations=('organizations', merge_sets),
+            inventories=('inventories', merge_sets),
+            canonical_facts=('canonical_facts', merge_setdicts),
+            facts=('facts', merge_setdicts),
+            last_automation=('last_automation', 'max'),
+            serials=('serials', merge_sets),
+            host_names_before_dedup=('host_names_before_dedup', merge_sets),
+        )
 
     @staticmethod
     def unique_index_columns():
