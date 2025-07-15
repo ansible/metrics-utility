@@ -1,12 +1,14 @@
 import datetime
 import logging
+
 from functools import reduce
 
 import pandas as pd
+
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.automation_controller_billing.helpers import (
-    merge_arrays, merge_json_sets)
+from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
+
 
 logger = logging.getLogger(__name__)
 
@@ -157,26 +159,23 @@ class Base:
                     # --- CRITICAL FIX: Use pd.isnull() to filter out both None and NaN ---
                     if col == 'events':
                         df_copy[col] = df_copy.apply(
-                            lambda row: merge_arrays([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]),
-                            axis=1
+                            lambda row: merge_arrays([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]), axis=1
                         )
                     elif col == 'managed_node_types_set':
                         df_copy[col] = df_copy.apply(
-                            lambda row: merge_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]),
-                            axis=1
+                            lambda row: merge_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]), axis=1
                         )
                     else:
-                        pass # Fallback for other combine_set types if any
+                        pass  # Fallback for other combine_set types if any
 
                 elif operation_type == 'combine_json_values':
                     # --- CRITICAL FIX: Use pd.isnull() to filter out both None and NaN ---
                     if col == 'facts' or col == 'canonical_facts':
                         df_copy[col] = df_copy.apply(
-                            lambda row: merge_json_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]),
-                            axis=1
+                            lambda row: merge_json_sets([item for item in [row.get(col_x), row.get(col_y)] if not pd.isnull(item)]), axis=1
                         )
                     else:
-                        pass # Fallback for other combine_json_values types if any
+                        pass  # Fallback for other combine_json_values types if any
 
                 elif operation_type == 'first_non_null':
                     df_copy[col] = df_copy[col_x].fillna(df_copy[col_y])

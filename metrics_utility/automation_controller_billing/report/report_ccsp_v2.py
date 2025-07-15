@@ -2,9 +2,11 @@
 # Code for building the spreadsheet
 ######################################
 import time
+
 from datetime import timedelta
 
 import pandas as pd
+
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
@@ -106,8 +108,7 @@ class ReportCCSPv2(Base):
         directs = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == DIRECT]
         indirects = job_host_summary_dataframe[job_host_summary_dataframe['managed_node_type'] == INDIRECT]
 
-          # --- Define font objects here (already added in previous step) ---
-        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        # --- Define font objects here (already added in previous step) ---
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
         bold_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         # --- END Font Definitions ---
@@ -146,42 +147,42 @@ class ReportCCSPv2(Base):
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1
 
-
             new_sheet_column_widths = {
                 1: 25,  # Column A (Category) width
                 2: 30,  # Column B (Device Type) width
-                3: 15   # Column C (Count) width
+                3: 15,  # Column C (Count) width
             }
             ws_counts = self.add_sheet('Usage Report', sheet_index, new_sheet_column_widths)
 
-            current_row = 1 # Start at row 1, as there are no headers.
+            current_row = 1  # Start at row 1, as there are no headers.
 
             # --- Data Population Logic Starts Here ---
 
-            # Get all unique infrastructure types (including 'Unknown Infrastructure')
+            # Get all unique infrastructure types (including 'Unknown Infrastructure' and 'On-Premise')
             all_infrastructure_types = job_host_summary_dataframe['infrastructure'].dropna().unique().tolist()
-            sorted_infrastructures = sorted([infra for infra in all_infrastructure_types if infra != 'Unknown Infrastructure'])
+            # Sort infrastructure types alphabetically, but put 'On-Premise' and 'Unknown Infrastructure' at the end
+            sorted_infrastructures = sorted([infra for infra in all_infrastructure_types if infra not in ['Unknown Infrastructure', 'On-Premise']])
+            if 'On-Premise' in all_infrastructure_types:
+                sorted_infrastructures.append('On-Premise')
             if 'Unknown Infrastructure' in all_infrastructure_types:
                 sorted_infrastructures.append('Unknown Infrastructure')
 
             # Iterate through each infrastructure type to create sections
             for infra_type in sorted_infrastructures:
                 # Filter data for the current infrastructure type
-                infra_filtered_df = job_host_summary_dataframe[
-                    job_host_summary_dataframe['infrastructure'] == infra_type
-                ]
+                infra_filtered_df = job_host_summary_dataframe[job_host_summary_dataframe['infrastructure'] == infra_type]
 
                 # Conditional display for infrastructure section
                 # Only display infrastructure heading and its devices if there's actual data for it (host_runs > 0)
-                if infra_filtered_df['host_runs'].sum() == 0: # Check if total count for this infra is 0
-                    continue # Skip this infrastructure if no hosts belong to it
+                if infra_filtered_df['host_runs'].sum() == 0:  # Check if total count for this infra is 0
+                    continue  # Skip this infrastructure if no hosts belong to it
 
                 # Write the infrastructure category heading (e.g., 'PublicCloud')
                 ws_counts.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=3)
                 cell_infra_heading = ws_counts.cell(row=current_row, column=1)
                 cell_infra_heading.value = f'{infra_type}'
                 cell_infra_heading.font = bold_font
-                cell_infra_heading.alignment = Alignment(horizontal='left') # Align to left
+                cell_infra_heading.alignment = Alignment(horizontal='left')  # Align to left
                 current_row += 1
 
                 # Group by category and device_type within this infrastructure type
@@ -194,9 +195,7 @@ class ReportCCSPv2(Base):
                 # Iterate through each category within this infrastructure
                 for category in sorted_categories:
                     # Filter data for the current category within this infrastructure
-                    category_filtered_df = infra_filtered_df[
-                        infra_filtered_df['category'] == category
-                    ]
+                    category_filtered_df = infra_filtered_df[infra_filtered_df['category'] == category]
 
                     # Group by device_type within this category
                     category_device_breakdown_df = category_filtered_df.groupby('device_type')['host_runs'].sum().reset_index()
@@ -205,9 +204,7 @@ class ReportCCSPv2(Base):
                     category_device_breakdown_df['device_type'] = category_device_breakdown_df['device_type'].fillna('Unknown Device Type')
 
                     # Filter out rows with zero counts
-                    category_device_breakdown_df = category_device_breakdown_df[
-                        category_device_breakdown_df['host_runs'] > 0
-                    ]
+                    category_device_breakdown_df = category_device_breakdown_df[category_device_breakdown_df['host_runs'] > 0]
 
                     if not category_device_breakdown_df.empty:
                         # Write category heading
@@ -222,14 +219,13 @@ class ReportCCSPv2(Base):
                             cell_count_value = ws_counts.cell(row=current_row, column=3)
 
                             cell_device_name.value = f'    {row_data["device_type"]}'
-                            cell_count_value.value = row_data["host_runs"]
+                            cell_count_value.value = row_data['host_runs']
 
                             cell_device_name.font = value_font
                             cell_count_value.font = value_font
                             current_row += 1
 
-                current_row += 1 # Add a blank row after each infrastructure section
-
+                current_row += 1  # Add a blank row after each infrastructure section
 
             sheet_index += 1
 
