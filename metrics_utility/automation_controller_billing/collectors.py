@@ -487,11 +487,7 @@ def main_host_table(since, full_path, until, **kwargs):
                            ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
                        END,
                        'ansible_virtualization_type',
-                       CASE
-                           WHEN (metrics_utility_is_valid_json(main_host.variables))
-                              THEN main_host.variables::jsonb->>'ansible_virtualization_type'
-                           ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_virtualization_type' )
-                       END
+                       main_host.ansible_facts->>'ansible_virtualization_type'::TEXT
                    ) AS facts
 
             FROM main_host

@@ -280,7 +280,6 @@ def validate_managed_nodes(file_path):
     assert 'db-primary' in host_names, 'db-primary host should be present in inventory scope'
 
     # Continue with detailed validation
-    # NOTE: Need to update expected values to match the new test data
 
     # Full data dict assertion for comprehensive validation
     # This validates the complete structure and content of all entries
@@ -296,7 +295,7 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["203.0.113.10"], "ansible_machine_id": ["nat-shared-001"], "ansible_port": [22], '
                 '"ansible_product_serial": ["DELL-R740-NAT"], "host_name": ["nat-host-01.external", "nat-host-02.external"]}'
             ),
-            'Facts': ('{"ansible_connection_variable": ["ssh"], "internal_ip": ["10.0.1.10", "10.0.1.11"], "ansible_virtualization_type": ["kvm"]}'),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
             'Host names before deduplication': '["203.0.113.10"]',
             'Host names before deduplication count': 1,
         },
