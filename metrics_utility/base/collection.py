@@ -143,7 +143,7 @@ class Collection:
         """Start of gathering based on settings excluding slices"""
         last_entry = max(
             self.last_gathered_entry or self.collector.last_gather,
-            self.collector.gather_until - timedelta(weeks=4),
+            self.collector.gather_until - timedelta(weeks=self.collector.MAX_GATHER_PERIOD_WEEKS),
         )
         return self.collector.gather_since or last_entry
 
