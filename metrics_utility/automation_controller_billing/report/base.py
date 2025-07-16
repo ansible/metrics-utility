@@ -8,6 +8,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
+from metrics_utility.metric_utils import INDIRECT
 
 
 class Base:
@@ -131,6 +132,83 @@ class Base:
 
             row_counter += 1
 
+        return current_row + row_counter
+
+    def _build_data_section_infrastructure_summary(self, current_row, ws, dataframe):
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+
+        # Extract infrastructure facts from indirect nodes
+        indirect_nodes = dataframe[dataframe['managed_node_type'] == INDIRECT].copy()
+        
+        if indirect_nodes.empty:
+            # If no indirect nodes, show empty message
+            cell = ws.cell(row=current_row, column=1)
+            cell.value = "No indirect nodes found"
+            cell.font = value_font
+            return current_row + 1
+        
+        # Parse facts to extract infra_type and infra_bucket
+        def extract_infra_info(facts):
+            if isinstance(facts, str):
+                import json
+                try:
+                    facts_dict = json.loads(facts)
+                    return {
+                        'infra_type': facts_dict.get('infra_type', 'Unknown'),
+                        'infra_bucket': facts_dict.get('infra_bucket', 'Unknown'),
+                        'device_type': facts_dict.get('device_type', 'Unknown')
+                    }
+                except:
+                    pass
+            return {'infra_type': 'Unknown', 'infra_bucket': 'Unknown', 'device_type': 'Unknown'}
+        
+        # Extract infrastructure information
+        infra_info = indirect_nodes['facts'].apply(extract_infra_info)
+        indirect_nodes['infra_type'] = infra_info.apply(lambda x: x['infra_type'])
+        indirect_nodes['infra_bucket'] = infra_info.apply(lambda x: x['infra_bucket'])
+        indirect_nodes['device_type'] = infra_info.apply(lambda x: x['device_type'])
+        
+        # Group by infra_type and infra_bucket
+        agg_dict = {
+            'indirect_hosts_unique': ('host_name', 'nunique'),
+            'indirect_hosts_total': ('host_name', 'count'),
+            'device_types': ('device_type', lambda x: ', '.join(sorted(set(x))))
+        }
+        
+        summary_df = indirect_nodes.groupby(['infra_type', 'infra_bucket'], dropna=False).agg(**agg_dict)
+        summary_df = summary_df.reset_index()
+        
+        # Rename columns
+        rename_columns = {
+            'infra_type': 'Infrastructure Type',
+            'infra_bucket': 'Infrastructure Bucket',
+            'indirect_hosts_unique': 'Unique Indirect Nodes',
+            'indirect_hosts_total': 'Total Indirect Node Count',
+            'device_types': 'Device Types'
+        }
+        
+        summary_df = summary_df.rename(columns=rename_columns)
+        
+        # Write to worksheet
+        row_counter = 0
+        rows = dataframe_to_rows(summary_df, index=False)
+        for r_idx, row in enumerate(rows, current_row):
+            for c_idx, value in enumerate(row, 1):
+                cell = ws.cell(row=r_idx, column=c_idx)
+                cell.value = value
+                
+                if row_counter == 0:
+                    # set header style
+                    cell.font = header_font
+                    rd = ws.row_dimensions[r_idx]
+                    rd.height = 25
+                else:
+                    # set value style
+                    cell.font = value_font
+            
+            row_counter += 1
+        
         return current_row + row_counter
 
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None, managed_node_type=None):

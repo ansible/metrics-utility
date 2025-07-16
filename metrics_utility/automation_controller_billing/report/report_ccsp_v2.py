@@ -147,6 +147,11 @@ class ReportCCSPv2(Base):
             self._build_data_section_scope(1, ws, scope)
             sheet_index += 1
 
+        if 'infrastructure_summary' in self.optional_report_sheets():
+            ws = self.add_sheet('Infrastructure Summary', sheet_index, self.config['data_column_widths'])
+            self._build_data_section_infrastructure_summary(1, ws, indirects)
+            sheet_index += 1
+
         if 'usage_by_organizations' in self.optional_report_sheets():
             # Sheet with usage by org
             ws = self.add_sheet('Usage by organizations', sheet_index, self.config['data_column_widths'])
