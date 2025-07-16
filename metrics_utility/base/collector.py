@@ -276,6 +276,9 @@ class Collector:
          2) Collections with slicing function can produce duplicate filename
         """
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
+            # print collection since and until
+            print(f'since-until {collection.since} to {collection.until}')
+
             collection.gather(self._package_class().max_data_size())
 
             if collection.is_empty() or not collection.gathering_successful:
