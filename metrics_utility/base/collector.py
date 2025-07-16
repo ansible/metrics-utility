@@ -290,7 +290,11 @@ class Collector:
          2) Collections with slicing function can produce duplicate filename
         """
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
-            print(f'gathering {collection.key} for {collection.since.strftime("%Y-%m-%d")}')
+            if collection is not None:
+                try:
+                    print(f'gathering {collection.key} for {collection.since.strftime("%Y-%m-%d")}')
+                except Exception:
+                    print(f'gathering {collection.key} for {collection.since}')
 
             collection.gather(self._package_class().max_data_size())
 
