@@ -40,7 +40,7 @@ class Collector:
     MANUAL_COLLECTION = 'manual'
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
-    
+
     MAX_GATHER_PERIOD_WEEKS = 4
 
     def __init__(self, collection_type=DRY_RUN, collector_module=None, logger=None, licensed=True):
@@ -219,15 +219,12 @@ class Collector:
         self.gather_until = until
         self.last_gather = last_gather
 
-        changed = False
         if original_since != since:
             # print since was changed
             print(f'since was changed from {original_since} to {since}')
-            changed = True
         if original_until != until:
             # print until was changed
             print(f'until was changed from {original_until} to {until}')
-            changed = True
 
         print(f'Final since-until: {since} to {until}')
         print('\n')

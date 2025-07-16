@@ -12,7 +12,7 @@ from django.db import connection
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 
-from metrics_utility.base import CsvFileSplitter, register, Collector
+from metrics_utility.base import Collector, CsvFileSplitter, register
 
 
 """
