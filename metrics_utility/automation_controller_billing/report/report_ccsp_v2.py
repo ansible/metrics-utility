@@ -151,7 +151,11 @@ class ReportCCSPv2(Base):
             sheet_index += 1
 
         if 'infrastructure_summary' in self.optional_report_sheets():
+<<<<<<< HEAD
             ws = self.add_sheet('Infrastructure Summary', sheet_index, self.config['infrastructure_summary_column_widths'])
+=======
+            ws = self.add_sheet('Infrastructure Summary', sheet_index, self.config['data_column_widths'])
+>>>>>>> cdde335 (infrastructure node summary)
             self._build_data_section_infrastructure_summary(1, ws, indirects)
             sheet_index += 1
 
