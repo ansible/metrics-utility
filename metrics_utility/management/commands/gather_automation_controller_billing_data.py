@@ -74,8 +74,10 @@ class Command(BaseCommand):
 
         tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params)
         if tgzfiles:
+            #self.logger.info(f"Created {len(tgzfiles)} tarball(s)")
             for tgz in tgzfiles:
-                self.logger.info(tgz)
+                # self.logger.info(tgz)  # Suppressed to reduce log spam
+                pass
         else:
             self.logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')

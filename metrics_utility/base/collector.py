@@ -41,7 +41,7 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
     
-    MAX_GATHER_PERIOD_WEEKS = 1000
+    MAX_GATHER_PERIOD_WEEKS = 4
 
     def __init__(self, collection_type=DRY_RUN, collector_module=None, logger=None, licensed=True):
         self.licensed = licensed
@@ -171,14 +171,16 @@ class Collector:
     #
     def _calculate_collection_interval(self, since, until):
         _now = now()
+        original_since = since
+        original_until = until
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
             until = _now
-            self.logger.warning(f'End of the collection interval is in the future, setting to {_now}.')
+            print(f'End of the collection interval is in the future, setting to {_now}.')
         if since is not None and since > _now:
             since = _now
-            self.logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
+            print(f'Start of the collection interval is in the future, setting to {_now}.')
 
         # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
         # set it to `now`, but only if that isn't more than 4 weeks ahead of a passed-in
@@ -187,14 +189,14 @@ class Collector:
             if until is not None:
                 if until > since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS):
                     until = since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
-                    self.logger.warning(f'End of the collection interval is greater than {self.MAX_GATHER_PERIOD_WEEKS} weeks from start, setting end to {until}.')
+                    print(f'End of the collection interval is greater than {self.MAX_GATHER_PERIOD_WEEKS} weeks from start, setting end to {until}.')
             else:  # until is None
                 until = min(since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS), _now)
         elif until is None:
             until = _now
 
         if since and since >= until:
-            self.logger.warning('Start of the collection interval is later than the end, ignoring request.')
+            print('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
         # The ultimate beginning of the interval needs to be compared to 4 weeks prior to
@@ -204,16 +206,28 @@ class Collector:
         horizon = until - timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
         if since is not None and since < horizon:
             since = horizon
-            self.logger.warning(f'Start of the collection interval is more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, setting to {horizon}.')
+            print(f'Start of the collection interval is more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, setting to {horizon}.')
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            self.logger.warning(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
+            print(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until
         self.last_gather = last_gather
+
+        changed = False
+        if original_since != since:
+            # print since was changed
+            print(f'since was changed from {original_since} to {since}')
+            changed = True
+        if original_until != until:
+            # print until was changed
+            print(f'until was changed from {original_until} to {until}')
+            changed = True
+        if changed:
+            print(f'since: {since}, until: {until}, last_gather: {last_gather}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -275,9 +289,14 @@ class Collector:
          1) the temp file needs to be deleted to ensure enough disk space
          2) Collections with slicing function can produce duplicate filename
         """
+
+        last_since_until = None
+
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
-            # print collection since and until
-            print(f'since-until {collection.since} to {collection.until}')
+            since_until = f'{collection.since} to {collection.until}'
+            if last_since_until is None or last_since_until != since_until:
+                print(f'gathering data for {collection.since} to {collection.until}')
+                last_since_until = since_until
 
             collection.gather(self._package_class().max_data_size())
 
