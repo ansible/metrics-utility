@@ -173,6 +173,8 @@ class Collector:
         _now = now()
         original_since = since
         original_until = until
+        print('\n')
+        print(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
@@ -226,8 +228,9 @@ class Collector:
             # print until was changed
             print(f'until was changed from {original_until} to {until}')
             changed = True
-        if changed:
-            print(f'since: {since}, until: {until}, last_gather: {last_gather}')
+
+        print(f'Final since-until: {since} to {until}')
+        print('\n')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -289,14 +292,8 @@ class Collector:
          1) the temp file needs to be deleted to ensure enough disk space
          2) Collections with slicing function can produce duplicate filename
         """
-
-        last_since_until = None
-
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
-            since_until = f'{collection.since} to {collection.until}'
-            if last_since_until is None or last_since_until != since_until:
-                print(f'gathering data for {collection.since} to {collection.until}')
-                last_since_until = since_until
+            print(f'gathering {collection.key} for {collection.since.strftime("%Y-%m-%d")}')
 
             collection.gather(self._package_class().max_data_size())
 
