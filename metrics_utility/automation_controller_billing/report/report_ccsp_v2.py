@@ -260,10 +260,10 @@ class ReportCCSPv2(Base):
         # find gaps between until -> next since
         df = df.sort_values(['file_name', 'since', 'until']).reset_index(drop=True)
         df['next_since'] = df.groupby('file_name')['since'].shift(-1)
-        df['gap'] = df['next_since'] - df['until']
+        df['gap'] = (df['next_since'] - df['until']).dt.total_seconds()
 
         # skip if under 2 seconds
-        threshold = timedelta(seconds=2)
+        threshold = 2  # seconds
         dataframe = df[df['gap'] > threshold].copy()
 
         dataframe = dataframe[['file_name', 'until', 'next_since', 'gap']]
@@ -283,6 +283,7 @@ class ReportCCSPv2(Base):
         # time difference between the current and previous row with the same file_name & sort
         df = df.sort_values(['file_name', 'collection_start_timestamp']).reset_index(drop=True)
         df['time_diff'] = df.groupby('file_name')['collection_start_timestamp'].diff()
+
         df = df.sort_values('collection_start_timestamp').reset_index(drop=True)
 
         median_diff = df['time_diff'].median()

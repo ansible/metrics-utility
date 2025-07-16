@@ -1,6 +1,0 @@
-Collection name,"Unique managed nodes
-automated","Non-unique managed
-nodes automated","Number of task
-runs","Duration of task
-runs [seconds]"
-ansible.builtin,2,2,6,8.1

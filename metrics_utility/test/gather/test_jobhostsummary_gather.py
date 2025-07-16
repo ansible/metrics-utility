@@ -169,13 +169,13 @@ def test_main_host_collection(cleanup_glob):
         with tarfile.open(file_path, 'r:gz') as tar:
             # look for the CSV inside
             try:
-                member = next(m for m in tar.getmembers() if m.name.endswith('main_host_table.csv'))
+                member = next(m for m in tar.getmembers() if m.name.endswith('main_host.csv'))
             except StopIteration:
                 continue
 
             main_host_found = True
             f = tar.extractfile(member)
-            assert f is not None, 'Could not extract main_host_table.csv'
+            assert f is not None, 'Could not extract main_host.csv'
 
             # read CSV rows
             text = f.read().decode('utf-8').splitlines()
@@ -188,7 +188,7 @@ def test_main_host_collection(cleanup_glob):
 
             # check that we have data rows
             actual_data = rows[1:]
-            assert len(actual_data) > 0, 'No data rows found in main_host_table.csv'
+            assert len(actual_data) > 0, 'No data rows found in main_host.csv'
 
             # Validate first row has expected structure
             if len(actual_data) > 0:
@@ -220,4 +220,4 @@ def test_main_host_collection(cleanup_glob):
             break
 
     if not main_host_found:
-        pytest.fail('main_host_table.csv not found in any tarballs.')
+        pytest.fail('main_host.csv not found in any tarballs.')
