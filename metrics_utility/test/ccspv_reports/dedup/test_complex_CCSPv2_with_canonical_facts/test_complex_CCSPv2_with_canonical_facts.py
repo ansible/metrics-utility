@@ -426,8 +426,8 @@ def validate_managed_nodes(file_path):
             'First automation': pandas.Timestamp('2025-07-09 13:36:04.823000'),
             'Last automation': pandas.Timestamp('2025-07-09 13:36:04.823000'),
             'Canonical Facts': (
-                '{"ansible_host": ["db01.company.com"], "ansible_port": [22], "ansible_product_serial": ["Dell-PowerEdge-R740"], '
-                '"host_name": ["db01.company.com"]}'
+                '{"ansible_host": ["db01.company.com"], "ansible_port": [22], '
+                '"ansible_product_serial": ["Dell-PowerEdge-R740"], "host_name": ["db01.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["xen"]}',
             'Host names before deduplication': '["db01.company.com"]',
@@ -546,8 +546,8 @@ def validate_managed_nodes(file_path):
             'First automation': pandas.Timestamp('2025-07-10 20:00:00'),
             'Last automation': pandas.Timestamp('2025-07-10 20:00:00'),
             'Canonical Facts': (
-                '{"ansible_host": ["win-srv01.company.com"], "ansible_port": [5985], "ansible_product_serial": ["WIN-HP-DL380-001"], '
-                '"host_name": ["win-srv01.company.com"]}'
+                '{"ansible_host": ["win-srv01.company.com"], "ansible_port": [5985], '
+                '"ansible_product_serial": ["WIN-HP-DL380-001"], "host_name": ["win-srv01.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["winrm"], "ansible_virtualization_type": ["VirtualPC"]}',
             'Host names before deduplication': '["win-srv01.company.com"]',
@@ -561,8 +561,8 @@ def validate_managed_nodes(file_path):
             'First automation': pandas.Timestamp('2025-07-10 20:05:00'),
             'Last automation': pandas.Timestamp('2025-07-10 20:05:00'),
             'Canonical Facts': (
-                '{"ansible_host": ["win-srv02.company.com"], "ansible_port": [5985], "ansible_product_serial": ["WIN-HP-DL380-001"], '
-                '"host_name": ["win-srv02.company.com"]}'
+                '{"ansible_host": ["win-srv02.company.com"], "ansible_port": [5985], '
+                '"ansible_product_serial": ["WIN-HP-DL380-001"], "host_name": ["win-srv02.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["winrm"], "ansible_virtualization_type": ["VirtualPC"]}',
             'Host names before deduplication': '["win-srv02.company.com"]',
@@ -624,39 +624,54 @@ def validate_inventory_scope(file_path):
             'Host names before deduplication count': 1,
         },
         1: {
+            'Host name': 'api-server',
+            'Last Automation': pandas.Timestamp('2025-07-08 13:10:00'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["api-server", "api-server.company.com", "api-server.company.com.east"], '
+                '"ansible_machine_id": ["api-server-001"], "ansible_port": [22], "ansible_product_serial": ["HP-ProLiant-DL360-API"], '
+                '"host_name": ["api-server", "api-server.company.com", "api-server.company.com.east"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Host names before deduplication': '["api-server", "api-server.company.com", "api-server.company.com.east"]',
+            'Host names before deduplication count': 3,
+        },
+        2: {
             'Host name': 'app01.cluster',
             'Last Automation': pandas.Timestamp('2025-07-09 17:20:15'),
             'Organizations': '["Development", "Production", "Staging"]',
             'Inventories': '["Cross-Org Inventory", "Development Inventory", "Production Inventory", "Staging Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["app01.cluster"], "ansible_machine_id": ["machine123"], "ansible_port": [22],'
+                '{"ansible_host": ["app01.cluster"], "ansible_machine_id": ["machine123"], "ansible_port": [22], '
                 '"ansible_product_serial": ["HP-ProLiant-DL380"], "host_name": ["app01.cluster"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
             'Host names before deduplication': '["app01.cluster"]',
             'Host names before deduplication count': 1,
         },
-        2: {
+        3: {
             'Host name': 'app01.failover',
             'Last Automation': pandas.Timestamp('2025-07-09 17:30:12'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["app01.failover"], "ansible_machine_id": ["machine456"], "ansible_port": [22],'
+                '{"ansible_host": ["app01.failover"], "ansible_machine_id": ["machine456"], "ansible_port": [22], '
                 '"ansible_product_serial": ["HP-ProLiant-DL380"], "host_name": ["app01.failover"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
             'Host names before deduplication': '["app01.failover"]',
             'Host names before deduplication count': 1,
         },
-        3: {
+        4: {
             'Host name': 'aws-vm-01.us-east',
             'Last Automation': pandas.Timestamp('2025-07-08 21:05:00'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["aws-vm-01.us-east", "aws-vm-02.us-east"], "ansible_machine_id": ["ec2-synthetic-id-123"],'
-                '"ansible_port": [22], "ansible_product_serial": ["ec2-instance"], "host_name": ["aws-vm-01.us-east", "aws-vm-02.us-east"]}'
+                '{"ansible_host": ["aws-vm-01.us-east", "aws-vm-02.us-east"], "ansible_machine_id": ["ec2-synthetic-id-123"], '
+                '"ansible_port": [22], "ansible_product_serial": ["ec2-instance"], '
+                '"host_name": ["aws-vm-01.us-east", "aws-vm-02.us-east"]}'
             ),
             'Facts': (
                 '{"ansible_connection_variable": ["ssh"], "aws_instance_id": ["i-0a1b2c3d4e5f6g7h8", "i-9z8y7x6w5v4u3t2s"], '
@@ -665,7 +680,7 @@ def validate_inventory_scope(file_path):
             'Host names before deduplication': '["aws-vm-01.us-east", "aws-vm-02.us-east"]',
             'Host names before deduplication count': 2,
         },
-        4: {
+        5: {
             'Host name': 'cache01.internal',
             'Last Automation': pandas.Timestamp('2025-07-09 14:25:30'),
             'Organizations': '["Development", "Production"]',
@@ -677,35 +692,109 @@ def validate_inventory_scope(file_path):
             'Host names before deduplication': '["cache01.internal"]',
             'Host names before deduplication count': 1,
         },
-        5: {
-            'Host name': 'db01.company.com',
-            'Last Automation': pandas.Timestamp('2025-07-09 13:36:08.627'),
+        6: {
+            'Host name': 'db-cluster-node1.internal',
+            'Last Automation': pandas.Timestamp('2025-07-08 11:00:00'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["db01.company.com"], "ansible_port": [22], "ansible_product_serial": ["Dell-PowerEdge-R740"], '
-                '"host_name": ["db01.company.com"]}'
+                '{"ansible_host": ["db-cluster-node1.internal"], "ansible_machine_id": ["db-node-001"], '
+                '"ansible_port": [22], "ansible_product_serial": ["DELL-R750-DB-001"], "host_name": ["db-cluster-node1.internal"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Host names before deduplication': '["db-cluster-node1.internal"]',
+            'Host names before deduplication count': 1,
+        },
+        7: {
+            'Host name': 'db-cluster-node2.internal',
+            'Last Automation': pandas.Timestamp('2025-07-08 11:05:00'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["db-cluster-node2.internal"], "ansible_machine_id": ["db-node-002"], '
+                '"ansible_port": [22], "ansible_product_serial": ["DELL-R750-DB-002"], "host_name": ["db-cluster-node2.internal"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["secondary"]}',
+            'Host names before deduplication': '["db-cluster-node2.internal"]',
+            'Host names before deduplication count': 1,
+        },
+        8: {
+            'Host name': 'db-primary',
+            'Last Automation': pandas.Timestamp('2025-07-08 14:00:00'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["db-primary"], "ansible_machine_id": ["db-primary-001"], '
+                '"ansible_port": [22], "ansible_product_serial": ["Dell-PowerEdge-R750-DB"], "host_name": ["db-primary"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Host names before deduplication': '["db-primary"]',
+            'Host names before deduplication count': 1,
+        },
+        9: {
+            'Host name': 'db-primary.company.com',
+            'Last Automation': pandas.Timestamp('2025-07-08 14:05:00'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': '{"ansible_host": ["db-primary.company.com"], "ansible_port": [22], "host_name": ["db-primary.company.com"]}',
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Host names before deduplication': '["db-primary.company.com"]',
+            'Host names before deduplication count': 1,
+        },
+        10: {
+            'Host name': 'db-primary.company.com.west',
+            'Last Automation': pandas.Timestamp('2025-07-08 14:10:00'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["db-primary.company.com.west"], "ansible_port": [22], "host_name": ["db-primary.company.com.west"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Host names before deduplication': '["db-primary.company.com.west"]',
+            'Host names before deduplication count': 1,
+        },
+        11: {
+            'Host name': 'db01.company.com',
+            'Last Automation': pandas.Timestamp('2025-07-09 13:36:08.627000'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["db01.company.com"], "ansible_port": [22], '
+                '"ansible_product_serial": ["Dell-PowerEdge-R740"], "host_name": ["db01.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["xen"]}',
             'Host names before deduplication': '["db01.company.com"]',
             'Host names before deduplication count': 1,
         },
-        6: {
+        12: {
             'Host name': 'db02.dev',
             'Last Automation': pandas.Timestamp('2025-07-09 13:45:08'),
             'Organizations': '["Development", "Staging"]',
             'Inventories': '["Development Inventory", "Staging Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["db02.company.com"], "ansible_machine_id": ["db02-machine-id"],'
-                '"ansible_port": [22], "ansible_product_serial": ["Dell-PowerEdge-R750"], "host_name": ["db02.dev", "db02.staging"]}'
+                '{"ansible_host": ["db02.company.com"], "ansible_machine_id": ["db02-machine-id"], "ansible_port": [22], '
+                '"ansible_product_serial": ["Dell-PowerEdge-R750"], "host_name": ["db02.dev", "db02.staging"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["xen"]}',
             'Host names before deduplication': '["db02.dev", "db02.staging"]',
             'Host names before deduplication count': 2,
         },
-        7: {
+        13: {
+            'Host name': 'legacy-server.company.com',
+            'Last Automation': pandas.Timestamp('2025-07-08 12:05:00'),
+            'Organizations': '["Development", "Production"]',
+            'Inventories': '["Development Inventory", "Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_machine_id": ["legacy-001"], "ansible_port": [22], "ansible_product_serial": ["HP-DL380-LEGACY-001"], '
+                '"host_name": ["legacy-server.company.com"], "ansible_host": ["legacy-server.company.com"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"], "server_type": ["legacy"]}',
+            'Host names before deduplication': '["legacy-server.company.com"]',
+            'Host names before deduplication count': 1,
+        },
+        14: {
             'Host name': 'log01.company.com',
-            'Last Automation': pandas.Timestamp('2025-07-09 14:10:35.988'),
+            'Last Automation': pandas.Timestamp('2025-07-09 14:10:35.988000'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': '{"ansible_host": ["log01.company.com"], "ansible_port": [514], "host_name": ["log01.company.com"]}',
@@ -713,110 +802,124 @@ def validate_inventory_scope(file_path):
             'Host names before deduplication': '["log01.company.com"]',
             'Host names before deduplication count': 1,
         },
-        8: {
+        15: {
             'Host name': 'mobile-dev-laptop.office.company.com',
             'Last Automation': pandas.Timestamp('2025-07-08 09:00:00'),
             'Organizations': '["Development"]',
             'Inventories': '["Development Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["mobile-dev-laptop.office.company.com"], "ansible_machine_id": ["mobile-laptop-001"],'
-                '"ansible_port": [22], "ansible_product_serial": ["DELL-LAPTOP-XPS13-001"], "host_name": ["mobile-dev-laptop.office.company.com"]}'
+                '{"ansible_host": ["mobile-dev-laptop.office.company.com"], "ansible_machine_id": ["mobile-laptop-001"], '
+                '"ansible_port": [22], "ansible_product_serial": ["DELL-LAPTOP-XPS13-001"], '
+                '"host_name": ["mobile-dev-laptop.office.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"], "network_context": ["office"]}',
             'Host names before deduplication': '["mobile-dev-laptop.office.company.com"]',
             'Host names before deduplication count': 1,
         },
-        9: {
+        16: {
             'Host name': 'web01.internal',
-            'Last Automation': pandas.Timestamp('2025-07-09 11:15:25.988'),
+            'Last Automation': pandas.Timestamp('2025-07-09 11:15:25.988000'),
             'Organizations': '["Production"]',
             'Inventories': '["Cross-Org Inventory", "Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["web01.internal", "web01.prod.company.com"], "ansible_machine_id": ["3a2f8c9b123456789012345678901234"],'
-                '"ansible_port": [22, 2222], "ansible_product_serial": ["VMware-56 4d 3a 2f 8c 9b 12 34-56 78 90 ab cd ef 12 34"],'
+                '{"ansible_host": ["web01.internal", "web01.prod.company.com"], '
+                '"ansible_machine_id": ["3a2f8c9b123456789012345678901234"], '
+                '"ansible_port": [22, 2222], "ansible_product_serial": ["VMware-56 4d 3a 2f 8c 9b 12 34-56 78 90 ab cd ef 12 34"], '
                 '"host_name": ["web01.internal", "web01.prod.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
             'Host names before deduplication': '["web01.internal", "web01.prod.company.com"]',
             'Host names before deduplication count': 2,
         },
-        10: {
+        17: {
             'Host name': 'web02.external',
             'Last Automation': pandas.Timestamp('2025-07-09 16:30:08'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["web02.external", "web02.internal"], "ansible_machine_id": ["def789ghi012"],'
-                '"ansible_port": [443], "ansible_product_serial": ["VMware-ab cd ef 12 34 56 78 90-12 34 56 78 90 ab cd ef"],'
+                '{"ansible_host": ["web02.external", "web02.internal"], "ansible_machine_id": ["def789ghi012"], "ansible_port": [443], '
+                '"ansible_product_serial": ["VMware-ab cd ef 12 34 56 78 90-12 34 56 78 90 ab cd ef"], '
                 '"host_name": ["web02.external", "web02.internal"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
             'Host names before deduplication': '["web02.external", "web02.internal"]',
             'Host names before deduplication count': 2,
         },
-        11: {
+        18: {
             'Host name': 'web03.internal',
             'Last Automation': pandas.Timestamp('2025-07-09 18:05:00'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["web03.company.com"], "ansible_machine_id": ["web03-machine-id"], '
-                '"ansible_port": [22, 2223], "ansible_product_serial": ["VMware-12 34 56 78 90 ab cd ef-ab cd ef 12 34 56 78 90"], '
+                '{"ansible_host": ["web03.company.com"], "ansible_machine_id": ["web03-machine-id"], "ansible_port": [22, 2223], '
+                '"ansible_product_serial": ["VMware-12 34 56 78 90 ab cd ef-ab cd ef 12 34 56 78 90"], '
                 '"host_name": ["web03.internal", "web03.prod.internal"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
             'Host names before deduplication': '["web03.internal", "web03.prod.internal"]',
             'Host names before deduplication count': 2,
         },
-        12: {
+        19: {
             'Host name': 'web04.dev',
             'Last Automation': pandas.Timestamp('2025-07-09 19:00:00'),
             'Organizations': '["Development"]',
             'Inventories': '["Development Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-dev-machine"],'
-                '"ansible_port": [22], "ansible_product_serial": ["VMware-dev-01-02-03-04-05-06-07-08-09-10-11-12"],'
-                '"host_name": ["web04.dev"]}'
+                '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-dev-machine"], "ansible_port": [22], '
+                '"ansible_product_serial": ["VMware-dev-01-02-03-04-05-06-07-08-09-10-11-12"], "host_name": ["web04.dev"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
             'Host names before deduplication': '["web04.dev"]',
             'Host names before deduplication count': 1,
         },
-        13: {
+        20: {
             'Host name': 'web04.staging',
             'Last Automation': pandas.Timestamp('2025-07-09 19:05:00'),
             'Organizations': '["Staging"]',
             'Inventories': '["Staging Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-staging-machine"],'
-                '"ansible_port": [22], "ansible_product_serial": ["VMware-stg-01-02-03-04-05-06-07-08-09-10-11-12"],'
-                '"host_name": ["web04.staging"]}'
+                '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-staging-machine"], "ansible_port": [22], '
+                '"ansible_product_serial": ["VMware-stg-01-02-03-04-05-06-07-08-09-10-11-12"], "host_name": ["web04.staging"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
             'Host names before deduplication': '["web04.staging"]',
             'Host names before deduplication count': 1,
         },
-        14: {
+        21: {
+            'Host name': 'webserver.company.com',
+            'Last Automation': pandas.Timestamp('2025-07-08 10:05:00'),
+            'Organizations': '["Production"]',
+            'Inventories': '["Production Inventory"]',
+            'Canonical Facts': (
+                '{"ansible_host": ["webserver.company.com"], "ansible_machine_id": ["web-backup-001", "web-primary-001"], '
+                '"ansible_port": [22], "ansible_product_serial": ["DELL-R740-WEB-001", "DELL-R740-WEB-002"], '
+                '"host_name": ["webserver.company.com"]}'
+            ),
+            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "server_role": ["backup", "primary"]}',
+            'Host names before deduplication': '["webserver.company.com"]',
+            'Host names before deduplication count': 1,
+        },
+        22: {
             'Host name': 'win-srv01.company.com',
             'Last Automation': pandas.Timestamp('2025-07-08 20:00:00'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["win-srv01.company.com"], "ansible_port": [5985], "ansible_product_serial": ["WIN-HP-DL380-001"],'
-                '"host_name": ["win-srv01.company.com"]}'
+                '{"ansible_host": ["win-srv01.company.com"], "ansible_port": [5985], '
+                '"ansible_product_serial": ["WIN-HP-DL380-001"], "host_name": ["win-srv01.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["winrm"], "ansible_virtualization_type": ["VirtualPC"]}',
             'Host names before deduplication': '["win-srv01.company.com"]',
             'Host names before deduplication count': 1,
         },
-        15: {
+        23: {
             'Host name': 'win-srv02.company.com',
             'Last Automation': pandas.Timestamp('2025-07-08 20:05:00'),
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': (
-                '{"ansible_host": ["win-srv02.company.com"], "ansible_port": [5985], "ansible_product_serial": ["WIN-HP-DL380-001"],'
-                '"host_name": ["win-srv02.company.com"]}'
+                '{"ansible_host": ["win-srv02.company.com"], "ansible_port": [5985], '
+                '"ansible_product_serial": ["WIN-HP-DL380-001"], "host_name": ["win-srv02.company.com"]}'
             ),
             'Facts': '{"ansible_connection_variable": ["winrm"], "ansible_virtualization_type": ["VirtualPC"]}',
             'Host names before deduplication': '["win-srv02.company.com"]',
