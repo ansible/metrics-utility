@@ -65,6 +65,7 @@ class ManagementUtility(management.ManagementUtility):
             module = import_module(f'metrics_utility.management.commands.{subcommand}')
         except Exception as ex:
             sys.stderr.write(f"Failed to import command '{subcommand}': {ex}")
+            raise ex
 
         return module.Command()
 
