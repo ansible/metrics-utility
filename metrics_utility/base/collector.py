@@ -6,7 +6,6 @@ import os
 import pathlib
 import shutil
 import tempfile
-import time
 
 from abc import abstractmethod
 
@@ -286,24 +285,12 @@ class Collector:
          2) Collections with slicing function can produce duplicate filename
         """
 
-        # we will print the message every X seconds
-        seconds = 20
-        last_print_time = time.time()
-
-        self.logger.info('Starting collecting, this may take while.')
+        last_key = None
 
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
-            # print this message every X seconds
-            current_time = time.time()
-
-            if current_time - last_print_time >= seconds:
-                if collection is not None:
-                    try:
-                        self.logger.info(f'Progress info: Gathering {collection.key} for {collection.since.strftime("%Y-%m-%d")}')
-                    except Exception:
-                        self.logger.info(f'Progress info: Gathering {collection.key} for {collection.since}')
-
-                last_print_time = current_time
+            if last_key != collection.key:
+                self.logger.info(f'Progress info: Now gathering {collection.key}')
+                last_key = collection.key
 
             collection.gather(self._package_class().max_data_size())
 
