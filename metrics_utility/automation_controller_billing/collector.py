@@ -25,7 +25,7 @@ except ImportError:
     # later 2.5, 2.6
     from ansible_base.lib.utils.db import advisory_lock
 
-logger = logging.getLogger('metrics_utility.collector')
+logger = logging.getLogger('awx.main.analytics')
 
 
 class Collector(base.Collector):

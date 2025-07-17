@@ -76,6 +76,8 @@ class Command(BaseCommand):
         if not tgzfiles:
             self.logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
+        if tgzfiles:
+            self.logger.info('Analytics collected')
 
     def _handle_ship_target(self, ship_target):
         if ship_target == 'crc':
