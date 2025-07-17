@@ -1674,31 +1674,37 @@ def validate_use_cases(actual_managed_nodes):
          - All 4 entries have same serial (HP-ProLiant-DL380) + machine_id (machine123)
          - Entries from 3 different orgs (Production x2, Development, Staging)
          - Result: Merged into single entry showing 3 organizations
+         - Dedup: Old logic only (count=1) - all 4 entries had same ansible_host
 
     1.2. web01.internal + web01.prod.company.com (3 entries → 1):
          - All have same VMware serial + machine_id (3a2f8c9b...)
          - Different hostnames but same physical machine
          - Result: Merged, showing both hostnames in canonical facts
+         - Dedup: New logic applied (count=2) - old logic kept 2 separate, new merged by machine_id
 
     1.3. web02.external + web02.internal (2 entries → 1):
          - Same VMware serial + machine_id (def789ghi012)
          - Different network access points to same machine
          - Result: Merged into web02.external (first seen)
+         - Dedup: New logic applied (count=2) - different ansible_host values
 
     1.4. db02.dev + db02.staging (2 entries → 1):
          - Same Dell serial (R750) + machine_id (db02-machine-id)
          - Different environment names for same database server
          - Result: Merged into db02.dev
+         - Dedup: New logic applied (count=2) - old logic grouped by ansible_host, new merged by machine_id
 
     1.5. web03.internal + web03.prod.internal (2 entries → 1):
          - Same VMware serial + machine_id (web03-machine-id)
          - Production variants of same web server
          - Result: Merged into web03.internal
+         - Dedup: New logic applied (count=2) - both had same ansible_host but different host_name
 
     1.6. cache01.internal (2 entries → 1):
          - Both have same machine_id (xyz789) but NO product_serial
          - From different orgs (Production, Development)
          - Result: Merged because machine_id matches (serial not required if missing)
+         - Dedup: Old logic only (count=1) - same ansible_host and host_name
 
     2. NOT DEDUPLICATED HOSTS (unique serial/machine_id combinations):
     -------------------------------------------------------------------
@@ -1706,21 +1712,25 @@ def validate_use_cases(actual_managed_nodes):
          - Different machine_id (machine456) than app01.cluster
          - Same serial type but different physical machine
          - Result: Kept separate
+         - Dedup: No dedup needed (count=1) - unique host
 
     2.2. db01.company.com:
          - Has product_serial but NO machine_id
          - Cannot deduplicate without machine_id
          - Result: Kept separate
+         - Dedup: No dedup needed (count=1) - unique ansible_host
 
     2.3. log01.company.com:
          - Missing BOTH product_serial AND machine_id
          - No canonical facts to deduplicate on
          - Result: Kept separate
+         - Dedup: No dedup needed (count=1) - unique host
 
     2.4. web04.dev and web04.staging:
          - Different machine_ids (web04-dev-machine vs web04-staging-machine)
          - Different serials (VMware-dev-... vs VMware-stg-...)
          - Result: Kept as separate hosts (different environments)
+         - Dedup: No dedup needed (count=1 each) - different hosts
 
     3. FALSE NEGATIVES - NOT DEDUPLICATED (but should be):
     -------------------------------------------------------
@@ -1729,18 +1739,21 @@ def validate_use_cases(actual_managed_nodes):
          - Windows lacks machine_id (systemd-specific)
          - Only product_serial available for deduplication
          - Result: Kept separate (FALSE NEGATIVE - same serial but no machine_id)
+         - Dedup: No dedup applied (count=1 each) - new logic requires machine_id
 
     3.2. k8s-node-01.cluster and k8s-node-01.internal:
          - Same Kubernetes node accessed differently
          - Container environment lacks both machine_id and serial
          - No canonical facts for deduplication
          - Result: Kept separate (SHOULD be merged based on hostname pattern)
+         - Dedup: No dedup possible - no canonical facts
 
     3.3. secure-host-01.company.com (privileged vs unprivileged):
          - Same host accessed with different credentials
          - Admin job has product_serial, user job doesn't
          - Same machine_id in both cases
          - Result: Kept separate (SHOULD be merged based on machine_id)
+         - Dedup: Likely incomplete canonical facts prevented merge
 
     4. FALSE POSITIVES - WRONGLY DEDUPLICATED (but shouldn't be):
     --------------------------------------------------------------
@@ -1749,12 +1762,14 @@ def validate_use_cases(actual_managed_nodes):
          - Cloud-init generates same synthetic machine_id
          - Generic AWS product_serial (ec2-instance)
          - Result: Wrongly merged (SHOULD be kept separate)
+         - Dedup: New logic wrongly applied (count=2) - matched on synthetic IDs
 
     4.2. nat-host-01.external and nat-host-02.external:
          - Different hosts behind same NAT gateway
          - NAT gateway's machine_id and serial exposed to both
          - Same public IP address (203.0.113.10)
          - Result: Wrongly merged (SHOULD be kept separate)
+         - Dedup: New logic wrongly applied (count=2) - matched on NAT gateway IDs
 
     4.3. mobile-dev-laptop (CORRECT deduplication but confusing):
          - Developer laptop connecting from different networks
@@ -1766,6 +1781,7 @@ def validate_use_cases(actual_managed_nodes):
          - This is a "false positive" from a user perspective - they see one entry
            for what appears to be different hostnames, but it's actually correct
            deduplication of the same physical machine
+         - Dedup: New logic correctly applied - merged different network names
 
     5. HOSTNAME RESOLUTION TEST CASES (NEW):
     ----------------------------------------
@@ -1779,6 +1795,7 @@ def validate_use_cases(actual_managed_nodes):
          - All have same machine_id (api-server-001) and serial (HP-ProLiant-DL360-API)
          - Result: Correctly deduplicated based on matching canonical facts
          - This shows that with canonical facts, DNS variations don't cause duplicates
+         - Dedup: Old logic only (count=1) - all had same ansible_host "api-server"
 
     5.2. db-primary (3 entries → 3 showing false negative):
          - db-primary (short hostname) - HAS canonical facts
@@ -1787,6 +1804,7 @@ def validate_use_cases(actual_managed_nodes):
          - Only first entry has machine_id (db-primary-001) and serial (Dell-PowerEdge-R750-DB)
          - Result: Shows as 3 separate hosts (false negative behavior)
          - This demonstrates that without canonical facts on all entries, they appear as separate hosts
+         - Dedup: No dedup (count=1 each) - different ansible_host values, missing canonical facts
     """
 
     # Helper function to find host entry by name
@@ -1803,20 +1821,15 @@ def validate_use_cases(actual_managed_nodes):
         except (json.JSONDecodeError, TypeError):
             return {}
 
-    print('\n=== VALIDATING DEDUPLICATION TEST CASES ===\n')
-
     # Test Case 1.1: app01.cluster (4 entries → 1)
-    print('Test Case 1.1: app01.cluster deduplication')
     app01_cluster = find_host('app01.cluster')
     assert app01_cluster is not None, 'app01.cluster should be present'
     assert app01_cluster['Automated by organizations'] == 3, f'app01.cluster should show 3 orgs, got {app01_cluster["Automated by organizations"]}'
     cf = get_canonical_facts(app01_cluster)
     assert cf.get('ansible_machine_id') == ['machine123'], "app01.cluster should have machine_id 'machine123'"
     assert cf.get('ansible_product_serial') == ['HP-ProLiant-DL380'], "app01.cluster should have serial 'HP-ProLiant-DL380'"
-    print('✓ app01.cluster correctly deduplicated from 4 entries to 1 showing 3 orgs')
 
     # Test Case 1.2: web01.internal + web01.prod.company.com (3 entries → 1)
-    print('\nTest Case 1.2: web01.internal + web01.prod.company.com deduplication')
     web01 = find_host('web01.internal')
     assert web01 is not None, 'web01.internal should be present'
     cf = get_canonical_facts(web01)
@@ -1824,173 +1837,135 @@ def validate_use_cases(actual_managed_nodes):
     assert 'web01.internal' in hostnames, 'web01.internal should be in host names'
     assert 'web01.prod.company.com' in hostnames, 'web01.prod.company.com should be in host names'
     assert cf.get('ansible_machine_id') == ['3a2f8c9b123456789012345678901234'], 'Should have correct machine_id'
-    print('✓ web01 variants correctly deduplicated showing both hostnames')
 
     # Test Case 1.3: web02.external + web02.internal (2 entries → 1)
-    print('\nTest Case 1.3: web02.external + web02.internal deduplication')
     web02 = find_host('web02.external')
     assert web02 is not None, 'web02.external should be present (first seen)'
     cf = get_canonical_facts(web02)
     assert cf.get('ansible_machine_id') == ['def789ghi012'], 'Should have correct machine_id'
     hostnames = cf.get('host_name', [])
     assert 'web02.external' in hostnames and 'web02.internal' in hostnames, 'Should show both hostnames'
-    print('✓ web02 variants correctly deduplicated to web02.external')
 
     # Test Case 1.4: db02.dev + db02.staging (2 entries → 1)
-    print('\nTest Case 1.4: db02.dev + db02.staging deduplication')
     db02 = find_host('db02.dev')
     assert db02 is not None, 'db02.dev should be present'
     cf = get_canonical_facts(db02)
     assert cf.get('ansible_machine_id') == ['db02-machine-id'], 'Should have correct machine_id'
     hostnames = cf.get('host_name', [])
     assert 'db02.dev' in hostnames and 'db02.staging' in hostnames, 'Should show both hostnames'
-    print('✓ db02 environments correctly deduplicated')
 
     # Test Case 1.5: web03.internal + web03.prod.internal (2 entries → 1)
-    print('\nTest Case 1.5: web03.internal + web03.prod.internal deduplication')
     web03 = find_host('web03.internal')
     assert web03 is not None, 'web03.internal should be present'
     cf = get_canonical_facts(web03)
     assert cf.get('ansible_machine_id') == ['web03-machine-id'], 'Should have correct machine_id'
-    print('✓ web03 production variants correctly deduplicated')
 
     # Test Case 1.6: cache01.internal (2 entries → 1)
-    print('\nTest Case 1.6: cache01.internal deduplication (no serial)')
     cache01 = find_host('cache01.internal')
     assert cache01 is not None, 'cache01.internal should be present'
     assert cache01['Automated by organizations'] == 2, f'cache01.internal should show 2 orgs, got {cache01["Automated by organizations"]}'
     cf = get_canonical_facts(cache01)
     assert cf.get('ansible_machine_id') == ['xyz789'], 'Should have machine_id'
     assert cf.get('ansible_product_serial') is None or cf.get('ansible_product_serial') == [], 'Should have no serial'
-    print('✓ cache01.internal correctly deduplicated based on machine_id only')
-
-    print('\n=== NOT DEDUPLICATED HOSTS ===')
 
     # Test Case 2.1: app01.failover (should be separate)
-    print('\nTest Case 2.1: app01.failover (different machine)')
     app01_failover = find_host('app01.failover')
     assert app01_failover is not None, 'app01.failover should be present as separate host'
     cf = get_canonical_facts(app01_failover)
     assert cf.get('ansible_machine_id') == ['machine456'], 'Should have different machine_id'
-    print('✓ app01.failover correctly kept separate')
 
     # Test Case 2.2: db01.company.com (no machine_id)
-    print('\nTest Case 2.2: db01.company.com (no machine_id)')
     db01 = find_host('db01.company.com')
     assert db01 is not None, 'db01.company.com should be present'
     cf = get_canonical_facts(db01)
     assert cf.get('ansible_machine_id') is None or cf.get('ansible_machine_id') == [], 'Should have no machine_id'
     assert cf.get('ansible_product_serial') == ['Dell-PowerEdge-R740'], 'Should have serial'
-    print('✓ db01.company.com correctly kept separate (no machine_id)')
 
     # Test Case 2.3: log01.company.com (no canonical facts)
-    print('\nTest Case 2.3: log01.company.com (no canonical facts)')
     log01 = find_host('log01.company.com')
     assert log01 is not None, 'log01.company.com should be present'
     cf = get_canonical_facts(log01)
     assert not cf.get('ansible_machine_id') and not cf.get('ansible_product_serial'), 'Should have no canonical facts'
-    print('✓ log01.company.com correctly kept separate (no canonical facts)')
 
     # Test Case 2.4: web04.dev and web04.staging (different machines)
-    print('\nTest Case 2.4: web04.dev and web04.staging (different machines)')
     web04_dev = find_host('web04.dev')
     web04_staging = find_host('web04.staging')
     assert web04_dev is not None, 'web04.dev should be present'
     assert web04_staging is not None, 'web04.staging should be present'
     assert web04_dev != web04_staging, 'web04.dev and web04.staging should be separate entries'
-    print('✓ web04 environments correctly kept separate')
-
-    print('\n=== FALSE NEGATIVES (not deduplicated but should be) ===')
 
     # Test Case 3.1: win-srv01.company.com and win-srv02.company.com
-    print('\nTest Case 3.1: Windows servers (same serial, no machine_id)')
     win_srv01 = find_host('win-srv01.company.com')
     win_srv02 = find_host('win-srv02.company.com')
     assert win_srv01 is not None, 'win-srv01.company.com should be present'
     assert win_srv02 is not None, 'win-srv02.company.com should be present'
     assert win_srv01 != win_srv02, 'Windows servers are kept separate (FALSE NEGATIVE)'
-    print('✗ Windows servers kept separate (expected false negative - no machine_id)')
 
     # Test Case 3.2: k8s-node-01.cluster and k8s-node-01.internal
-    print('\nTest Case 3.2: Kubernetes nodes (no canonical facts)')
     k8s_cluster = find_host('k8s-node-01.cluster')
     k8s_internal = find_host('k8s-node-01.internal')
     if k8s_cluster is None or k8s_internal is None:
-        print('⚠️  K8s test data not found - SKIPPING')
+        pass  # K8s test data not found - SKIPPING
     else:
         assert k8s_cluster != k8s_internal, 'K8s nodes are kept separate (FALSE NEGATIVE)'
-        print('✗ K8s nodes kept separate (expected false negative - no canonical facts)')
 
     # Test Case 3.3: secure-host-01.company.com (different privilege levels)
-    print('\nTest Case 3.3: secure-host-01.company.com privilege levels')
     # Look for secure-host-01.company.com entries
     secure_hosts = [entry for entry in actual_managed_nodes.values() if 'secure-host-01' in entry['Host name']]
     if len(secure_hosts) == 0:
-        print('⚠️  secure-host test data not found - SKIPPING')
+        pass  # secure-host test data not found - SKIPPING
     else:
         # Should have 2 separate entries due to incomplete canonical facts
         assert len(secure_hosts) == 2, f'Should have 2 secure-host-01 entries (false negative), got {len(secure_hosts)}'
-        print('✗ secure-host-01 privilege levels kept separate (expected false negative)')
-
-    print('\n=== FALSE POSITIVES (wrongly deduplicated) ===')
 
     # Test Case 4.1: AWS VMs with same synthetic machine_id
-    print('\nTest Case 4.1: AWS VMs (same synthetic machine_id)')
     # Look for any AWS VM entry
     aws_vm = find_host('aws-vm-01.us-east')
     if aws_vm:
         cf = get_canonical_facts(aws_vm)
         hostnames = cf.get('host_name', [])
         if 'aws-vm-02.us-east' in hostnames:
-            print('✗ AWS VMs wrongly merged (expected false positive)')
+            pass  # AWS VMs wrongly merged (expected false positive)
         else:
-            print('✓ AWS VMs kept separate (false positive avoided)')
+            pass  # AWS VMs kept separate (false positive avoided)
     else:
         # They might be merged under a different name
         for entry in actual_managed_nodes.values():
             cf = get_canonical_facts(entry)
             hostnames = cf.get('host_name', [])
             if 'aws-vm-01.us-east' in hostnames and 'aws-vm-02.us-east' in hostnames:
-                print('✗ AWS VMs wrongly merged (expected false positive)')
+                pass  # AWS VMs wrongly merged (expected false positive)
                 break
         else:
-            print('⚠️  AWS VM test data not found - SKIPPING')
+            pass  # AWS VM test data not found - SKIPPING
 
     # Test Case 4.2: NAT hosts
-    print('\nTest Case 4.2: NAT hosts (same gateway info)')
     nat_entry = find_host('203.0.113.10')  # They get merged under the IP
     if nat_entry:
         cf = get_canonical_facts(nat_entry)
         hostnames = cf.get('host_name', [])
         if 'nat-host-01.external' in hostnames and 'nat-host-02.external' in hostnames:
-            print('✗ NAT hosts wrongly merged under IP (expected false positive)')
+            pass  # NAT hosts wrongly merged under IP (expected false positive)
 
     # Test Case 4.3: mobile-dev-laptop (correct dedup but confusing)
-    print('\nTest Case 4.3: mobile-dev-laptop (correct deduplication)')
     mobile = find_host('mobile-dev-laptop.office.company.com')
     if mobile:
         cf = get_canonical_facts(mobile)
         assert cf.get('ansible_machine_id') == ['mobile-laptop-001'], 'Should have consistent machine_id'
-        print('✓ mobile-dev-laptop correctly deduplicated (appears confusing but correct)')
     else:
-        print('⚠️  mobile-dev-laptop test data not found - SKIPPING')
-
-    print('\n=== HOSTNAME RESOLUTION TEST CASES ===')
+        pass  # mobile-dev-laptop test data not found - SKIPPING
 
     # Test Case 5.1: api-server variants
-    print('\nTest Case 5.1: api-server DNS variants')
     api_server = find_host('api-server')
     if api_server is None:
-        print('⚠️  api-server test data not found - SKIPPING')
+        pass  # api-server test data not found - SKIPPING
     else:
         cf = get_canonical_facts(api_server)
         hostnames = cf.get('host_name', [])
         assert 'api-server' in hostnames, 'Should include short hostname'
         assert any('api-server.company.com' in h for h in hostnames), 'Should include FQDN variants'
-        print('✓ api-server DNS variants correctly deduplicated')
 
     # Test Case 5.2: db-primary variants (false negative)
-    print('\nTest Case 5.2: db-primary DNS variants')
     db_primary_short = find_host('db-primary')
     db_primary_fqdn = find_host('db-primary.company.com')
     db_primary_west = find_host('db-primary.company.com.west')
@@ -1998,9 +1973,6 @@ def validate_use_cases(actual_managed_nodes):
     # Count how many are present
     db_primary_count = sum(1 for h in [db_primary_short, db_primary_fqdn, db_primary_west] if h is not None)
     if db_primary_count == 0:
-        print('⚠️  db-primary test data not found - SKIPPING')
+        pass  # db-primary test data not found - SKIPPING
     else:
         assert db_primary_count == 3, f'Should have 3 separate db-primary entries (false negative), got {db_primary_count}'
-        print('✗ db-primary variants kept separate (expected false negative - missing canonical facts)')
-
-    print('\n=== VALIDATION COMPLETE ===\n')

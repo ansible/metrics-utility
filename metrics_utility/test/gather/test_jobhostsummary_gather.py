@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from metrics_utility.base.collection import Collection
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
@@ -148,7 +149,6 @@ def test_main_host_collection(cleanup_glob):
     collection_statuses = {}
 
     # Mock the Collection.gather method to capture success/failure status
-    from metrics_utility.base.collection import Collection
     original_collection_gather = Collection.gather
 
     def mock_collection_gather(self, path):
@@ -174,20 +174,20 @@ def test_main_host_collection(cleanup_glob):
         )
 
     # Check collection statuses
-    print("\nCollection statuses:")
+    print('\nCollection statuses:')
     expected_collections = {'job_host_summary.csv', 'main_jobevent.csv', 'main_host.csv'}
     errors_found = []
 
     for collection_name, status in collection_statuses.items():
         status_str = 'ok' if status else 'failed'
-        print(f"  {collection_name}: {status_str}")
+        print(f'  {collection_name}: {status_str}')
 
         if not status:
             errors_found.append(f"Collection '{collection_name}' failed")
 
     # Check if there were any errors
     if errors_found:
-        assert False, "Found errors in collections:\n" + "\n".join(errors_found)
+        assert False, 'Found errors in collections:\n' + '\n'.join(errors_found)
 
     # Check if all expected collections were seen
     collected_names = set(collection_statuses.keys())
@@ -202,4 +202,4 @@ def test_main_host_collection(cleanup_glob):
                 break
 
     if missing_collections:
-        assert False, f"Expected collections were not found: {', '.join(missing_collections)}. Found: {', '.join(collected_names)}"
+        assert False, f'Expected collections were not found: {", ".join(missing_collections)}. Found: {", ".join(collected_names)}'
