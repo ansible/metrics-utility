@@ -487,7 +487,25 @@ def main_host_table(since, full_path, until, **kwargs):
                            ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
                        END,
                        'ansible_virtualization_type',
-                       main_host.ansible_facts->>'ansible_virtualization_type'::TEXT
+                       main_host.ansible_facts->>'ansible_virtualization_type'::TEXT,
+                       'ansible_virtualization_role',
+                       main_host.ansible_facts->>'ansible_virtualization_role'::TEXT,
+                       'ansible_system_vendor',
+                       main_host.ansible_facts->>'ansible_system_vendor'::TEXT,
+                       'ansible_product_name',
+                       main_host.ansible_facts->>'ansible_product_name'::TEXT,
+                       'ansible_architecture',
+                       main_host.ansible_facts->>'ansible_architecture'::TEXT,
+                       'ansible_processor',
+                       main_host.ansible_facts->>'ansible_processor'::TEXT,
+                       'ansible_form_factor',
+                       main_host.ansible_facts->>'ansible_form_factor'::TEXT,
+                       'ansible_bios_vendor',
+                       main_host.ansible_facts->>'ansible_bios_vendor'::TEXT,
+                       'ansible_bios_version',
+                       main_host.ansible_facts->>'ansible_bios_version'::TEXT,
+                       'ansible_board_serial',
+                       main_host.ansible_facts->>'ansible_board_serial'::TEXT
                    ) AS facts
 
             FROM main_host

@@ -176,7 +176,9 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["203.0.113.10"], "ansible_machine_id": ["nat-shared-001"], "ansible_port": [22], '
                 '"ansible_product_serial": ["DELL-R740-NAT"], "host_name": ["nat-host-01.external", "nat-host-02.external"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "ansible_system_vendor": ["Dell Inc."], "ansible_product_name": ["OptiPlex 7090"], "ansible_virtualization_role": ["host"], "ansible_architecture": ["x86_64"], "ansible_processor": ["Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz"], "ansible_form_factor": ["Desktop"], "ansible_bios_vendor": ["Dell Inc."], "ansible_bios_version": ["1.2.3"], "ansible_board_serial": ["NAT-GW-001", "NAT-GW-002"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["203.0.113.10"]',
             'Host names before deduplication count': 1,
         },
@@ -192,7 +194,9 @@ def validate_managed_nodes(file_path):
                 '"ansible_machine_id": ["api-server-001"], "ansible_port": [22], "ansible_product_serial": ["HP-ProLiant-DL360-API"], '
                 '"host_name": ["api-server", "api-server.company.com", "api-server.company.com.east"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["HP"], "ansible_bios_version": ["U32"], "ansible_board_serial": ["API-SERVER-001"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["ProLiant DL360 Gen10"], "ansible_system_vendor": ["HP"], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["api-server", "api-server.company.com", "api-server.company.com.east"]',
             'Host names before deduplication count': 3,
         },
@@ -207,7 +211,9 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["app01.cluster"], "ansible_machine_id": ["machine123"], "ansible_port": [22], '
                 '"ansible_product_serial": ["HP-ProLiant-DL380"], "host_name": ["app01.cluster"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["HP"], "ansible_bios_version": ["U30"], "ansible_board_serial": ["USE1234567"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["ProLiant DL380 Gen10"], "ansible_system_vendor": ["HP"], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["app01.cluster"]',
             'Host names before deduplication count': 1,
         },
@@ -222,7 +228,9 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["app01.failover"], "ansible_machine_id": ["machine456"], "ansible_port": [22], '
                 '"ansible_product_serial": ["HP-ProLiant-DL380"], "host_name": ["app01.failover"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["HP"], "ansible_bios_version": ["U30"], "ansible_board_serial": ["USE7654321"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["ProLiant DL380 Gen10"], "ansible_system_vendor": ["HP"], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["app01.failover"]',
             'Host names before deduplication count': 1,
         },
@@ -254,7 +262,9 @@ def validate_managed_nodes(file_path):
             'Canonical Facts': (
                 '{"ansible_host": ["cache01.internal"], "ansible_machine_id": ["xyz789"], "ansible_port": [6379], "host_name": ["cache01.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["docker"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_connection_variable": ["ssh"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_virtualization_type": ["docker"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["cache01.internal"]',
             'Host names before deduplication count': 1,
         },
@@ -269,7 +279,9 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["db-primary"], "ansible_machine_id": ["db-primary-001"], "ansible_port": [22], '
                 '"ansible_product_serial": ["Dell-PowerEdge-R750-DB"], "host_name": ["db-primary"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Dell Inc."], "ansible_bios_version": ["2.14.0"], "ansible_board_serial": ["DB-PRIMARY-001"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["AMD EPYC 7542 32-Core Processor"], "ansible_product_name": ["PowerEdge R750"], "ansible_system_vendor": ["Dell Inc."], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["db-primary"]',
             'Host names before deduplication count': 1,
         },
@@ -281,7 +293,7 @@ def validate_managed_nodes(file_path):
             'First automation': pandas.Timestamp('2025-07-08 14:05:00'),
             'Last automation': pandas.Timestamp('2025-07-08 14:05:00'),
             'Canonical Facts': '{"ansible_host": ["db-primary.company.com"], "ansible_port": [22], "host_name": ["db-primary.company.com"]}',
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'),
             'Host names before deduplication': '["db-primary.company.com"]',
             'Host names before deduplication count': 1,
         },
@@ -295,7 +307,7 @@ def validate_managed_nodes(file_path):
             'Canonical Facts': (
                 '{"ansible_host": ["db-primary.company.com.west"], "ansible_port": [22], "host_name": ["db-primary.company.com.west"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'),
             'Host names before deduplication': '["db-primary.company.com.west"]',
             'Host names before deduplication count': 1,
         },
@@ -353,7 +365,9 @@ def validate_managed_nodes(file_path):
                 '"ansible_port": [22, 2222], "ansible_product_serial": ["VMware-56 4d 3a 2f 8c 9b 12 34-56 78 90 ab cd ef 12 34"], '
                 '"host_name": ["web01.internal", "web01.prod.company.com"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web01.internal", "web01.prod.company.com"]',
             'Host names before deduplication count': 2,
         },
@@ -369,7 +383,9 @@ def validate_managed_nodes(file_path):
                 '"ansible_product_serial": ["VMware-ab cd ef 12 34 56 78 90-12 34 56 78 90 ab cd ef"], '
                 '"host_name": ["web02.external", "web02.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web02.external", "web02.internal"]',
             'Host names before deduplication count': 2,
         },
@@ -385,7 +401,9 @@ def validate_managed_nodes(file_path):
                 '"ansible_product_serial": ["VMware-12 34 56 78 90 ab cd ef-ab cd ef 12 34 56 78 90"], '
                 '"host_name": ["web03.internal", "web03.prod.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web03.internal", "web03.prod.internal"]',
             'Host names before deduplication count': 2,
         },
@@ -400,7 +418,9 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-dev-machine"], "ansible_port": [22], '
                 '"ansible_product_serial": ["VMware-dev-01-02-03-04-05-06-07-08-09-10-11-12"], "host_name": ["web04.dev"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web04.dev"]',
             'Host names before deduplication count': 1,
         },
@@ -415,7 +435,9 @@ def validate_managed_nodes(file_path):
                 '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-staging-machine"], "ansible_port": [22], '
                 '"ansible_product_serial": ["VMware-stg-01-02-03-04-05-06-07-08-09-10-11-12"], "host_name": ["web04.staging"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web04.staging"]',
             'Host names before deduplication count': 1,
         },
@@ -500,7 +522,9 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["203.0.113.10"], "ansible_machine_id": ["nat-shared-001"], "ansible_port": [22], '
                 '"ansible_product_serial": ["DELL-R740-NAT"], "host_name": ["nat-host-01.external", "nat-host-02.external"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "ansible_system_vendor": ["Dell Inc."], "ansible_product_name": ["OptiPlex 7090"], "ansible_virtualization_role": ["host"], "ansible_architecture": ["x86_64"], "ansible_processor": ["Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz"], "ansible_form_factor": ["Desktop"], "ansible_bios_vendor": ["Dell Inc."], "ansible_bios_version": ["1.2.3"], "ansible_board_serial": ["NAT-GW-001", "NAT-GW-002"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["203.0.113.10"]',
             'Host names before deduplication count': 1,
         },
@@ -514,7 +538,9 @@ def validate_inventory_scope(file_path):
                 '"ansible_machine_id": ["api-server-001"], "ansible_port": [22], "ansible_product_serial": ["HP-ProLiant-DL360-API"], '
                 '"host_name": ["api-server", "api-server.company.com", "api-server.company.com.east"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["HP"], "ansible_bios_version": ["U32"], "ansible_board_serial": ["API-SERVER-001"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["ProLiant DL360 Gen10"], "ansible_system_vendor": ["HP"], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["api-server", "api-server.company.com", "api-server.company.com.east"]',
             'Host names before deduplication count': 3,
         },
@@ -527,7 +553,9 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["app01.cluster"], "ansible_machine_id": ["machine123"], "ansible_port": [22], '
                 '"ansible_product_serial": ["HP-ProLiant-DL380"], "host_name": ["app01.cluster"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["HP"], "ansible_bios_version": ["U30"], "ansible_board_serial": ["USE1234567"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["ProLiant DL380 Gen10"], "ansible_system_vendor": ["HP"], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["app01.cluster"]',
             'Host names before deduplication count': 1,
         },
@@ -540,7 +568,9 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["app01.failover"], "ansible_machine_id": ["machine456"], "ansible_port": [22], '
                 '"ansible_product_serial": ["HP-ProLiant-DL380"], "host_name": ["app01.failover"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["HP"], "ansible_bios_version": ["U30"], "ansible_board_serial": ["USE7654321"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["ProLiant DL380 Gen10"], "ansible_system_vendor": ["HP"], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["app01.failover"]',
             'Host names before deduplication count': 1,
         },
@@ -569,7 +599,9 @@ def validate_inventory_scope(file_path):
             'Canonical Facts': (
                 '{"ansible_host": ["cache01.internal"], "ansible_machine_id": ["xyz789"], "ansible_port": [6379], "host_name": ["cache01.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["docker"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_connection_variable": ["ssh"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_virtualization_type": ["docker"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["cache01.internal"]',
             'Host names before deduplication count': 1,
         },
@@ -582,7 +614,7 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["db-cluster-node1.internal"], "ansible_machine_id": ["db-node-001"], '
                 '"ansible_port": [22], "ansible_product_serial": ["DELL-R750-DB-001"], "host_name": ["db-cluster-node1.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'),
             'Host names before deduplication': '["db-cluster-node1.internal"]',
             'Host names before deduplication count': 1,
         },
@@ -595,7 +627,7 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["db-cluster-node2.internal"], "ansible_machine_id": ["db-node-002"], '
                 '"ansible_port": [22], "ansible_product_serial": ["DELL-R750-DB-002"], "host_name": ["db-cluster-node2.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["secondary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["secondary"]}'),
             'Host names before deduplication': '["db-cluster-node2.internal"]',
             'Host names before deduplication count': 1,
         },
@@ -608,7 +640,9 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["db-primary"], "ansible_machine_id": ["db-primary-001"], '
                 '"ansible_port": [22], "ansible_product_serial": ["Dell-PowerEdge-R750-DB"], "host_name": ["db-primary"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Dell Inc."], "ansible_bios_version": ["2.14.0"], "ansible_board_serial": ["DB-PRIMARY-001"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": ["AMD EPYC 7542 32-Core Processor"], "ansible_product_name": ["PowerEdge R750"], "ansible_system_vendor": ["Dell Inc."], "ansible_virtualization_role": ["host"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["db-primary"]',
             'Host names before deduplication count': 1,
         },
@@ -618,7 +652,7 @@ def validate_inventory_scope(file_path):
             'Organizations': '["Production"]',
             'Inventories': '["Production Inventory"]',
             'Canonical Facts': '{"ansible_host": ["db-primary.company.com"], "ansible_port": [22], "host_name": ["db-primary.company.com"]}',
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'),
             'Host names before deduplication': '["db-primary.company.com"]',
             'Host names before deduplication count': 1,
         },
@@ -630,7 +664,7 @@ def validate_inventory_scope(file_path):
             'Canonical Facts': (
                 '{"ansible_host": ["db-primary.company.com.west"], "ansible_port": [22], "host_name": ["db-primary.company.com.west"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "db_role": ["primary"]}'),
             'Host names before deduplication': '["db-primary.company.com.west"]',
             'Host names before deduplication count': 1,
         },
@@ -669,7 +703,7 @@ def validate_inventory_scope(file_path):
                 '{"ansible_machine_id": ["legacy-001"], "ansible_port": [22], "ansible_product_serial": ["HP-DL380-LEGACY-001"], '
                 '"host_name": ["legacy-server.company.com"], "ansible_host": ["legacy-server.company.com"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"], "server_type": ["legacy"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"], "server_type": ["legacy"]}'),
             'Host names before deduplication': '["legacy-server.company.com"]',
             'Host names before deduplication count': 1,
         },
@@ -693,7 +727,7 @@ def validate_inventory_scope(file_path):
                 '"ansible_port": [22], "ansible_product_serial": ["DELL-LAPTOP-XPS13-001"], '
                 '"host_name": ["mobile-dev-laptop.office.company.com"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"], "network_context": ["office"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"], "network_context": ["office"]}'),
             'Host names before deduplication': '["mobile-dev-laptop.office.company.com"]',
             'Host names before deduplication count': 1,
         },
@@ -708,7 +742,9 @@ def validate_inventory_scope(file_path):
                 '"ansible_port": [22, 2222], "ansible_product_serial": ["VMware-56 4d 3a 2f 8c 9b 12 34-56 78 90 ab cd ef 12 34"], '
                 '"host_name": ["web01.internal", "web01.prod.company.com"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web01.internal", "web01.prod.company.com"]',
             'Host names before deduplication count': 2,
         },
@@ -722,7 +758,9 @@ def validate_inventory_scope(file_path):
                 '"ansible_product_serial": ["VMware-ab cd ef 12 34 56 78 90-12 34 56 78 90 ab cd ef"], '
                 '"host_name": ["web02.external", "web02.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web02.external", "web02.internal"]',
             'Host names before deduplication count': 2,
         },
@@ -736,7 +774,9 @@ def validate_inventory_scope(file_path):
                 '"ansible_product_serial": ["VMware-12 34 56 78 90 ab cd ef-ab cd ef 12 34 56 78 90"], '
                 '"host_name": ["web03.internal", "web03.prod.internal"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web03.internal", "web03.prod.internal"]',
             'Host names before deduplication count': 2,
         },
@@ -749,7 +789,9 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-dev-machine"], "ansible_port": [22], '
                 '"ansible_product_serial": ["VMware-dev-01-02-03-04-05-06-07-08-09-10-11-12"], "host_name": ["web04.dev"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web04.dev"]',
             'Host names before deduplication count': 1,
         },
@@ -762,7 +804,9 @@ def validate_inventory_scope(file_path):
                 '{"ansible_host": ["web04.company.com"], "ansible_machine_id": ["web04-staging-machine"], "ansible_port": [22], '
                 '"ansible_product_serial": ["VMware-stg-01-02-03-04-05-06-07-08-09-10-11-12"], "host_name": ["web04.staging"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["VMware"]}',
+            'Facts': (
+                '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Phoenix Technologies LTD"], "ansible_bios_version": ["6.00"], "ansible_board_serial": ["None"], "ansible_connection_variable": ["ssh"], "ansible_form_factor": ["Virtual"], "ansible_processor": ["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": ["VMware Virtual Platform"], "ansible_system_vendor": ["VMware, Inc."], "ansible_virtualization_role": ["guest"], "ansible_virtualization_type": ["VMware"]}'  # noqa: E501
+            ),
             'Host names before deduplication': '["web04.staging"]',
             'Host names before deduplication count': 1,
         },
@@ -776,7 +820,7 @@ def validate_inventory_scope(file_path):
                 '"ansible_port": [22], "ansible_product_serial": ["DELL-R740-WEB-001", "DELL-R740-WEB-002"], '
                 '"host_name": ["webserver.company.com"]}'
             ),
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "server_role": ["backup", "primary"]}',
+            'Facts': ('{"ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["kvm"], "server_role": ["backup", "primary"]}'),
             'Host names before deduplication': '["webserver.company.com"]',
             'Host names before deduplication count': 1,
         },
