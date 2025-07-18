@@ -112,7 +112,7 @@ def test_kubernetes_config_failure():
 
 
 def test_cluster_name_not_set():
-    """Test that the function raises exception when cluster name is not set."""
+    """Test that the function raises MissingRequiredEnvVar when cluster name is not set."""
 
     # Mock the collectors module functions
     with (
@@ -121,6 +121,7 @@ def test_cluster_name_not_set():
     ):
         # Import the function after setting up the mocks
         from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
+        from metrics_utility.exceptions import MissingRequiredEnvVar
 
         # Set up the mocks
         mock_get.return_value = ['total_workers_vcpu']
@@ -132,12 +133,12 @@ def test_cluster_name_not_set():
             exception_raised = False
             try:
                 total_workers_vcpu(None, None, None)
-            except Exception as e:
+            except MissingRequiredEnvVar as e:
                 exception_raised = True
                 assert 'environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set' in str(e)
 
             # Verify that an exception was raised
-            assert exception_raised, 'Function should raise exception when cluster name is not set'
+            assert exception_raised, 'Function should raise MissingRequiredEnvVar when cluster name is not set'
 
             # Verify that an error was logged
             mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')

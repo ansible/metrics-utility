@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
+from metrics_utility.exceptions import MissingRequiredEnvVar
 from metrics_utility.test.util import temporary_env
 
 
@@ -19,15 +20,15 @@ class TestTotalWorkersVcpu:
             result = total_workers_vcpu(None, None, None)
             assert result is None
 
-    def test_raises_exception_when_cluster_name_not_set(self):
-        """Test that the function raises exception when METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set."""
+    def test_raises_metrics_exception_when_cluster_name_not_set(self):
+        """Test that the function raises MissingRequiredEnvVar when METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': None}):
-                with pytest.raises(Exception) as exc_info:
+                with pytest.raises(MissingRequiredEnvVar) as exc_info:
                     total_workers_vcpu(None, None, None)
                 assert 'environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set' in str(exc_info.value)
                 mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
