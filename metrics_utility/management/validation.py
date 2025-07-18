@@ -240,7 +240,10 @@ def validate_collectors(errors):
         if collectors:
             invalid = set(collectors) - VALID_MANDATORY_COLLECTORS
             if invalid:
-                errors.append(f'Invalid METRICS_UTILITY_MANDATORY_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_MANDATORY_COLLECTORS)}')
+                errors.append(
+                    f'Invalid METRICS_UTILITY_MANDATORY_COLLECTORS: \
+                              {", ".join(invalid)}. Valid values: {", ".join(VALID_MANDATORY_COLLECTORS)}'
+                )
 
     collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
     if collectors:

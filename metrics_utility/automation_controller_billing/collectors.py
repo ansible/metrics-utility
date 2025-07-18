@@ -493,7 +493,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     now = datetime.now(timezone.utc)
 
-    info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
+    info = {'cluster_name': cluster_name, 'timestamp': now.isoformat(), 'nodes': []}
 
     # If METRICS_UTILITY_VCPU_COUNT_ENABLED is not set or not set to true then it returns 1
     vcpu_count_enabled_str = os.environ.get('METRICS_UTILITY_VCPU_COUNT_ENABLED')
@@ -516,8 +516,6 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     api_instance = client.CoreV1Api()
 
     nodes = api_instance.list_node()
-
-    info = {'cluster_name': cluster_name , 'timestamp': now.isoformat(), 'nodes': []}
 
     total_workers_vcpu = 0
     for node_info in nodes.items:

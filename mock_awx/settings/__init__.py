@@ -4,10 +4,10 @@ import os
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'awx',
-        'USER': 'myuser',
-        'PASSWORD': 'mypassword',
-        'HOST': os.getenv('METRICS_UTILITY_DB_HOST', 'localhost'),
+        'NAME': 'postgres',
+        'USER': 'awx',
+        'PASSWORD': 'awx',
+        'HOST': os.getenv('METRICS_UTILITY_DB_HOST', 'postgres'),
         'PORT': '5432',
     }
 }

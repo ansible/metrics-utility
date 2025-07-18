@@ -84,6 +84,20 @@ def test_validate_collectors_valid(monkeypatch):
     assert not errors
 
 
+def test_validate_collectors_total_workers_vcpu_valid(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'total_workers_vcpu')
+    errors = []
+    validate_collectors(errors)
+    assert not errors
+
+
+def test_validate_collectors_multiple_including_total_workers_vcpu_valid(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_host,total_workers_vcpu,main_jobevent')
+    errors = []
+    validate_collectors(errors)
+    assert not errors
+
+
 def test_validate_collectors_invalid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'invalid_collector')
     errors = []
