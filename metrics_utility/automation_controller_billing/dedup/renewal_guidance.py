@@ -243,17 +243,22 @@ class DedupRenewalExperimental:
         for _, row in hostname_df.iterrows():
             hostname_group = row['hostname']
             if hostname_group in processed_hostname_groups:
-                if hostname_group in canonical_groups:
-                    for serial_info in serial_groups.values():
-                        if hostname_group == serial_info['canonical_group']:
-                            merged_data = self._merge_hostname_groups(hostname_df, serial_info['groups_to_merge'])
-                            final_deduped_list.append(merged_data)
-                            break
-                else:
-                    continue
+                self._handle_processed_group(hostname_group, hostname_df, serial_groups, canonical_groups, final_deduped_list)
             else:
                 final_deduped_list.append(row.to_dict())
         return final_deduped_list
+
+    def _handle_processed_group(self, hostname_group, hostname_df, serial_groups, canonical_groups, final_deduped_list):
+        if hostname_group in canonical_groups:
+            self._append_canonical_group(hostname_group, hostname_df, serial_groups, final_deduped_list)
+        # else: skip non-canonical processed groups
+
+    def _append_canonical_group(self, hostname_group, hostname_df, serial_groups, final_deduped_list):
+        for serial_info in serial_groups.values():
+            if hostname_group == serial_info['canonical_group']:
+                merged_data = self._merge_hostname_groups(hostname_df, serial_info['groups_to_merge'])
+                final_deduped_list.append(merged_data)
+                break
 
     def _clean_serial_field(self, value):
         """Clean serial field values similar to existing logic."""
