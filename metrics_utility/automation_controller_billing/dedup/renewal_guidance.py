@@ -187,86 +187,73 @@ class DedupRenewalExperimental:
 
     def _apply_serial_deduplication(self, hostname_df):
         """Apply serial-based deduplication similar to CCSP experimental mode."""
-        # Clean up serial fields
         hostname_df = hostname_df.copy()
+        expanded_df = self._expand_serial_records(hostname_df)
+        if expanded_df is None or expanded_df.empty:
+            return {'host_metric': hostname_df}
 
-        # Parse existing aggregated serial data back to individual records for processing
+        serial_groups, processed_hostname_groups = self._create_serial_groups(expanded_df)
+        final_deduped_list = self._build_final_deduped_list(hostname_df, serial_groups, processed_hostname_groups)
+        return {'host_metric': pd.DataFrame(final_deduped_list)}
+
+    def _expand_serial_records(self, hostname_df):
+        """Expand aggregated serial data back to individual records for processing."""
         expanded_records = []
         for _, group_row in hostname_df.iterrows():
-            # Find all original records that contributed to this hostname group
             hostnames_in_group = [h.strip() for h in group_row['hostnames'].split(',') if h.strip()]
             original_records = self.dataframe[self.dataframe['hostname'].isin(hostnames_in_group)]
-
             for _, orig_row in original_records.iterrows():
-                # Clean serial fields
                 product_serial = self._clean_serial_field(orig_row.get('ansible_product_serial'))
                 machine_id = self._clean_serial_field(orig_row.get('ansible_machine_id'))
-
-                # Create compound serial key (similar to CCSP compute_serial function)
-                compound_serial = None
-                if product_serial and machine_id:
-                    compound_serial = f'{product_serial}/{machine_id}'
-
+                compound_serial = f'{product_serial}/{machine_id}' if product_serial and machine_id else None
                 expanded_records.append(
                     {
                         'hostname': orig_row['hostname'],
-                        'hostname_group': group_row['hostname'],  # The representative hostname from step 1
+                        'hostname_group': group_row['hostname'],
                         'compound_serial': compound_serial,
                         'ansible_product_serial': product_serial,
                         'ansible_machine_id': machine_id,
-                        'original_data': group_row.to_dict(),  # Keep original aggregated data
+                        'original_data': group_row.to_dict(),
                     }
                 )
-
         if not expanded_records:
-            return {'host_metric': hostname_df}
+            return None
+        return pd.DataFrame(expanded_records)
 
-        expanded_df = pd.DataFrame(expanded_records)
-
-        # Group by compound serial to find additional matches
+    def _create_serial_groups(self, expanded_df):
+        """Create serial-based groupings."""
         serial_groups = {}
         processed_hostname_groups = set()
-
-        # First, create serial-based groupings
         for compound_serial in expanded_df['compound_serial'].dropna().unique():
-            if compound_serial:
-                serial_matches = expanded_df[expanded_df['compound_serial'] == compound_serial]
-                hostname_groups_in_serial = serial_matches['hostname_group'].unique()
-                if len(hostname_groups_in_serial) > 1:
-                    # Multiple hostname groups share the same serial - merge them
-                    canonical_group = hostname_groups_in_serial[0]  # Use first as canonical
-                    serial_groups[compound_serial] = {
-                        'canonical_group': canonical_group,
-                        'groups_to_merge': hostname_groups_in_serial,
-                    }
-                    processed_hostname_groups.update(hostname_groups_in_serial)
+            serial_matches = expanded_df[expanded_df['compound_serial'] == compound_serial]
+            hostname_groups_in_serial = serial_matches['hostname_group'].unique()
+            if len(hostname_groups_in_serial) > 1:
+                canonical_group = hostname_groups_in_serial[0]
+                serial_groups[compound_serial] = {
+                    'canonical_group': canonical_group,
+                    'groups_to_merge': hostname_groups_in_serial,
+                }
+                processed_hostname_groups.update(hostname_groups_in_serial)
+        return serial_groups, processed_hostname_groups
 
-        # Build the final result
+    def _build_final_deduped_list(self, hostname_df, serial_groups, processed_hostname_groups):
+        """Build the final deduped list based on serial and hostname groups."""
         final_deduped_list = []
-
+        canonical_groups = {info['canonical_group'] for info in serial_groups.values()}
         for _, row in hostname_df.iterrows():
             hostname_group = row['hostname']
-
             if hostname_group in processed_hostname_groups:
-                # This group is part of a serial-based merge
-                # Check if it's the canonical group that should represent the merged data
-                is_canonical = False
-                for serial_info in serial_groups.values():
-                    if hostname_group == serial_info['canonical_group']:
-                        is_canonical = True
-                        # Merge data from all groups in this serial cluster
-                        merged_data = self._merge_hostname_groups(hostname_df, serial_info['groups_to_merge'])
-                        final_deduped_list.append(merged_data)
-                        break
-
-                # If not canonical, skip (already merged into canonical)
-                if not is_canonical:
+                if hostname_group in canonical_groups:
+                    for serial_info in serial_groups.values():
+                        if hostname_group == serial_info['canonical_group']:
+                            merged_data = self._merge_hostname_groups(hostname_df, serial_info['groups_to_merge'])
+                            final_deduped_list.append(merged_data)
+                            break
+                else:
                     continue
             else:
-                # No serial-based merging needed, keep as-is
                 final_deduped_list.append(row.to_dict())
-
-        return {'host_metric': pd.DataFrame(final_deduped_list)}
+        return final_deduped_list
 
     def _clean_serial_field(self, value):
         """Clean serial field values similar to existing logic."""
