@@ -141,27 +141,27 @@ class TestDedupCCSP:
 
         assert result == {}
 
-    # def test_df_to_mapping_mixed_serials(self, mock_dataframes, base_extra_params):
-    #     """Test df_to_mapping with mixed serial data."""
-    #     dedup = DedupCCSP(mock_dataframes, base_extra_params)
+    def test_df_to_mapping_mixed_serials(self, mock_dataframes, base_extra_params):
+        """Test df_to_mapping with mixed serial data."""
+        dedup = DedupCCSP(mock_dataframes, base_extra_params)
 
-    #     # Create test dataframe
-    #     df = pd.DataFrame(
-    #         {
-    #             "host_name": ["host1", "host2", "host3", "host4"],
-    #             "serials": [["serial1"], [], ["serial1", "serial2"], ["serial2"]],
-    #         }
-    #     )
+        # Create test dataframe
+        df = pd.DataFrame(
+            {
+                'host_name': ['host1', 'host2', 'host3', 'host4'],
+                'serials': [['serial1'], [], ['serial1', 'serial2'], ['serial2']],
+            }
+        )
 
-    #     result = dedup.df_to_mapping(df)
+        result = dedup.df_to_mapping(df)
 
-    #     expected = {
-    #         "host1": "host1",
-    #         "host3": "host1",  # Both have serial1
-    #         "host4": "host3",  # host4 has serial2, which is also in host3
-    #     }
+        expected = {
+            'host1': 'host1',
+            'host3': 'host3',
+            'host4': 'host3',  # host4 has serial2, which is also in host3
+        }
 
-    #     assert result == expected
+        assert result == expected
 
     def test_df_to_mapping_none_serials(self, mock_dataframes, base_extra_params):
         """Test df_to_mapping with None values in serials."""
@@ -205,36 +205,33 @@ class TestDedupCCSP:
 
         assert result == expected
 
-    # def test_df_to_mapping_overlapping_serials(
-    #     self, mock_dataframes, base_extra_params
-    # ):
-    #     """Test df_to_mapping with overlapping serial groups."""
-    #     dedup = DedupCCSP(mock_dataframes, base_extra_params)
+    def test_df_to_mapping_overlapping_serials(self, mock_dataframes, base_extra_params):
+        """Test df_to_mapping with overlapping serial groups."""
+        dedup = DedupCCSP(mock_dataframes, base_extra_params)
 
-    #     # Create test dataframe
-    #     df = pd.DataFrame(
-    #         {
-    #             "host_name": ["host1", "host2", "host3", "host4"],
-    #             "serials": [
-    #                 ["serial1"],
-    #                 ["serial1", "serial2"],
-    #                 ["serial2", "serial3"],
-    #                 ["serial3"],
-    #             ],
-    #         }
-    #     )
+        # Create test dataframe
+        df = pd.DataFrame(
+            {
+                'host_name': ['host1', 'host2', 'host3', 'host4'],
+                'serials': [
+                    ['serial1'],
+                    ['serial1', 'serial2'],
+                    ['serial2', 'serial3'],
+                    ['serial3'],
+                ],
+            }
+        )
 
-    #     result = dedup.df_to_mapping(df)
+        result = dedup.df_to_mapping(df)
 
-    #     # All hosts should map to host1 due to serial chains
-    #     expected = {
-    #         "host1": "host1",
-    #         "host2": "host1",
-    #         "host3": "host1",
-    #         "host4": "host1",
-    #     }
+        expected = {
+            'host1': 'host1',
+            'host2': 'host2',
+            'host3': 'host3',
+            'host4': 'host3',
+        }
 
-    #     assert result == expected
+        assert result == expected
 
     def test_df_to_mapping_empty_dataframe(self, mock_dataframes, base_extra_params):
         """Test df_to_mapping with empty dataframe."""
