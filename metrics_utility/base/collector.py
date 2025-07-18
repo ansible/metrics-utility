@@ -173,15 +173,15 @@ class Collector:
         _now = now()
         original_since = since
         original_until = until
-        self.logger.info(f'Original since-until: {original_since} to {original_until}')
+        self.logger.warning(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
             until = _now
-            self.logger.info(f'End of the collection interval is in the future, setting to {_now}.')
+            self.logger.warning(f'End of the collection interval is in the future, setting to {_now}.')
         if since is not None and since > _now:
             since = _now
-            self.logger.info(f'Start of the collection interval is in the future, setting to {_now}.')
+            self.logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
 
         # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
         # set it to `now`, but only if that isn't more than 4 weeks ahead of a passed-in
@@ -190,7 +190,7 @@ class Collector:
             if until is not None:
                 if until > since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS):
                     until = since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
-                    self.logger.info(
+                    self.logger.warning(
                         f'End of the collection interval is greater than {self.MAX_GATHER_PERIOD_WEEKS} weeks from start, setting end to {until}.'
                     )
             else:  # until is None
@@ -199,7 +199,7 @@ class Collector:
             until = _now
 
         if since and since >= until:
-            self.logger.info('Start of the collection interval is later than the end, ignoring request.')
+            self.logger.warning('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
         # The ultimate beginning of the interval needs to be compared to 4 weeks prior to
@@ -209,20 +209,20 @@ class Collector:
         horizon = until - timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
         if since is not None and since < horizon:
             since = horizon
-            self.logger.info(
+            self.logger.warning(
                 f'Start of the collection interval is more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, setting to {horizon}.'
             )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            self.logger.info(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
+            self.logger.warning(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until
         self.last_gather = last_gather
 
-        self.logger.info(f'Final since-until: {since} to {until}')
+        self.logger.warning(f'Final since-until: {since} to {until}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -289,7 +289,7 @@ class Collector:
 
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
             if last_key != collection.key:
-                self.logger.info(f'Progress info: Now gathering {collection.key}')
+                self.logger.warning(f'Progress info: Now gathering {collection.key}')
                 last_key = collection.key
 
             collection.gather(self._package_class().max_data_size())
