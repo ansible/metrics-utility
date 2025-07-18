@@ -1,5 +1,9 @@
 from metrics_utility.automation_controller_billing.dedup.ccsp import DedupCCSP
-from metrics_utility.automation_controller_billing.dedup.renewal_guidance import DedupRenewal
+from metrics_utility.automation_controller_billing.dedup.renewal_guidance import (
+    DedupRenewal,
+    DedupRenewalExperimental,
+    DedupRenewalHostname,
+)
 from metrics_utility.exceptions import NotSupportedFactory
 
 
@@ -34,5 +38,16 @@ class Factory:  # DedupFactory
             if report_type not in {'CCSP', 'CCSPv2'}:
                 raise NotSupportedFactory(f'Unknown report type: {report_type}')
             return DedupCCSP(**kwargs, experimental=True)
+
+        # New renewal guidance deduplication modes
+        if deduplicator == 'renewal-hostname':
+            if report_type not in {'RENEWAL_GUIDANCE'}:
+                raise NotSupportedFactory(f'renewal-hostname only supports RENEWAL_GUIDANCE, got: {report_type}')
+            return DedupRenewalHostname(**kwargs)
+
+        if deduplicator == 'renewal-experimental':
+            if report_type not in {'RENEWAL_GUIDANCE'}:
+                raise NotSupportedFactory(f'renewal-experimental only supports RENEWAL_GUIDANCE, got: {report_type}')
+            return DedupRenewalExperimental(**kwargs)
 
         raise NotSupportedFactory(f'Factory for {deduplicator} not supported')

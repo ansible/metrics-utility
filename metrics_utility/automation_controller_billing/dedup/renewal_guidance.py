@@ -77,3 +77,229 @@ class DedupRenewal:
         dupes = pd.concat([dupes, next_iteration_dupes]).drop_duplicates().reset_index(drop=True)
 
         return dupes
+
+
+class DedupRenewalHostname:
+    """
+    Hostname-based deduplication for renewal guidance that mirrors CCSP logic.
+    Uses ansible_host_variable || hostname for deduplication, similar to CCSP.
+    """
+
+    def __init__(self, dataframes, extra_params):
+        self.dataframe = dataframes['host_metric'].build_dataframe()
+        self.extra_params = extra_params
+
+    def run(self):
+        # Check if dataframe is empty or missing required columns
+        if self.dataframe.empty:
+            return {'host_metric': pd.DataFrame()}
+
+        # Ensure required columns exist
+        if 'ansible_host_variable' not in self.dataframe.columns:
+            self.dataframe['ansible_host_variable'] = None
+
+        # Cleanup the null like values first
+        self.dataframe['ansible_host_variable'] = self.dataframe['ansible_host_variable'].replace('', None)
+
+        # Apply hostname normalization logic similar to CCSP:
+        # ansible_host_variable || hostname
+        self.dataframe['normalized_hostname'] = self.dataframe['ansible_host_variable'].fillna(self.dataframe['hostname'])
+
+        deduped_list = []
+        processed_dupes_index = set()
+
+        for index, row in self.dataframe.iterrows():
+            # Skip if index is in existing dupes_index
+            if index in processed_dupes_index:
+                continue
+
+            # Find duplicates based on normalized hostname only
+            dupes = self.dataframe[self.dataframe['normalized_hostname'] == row['normalized_hostname']]
+            processed_dupes_index.update(dupes['index'])
+
+            # Take the last updated non deleted hostname with priority, to represent the
+            # duplicate group
+            latest_hostname = dupes.sort_values(by=['deleted', 'last_automation'], ascending=[True, False])['hostname'].iloc[0]
+
+            # Clean up product serial and machine ID for consistent output
+            dupes_clean = dupes.copy()
+            dupes_clean['ansible_product_serial'] = dupes_clean['ansible_product_serial'].replace('NA', None).replace('', None)
+            dupes_clean['ansible_machine_id'] = dupes_clean['ansible_machine_id'].replace('NA', None).replace('', None)
+
+            deduped_list.append(
+                {
+                    'hostname': latest_hostname,
+                    'hostmetric_record_count': dupes['hostname'].nunique(),
+                    'hostmetric_record_count_active': dupes[~dupes['deleted']]['hostname'].nunique(),
+                    'hostmetric_record_count_deleted': dupes[dupes['deleted']]['hostname'].nunique(),
+                    'hostnames': self.stringify(set(dupes['hostname'])),
+                    'ansible_host_variables': self.stringify(set(dupes['ansible_host_variable'])),
+                    'ansible_product_serials': self.stringify(set(dupes_clean['ansible_product_serial'])),
+                    'ansible_machine_ids': self.stringify(set(dupes_clean['ansible_machine_id'])),
+                    'deleted': min(dupes['deleted']),  # if there was at least one false, it's not deleted
+                    'first_automation': min(dupes['first_automation']),
+                    'last_automation': max(dupes['last_automation']),
+                    'automated_counter': sum(dupes['automated_counter']),
+                    'deleted_counter': sum(dupes['deleted_counter']),
+                    'last_deleted': max(dupes['last_deleted']),
+                }
+            )
+
+        return {'host_metric': pd.DataFrame(deduped_list)}
+
+    def stringify(self, value):
+        return ', '.join([v for v in list(value) if v is not None])
+
+
+class DedupRenewalExperimental:
+    """
+    Experimental deduplication for renewal guidance that combines hostname-based
+    deduplication with serial-based deduplication (product_serial + machine_id).
+    Mimics the CCSP experimental approach.
+    """
+
+    def __init__(self, dataframes, extra_params):
+        self.dataframe = dataframes['host_metric'].build_dataframe()
+        self.extra_params = extra_params
+
+    def run(self):
+        # Check if dataframe is empty
+        if self.dataframe.empty:
+            return {'host_metric': pd.DataFrame()}
+
+        # Step 1: Apply hostname-based deduplication first
+        # Create a mock dataframe object that returns our dataframe
+        class MockDataframe:
+            def __init__(self, dataframe):
+                self.dataframe = dataframe
+
+            def build_dataframe(self):
+                return self.dataframe
+
+        mock_dataframe = MockDataframe(self.dataframe)
+
+        hostname_dedup = DedupRenewalHostname({'host_metric': mock_dataframe}, self.extra_params)
+        hostname_result = hostname_dedup.run()
+        hostname_df = hostname_result['host_metric']
+
+        # Step 2: Apply serial-based deduplication on top of hostname results
+        return self._apply_serial_deduplication(hostname_df)
+
+    def _apply_serial_deduplication(self, hostname_df):
+        """Apply serial-based deduplication similar to CCSP experimental mode."""
+        # Clean up serial fields
+        hostname_df = hostname_df.copy()
+
+        # Parse existing aggregated serial data back to individual records for processing
+        expanded_records = []
+        for _, group_row in hostname_df.iterrows():
+            # Find all original records that contributed to this hostname group
+            hostnames_in_group = [h.strip() for h in group_row['hostnames'].split(',') if h.strip()]
+            original_records = self.dataframe[self.dataframe['hostname'].isin(hostnames_in_group)]
+
+            for _, orig_row in original_records.iterrows():
+                # Clean serial fields
+                product_serial = self._clean_serial_field(orig_row.get('ansible_product_serial'))
+                machine_id = self._clean_serial_field(orig_row.get('ansible_machine_id'))
+
+                # Create compound serial key (similar to CCSP compute_serial function)
+                compound_serial = None
+                if product_serial and machine_id:
+                    compound_serial = f'{product_serial}/{machine_id}'
+
+                expanded_records.append(
+                    {
+                        'hostname': orig_row['hostname'],
+                        'hostname_group': group_row['hostname'],  # The representative hostname from step 1
+                        'compound_serial': compound_serial,
+                        'ansible_product_serial': product_serial,
+                        'ansible_machine_id': machine_id,
+                        'original_data': group_row.to_dict(),  # Keep original aggregated data
+                    }
+                )
+
+        if not expanded_records:
+            return {'host_metric': hostname_df}
+
+        expanded_df = pd.DataFrame(expanded_records)
+
+        # Group by compound serial to find additional matches
+        serial_groups = {}
+        processed_hostname_groups = set()
+
+        # First, create serial-based groupings
+        for compound_serial in expanded_df['compound_serial'].dropna().unique():
+            if compound_serial:
+                serial_matches = expanded_df[expanded_df['compound_serial'] == compound_serial]
+                hostname_groups_in_serial = serial_matches['hostname_group'].unique()
+                if len(hostname_groups_in_serial) > 1:
+                    # Multiple hostname groups share the same serial - merge them
+                    canonical_group = hostname_groups_in_serial[0]  # Use first as canonical
+                    serial_groups[compound_serial] = {
+                        'canonical_group': canonical_group,
+                        'groups_to_merge': hostname_groups_in_serial,
+                    }
+                    processed_hostname_groups.update(hostname_groups_in_serial)
+
+        # Build the final result
+        final_deduped_list = []
+
+        for _, row in hostname_df.iterrows():
+            hostname_group = row['hostname']
+
+            if hostname_group in processed_hostname_groups:
+                # This group is part of a serial-based merge
+                # Check if it's the canonical group that should represent the merged data
+                is_canonical = False
+                for serial_info in serial_groups.values():
+                    if hostname_group == serial_info['canonical_group']:
+                        is_canonical = True
+                        # Merge data from all groups in this serial cluster
+                        merged_data = self._merge_hostname_groups(hostname_df, serial_info['groups_to_merge'])
+                        final_deduped_list.append(merged_data)
+                        break
+
+                # If not canonical, skip (already merged into canonical)
+                if not is_canonical:
+                    continue
+            else:
+                # No serial-based merging needed, keep as-is
+                final_deduped_list.append(row.to_dict())
+
+        return {'host_metric': pd.DataFrame(final_deduped_list)}
+
+    def _clean_serial_field(self, value):
+        """Clean serial field values similar to existing logic."""
+        if pd.isna(value) or value in ['', 'NA']:
+            return None
+        return value
+
+    def _merge_hostname_groups(self, hostname_df, groups_to_merge):
+        """Merge multiple hostname groups into a single group."""
+        groups_data = hostname_df[hostname_df['hostname'].isin(groups_to_merge)]
+
+        if groups_data.empty:
+            return {}
+
+        # Take the latest hostname as representative
+        latest_group = groups_data.sort_values(by=['last_automation'], ascending=[False]).iloc[0]
+
+        # Merge the data
+        merged = {
+            'hostname': latest_group['hostname'],
+            'hostmetric_record_count': groups_data['hostmetric_record_count'].sum(),
+            'hostmetric_record_count_active': groups_data['hostmetric_record_count_active'].sum(),
+            'hostmetric_record_count_deleted': groups_data['hostmetric_record_count_deleted'].sum(),
+            'hostnames': ', '.join([h for group in groups_data['hostnames'] for h in group.split(', ') if h]),
+            'ansible_host_variables': ', '.join([h for group in groups_data['ansible_host_variables'] for h in group.split(', ') if h]),
+            'ansible_product_serials': ', '.join([h for group in groups_data['ansible_product_serials'] for h in group.split(', ') if h]),
+            'ansible_machine_ids': ', '.join([h for group in groups_data['ansible_machine_ids'] for h in group.split(', ') if h]),
+            'deleted': groups_data['deleted'].min(),  # if there was at least one false, it's not deleted
+            'first_automation': groups_data['first_automation'].min(),
+            'last_automation': groups_data['last_automation'].max(),
+            'automated_counter': groups_data['automated_counter'].sum(),
+            'deleted_counter': groups_data['deleted_counter'].sum(),
+            'last_deleted': groups_data['last_deleted'].max(),
+        }
+
+        return merged
