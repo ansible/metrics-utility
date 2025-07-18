@@ -500,7 +500,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     vcpu_count_enabled = False
     if vcpu_count_enabled_str and (vcpu_count_enabled_str.lower() == 'true'):
         vcpu_count_enabled = True
-    if vcpu_count_enabled:
+    if not vcpu_count_enabled:
         return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': '1'}
 
     try:
@@ -517,7 +517,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     nodes = api_instance.list_node()
 
-    info = {'cluster_name': 'TOBEADDED', 'timestamp': now.isoformat(), 'nodes': []}
+    info = {'cluster_name': cluster_name , 'timestamp': now.isoformat(), 'nodes': []}
 
     total_workers_vcpu = 0
     for node_info in nodes.items:

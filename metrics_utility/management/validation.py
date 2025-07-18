@@ -45,7 +45,8 @@ VALID_SHEETS = {
         'managed_nodes_by_organizations',
     },
 }
-VALID_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit'}
+VALID_OPTIONAL_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit', 'total_workers_vcpu'}
+VALID_MANDATORY_COLLECTORS = {'job_host_summary'}
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
@@ -222,18 +223,30 @@ def validate_collectors(errors):
     Environment Variables:
         METRICS_UTILITY_OPTIONAL_COLLECTORS (str, optional): Comma-separated
             list of collector names. Defaults to 'main_jobevent' if not set.
+        METRICS_UTILITY_MANDATORY_COLLECTORS (str, optional): Comma-separated
+            list of collector names. Defaults to 'main_jobevent' if not set.
 
     Notes:
-        - The set of valid collectors is defined by the global variable
-          VALID_COLLECTORS.
+        - The set of valid optional collectors is defined by the global variable
+          VALID_OPTIONAL_COLLECTORS.
+        - The set of valid mandatory collectors is defined by the global variable
+          VALID_MANDATORY_COLLECTORS.
         - Error messages include the invalid collector names and the list of
           valid values.
     """
+    collectors_env_var = os.environ.get('METRICS_UTILITY_MANDATORY_COLLECTORS')
+    if collectors_env_var:
+        collectors = collectors_env_var.split(',')
+        if collectors:
+            invalid = set(collectors) - VALID_MANDATORY_COLLECTORS
+            if invalid:
+                errors.append(f'Invalid METRICS_UTILITY_MANDATORY_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_MANDATORY_COLLECTORS)}')
+
     collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
     if collectors:
-        invalid = set(collectors) - VALID_COLLECTORS
+        invalid = set(collectors) - VALID_OPTIONAL_COLLECTORS
         if invalid:
-            errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
+            errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_OPTIONAL_COLLECTORS)}')
 
 
 def validate_ship_target(errors, method):
