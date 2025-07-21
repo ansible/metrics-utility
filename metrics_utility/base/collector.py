@@ -41,6 +41,8 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
+    MAX_GATHER_PERIOD_WEEKS = 4
+
     def __init__(self, collection_type=DRY_RUN, collector_module=None, logger=None, licensed=True):
         self.licensed = licensed
         self.collector_module = collector_module
@@ -49,7 +51,7 @@ class Collector:
         self.packages = {}
 
         self.last_gathered_entries = None
-        self.logger = logger or logging.getLogger('metrics_utility.base.collector')
+        self.logger = logger or logging.getLogger('awx.main.analytics')
         self.log_level = logging.ERROR if self.collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
 
         self.tmp_dir = None
@@ -169,6 +171,9 @@ class Collector:
     #
     def _calculate_collection_interval(self, since, until):
         _now = now()
+        original_since = since
+        original_until = until
+        self.logger.warning(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
@@ -183,11 +188,13 @@ class Collector:
         # `since` parameter.
         if since is not None:
             if until is not None:
-                if until > since + timedelta(weeks=4):
-                    until = since + timedelta(weeks=4)
-                    self.logger.warning(f'End of the collection interval is greater than 4 weeks from start, setting end to {until}.')
+                if until > since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS):
+                    until = since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
+                    self.logger.warning(
+                        f'End of the collection interval is greater than {self.MAX_GATHER_PERIOD_WEEKS} weeks from start, setting end to {until}.'
+                    )
             else:  # until is None
-                until = min(since + timedelta(weeks=4), _now)
+                until = min(since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS), _now)
         elif until is None:
             until = _now
 
@@ -199,19 +206,23 @@ class Collector:
         # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
         # case to know whether to use the bookkeeping settings variables to decide the start of
         # the interval.
-        horizon = until - timedelta(weeks=4)
+        horizon = until - timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
         if since is not None and since < horizon:
             since = horizon
-            self.logger.warning(f'Start of the collection interval is more than 4 weeks prior to {until}, setting to {horizon}.')
+            self.logger.warning(
+                f'Start of the collection interval is more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, setting to {horizon}.'
+            )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            self.logger.warning(f'Last analytics run was more than 4 weeks prior to {until}, using {horizon} instead.')
+            self.logger.warning(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until
         self.last_gather = last_gather
+
+        self.logger.warning(f'Final since-until: {since} to {until}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -273,7 +284,14 @@ class Collector:
          1) the temp file needs to be deleted to ensure enough disk space
          2) Collections with slicing function can produce duplicate filename
         """
+
+        last_key = None
+
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
+            if last_key != collection.key:
+                self.logger.warning(f'Progress info: Now gathering {collection.key}')
+                last_key = collection.key
+
             collection.gather(self._package_class().max_data_size())
 
             if collection.is_empty() or not collection.gathering_successful:
