@@ -34,9 +34,6 @@ class DedupCCSP:
                 # Pass main_host dataframe to job_host_summary for canonical facts enrichment
                 if v == 'job_host_summary':
                     new[v] = self.dataframes[v].dedup(new[v], mapping, scope_dataframe=dedup_info_copy)
-                elif v == 'main_host':
-                    # Deduplicate the inventory scope (main_host) dataframe
-                    new[v] = self.dataframes[v].dedup(new[v], mapping)
                 else:
                     new[v] = self.dataframes[v].dedup(new[v], mapping)
         # no dedup on data_collection_status
