@@ -3,7 +3,7 @@
 ######################################
 import json
 
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
@@ -135,8 +135,6 @@ class Base:
         return current_row + row_counter
 
     def _build_data_section_infrastructure_summary(self, current_row, ws, dataframe):
-        from openpyxl.styles import Alignment
-
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
