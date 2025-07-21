@@ -192,7 +192,7 @@ class DataframeJobhostSummaryUsage(Base):
 
         # Enrich direct managed nodes with canonical facts and facts from scope data
         # when experimental deduplication is enabled
-        experimental_dedup = getattr(self, 'extra_params', {}).get('deduplicator') == 'ccsp-experimental'
+        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
 
         if experimental_dedup and scope_dataframe is not None and not scope_dataframe.empty:
             # Create a mapping from host_name to canonical_facts and facts
