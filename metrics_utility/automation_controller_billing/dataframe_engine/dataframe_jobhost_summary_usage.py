@@ -198,8 +198,6 @@ class DataframeJobhostSummaryUsage(Base):
             # Create a mapping from host_name to canonical_facts and facts
             if 'canonical_facts' in scope_dataframe.columns and 'facts' in scope_dataframe.columns:
                 # Filter to only direct managed nodes for enrichment
-                from metrics_utility.metric_utils import DIRECT
-
                 direct_mask = dataframe['managed_node_type'] == DIRECT  # DIRECT = 0
 
                 if direct_mask.any():
