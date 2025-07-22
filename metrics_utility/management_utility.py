@@ -61,7 +61,12 @@ class ManagementUtility(management.ManagementUtility):
             self.run_subcommand(subcommand, self.argv)
 
     def fetch_command(self, subcommand):
-        module = import_module(f'metrics_utility.management.commands.{subcommand}')
+        try:
+            module = import_module(f'metrics_utility.management.commands.{subcommand}')
+        except Exception as ex:
+            sys.stdout.write(f"Failed to import command '{subcommand}': {ex}")
+            raise ex
+
         return module.Command()
 
     @staticmethod

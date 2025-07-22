@@ -73,10 +73,13 @@ class ReportCCSPv2(Base):
 
         default_status_column_widths = {1: 36, 2: 20, 3: 20, 4: 36, 5: 15, 6: 15, 7: 20}
 
+        infrastructure_summary_column_widths = {1: 20, 2: 20, 3: 20, 4: 20, 5: 20}
+
         self.config['sku_description'] = default_sku_description
         self.config['column_widths'] = default_column_widths
         self.config['data_column_widths'] = default_data_column_widths
         self.config['status_column_widths'] = default_status_column_widths
+        self.config['infrastructure_summary_column_widths'] = infrastructure_summary_column_widths
 
     def _apply_filter(self, job_host_summary_dataframe, events_dataframe):
         if self.extra_params['report_organization_filter'] is not None:
@@ -145,6 +148,11 @@ class ReportCCSPv2(Base):
             ws = self.add_sheet('Inventory Scope', sheet_index, self.config['data_column_widths'])
             scope = scope_dataframe
             self._build_data_section_scope(1, ws, scope)
+            sheet_index += 1
+
+        if 'infrastructure_summary' in self.optional_report_sheets():
+            ws = self.add_sheet('Infrastructure Summary', sheet_index, self.config['infrastructure_summary_column_widths'])
+            self._build_data_section_infrastructure_summary(1, ws, indirects)
             sheet_index += 1
 
         if 'usage_by_organizations' in self.optional_report_sheets():

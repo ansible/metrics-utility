@@ -73,12 +73,11 @@ class Command(BaseCommand):
         )
 
         tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params)
-        if tgzfiles:
-            for tgz in tgzfiles:
-                self.logger.info(tgz)
-        else:
+        if not tgzfiles:
             self.logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
+        if tgzfiles:
+            self.logger.info('Analytics collected')
 
     def _handle_ship_target(self, ship_target):
         if ship_target == 'crc':
