@@ -14,10 +14,10 @@ env_vars = {
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,indirectly_managed_nodes,'
-    'inventory_scope,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules,managed_nodes_by_organizations',
+    'inventory_scope,infrastructure_summary,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules,managed_nodes_by_organizations',
 }
 
-file_path = './metrics_utility/test/test_data/reports/2025/03/CCSPv2-2024-02-20--2025-03-02.xlsx'
+file_path = './metrics_utility/test/test_data/reports/2025/07/CCSPv2-2025-02-25--2025-07-16.xlsx'
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -35,8 +35,8 @@ def test_command(cleanup):
     run_build_int(
         env_vars,
         {
-            'since': '2024-02-20',
-            'until': '2025-03-02',
+            'since': '2025-02-25',
+            'until': '2025-07-16',
             'force': True,
         },
     )
