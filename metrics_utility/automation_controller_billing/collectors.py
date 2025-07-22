@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import os.path
 import platform
@@ -15,6 +14,7 @@ from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 
 from metrics_utility.base import Collector, CsvFileSplitter, register
+from metrics_utility.logger import logger
 
 
 """
@@ -420,7 +420,7 @@ def main_indirectmanagednodeaudit_table(since, full_path, until, **kwargs):
             path=full_path,
         )
     except ProgrammingError as e:
-        logging.warning(
+        logger.warning(
             'main_indirectmanagednodeaudit table missing in the database schema: %s.'
             ' Falling back to behavior without indirect managed node audit data.',
             e,
