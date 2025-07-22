@@ -155,7 +155,7 @@ class DedupRenewalExperimental:
     """
     Experimental deduplication for renewal guidance that combines hostname-based
     deduplication with serial-based deduplication (product_serial + machine_id).
-    Mimics the CCSP experimental approach.
+    Mimics the CCSP experimental approach with proper multiple serial handling.
     """
 
     def __init__(self, dataframes, extra_params):
@@ -203,28 +203,100 @@ class DedupRenewalExperimental:
             hostnames_in_group = [h.strip() for h in group_row['hostnames'].split(',') if h.strip()]
             original_records = self.dataframe[self.dataframe['hostname'].isin(hostnames_in_group)]
             for _, orig_row in original_records.iterrows():
-                product_serial = self._clean_serial_field(orig_row.get('ansible_product_serial'))
-                machine_id = self._clean_serial_field(orig_row.get('ansible_machine_id'))
-                compound_serial = f'{product_serial}/{machine_id}' if product_serial and machine_id else None
-                expanded_records.append(
-                    {
-                        'hostname': orig_row['hostname'],
-                        'hostname_group': group_row['hostname'],
-                        'compound_serial': compound_serial,
-                        'ansible_product_serial': product_serial,
-                        'ansible_machine_id': machine_id,
-                        'original_data': group_row.to_dict(),
-                    }
-                )
+                # Parse multiple serial numbers from comma-separated values
+                product_serials = self._parse_multiple_serials(orig_row.get('ansible_product_serial'))
+                machine_ids = self._parse_multiple_serials(orig_row.get('ansible_machine_id'))
+
+                # Create records for all combinations of serials
+                serial_combinations = self._create_serial_combinations(product_serials, machine_ids)
+
+                for serial_info in serial_combinations:
+                    expanded_records.append(
+                        {
+                            'hostname': orig_row['hostname'],
+                            'hostname_group': group_row['hostname'],
+                            'product_serial': serial_info['product_serial'],
+                            'machine_id': serial_info['machine_id'],
+                            'compound_serial': serial_info['compound_serial'],
+                            'individual_serials': serial_info['individual_serials'],
+                            'original_data': group_row.to_dict(),
+                        }
+                    )
         if not expanded_records:
             return None
         return pd.DataFrame(expanded_records)
 
+    def _parse_multiple_serials(self, value):
+        """Parse multiple serial numbers from a field that may contain comma-separated values."""
+        if pd.isna(value) or value in ['', 'NA']:
+            return []
+
+        # Handle single value or comma-separated values
+        if isinstance(value, str):
+            serials = [s.strip() for s in value.split(',') if s.strip() and s.strip() != 'NA']
+            return [s for s in serials if s]  # Remove empty strings
+
+        return [value] if value else []
+
+    def _create_serial_combinations(self, product_serials, machine_ids):
+        """Create all valid serial combinations for deduplication."""
+        combinations = []
+
+        # If we have both product serials and machine IDs, create compound keys
+        if product_serials and machine_ids:
+            for ps in product_serials:
+                for mid in machine_ids:
+                    combinations.append(
+                        {
+                            'product_serial': ps,
+                            'machine_id': mid,
+                            'compound_serial': f'{ps}/{mid}',
+                            'individual_serials': [ps, mid],
+                        }
+                    )
+
+        # Also add individual serials for partial matching
+        for ps in product_serials:
+            combinations.append(
+                {
+                    'product_serial': ps,
+                    'machine_id': None,
+                    'compound_serial': f'ps:{ps}',
+                    'individual_serials': [ps],
+                }
+            )
+
+        for mid in machine_ids:
+            combinations.append(
+                {
+                    'product_serial': None,
+                    'machine_id': mid,
+                    'compound_serial': f'mid:{mid}',
+                    'individual_serials': [mid],
+                }
+            )
+
+        # If no serials, return empty list
+        if not combinations:
+            combinations.append(
+                {
+                    'product_serial': None,
+                    'machine_id': None,
+                    'compound_serial': None,
+                    'individual_serials': [],
+                }
+            )
+
+        return combinations
+
     def _create_serial_groups(self, expanded_df):
-        """Create serial-based groupings."""
+        """Create serial-based groupings with support for multiple serials."""
         serial_groups = {}
         processed_hostname_groups = set()
-        for compound_serial in expanded_df['compound_serial'].dropna().unique():
+
+        # Group by compound serial (exact matches)
+        compound_serials = expanded_df['compound_serial'].dropna()
+        for compound_serial in compound_serials.unique():
             serial_matches = expanded_df[expanded_df['compound_serial'] == compound_serial]
             hostname_groups_in_serial = serial_matches['hostname_group'].unique()
             if len(hostname_groups_in_serial) > 1:
@@ -232,8 +304,29 @@ class DedupRenewalExperimental:
                 serial_groups[compound_serial] = {
                     'canonical_group': canonical_group,
                     'groups_to_merge': hostname_groups_in_serial,
+                    'serial_type': 'compound',
                 }
                 processed_hostname_groups.update(hostname_groups_in_serial)
+
+        # Group by individual serials (for partial matches)
+        for _, row in expanded_df.iterrows():
+            if row['hostname_group'] not in processed_hostname_groups:
+                for serial in row['individual_serials']:
+                    if serial:
+                        # Find other hosts with this individual serial
+                        serial_matches = expanded_df[expanded_df['individual_serials'].apply(lambda x: serial in x if x else False)]
+                        hostname_groups_in_serial = serial_matches['hostname_group'].unique()
+                        if len(hostname_groups_in_serial) > 1:
+                            canonical_group = hostname_groups_in_serial[0]
+                            serial_key = f'individual:{serial}'
+                            if serial_key not in serial_groups:
+                                serial_groups[serial_key] = {
+                                    'canonical_group': canonical_group,
+                                    'groups_to_merge': hostname_groups_in_serial,
+                                    'serial_type': 'individual',
+                                }
+                                processed_hostname_groups.update(hostname_groups_in_serial)
+
         return serial_groups, processed_hostname_groups
 
     def _build_final_deduped_list(self, hostname_df, serial_groups, processed_hostname_groups):
@@ -243,12 +336,25 @@ class DedupRenewalExperimental:
         for _, row in hostname_df.iterrows():
             hostname_group = row['hostname']
             if hostname_group in processed_hostname_groups:
-                self._handle_processed_group(hostname_group, hostname_df, serial_groups, canonical_groups, final_deduped_list)
+                self._handle_processed_group(
+                    hostname_group,
+                    hostname_df,
+                    serial_groups,
+                    canonical_groups,
+                    final_deduped_list,
+                )
             else:
                 final_deduped_list.append(row.to_dict())
         return final_deduped_list
 
-    def _handle_processed_group(self, hostname_group, hostname_df, serial_groups, canonical_groups, final_deduped_list):
+    def _handle_processed_group(
+        self,
+        hostname_group,
+        hostname_df,
+        serial_groups,
+        canonical_groups,
+        final_deduped_list,
+    ):
         if hostname_group in canonical_groups:
             self._append_canonical_group(hostname_group, hostname_df, serial_groups, final_deduped_list)
         # else: skip non-canonical processed groups
@@ -276,7 +382,7 @@ class DedupRenewalExperimental:
         # Take the latest hostname as representative
         latest_group = groups_data.sort_values(by=['last_automation'], ascending=[False]).iloc[0]
 
-        # Merge the data
+        # Merge the data with improved serial handling
         merged = {
             'hostname': latest_group['hostname'],
             'hostmetric_record_count': groups_data['hostmetric_record_count'].sum(),
@@ -284,8 +390,8 @@ class DedupRenewalExperimental:
             'hostmetric_record_count_deleted': groups_data['hostmetric_record_count_deleted'].sum(),
             'hostnames': ', '.join([h for group in groups_data['hostnames'] for h in group.split(', ') if h]),
             'ansible_host_variables': ', '.join([h for group in groups_data['ansible_host_variables'] for h in group.split(', ') if h]),
-            'ansible_product_serials': ', '.join([h for group in groups_data['ansible_product_serials'] for h in group.split(', ') if h]),
-            'ansible_machine_ids': ', '.join([h for group in groups_data['ansible_machine_ids'] for h in group.split(', ') if h]),
+            'ansible_product_serials': self._merge_serial_fields([group['ansible_product_serials'] for _, group in groups_data.iterrows()]),
+            'ansible_machine_ids': self._merge_serial_fields([group['ansible_machine_ids'] for _, group in groups_data.iterrows()]),
             'deleted': groups_data['deleted'].min(),  # if there was at least one false, it's not deleted
             'first_automation': groups_data['first_automation'].min(),
             'last_automation': groups_data['last_automation'].max(),
@@ -295,3 +401,16 @@ class DedupRenewalExperimental:
         }
 
         return merged
+
+    def _merge_serial_fields(self, serial_fields):
+        """Merge serial fields while preserving individual serial numbers."""
+        all_serials = set()
+        for field in serial_fields:
+            if field:
+                # Split comma-separated values and add to set
+                serials = [s.strip() for s in str(field).split(', ') if s.strip()]
+                all_serials.update(serials)
+
+        # Remove None and empty values, sort for consistency
+        clean_serials = sorted([s for s in all_serials if s and s != 'None'])
+        return ', '.join(clean_serials) if clean_serials else ''
