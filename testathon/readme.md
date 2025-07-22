@@ -23,6 +23,8 @@ SSH_URL, SSH_USER to controller instance.
 
 Script will directly connect using SSH and do some modification to DB.
 
+If the server is on VPN, do not forget to connect on VPN.
+
 # gather_all
 
 Gather all gathers whole data from begining to datetime now. It uses SSH_URL and SSH_USER as previous script. 
