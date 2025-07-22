@@ -125,7 +125,6 @@ def test_command(cleanup_glob):
                     if col_name in skip_columns:
                         # skip unstable ID
                         continue
-                    print(f'Comparing column {col_name} A: {act_cell} E: {exp_cell}')
 
                     assert exp_cell == act_cell, (
                         f'\nData mismatch on row {i + 1}, column "{col_name}" (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'

@@ -5,6 +5,8 @@ from django.conf import settings
 
 import metrics_utility.base as base
 
+from metrics_utility.logger import logger
+
 
 class PackageDirectory(base.Package):
     def _batch_since_and_until(self):
@@ -22,11 +24,11 @@ class PackageDirectory(base.Package):
 
     def is_shipping_configured(self):
         if not self.tar_path:
-            self.logger.error('Insights for Ansible Automation Platform TAR not found')
+            logger.error('Insights for Ansible Automation Platform TAR not found')
             return False
 
         if not os.path.exists(self.tar_path):
-            self.logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
+            logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
         if 'Error:' in str(self.tar_path):
@@ -51,7 +53,7 @@ class PackageDirectory(base.Package):
             self.shipping_successful = False
             return False
 
-        self.logger.debug(f'shipping analytics file: {self.tar_path}')
+        logger.debug(f'shipping analytics file: {self.tar_path}')
 
         since, _ = self._batch_since_and_until()
         destination_path = self._destination_path(self.collector.billing_provider_params['ship_path'], since, os.path.basename(self.tar_path))

@@ -194,7 +194,6 @@ def test_handle_env_validation_gather_raises1(monkeypatch):
     with pytest.raises(MissingRequiredEnvVar) as excinfo:
         handle_env_validation('gather')
     msg = str(excinfo.value)
-    print(f'full message: {msg}')
     assert 'Invalid METRICS_UTILITY_REPORT_TYPE' in msg
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in msg
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in msg

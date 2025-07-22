@@ -1,16 +1,15 @@
-import logging
 import os
 import tempfile
 
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
+from metrics_utility.logger import logger
 
 
 class ReportSaverS3:
     LOG_PREFIX = '[ReportSaverS3]'
 
-    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
+    def __init__(self, extra_params):
         self.extra_params = extra_params
-        self.logger = logger
 
         self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
 
@@ -28,8 +27,6 @@ class ReportSaverS3:
                 self.s3_handler.upload_file(local_report_path, self.report_spreadsheet_destination_path)
 
             except Exception as e:
-                self.logger.exception(
-                    f'{self.LOG_PREFIX} ERROR: Saving report to S3 into path {self.report_spreadsheet_destination_path} failed with {e}'
-                )
+                logger.exception(f'{self.LOG_PREFIX} ERROR: Saving report to S3 into path {self.report_spreadsheet_destination_path} failed with {e}')
 
-        self.logger.info(f'Report sent into S3 bucket into path: {self.report_spreadsheet_destination_path}')
+        logger.info(f'Report sent into S3 bucket into path: {self.report_spreadsheet_destination_path}')

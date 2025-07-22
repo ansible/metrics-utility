@@ -1,11 +1,10 @@
 import json
-import logging
 import os
 import tarfile
 
 import pandas as pd
 
-from metrics_utility.debug_utils import print_debug
+from metrics_utility.logger import logger
 
 
 # csv name => [ sheet_names ]
@@ -47,26 +46,19 @@ CSV_SHEETS = {
 class Base:
     LOG_PREFIX = '[ExtractorBase]'
 
-    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
+    def __init__(self, extra_params):
         self.extra_params = extra_params
-        self.logger = logger
 
     def load_config(self, file_path):
         try:
             with open(file_path) as f:
                 return json.loads(f.read())
         except FileNotFoundError:
-            self.logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
+            logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
 
     def process_tarballs(self, path, temp_dir):
         _safe_extract(path, temp_dir)
         config = self.load_config(os.path.join(temp_dir, 'config.json'))
-
-        # # TODO: read the csvs in batches
-        # for chunk in pd.read_csv(filename, chunksize=chunksize):
-        # # chunk is a DataFrame. To "process" the rows in the chunk:
-        # for index, row in chunk.iterrows():
-        #     print(row)
 
         empty_dataframe = pd.DataFrame([{}])
         needed_data = {
@@ -166,7 +158,7 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
             if member.isdir():
                 continue
             if member.issym() or member.islnk():
-                print(f'Skipping link: {member.name}')
+                logger.warning(f'Skipping link: {member.name}')
                 continue
 
             # 2) Only allow .json or .csv
@@ -178,12 +170,12 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
             member_path = os.path.abspath(os.path.join(extract_path, member.name))
             extract_path_abs = os.path.abspath(extract_path)
             if not member_path.startswith(extract_path_abs + os.sep):
-                print(f'Skipping potentially unsafe file (path traversal): {member.name}')
+                logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
                 continue
 
             # 4) Limit total files
             if extracted_files >= max_files:
-                print(f'Reached max file limit of {max_files}.')
+                logger.warning(f'Reached max file limit of {max_files}.')
                 break
 
             # 5) Extract file contents manually, in chunks,
@@ -201,4 +193,4 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
             extracted_files += 1
 
-    print_debug(f'Extraction complete. Files extracted: {extracted_files}, Total size: {total_extracted_size} bytes.')
+    logger.debug(f'Extraction complete. Files extracted: {extracted_files}, Total size: {total_extracted_size} bytes.')

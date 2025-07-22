@@ -9,11 +9,12 @@ import warnings
 
 from dataclasses import dataclass
 from pathlib import Path
-from pprint import pprint
 from typing import Dict, List
 
 import openpyxl
 import openpyxl.utils
+
+from metrics_utility.logger import logger
 
 
 warnings.filterwarnings('ignore', category=ResourceWarning)
@@ -52,7 +53,7 @@ def create_directory_if_not_exists(directory_path: str) -> None:
     try:
         os.makedirs(directory_path, exist_ok=True)
     except Exception as e:
-        print(f'Error creating directory: {e}')
+        logger.error(f'Error creating directory: {e}')
 
 
 def parse_json_file(file_path: str) -> dict | None:
@@ -70,11 +71,11 @@ def parse_json_file(file_path: str) -> dict | None:
             data = json.load(file)
             return data
     except json.JSONDecodeError as e:
-        print(f'Error decoding JSON from file {file_path}: {e}')
+        logger.error(f'Error decoding JSON from file {file_path}: {e}')
     except FileNotFoundError:
-        print(f'File not found: {file_path}')
+        logger.error(f'File not found: {file_path}')
     except Exception as e:
-        print(f'An error occurred: {e}')
+        logger.error(f'An error occurred: {e}')
     return None
 
 
@@ -96,9 +97,9 @@ def save_snapshot_definition(data: DataShape, path: str) -> None:
             # Serialize the dictionary into JSON and write to the file
             json.dump(data, json_file, indent=4)
             json_file.flush()  # Explicitly flush the buffer
-        print(f'Data successfully saved to {path}')
+        logger.info(f'Data successfully saved to {path}')
     except Exception as e:
-        print(f'An error occurred while saving the data: {e} into {path}')
+        logger.error(f'An error occurred while saving the data: {e} into {path}')
 
 
 def find_json_files(directory: str) -> List[Path]:
@@ -127,11 +128,11 @@ def run_and_generate_snapshot_definitions(directory: str) -> None:
     Returns:
         None
     """
-    print(f'\nRun and generate snapshots from {directory}\n')
+    logger.debug(f'\nRun and generate snapshots from {directory}\n')
     json_files = find_json_files(directory)
 
     for json_file in json_files:
-        print(f'Found {json_file}')
+        logger.debug(f'Found {json_file}')
         output_dir = json_file.as_posix().removesuffix('.json')
         create_directory_if_not_exists(output_dir)
 
@@ -143,7 +144,7 @@ def run_and_generate_snapshot_definitions(directory: str) -> None:
             os.remove(output_file)
 
         shutil.move(generated_file, output_file)
-        print(f'Report generated and moved from {generated_file} to {output_file}\n')
+        logger.info(f'Report generated and moved from {generated_file} to {output_file}\n')
 
 
 def run_snapshot_definition(data: DataShape) -> str:
@@ -176,8 +177,8 @@ def run_snapshot_definition(data: DataShape) -> str:
         )
 
         if result.returncode != 0:
-            print('Generating of report failed')
-            print(result.stderr)
+            logger.error('Generating of report failed')
+            logger.error(result.stderr)
             return ''
 
         text = result.stderr + '/n' + result.stdout
@@ -196,7 +197,7 @@ def run_snapshot_definition(data: DataShape) -> str:
     if match:
         return match.group(1)
 
-    return ''
+    return None
 
 
 def run_and_test_snapshot_definitions(directory: str) -> None:
@@ -214,17 +215,14 @@ def run_and_test_snapshot_definitions(directory: str) -> None:
         None
     """
     json_files = find_json_files(directory)
-    print('Found definitions:')
-    pprint(json_files)
     for json_file in json_files:
-        print('')
         data_dir = json_file.as_posix().removesuffix('.json')
         data: DataShape = parse_json_file(json_file)
 
         original_file = './' + data_dir + '/report.xlsx'
         generated_file = run_snapshot_definition(data)
 
-        print(f'Compare {original_file} to {generated_file}')
+        logger.info(f'Compare {original_file} to {generated_file}')
         # compare the generated and original_file
 
         if data['env_vars']['METRICS_UTILITY_REPORT_TYPE'] == 'CCSPv2':
@@ -232,9 +230,6 @@ def run_and_test_snapshot_definitions(directory: str) -> None:
 
         if data['env_vars']['METRICS_UTILITY_REPORT_TYPE'] == 'CCSP':
             compare_ccsp_reports(original_file, generated_file)
-
-        if os.path.exists(generated_file):
-            print(f'Removing {generated_file}')
 
 
 def compare_ccspv2_reports(original_report_path: str, generated_report_path: str) -> None:
@@ -248,10 +243,10 @@ def compare_ccspv2_reports(original_report_path: str, generated_report_path: str
     Returns:
         None
     """
-    print(f'Opening {generated_report_path}')
+    logger.debug(f'Opening {generated_report_path}')
     g_wb = openpyxl.load_workbook(filename=generated_report_path)
 
-    print(f'Opening {original_report_path}')
+    logger.debug(f'Opening {original_report_path}')
     o_wb = openpyxl.load_workbook(filename=original_report_path)
 
     try:
@@ -274,10 +269,10 @@ def compare_ccsp_reports(original_report_path: str, generated_report_path: str) 
     Returns:
         None
     """
-    print(f'Opening {generated_report_path}')
+    logger.debug(f'Opening {generated_report_path}')
     g_wb = openpyxl.load_workbook(filename=generated_report_path)
 
-    print(f'Opening {original_report_path}')
+    logger.debug(f'Opening {original_report_path}')
     o_wb = openpyxl.load_workbook(filename=original_report_path)
 
     try:

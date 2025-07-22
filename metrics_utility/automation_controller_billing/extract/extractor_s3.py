@@ -1,24 +1,25 @@
-import logging
 import os
 import tempfile
 
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 from metrics_utility.automation_controller_billing.extract.base import Base
+from metrics_utility.logger import logger
 
 
 class ExtractorS3(Base):
     LOG_PREFIX = '[ExtractorS3]'
 
-    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
-        super().__init__(extra_params, logger)
+    def __init__(self, extra_params):
+        super().__init__(extra_params)
 
         self.s3_handler = S3Handler(params=self.extra_params)
 
     def iter_batches(self, date, columns=None, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size()
-        # Read parquet in memory in batches
-        self.logger.info(f'{self.LOG_PREFIX} Processing {date}')
+
+        # Read tarball in memory in batches
+        logger.debug(f'{self.LOG_PREFIX} Processing {date}')
         s3_paths = self.fetch_partition_paths(date)
 
         if batch_size is None:
@@ -33,7 +34,7 @@ class ExtractorS3(Base):
                     yield self.process_tarballs(self, s3_path, temp_dir)
 
                 except Exception as e:
-                    self.logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {s3_path} failed with {e}')
+                    logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {s3_path} failed with {e}')
 
     def fetch_partition_paths(self, date):
         prefix = self.get_path_prefix(date)

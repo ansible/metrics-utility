@@ -99,7 +99,7 @@ def test_gather_crc(caplog):
             'dry-run': True,
         },
     )
-    assert caplog.messages[-1] == 'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="controller_db", "directory", "s3"'
+    assert caplog.messages[0] == 'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="controller_db", "directory", "s3"'
 
 
 def test_build_directory(caplog):
