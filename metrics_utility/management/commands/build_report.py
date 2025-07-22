@@ -52,7 +52,7 @@ class Command(BaseCommand):
             'Example: --ephemeral=3months, or --ephemeral=3days'
         ),
         'force': ('With this option, the existing reports will be overwritten if running this command again.'),
-        'verbose': ('Starts to print debug information to terminal.'),
+        'verbose': ('Print debug information to console.'),
     }
 
     def create_parser(self, prog_name, subcommand, **kwargs):
@@ -88,16 +88,16 @@ class Command(BaseCommand):
         parser.add_argument('--force', dest='force', action='store_true', help=self.help_texts.get('force'))
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
-    def init_logging(self):
+    def init_logging(self, verbose=False):
         self.logger = logging.getLogger('awx.main.analytics')
         handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(logging.DEBUG if verbose else logging.INFO)
         handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(handler)
         self.logger.propagate = False
 
     def handle(self, *args, **options):
-        self.init_logging()
+        self.init_logging(options.get('verbose'))
         handle_env_validation('build')
 
         opt_since, opt_until = validate_build_params(options, self.help_texts)

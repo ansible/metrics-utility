@@ -19,7 +19,7 @@ def prepare():
 
             # debug logging by default in standalone mode
             logger = logging.getLogger('awx.main.analytics')
-            logger.setLevel(logging.DEBUG)  # Ensure the logger captures all messages
+            logger.setLevel(logging.INFO)  # DEBUG with --verbose
 
     import django
 

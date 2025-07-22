@@ -31,6 +31,7 @@ class Command(BaseCommand):
         'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
         'dry-run': ('Gather billing metrics without shipping.'),
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
+        'verbose': ('Print debug information to console.'),
     }
 
     def add_arguments(self, parser):
@@ -38,17 +39,18 @@ class Command(BaseCommand):
         parser.add_argument('--ship', dest='ship', action='store_true', help=self.help_texts.get('ship'))
         parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
         parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
+        parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
-    def init_logging(self):
+    def init_logging(self, verbose=False):
         self.logger = logging.getLogger('awx.main.analytics')
         handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(logging.DEBUG if verbose else logging.INFO)
         handler.setFormatter(logging.Formatter('%(message)s'))
         self.logger.addHandler(handler)
         self.logger.propagate = False
 
     def handle(self, *args, **options):
-        self.init_logging()
+        self.init_logging(options.get('verbose'))
         handle_env_validation('gather')
 
         opt_since = options.get('since')
