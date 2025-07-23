@@ -34,3 +34,12 @@ jobs:
       - name: "Check ruff format"
         run: |
           uvx ruff format --check
+
+      - name: "One logger to rule them all"
+        run: |
+          if rgrep logging.getLogger metrics_utility | cut -d: -f1 | grep -v logger.py | grep . ; then
+            echo "^ Please use logger imported from metrics_utility.logger instead of creating a new one" 1>&2
+            false
+          else
+            true
+          fi
