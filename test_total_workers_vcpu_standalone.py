@@ -49,7 +49,7 @@ def test_config_exception_fix():
         mock_nodes.items = [mock_node1, mock_node2]
         mock_api.list_node.return_value = mock_nodes
 
-        # Set environment variables - need to enable vcpu count to test K8s API
+        # Set environment variables - need to enable usage-based billing to test K8s API
         os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
         os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
 
@@ -85,7 +85,7 @@ def test_kubernetes_config_failure():
         mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException('not in cluster')
         mock_kube_config.load_kube_config.side_effect = mock_kube_config.ConfigException('no kube config')
 
-        # Set environment variables - need to enable vcpu count to reach K8s config code
+        # Set environment variables - need to enable usage-based billing to reach K8s config code
         os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
         os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
 
@@ -149,8 +149,8 @@ def test_cluster_name_not_set():
             pass  # No cleanup needed since we removed the env var
 
 
-def test_vcpu_count_disabled_default_behavior():
-    """Test that the function returns hardcoded value when vcpu count is disabled (default)."""
+def test_usage_based_billing_disabled_default_behavior():
+    """Test that the function returns hardcoded value when usage-based billing is disabled (default)."""
 
     # Mock the collectors module functions
     with (
@@ -162,7 +162,7 @@ def test_vcpu_count_disabled_default_behavior():
         # Set up the mocks
         mock_get.return_value = ['total_workers_vcpu']
 
-        # Set environment variables - don't set vcpu count enabled (default behavior)
+        # Set environment variables - don't set usage-based billing enabled (default behavior)
         os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
         os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
@@ -170,9 +170,9 @@ def test_vcpu_count_disabled_default_behavior():
             result = total_workers_vcpu(None, None, None)
 
             # Verify the result - should return hardcoded value
-            assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': '1'}
+            assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
 
-            print('✅ vCPU count disabled default behavior test passed!')
+            print('✅ Usage-based billing disabled default behavior test passed!')
 
         finally:
             # Clean up environment variables
@@ -183,5 +183,5 @@ if __name__ == '__main__':
     test_config_exception_fix()
     test_kubernetes_config_failure()
     test_cluster_name_not_set()
-    test_vcpu_count_disabled_default_behavior()
+    test_usage_based_billing_disabled_default_behavior()
     print('All tests passed!')
