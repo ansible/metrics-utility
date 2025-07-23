@@ -3,11 +3,12 @@
 ######################################
 import json
 
-from openpyxl.styles import Font
+from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
+from metrics_utility.metric_utils import INDIRECT
 
 
 class Base:
@@ -132,6 +133,130 @@ class Base:
             row_counter += 1
 
         return current_row + row_counter
+
+    def _build_data_section_infrastructure_summary(self, current_row, ws, dataframe):
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+
+        # Extract infrastructure facts from indirect nodes
+        indirect_nodes = dataframe[dataframe['managed_node_type'] == INDIRECT].copy()
+
+        if indirect_nodes.empty:
+            # If no indirect nodes, show empty message
+            cell = ws.cell(row=current_row, column=1)
+            cell.value = 'No indirect nodes found'
+            cell.font = value_font
+            return current_row + 1
+
+        # Parse facts to extract infra_type, infra_bucket, and device_type
+        def extract_infra_info(facts):
+            def extract_value(value):
+                if isinstance(value, set):
+                    return list(value)[0] if value else 'Unknown'
+                elif isinstance(value, list):
+                    return value[0] if value else 'Unknown'
+                elif isinstance(value, str):
+                    return value
+                else:
+                    return 'Unknown'
+
+            if isinstance(facts, dict):
+                return {
+                    'infra_type': extract_value(facts.get('infra_type', 'Unknown')),
+                    'infra_bucket': extract_value(facts.get('infra_bucket', 'Unknown')),
+                    'device_type': extract_value(facts.get('device_type', 'Unknown')),
+                }
+            elif isinstance(facts, str):
+                import json
+
+                try:
+                    facts_dict = json.loads(facts)
+                    return {
+                        'infra_type': extract_value(facts_dict.get('infra_type', 'Unknown')),
+                        'infra_bucket': extract_value(facts_dict.get('infra_bucket', 'Unknown')),
+                        'device_type': extract_value(facts_dict.get('device_type', 'Unknown')),
+                    }
+                except Exception:
+                    pass
+            return {'infra_type': 'Unknown', 'infra_bucket': 'Unknown', 'device_type': 'Unknown'}
+
+        # Extract infrastructure information
+        infra_info = indirect_nodes['facts'].apply(extract_infra_info)
+        indirect_nodes['infra_type'] = infra_info.apply(lambda x: x['infra_type'])
+        indirect_nodes['infra_bucket'] = infra_info.apply(lambda x: x['infra_bucket'])
+        indirect_nodes['device_type'] = infra_info.apply(lambda x: x['device_type'])
+
+        # Group by infra_type, infra_bucket, and device_type
+        agg_dict = {
+            'indirect_hosts_unique': ('host_name', 'nunique'),
+            'indirect_hosts_total': ('host_name', 'count'),
+        }
+
+        summary_df = indirect_nodes.groupby(['infra_type', 'infra_bucket', 'device_type'], dropna=False).agg(**agg_dict)
+        summary_df = summary_df.reset_index()
+
+        # Sort by infrastructure type, then bucket, then device type
+        summary_df = summary_df.sort_values(['infra_type', 'infra_bucket', 'device_type'])
+
+        # Add all column headers
+        headers = ['Infrastructure', 'Device Category', 'Device Type', 'Unique Nodes', 'Total Nodes']
+        for c_idx, header in enumerate(headers, 1):
+            cell = ws.cell(row=current_row, column=c_idx)
+            cell.value = header
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='left')
+
+        ws.row_dimensions[current_row].height = 25
+        current_row += 1
+
+        # Create hierarchical display
+        prev_infra_type = None
+        prev_infra_bucket = None
+
+        for _, row in summary_df.iterrows():
+            infra_type = row['infra_type']
+            infra_bucket = row['infra_bucket']
+            device_type = row['device_type']
+
+            # Write infrastructure type header when it changes
+            if infra_type != prev_infra_type:
+                # Merge cells across three columns for infrastructure type
+                ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=3)
+                cell = ws.cell(row=current_row, column=1)
+                cell.value = infra_type
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='left')
+                ws.row_dimensions[current_row].height = 25
+                current_row += 1
+                prev_infra_type = infra_type
+                prev_infra_bucket = None  # Reset bucket tracking
+
+            # Write infrastructure bucket header when it changes
+            if infra_bucket != prev_infra_bucket:
+                cell = ws.cell(row=current_row, column=2)
+                cell.value = infra_bucket
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='left')
+                ws.row_dimensions[current_row].height = 25
+                current_row += 1
+                prev_infra_bucket = infra_bucket
+
+            # Write device type row
+            cell = ws.cell(row=current_row, column=3)
+            cell.value = device_type
+            cell.font = value_font
+
+            cell = ws.cell(row=current_row, column=4)
+            cell.value = row['indirect_hosts_unique']
+            cell.font = value_font
+
+            cell = ws.cell(row=current_row, column=5)
+            cell.value = row['indirect_hosts_total']
+            cell.font = value_font
+
+            current_row += 1
+
+        return current_row
 
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)

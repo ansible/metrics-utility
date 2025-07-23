@@ -1,6 +1,10 @@
 import subprocess
 
 
+# This script is used to generate sql scripts that will be used to insert data into the database.
+# it should not be used in testathon, but rather for some performance testing.
+
+
 def run(sql_script):
     command = ['docker', 'exec', '-i', 'postgres', 'psql', '-U', 'awx']
 
