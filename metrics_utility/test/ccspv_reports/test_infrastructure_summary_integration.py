@@ -8,14 +8,14 @@ with real data from the test tarballs in metrics_utility/test/test_data/data/202
 import os
 import tarfile
 import tempfile
+
 from unittest.mock import patch
 
 import pandas as pd
 import pytest
 
 from metrics_utility.automation_controller_billing.report.base import Base
-from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import \
-    ReportCCSPv2
+from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import ReportCCSPv2
 from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
@@ -86,32 +86,36 @@ class TestInfrastructureSummaryWithTarballData:
             'report_rhn_login': 'test_login',
             'report_sku_description': 'Test Infrastructure Summary Description',
             'optional_report_sheets': 'infrastructure_summary',
-            'report_organization_filter': None
+            'report_organization_filter': None,
         }
 
         # Mock the dataframes that would come from tarball processing
         mock_dataframes = {
-            'job_host_summary': pd.DataFrame({
-                'managed_node_type': [INDIRECT, INDIRECT, INDIRECT, INDIRECT, INDIRECT],
-                'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
-                'original_host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
-                'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
-                'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5'],
-                'facts': [
-                    '{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}',
-                    '{"device_type": "Object Storage", "infra_type": "Hybrid Cloud", "infra_bucket": "Database"}',
-                    '{"device_type": "Block Storage", "infra_type": "On-Premises", "infra_bucket": "Network"}',
-                    '{"device_type": "File Storage", "infra_type": "Edge Computing", "infra_bucket": "Security"}',
-                    '{"device_type": "SQL", "infra_type": "Multi-Cloud", "infra_bucket": "Analytics"}'
-                ]
-            }),
-            'main_jobevent': pd.DataFrame({
-                'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
-                'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
-                'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5']
-            }),
+            'job_host_summary': pd.DataFrame(
+                {
+                    'managed_node_type': [INDIRECT, INDIRECT, INDIRECT, INDIRECT, INDIRECT],
+                    'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
+                    'original_host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
+                    'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
+                    'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5'],
+                    'facts': [
+                        '{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}',
+                        '{"device_type": "Object Storage", "infra_type": "Hybrid Cloud", "infra_bucket": "Database"}',
+                        '{"device_type": "Block Storage", "infra_type": "On-Premises", "infra_bucket": "Network"}',
+                        '{"device_type": "File Storage", "infra_type": "Edge Computing", "infra_bucket": "Security"}',
+                        '{"device_type": "SQL", "infra_type": "Multi-Cloud", "infra_bucket": "Analytics"}',
+                    ],
+                }
+            ),
+            'main_jobevent': pd.DataFrame(
+                {
+                    'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
+                    'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
+                    'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5'],
+                }
+            ),
             'main_host': pd.DataFrame(),  # Required by build_spreadsheet
-            'data_collection_status': pd.DataFrame()  # Required by build_spreadsheet
+            'data_collection_status': pd.DataFrame(),  # Required by build_spreadsheet
         }
 
         # Create report instance

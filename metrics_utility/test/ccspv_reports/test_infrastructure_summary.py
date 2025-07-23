@@ -12,11 +12,11 @@ from unittest.mock import patch
 
 import pandas as pd
 import pytest
+
 from openpyxl import Workbook
 
 from metrics_utility.automation_controller_billing.report.base import Base
-from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import \
-    ReportCCSPv2
+from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import ReportCCSPv2
 from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
@@ -183,9 +183,9 @@ class TestInfrastructureSummaryDataTransformation:
             'host_name': ['host1', 'host2', 'host3', 'host4'],
             'facts': [
                 '{"device_type": "Containers", "infra_type": "Public Cloud"}',  # Missing infra_bucket
-                '{"infra_type": "Private Cloud", "infra_bucket": "Storage"}',   # Missing device_type
+                '{"infra_type": "Private Cloud", "infra_bucket": "Storage"}',  # Missing device_type
                 '{"device_type": "Virtual Machines", "infra_bucket": "Compute"}',  # Missing infra_type
-                '{"device_type": "Database", "infra_type": "Hybrid Cloud"}'    # Missing infra_bucket
+                '{"device_type": "Database", "infra_type": "Hybrid Cloud"}',  # Missing infra_bucket
             ],
         }
         df = pd.DataFrame(test_data)
@@ -257,11 +257,7 @@ class TestInfrastructureSummaryDataTransformation:
         test_data = {
             'managed_node_type': [INDIRECT],
             'host_name': ['host1'],
-            'facts': [{
-                'device_type': {'Containers', 'Virtual Machines'},
-                'infra_type': {'Public Cloud'},
-                'infra_bucket': {'Storage', 'Compute'}
-            }]
+            'facts': [{'device_type': {'Containers', 'Virtual Machines'}, 'infra_type': {'Public Cloud'}, 'infra_bucket': {'Storage', 'Compute'}}],
         }
         df = pd.DataFrame(test_data)
 
@@ -279,11 +275,7 @@ class TestInfrastructureSummaryDataTransformation:
         test_data = {
             'managed_node_type': [INDIRECT],
             'host_name': ['host1'],
-            'facts': [{
-                'device_type': ['Containers', 'Virtual Machines'],
-                'infra_type': ['Public Cloud'],
-                'infra_bucket': ['Storage', 'Compute']
-            }]
+            'facts': [{'device_type': ['Containers', 'Virtual Machines'], 'infra_type': ['Public Cloud'], 'infra_bucket': ['Storage', 'Compute']}],
         }
         df = pd.DataFrame(test_data)
 
@@ -304,24 +296,22 @@ class TestInfrastructureSummarySpreadsheetGeneration:
         """Test that Infrastructure Summary sheet is created when requested."""
         # Mock dataframes with all required dataframes and columns
         dataframes = {
-            'job_host_summary': pd.DataFrame({
-                'managed_node_type': [INDIRECT, INDIRECT],
-                'host_name': ['host1', 'host2'],
-                'original_host_name': ['host1', 'host2'],
-                'install_uuid': ['uuid1', 'uuid2'],
-                'job_remote_id': ['job1', 'job2'],
-                'facts': [
-                    '{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}',
-                    '{"device_type": "Virtual Machines", "infra_type": "Private Cloud", "infra_bucket": "Compute"}'
-                ]
-            }),
-            'main_jobevent': pd.DataFrame({
-                'host_name': ['host1', 'host2'],
-                'install_uuid': ['uuid1', 'uuid2'],
-                'job_remote_id': ['job1', 'job2']
-            }),
+            'job_host_summary': pd.DataFrame(
+                {
+                    'managed_node_type': [INDIRECT, INDIRECT],
+                    'host_name': ['host1', 'host2'],
+                    'original_host_name': ['host1', 'host2'],
+                    'install_uuid': ['uuid1', 'uuid2'],
+                    'job_remote_id': ['job1', 'job2'],
+                    'facts': [
+                        '{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}',
+                        '{"device_type": "Virtual Machines", "infra_type": "Private Cloud", "infra_bucket": "Compute"}',
+                    ],
+                }
+            ),
+            'main_jobevent': pd.DataFrame({'host_name': ['host1', 'host2'], 'install_uuid': ['uuid1', 'uuid2'], 'job_remote_id': ['job1', 'job2']}),
             'main_host': pd.DataFrame(),  # Required by build_spreadsheet
-            'data_collection_status': pd.DataFrame()  # Required by build_spreadsheet
+            'data_collection_status': pd.DataFrame(),  # Required by build_spreadsheet
         }
 
         # Mock extra params
@@ -336,7 +326,7 @@ class TestInfrastructureSummarySpreadsheetGeneration:
             'report_rhn_login': 'test_login',
             'report_sku_description': 'Test Description',
             'optional_report_sheets': 'infrastructure_summary',
-            'report_organization_filter': None
+            'report_organization_filter': None,
         }
 
         # Create report instance
@@ -367,7 +357,7 @@ class TestInfrastructureSummarySpreadsheetGeneration:
             'job_host_summary': pd.DataFrame(),
             'main_jobevent': pd.DataFrame(),
             'main_host': pd.DataFrame(),
-            'data_collection_status': pd.DataFrame()
+            'data_collection_status': pd.DataFrame(),
         }
         extra_params = {
             'price_per_node': 11.55,
@@ -380,7 +370,7 @@ class TestInfrastructureSummarySpreadsheetGeneration:
             'report_rhn_login': 'test_login',
             'report_sku_description': 'Test Description',
             'optional_report_sheets': 'usage_by_organizations',
-            'report_organization_filter': None
+            'report_organization_filter': None,
         }
 
         report = ReportCCSPv2(dataframes, extra_params)
@@ -392,15 +382,12 @@ class TestInfrastructureSummarySpreadsheetGeneration:
                 # Mock the add_sheet method
                 with patch.object(report, 'add_sheet') as mock_add_sheet:
                     # Mock the build_spreadsheet method to avoid complex dependencies
-                    with patch.object(report, 'build_spreadsheet') as mock_build_spreadsheet:
+                    with patch.object(report, 'build_spreadsheet'):
                         # Call the mocked build_spreadsheet
                         report.build_spreadsheet()
 
                         # Verify Infrastructure Summary sheet was not added
-                        infrastructure_summary_calls = [
-                            call for call in mock_add_sheet.call_args_list
-                            if call[0][0] == 'Infrastructure Summary'
-                        ]
+                        infrastructure_summary_calls = [call for call in mock_add_sheet.call_args_list if call[0][0] == 'Infrastructure Summary']
                         assert len(infrastructure_summary_calls) == 0
 
                         # Verify build method was not called
@@ -419,7 +406,7 @@ class TestInfrastructureSummarySpreadsheetGeneration:
             'report_email': 'test@example.com',
             'report_rhn_login': 'test_login',
             'report_sku_description': 'Test Description',
-            'report_organization_filter': None
+            'report_organization_filter': None,
         }
 
         report = ReportCCSPv2(dataframes, extra_params)
@@ -433,7 +420,7 @@ class TestInfrastructureSummarySpreadsheetGeneration:
         test_data = {
             'managed_node_type': [INDIRECT],
             'host_name': ['host1'],
-            'facts': ['{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}']
+            'facts': ['{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}'],
         }
         df = pd.DataFrame(test_data)
 
@@ -463,7 +450,7 @@ class TestInfrastructureSummarySpreadsheetGeneration:
         test_data = {
             'managed_node_type': [INDIRECT],
             'host_name': ['host1'],
-            'facts': ['{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}']
+            'facts': ['{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}'],
         }
         df = pd.DataFrame(test_data)
 
@@ -615,15 +602,15 @@ class TestInfrastructureSummaryMockDataScenarios:
     def test_extreme_device_type_names(self):
         """Test scenario with extremely long device type names."""
         long_device_name = (
-            "Super_Duper_Mega_Ultra_Hyper_Advanced_Enterprise_Grade_Virtual_Machine_"
-            "Instance_With_All_The_Bells_And_Whistles_Plus_Some_Extra_Features_That_"
-            "Nobody_Really_Needs_But_We_Include_Anyway_Because_Why_Not"
+            'Super_Duper_Mega_Ultra_Hyper_Advanced_Enterprise_Grade_Virtual_Machine_'
+            'Instance_With_All_The_Bells_And_Whistles_Plus_Some_Extra_Features_That_'
+            'Nobody_Really_Needs_But_We_Include_Anyway_Because_Why_Not'
         )
 
         test_data = {
             'managed_node_type': [INDIRECT],
             'host_name': ['host1'],
-            'facts': [f'{{"device_type": "{long_device_name}", "infra_type": "Test", "infra_bucket": "Test"}}']
+            'facts': [f'{{"device_type": "{long_device_name}", "infra_type": "Test", "infra_bucket": "Test"}}'],
         }
         df = pd.DataFrame(test_data)
 
@@ -682,27 +669,31 @@ class TestInfrastructureSummaryIntegration:
 
         # Mock the dataframes that would come from tarball processing
         mock_dataframes = {
-            'job_host_summary': pd.DataFrame({
-                'managed_node_type': [INDIRECT, INDIRECT, INDIRECT, INDIRECT, INDIRECT],
-                'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
-                'original_host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
-                'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
-                'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5'],
-                'facts': [
-                    '{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}',
-                    '{"device_type": "Object Storage", "infra_type": "Hybrid Cloud", "infra_bucket": "Database"}',
-                    '{"device_type": "Block Storage", "infra_type": "On-Premises", "infra_bucket": "Network"}',
-                    '{"device_type": "File Storage", "infra_type": "Edge Computing", "infra_bucket": "Security"}',
-                    '{"device_type": "SQL", "infra_type": "Multi-Cloud", "infra_bucket": "Analytics"}',
-                ],
-            }),
-            'main_jobevent': pd.DataFrame({
-                'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
-                'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
-                'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5']
-            }),
+            'job_host_summary': pd.DataFrame(
+                {
+                    'managed_node_type': [INDIRECT, INDIRECT, INDIRECT, INDIRECT, INDIRECT],
+                    'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
+                    'original_host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
+                    'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
+                    'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5'],
+                    'facts': [
+                        '{"device_type": "Containers", "infra_type": "Public Cloud", "infra_bucket": "Storage"}',
+                        '{"device_type": "Object Storage", "infra_type": "Hybrid Cloud", "infra_bucket": "Database"}',
+                        '{"device_type": "Block Storage", "infra_type": "On-Premises", "infra_bucket": "Network"}',
+                        '{"device_type": "File Storage", "infra_type": "Edge Computing", "infra_bucket": "Security"}',
+                        '{"device_type": "SQL", "infra_type": "Multi-Cloud", "infra_bucket": "Analytics"}',
+                    ],
+                }
+            ),
+            'main_jobevent': pd.DataFrame(
+                {
+                    'host_name': ['host_1', 'host_2', 'host_3', 'host_4', 'host_5'],
+                    'install_uuid': ['uuid1', 'uuid2', 'uuid3', 'uuid4', 'uuid5'],
+                    'job_remote_id': ['job1', 'job2', 'job3', 'job4', 'job5'],
+                }
+            ),
             'main_host': pd.DataFrame(),  # Required by build_spreadsheet
-            'data_collection_status': pd.DataFrame()  # Required by build_spreadsheet
+            'data_collection_status': pd.DataFrame(),  # Required by build_spreadsheet
         }
 
         extra_params = {
@@ -715,7 +706,7 @@ class TestInfrastructureSummaryIntegration:
             'report_email': 'test@example.com',
             'report_rhn_login': 'test_login',
             'report_sku_description': 'Test Description',
-            'report_organization_filter': None
+            'report_organization_filter': None,
         }
 
         report = ReportCCSPv2(mock_dataframes, extra_params)
