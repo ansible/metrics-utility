@@ -88,23 +88,67 @@ def delete_job_template(id):
             break
 
 
-def search_for_demo_project():
-    # https://localhost:8030/api/controller/v2/projects/?search=Demo+Project&order_by=name&page=1&page_size=10
-    url = f'{API_URL}/projects/?search=Demo+Project&order_by=name&page=1&page_size=10'
+def delete_main_project():
+    # delete mock project
+    url = f'{API_URL}/projects/?name=MockA_Test_Project'
     resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
-    # select first reslt
-    # print(resp.json())
-    data = resp.json()['results'][0]
-    return data['id']
+    data = resp.json()
+    if data['count'] == 0:
+        print('No project named "MockA_Test_Project" found to delete.')
+        return
+
+    for project in data['results']:
+        project_id = project['id']
+        del_url = f'{API_URL}/projects/{project_id}/'
+        del_resp = requests.delete(del_url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+        if del_resp.status_code in (200, 202, 204):
+            print(f'Deleted project {project["name"]} (id={project_id})')
+        else:
+            print(f'Failed to delete project {project["name"]} (id={project_id}): {del_resp.status_code} - {del_resp.text}')
+
+
+def create_main_project():
+    # https://localhost:8030/api/controller/v2/projects/
+    url = f'{API_URL}/projects/'
+    data = {
+        'name': 'MockA_Test_Project',
+        'organization': 1,
+        'scm_type': 'git',
+        'scm_url': 'https://github.com/ansible/ansible-tower-samples',
+    }
+    resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
+
+    if resp.status_code not in (200, 201, 202):
+        print(f'Failed to create project {data["name"]}: {resp.status_code} - {resp.text}')
+
+    print(f'Created project {data["name"]}: {resp.status_code}')
+
+    print('Waiting for sync')
+
+    # repeatedly get the project and check field status: "successful"
+    project_id = resp.json()['id']
+    status = None
+    for _ in range(60):  # Try for up to 60 seconds
+        proj_resp = requests.get(f'{API_URL}/projects/{project_id}/', auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+        if proj_resp.status_code not in (200, 201, 202):
+            print(f'Failed to get project status: {proj_resp.status_code} - {proj_resp.text}')
+            time.sleep(1)
+            continue
+        status = proj_resp.json().get('status')
+        print(f'Project sync status: {status}')
+        if status == 'successful':
+            break
+        time.sleep(1)
+    else:
+        print(f'Project {project_id} did not reach "successful" status after waiting.')
+
+    return resp.json()['id']
 
 
 def create_job_template(name, inventory_id, project_id):
     # https://localhost:8030/api/controller/v2/job_templates/
     # create with only name, inventory, project, playbook
     url = f'{API_URL}/job_templates/'
-
-    project_id = search_for_demo_project()
-    print(f'Found project with id{project_id}')
 
     data = {'name': name, 'inventory': inventory_id, 'project': project_id, 'playbook': 'hello_world.yml'}
 
@@ -255,11 +299,11 @@ def delete_main_jobhostsummary():
 # make data optional, if not provided, use default values
 
 
-def create_inventory_and_template(name, hosts_count, data={}):
+def create_inventory_and_template(name, hosts_count, project_id, data={}):
     variables = data.get('variables', '')
 
     inv_id = create_inventory(name)
-    job_template_id = create_job_template(name, inv_id, 1)
+    job_template_id = create_job_template(name, inv_id, project_id)
     create_inventory_hosts(inv_id, f'{name}_host', hosts_count, variables, data)
 
     # return {}
@@ -329,6 +373,8 @@ def set_different_modified_dates(dates):
 
 
 def main():
+    delete_main_project()
+
     delete_job_templates()
     delete_inventories()
     delete_main_jobhostsummary()
@@ -338,16 +384,18 @@ def main():
     print('\n\n')
     res = []
 
-    res.append(create_inventory_and_template('mockA_test1', 2, {'variables': 'ansible_connection: local'}))
-    res.append(create_inventory_and_template('mockA_test2', 3, {'variables': 'ansible_connection: local'}))
+    projectId = create_main_project()
+
+    res.append(create_inventory_and_template('mockA_test1', 2, projectId, {'variables': 'ansible_connection: local'}))
+    res.append(create_inventory_and_template('mockA_test2', 3, projectId, {'variables': 'ansible_connection: local'}))
 
     # unreachable host
-    res.append(create_inventory_and_template('mockA_test3', 1))
+    res.append(create_inventory_and_template('mockA_test3', 1, projectId))
 
     # some shared host names
-    res.append(create_inventory_and_template('mockA_test4', 2, {'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']}))
-    res.append(create_inventory_and_template('mockA_test5', 2, {'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']}))
-    res.append(create_inventory_and_template('mockA_test6', 2, {'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']}))
+    res.append(create_inventory_and_template('mockA_test4', 2, projectId, {'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']}))
+    res.append(create_inventory_and_template('mockA_test5', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']}))
+    res.append(create_inventory_and_template('mockA_test6', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']}))
 
     jobs_count = 2
 
