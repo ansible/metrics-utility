@@ -47,12 +47,14 @@ def month_ranges(start_date, end_date):
         first_window_end = first_of_month + timedelta(days=27)
         first_window_end = min(first_window_end, end_of_month, today)
 
-        yield (first_of_month, first_window_end)
+        # note that gather works like the last day is excluded, so we need to add 1 day to each gather
+        yield (first_of_month, first_window_end + timedelta(days=1))
 
         # Second window: remainder of month
         remainder_start = first_window_end + timedelta(days=1)
         if remainder_start <= end_of_month and remainder_start <= today:
-            yield (remainder_start, end_of_month)
+            # note that gather works like the last day is excluded, so we need to add 1 day to each gather
+            yield (remainder_start, end_of_month + timedelta(days=1))
 
         # Advance to next month
         next_month = month % 12 + 1
