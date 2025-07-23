@@ -34,7 +34,7 @@ class TestTotalWorkersVcpu:
                 mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
 
     def test_returns_hardcoded_value_when_vcpu_count_disabled(self):
-        """Test that the function returns hardcoded value when METRICS_UTILITY_VCPU_COUNT_ENABLED is not set or false (default behavior)."""
+        """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or false (default behavior)."""
         with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -44,12 +44,12 @@ class TestTotalWorkersVcpu:
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': '1'}
 
             # Test when explicitly set to false
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'false'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': '1'}
 
     def test_vcpu_count_enabled_case_insensitive(self):
-        """Test that METRICS_UTILITY_VCPU_COUNT_ENABLED is case insensitive."""
+        """Test that METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is case insensitive."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
@@ -71,12 +71,12 @@ class TestTotalWorkersVcpu:
             mock_api.list_node.return_value = mock_nodes
 
             # Test TRUE (case insensitive)
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'TRUE'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'TRUE'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 4}
 
     def test_vcpu_count_enabled_true_continues_to_k8s_api(self):
-        """Test that when METRICS_UTILITY_VCPU_COUNT_ENABLED is true, it continues to K8s API."""
+        """Test that when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is true, it continues to K8s API."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
@@ -104,16 +104,16 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = [mock_node1, mock_node2]
             mock_api.list_node.return_value = mock_nodes
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 6}
 
     def test_vcpu_count_disabled_unset_returns_hardcoded_value(self):
-        """Test that when METRICS_UTILITY_VCPU_COUNT_ENABLED is unset, it returns hardcoded value."""
+        """Test that when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is unset, it returns hardcoded value."""
         with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
             mock_get.return_value = ['total_workers_vcpu']
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': None}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': None}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': '1'}
 
@@ -129,7 +129,7 @@ class TestTotalWorkersVcpu:
             mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException('not in cluster')
             mock_kube_config.load_kube_config.side_effect = mock_kube_config.ConfigException('no kube config')
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 with pytest.raises(Exception) as exc_info:
                     total_workers_vcpu(None, None, None)
                 assert 'Could not configure Kubernetes Python client ERROR:' in str(exc_info.value)
@@ -166,7 +166,7 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = [mock_node1, mock_node2, mock_node3]
             mock_api.list_node.return_value = mock_nodes
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'my-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'my-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
 
                 expected_total = 16 + 8 + 4  # 28 vCPUs
@@ -199,7 +199,7 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = [mock_node1, mock_node2]
             mock_api.list_node.return_value = mock_nodes
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 4}
 
@@ -221,7 +221,7 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = []
             mock_api.list_node.return_value = mock_nodes
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 0}
 
@@ -247,7 +247,7 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = [mock_node1]
             mock_api.list_node.return_value = mock_nodes
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
 
                 assert result is not None, 'Function returned None instead of expected result'
@@ -287,7 +287,7 @@ class TestTotalWorkersVcpu:
             mock_logger_info = MagicMock()
             mock_logging.getLogger.return_value = mock_logger_info
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
 
                 # Check that logger was called with JSON containing timestamp
@@ -330,7 +330,7 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = [mock_node1]
             mock_api.list_node.return_value = mock_nodes
 
-            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_VCPU_COUNT_ENABLED': 'true'}):
+            with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
 
                 # Verify both config methods were called

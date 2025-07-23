@@ -51,7 +51,7 @@ def test_config_exception_fix():
 
         # Set environment variables - need to enable vcpu count to test K8s API
         os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
-        os.environ['METRICS_UTILITY_VCPU_COUNT_ENABLED'] = 'true'
+        os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
 
         try:
             result = total_workers_vcpu(None, None, None)
@@ -64,7 +64,7 @@ def test_config_exception_fix():
         finally:
             # Clean up environment variables
             os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
-            os.environ.pop('METRICS_UTILITY_VCPU_COUNT_ENABLED', None)
+            os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
 
 def test_kubernetes_config_failure():
@@ -87,7 +87,7 @@ def test_kubernetes_config_failure():
 
         # Set environment variables - need to enable vcpu count to reach K8s config code
         os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
-        os.environ['METRICS_UTILITY_VCPU_COUNT_ENABLED'] = 'true'
+        os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
 
         try:
             exception_raised = False
@@ -108,7 +108,7 @@ def test_kubernetes_config_failure():
         finally:
             # Clean up environment variables
             os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
-            os.environ.pop('METRICS_UTILITY_VCPU_COUNT_ENABLED', None)
+            os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
 
 def test_cluster_name_not_set():
@@ -164,7 +164,7 @@ def test_vcpu_count_disabled_default_behavior():
 
         # Set environment variables - don't set vcpu count enabled (default behavior)
         os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
-        os.environ.pop('METRICS_UTILITY_VCPU_COUNT_ENABLED', None)
+        os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
         try:
             result = total_workers_vcpu(None, None, None)

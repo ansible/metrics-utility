@@ -496,13 +496,13 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info = {'cluster_name': cluster_name, 'timestamp': now.isoformat(), 'nodes': []}
 
-    # If METRICS_UTILITY_VCPU_COUNT_ENABLED is not set or not set to true then it returns 1
-    vcpu_count_enabled_str = os.environ.get('METRICS_UTILITY_VCPU_COUNT_ENABLED')
-    vcpu_count_enabled = False
-    if vcpu_count_enabled_str and (vcpu_count_enabled_str.lower() == 'true'):
-        vcpu_count_enabled = True
-    if not vcpu_count_enabled:
-        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': '1'}
+    # If METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or set to false then it returns 1
+    usage_based_billing_enabled_str = os.environ.get('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
+    usage_based_billing_enabled = False
+    if usage_based_billing_enabled_str and (usage_based_billing_enabled_str.lower() == 'true'):
+        usage_based_billing_enabled = True
+    if not usage_based_billing_enabled:
+        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': 1}
 
     try:
         kube_config.load_incluster_config()
@@ -519,6 +519,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     nodes = api_instance.list_node()
 
     total_workers_vcpu = 0
+    # In SaaS case we have only Worker nodes and so we don't need to filter out the control plan.
+    # If it used for other environement, we might need to implement the filtering.
     for node_info in nodes.items:
         for resource, value in node_info.status.capacity.items():
             if resource == 'cpu':
