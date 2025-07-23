@@ -1,6 +1,6 @@
 # testathon_data_prepare
 
-if you run this directly without any parameters, it will fill local environment db, provided that it runs
+If you run this directly without any parameters, it will prepopulate local environment db, provided that it runs
 at this url:
 
 https://localhost:8030/api/controller/v2

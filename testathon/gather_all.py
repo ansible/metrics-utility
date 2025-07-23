@@ -62,21 +62,8 @@ def month_ranges(start_date, end_date):
 
 def get_metrics_utility_config():
     return {
-        'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
         'METRICS_UTILITY_SHIP_PATH': './shipped_data',
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
-        'METRICS_UTILITY_PRICE_PER_NODE': '11.55',
-        'METRICS_UTILITY_REPORT_COMPANY_NAME': 'Partner A',
-        'METRICS_UTILITY_REPORT_EMAIL': 'email@email.com',
-        'METRICS_UTILITY_REPORT_END_USER_CITY': 'Springfield',
-        'METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME': 'Customer A',
-        'METRICS_UTILITY_REPORT_END_USER_COUNTRY': 'US',
-        'METRICS_UTILITY_REPORT_END_USER_STATE': 'TX',
-        'METRICS_UTILITY_REPORT_H1_HEADING': 'CCSP NA Direct Reporting Template',
-        'METRICS_UTILITY_REPORT_PO_NUMBER': '123',
-        'METRICS_UTILITY_REPORT_RHN_LOGIN': 'test_login',
-        'METRICS_UTILITY_REPORT_SKU': 'MCT3752MO',
-        'METRICS_UTILITY_REPORT_SKU_DESCRIPTION': ('EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)'),
     }
 
 
