@@ -38,11 +38,11 @@ class TestTotalWorkersVcpu:
         with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
             mock_get.return_value = ['total_workers_vcpu']
 
-                        # Test when not set (default behavior)
+            # Test when not set (default behavior)
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
-                
+
             # Test when explicitly set to false
             with temporary_env({'METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
                 result = total_workers_vcpu(None, None, None)
