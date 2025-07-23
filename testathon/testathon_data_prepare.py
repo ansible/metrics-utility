@@ -65,7 +65,7 @@ def delete_job_template(id):
     print(f'Deleting job template {id}')
     # https://localhost:8030/api/controller/v2/job_templates/6/
     #
-    Failed = True
+    failed = True
     while True:
         try:
             url = f'{API_URL}/job_templates/{id}/'
@@ -75,13 +75,13 @@ def delete_job_template(id):
             if resp.status_code not in (200, 202, 204):
                 print(f'Failed to delete job template {id}: {resp.status_code} - {resp.text}')
             else:
-                Failed = False
+                failed = False
                 break
         except Exception as e:
             print(f'Failed to delete job template {id}: {e}')
-            Failed = True
+            failed = True
 
-        if Failed:
+        if failed:
             print(f'Failed to delete job template {id}, maybe jobs are still running, trying again in 10 seconds')
             time.sleep(10)
         else:
