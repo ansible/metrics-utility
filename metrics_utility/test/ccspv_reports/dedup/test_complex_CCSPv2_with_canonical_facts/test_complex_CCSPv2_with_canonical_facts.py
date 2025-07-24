@@ -171,7 +171,7 @@ def validate_managed_nodes(file_path):
         0: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["203.0.113.10"], "ansible_machine_id": '
-            '["639d3a53a94028d35a3f5f244793dad2"], "ansible_port": [22], '
+            '["639d3a53a94028d35a3f5f244793dad2"], "ansible_port": [2201, 2202], '
             '"ansible_product_serial": ["CN7792194B0NAT"], "host_name": '
             '["nat-host-01.external", "nat-host-02.external"]}',
             'Facts': '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Dell '
@@ -597,7 +597,7 @@ def validate_inventory_scope(file_path):
     expected_inventory_scope = {
         0: {
             'Canonical Facts': '{"ansible_host": ["203.0.113.10"], "ansible_machine_id": '
-            '["639d3a53a94028d35a3f5f244793dad2"], "ansible_port": [22], '
+            '["639d3a53a94028d35a3f5f244793dad2"], "ansible_port": [2201, 2202], '
             '"ansible_product_serial": ["CN7792194B0NAT"], "host_name": '
             '["nat-host-01.external", "nat-host-02.external"]}',
             'Facts': '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Dell '
