@@ -540,6 +540,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info['total_workers_vcpu'] = total_workers_vcpu
 
+    # This message must always appear in the log regardless of the log level.
     logging.basicConfig(format='%(message)s', level=logging.INFO)
     logger_info = logging.getLogger(__name__)
     logger_info.setLevel(logger.INFO)
