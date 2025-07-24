@@ -266,7 +266,7 @@ class TestTotalWorkersVcpu:
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
             patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-            patch('metrics_utility.automation_controller_billing.collectors.logging') as mock_logging,
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             mock_kube_config.load_incluster_config.return_value = None
@@ -283,16 +283,10 @@ class TestTotalWorkersVcpu:
             mock_nodes.items = [mock_node1]
             mock_api.list_node.return_value = mock_nodes
 
-            # Mock the logger that's created inside the function
-            mock_logger_info = MagicMock()
-            mock_logging.getLogger.return_value = mock_logger_info
-
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 result = total_workers_vcpu(None, None, None)
 
-                # Check that logger was called with JSON containing timestamp
-                mock_logging.getLogger.assert_called_with('metrics_utility.automation_controller_billing.collectors')
-                mock_logger_info.setLevel.assert_called_with(mock_logging.INFO)
+                # Check that logger_info_level.info was called with JSON containing timestamp
                 mock_logger_info.info.assert_called_once()
 
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
