@@ -500,10 +500,10 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if 'total_workers_vcpu' not in get_optional_collectors():
         return None
 
-    cluster_name = os.environ.get('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME')
+    cluster_name = os.environ.get('METRICS_UTILITY_CLUSTER_NAME')
     if not cluster_name:
-        logger.error('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
-        raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+        logger.error('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
+        raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
 
     now = datetime.now(timezone.utc)
 

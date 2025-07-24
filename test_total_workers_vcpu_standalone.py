@@ -50,7 +50,7 @@ def test_config_exception_fix():
         mock_api.list_node.return_value = mock_nodes
 
         # Set environment variables - need to enable usage-based billing to test K8s API
-        os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
+        os.environ['METRICS_UTILITY_CLUSTER_NAME'] = 'test-cluster'
         os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
 
         try:
@@ -63,7 +63,7 @@ def test_config_exception_fix():
 
         finally:
             # Clean up environment variables
-            os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
+            os.environ.pop('METRICS_UTILITY_CLUSTER_NAME', None)
             os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
 
@@ -86,7 +86,7 @@ def test_kubernetes_config_failure():
         mock_kube_config.load_kube_config.side_effect = mock_kube_config.ConfigException('no kube config')
 
         # Set environment variables - need to enable usage-based billing to reach K8s config code
-        os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
+        os.environ['METRICS_UTILITY_CLUSTER_NAME'] = 'test-cluster'
         os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
 
         try:
@@ -107,7 +107,7 @@ def test_kubernetes_config_failure():
 
         finally:
             # Clean up environment variables
-            os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
+            os.environ.pop('METRICS_UTILITY_CLUSTER_NAME', None)
             os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
 
@@ -127,7 +127,7 @@ def test_cluster_name_not_set():
         mock_get.return_value = ['total_workers_vcpu']
 
         # Make sure cluster name is not set
-        os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
+        os.environ.pop('METRICS_UTILITY_CLUSTER_NAME', None)
 
         try:
             exception_raised = False
@@ -135,13 +135,13 @@ def test_cluster_name_not_set():
                 total_workers_vcpu(None, None, None)
             except MissingRequiredEnvVar as e:
                 exception_raised = True
-                assert 'environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set' in str(e)
+                assert 'environment variable METRICS_UTILITY_CLUSTER_NAME is not set' in str(e)
 
             # Verify that an exception was raised
             assert exception_raised, 'Function should raise MissingRequiredEnvVar when cluster name is not set'
 
             # Verify that an error was logged
-            mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME is not set')
+            mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
 
             print('✅ Cluster name not set test passed!')
 
@@ -163,7 +163,7 @@ def test_usage_based_billing_disabled_default_behavior():
         mock_get.return_value = ['total_workers_vcpu']
 
         # Set environment variables - don't set usage-based billing enabled (default behavior)
-        os.environ['METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME'] = 'test-cluster'
+        os.environ['METRICS_UTILITY_CLUSTER_NAME'] = 'test-cluster'
         os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
 
         try:
@@ -176,7 +176,7 @@ def test_usage_based_billing_disabled_default_behavior():
 
         finally:
             # Clean up environment variables
-            os.environ.pop('METRICS_UTILITY_ANSIBLE_SAAS_CLUSTER_NAME', None)
+            os.environ.pop('METRICS_UTILITY_CLUSTER_NAME', None)
 
 
 if __name__ == '__main__':
