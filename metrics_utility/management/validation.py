@@ -221,8 +221,6 @@ def validate_collectors(errors):
     Environment Variables:
         METRICS_UTILITY_OPTIONAL_COLLECTORS (str, optional): Comma-separated
             list of collector names. Defaults to 'main_jobevent' if not set.
-        METRICS_UTILITY_MANDATORY_COLLECTORS (str, optional): Comma-separated
-            list of collector names. Defaults to 'main_jobevent' if not set.
 
     Notes:
         - The set of valid optional collectors is defined by the global variable
@@ -232,16 +230,6 @@ def validate_collectors(errors):
         - Error messages include the invalid collector names and the list of
           valid values.
     """
-    collectors_env_var = os.environ.get('METRICS_UTILITY_MANDATORY_COLLECTORS')
-    if collectors_env_var:
-        collectors = collectors_env_var.split(',')
-        if collectors:
-            invalid = set(collectors) - VALID_MANDATORY_COLLECTORS
-            if invalid:
-                errors.append(
-                    f'Invalid METRICS_UTILITY_MANDATORY_COLLECTORS: \
-                              {", ".join(invalid)}. Valid values: {", ".join(VALID_MANDATORY_COLLECTORS)}'
-                )
 
     collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
     if collectors:
