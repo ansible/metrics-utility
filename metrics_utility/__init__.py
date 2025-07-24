@@ -1,5 +1,4 @@
 import importlib.util
-import logging
 import os
 import sys
 
@@ -16,10 +15,6 @@ def prepare():
         if spec is None:
             sys.stderr.write(f'Automation Controller modules not found in {awx_path} (AWX_PATH). Using mock and continuing.\n')
             sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'mock_awx')))
-
-            # debug logging by default in standalone mode
-            logger = logging.getLogger('awx.main.analytics')
-            logger.setLevel(logging.DEBUG)  # Ensure the logger captures all messages
 
     import django
 

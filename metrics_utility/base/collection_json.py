@@ -2,6 +2,8 @@ import io
 import json
 import tarfile
 
+from metrics_utility.logger import logger
+
 from .collection import Collection
 
 
@@ -31,7 +33,7 @@ class CollectionJSON(Collection):
     def add_to_tar(self, tar):
         """Adds JSON data to TAR(tgz) archive"""
         buf = self.target().encode('utf-8')
-        self.logger.debug(f'CollectionJSON._add_to_tar: | {self.key}.json | Size: {self.data_size()}')
+        logger.debug(f'CollectionJSON._add_to_tar: | {self.key}.json | Size: {self.data_size()}')
         info = tarfile.TarInfo(f'./{self.filename}')
         info.size = len(buf)
         info.mtime = self.collector.gather_until.timestamp()

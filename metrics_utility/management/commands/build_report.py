@@ -1,5 +1,4 @@
 import datetime
-import logging
 import os
 
 from argparse import RawDescriptionHelpFormatter
@@ -13,6 +12,7 @@ from metrics_utility.automation_controller_billing.extract.factory import Factor
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
     date_format_text,
     handle_directory_ship_target,
@@ -52,7 +52,7 @@ class Command(BaseCommand):
             'Example: --ephemeral=3months, or --ephemeral=3days'
         ),
         'force': ('With this option, the existing reports will be overwritten if running this command again.'),
-        'verbose': ('Starts to print debug information to terminal.'),
+        'verbose': ('Print debug information to console.'),
     }
 
     def create_parser(self, prog_name, subcommand, **kwargs):
@@ -88,16 +88,9 @@ class Command(BaseCommand):
         parser.add_argument('--force', dest='force', action='store_true', help=self.help_texts.get('force'))
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
-    def init_logging(self):
-        self.logger = logging.getLogger('awx.main.analytics')
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter('%(message)s'))
-        self.logger.addHandler(handler)
-        self.logger.propagate = False
-
     def handle(self, *args, **options):
-        self.init_logging()
+        if options.get('verbose'):
+            debug()
         handle_env_validation('build')
 
         opt_since, opt_until = validate_build_params(options, self.help_texts)
@@ -139,7 +132,7 @@ class Command(BaseCommand):
 
         if report_saver_engine.report_exist() and not opt_force:
             # If the monthly report already exists, skip the generation
-            self.logger.info(
+            logger.info(
                 'Skipping report generation, report: '
                 f'{report_saver_engine.report_spreadsheet_destination_path} already exists. '
                 'Use --force option to override the report.'
@@ -153,9 +146,9 @@ class Command(BaseCommand):
 
         if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes.items()):
             if opt_since is not None:
-                self.logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
+                logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
             else:
-                self.logger.info(f'No billing data for month {opt_month}')
+                logger.info(f'No billing data for month {opt_month}')
             return
 
         report_engine = ReportFactory(dataframes=dataframes, extra_params=extra_params).create()
@@ -163,7 +156,7 @@ class Command(BaseCommand):
 
         # Save the report to the configured destination
         report_saver_engine.save(report_spreadsheet)
-        self.logger.info(f'Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}')
+        logger.info(f'Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}')
 
     def _handle_ship_target(self, ship_target):
         if ship_target in ['controller_db', 'directory']:

@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import os.path
 import platform
@@ -20,10 +19,8 @@ from kubernetes import config as kube_config
 
 from metrics_utility.base import Collector, CsvFileSplitter, register
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.logger import logger
 
-
-logging.basicConfig(format='%(asctime)s(+%(relativeCreated)d): %(message)s', level=logging.WARNING)
-logger = logging.getLogger(__name__)
 
 """
 This module is used to define metrics collected by
@@ -435,7 +432,7 @@ def main_indirectmanagednodeaudit_table(since, full_path, until, **kwargs):
             path=full_path,
         )
     except ProgrammingError as e:
-        logging.warning(
+        logger.warning(
             'main_indirectmanagednodeaudit table missing in the database schema: %s.'
             ' Falling back to behavior without indirect managed node audit data.',
             e,
@@ -542,8 +539,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info['total_workers_vcpu'] = total_workers_vcpu
 
-    logger_info = logging.getLogger(__name__)
-    logger_info.setLevel(logging.INFO)
+    logger_info = logger.getLogger(__name__)
+    logger_info.setLevel(logger.INFO)
 
     logger_info.info(json.dumps(info, indent=2))
 

@@ -11,6 +11,8 @@ from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.logger import logger
+
 from .collection import Collection
 from .collection_csv import CollectionCSV
 from .collection_json import CollectionJSON
@@ -30,7 +32,6 @@ class Collector:
     - collector_module: module with functions with decorator `@register` - they define what data are collected
       - collector functions are wrapped by kind of Collection object
       - Collections are grouped by Package, and Packages are creating tarballs and shipping them.
-    - logger: logging.logger
 
     Collector is an abstract class, example of implementation is in tests/classes
 
@@ -43,7 +44,7 @@ class Collector:
 
     MAX_GATHER_PERIOD_WEEKS = 4
 
-    def __init__(self, collection_type=DRY_RUN, collector_module=None, logger=None, licensed=True):
+    def __init__(self, collection_type=DRY_RUN, collector_module=None, licensed=True):
         self.licensed = licensed
         self.collector_module = collector_module
         self.collection_type = collection_type
@@ -51,7 +52,6 @@ class Collector:
         self.packages = {}
 
         self.last_gathered_entries = None
-        self.logger = logger or logging.getLogger('awx.main.analytics')
         self.log_level = logging.ERROR if self.collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
 
         self.tmp_dir = None
@@ -114,7 +114,7 @@ class Collector:
 
         with self._pg_advisory_lock('gather_analytics_lock', wait=False) as acquired:
             if not acquired:
-                self.logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
+                logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
                 return None
 
             self._gather_initialize(dest, subset, since, until)
@@ -140,7 +140,7 @@ class Collector:
     def is_enabled(self):
         """Checks for license and shipping data (like credentials)"""
         if not self._is_valid_license() and self.licensed:
-            self.logger.log(self.log_level, 'Invalid License provided, or No License Provided')
+            logger.log(self.log_level, 'Invalid License provided, or No License Provided')
             return False
 
         if self.is_shipping_enabled():
@@ -173,15 +173,15 @@ class Collector:
         _now = now()
         original_since = since
         original_until = until
-        self.logger.warning(f'Original since-until: {original_since} to {original_until}')
+        logger.warning(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
             until = _now
-            self.logger.warning(f'End of the collection interval is in the future, setting to {_now}.')
+            logger.warning(f'End of the collection interval is in the future, setting to {_now}.')
         if since is not None and since > _now:
             since = _now
-            self.logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
+            logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
 
         # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
         # set it to `now`, but only if that isn't more than 4 weeks ahead of a passed-in
@@ -190,7 +190,7 @@ class Collector:
             if until is not None:
                 if until > since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS):
                     until = since + timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
-                    self.logger.warning(
+                    logger.warning(
                         f'End of the collection interval is greater than {self.MAX_GATHER_PERIOD_WEEKS} weeks from start, setting end to {until}.'
                     )
             else:  # until is None
@@ -202,7 +202,7 @@ class Collector:
         until = until.replace(hour=23, minute=59, second=59, microsecond=999999)
 
         if since and since >= until:
-            self.logger.warning('Start of the collection interval is later than the end, ignoring request.')
+            logger.warning('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
         # The ultimate beginning of the interval needs to be compared to 4 weeks prior to
@@ -212,20 +212,20 @@ class Collector:
         horizon = until - timedelta(weeks=self.MAX_GATHER_PERIOD_WEEKS)
         if since is not None and since < horizon:
             since = horizon
-            self.logger.warning(
+            logger.warning(
                 f'Start of the collection interval is more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, setting to {horizon}.'
             )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            self.logger.warning(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
+            logger.warning(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_WEEKS} weeks prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until
         self.last_gather = last_gather
 
-        self.logger.warning(f'Final since-until: {since} to {until}')
+        logger.warning(f'Final since-until: {since} to {until}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -251,7 +251,7 @@ class Collector:
         return available_package
 
     def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        self.logger.debug(f'Last analytics run was: {self._last_gathering()}')
+        logger.debug(f'Last analytics run was: {self._last_gathering()}')
 
         self._init_tmp_dir(tmp_root_dir)
 
@@ -268,7 +268,7 @@ class Collector:
         TODO: add "always" flag to @register decorator
         """
         if not self.config_present():
-            self.logger.log(self.log_level, "'config' collector data is missing")
+            logger.log(self.log_level, "'config' collector data is missing")
             return False
         else:
             self.collections['config'].gather(self._package_class().max_data_size())
@@ -292,7 +292,7 @@ class Collector:
 
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
             if last_key != collection.key:
-                self.logger.warning(f'Progress info: Now gathering {collection.key}')
+                logger.warning(f'Progress info: Now gathering {collection.key}')
                 last_key = collection.key
 
             collection.gather(self._package_class().max_data_size())

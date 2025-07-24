@@ -1,14 +1,10 @@
 import datetime
-import logging
 
 from functools import reduce
 
 import pandas as pd
 
 from dateutil.relativedelta import relativedelta
-
-
-logger = logging.getLogger(__name__)
 
 
 def granularity_cast(date, granularity):
@@ -101,8 +97,6 @@ def combine_json_values(val1, val2):
 
 class Base:
     def __init__(self, extractor, month, extra_params):
-        self.logger = logger
-
         self.extractor = extractor
         self.month = month
         self.extra_params = extra_params

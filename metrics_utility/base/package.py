@@ -8,6 +8,8 @@ from abc import abstractmethod
 
 import requests
 
+from metrics_utility.logger import logger
+
 from .collection_data_status import CollectionDataStatus
 from .collection_manifest import CollectionManifest
 
@@ -48,7 +50,6 @@ class Package:
         self.collections = []
         self.collection_keys = []
         self.data_collection_status = CollectionDataStatus(self.collector, self)
-        self.logger = collector.logger
         self.manifest = CollectionManifest(collector)
         self.processed = False
         self.shipping_successful = None
@@ -86,11 +87,11 @@ class Package:
 
     def is_shipping_configured(self):
         if not self.tar_path:
-            self.logger.error('Insights for Ansible Automation Platform TAR not found')
+            logger.error('Insights for Ansible Automation Platform TAR not found')
             return False
 
         if not os.path.exists(self.tar_path):
-            self.logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
+            logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
         if 'Error:' in str(self.tar_path):
@@ -98,36 +99,36 @@ class Package:
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
             if not self.get_ingress_url():
-                self.logger.error('AUTOMATION_ANALYTICS_URL is not set')
+                logger.error('AUTOMATION_ANALYTICS_URL is not set')
                 return False
 
             if not self._get_rh_user():
-                self.logger.error('REDHAT_USERNAME is not set')
+                logger.error('REDHAT_USERNAME is not set')
                 return False
 
             if not self._get_rh_password():
-                self.logger.error('REDHAT_PASSWORD is not set')
+                logger.error('REDHAT_PASSWORD is not set')
                 return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_S3_USERPASS:
             if not self.get_s3_configured():
-                self.logger.error('S3 configuration is not set')
+                logger.error('S3 configuration is not set')
                 return False
 
             if not self._get_rh_user():
-                self.logger.error('aws_access_key_id is not set')
+                logger.error('aws_access_key_id is not set')
                 return False
 
             if not self._get_rh_password():
-                self.logger.error('aws_secret_access_key is not set')
+                logger.error('aws_secret_access_key is not set')
                 return False
 
             if not self._get_rh_region():
-                self.logger.error('aws_region is not set')
+                logger.error('aws_region is not set')
                 return False
 
             if not self._get_rh_bucket():
-                self.logger.error('aws_bucket is not set')
+                logger.error('aws_bucket is not set')
                 return False
 
         return True
@@ -153,7 +154,7 @@ class Package:
                 self.tar_path = f.name
             return True
         except Exception as e:
-            self.logger.exception(f'Failed to write analytics archive file: {e}')
+            logger.exception(f'Failed to write analytics archive file: {e}')
             return False
 
     def ship(self):
@@ -164,7 +165,7 @@ class Package:
             self.shipping_successful = False
             return False
 
-        self.logger.debug(f'shipping analytics file: {self.tar_path}')
+        logger.debug(f'shipping analytics file: {self.tar_path}')
 
         with open(self.tar_path, 'rb') as f:
             files = {
@@ -209,7 +210,7 @@ class Package:
                 collection.add_to_tar(tar)
                 self.manifest.add_collection(collection)
         except Exception as e:
-            self.logger.exception(f'Could not generate metric {collection.filename}: {e}')
+            logger.exception(f'Could not generate metric {collection.filename}: {e}')
             return None
 
     def _send_data(self, url, files, session):
@@ -227,14 +228,14 @@ class Package:
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
-            self.logger.error('Upload failed with status {}, {}'.format(response.status_code, response.text))
+            logger.error('Upload failed with status {}, {}'.format(response.status_code, response.text))
             return False
 
         return True
 
     def _config_to_tar(self, tar):
         if self.collector.collections['config'] is None:
-            self.logger.error("'config' collector data is missing, and is required to ship.")
+            logger.error("'config' collector data is missing, and is required to ship.")
             return False
         else:
             self._collection_to_tar(tar, self.collector.collections['config'])
@@ -299,7 +300,7 @@ class Package:
             self.data_collection_status.add_to_tar(tar)
             self.manifest.add_collection(self.data_collection_status)
         except Exception as e:
-            self.logger.exception(f'Could not generate {self.data_collection_status.filename}: {e}')
+            logger.exception(f'Could not generate {self.data_collection_status.filename}: {e}')
 
     def _manifest_to_tar(self, tar):
         try:
@@ -307,7 +308,7 @@ class Package:
             self.manifest.add_to_tar(tar)
             self.add_collection(self.manifest)
         except Exception as e:
-            self.logger.exception(f'Could not generate {self.manifest.filename}: {e}')
+            logger.exception(f'Could not generate {self.manifest.filename}: {e}')
 
     def _payload_content_type(self):
         return self.PAYLOAD_CONTENT_TYPE
