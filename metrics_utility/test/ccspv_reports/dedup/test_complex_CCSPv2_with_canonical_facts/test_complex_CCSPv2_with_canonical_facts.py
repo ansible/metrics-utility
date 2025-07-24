@@ -253,10 +253,10 @@ def validate_managed_nodes(file_path):
         },
         4: {
             'Automated by organizations': 1,
-            'Canonical Facts': '{"ansible_host": ["aws-vm-01.us-east", "aws-vm-02.us-east"], '
+            'Canonical Facts': '{"ansible_host": ["aws-vm-01.us-east", "aws-vm-02.us-west"], '
             '"ansible_machine_id": ["81b0f5bd1078b9636e2a5a8f9a9e14df"], '
             '"ansible_port": [22], "ansible_product_serial": ["ec2-instance"], '
-            '"host_name": ["aws-vm-01.us-east", "aws-vm-02.us-east"]}',
+            '"host_name": ["aws-vm-01.us-east", "aws-vm-02.us-west"]}',
             'Facts': '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Amazon '
             'EC2"], "ansible_bios_version": ["1.0"], "ansible_board_serial": '
             '["ec2-instance"], "ansible_connection_variable": ["ssh"], '
@@ -268,7 +268,7 @@ def validate_managed_nodes(file_path):
             '["i-0a1b2c3d4e5f6g7h8", "i-9z8y7x6w5v4u3t2s"]}',
             'First automation': Timestamp('2025-07-10 21:00:00'),
             'Host name': 'aws-vm-01.us-east',
-            'Host names before deduplication': '["aws-vm-01.us-east", "aws-vm-02.us-east"]',
+            'Host names before deduplication': '["aws-vm-01.us-east", "aws-vm-02.us-west"]',
             'Host names before deduplication count': 2,
             'Job runs': 2,
             'Last automation': Timestamp('2025-07-10 21:05:00'),
@@ -671,10 +671,10 @@ def validate_inventory_scope(file_path):
             'Organizations': '["Production"]',
         },
         4: {
-            'Canonical Facts': '{"ansible_host": ["aws-vm-01.us-east", "aws-vm-02.us-east"], '
+            'Canonical Facts': '{"ansible_host": ["aws-vm-01.us-east", "aws-vm-02.us-west"], '
             '"ansible_machine_id": ["81b0f5bd1078b9636e2a5a8f9a9e14df"], '
             '"ansible_port": [22], "ansible_product_serial": ["ec2-instance"], '
-            '"host_name": ["aws-vm-01.us-east", "aws-vm-02.us-east"]}',
+            '"host_name": ["aws-vm-01.us-east", "aws-vm-02.us-west"]}',
             'Facts': '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Amazon '
             'EC2"], "ansible_bios_version": ["1.0"], "ansible_board_serial": '
             '["ec2-instance"], "ansible_connection_variable": ["ssh"], '
@@ -685,7 +685,7 @@ def validate_inventory_scope(file_path):
             '"ansible_virtualization_type": ["xen"], "aws_instance_id": '
             '["i-0a1b2c3d4e5f6g7h8", "i-9z8y7x6w5v4u3t2s"]}',
             'Host name': 'aws-vm-01.us-east',
-            'Host names before deduplication': '["aws-vm-01.us-east", "aws-vm-02.us-east"]',
+            'Host names before deduplication': '["aws-vm-01.us-east", "aws-vm-02.us-west"]',
             'Host names before deduplication count': 2,
             'Inventories': '["Production Inventory"]',
             'Last Automation': Timestamp('2025-07-08 21:05:00'),
@@ -2385,7 +2385,7 @@ def validate_use_cases(actual_managed_nodes):
     cf = get_canonical_facts(aws_vm)
     hostnames = cf.get('host_name', [])
     # AWS VMs should be merged (they have same machine_id and serial)
-    assert 'aws-vm-02.us-east' in hostnames, 'AWS VMs should be wrongly merged (expected false positive)'
+    assert 'aws-vm-02.us-west' in hostnames, 'AWS VMs should be wrongly merged (expected false positive)'
 
     # Test Case 4.2: NAT hosts
     nat_entry = find_host('203.0.113.10')  # They get merged under the IP
