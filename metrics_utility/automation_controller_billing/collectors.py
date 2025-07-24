@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import os.path
 import platform
@@ -20,7 +19,7 @@ from kubernetes import config as kube_config
 
 from metrics_utility.base import Collector, CsvFileSplitter, register
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
-from metrics_utility.logger import logger
+from metrics_utility.logger import logger, logger_info_level
 
 
 """
@@ -541,10 +540,6 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     info['total_workers_vcpu'] = total_workers_vcpu
 
     # This message must always appear in the log regardless of the log level.
-    logging.basicConfig(format='%(message)s', level=logging.INFO)
-    logger_info = logging.getLogger(__name__)
-    logger_info.setLevel(logger.INFO)
-
-    logger_info.info(json.dumps(info, indent=2))
+    logger_info_level.info(json.dumps(info, indent=2))
 
     return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
