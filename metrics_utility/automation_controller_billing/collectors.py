@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import os.path
 import platform
@@ -539,7 +540,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info['total_workers_vcpu'] = total_workers_vcpu
 
-    logger_info = logger.getLogger(__name__)
+    logging.basicConfig(format='%(message)s', level=logging.INFO)
+    logger_info = logging.getLogger(__name__)
     logger_info.setLevel(logger.INFO)
 
     logger_info.info(json.dumps(info, indent=2))
