@@ -23,6 +23,8 @@ class DataframeContentUsage(Base):
                 events = events[events['task_action'].notnull()]
                 events = events[events['host_name'].notnull()]
 
+                self.hostname_transform(events, backup=None)
+
                 # If the dataframe is empty, skip additional processing
                 if events.empty:
                     continue

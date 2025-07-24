@@ -22,6 +22,8 @@ class DBDataframeHostMetric(Base):
             host_metric['last_automation'] = pd.to_datetime(host_metric['last_automation'], format='ISO8601').dt.tz_localize(None)
             host_metric['last_deleted'] = pd.to_datetime(host_metric['last_deleted'], format='ISO8601').dt.tz_localize(None)
 
+            self.hostname_transform(host_metric, backup=None)
+
             if host_metric_concat is None:
                 host_metric_concat = host_metric
             else:

@@ -180,6 +180,38 @@ class Base:
         df_grouped = self.cast_dataframe(df_grouped, self.cast_types())
         return df_grouped.reset_index()
 
+    def hostname_transform_host(self, dataframe):
+        if 'ansible_host_variable' not in dataframe.columns:
+            return
+
+        # Replace missing ansible_host_variable with host name
+        dataframe['ansible_host_variable'] = dataframe.ansible_host_variable.fillna(dataframe['host_name'])
+        # And use the new ansible_host_variable instead of host_name, since
+        # what is in ansible_host_variable should be the actual host we count
+        dataframe['host_name'] = dataframe['ansible_host_variable']
+
+    def hostname_transform_port(self, dataframe):
+        if 'ansible_port_variable' not in dataframe.columns:
+            return
+
+        def add_port(row):
+            # FIXME: ipv6 []
+            return f'{row["host_name"]}:{row["ansible_port_variable"]}' if row['ansible_port_variable'] else row['host_name']
+
+        dataframe['host_name'] = dataframe.apply(add_port, axis=1)
+
+    def hostname_transform(self, dataframe, backup='original_host_name'):
+        active = self.extra_params.get('hostname_transform')
+
+        if backup:
+            dataframe[backup] = dataframe['host_name']
+
+        if active in {'host', 'both'}:
+            self.hostname_transform_host(dataframe, 'host_name')
+
+        if active in {'port', 'both'}:
+            self.hostname_transform_port(dataframe, 'host_name')
+
     @staticmethod
     def unique_index_columns():
         pass

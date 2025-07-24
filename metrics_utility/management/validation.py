@@ -286,6 +286,17 @@ def validate_ship_path(errors, ship_target, method):
         logger.info('No path set under METRICS_UTILITY_SHIP_PATH. A directory will be created')
 
 
+def validate_hostname_transform(errors):
+    value = os.getenv('METRICS_UTILITY_HOSTNAME_TRANSFORM', None)
+    if not value:
+        return
+
+    if value in {'none', 'host', 'port', 'both'}:
+        return
+
+    errors.append(f'Invalid METRICS_UTILITY_HOSTNAME_TRANSFORM: {value} is not an existing directory.')
+
+
 def handle_env_validation(method: str):
     """
     Validates required environment variables and configuration for the application.
@@ -321,6 +332,7 @@ def handle_env_validation(method: str):
     validate_collectors(errors)
     if method == 'build':
         validate_ccsp_report_sheets(errors, report_type)
+        validate_hostname_transform(errors)
         ship_target = validate_ship_target(errors, method)
     else:
         ship_target = validate_ship_target(errors, method)

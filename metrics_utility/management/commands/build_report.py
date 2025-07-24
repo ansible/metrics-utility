@@ -75,6 +75,10 @@ class Command(BaseCommand):
                     '',
                     "    METRICS_UTILITY_DEDUPLICATOR (optional): one of 'ccsp', 'renewal', 'ccsp-experimental'",
                     "        choice of deduplication algorithm, defaults to 'ccsp' or 'renewal' based on the chosen report type",
+                    '',
+                    "    METRICS_UTILITY_HOSTNAME_TRANSFORM (optional): one of 'none', 'host', 'port', 'both'",
+                    "        apply a hostname transform before deduplication; defaults to 'none'; 'host' prefers ansible_host over host_name, "
+                    "'port' appends :ansible_port to the hostname, 'both' does both",
                 ]
             ),
             **kwargs,
@@ -107,6 +111,7 @@ class Command(BaseCommand):
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
         extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR', None) or None
+        extra_params['hostname_transform'] = os.getenv('METRICS_UTILITY_HOSTNAME_TRANSFORM', None) or 'none'
 
         extractor = ExtractorFactory(ship_target, extra_params).create()
 

@@ -33,13 +33,7 @@ class DataframeInventoryScope(Base):
                 billing_data['install_uuid'] = data['config']['install_uuid']
 
                 # Store the original host name for mapping purposes
-                billing_data['original_host_name'] = billing_data['host_name']
-                if 'ansible_host_variable' in billing_data.columns:
-                    # Replace missing ansible_host_variable with host name
-                    billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
-                    # And use the new ansible_host_variable instead of host_name, since
-                    # what is in ansible_host_variable should be the actual host we count
-                    billing_data['host_name'] = billing_data['ansible_host_variable']
+                self.hostname_transform(billing_data, backup='original_host_name')
 
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
