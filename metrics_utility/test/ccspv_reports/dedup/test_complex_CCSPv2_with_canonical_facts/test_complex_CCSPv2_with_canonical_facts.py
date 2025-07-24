@@ -1803,7 +1803,7 @@ def validate_use_cases(actual_managed_nodes):
     1. DEDUPLICATED HOSTS (merged based on matching serial + machine_id):
     ---------------------------------------------------------------------
     1.1. app01.cluster (4 entries → 1):
-         - All 4 entries have same serial (HP-ProLiant-DL380) + machine_id (machine123)
+         - All 4 entries have same serial (USE1234567) + machine_id (e56eb592febecd4e03860514ce5a9f55)
          - Entries from 3 different orgs (Production x2, Development, Staging)
          - Result: Merged into single entry showing 3 organizations
          - Dedup: Old logic only (count=1) - all 4 entries had same ansible_host
@@ -1812,62 +1812,58 @@ def validate_use_cases(actual_managed_nodes):
          - All have same VMware serial + machine_id (3a2f8c9b...)
          - Different hostnames but same physical machine
          - Result: Merged, showing both hostnames in canonical facts
-         - Dedup: New logic applied (count=2) - old logic kept 2 separate, new merged by machine_id
+         - Dedup: New logic applied (count=2) - old logic kept 2 separate, new merged by machine_id+serial
 
     1.3. web02.external + web02.internal (2 entries → 1):
-         - Same VMware serial + machine_id (def789ghi012)
+         - Same VMware serial + machine_id (f3e2da65c5d34e59151db7ec18b868d9)
          - Different network access points to same machine
          - Result: Merged into web02.external (first seen)
          - Dedup: New logic applied (count=2) - different ansible_host values
 
     1.4. db02.dev + db02.staging (2 entries → 1):
-         - Same Dell serial (R750) + machine_id (db02-machine-id)
+         - Same Dell serial (R750) + machine_id (eddfa033379afb7784abb2e4c7dc2cf1)
          - Different environment names for same database server
          - Result: Merged into db02.dev
          - Dedup: New logic applied (count=2) - old logic grouped by ansible_host, new merged by machine_id
 
     1.5. web03.internal + web03.prod.internal (2 entries → 1):
-         - Same VMware serial + machine_id (web03-machine-id)
+         - Same VMware serial + machine_id (01b6b28643a6a867e339e957c8ed9d37)
          - Production variants of same web server
          - Result: Merged into web03.internal
-         - Dedup: New logic applied (count=2) - both had same ansible_host but different host_name
+         - Dedup: New logic applied (count=2) - both had different ansible_host and different host_name
 
     1.6. cache01.internal (2 entries → 1):
-         - Both have same machine_id (xyz789) but NO product_serial
+         - Both have same machine_id (0267fc0887de14e8c994d1025a445221) but NO product_serial
          - From different orgs (Production, Development)
          - Result: Merged because machine_id matches (serial not required if missing)
          - Dedup: Old logic only (count=1) - same ansible_host and host_name
 
     2. NOT DEDUPLICATED HOSTS (unique serial/machine_id combinations):
     -------------------------------------------------------------------
-    2.1. app01.failover:
-         - Different machine_id (machine456) than app01.cluster
-         - Same serial type but different physical machine
-         - Result: Kept separate
-         - Dedup: No dedup needed (count=1) - unique host
 
-    2.2. db01.company.com:
+    2.1. db01.company.com:
          - Has product_serial but NO machine_id
          - Cannot deduplicate without machine_id
          - Result: Kept separate
-         - Dedup: No dedup needed (count=1) - unique ansible_host
+         - Dedup: No dedup needed (count=1) - unique ansible_host and serial CN7792194B0740
 
-    2.3. log01.company.com:
+    2.2. log01.company.com:
          - Missing BOTH product_serial AND machine_id
          - No canonical facts to deduplicate on
          - Result: Kept separate
          - Dedup: No dedup needed (count=1) - unique host
 
-    2.4. web04.dev and web04.staging:
-         - Different machine_ids (web04-dev-machine vs web04-staging-machine)
+    2.3. web04.dev and web04.staging:
+         - Different machine_ids (ae920ed940e880003e264a357de969c1 vs d1134fec21d571a9b596f7dbf7dc5673)
          - Different serials (VMware-dev-... vs VMware-stg-...)
+         - Different hostnames
          - Result: Kept as separate hosts (different environments)
          - Dedup: No dedup needed (count=1 each) - different hosts
 
     3. FALSE NEGATIVES - NOT DEDUPLICATED (but should be):
     -------------------------------------------------------
     3.1. win-srv01.company.com and win-srv02.company.com:
-         - Different Windows servers with SAME serial (WIN-HP-DL380-001)
+         - Different Windows servers with SAME serial (USE9876543)
          - Windows lacks machine_id (systemd-specific)
          - Only product_serial available for deduplication
          - Result: Kept separate (FALSE NEGATIVE - same serial but no machine_id)
@@ -1886,6 +1882,12 @@ def validate_use_cases(actual_managed_nodes):
          - Same machine_id in both cases
          - Result: Kept separate (SHOULD be merged based on machine_id)
          - Dedup: Likely incomplete canonical facts prevented merge
+
+    3.4. app01.failover:
+         - Different machine_id (1a17f31cc8a19e2e1d3aa4901cb47939) than app01.cluster
+         - Same serial number USE1234567 but different physical machine
+         - Result: Kept separate
+         - Dedup: No dedup done becaue both machine_id and serial need to match
 
     4. FALSE POSITIVES - WRONGLY DEDUPLICATED (but shouldn't be):
     --------------------------------------------------------------
@@ -1908,7 +1910,7 @@ def validate_use_cases(actual_managed_nodes):
          - Day 1: mobile-dev-laptop.office.company.com (office network)
          - Day 2: mobile-dev-laptop.home.local (home network)
          - Day 3: mobile-dev-laptop.office.company.com (back to office)
-         - Same machine_id (mobile-laptop-001) and serial (DELL-LAPTOP-XPS13-001)
+         - Same machine_id (797690615d609504271f6d3467fb7c7d) and serial (CN0123456789)
          - Result: Correctly deduplicated but demonstrates hostname confusion
          - This is a "false positive" from a user perspective - they see one entry
            for what appears to be different hostnames, but it's actually correct
@@ -1924,7 +1926,7 @@ def validate_use_cases(actual_managed_nodes):
          - api-server (short hostname)
          - api-server.company.com (FQDN)
          - api-server.company.com.east (FQDN with region)
-         - All have same machine_id (api-server-001) and serial (HP-ProLiant-DL360-API)
+         - All have same machine_id (a644029003e46b31d1a09ecec6c77b02) and serial (USE1845G8K1)
          - Result: Correctly deduplicated based on matching canonical facts
          - This shows that with canonical facts, DNS variations don't cause duplicates
          - Dedup: Old logic only (count=1) - all had same ansible_host "api-server"
@@ -1933,7 +1935,7 @@ def validate_use_cases(actual_managed_nodes):
          - db-primary (short hostname) - HAS canonical facts
          - db-primary.company.com (FQDN) - NO canonical facts
          - db-primary.company.com.west (FQDN with region) - NO canonical facts
-         - Only first entry has machine_id (db-primary-001) and serial (Dell-PowerEdge-R750-DB)
+         - Only first entry has machine_id (bc2fa6de408414cef69227ebf4cf0f7e) and serial (CN7016194B0DB1)
          - Result: Shows as 3 separate hosts (false negative behavior)
          - This demonstrates that without canonical facts on all entries, they appear as separate hosts
          - Dedup: No dedup (count=1 each) - different ansible_host values, missing canonical facts
@@ -2002,26 +2004,20 @@ def validate_use_cases(actual_managed_nodes):
     assert cf.get('ansible_machine_id') == ['0267fc0887de14e8c994d1025a445221'], 'Should have machine_id'
     assert cf.get('ansible_product_serial') is None or cf.get('ansible_product_serial') == [], 'Should have no serial'
 
-    # Test Case 2.1: app01.failover (should be separate)
-    app01_failover = find_host('app01.failover')
-    assert app01_failover is not None, 'app01.failover should be present as separate host'
-    cf = get_canonical_facts(app01_failover)
-    assert cf.get('ansible_machine_id') == ['1a17f31cc8a19e2e1d3aa4901cb47939'], 'Should have different machine_id'
-
-    # Test Case 2.2: db01.company.com (no machine_id)
+    # Test Case 2.1: db01.company.com (no machine_id)
     db01 = find_host('db01.company.com')
     assert db01 is not None, 'db01.company.com should be present'
     cf = get_canonical_facts(db01)
     assert cf.get('ansible_machine_id') is None or cf.get('ansible_machine_id') == [], 'Should have no machine_id'
     assert cf.get('ansible_product_serial') == ['CN7792194B0740'], 'Should have serial'
 
-    # Test Case 2.3: log01.company.com (no canonical facts)
+    # Test Case 2.2: log01.company.com (no canonical facts)
     log01 = find_host('log01.company.com')
     assert log01 is not None, 'log01.company.com should be present'
     cf = get_canonical_facts(log01)
     assert not cf.get('ansible_machine_id') and not cf.get('ansible_product_serial'), 'Should have no canonical facts'
 
-    # Test Case 2.4: web04.dev and web04.staging (different machines)
+    # Test Case 2.3: web04.dev and web04.staging (different machines)
     web04_dev = find_host('web04.dev')
     web04_staging = find_host('web04.staging')
     assert web04_dev is not None, 'web04.dev should be present'
@@ -2051,6 +2047,12 @@ def validate_use_cases(actual_managed_nodes):
     else:
         # Should have 2 separate entries due to incomplete canonical facts
         assert len(secure_hosts) == 2, f'Should have 2 secure-host-01 entries (false negative), got {len(secure_hosts)}'
+
+    # Test Case 3.4: app01.failover (should be separate)
+    app01_failover = find_host('app01.failover')
+    assert app01_failover is not None, 'app01.failover should be present as separate host'
+    cf = get_canonical_facts(app01_failover)
+    assert cf.get('ansible_machine_id') == ['1a17f31cc8a19e2e1d3aa4901cb47939'], 'Should have different machine_id'
 
     # Test Case 4.1: AWS VMs with same synthetic machine_id
     # Look for any AWS VM entry
