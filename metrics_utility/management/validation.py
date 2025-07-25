@@ -47,7 +47,6 @@ VALID_SHEETS = {
     },
 }
 VALID_OPTIONAL_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit', 'total_workers_vcpu'}
-VALID_MANDATORY_COLLECTORS = {'job_host_summary'}
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
@@ -225,8 +224,6 @@ def validate_collectors(errors):
     Notes:
         - The set of valid optional collectors is defined by the global variable
           VALID_OPTIONAL_COLLECTORS.
-        - The set of valid mandatory collectors is defined by the global variable
-          VALID_MANDATORY_COLLECTORS.
         - Error messages include the invalid collector names and the list of
           valid values.
     """
