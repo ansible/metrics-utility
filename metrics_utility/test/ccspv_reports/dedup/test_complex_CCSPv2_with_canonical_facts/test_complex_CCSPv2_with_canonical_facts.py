@@ -2225,18 +2225,6 @@ def validate_use_cases(actual_managed_nodes):
          - Result: Merged because machine_id matches (serial not required if missing)
          - Dedup: Old logic only (count=1) - same ansible_host and host_name
 
-    1.7. mobile-dev-laptop (CORRECT deduplication but confusing):
-         - Developer laptop connecting from different networks
-         - Day 1: mobile-dev-laptop.office.company.com (office network)
-         - Day 2: mobile-dev-laptop.home.local (home network)
-         - Day 3: mobile-dev-laptop.office.company.com (back to office)
-         - Same machine_id (797690615d609504271f6d3467fb7c7d) and serial (CN0123456789)
-         - Result: Correctly deduplicated but demonstrates hostname confusion
-         - This is a "false positive" from a user perspective - they see one entry
-           for what appears to be different hostnames, but it's actually correct
-           deduplication of the same physical machine
-         - Dedup: New logic correctly applied - merged different network names
-
     2. NOT DEDUPLICATED HOSTS (unique serial/machine_id combinations):
     -------------------------------------------------------------------
 
@@ -2391,10 +2379,6 @@ def validate_use_cases(actual_managed_nodes):
     cf = get_canonical_facts(cache01)
     assert cf.get('ansible_machine_id') == ['0267fc0887de14e8c994d1025a445221'], 'Should have machine_id'
     assert cf.get('ansible_product_serial') is None or cf.get('ansible_product_serial') == [], 'Should have no serial'
-
-    # Test Case 1.7: mobile-dev-laptop (correct dedup but confusing)
-    # Note: mobile-dev-laptop is not included in managed nodes as it doesn't meet the criteria
-    # Skip this test case
 
     # Test Case 2.1: db01.company.com (no machine_id)
     db01 = find_host('db01.company.com')
