@@ -9,6 +9,7 @@ from django.conf import settings
 import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.logger import logger
 
 
 class PackageCRC(base.Package):
@@ -54,19 +55,19 @@ class PackageCRC(base.Package):
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             if not self.get_ingress_url():
-                self.logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
+                logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
                 return False
 
             if not self.get_sso_url():
-                self.logger.error('METRICS_UTILITY_CRC_SSO_URL is not set')
+                logger.error('METRICS_UTILITY_CRC_SSO_URL is not set')
                 return False
 
             if not self._get_rh_user():
-                self.logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set')
+                logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set')
                 return False
 
             if not self._get_rh_password():
-                self.logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set')
+                logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set')
                 return False
         return True
 

@@ -1,9 +1,10 @@
-import logging
 import os
 
 import boto3
 
 from botocore.exceptions import ClientError
+
+from metrics_utility.logger import logger
 
 
 class S3Handler:
@@ -59,7 +60,7 @@ class S3Handler:
             s3_resource = self.get_s3_resource()
             s3_resource.meta.client.upload_file(file_name, self.bucket_name, object_name)
         except ClientError as e:
-            logging.error(e)
+            logger.error(e)
             return False
 
     def download_file(self, s3_filename, local_filename):

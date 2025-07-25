@@ -19,6 +19,7 @@ from metrics_utility.automation_controller_billing.extract.base import Base
 from metrics_utility.base import CsvFileSplitter
 
 
+# adds relative time since start; debug with --verbose
 logging.basicConfig(format='%(asctime)s(+%(relativeCreated)d): %(message)s', level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
@@ -192,9 +193,7 @@ class Main:
         self.parse_env()
         self.parse_args()
 
-        if self.verbose:
-            print('config', vars(self))
-            logger.setLevel(logging.INFO)
+        logger.debug(f'config {vars(self)}')
 
     def parse_env(self):
         year = now().year
@@ -258,7 +257,8 @@ Environment vars:
         parser.add_argument('-v', '--verbose', action='store_true')
         args = parser.parse_args()
 
-        self.verbose = args.verbose
+        if args.verbose:
+            logger.setLevel(logging.DEBUG)
 
     def concat(self, name, data):
         if name not in self.selected:
@@ -275,16 +275,14 @@ Environment vars:
 
     def load(self):
         self.loaded = dict((s, None) for s in self.selected)
-        if self.verbose:
-            print('loaded', self.loaded)
+        logger.debug(f'loaded {self.loaded}')
 
         if os.path.isdir(self.source_tarballs):
             tarballs = glob.glob(os.path.join(self.source_tarballs, '**/*.tar.gz'), recursive=True)
         else:
             tarballs = glob.glob(self.source_tarballs, recursive=True)
 
-        if self.verbose:
-            print('tarballs', tarballs)
+        logger.debug(f'tarballs {tarballs}')
 
         for file in tarballs:
             with tempfile.TemporaryDirectory(prefix='metrics-generator-load') as temp_dir:
@@ -296,8 +294,7 @@ Environment vars:
                 self.concat('main_jobevent', data['main_jobevent'])
                 self.config_json = data['config']
 
-        if self.verbose:
-            print('loaded', self.loaded)
+        logger.debug(f'loaded {self.loaded}')
 
     def gen_df(self, table, fn, settings):
         if table not in self.loaded:
@@ -345,8 +342,7 @@ Environment vars:
             # table
             tar.add(file, arcname=f'./{table}.csv')
 
-        if self.verbose:
-            print(f'created {filename}')
+        logger.debug(f'created {filename}')
 
     def save_tarballs(self, table):
         """creates and saves all tarballs for table"""
@@ -394,8 +390,7 @@ Environment vars:
         self.add_to_tar(filename, json.dumps(content), tar, timestamp)
 
     def add_to_tar(self, filename, content, tar, timestamp):
-        if self.verbose:
-            print(filename, content)
+        logger.debug(filename, content)
 
         buf = content.encode('utf-8')
         info = tarfile.TarInfo(f'./{filename}')

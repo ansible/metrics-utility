@@ -1,11 +1,11 @@
-import logging
 import os
+
+from metrics_utility.logger import logger
 
 
 class ReportSaverDirectory:
-    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
+    def __init__(self, extra_params):
         self.extra_params = extra_params
-        self.logger = logger
 
         self.report_spreadsheet_destination_path = self.extra_params['report_spreadsheet_destination_path']
 
@@ -18,4 +18,4 @@ class ReportSaverDirectory:
 
         report_spreadsheet.save(self.report_spreadsheet_destination_path)
 
-        self.logger.info(f'Report generated into: {self.report_spreadsheet_destination_path}')
+        logger.info(f'Report generated into: {self.report_spreadsheet_destination_path}')

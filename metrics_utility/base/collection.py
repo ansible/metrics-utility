@@ -2,6 +2,8 @@ from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.logger import logger
+
 
 class Collection:
     """Wrapper for gathering function from Collector.collector_module
@@ -14,7 +16,6 @@ class Collection:
 
     def __init__(self, collector, fnc_collecting):
         self.collector = collector
-        self.logger = collector.logger
         self.fnc_collecting = fnc_collecting
         self.fnc_slicing = fnc_collecting.__insights_analytics_fnc_slicing__
         self.is_config = fnc_collecting.__insights_analytics_config__
@@ -66,7 +67,7 @@ class Collection:
 
             self.gathering_successful = True
         except Exception as e:
-            self.logger.exception(f'Could not generate metric {self.filename}: {e}')
+            logger.exception(f'Could not generate metric {self.filename}: {e}')
             self.gathering_successful = False
         finally:
             self._set_gathering_finished()

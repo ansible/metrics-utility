@@ -1,4 +1,3 @@
-import logging
 import os
 
 from django.core.management.base import BaseCommand
@@ -8,6 +7,7 @@ from metrics_utility.exceptions import (
     BadShipTarget,
     NoAnalyticsCollected,
 )
+from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
     date_format_text,
     handle_crc_ship_target,
@@ -31,6 +31,7 @@ class Command(BaseCommand):
         'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
         'dry-run': ('Gather billing metrics without shipping.'),
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
+        'verbose': ('Print debug information to console.'),
     }
 
     def add_arguments(self, parser):
@@ -38,17 +39,11 @@ class Command(BaseCommand):
         parser.add_argument('--ship', dest='ship', action='store_true', help=self.help_texts.get('ship'))
         parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
         parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
-
-    def init_logging(self):
-        self.logger = logging.getLogger('awx.main.analytics')
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.DEBUG)
-        handler.setFormatter(logging.Formatter('%(message)s'))
-        self.logger.addHandler(handler)
-        self.logger.propagate = False
+        parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
     def handle(self, *args, **options):
-        self.init_logging()
+        if options.get('verbose'):
+            debug()
         handle_env_validation('gather')
 
         opt_since = options.get('since')
@@ -63,7 +58,7 @@ class Command(BaseCommand):
         billing_provider_params = self._handle_ship_target(ship_target)
 
         if opt_ship and opt_dry_run:
-            self.logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
+            logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
             return
 
         collector = Collector(
@@ -74,10 +69,10 @@ class Command(BaseCommand):
 
         tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params)
         if not tgzfiles:
-            self.logger.error('No analytics collected')
+            logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
         if tgzfiles:
-            self.logger.info('Analytics collected')
+            logger.info('Analytics collected')
 
     def _handle_ship_target(self, ship_target):
         if ship_target == 'crc':

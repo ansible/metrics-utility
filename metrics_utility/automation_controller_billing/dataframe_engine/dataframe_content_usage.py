@@ -1,10 +1,6 @@
-import logging
 import re
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
-
-
-logger = logging.getLogger(__name__)
 
 
 # dataframe for main_jobevent

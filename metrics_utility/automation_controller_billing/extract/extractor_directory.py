@@ -1,22 +1,19 @@
-import logging
 import os
 import tempfile
 
 from metrics_utility.automation_controller_billing.extract.base import Base
+from metrics_utility.logger import logger
 
 
 class ExtractorDirectory(Base):
     LOG_PREFIX = '[ExtractorDirectory]'
-
-    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
-        super().__init__(extra_params, logger)
 
     def iter_batches(self, date, columns=None, batch_size=None):
         if batch_size is None:
             batch_size = self.batch_size()
 
         # Read tarball in memory in batches
-        self.logger.info(f'{self.LOG_PREFIX} Processing {date}')
+        logger.debug(f'{self.LOG_PREFIX} Processing {date}')
         paths = self.fetch_partition_paths(date)
 
         if batch_size is None:
@@ -31,7 +28,7 @@ class ExtractorDirectory(Base):
                     yield self.process_tarballs(path, temp_dir)
 
                 except Exception as e:
-                    self.logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {path} failed with {e}')
+                    logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {path} failed with {e}')
 
     def fetch_partition_paths(self, date):
         prefix = self.get_path_prefix(date)
