@@ -34,7 +34,10 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 
 
 def get_optional_collectors():
-    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+    opt_collector = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent')
+    if not opt_collector or opt_collector.isspace():
+        opt_collector = 'main_jobevent'
+    return opt_collector.split(',')
 
 
 def daily_slicing(key, last_gather, **kwargs):

@@ -5,7 +5,13 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
+from metrics_utility.exceptions import (
+    BadParameter,
+    DateFormatError,
+    MissingRequiredEnvVar,
+    MissingRequiredParameter,
+    UnparsableParameter,
+)
 
 
 date_format_text = (
@@ -230,7 +236,10 @@ def validate_collectors(errors):
         - Error messages include the invalid collector names and the list of
           valid values.
     """
-    collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+    collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent')
+    if not collectors or collectors.isspace():
+        collectors = 'main_jobevent'
+    collectors = collectors.split(',')
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:
