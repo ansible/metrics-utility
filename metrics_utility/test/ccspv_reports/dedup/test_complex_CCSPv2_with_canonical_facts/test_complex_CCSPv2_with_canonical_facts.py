@@ -96,16 +96,16 @@ def test_command_with_extended_canonical_facts(cleanup, request):
         copy_if_content_changed(file_path, test_report_path)
 
         # Validate all report sheets
-        validate_ccsp_summary(file_path)
-        validate_jobs(file_path)
         validate_managed_nodes(file_path)
-        validate_indirectly_managed_nodes(file_path)
         validate_inventory_scope(file_path)
+        validate_jobs(file_path)
+        validate_indirectly_managed_nodes(file_path)
         validate_usage_by_organizations(file_path)
         validate_usage_by_collections(file_path)
         validate_usage_by_roles(file_path)
         validate_usage_by_modules(file_path)
         validate_data_collection_status(file_path)
+        validate_ccsp_summary(file_path)
 
     finally:
         if workbook:
@@ -2305,7 +2305,7 @@ def validate_use_cases(actual_managed_nodes):
          - All have same machine_id (a644029003e46b31d1a09ecec6c77b02) and serial (USE1845G8K1)
          - Result: Correctly deduplicated based on matching canonical facts
          - This shows that with canonical facts, DNS variations don't cause duplicates
-         - Dedup: Old logic only (count=1) - all had same ansible_host "api-server"
+         - Dedup: New logic only (count=1) - deduplicated by machine_id and product_serial
 
     5.2. db-primary (3 entries → 3 showing false negative):
          - db-primary (short hostname) - HAS canonical facts
@@ -2456,7 +2456,4 @@ def validate_use_cases(actual_managed_nodes):
 
     # Count how many are present
     db_primary_count = sum(1 for h in [db_primary_short, db_primary_fqdn, db_primary_west] if h is not None)
-    if db_primary_count == 0:
-        pass  # db-primary test data not found - SKIPPING
-    else:
-        assert db_primary_count == 3, f'Should have 3 separate db-primary entries (false negative), got {db_primary_count}'
+    assert db_primary_count == 3, f'Should have 3 separate db-primary entries (false negative), got {db_primary_count}'
