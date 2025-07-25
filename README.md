@@ -1,5 +1,7 @@
 # AAP metrics-utility
 
+test ci
+
 A standalone CLI utility for collecting and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances. This tool allows users to:
 
 - Collect and analyze Controller usage data
