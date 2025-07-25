@@ -153,7 +153,7 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
         with tarfile.open(file_path, 'r:gz') as tar:
             # look for the CSV inside - it should NOT be present
             try:
-                member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                 jobhost_found = True
             except StopIteration:
                 # This is expected when collector is disabled
@@ -181,7 +181,7 @@ def test_job_host_summary_enabled_explicitly(cleanup_glob):
         with tarfile.open(file_path, 'r:gz') as tar:
             # look for the CSV inside - it should be present
             try:
-                member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                 jobhost_found = True
                 break
             except StopIteration:
@@ -212,7 +212,7 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
             with tarfile.open(file_path, 'r:gz') as tar:
                 # look for the CSV inside - it should NOT be present
                 try:
-                    member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                     jobhost_found = True
                 except StopIteration:
                     # This is expected when collector is disabled
@@ -247,7 +247,7 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
             with tarfile.open(file_path, 'r:gz') as tar:
                 # look for the CSV inside - it should be present since invalid values don't disable
                 try:
-                    member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                     jobhost_found = True
                     break
                 except StopIteration:
