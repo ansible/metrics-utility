@@ -411,20 +411,42 @@ def validate_managed_nodes(file_path):
         },
         14: {
             'Automated by organizations': 1,
+            'Canonical Facts': '{"ansible_host": ["secure-host-01-readonly.internal"], '
+            '"ansible_machine_id": ["f8e7d6c5b4a3928170605040302010"], '
+            '"ansible_port": [22], "host_name": '
+            '["secure-host-01-readonly.internal"]}',
+            'Facts': '{"ansible_architecture": ["x86_64"], "ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"]}',
+            'First automation': Timestamp('2025-07-08 16:05:05'),
+            'Host name': 'secure-host-01-readonly.internal',
+            'Host names before deduplication': '["secure-host-01-readonly.internal"]',
+            'Host names before deduplication count': 1,
+            'Job runs': 1,
+            'Last automation': Timestamp('2025-07-08 16:05:05'),
+            'Number of task runs': 5,
+        },
+        15: {
+            'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["secure-host-01.company.com"], '
-            '"ansible_machine_id": ["4f7a8b9c2d3e5f6a7b8c9d0e1f2a3b4c"], '
-            '"ansible_port": [22], "ansible_product_serial": ["CN5555555555"], '
+            '"ansible_machine_id": ["f8e7d6c5b4a3928170605040302010"], '
+            '"ansible_port": [22], "ansible_product_serial": ["CN7792194B0SEC"], '
             '"host_name": ["secure-host-01.company.com"]}',
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_user": ["admin", "readonly"], "ansible_virtualization_type": ["kvm"]}',
+            'Facts': '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Dell '
+            'Inc."], "ansible_bios_version": ["2.5.4"], "ansible_board_serial": '
+            '["CN7792194B0001"], "ansible_connection_variable": ["ssh"], '
+            '"ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": '
+            '["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": '
+            '["PowerEdge R840"], "ansible_system_vendor": ["Dell Inc."], '
+            '"ansible_virtualization_role": ["host"], '
+            '"ansible_virtualization_type": ["physical"]}',
             'First automation': Timestamp('2025-07-08 16:00:00'),
             'Host name': 'secure-host-01.company.com',
             'Host names before deduplication': '["secure-host-01.company.com"]',
             'Host names before deduplication count': 1,
-            'Job runs': 2,
+            'Job runs': 3,
             'Last automation': Timestamp('2025-07-08 16:05:00'),
-            'Number of task runs': 13,
+            'Number of task runs': 21,
         },
-        15: {
+        16: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["web01.internal", "web01.prod.company.com"], '
             '"ansible_machine_id": ["3a2f8c9b123456789012345678901234"], '
@@ -447,7 +469,7 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-07-09 11:15:20.123000'),
             'Number of task runs': 35,
         },
-        16: {
+        17: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["web02.external", "web02.internal"], '
             '"ansible_machine_id": ["f3e2da65c5d34e59151db7ec18b868d9"], '
@@ -470,7 +492,7 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-07-09 16:30:00'),
             'Number of task runs': 24,
         },
-        17: {
+        18: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["web03.company.com"], "ansible_machine_id": '
             '["01b6b28643a6a867e339e957c8ed9d37"], "ansible_port": [22, 2223], '
@@ -493,7 +515,7 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-07-09 18:05:00'),
             'Number of task runs': 28,
         },
-        18: {
+        19: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["web04.company.com"], "ansible_machine_id": '
             '["ae920ed940e880003e264a357de969c1"], "ansible_port": [22], '
@@ -516,7 +538,7 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-07-09 19:00:00'),
             'Number of task runs': 14,
         },
-        19: {
+        20: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["web04.company.com"], "ansible_machine_id": '
             '["d1134fec21d571a9b596f7dbf7dc5673"], "ansible_port": [22], '
@@ -539,7 +561,7 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-07-09 19:05:00'),
             'Number of task runs': 12,
         },
-        20: {
+        21: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["win-srv01.company.com"], "ansible_port": [5985], '
             '"ansible_product_serial": ["USE9876543"], "host_name": '
@@ -560,7 +582,7 @@ def validate_managed_nodes(file_path):
             'Last automation': Timestamp('2025-07-10 20:00:00'),
             'Number of task runs': 16,
         },
-        21: {
+        22: {
             'Automated by organizations': 1,
             'Canonical Facts': '{"ansible_host": ["win-srv02.company.com"], "ansible_port": [5985], '
             '"ansible_product_serial": ["USE9876543"], "host_name": '
@@ -861,19 +883,39 @@ def validate_inventory_scope(file_path):
             'Organizations': '["Development"]',
         },
         18: {
-            'Canonical Facts': '{"ansible_host": ["secure-host-01.company.com"], '
-            '"ansible_machine_id": ["4f7a8b9c2d3e5f6a7b8c9d0e1f2a3b4c"], '
-            '"ansible_port": [22], "ansible_product_serial": ["CN5555555555"], '
-            '"host_name": ["secure-host-01.company.com"]}',
-            'Facts': '{"ansible_connection_variable": ["ssh"], "ansible_user": ["admin", "readonly"], "ansible_virtualization_type": ["kvm"]}',
-            'Host name': 'secure-host-01.company.com',
-            'Host names before deduplication': '["secure-host-01.company.com"]',
+            'Canonical Facts': '{"ansible_host": ["secure-host-01-readonly.internal"], '
+            '"ansible_machine_id": ["f8e7d6c5b4a3928170605040302010"], '
+            '"ansible_port": [22], "host_name": '
+            '["secure-host-01-readonly.internal"]}',
+            'Facts': '{"ansible_architecture": ["x86_64"], "ansible_connection_variable": ["ssh"], "ansible_virtualization_type": ["physical"]}',
+            'Host name': 'secure-host-01-readonly.internal',
+            'Host names before deduplication': '["secure-host-01-readonly.internal"]',
             'Host names before deduplication count': 1,
-            'Inventories': '["Production Inventory", "Restricted Inventory"]',
+            'Inventories': '["Restricted Inventory"]',
             'Last Automation': Timestamp('2025-07-08 16:05:00'),
             'Organizations': '["Production"]',
         },
         19: {
+            'Canonical Facts': '{"ansible_host": ["secure-host-01.company.com"], '
+            '"ansible_machine_id": ["f8e7d6c5b4a3928170605040302010"], '
+            '"ansible_port": [22], "ansible_product_serial": ["CN7792194B0SEC"], '
+            '"host_name": ["secure-host-01.company.com"]}',
+            'Facts': '{"ansible_architecture": ["x86_64"], "ansible_bios_vendor": ["Dell '
+            'Inc."], "ansible_bios_version": ["2.5.4"], "ansible_board_serial": '
+            '["CN7792194B0001"], "ansible_connection_variable": ["ssh"], '
+            '"ansible_form_factor": ["Rack Mount Chassis"], "ansible_processor": '
+            '["Intel(R) Xeon(R) Gold 6248 CPU @ 2.50GHz"], "ansible_product_name": '
+            '["PowerEdge R840"], "ansible_system_vendor": ["Dell Inc."], '
+            '"ansible_virtualization_role": ["host"], '
+            '"ansible_virtualization_type": ["physical"]}',
+            'Host name': 'secure-host-01.company.com',
+            'Host names before deduplication': '["secure-host-01.company.com"]',
+            'Host names before deduplication count': 1,
+            'Inventories': '["Production Inventory"]',
+            'Last Automation': Timestamp('2025-07-08 16:00:00'),
+            'Organizations': '["Production"]',
+        },
+        20: {
             'Canonical Facts': '{"ansible_host": ["web01.internal", "web01.prod.company.com"], '
             '"ansible_machine_id": ["3a2f8c9b123456789012345678901234"], '
             '"ansible_port": [22, 2222], "ansible_product_serial": ["VMware-56 4d '
@@ -894,7 +936,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-09 11:15:25.988000'),
             'Organizations': '["Production"]',
         },
-        20: {
+        21: {
             'Canonical Facts': '{"ansible_host": ["web02.external", "web02.internal"], '
             '"ansible_machine_id": ["f3e2da65c5d34e59151db7ec18b868d9"], '
             '"ansible_port": [443], "ansible_product_serial": ["VMware-ab cd ef 12 '
@@ -915,7 +957,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-09 16:30:08'),
             'Organizations': '["Production"]',
         },
-        21: {
+        22: {
             'Canonical Facts': '{"ansible_host": ["web03.company.com"], "ansible_machine_id": '
             '["01b6b28643a6a867e339e957c8ed9d37"], "ansible_port": [22, 2223], '
             '"ansible_product_serial": ["VMware-12 34 56 78 90 ab cd ef-ab cd ef '
@@ -936,7 +978,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-09 18:05:00'),
             'Organizations': '["Production"]',
         },
-        22: {
+        23: {
             'Canonical Facts': '{"ansible_host": ["web04.company.com"], "ansible_machine_id": '
             '["ae920ed940e880003e264a357de969c1"], "ansible_port": [22], '
             '"ansible_product_serial": '
@@ -957,7 +999,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-09 19:00:00'),
             'Organizations': '["Development"]',
         },
-        23: {
+        24: {
             'Canonical Facts': '{"ansible_host": ["web04.company.com"], "ansible_machine_id": '
             '["d1134fec21d571a9b596f7dbf7dc5673"], "ansible_port": [22], '
             '"ansible_product_serial": '
@@ -978,7 +1020,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-09 19:05:00'),
             'Organizations': '["Staging"]',
         },
-        24: {
+        25: {
             'Canonical Facts': '{"ansible_host": ["webserver.company.com"], "ansible_machine_id": '
             '["1dcd7ec391a45938c8ab4ec198a24dc5", '
             '"78a5084255b084eebb58b41f5eb85c06"], "ansible_port": [22], '
@@ -992,7 +1034,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-08 10:05:00'),
             'Organizations': '["Production"]',
         },
-        25: {
+        26: {
             'Canonical Facts': '{"ansible_host": ["win-srv01.company.com"], "ansible_port": [5985], '
             '"ansible_product_serial": ["USE9876543"], "host_name": '
             '["win-srv01.company.com"]}',
@@ -1011,7 +1053,7 @@ def validate_inventory_scope(file_path):
             'Last Automation': Timestamp('2025-07-08 20:00:00'),
             'Organizations': '["Production"]',
         },
-        26: {
+        27: {
             'Canonical Facts': '{"ansible_host": ["win-srv02.company.com"], "ansible_port": [5985], '
             '"ansible_product_serial": ["USE9876543"], "host_name": '
             '["win-srv02.company.com"]}',
@@ -1061,13 +1103,13 @@ def validate_usage_by_organizations(file_path):
             'Unique managed nodes automated': 5,
         },
         2: {
-            'Job runs': 27,
+            'Job runs': 29,
             'Non-unique indirect managed nodes automated': 0,
-            'Non-unique managed nodes automated': 28,
-            'Number of task runs': 297,
+            'Non-unique managed nodes automated': 30,
+            'Number of task runs': 310,
             'Organization name': 'Production',
             'Unique indirect managed nodes automated': 0,
-            'Unique managed nodes automated': 18,
+            'Unique managed nodes automated': 19,
         },
         3: {
             'Job runs': 3,
@@ -1160,7 +1202,7 @@ def validate_ccsp_summary(file_path):
             'has_report_period': True,
             'report_period_contains': ['2025-07-08', '2025-07-11'],
             'has_sku_data': True,
-            'total_unique_nodes': 22,
+            'total_unique_nodes': 23,
         }
     }
 
@@ -1195,7 +1237,7 @@ def validate_ccsp_summary(file_path):
     for col_name, col_data in raw_data.items():
         if isinstance(col_data, dict):
             for row_idx, value in col_data.items():
-                if value in [20, 21, 22]:
+                if value in [23]:
                     actual['structure']['has_sku_data'] = True
                     actual['structure']['total_unique_nodes'] = value  # Use the actual value found
                     break
@@ -1374,6 +1416,16 @@ def validate_jobs(file_path):
             'Unique managed nodes automated': 1,
         },
         16: {
+            'First run': Timestamp('2025-07-08 16:05:00'),
+            'Job runs': 1,
+            'Job template name': 'Health Check',
+            'Last run': Timestamp('2025-07-08 16:05:00'),
+            'Non-unique managed nodes automated': 1,
+            'Number of task runs': 5,
+            'Organization name': 'Production',
+            'Unique managed nodes automated': 1,
+        },
+        17: {
             'First run': Timestamp('2025-07-08 15:00:00'),
             'Job runs': 1,
             'Job template name': 'K8S Deployment',
@@ -1383,7 +1435,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        17: {
+        18: {
             'First run': Timestamp('2025-07-09 14:10:30.123000'),
             'Job runs': 1,
             'Job template name': 'Log Management',
@@ -1393,7 +1445,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        18: {
+        19: {
             'First run': Timestamp('2025-07-10 17:00:00'),
             'Job runs': 2,
             'Job template name': 'Multi-Node App',
@@ -1403,7 +1455,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 2,
         },
-        19: {
+        20: {
             'First run': Timestamp('2025-07-10 22:00:00'),
             'Job runs': 2,
             'Job template name': 'Remote Site Management',
@@ -1413,7 +1465,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        20: {
+        21: {
             'First run': Timestamp('2025-07-08 16:00:00'),
             'Job runs': 1,
             'Job template name': 'Secure Host Admin',
@@ -1423,7 +1475,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        21: {
+        22: {
             'First run': Timestamp('2025-07-08 16:05:00'),
             'Job runs': 1,
             'Job template name': 'Secure Host Readonly',
@@ -1433,7 +1485,17 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        22: {
+        23: {
+            'First run': Timestamp('2025-07-08 16:00:00'),
+            'Job runs': 1,
+            'Job template name': 'System Update',
+            'Last run': Timestamp('2025-07-08 16:00:00'),
+            'Non-unique managed nodes automated': 1,
+            'Number of task runs': 8,
+            'Organization name': 'Production',
+            'Unique managed nodes automated': 1,
+        },
+        24: {
             'First run': Timestamp('2025-07-09 16:00:00'),
             'Job runs': 2,
             'Job template name': 'Web Deployment',
@@ -1443,7 +1505,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        23: {
+        25: {
             'First run': Timestamp('2025-07-09 18:00:00'),
             'Job runs': 1,
             'Job template name': 'Web03 Deploy',
@@ -1453,7 +1515,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        24: {
+        26: {
             'First run': Timestamp('2025-07-09 18:05:00'),
             'Job runs': 1,
             'Job template name': 'Web03 Prod Deploy',
@@ -1463,7 +1525,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 1,
         },
-        25: {
+        27: {
             'First run': Timestamp('2025-07-10 20:00:00'),
             'Job runs': 2,
             'Job template name': 'Windows Patching',
@@ -1473,7 +1535,7 @@ def validate_jobs(file_path):
             'Organization name': 'Production',
             'Unique managed nodes automated': 2,
         },
-        26: {
+        28: {
             'First run': Timestamp('2025-07-09 13:45:04'),
             'Job runs': 1,
             'Job template name': 'Staging Database Setup',
@@ -1483,7 +1545,7 @@ def validate_jobs(file_path):
             'Organization name': 'Staging',
             'Unique managed nodes automated': 1,
         },
-        27: {
+        29: {
             'First run': Timestamp('2025-07-10 17:10:00'),
             'Job runs': 1,
             'Job template name': 'Staging Multi-Node App',
@@ -1493,7 +1555,7 @@ def validate_jobs(file_path):
             'Organization name': 'Staging',
             'Unique managed nodes automated': 1,
         },
-        28: {
+        30: {
             'First run': Timestamp('2025-07-09 19:05:00'),
             'Job runs': 1,
             'Job template name': 'Web04 Staging Deploy',
@@ -2213,10 +2275,10 @@ def validate_use_cases(actual_managed_nodes):
          - Result: Kept separate (SHOULD be merged based on hostname pattern)
          - Dedup: No dedup possible - no canonical facts
 
-    3.3. secure-host-01.company.com (privileged vs unprivileged):
+    3.3. secure-host-01.company.com and secure-host-01-readonly.internal (privileged vs unprivileged):
          - Same host accessed with different credentials
          - Admin job has product_serial, user job doesn't
-         - Same machine_id in both cases
+         - Same machine_id in both cases 4f7a8b9c2d3e5f6a7b8c9d0e1f2a3b4c
          - Result: Correctly merged based on machine_id
          - Dedup: Working correctly - same machine_id causes deduplication
 
@@ -2369,8 +2431,8 @@ def validate_use_cases(actual_managed_nodes):
     # Test Case 3.3: secure-host-01.company.com (different privilege levels)
     # Look for secure-host-01.company.com entries
     secure_hosts = [entry for entry in actual_managed_nodes.values() if 'secure-host-01' in entry['Host name']]
-    # Should have 1 merged entry due to same machine_id
-    assert len(secure_hosts) == 1, f'Should have 1 secure-host-01 entry (correctly deduplicated), got {len(secure_hosts)}'
+    # Should have 2 entries due to different privilege levels
+    assert len(secure_hosts) == 2, f'Should have 2 secure-host-01 entry (correctly deduplicated), got {len(secure_hosts)}'
 
     # Test Case 3.4: app01.failover (should be separate)
     app01_failover = find_host('app01.failover')
