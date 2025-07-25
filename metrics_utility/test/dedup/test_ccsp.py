@@ -87,9 +87,12 @@ class TestDedupCCSP:
 
         # Mock the build_dataframe method
         for df in mock_dataframes.values():
-            df.build_dataframe.return_value = pd.DataFrame()
+            df.build_dataframe.return_value = pd.DataFrame({'dummy': [1]})  # Non-empty dataframe
 
         mock_dataframes['main_host'].build_dataframe.return_value = host_data
+        # Ensure job_host_summary and main_jobevent return non-empty dataframes
+        mock_dataframes['job_host_summary'].build_dataframe.return_value = pd.DataFrame({'host_name': ['host1', 'host2']})
+        mock_dataframes['main_jobevent'].build_dataframe.return_value = pd.DataFrame({'host_name': ['host1', 'host3']})
 
         # Mock the dedup method for dataframes that support it
         mock_dataframes['job_host_summary'].dedup = Mock(return_value=pd.DataFrame())
@@ -107,6 +110,7 @@ class TestDedupCCSP:
         # Check that dedup was called on relevant dataframes
         mock_dataframes['job_host_summary'].dedup.assert_called_once()
         mock_dataframes['main_jobevent'].dedup.assert_called_once()
+        mock_dataframes['main_host'].dedup.assert_called_once()
 
     def test_df_to_mapping_simple(self, mock_dataframes, base_extra_params):
         """Test df_to_mapping with simple data."""
