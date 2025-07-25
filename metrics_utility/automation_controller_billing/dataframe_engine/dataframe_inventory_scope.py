@@ -6,9 +6,9 @@ from metrics_utility.automation_controller_billing.helpers import merge_json_set
 
 def compute_serial(row):
     facts = parse_json(row['canonical_facts'])
-    if pd.isnull(facts['ansible_product_serial']) or pd.isnull(facts['ansible_machine_id']):
+    if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
-    return facts['ansible_product_serial'] + '/' + facts['ansible_machine_id']
+    return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')
 
 
 # dataframe for main_host
