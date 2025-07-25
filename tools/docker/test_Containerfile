@@ -11,6 +11,8 @@
 # Launch for example:
 #  source /var/lib/awx/venv/awx/bin/activate
 #  python /metrics_utility/manage.py gather_automation_controller_billing_data --dry-run
+# tar -xzvf /tmp/00000000-0000-0000-0000-000000000000-*.tar.gz -C /tmp
+# cat /tmp/<the_file_your_are_looking_for>
 
 FROM  --platform=linux/amd64 registry.redhat.io/ansible-automation-platform-25/controller-rhel8@sha256:919777713928a849dd1ea550a834ddbe5c363c1d203e7e8bf184ca1f36b3c03c as controller
 
