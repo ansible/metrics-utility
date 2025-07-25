@@ -86,12 +86,6 @@ def test_handle_extra_params_all_valid(monkeypatch, command_instance):
     assert params['report_type'] == 'CCSP'
 
 
-def test_init_logging(command_instance):
-    command_instance.init_logging()
-    assert hasattr(command_instance, 'logger')
-    assert command_instance.logger.name == 'awx.main.analytics'
-
-
 @pytest.mark.parametrize(
     'exc',
     [

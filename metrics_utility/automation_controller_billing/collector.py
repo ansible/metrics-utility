@@ -1,6 +1,5 @@
 import contextlib
 import json
-import logging
 
 from awx.main.utils import datetime_hook
 from django.conf import settings
@@ -15,6 +14,7 @@ import metrics_utility.base as base
 # from awx.main.access import access_registry
 # from rest_framework.exceptions import PermissionDenied
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+from metrics_utility.logger import logger
 
 
 # work around https://github.com/ansible/awx/pull/15676
@@ -24,8 +24,6 @@ try:
 except ImportError:
     # later 2.5, 2.6
     from ansible_base.lib.utils.db import advisory_lock
-
-logger = logging.getLogger('awx.main.analytics')
 
 
 class Collector(base.Collector):
@@ -38,7 +36,7 @@ class Collector(base.Collector):
         self.ship_target = ship_target
         self.billing_provider_params = billing_provider_params
 
-        super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module, logger=logger)
+        super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module)
 
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
@@ -57,7 +55,7 @@ class Collector(base.Collector):
 
         with self._pg_advisory_lock('gather_automation_controller_billing_lock', wait=False) as acquired:
             if not acquired:
-                self.logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
+                logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
 
             self._gather_initialize(dest, subset, since, until)

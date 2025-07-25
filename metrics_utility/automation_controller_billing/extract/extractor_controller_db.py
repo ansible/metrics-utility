@@ -1,5 +1,4 @@
 import datetime
-import logging
 
 import pandas as pd
 
@@ -7,11 +6,10 @@ from django.db import connection
 
 
 class ExtractorControllerDB:
-    def __init__(self, extra_params, logger=logging.getLogger(__name__)):
+    def __init__(self, extra_params):
         super().__init__()
 
         self.extra_params = extra_params
-        self.logger = logger
 
     def iter_batches(self):
         with connection.cursor() as cursor:

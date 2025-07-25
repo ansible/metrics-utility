@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 
@@ -7,9 +6,7 @@ from importlib import import_module
 import django.core.management as management
 
 from metrics_utility.exceptions import MetricsException
-
-
-logger = logging.getLogger(__name__)
+from metrics_utility.logger import logger
 
 
 class ManagementUtility(management.ManagementUtility):

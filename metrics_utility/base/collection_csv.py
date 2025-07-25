@@ -3,6 +3,8 @@ import os
 
 from django.utils.timezone import now
 
+from metrics_utility.logger import logger
+
 from .collection import Collection
 
 
@@ -23,7 +25,7 @@ class CollectionCSV(Collection):
 
     def add_to_tar(self, tar):
         """Adds CSV file to the tar(tgz) archive"""
-        self.logger.debug(f'CollectionCSV._add_to_tar: | {self.key}.csv | Size: {self.data_size()}')
+        logger.debug(f'CollectionCSV._add_to_tar: | {self.key}.csv | Size: {self.data_size()}')
         tar.add(self.target(), arcname=f'./{self.filename}')
 
     def cleanup(self):
@@ -44,7 +46,7 @@ class CollectionCSV(Collection):
             if os.path.exists(self.data_filepath):
                 data_size = os.path.getsize(self.data_filepath)
         except OSError as e:
-            self.logger.error(f"Can't get size of CSV file: {e}")
+            logger.error(f"Can't get size of CSV file: {e}")
 
         return data_size
 

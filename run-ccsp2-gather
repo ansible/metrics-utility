@@ -2,22 +2,8 @@
 set -e
 cd "`dirname "$0"`"
 
-export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
 export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="directory"
-
-export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
-export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
-export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
-export METRICS_UTILITY_REPORT_END_USER_CITY="Springfield"
-export METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME="Customer A"
-export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
-export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
-export METRICS_UTILITY_REPORT_H1_HEADING="CCSP NA Direct Reporting Template"
-export METRICS_UTILITY_REPORT_PO_NUMBER="123"
-export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
-export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
-export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 
 TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
 

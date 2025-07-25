@@ -1,12 +1,7 @@
-import logging
-
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
 from metrics_utility.automation_controller_billing.helpers import merge_json_sets, parse_json
-
-
-logger = logging.getLogger(__name__)
 
 
 def compute_serial(row):

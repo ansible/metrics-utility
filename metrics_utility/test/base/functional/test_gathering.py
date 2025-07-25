@@ -2,6 +2,8 @@ import json
 import logging
 import tarfile
 
+from unittest.mock import patch
+
 import pytest
 
 import base.functional.collector_module
@@ -24,12 +26,11 @@ def collector(mocker):
 
 
 def test_missing_config(mocker, collector):
-    mock_logger = mocker.patch.object(collector, 'logger')
+    with patch('metrics_utility.base.collector.logger') as mock_logger:
+        tgz_files = collector.gather(subset=['json_collection_1', 'json_collection_2'])
 
-    tgz_files = collector.gather(subset=['json_collection_1', 'json_collection_2'])
-
-    assert tgz_files is None
-    mock_logger.log.assert_called_with(logging.ERROR, "'config' collector data is missing")
+        assert tgz_files is None
+        mock_logger.log.assert_called_with(logging.ERROR, "'config' collector data is missing")
 
 
 def test_json_collections(collector):
