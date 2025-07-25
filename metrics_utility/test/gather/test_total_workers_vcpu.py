@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
-from metrics_utility.exceptions import MissingRequiredEnvVar, MetricsException
+from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.test.util import temporary_env
 
 
