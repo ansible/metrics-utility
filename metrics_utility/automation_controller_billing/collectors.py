@@ -526,7 +526,9 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     # Create a CoreV1Api client
     api_instance = client.CoreV1Api()
-
+    if not api_instance:
+        raise MetricsException(f"Could get a Kube CoreV1Api client: {e}")
+    
     nodes = api_instance.list_node()
 
     total_workers_vcpu = 0

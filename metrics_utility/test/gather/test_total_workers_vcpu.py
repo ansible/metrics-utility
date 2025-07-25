@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
-from metrics_utility.exceptions import MissingRequiredEnvVar
+from metrics_utility.exceptions import MissingRequiredEnvVar, MetricsException
 from metrics_utility.test.util import temporary_env
 
 
@@ -134,6 +134,24 @@ class TestTotalWorkersVcpu:
                     total_workers_vcpu(None, None, None)
                 assert 'Could not configure Kubernetes Python client ERROR:' in str(exc_info.value)
                 mock_logger.error.assert_called_once()
+
+    def test_corev1api_client_none_raises_exception(self):
+        """Test that the function raises MetricsException when CoreV1Api client is None."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
+            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_kube_config.load_incluster_config.return_value = None
+
+            # Mock CoreV1Api to return None
+            mock_client.CoreV1Api.return_value = None
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
+                assert 'Could get a Kube CoreV1Api client' in str(exc_info.value)
 
     def test_successful_kubernetes_api_call_with_multiple_nodes(self):
         """Test successful K8s API call with multiple nodes and CPU calculation."""

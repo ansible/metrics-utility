@@ -179,9 +179,53 @@ def test_usage_based_billing_disabled_default_behavior():
             os.environ.pop('METRICS_UTILITY_CLUSTER_NAME', None)
 
 
+def test_corev1api_client_none_raises_exception():
+    """Test that the function raises MetricsException when CoreV1Api client is None."""
+
+    # Mock the collectors module functions
+    with (
+        patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+        patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
+        patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+    ):
+        # Import the function after setting up the mocks
+        from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
+        from metrics_utility.exceptions import MetricsException
+
+        # Set up the mocks
+        mock_get.return_value = ['total_workers_vcpu']
+        mock_kube_config.load_incluster_config.return_value = None
+
+        # Mock CoreV1Api to return None
+        mock_client.CoreV1Api.return_value = None
+
+        # Set environment variables - need to enable usage-based billing to reach K8s API code
+        os.environ['METRICS_UTILITY_CLUSTER_NAME'] = 'test-cluster'
+        os.environ['METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED'] = 'true'
+
+        try:
+            exception_raised = False
+            try:
+                total_workers_vcpu(None, None, None)
+            except MetricsException as e:
+                exception_raised = True
+                assert 'Could get a Kube CoreV1Api client' in str(e)
+
+            # Verify that an exception was raised
+            assert exception_raised, 'Function should raise MetricsException when CoreV1Api client is None'
+
+            print('✅ CoreV1Api client None test passed!')
+
+        finally:
+            # Clean up environment variables
+            os.environ.pop('METRICS_UTILITY_CLUSTER_NAME', None)
+            os.environ.pop('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED', None)
+
+
 if __name__ == '__main__':
     test_config_exception_fix()
     test_kubernetes_config_failure()
     test_cluster_name_not_set()
     test_usage_based_billing_disabled_default_behavior()
+    test_corev1api_client_none_raises_exception()
     print('All tests passed!')
