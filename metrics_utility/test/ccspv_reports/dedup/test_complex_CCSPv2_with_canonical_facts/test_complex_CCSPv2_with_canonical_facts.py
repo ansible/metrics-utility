@@ -2267,14 +2267,14 @@ def validate_use_cases(actual_managed_nodes):
          - Same host accessed with different credentials
          - Admin job has product_serial, user job doesn't
          - Same machine_id in both cases 4f7a8b9c2d3e5f6a7b8c9d0e1f2a3b4c
-         - Result: Correctly merged based on machine_id
-         - Dedup: Working correctly - same machine_id causes deduplication
+         - Result: Kept separate
+         - Dedup: No dedup done, because one record serial is missing
 
     3.4. app01.failover:
          - Different machine_id (1a17f31cc8a19e2e1d3aa4901cb47939) than app01.cluster
          - Same serial number USE1234567 but different physical machine
          - Result: Kept separate
-         - Dedup: No dedup done becaue both machine_id and serial need to match
+         - Dedup: No dedup done because both machine_id and serial need to match
 
     4. FALSE POSITIVES - WRONGLY DEDUPLICATED (but shouldn't be):
     --------------------------------------------------------------
@@ -2290,7 +2290,7 @@ def validate_use_cases(actual_managed_nodes):
          - NAT gateway's machine_id and serial exposed to both
          - Same public IP address (203.0.113.10) with different ports (2201 and 2202)
          - Result: Still merged (port not used in deduplication logic)
-         - Dedup: Serial based on product_serial/machine_id only - port ignored
+         - Dedup: Merged based on ansible_host
          - Note: This demonstrates a limitation where NAT gateway hosts are incorrectly merged
 
     5. HOSTNAME RESOLUTION TEST CASES (NEW):
