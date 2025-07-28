@@ -137,6 +137,7 @@ def test_command(cleanup_glob):
     if not jobhost_found:
         pytest.fail('job_host_summary.csv not found in any tarballs.')
 
+
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     """Test that job_host_summary.csv is not generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is set to 'true'."""
@@ -261,6 +262,7 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
         # Clean up files for next iteration
         for file in glob.glob(file_glob):
             os.remove(file)
+
 
 def test_main_host_collection(cleanup_glob):
     """Test that main_host table collection runs without error and all collections have 'ok' status."""
