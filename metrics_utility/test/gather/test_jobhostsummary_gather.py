@@ -14,11 +14,11 @@ from metrics_utility.test.util import run_gather_ext, run_gather_int
 def safe_tarfile_member_check(member):
     """
     Check if a tar member is safe to extract (no path traversal).
-    
+
     This function prevents 'tar slip' or 'zip slip' attacks by validating
     that tar members don't contain dangerous paths that could extract files
     outside the intended directory.
-    
+
     SonarQube compliance: Addresses security hotspot for archive expansion.
     """
     # Reject device files and FIFOs which could be dangerous
