@@ -47,7 +47,7 @@ class SafeTarFile:
 
     def __enter__(self):
         # Open the tar file - suppressed security warning as we immediately filter members below
-        self.tar = tarfile.open(self.file_path, self.mode)  # NOSONAR: Safe usage - members are filtered for security
+        self.tar = tarfile.open(self.file_path, self.mode)
 
         # Filter members to only include safe ones
         original_members = self.tar.getmembers()
