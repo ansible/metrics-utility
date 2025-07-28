@@ -6,9 +6,9 @@ from metrics_utility.automation_controller_billing.helpers import merge_json_set
 
 def compute_serial(row):
     facts = parse_json(row['canonical_facts'])
-    if pd.isnull(facts['ansible_product_serial']) or pd.isnull(facts['ansible_machine_id']):
+    if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
-    return facts['ansible_product_serial'] + '/' + facts['ansible_machine_id']
+    return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')
 
 
 # dataframe for main_host
@@ -45,6 +45,13 @@ class DataframeInventoryScope(Base):
 
                 billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
 
+                experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+                if experimental_dedup:
+                    billing_data['host_names_before_dedup'] = billing_data['host_name']
+                else:
+                    # Always create the column for consistent structure, but keep it empty when dedup is not enabled
+                    billing_data['host_names_before_dedup'] = None
+
                 ################################
                 # Do the aggregation
                 ################################
@@ -71,6 +78,7 @@ class DataframeInventoryScope(Base):
             facts=('facts', merge_json_sets),
             last_automation=('last_automation', 'max'),
             serials=('serial', set),
+            host_names_before_dedup=('host_names_before_dedup', set),
         )
         return self.cast_dataframe(group, self.cast_types())
 
@@ -83,6 +91,7 @@ class DataframeInventoryScope(Base):
             facts=('facts', merge_setdicts),
             last_automation=('last_automation', 'max'),
             serials=('serials', merge_sets),
+            host_names_before_dedup=('host_names_before_dedup', merge_sets),
         )
 
     @staticmethod
@@ -91,7 +100,7 @@ class DataframeInventoryScope(Base):
 
     @staticmethod
     def data_columns():
-        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials']
+        return ['last_automation', 'organizations', 'inventories', 'canonical_facts', 'facts', 'serials', 'host_names_before_dedup']
 
     @staticmethod
     def cast_types():
@@ -106,4 +115,5 @@ class DataframeInventoryScope(Base):
             'canonical_facts': 'combine_json_values',
             'facts': 'combine_json_values',
             'serials': 'combine_set',
+            'host_names_before_dedup': 'combine_set',
         }

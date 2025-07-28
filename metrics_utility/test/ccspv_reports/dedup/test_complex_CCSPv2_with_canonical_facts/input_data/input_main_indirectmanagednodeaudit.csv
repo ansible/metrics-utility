@@ -1,0 +1,4 @@
+id,created,modified,job_created,host_name,host_remote_id,module_name,module_args
+1,2025-07-09 18:00:00+00,2025-07-09 18:00:05+00,2025-07-09 18:00:00+00,k8s-pod-01.cluster,101,kubernetes.core.k8s,state=present
+2,2025-07-09 18:00:00+00,2025-07-09 18:00:05+00,2025-07-09 18:00:00+00,k8s-pod-02.cluster,102,kubernetes.core.k8s,state=present
+3,2025-07-09 18:05:00+00,2025-07-09 18:05:05+00,2025-07-09 18:05:00+00,vm-guest-01.internal,103,vmware.vmware_rest.vm_power,state=on

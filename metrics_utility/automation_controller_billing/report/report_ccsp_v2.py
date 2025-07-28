@@ -260,10 +260,10 @@ class ReportCCSPv2(Base):
         # find gaps between until -> next since
         df = df.sort_values(['file_name', 'since', 'until']).reset_index(drop=True)
         df['next_since'] = df.groupby('file_name')['since'].shift(-1)
-        df['gap'] = df['next_since'] - df['until']
+        df['gap'] = (df['next_since'] - df['until']).dt.total_seconds()
 
         # skip if under 2 seconds
-        threshold = timedelta(seconds=2)
+        threshold = 2  # seconds
         dataframe = df[df['gap'] > threshold].copy()
 
         dataframe = dataframe[['file_name', 'until', 'next_since', 'gap']]
@@ -283,6 +283,7 @@ class ReportCCSPv2(Base):
         # time difference between the current and previous row with the same file_name & sort
         df = df.sort_values(['file_name', 'collection_start_timestamp']).reset_index(drop=True)
         df['time_diff'] = df.groupby('file_name')['collection_start_timestamp'].diff()
+
         df = df.sort_values('collection_start_timestamp').reset_index(drop=True)
 
         median_diff = df['time_diff'].median()
@@ -476,24 +477,30 @@ class ReportCCSPv2(Base):
         ccsp_report_dataframe = dataframe.groupby('organization_name', dropna=False).agg(**agg_dict)
 
         ccsp_report_dataframe = ccsp_report_dataframe.reset_index()
-        ccsp_report_dataframe = ccsp_report_dataframe.reindex(
-            columns=['organization_name', 'job_runs', 'host_runs_unique', 'host_runs', 'indirect_host_runs_unique', 'indirect_host_runs', 'task_runs']
-        )
+
+        # Build columns list dynamically
+        columns = ['organization_name', 'job_runs', 'host_runs_unique', 'host_runs']
+        if 'indirectly_managed_nodes' in self.optional_report_sheets():
+            columns.extend(['indirect_host_runs_unique', 'indirect_host_runs'])
+        columns.append('task_runs')
+
+        ccsp_report_dataframe = ccsp_report_dataframe.reindex(columns=columns)
 
         if 'indirectly_managed_nodes' not in self.optional_report_sheets():
-            ccsp_report_dataframe.drop(['indirect_host_runs_unique', 'indirect_host_runs'], axis=1, inplace=True)
+            drop_cols = ['indirect_host_runs_unique', 'indirect_host_runs']
+            ccsp_report_dataframe.drop([col for col in drop_cols if col in ccsp_report_dataframe.columns], axis=1, inplace=True)
 
-        ccsp_report_dataframe = ccsp_report_dataframe.rename(
-            columns={
-                'organization_name': 'Organization name',
-                'job_runs': 'Job runs',
-                'host_runs_unique': 'Unique managed nodes\nautomated',
-                'host_runs': 'Non-unique managed\nnodes automated',
-                'indirect_host_runs_unique': 'Unique indirect managed nodes\nautomated',
-                'indirect_host_runs': 'Non-unique indirect managed\nnodes automated',
-                'task_runs': 'Number of task\nruns',
-            }
-        )
+        rename_columns = {
+            'organization_name': 'Organization name',
+            'job_runs': 'Job runs',
+            'host_runs_unique': 'Unique managed nodes\nautomated',
+            'host_runs': 'Non-unique managed\nnodes automated',
+            'indirect_host_runs_unique': 'Unique indirect managed nodes\nautomated',
+            'indirect_host_runs': 'Non-unique indirect managed\nnodes automated',
+            'task_runs': 'Number of task\nruns',
+        }
+
+        ccsp_report_dataframe = ccsp_report_dataframe.rename(columns=rename_columns)
 
         row_counter = 0
         rows = dataframe_to_rows(ccsp_report_dataframe, index=False)
@@ -533,9 +540,12 @@ class ReportCCSPv2(Base):
         current_row += 1
         return current_row
 
+    def current_date(self):
+        return time.strftime('%b %d, %Y')
+
     def _build_updated_timestamp(self, current_row, ws):
         cell = ws.cell(row=1, column=8)
-        cell.value = f'Updated: {time.strftime("%b %d, %Y")}'
+        cell.value = f'Updated: {self.current_date()}'
 
         return current_row
 

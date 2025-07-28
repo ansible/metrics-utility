@@ -1,5 +1,3 @@
-import datetime
-
 import openpyxl
 import pandas
 import pytest
@@ -216,25 +214,25 @@ def validate_data_collection_status(file_path):
     assert transform_sheet(sheet_missing.to_dict()) == {
         0: {
             'CSV filename': 'job_host_summary.csv',
-            'Gap in seconds': datetime.time(11, 49, 17, 200000),
+            'Gap in seconds': 42557.200196,
             'Missing from': Timestamp('2025-02-13 00:00:00'),
             'Missing until': Timestamp('2025-02-13 11:49:17.200000'),
         },
         1: {
             'CSV filename': 'job_host_summary.csv',
-            'Gap in seconds': datetime.time(11, 10, 42, 798000),
+            'Gap in seconds': 40242.797774,
             'Missing from': Timestamp('2025-02-13 12:49:17.202000'),
             'Missing until': Timestamp('2025-02-14 00:00:00'),
         },
         2: {
             'CSV filename': 'main_jobevent.csv',
-            'Gap in seconds': datetime.time(11, 49, 17, 200000),
+            'Gap in seconds': 42557.200196,
             'Missing from': Timestamp('2025-02-13 00:00:00'),
             'Missing until': Timestamp('2025-02-13 11:49:17.200000'),
         },
         3: {
             'CSV filename': 'main_jobevent.csv',
-            'Gap in seconds': datetime.time(11, 10, 42, 798000),
+            'Gap in seconds': 40242.797774,
             'Missing from': Timestamp('2025-02-13 12:49:17.202000'),
             'Missing until': Timestamp('2025-02-14 00:00:00'),
         },

@@ -3,9 +3,12 @@ import glob
 import os
 import tarfile
 
+from unittest.mock import patch
+
 import pytest
 
-from metrics_utility.test.util import run_gather_ext
+from metrics_utility.base.collection import Collection
+from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
 # environment for run_gather_ext
@@ -88,7 +91,7 @@ def cleanup_glob():
 def test_command(cleanup_glob):
     """Build xlsx report using build command and test CSV contents."""
     # run the gather command
-    run_gather_ext(env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
+    run_gather_ext(env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14', '--force'])
 
     jobhost_found = False
 
@@ -133,7 +136,6 @@ def test_command(cleanup_glob):
 
     if not jobhost_found:
         pytest.fail('job_host_summary.csv not found in any tarballs.')
-
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_disabled_by_env_var(cleanup_glob):
@@ -259,3 +261,68 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
         # Clean up files for next iteration
         for file in glob.glob(file_glob):
             os.remove(file)
+
+def test_main_host_collection(cleanup_glob):
+    """Test that main_host table collection runs without error and all collections have 'ok' status."""
+    # Enable main_host collection by adding it to optional collectors
+    env_vars_with_main_host = env_vars.copy()
+    env_vars_with_main_host['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_jobevent,main_host'
+
+    # Track collections and their statuses
+    collection_statuses = {}
+
+    # Mock the Collection.gather method to capture success/failure status
+    original_collection_gather = Collection.gather
+
+    def mock_collection_gather(self, path):
+        """Mock collection gather to capture statuses."""
+        # Call the original method
+        result = original_collection_gather(self, path)
+
+        # Capture the status
+        collection_name = getattr(self, 'filename', 'unknown')
+        collection_statuses[collection_name] = self.gathering_successful
+
+        return result
+
+    with patch.object(Collection, 'gather', mock_collection_gather):
+        # Run the gather command
+        run_gather_int(
+            env_vars_with_main_host,
+            {
+                'ship': True,
+                'since': '2025-06-12',
+                'until': '2025-06-14',
+            },
+        )
+
+    # Check collection statuses
+    print('\nCollection statuses:')
+    expected_collections = {'job_host_summary.csv', 'main_jobevent.csv', 'main_host.csv'}
+    errors_found = []
+
+    for collection_name, status in collection_statuses.items():
+        status_str = 'ok' if status else 'failed'
+        print(f'  {collection_name}: {status_str}')
+
+        if not status:
+            errors_found.append(f"Collection '{collection_name}' failed")
+
+    # Check if there were any errors
+    if errors_found:
+        assert False, 'Found errors in collections:\n' + '\n'.join(errors_found)
+
+    # Check if all expected collections were seen
+    collected_names = set(collection_statuses.keys())
+    missing_collections = expected_collections - collected_names
+
+    # Note: Some collections might have different names or be in subdirectories
+    # Let's check for partial matches
+    for expected in list(missing_collections):
+        for collected in collected_names:
+            if expected in collected or collected.endswith(expected):
+                missing_collections.remove(expected)
+                break
+
+    if missing_collections:
+        assert False, f'Expected collections were not found: {", ".join(missing_collections)}. Found: {", ".join(collected_names)}'

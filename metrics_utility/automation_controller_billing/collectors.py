@@ -464,7 +464,32 @@ def main_host_table(since, full_path, until, **kwargs):
 
                    jsonb_build_object(
                        'ansible_product_serial', main_host.ansible_facts->>'ansible_product_serial'::TEXT,
-                       'ansible_machine_id', main_host.ansible_facts->>'ansible_machine_id'::TEXT
+                       'ansible_machine_id', main_host.ansible_facts->>'ansible_machine_id'::TEXT,
+                       'ansible_host',
+                       CASE
+                           WHEN (metrics_utility_is_valid_json(main_host.variables))
+                              THEN main_host.variables::jsonb->>'ansible_host'
+                           ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_host' )
+                       END,
+                       'host_name', main_host.name,
+                       'ansible_port',
+                       CASE
+                           WHEN (
+                               CASE
+                                   WHEN (metrics_utility_is_valid_json(main_host.variables))
+                                      THEN main_host.variables::jsonb->>'ansible_port'
+                                   ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_port' )
+                               END
+                           ) ~ '^[0-9]+$' THEN
+                               (
+                                   CASE
+                                       WHEN (metrics_utility_is_valid_json(main_host.variables))
+                                          THEN main_host.variables::jsonb->>'ansible_port'
+                                       ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_port' )
+                                   END
+                               )::INTEGER
+                           ELSE NULL
+                       END
                    ) AS canonical_facts,
 
                    jsonb_build_object(
@@ -473,7 +498,27 @@ def main_host_table(since, full_path, until, **kwargs):
                            WHEN (metrics_utility_is_valid_json(main_host.variables))
                               THEN main_host.variables::jsonb->>'ansible_connection'
                            ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
-                       END
+                       END,
+                       'ansible_virtualization_type',
+                       main_host.ansible_facts->>'ansible_virtualization_type'::TEXT,
+                       'ansible_virtualization_role',
+                       main_host.ansible_facts->>'ansible_virtualization_role'::TEXT,
+                       'ansible_system_vendor',
+                       main_host.ansible_facts->>'ansible_system_vendor'::TEXT,
+                       'ansible_product_name',
+                       main_host.ansible_facts->>'ansible_product_name'::TEXT,
+                       'ansible_architecture',
+                       main_host.ansible_facts->>'ansible_architecture'::TEXT,
+                       'ansible_processor',
+                       main_host.ansible_facts->>'ansible_processor'::TEXT,
+                       'ansible_form_factor',
+                       main_host.ansible_facts->>'ansible_form_factor'::TEXT,
+                       'ansible_bios_vendor',
+                       main_host.ansible_facts->>'ansible_bios_vendor'::TEXT,
+                       'ansible_bios_version',
+                       main_host.ansible_facts->>'ansible_bios_version'::TEXT,
+                       'ansible_board_serial',
+                       main_host.ansible_facts->>'ansible_board_serial'::TEXT
                    ) AS facts
 
             FROM main_host

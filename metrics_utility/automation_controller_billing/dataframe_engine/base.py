@@ -171,6 +171,7 @@ class Base:
 
         # map hostnames to canonical value
         df = dataframe.copy()
+
         df['host_name'] = df['host_name'].map(hostname_mapping).fillna(df['host_name'])
 
         # multiple rows can now have the same hostname, regroup
