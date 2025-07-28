@@ -11,6 +11,25 @@ from metrics_utility.base.collection import Collection
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
+def safe_tarfile_member_check(member):
+    """
+    Check if a tar member is safe to extract (no path traversal).
+    
+    This function prevents 'tar slip' or 'zip slip' attacks by validating
+    that tar members don't contain dangerous paths that could extract files
+    outside the intended directory.
+    
+    SonarQube compliance: Addresses security hotspot for archive expansion.
+    """
+    # Reject device files and FIFOs which could be dangerous
+    if member.isdev() or member.isfifo():
+        return False
+    # Reject paths with directory traversal patterns
+    if '..' in member.name or member.name.startswith('/'):
+        return False
+    return True
+
+
 # environment for run_gather_ext
 env_vars = {
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
@@ -98,9 +117,9 @@ def test_command(cleanup_glob):
     # locate the generated tarball(s)
     for file_path in glob.glob(file_paths):
         with tarfile.open(file_path, 'r:gz') as tar:
-            # look for the CSV inside
+            # look for the CSV inside with safety checks
             try:
-                member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv') and safe_tarfile_member_check(m))
             except StopIteration:
                 continue
 
@@ -154,9 +173,9 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     # locate the generated tarball(s)
     for file_path in glob.glob(file_paths):
         with tarfile.open(file_path, 'r:gz') as tar:
-            # look for the CSV inside - it should NOT be present
+            # look for the CSV inside - it should NOT be present (with safety checks)
             try:
-                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv') and safe_tarfile_member_check(m))
                 jobhost_found = True
             except StopIteration:
                 # This is expected when collector is disabled
@@ -182,9 +201,9 @@ def test_job_host_summary_enabled_explicitly(cleanup_glob):
     # locate the generated tarball(s)
     for file_path in glob.glob(file_paths):
         with tarfile.open(file_path, 'r:gz') as tar:
-            # look for the CSV inside - it should be present
+            # look for the CSV inside - it should be present (with safety checks)
             try:
-                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv') and safe_tarfile_member_check(m))
                 jobhost_found = True
                 break
             except StopIteration:
@@ -213,9 +232,9 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
         # locate the generated tarball(s)
         for file_path in glob.glob(file_paths):
             with tarfile.open(file_path, 'r:gz') as tar:
-                # look for the CSV inside - it should NOT be present
+                # look for the CSV inside - it should NOT be present (with safety checks)
                 try:
-                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv') and safe_tarfile_member_check(m))
                     jobhost_found = True
                 except StopIteration:
                     # This is expected when collector is disabled
@@ -248,9 +267,9 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
         # locate the generated tarball(s)
         for file_path in glob.glob(file_paths):
             with tarfile.open(file_path, 'r:gz') as tar:
-                # look for the CSV inside - it should be present since invalid values don't disable
+                # look for the CSV inside - it should be present since invalid values don't disable (with safety checks)
                 try:
-                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
+                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv') and safe_tarfile_member_check(m))
                     jobhost_found = True
                     break
                 except StopIteration:
