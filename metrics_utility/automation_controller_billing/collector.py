@@ -1,5 +1,6 @@
 import contextlib
 import json
+import os
 
 from awx.main.utils import datetime_hook
 from django.conf import settings
@@ -53,7 +54,12 @@ class Collector(base.Collector):
         if not self.is_enabled():
             return None
 
-        with self._pg_advisory_lock('gather_automation_controller_billing_lock', wait=False) as acquired:
+        key = 'gather_automation_controller_billing_lock'
+        suffix = os.environ.get('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
+        if suffix:
+            key = f'gather_automation_controller_billing_{suffix}_lock'
+
+        with self._pg_advisory_lock(key, wait=False) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
@@ -130,7 +136,13 @@ class Collector(base.Collector):
 
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""
-        if self.is_shipping_enabled():
+
+        disabled_str = os.environ.get('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES', 'false')
+        disabled = False
+        if disabled_str and (disabled_str.lower() == 'true'):
+            disabled = True
+
+        if self.is_shipping_enabled() and not disabled:
             # We need to wait on analytics lock, to update the last collected timestamp settings
             # so we don't clash with analytics job collection.
             with self._pg_advisory_lock('gather_analytics_lock', wait=True):
