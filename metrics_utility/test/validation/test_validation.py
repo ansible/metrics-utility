@@ -146,13 +146,13 @@ def test_validate_max_gather_period_days_invalid_negative(monkeypatch):
 
 
 def test_validate_max_gather_period_days_invalid_too_large(monkeypatch):
-    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '400')
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '4000')
     errors = []
     result = validate_max_gather_period_days(errors)
     assert result is None
     assert errors
-    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 400' in errors[0]
-    assert 'Value must be between 1 and 365 days' in errors[0]
+    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 4000' in errors[0]
+    assert 'Value must be between 1 and 3650 days' in errors[0]
 
 
 def test_validate_max_gather_period_days_invalid_non_integer(monkeypatch):
@@ -162,7 +162,7 @@ def test_validate_max_gather_period_days_invalid_non_integer(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "abc"' in errors[0]
-    assert 'Value must be a positive integer between 1 and 365' in errors[0]
+    assert 'Value must be a positive integer between 1 and 3650' in errors[0]
 
 
 def test_validate_max_gather_period_days_invalid_float(monkeypatch):
@@ -172,7 +172,7 @@ def test_validate_max_gather_period_days_invalid_float(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "30.5"' in errors[0]
-    assert 'Value must be a positive integer between 1 and 365' in errors[0]
+    assert 'Value must be a positive integer between 1 and 3650' in errors[0]
 
 
 def test_validate_ship_target_valid(monkeypatch):

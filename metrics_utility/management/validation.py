@@ -18,6 +18,7 @@ date_format_text = (
 ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
 
 # Constants for valid values
+MAX_GATHER_PERIOD_DAYS = 3650  # 10 years maximum
 VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
 VALID_SHEETS = {
     'CCSP': {
@@ -290,7 +291,7 @@ def validate_max_gather_period_days(errors):
     """
     Validates the 'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS' environment variable.
 
-    Checks that the value is a positive integer within a reasonable range (1-365 days).
+    Checks that the value is a positive integer within a reasonable range (1-3650 days).
     If the environment variable is set and its value is not valid, an error message 
     is appended to the provided errors list.
 
@@ -312,17 +313,17 @@ def validate_max_gather_period_days(errors):
                 f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_gather_days}. '
                 f'Value must be a positive integer greater than 0.'
             )
-        elif max_gather_days > 365:
+        elif max_gather_days > MAX_GATHER_PERIOD_DAYS:
             errors.append(
                 f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_gather_days}. '
-                f'Value must be between 1 and 365 days.'
+                f'Value must be between 1 and {MAX_GATHER_PERIOD_DAYS} days.'
             )
         else:
             return max_gather_days
     except (ValueError, TypeError):
         errors.append(
             f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "{max_gather_days_str}". '
-            f'Value must be a positive integer between 1 and 365.'
+            f'Value must be a positive integer between 1 and {MAX_GATHER_PERIOD_DAYS}.'
         )
     
     return None
