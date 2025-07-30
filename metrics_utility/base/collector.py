@@ -35,7 +35,7 @@ class Collector:
 
     Collector is an abstract class, example of implementation is in tests/classes
 
-    Data are gathered maximally 4 weeks ago and can be set to less (see gather(since, until,..))
+    Data are gathered maximally 28 days ago and can be set to less (see gather(since, until,..))
     """
 
     MANUAL_COLLECTION = 'manual'

@@ -82,7 +82,7 @@ class Collection:
         last_gather = self.collector.last_gather
         # These slicer functions may return a generator. The `since` parameter is
         # allowed to be None, and will fall back to LAST_ENTRIES[key] or to
-        # LAST_GATHER (truncated appropriately to match the 4-week limit).
+        # LAST_GATHER (truncated appropriately to match the 28-day limit).
         #
         # Or it can force full table sync if interval is given
         if self.fnc_slicing:

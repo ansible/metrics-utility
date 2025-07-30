@@ -46,7 +46,7 @@ class Collector(base.Collector):
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
         :param subset: (list) collector_module's function names if only subset is required (typically tests)
-        :param since: (datetime) - low threshold of data changes (max. and default - 4 weeks ago)
+        :param since: (datetime) - low threshold of data changes (max. and default - 28 days ago)
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
