@@ -7,6 +7,7 @@ from metrics_utility.management.validation import (
     handle_env_validation,
     validate_ccsp_report_sheets,
     validate_collectors,
+    validate_max_gather_period_days,
     validate_report_type,
     validate_ship_path,
     validate_ship_target,
@@ -22,6 +23,7 @@ def clear_env(monkeypatch):
         'METRICS_UTILITY_OPTIONAL_COLLECTORS',
         'METRICS_UTILITY_SHIP_PATH',
         'METRICS_UTILITY_SHIP_TARGET',
+        'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS',
     ]
     for key in keys:
         monkeypatch.delenv(key, raising=False)
@@ -90,6 +92,87 @@ def test_validate_collectors_invalid(monkeypatch):
     validate_collectors(errors)
     assert errors
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in errors[0]
+
+
+def test_validate_max_gather_period_days_valid(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '30')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result == 30
+    assert not errors
+
+
+def test_validate_max_gather_period_days_valid_min_value(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '1')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result == 1
+    assert not errors
+
+
+def test_validate_max_gather_period_days_valid_max_value(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '365')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result == 365
+    assert not errors
+
+
+def test_validate_max_gather_period_days_not_set():
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result is None
+    assert not errors
+
+
+def test_validate_max_gather_period_days_invalid_zero(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '0')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result is None
+    assert errors
+    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 0' in errors[0]
+    assert 'Value must be a positive integer greater than 0' in errors[0]
+
+
+def test_validate_max_gather_period_days_invalid_negative(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '-5')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result is None
+    assert errors
+    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: -5' in errors[0]
+    assert 'Value must be a positive integer greater than 0' in errors[0]
+
+
+def test_validate_max_gather_period_days_invalid_too_large(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '400')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result is None
+    assert errors
+    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 400' in errors[0]
+    assert 'Value must be between 1 and 365 days' in errors[0]
+
+
+def test_validate_max_gather_period_days_invalid_non_integer(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', 'abc')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result is None
+    assert errors
+    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "abc"' in errors[0]
+    assert 'Value must be a positive integer between 1 and 365' in errors[0]
+
+
+def test_validate_max_gather_period_days_invalid_float(monkeypatch):
+    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '30.5')
+    errors = []
+    result = validate_max_gather_period_days(errors)
+    assert result is None
+    assert errors
+    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "30.5"' in errors[0]
+    assert 'Value must be a positive integer between 1 and 365' in errors[0]
 
 
 def test_validate_ship_target_valid(monkeypatch):
@@ -181,8 +264,23 @@ def test_handle_env_validation_all_build_valid(monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_host')
         monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'directory')
         monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', tmpdir)
+        monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '30')
         # Should not raise
         handle_env_validation('build')
+
+
+def test_handle_env_validation_with_invalid_max_gather_period_days(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSP')
+        monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary')
+        monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_host')
+        monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'directory')
+        monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', tmpdir)
+        monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', 'invalid')
+        with pytest.raises(MissingRequiredEnvVar) as excinfo:
+            handle_env_validation('build')
+        msg = str(excinfo.value)
+        assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS' in msg
 
 
 def test_handle_env_validation_gather_raises1(monkeypatch):

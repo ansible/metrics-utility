@@ -286,6 +286,48 @@ def validate_ship_path(errors, ship_target, method):
         logger.info('No path set under METRICS_UTILITY_SHIP_PATH. A directory will be created')
 
 
+def validate_max_gather_period_days(errors):
+    """
+    Validates the 'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS' environment variable.
+
+    Checks that the value is a positive integer within a reasonable range (1-365 days).
+    If the environment variable is set and its value is not valid, an error message 
+    is appended to the provided errors list.
+
+    Args:
+        errors (list): A list to which error messages will be appended if validation fails.
+
+    Returns:
+        int or None: The validated value as an integer if set and valid, otherwise None.
+    """
+    max_gather_days_str = os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', None)
+    
+    if max_gather_days_str is None:
+        return None
+    
+    try:
+        max_gather_days = int(max_gather_days_str)
+        if max_gather_days <= 0:
+            errors.append(
+                f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_gather_days}. '
+                f'Value must be a positive integer greater than 0.'
+            )
+        elif max_gather_days > 365:
+            errors.append(
+                f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_gather_days}. '
+                f'Value must be between 1 and 365 days.'
+            )
+        else:
+            return max_gather_days
+    except (ValueError, TypeError):
+        errors.append(
+            f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "{max_gather_days_str}". '
+            f'Value must be a positive integer between 1 and 365.'
+        )
+    
+    return None
+
+
 def handle_env_validation(method: str):
     """
     Validates required environment variables and configuration for the application.
@@ -300,6 +342,7 @@ def handle_env_validation(method: str):
     - Validating collectors.
     - Validating the ship target (uses the `method` argument to determine which set of valid targets to check).
     - Validating the ship path based on the ship target.
+    - Validating the max gather period days.
 
     Args:
         method (str): Determines which set of valid ship targets to use for validation.
@@ -309,7 +352,7 @@ def handle_env_validation(method: str):
         - The function accumulates all errors before raising an exception, providing a comprehensive
           error message.
         - The specific validation functions (`validate_report_type`, `validate_ccsp_report_sheets`,
-          `validate_collectors`, `validate_ship_target`, `validate_ship_path`) are expected to
+          `validate_collectors`, `validate_ship_target`, `validate_ship_path`, `validate_max_gather_period_days`) are expected to
           append error messages to the provided `errors` list.
         - The `method` parameter controls which ship target validation set is used.
         - Raises:
@@ -319,6 +362,7 @@ def handle_env_validation(method: str):
     errors = []
     report_type = validate_report_type(errors, method)
     validate_collectors(errors)
+    validate_max_gather_period_days(errors)
     if method == 'build':
         validate_ccsp_report_sheets(errors, report_type)
         ship_target = validate_ship_target(errors, method)
