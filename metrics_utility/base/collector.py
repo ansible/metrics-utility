@@ -42,7 +42,7 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    @property
+    @classmethod
     def MAX_GATHER_PERIOD_DAYS(cls):
         try:
             return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', 28))
@@ -194,13 +194,13 @@ class Collector:
         # `since` parameter.
         if since is not None:
             if until is not None:
-                if until > since + timedelta(days=self.MAX_GATHER_PERIOD_DAYS):
-                    until = since + timedelta(days=self.MAX_GATHER_PERIOD_DAYS)
+                if until > since + timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS):
+                    until = since + timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS)
                     logger.warning(
-                        f'End of the collection interval is greater than {self.MAX_GATHER_PERIOD_DAYS} days from start, setting end to {until}.'
+                        f'End of the collection interval is greater than {Collector.MAX_GATHER_PERIOD_DAYS} days from start, setting end to {until}.'
                     )
             else:  # until is None
-                until = min(since + timedelta(days=self.MAX_GATHER_PERIOD_DAYS), _now)
+                until = min(since + timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS), _now)
         elif until is None:
             until = _now
 
@@ -215,17 +215,17 @@ class Collector:
         # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
         # case to know whether to use the bookkeeping settings variables to decide the start of
         # the interval.
-        horizon = until - timedelta(days=self.MAX_GATHER_PERIOD_DAYS)
+        horizon = until - timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS)
         if since is not None and since < horizon:
             since = horizon
             logger.warning(
-                f'Start of the collection interval is more than {self.MAX_GATHER_PERIOD_DAYS} days prior to {until}, setting to {horizon}.'
+                f'Start of the collection interval is more than {Collector.MAX_GATHER_PERIOD_DAYS} days prior to {until}, setting to {horizon}.'
             )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            logger.warning(f'Last analytics run was more than {self.MAX_GATHER_PERIOD_DAYS} days prior to {until}, using {horizon} instead.')
+            logger.warning(f'Last analytics run was more than {Collector.MAX_GATHER_PERIOD_DAYS} days prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until

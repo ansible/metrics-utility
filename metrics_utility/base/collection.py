@@ -142,9 +142,10 @@ class Collection:
 
     def _gather_since(self):
         """Start of gathering based on settings excluding slices"""
+        from .collector import Collector
         last_entry = max(
             self.last_gathered_entry or self.collector.last_gather,
-            self.collector.gather_until - timedelta(days=self.collector.MAX_GATHER_PERIOD_DAYS),
+            self.collector.gather_until - timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS),
         )
         return self.collector.gather_since or last_entry
 
