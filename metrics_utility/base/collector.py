@@ -42,7 +42,13 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    MAX_GATHER_PERIOD_DAYS = 28
+    @property
+    def MAX_GATHER_PERIOD_DAYS(cls):
+        try:
+            return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', 28))
+        except (ValueError, TypeError):
+            logger.warning('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer, using default value of 28')
+            return 28
 
     def __init__(self, collection_type=DRY_RUN, collector_module=None, licensed=True):
         self.licensed = licensed
