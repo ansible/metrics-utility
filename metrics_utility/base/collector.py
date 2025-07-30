@@ -19,6 +19,20 @@ from .collection_json import CollectionJSON
 from .package import Package
 
 
+def get_max_gather_period_days():
+    """
+    Get the maximum gather period in days from environment variable.
+    Defaults to 28 days if not set or invalid.
+    """
+    MAX_GATHER_PERIOD_DAYS_DEFAULT = 28
+
+    try:
+        return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', str(MAX_GATHER_PERIOD_DAYS_DEFAULT)))
+    except (ValueError, TypeError):
+        logger.warning(f'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer, using default value of {MAX_GATHER_PERIOD_DAYS_DEFAULT}')
+        return MAX_GATHER_PERIOD_DAYS_DEFAULT
+
+
 class Collector:
     """Abstract class. The Collector is an entry-point for gathering data
        from awx to cloud.
@@ -41,14 +55,6 @@ class Collector:
     MANUAL_COLLECTION = 'manual'
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
-
-    MAX_GATHER_PERIOD_DAYS_DEFAULT = 28
-
-    try:
-        MAX_GATHER_PERIOD_DAYS = int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', str(MAX_GATHER_PERIOD_DAYS_DEFAULT)))
-    except (ValueError, TypeError):
-        logger.warning(f'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer, using default value of {MAX_GATHER_PERIOD_DAYS_DEFAULT}')
-        MAX_GATHER_PERIOD_DAYS = MAX_GATHER_PERIOD_DAYS_DEFAULT
 
     def __init__(self, collection_type=DRY_RUN, collector_module=None, licensed=True):
         self.licensed = licensed
@@ -194,13 +200,13 @@ class Collector:
         # `since` parameter.
         if since is not None:
             if until is not None:
-                if until > since + timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS):
-                    until = since + timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS)
+                if until > since + timedelta(days=get_max_gather_period_days()):
+                    until = since + timedelta(days=get_max_gather_period_days())
                     logger.warning(
-                        f'End of the collection interval is greater than {Collector.MAX_GATHER_PERIOD_DAYS} days from start, setting end to {until}.'
+                        f'End of the collection interval is greater than {get_max_gather_period_days()} days from start, setting end to {until}.'
                     )
             else:  # until is None
-                until = min(since + timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS), _now)
+                until = min(since + timedelta(days=get_max_gather_period_days()), _now)
         elif until is None:
             until = _now
 
@@ -215,17 +221,17 @@ class Collector:
         # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
         # case to know whether to use the bookkeeping settings variables to decide the start of
         # the interval.
-        horizon = until - timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS)
+        horizon = until - timedelta(days=get_max_gather_period_days())
         if since is not None and since < horizon:
             since = horizon
             logger.warning(
-                f'Start of the collection interval is more than {Collector.MAX_GATHER_PERIOD_DAYS} days prior to {until}, setting to {horizon}.'
+                f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
             )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            logger.warning(f'Last analytics run was more than {Collector.MAX_GATHER_PERIOD_DAYS} days prior to {until}, using {horizon} instead.')
+            logger.warning(f'Last analytics run was more than {get_max_gather_period_days()} days prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until

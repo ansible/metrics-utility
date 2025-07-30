@@ -45,8 +45,9 @@ def daily_slicing(key, last_gather, **kwargs):
         last_entry = since
     else:
         from awx.conf.models import Setting
+        from metrics_utility.base.collector import get_max_gather_period_days
 
-        horizon = until - timedelta(days=Collector.MAX_GATHER_PERIOD_DAYS)
+        horizon = until - timedelta(days=get_max_gather_period_days())
         last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
         last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
         try:
