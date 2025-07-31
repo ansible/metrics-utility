@@ -29,7 +29,9 @@ def get_max_gather_period_days():
     try:
         return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', str(MAX_GATHER_PERIOD_DAYS_DEFAULT)))
     except (ValueError, TypeError):
-        logger.warning(f'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer, using default value of {MAX_GATHER_PERIOD_DAYS_DEFAULT}')
+        logger.warning(
+            f'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer, using default value of {MAX_GATHER_PERIOD_DAYS_DEFAULT}'
+        )
         return MAX_GATHER_PERIOD_DAYS_DEFAULT
 
 

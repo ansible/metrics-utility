@@ -293,7 +293,7 @@ def validate_max_gather_period_days(errors):
     Validates the 'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS' environment variable.
 
     Checks that the value is a positive integer within a reasonable range (1-3650 days).
-    If the environment variable is set and its value is not valid, an error message 
+    If the environment variable is set and its value is not valid, an error message
     is appended to the provided errors list.
 
     Args:
@@ -303,25 +303,19 @@ def validate_max_gather_period_days(errors):
         int or None: The validated value as an integer if set and valid, otherwise None.
     """
     max_gather_days_str = os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', None)
-    
+
     if max_gather_days_str is None:
         return None
-    
+
     try:
         max_gather_days = int(max_gather_days_str)
         if max_gather_days < 0 or max_gather_days > MAX_GATHER_PERIOD_DAYS:
-            errors.append(
-                f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_gather_days}. '
-                f'{MAX_GATHER_PERIOD_DAYS_ERROR_MSG}'
-            )
+            errors.append(f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_gather_days}. {MAX_GATHER_PERIOD_DAYS_ERROR_MSG}')
         else:
             return max_gather_days
     except (ValueError, TypeError):
-        errors.append(
-            f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "{max_gather_days_str}". '
-            f'{MAX_GATHER_PERIOD_DAYS_ERROR_MSG}'
-        )
-    
+        errors.append(f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "{max_gather_days_str}". {MAX_GATHER_PERIOD_DAYS_ERROR_MSG}')
+
     return None
 
 
