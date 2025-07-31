@@ -48,13 +48,15 @@ def _run_ext(env, name, args):
 
     assert status == 0
 
+    return result
+
 
 def run_build_ext(env, args):
-    _run_ext(env, 'build_report', args)
+    return _run_ext(env, 'build_report', args)
 
 
 def run_gather_ext(env, args):
-    _run_ext(env, 'gather_automation_controller_billing_data', args)
+    return _run_ext(env, 'gather_automation_controller_billing_data', args)
 
 
 # Running a command python way, so we can work with debugger in the code, and collect coverage

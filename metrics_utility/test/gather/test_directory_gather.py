@@ -33,8 +33,6 @@ def cleanup_glob():
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_command(cleanup_glob):
-    """Build xlsx report using build command and test its contents."""
-
     run_gather_ext(env_vars, ['--ship', '--until=10m'])
 
     validate_exists(file_glob)
