@@ -17,22 +17,7 @@ from .collection import Collection
 from .collection_csv import CollectionCSV
 from .collection_json import CollectionJSON
 from .package import Package
-
-
-def get_max_gather_period_days():
-    """
-    Get the maximum gather period in days from environment variable.
-    Defaults to 28 days if not set or invalid.
-    """
-    MAX_GATHER_PERIOD_DAYS_DEFAULT = 28
-
-    try:
-        return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', str(MAX_GATHER_PERIOD_DAYS_DEFAULT)))
-    except (ValueError, TypeError):
-        logger.warning(
-            f'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer, using default value of {MAX_GATHER_PERIOD_DAYS_DEFAULT}'
-        )
-        return MAX_GATHER_PERIOD_DAYS_DEFAULT
+from .utils import get_max_gather_period_days
 
 
 class Collector:
