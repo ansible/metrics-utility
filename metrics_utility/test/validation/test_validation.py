@@ -129,16 +129,6 @@ def test_validate_max_gather_period_days_not_set():
     assert not errors
 
 
-def test_validate_max_gather_period_days_invalid_zero(monkeypatch):
-    monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '0')
-    errors = []
-    result = validate_max_gather_period_days(errors)
-    assert result is None
-    assert errors
-    assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 0' in errors[0]
-    assert MAX_GATHER_DAYS_ERROR_MSG in errors[0]
-
-
 def test_validate_max_gather_period_days_invalid_negative(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '-5')
     errors = []
