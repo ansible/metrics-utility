@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.base.collector import get_max_gather_period_days
 from metrics_utility.logger import logger
 
 
@@ -142,7 +143,6 @@ class Collection:
 
     def _gather_since(self):
         """Start of gathering based on settings excluding slices"""
-        from .collector import get_max_gather_period_days
 
         last_entry = max(
             self.last_gathered_entry or self.collector.last_gather,
