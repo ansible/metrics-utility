@@ -1,4 +1,5 @@
 import glob
+import os
 
 import pytest
 
@@ -22,29 +23,35 @@ def validate_exists(file_glob):
     assert len(glob.glob(file_glob)) > 0
 
 
+@pytest.fixture
+def cleanup_glob():
+    yield
+    for file in glob.glob(file_glob):
+        os.remove(file)
+
+
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_larger_range(cleanup_glob):
     result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-05'])
-
-    #validate_exists(file_glob)
+    validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
-
-    #assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-05 00:00:00+00:00' in text
-    #assert 'End of the collection interval is greater than 3 days from start, setting end to 2024-01-04 00:00:00+00:00.' in text
-    #assert (
-    #    'Start of the collection interval is more than 3 days prior to 2024-01-04 23:59:59.999999+00:00, setting to 2024-01-01 23:59:59.999999+00:00.'
-    #    in text
-    #)
-    #assert 'Final since-until: 2024-01-01 23:59:59.999999+00:00 to 2024-01-04 23:59:59.999999+00:00' in text
+    print(text)
+    assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-05 00:00:00+00:00' in text
+    assert 'End of the collection interval is greater than 3 days from start, setting end to 2024-01-04 00:00:00+00:00.' in text
+    assert (
+        'Start of the collection interval is more than 3 days prior to 2024-01-04 23:59:59.999999+00:00, setting to 2024-01-01 23:59:59.999999+00:00.'
+        in text
+    )
+    assert 'Final since-until: 2024-01-01 23:59:59.999999+00:00 to 2024-01-04 23:59:59.999999+00:00' in text
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_smaller_range(cleanup_glob):
     result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
-    #validate_exists(file_glob)
-    text = result.stderr + '\n' + result.stdout
+    validate_exists(file_glob)
 
+    text = result.stderr + '\n' + result.stdout
     print(text)
-    #assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
-    #assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
+    assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
