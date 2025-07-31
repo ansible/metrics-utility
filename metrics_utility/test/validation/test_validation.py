@@ -14,6 +14,10 @@ from metrics_utility.management.validation import (
 )
 
 
+# Error message constants
+MAX_GATHER_DAYS_ERROR_MSG = 'Value must be number between 0 to 3650'
+
+
 @pytest.fixture(autouse=True)
 def clear_env(monkeypatch):
     # Clear relevant env vars before each test
@@ -132,7 +136,7 @@ def test_validate_max_gather_period_days_invalid_zero(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 0' in errors[0]
-    assert 'Value must be number between 1 to 3650' in errors[0]
+    assert MAX_GATHER_DAYS_ERROR_MSG in errors[0]
 
 
 def test_validate_max_gather_period_days_invalid_negative(monkeypatch):
@@ -142,7 +146,7 @@ def test_validate_max_gather_period_days_invalid_negative(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: -5' in errors[0]
-    assert 'Value must be number between 1 to 3650' in errors[0]
+    assert MAX_GATHER_DAYS_ERROR_MSG in errors[0]
 
 
 def test_validate_max_gather_period_days_invalid_too_large(monkeypatch):
@@ -152,7 +156,7 @@ def test_validate_max_gather_period_days_invalid_too_large(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: 4000' in errors[0]
-    assert 'Value must be number between 1 to 3650' in errors[0]
+    assert MAX_GATHER_DAYS_ERROR_MSG in errors[0]
 
 
 def test_validate_max_gather_period_days_invalid_non_integer(monkeypatch):
@@ -162,7 +166,7 @@ def test_validate_max_gather_period_days_invalid_non_integer(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "abc"' in errors[0]
-    assert 'Value must be number between 1 to 3650' in errors[0]
+    assert MAX_GATHER_DAYS_ERROR_MSG in errors[0]
 
 
 def test_validate_max_gather_period_days_invalid_float(monkeypatch):
@@ -172,7 +176,7 @@ def test_validate_max_gather_period_days_invalid_float(monkeypatch):
     assert result is None
     assert errors
     assert 'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "30.5"' in errors[0]
-    assert 'Value must be number between 1 to 3650' in errors[0]
+    assert MAX_GATHER_DAYS_ERROR_MSG in errors[0]
 
 
 def test_validate_ship_target_valid(monkeypatch):
