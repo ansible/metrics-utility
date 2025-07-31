@@ -14,7 +14,7 @@ USERNAME = os.getenv('USERNAME', 'admin')
 PASSWORD = os.getenv('PASSWORD', 'admin')
 
 SSH_URL = os.getenv('SSH_URL', None)
-SSH_USER = os.getenv('SSH_USER', None)
+SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')

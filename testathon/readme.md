@@ -30,6 +30,11 @@ Script will directly connect using SSH and do some modification to DB.
 
 If the server is on VPN, do not forget to connect on VPN.
 
+Script will repeatedly ask for passphrase for SSH key, for example:
+Enter passphrase for key '/home/milan/.ssh/id_ed19561'
+
+You can add it before script running:
+
 ## RPM Example:
 
 export PASSWORD='**Fill here**'
