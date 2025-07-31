@@ -36,7 +36,6 @@ def test_larger_range(cleanup_glob):
     validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
-    print(text)
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-05 00:00:00+00:00' in text
     assert 'End of the collection interval is greater than 3 days from start, setting end to 2024-01-04 00:00:00+00:00.' in text
     assert (
@@ -52,6 +51,5 @@ def test_smaller_range(cleanup_glob):
     validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
-    print(text)
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
