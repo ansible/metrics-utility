@@ -34,6 +34,7 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 
 def run(sql_script):
     try:
+        print(sql_script)
         stderr = ''
         stdout = ''
         if ENVIRONMENT == 'local':
@@ -50,17 +51,24 @@ def run(sql_script):
             stderr = process.stderr.decode()
             stdout = process.stdout.decode()
 
+        import base64
+
         if ENVIRONMENT == 'containerized':
-            ssh_command = [
-                'ssh',
-                f'{SSH_USER}@{SSH_URL}',
-                # here, we're giving ssh ONE single remote‐command string:
-                'podman exec -i automation-controller-web bash -lc \'echo "{}" | awx-manage dbshell\''.format(sql_script.strip().replace('"', '\\"')),
-            ]
-            print('ssh_command:', ssh_command)
-            process = subprocess.run(ssh_command, capture_output=True, text=True)
+            # base64-encode the whole SQL
+            b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
+            remote_command = (
+                f"echo {b64} | base64 --decode | "
+                f"podman exec -i automation-controller-web awx-manage dbshell"
+            )
+            print("remote_command:", remote_command)
+            process = subprocess.run(
+                ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command],
+                capture_output=True, text=True
+            )
             stdout = process.stdout
             stderr = process.stderr
+
+
 
         if ENVIRONMENT == 'OpenShift':
             pass
