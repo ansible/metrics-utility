@@ -538,7 +538,7 @@ def main_host_table(since, full_path, until, **kwargs):
     )
 
 
-@register('total_workers_vcpu', '1.0', format='json', description=_('Total workers vCPU', fnc_slicing=limit_slicing))
+@register('total_workers_vcpu', '1.0', format='json', description=_('Total workers vCPU'), fnc_slicing=limit_slicing)
 def total_workers_vcpu(since, full_path, until, **kwargs):
     if 'total_workers_vcpu' not in get_optional_collectors():
         return None
