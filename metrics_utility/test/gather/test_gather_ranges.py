@@ -1,5 +1,6 @@
 import glob
 import os
+import tarfile
 
 import pytest
 
@@ -53,3 +54,30 @@ def test_smaller_range(cleanup_glob):
     text = result.stderr + '\n' + result.stdout
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
+
+
+# test that it gathers only one file host scope optional collectors
+def test_only_host_scope():
+    new_env_vars = env_vars.copy()
+    new_env_vars['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_host'
+    new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '0'
+
+    result = run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
+    # validate_exists(file_glob)
+
+    text = result.stderr + '\n' + result.stdout
+
+    print(text)
+    assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
+    assert 'Final since-until: 2024-01-01 23:59:59.999999+00:00 to 2024-01-01 23:59:59.999999+00:00' in text
+
+    # extract tarball
+    # metrics_utility/test/test_data/data/2025/08/01/00000000-0000-0000-0000-000000000000-2025-08-01-000000+0000-2025-08-01-000000+0000-0.tar.gz
+    tarball = (
+        './metrics_utility/test/test_data/data/2025/08/01/00000000-0000-0000-0000-000000000000-2025-08-01-000000+0000-2025-08-01-000000+0000-0.tar.gz'
+    )
+
+    # extract tarball
+    with tarfile.open(tarball, 'r') as tar:
+        # ensure main_host.csv is present
+        assert './main_host.csv' in tar.getnames()
