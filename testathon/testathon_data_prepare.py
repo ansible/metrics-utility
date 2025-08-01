@@ -16,12 +16,14 @@ PASSWORD = os.getenv('PASSWORD', 'admin')
 SSH_URL = os.getenv('SSH_URL', None)
 SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
+
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
 print(f'PASSWORD: {PASSWORD}')
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
-
+print(f'ENVIRONMENT: {ENVIRONMENT}')
 
 VERIFY_SSL = False  # Set to True if you have valid SSL certificates
 PAGE_SIZE = 100
@@ -32,17 +34,39 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 
 def run(sql_script):
     try:
-        if SSH_URL is None:
+        stderr = ''
+        stdout = ''
+        if ENVIRONMENT == 'local':
             command = ['docker', 'exec', '-i', 'tools_postgres_1', 'psql', '-U', 'awx']
             process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
-        else:
+            stderr = process.stderr.decode()
+            stdout = process.stdout.decode()
+
+        if ENVIRONMENT == 'RPM':
             # Send SQL script over SSH and pipe it into `sudo awx-manage dbshell`
             remote_command = f'echo "{sql_script}" | sudo awx-manage dbshell'
             ssh_command = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
             process = subprocess.run(ssh_command, capture_output=True)
+            stderr = process.stderr.decode()
+            stdout = process.stdout.decode()
 
-        print(process.stderr.decode())
-        return process.stdout.decode()
+        if ENVIRONMENT == 'containerized':
+            ssh_command = [
+                'ssh',
+                f'{SSH_USER}@{SSH_URL}',
+                # here, we're giving ssh ONE single remote‐command string:
+                'podman exec -i automation-controller-web bash -lc \'echo "{}" | awx-manage dbshell\''.format(sql_script.strip().replace('"', '\\"')),
+            ]
+            print('ssh_command:', ssh_command)
+            process = subprocess.run(ssh_command, capture_output=True, text=True)
+            stdout = process.stdout
+            stderr = process.stderr
+
+        if ENVIRONMENT == 'OpenShift':
+            pass
+
+        print(stderr)
+        return stdout
     except Exception as e:
         print(f'Failed to run SQL script: {e}')
         return ''
@@ -378,6 +402,7 @@ def set_different_modified_dates(dates):
 
 
 def main():
+    delete_main_jobhostsummary()
     delete_main_project()
 
     delete_job_templates()
