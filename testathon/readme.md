@@ -35,6 +35,8 @@ Enter passphrase for key '/home/milan/.ssh/id_ed19561'
 
 You can add it before script running:
 
+ssh-add ~/.ssh/id_ed19561
+
 ## RPM Example:
 
 export PASSWORD='**Fill here**'

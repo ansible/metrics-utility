@@ -31,17 +31,21 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 
 
 def run(sql_script):
-    if SSH_URL is None:
-        command = ['docker', 'exec', '-i', 'tools_postgres_1', 'psql', '-U', 'awx']
-        process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
-    else:
-        # Send SQL script over SSH and pipe it into `sudo awx-manage dbshell`
-        remote_command = f'echo "{sql_script}" | sudo awx-manage dbshell'
-        ssh_command = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
-        process = subprocess.run(ssh_command, capture_output=True)
+    try:
+        if SSH_URL is None:
+            command = ['docker', 'exec', '-i', 'tools_postgres_1', 'psql', '-U', 'awx']
+            process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
+        else:
+            # Send SQL script over SSH and pipe it into `sudo awx-manage dbshell`
+            remote_command = f'echo "{sql_script}" | sudo awx-manage dbshell'
+            ssh_command = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
+            process = subprocess.run(ssh_command, capture_output=True)
 
-    print(process.stderr.decode())
-    return process.stdout.decode()
+        print(process.stderr.decode())
+        return process.stdout.decode()
+    except Exception as e:
+        print(f'Failed to run SQL script: {e}')
+        return ''
 
 
 def delete_job_templates():
@@ -90,6 +94,7 @@ def delete_job_template(id):
 
 def delete_main_project():
     # delete mock project
+
     url = f'{API_URL}/projects/?name=MockA_Test_Project'
     resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
     data = resp.json()
