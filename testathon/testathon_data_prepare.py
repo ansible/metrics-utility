@@ -69,11 +69,13 @@ def run(sql_script):
 
         if ENVIRONMENT == 'OpenShift':
             print('openshift')
-            remote_command = f'{OC_COMMAND} sh -c \'echo "{sql_script}" | awx-manage dbshell\''
+            # base64-encode the whole SQL to avoid quote issues
+            b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
+            remote_command = f'{OC_COMMAND} sh -c \'echo {b64} | base64 --decode | awx-manage dbshell\''
 
             print('remote command: ', remote_command)
 
-            process = subprocess.run(remote_command, check=True, shell=True)
+            process = subprocess.run(remote_command, check=True, shell=True, capture_output=True, text=True)
             stdout = process.stdout
             stderr = process.stderr
 
