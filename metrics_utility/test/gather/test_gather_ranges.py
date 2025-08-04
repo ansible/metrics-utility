@@ -2,6 +2,8 @@ import glob
 import os
 import tarfile
 
+from datetime import datetime
+
 import pytest
 
 from metrics_utility.test.util import run_gather_ext
@@ -56,14 +58,22 @@ def test_smaller_range(cleanup_glob):
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
 
 
+# test invalid max gather period days
+def test_invalid_max_gather_period_days():
+    new_env_vars = env_vars.copy()
+    new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = 'invalid'
+
+    with pytest.raises(ValueError):
+        run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
+
+
 # test that it gathers only one file host scope optional collectors
-def test_only_host_scope():
+def test_only_host_scope(cleanup_glob):
     new_env_vars = env_vars.copy()
     new_env_vars['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_host'
     new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '0'
 
     result = run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
-    # validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
 
@@ -71,11 +81,27 @@ def test_only_host_scope():
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
     assert 'Final since-until: 2024-01-01 23:59:59.999999+00:00 to 2024-01-01 23:59:59.999999+00:00' in text
 
+    today = datetime.now()
+    year = today.year
+    month = today.month
+    day = today.day
+
+    # ensure month and day is 2 digits
+    month = f'{month:02d}'
+    day = f'{day:02d}'
+
     # extract tarball
-    # metrics_utility/test/test_data/data/2025/08/01/00000000-0000-0000-0000-000000000000-2025-08-01-000000+0000-2025-08-01-000000+0000-0.tar.gz
+
+    # multiline string
     tarball = (
-        './metrics_utility/test/test_data/data/2025/08/01/00000000-0000-0000-0000-000000000000-2025-08-01-000000+0000-2025-08-01-000000+0000-0.tar.gz'
+        f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/'
+        f'00000000-0000-0000-0000-000000000000-'
+        f'{year}-{month}-{day}-000000+0000-'
+        f'{year}-{month}-{day}-000000+0000-0.tar.gz'
     )
+
+    # ensure no other tarballs are present in the directory for current date
+    assert len(glob.glob(f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/*.tar.gz')) == 1
 
     # extract tarball
     with tarfile.open(tarball, 'r') as tar:

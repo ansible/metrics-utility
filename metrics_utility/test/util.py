@@ -43,6 +43,7 @@ def _run_ext(env, name, args):
     )
 
     status = result.returncode
+
     if status != 0:
         pytest.fail(result.stderr)
 
