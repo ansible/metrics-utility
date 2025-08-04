@@ -56,19 +56,11 @@ def run(sql_script):
         if ENVIRONMENT == 'containerized':
             # base64-encode the whole SQL
             b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
-            remote_command = (
-                f"echo {b64} | base64 --decode | "
-                f"podman exec -i automation-controller-web awx-manage dbshell"
-            )
-            print("remote_command:", remote_command)
-            process = subprocess.run(
-                ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command],
-                capture_output=True, text=True
-            )
+            remote_command = f'echo {b64} | base64 --decode | podman exec -i automation-controller-web awx-manage dbshell'
+            print('remote_command:', remote_command)
+            process = subprocess.run(['ssh', f'{SSH_USER}@{SSH_URL}', remote_command], capture_output=True, text=True)
             stdout = process.stdout
             stderr = process.stderr
-
-
 
         if ENVIRONMENT == 'OpenShift':
             pass
