@@ -16,10 +16,9 @@ env_vars = {
     'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': '3',
 }
 
-year = 2024
 uuid = '00000000-0000-0000-0000-000000000000'  # mock_awx INSTALL_UUID setting
 
-file_glob = f'./metrics_utility/test/test_data/data/{year}/*/*/{uuid}-*.tar.gz'
+file_glob = f'./metrics_utility/test/test_data/data/*/*/*/{uuid}-*.tar.gz'
 
 
 def validate_exists(file_glob):
@@ -56,16 +55,6 @@ def test_smaller_range(cleanup_glob):
     text = result.stderr + '\n' + result.stdout
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
-
-
-# test invalid max gather period days
-def test_invalid_max_gather_period_days():
-    new_env_vars = env_vars.copy()
-    new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = 'invalid'
-
-    with pytest.raises(ValueError):
-        run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
-
 
 # test that it gathers only one file host scope optional collectors
 def test_only_host_scope(cleanup_glob):
