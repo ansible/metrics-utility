@@ -16,6 +16,9 @@ PASSWORD = os.getenv('PASSWORD', 'admin')
 SSH_URL = os.getenv('SSH_URL', None)
 SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
+OC_COMMAND = os.getenv('OC_COMMAND', 'oc')
+OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', 'oc login')
+
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 
 print(f'API_URL: {API_URL}')
@@ -24,6 +27,8 @@ print(f'PASSWORD: {PASSWORD}')
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
 print(f'ENVIRONMENT: {ENVIRONMENT}')
+print(f'OC_COMMAND: {OC_COMMAND}')
+print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
 
 VERIFY_SSL = False  # Set to True if you have valid SSL certificates
 PAGE_SIZE = 100
@@ -57,13 +62,20 @@ def run(sql_script):
             # base64-encode the whole SQL
             b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
             remote_command = f'echo {b64} | base64 --decode | podman exec -i automation-controller-web awx-manage dbshell'
-            print('remote_command:', remote_command)
+            print('remote command:', remote_command)
             process = subprocess.run(['ssh', f'{SSH_USER}@{SSH_URL}', remote_command], capture_output=True, text=True)
             stdout = process.stdout
             stderr = process.stderr
 
         if ENVIRONMENT == 'OpenShift':
-            pass
+            print('openshift')
+            remote_command = f'{OC_COMMAND} sh -c \'echo "{sql_script}" | awx-manage dbshell\''
+
+            print('remote command: ', remote_command)
+
+            process = subprocess.run(remote_command, check=True, shell=True)
+            stdout = process.stdout
+            stderr = process.stderr
 
         print(stderr)
         return stdout
@@ -401,7 +413,15 @@ def set_different_modified_dates(dates):
     run(sql_update)
 
 
+def oc_login():
+    # subprocess run
+    subprocess.run(OC_LOGIN_COMMAND, shell=True)
+
+
 def main():
+    if ENVIRONMENT == 'OpenShift':
+        oc_login()
+
     delete_main_project()
 
     delete_job_templates()

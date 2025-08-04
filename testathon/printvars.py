@@ -10,6 +10,8 @@ env_vars = [
     'SSH_URL',
     'SSH_USER',
     'ENVIRONMENT',
+    'OC_COMMAND',
+    'OC_LOGIN_COMMAND'
 ]
 
 for var in env_vars:
