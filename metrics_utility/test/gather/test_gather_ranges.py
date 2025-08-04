@@ -56,6 +56,7 @@ def test_smaller_range(cleanup_glob):
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
 
+
 # test that it gathers only one file host scope optional collectors
 def test_only_host_scope(cleanup_glob):
     new_env_vars = env_vars.copy()
