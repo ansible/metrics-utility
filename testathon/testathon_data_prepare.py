@@ -402,7 +402,6 @@ def set_different_modified_dates(dates):
 
 
 def main():
-    delete_main_jobhostsummary()
     delete_main_project()
 
     delete_job_templates()
