@@ -551,7 +551,6 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     now = datetime.now(timezone.utc)
 
     info = {'cluster_name': cluster_name, 'timestamp': now.isoformat(), 'nodes': []}
-
     # If METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or set to false then it returns 1
     usage_based_billing_enabled_str = os.environ.get('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
     usage_based_billing_enabled = False

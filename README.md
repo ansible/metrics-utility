@@ -20,6 +20,7 @@ The standalone mode is currently used only for development & testing. It does no
 - **Python 3.11 or later**
 - **[uv](https://github.com/astral-sh/uv) package manager** (Install with `pip install uv` if not already installed)
 - **Dependencies managed via `pyproject.toml`** (Ensure `uv.lock` is used for consistency)
+- **MacOS** `brew install postgresql`, if you need the database or minio
 
 ### Installation (standalone)
 
@@ -38,7 +39,8 @@ For more about the development setup, see the [Developer Setup Guide](./docs/dev
 
 Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one.
 
-You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`.
+You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`. You use also `podman`.
+
 For more flexibility, use:
 
 ```
@@ -184,8 +186,9 @@ podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash
 #### Example CCSPv2 run
 
 ```bash
+# You can use also an env-file but then you must export it with `export UV_ENV_FILE=<your_env_file>`
 export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
-export METRICS_UTILITY_SHIP_PATH="./metrics_utility/test/test_data/"
+export METRICS_UTILITY_SHIP_PATH="./test/test_data/"
 export METRICS_UTILITY_SHIP_TARGET="directory"
 
 export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
