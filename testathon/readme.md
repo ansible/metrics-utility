@@ -70,7 +70,11 @@ Oc command is command that will acess the pod and allows execution of console co
 
 Below will be description how to obtain these two variables. Now we will show examples:
 
+OC_LOGIN_COMMAND:
+oc login --token={token} --server=https://api.aap-test-v418-x86-64-knmrp.ocp4.testing.ansible.com:6443
 
+OC_COMMAND:
+oc rsh -n aap-wrongly-airedale aap-cc3e0aa2-controller-task-5d75cd9d68-sz9kp
 
 
 
