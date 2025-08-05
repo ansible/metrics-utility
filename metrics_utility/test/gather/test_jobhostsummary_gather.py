@@ -190,7 +190,7 @@ def test_command(cleanup_glob):
         pytest.fail('job_host_summary.csv not found in any tarballs.')
 
     # Clean up generated files
-    for file in glob.glob(file_glob):
+    for file in glob.glob(file_paths):
         os.remove(file)
 
 
@@ -222,7 +222,7 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
             pytest.fail('job_host_summary.csv should not be generated when collector is disabled.')
 
     # Clean up generated files
-    for file in glob.glob(file_glob):
+    for file in glob.glob(file_paths):
         os.remove(file)
 
 
@@ -254,7 +254,7 @@ def test_job_host_summary_enabled_explicitly(cleanup_glob):
         pytest.fail('job_host_summary.csv should be generated when collector is explicitly enabled.')
 
     # Clean up generated files
-    for file in glob.glob(file_glob):
+    for file in glob.glob(file_paths):
         os.remove(file)
 
 
@@ -289,12 +289,8 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
             pytest.fail(f'job_host_summary.csv should not be generated when collector is disabled with value "{test_value}".')
 
         # Clean up files for next iteration
-        for file in glob.glob(file_glob):
+        for file in glob.glob(file_paths):
             os.remove(file)
-
-    # Final cleanup of any remaining generated files
-    for file in glob.glob(file_glob):
-        os.remove(file)
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -328,12 +324,8 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
             pytest.fail(f'job_host_summary.csv should be generated when collector has invalid disable value "{test_value}".')
 
         # Clean up files for next iteration
-        for file in glob.glob(file_glob):
+        for file in glob.glob(file_paths):
             os.remove(file)
-
-    # Final cleanup of any remaining generated files
-    for file in glob.glob(file_glob):
-        os.remove(file)
 
 
 def test_main_host_collection(cleanup_glob):
@@ -402,5 +394,5 @@ def test_main_host_collection(cleanup_glob):
         assert False, f'Expected collections were not found: {", ".join(missing_collections)}. Found: {", ".join(collected_names)}'
 
     # Clean up generated files
-    for file in glob.glob(file_glob):
+    for file in glob.glob(file_paths):
         os.remove(file)
