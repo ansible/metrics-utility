@@ -17,10 +17,10 @@ from django.utils.translation import gettext_lazy as _
 from kubernetes import client
 from kubernetes import config as kube_config
 
-from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
-from metrics_utility.logger import logger, logger_info_level
 from metrics_utility.base import CsvFileSplitter, register
 from metrics_utility.base.utils import get_max_gather_period_days
+from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.logger import logger, logger_info_level
 
 
 """
