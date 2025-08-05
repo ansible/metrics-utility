@@ -2,6 +2,7 @@ from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.base.utils import get_max_gather_period_days
 from metrics_utility.logger import logger
 
 
@@ -83,7 +84,7 @@ class Collection:
         last_gather = self.collector.last_gather
         # These slicer functions may return a generator. The `since` parameter is
         # allowed to be None, and will fall back to LAST_ENTRIES[key] or to
-        # LAST_GATHER (truncated appropriately to match the 4-week limit).
+        # LAST_GATHER (truncated appropriately to match the 28-day limit).
         #
         # Or it can force full table sync if interval is given
         if self.fnc_slicing:
@@ -143,9 +144,10 @@ class Collection:
 
     def _gather_since(self):
         """Start of gathering based on settings excluding slices"""
+
         last_entry = max(
             self.last_gathered_entry or self.collector.last_gather,
-            self.collector.gather_until - timedelta(weeks=self.collector.MAX_GATHER_PERIOD_WEEKS),
+            self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
         )
         return self.collector.gather_since or last_entry
 

@@ -17,9 +17,10 @@ from django.utils.translation import gettext_lazy as _
 from kubernetes import client
 from kubernetes import config as kube_config
 
-from metrics_utility.base import Collector, CsvFileSplitter, register
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.logger import logger, logger_info_level
+from metrics_utility.base import CsvFileSplitter, register
+from metrics_utility.base.utils import get_max_gather_period_days
 
 
 """
@@ -51,7 +52,7 @@ def daily_slicing(key, last_gather, **kwargs):
     else:
         from awx.conf.models import Setting
 
-        horizon = until - timedelta(weeks=Collector.MAX_GATHER_PERIOD_WEEKS)
+        horizon = until - timedelta(days=get_max_gather_period_days())
         last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
         last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
         try:
