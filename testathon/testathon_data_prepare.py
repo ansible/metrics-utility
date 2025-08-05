@@ -16,8 +16,8 @@ PASSWORD = os.getenv('PASSWORD', 'admin')
 SSH_URL = os.getenv('SSH_URL', None)
 SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
-OC_COMMAND = os.getenv('OC_COMMAND', 'oc')
-OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', 'oc login')
+OC_COMMAND = os.getenv('OC_COMMAND', '')
+OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 
@@ -71,7 +71,7 @@ def run(sql_script):
             print('openshift')
             # base64-encode the whole SQL to avoid quote issues
             b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
-            remote_command = f'{OC_COMMAND} sh -c \'echo {b64} | base64 --decode | awx-manage dbshell\''
+            remote_command = f"{OC_COMMAND} sh -c 'echo {b64} | base64 --decode | awx-manage dbshell'"
 
             print('remote command: ', remote_command)
 

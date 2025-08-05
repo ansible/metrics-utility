@@ -7,16 +7,31 @@ import sys
 from datetime import date, timedelta
 
 
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
+
 SSH_URL = os.getenv('SSH_URL')
-SSH_USER = os.getenv('SSH_USER')
+SSH_USER = os.getenv('SSH_USER', 'ec2-user')
+
+OC_COMMAND = os.getenv('OC_COMMAND', '')
+OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
+
+print(f'ENVIRONMENT: {ENVIRONMENT}')
 
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
+
+print(f'OC_COMMAND: {OC_COMMAND}')
+print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
 
 # Configure the beginning of your range here
 START_DATE = date(2022, 1, 1)
 # Uses today() as the end of the range; modify if you need a fixed end
 END_DATE = date.today()
+
+path_to_shipped_data = '/var/tmp/shipped_data'
+
+if ENVIRONMENT == 'local' or ENVIRONMENT == 'containerized':
+    path_to_shipped_data = './shipped_data'
 
 
 def month_ranges(start_date, end_date):
@@ -61,13 +76,143 @@ def month_ranges(start_date, end_date):
 
 
 def get_metrics_utility_config():
-    return {
-        'METRICS_UTILITY_SHIP_PATH': './shipped_data',
+    env = {
+        'METRICS_UTILITY_SHIP_PATH': path_to_shipped_data,
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
     }
 
+    return env
+
+
+def run_command(args, config):
+    """
+    Execute the metrics-utility command based on the environment type.
+    """
+    if ENVIRONMENT == 'local':
+        # Local docker exec path
+        docker_env = []
+        for k, v in config.items():
+            docker_env += ['-e', f'{k}={v}']
+        docker_cmd = [
+            'docker',
+            'exec',
+            *docker_env,
+            'tools_awx_1',
+            '/bin/sh',
+            '-c',
+            f'cd awx-dev/metrics-utility && . /var/lib/awx/venv/awx/bin/activate && python3 ./manage.py {" ".join(args)}',
+        ]
+        print('Running local:', ' '.join(docker_cmd))
+        return subprocess.run(docker_cmd, check=False, capture_output=True, text=True)
+
+    elif ENVIRONMENT == 'RPM':
+        # RPM deployment via SSH
+        if not SSH_URL or not SSH_USER:
+            raise ValueError('SSH_URL and SSH_USER must be set for RPM environment')
+
+        env_list = [f'{k}={v}' for k, v in config.items()]
+        ssh_cmd = ['ssh', f'{SSH_USER}@{SSH_URL}', 'sudo', '-E', 'env', *env_list, 'metrics-utility', *args]
+        print('Running RPM:', ' '.join(ssh_cmd))
+        return subprocess.run(ssh_cmd, check=False, capture_output=True, text=True)
+
+    elif ENVIRONMENT == 'containerized':
+        # Containerized deployment via SSH with podman
+        if not SSH_URL or not SSH_USER:
+            raise ValueError('SSH_URL and SSH_USER must be set for containerized environment')
+
+        # Build the command to run inside the container
+        env_vars = ' '.join([f'{k}={v}' for k, v in config.items()])
+        container_cmd = f'cd /var/lib/awx && {env_vars} metrics-utility {" ".join(args)}'
+
+        # Use podman exec to run the command inside automation-controller-web container
+        remote_command = f'echo "{container_cmd}" | podman exec -i automation-controller-web /bin/bash'
+        ssh_cmd = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
+        print('Running containerized:', ' '.join(ssh_cmd))
+        return subprocess.run(ssh_cmd, check=False, capture_output=True, text=True)
+
+    elif ENVIRONMENT == 'OpenShift':
+        # OpenShift deployment via oc command
+        env_vars = ' '.join([f'{k}={v}' for k, v in config.items()])
+        container_cmd = f'cd /var/lib/awx && {env_vars} metrics-utility {" ".join(args)}'
+
+        # Use oc exec to run the command
+        oc_cmd = f'{OC_COMMAND} exec deployment/automation-controller-web -- /bin/bash -c "{container_cmd}"'
+        print('Running OpenShift:', oc_cmd)
+        return subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+
+    else:
+        raise ValueError(f'Unsupported environment: {ENVIRONMENT}')
+
+
+def oc_login():
+    # subprocess run
+    subprocess.run(OC_LOGIN_COMMAND, shell=True)
+
+
+def list_gathered_files(config):
+    """
+    List the files that were gathered in the ship directory.
+    """
+    ship_path = config.get('METRICS_UTILITY_SHIP_PATH', path_to_shipped_data)
+    print(f'\n=== Listing gathered files in {ship_path} ===')
+
+    if ENVIRONMENT == 'local':
+        # For local environment, list files in the docker container
+        docker_cmd = [
+            'docker',
+            'exec',
+            'tools_awx_1',
+            '/bin/sh',
+            '-c',
+            f'cd awx-dev/metrics-utility && find {ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"',
+        ]
+        print('Running local ls:', ' '.join(docker_cmd))
+        result = subprocess.run(docker_cmd, check=False, capture_output=True, text=True)
+
+    elif ENVIRONMENT == 'RPM':
+        # RPM deployment via SSH
+        if not SSH_URL or not SSH_USER:
+            print('SSH_URL and SSH_USER must be set for RPM environment')
+            return
+
+        ssh_cmd = ['ssh', f'{SSH_USER}@{SSH_URL}', f'find {ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"']
+        print('Running RPM ls:', ' '.join(ssh_cmd))
+        result = subprocess.run(ssh_cmd, check=False, capture_output=True, text=True)
+
+    elif ENVIRONMENT == 'containerized':
+        # Containerized deployment via SSH with podman
+        if not SSH_URL or not SSH_USER:
+            print('SSH_URL and SSH_USER must be set for containerized environment')
+            return
+
+        container_cmd = f'find /var/lib/awx/{ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
+        remote_command = f'echo "{container_cmd}" | podman exec -i automation-controller-web /bin/bash'
+        ssh_cmd = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
+        print('Running containerized ls:', ' '.join(ssh_cmd))
+        result = subprocess.run(ssh_cmd, check=False, capture_output=True, text=True)
+
+    elif ENVIRONMENT == 'OpenShift':
+        # OpenShift deployment via oc command
+        container_cmd = f'find /var/lib/awx/{ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
+        oc_cmd = f'{OC_COMMAND} exec deployment/automation-controller-web -- /bin/bash -c "{container_cmd}"'
+        print('Running OpenShift ls:', oc_cmd)
+        result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+
+    else:
+        print(f'Unsupported environment for listing files: {ENVIRONMENT}')
+        return
+
+    # Print the results
+    if result.stdout:
+        print(result.stdout)
+    if result.stderr:
+        print(result.stderr, file=sys.stderr)
+
 
 def main():
+    if ENVIRONMENT == 'OpenShift':
+        oc_login()
+
     config = get_metrics_utility_config()
 
     for since, until in month_ranges(START_DATE, END_DATE):
@@ -80,28 +225,11 @@ def main():
             '--force',
         ]
 
-        if SSH_URL and SSH_USER:
-            # Build remote SSH command list
-            env_list = [f'{k}={v}' for k, v in config.items()]
-            ssh_cmd = ['ssh', f'{SSH_USER}@{SSH_URL}', 'sudo', '-E', 'env', *env_list, 'metrics-utility', *args]
-            print('Running remote:', ' '.join(ssh_cmd))
-            result = subprocess.run(ssh_cmd, check=False, capture_output=True, text=True)
-        else:
-            # Local docker exec path
-            docker_env = []
-            for k, v in config.items():
-                docker_env += ['-e', f'{k}={v}']
-            docker_cmd = [
-                'docker',
-                'exec',
-                *docker_env,
-                'tools_awx_1',
-                '/bin/sh',
-                '-c',
-                f'cd awx-dev/metrics-utility && . /var/lib/awx/venv/awx/bin/activate && python3 ./manage.py {" ".join(args)}',
-            ]
-            print('Running local:', ' '.join(docker_cmd))
-            result = subprocess.run(docker_cmd, check=False, capture_output=True, text=True)
+        try:
+            result = run_command(args, config)
+        except ValueError as e:
+            print(f'Configuration error: {e}', file=sys.stderr)
+            sys.exit(1)
 
         # Print output
         if result.stdout:
@@ -110,6 +238,9 @@ def main():
             print(result.stderr, file=sys.stderr)
 
         # Continue through all date ranges (no premature exit)
+
+    # List all gathered files after completion
+    list_gathered_files(config)
 
 
 if __name__ == '__main__':
