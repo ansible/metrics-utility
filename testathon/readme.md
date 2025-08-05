@@ -82,6 +82,8 @@ oc exec -n aap-wrongly-airedale aap-cc3e0aa2-controller-task-5d75cd9d68-sz9kp
 
 If you want to set it manually, fully follow steps below.
 
+For manual access: instead of oc exec, use oc rsh
+
 Below is detailed description by Mauricio Magnani and Apurva.
 
 ### Step 1: Access OpenShift Web Console

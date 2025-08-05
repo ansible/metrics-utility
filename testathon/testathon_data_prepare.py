@@ -35,8 +35,9 @@ print(f'PASSWORD: {PASSWORD}')
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
 print(f'ENVIRONMENT: {ENVIRONMENT}')
-print(f'OC_COMMAND: {OC_COMMAND}')
 print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
+print(f'OC_COMMAND: {OC_COMMAND}')
+
 
 VERIFY_SSL = False  # Set to True if you have valid SSL certificates
 PAGE_SIZE = 100
@@ -76,16 +77,43 @@ def run(sql_script):
             stderr = process.stderr
 
         if ENVIRONMENT == 'OpenShift':
-            print('openshift')
-            # base64-encode the whole SQL to avoid quote issues
-            b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
-            remote_command = f"{OC_COMMAND} sh -c 'echo {b64} | base64 --decode | awx-manage dbshell'"
+            # extract pod name from OC_COMMAND
+            pod_name = OC_COMMAND.split()[-1]
+            # extract namespace from OC_COMMAND
+            namespace = OC_COMMAND.split()[-2]
 
-            print('remote command: ', remote_command)
+            print(f'pod_name: {pod_name}')
+            print(f'namespace: {namespace}')
 
-            process = subprocess.run(remote_command, check=True, shell=True, capture_output=True, text=True)
-            stdout = process.stdout
-            stderr = process.stderr
+            # run the command
+            # sql_script is the variable that contains the sql script
+            # forget the OC_COMMAND, use the pod name and namespace to run the command
+            # note that -c does not work for dbshell
+
+            # pipe sql script to the command
+            command = [
+                'oc',
+                'exec',
+                '-i',  # keep STDIN open
+                '-n',
+                namespace,
+                pod_name,
+                '--',
+                'awx-manage',
+                'dbshell',
+            ]
+
+            # Run the command and pipe the SQL into STDIN
+            result = subprocess.run(
+                command,
+                input=sql_script,  # <<–– here's where the script goes
+                text=True,  # treat stdin/stdout as str instead of bytes
+                capture_output=True,  # optional: collect results for logging
+                check=True,  # raise if the command fails
+            )
+
+            stdout = result.stdout
+            stderr = result.stderr
 
         print(stderr)
         return stdout
@@ -431,6 +459,8 @@ def oc_login():
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
+
+    list_main_jobhostsummary()
 
     delete_main_project()
 
