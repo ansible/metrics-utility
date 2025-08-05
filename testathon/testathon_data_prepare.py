@@ -21,6 +21,14 @@ OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 
+if OC_COMMAND is not None and len(OC_COMMAND) > 0:
+    # command must begin with 'oc exec'
+    if not OC_COMMAND.startswith('oc exec'):
+        raise ValueError('OC_COMMAND must begin with "oc exec"')
+
+    if OC_COMMAND.startswith('oc rsh'):
+        raise ValueError('OC_COMMAND must not begin with "oc rsh"')
+
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
 print(f'PASSWORD: {PASSWORD}')

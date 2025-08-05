@@ -122,7 +122,7 @@ def run_command(args, config):
 
         # Build the command to run inside the container
         env_vars = ' '.join([f'{k}={v}' for k, v in config.items()])
-        container_cmd = f'cd /var/lib/awx && {env_vars} metrics-utility {" ".join(args)}'
+        container_cmd = f'{env_vars} metrics-utility {" ".join(args)}'
 
         # Use podman exec to run the command inside automation-controller-web container
         remote_command = f'echo "{container_cmd}" | podman exec -i automation-controller-web /bin/bash'
@@ -133,10 +133,10 @@ def run_command(args, config):
     elif ENVIRONMENT == 'OpenShift':
         # OpenShift deployment via oc command
         env_vars = ' '.join([f'{k}={v}' for k, v in config.items()])
-        container_cmd = f'cd /var/lib/awx && {env_vars} metrics-utility {" ".join(args)}'
+        container_cmd = f'{env_vars} metrics-utility {" ".join(args)}'
 
         # Use oc exec to run the command
-        oc_cmd = f'{OC_COMMAND} exec deployment/automation-controller-web -- /bin/bash -c "{container_cmd}"'
+        oc_cmd = f'{OC_COMMAND} -- /bin/bash -c "{container_cmd}"'
         print('Running OpenShift:', oc_cmd)
         return subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
 
@@ -241,6 +241,26 @@ def main():
 
     # List all gathered files after completion
     list_gathered_files(config)
+
+    # print commands how to connect manually to the terminal
+    if ENVIRONMENT == 'OpenShift':
+        print('To connect manually to the terminal, run:')
+        oc_rsh_command = OC_COMMAND.replace('oc exec', 'oc rsh')
+        print(oc_rsh_command)
+
+    if ENVIRONMENT == 'containerized':
+        # ssh and connect to the container
+        ssh_command = f'ssh {SSH_USER}@{SSH_URL}'
+        print('To connect manually to the terminal, run:')
+        print(ssh_command)
+
+    if ENVIRONMENT == 'local':
+        print('To connect manually to the terminal, run:')
+        print('docker exec -it tools_awx_1 /bin/bash')
+
+    if ENVIRONMENT == 'RPM':
+        print('To connect manually to the terminal, run:')
+        print(f'ssh {SSH_USER}@{SSH_URL}')
 
 
 if __name__ == '__main__':
