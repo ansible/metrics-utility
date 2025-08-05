@@ -253,6 +253,7 @@ def main():
         ssh_command = f'ssh {SSH_USER}@{SSH_URL}'
         print('To connect manually to the terminal, run:')
         print(ssh_command)
+        print('podman exec -it automation-controller-web /bin/bash')
 
     if ENVIRONMENT == 'local':
         print('To connect manually to the terminal, run:')

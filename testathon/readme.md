@@ -73,10 +73,14 @@ Below will be description how to obtain these two variables. Now we will show ex
 OC_LOGIN_COMMAND:
 oc login --token={token} --server=https://api.aap-test-v418-x86-64-knmrp.ocp4.testing.ansible.com:6443
 
+Follow steps 1-3 below to fill OC_LOGIN_COMMAND
+
 OC_COMMAND:
+Will be computed on the fly if you run helper_ocp_prepare and will look something like this:
+
 oc exec -n aap-wrongly-airedale aap-cc3e0aa2-controller-task-5d75cd9d68-sz9kp
 
-
+If you want to set it manually, fully follow steps below.
 
 Below is detailed description by Mauricio Magnani and Apurva.
 
