@@ -95,6 +95,7 @@ def test_only_host_scope(cleanup_glob):
 
     # extract tarball
     with tarfile.open(tarball, 'r') as tar:
-        pass
+        # just print to do something
+        print(tar.getnames())
         # ensure main_host.csv is present
         # assert './main_host.csv' in tar.getnames()
