@@ -30,7 +30,18 @@ class TestInfrastructureSummaryUnit:
     def create_mock_worksheet(self):
         """Create a properly mocked worksheet for testing."""
         mock_ws = Mock()
-        mock_ws.cell.return_value = Mock()
+
+        # Track all cell writes with a dictionary to easily verify values
+        self.cell_writes = {}  # (row, col) -> value
+
+        def mock_cell_side_effect(row, column):
+            cell_mock = Mock()
+            # Store the cell reference for later verification
+            key = (row, column)
+            self.cell_writes[key] = cell_mock
+            return cell_mock
+
+        mock_ws.cell.side_effect = mock_cell_side_effect
 
         # Mock row_dimensions to support subscripting
         mock_ws.row_dimensions = MagicMock()
@@ -42,7 +53,63 @@ class TestInfrastructureSummaryUnit:
         mock_ws.column_dimensions.__getitem__.return_value = Mock()
         mock_ws.column_dimensions.__setitem__.return_value = None
 
+        # Mock merge_cells method
+        mock_ws.merge_cells = Mock()
+
         return mock_ws
+
+    def get_cell_value(self, row, col):
+        """Helper to get the value written to a specific cell."""
+        key = (row, col)
+        if key in self.cell_writes:
+            return getattr(self.cell_writes[key], 'value', None)
+        return None
+
+    def find_cell_with_value(self, value):
+        """Helper to find cells containing specific values."""
+        matches = []
+        for (row, col), cell_mock in self.cell_writes.items():
+            if hasattr(cell_mock, 'value') and cell_mock.value == value:
+                matches.append((row, col))
+        return matches
+
+    def get_table_structure(self):
+        """Helper to get the table structure for debugging."""
+        table = {}
+        for (row, col), cell_mock in self.cell_writes.items():
+            if hasattr(cell_mock, 'value'):
+                table[(row, col)] = cell_mock.value
+        return table
+
+    def find_data_row_with_device_type(self, device_type):
+        """Find the row containing a specific device type and return its counts."""
+        # Look for device type in column 3 (Device Type column)
+        for (row, col), cell_mock in self.cell_writes.items():
+            if col == 3 and hasattr(cell_mock, 'value') and cell_mock.value == device_type:
+                # Found the device type, now get the counts from columns 4 and 5
+                unique_nodes = self.get_cell_value(row, 4)  # Unique Nodes column
+                total_nodes = self.get_cell_value(row, 5)  # Total Nodes column
+
+                # The infra_bucket is in column 2 of the row above (hierarchical structure)
+                infra_bucket = self.get_cell_value(row - 1, 2)  # Device Category is one row up
+
+                # Find the infrastructure type by looking backwards for a value in column 1
+                infra_type = None
+                for check_row in range(row, 0, -1):  # Look backwards from current row
+                    infra_type_candidate = self.get_cell_value(check_row, 1)
+                    if infra_type_candidate and infra_type_candidate not in ['Infrastructure']:
+                        infra_type = infra_type_candidate
+                        break
+
+                return {
+                    'row': row,
+                    'device_type': device_type,
+                    'unique_nodes': unique_nodes,
+                    'total_nodes': total_nodes,
+                    'infra_bucket': infra_bucket,
+                    'infra_type': infra_type,
+                }
+        return None
 
     def create_test_dataframe_from_csv_data(self):
         """Create test dataframe using realistic data from the CSV."""
@@ -321,15 +388,21 @@ class TestInfrastructureSummaryUnit:
         report = ReportCCSPv2(dataframes, self.extra_params)
         mock_ws = self.create_mock_worksheet()
 
-        current_row = report._build_data_section_infrastructure_summary(1, mock_ws, df)
+        report._build_data_section_infrastructure_summary(1, mock_ws, df)
+
+        # Verify headers are written correctly
+        expected_headers = ['Infrastructure', 'Device Category', 'Device Type', 'Unique Nodes', 'Total Nodes']
+        for i, header in enumerate(expected_headers, 1):
+            assert self.get_cell_value(1, i) == header
+
+        # Find the Containers row and verify aggregation
+        containers_row = self.find_data_row_with_device_type('Containers')
+        assert containers_row is not None, 'Containers device type should be found in the table'
 
         # Should aggregate correctly: 2 unique hosts (host_1, host_2), 3 total records
-        assert isinstance(current_row, int)
-        assert mock_ws.cell.called
-
-        # Check that aggregation occurred by verifying method completed
-        call_count = mock_ws.cell.call_count
-        assert call_count > 5  # Headers + at least one data row
+        assert containers_row['infra_bucket'] == 'Storage', f'Containers should be in Storage bucket, got {containers_row["infra_bucket"]}'
+        assert containers_row['unique_nodes'] == 2, f'Should have 2 unique hosts (host_1, host_2), got {containers_row["unique_nodes"]}'
+        assert containers_row['total_nodes'] == 3, f'Should have 3 total records, got {containers_row["total_nodes"]}'
 
     def test_aggregation_calculations_grouping(self):
         """Test aggregation grouping by infra_type, infra_bucket, and device_type."""
@@ -378,15 +451,38 @@ class TestInfrastructureSummaryUnit:
         report = ReportCCSPv2(dataframes, self.extra_params)
         mock_ws = self.create_mock_worksheet()
 
-        current_row = report._build_data_section_infrastructure_summary(1, mock_ws, df)
+        report._build_data_section_infrastructure_summary(1, mock_ws, df)
+
+        # Verify headers are written correctly
+        expected_headers = ['Infrastructure', 'Device Category', 'Device Type', 'Unique Nodes', 'Total Nodes']
+        for i, header in enumerate(expected_headers, 1):
+            assert self.get_cell_value(1, i) == header
 
         # Should create separate groups for each unique combination
-        assert isinstance(current_row, int)
-        assert mock_ws.cell.called
+        # Based on the debug output, we can see the structure creates separate entries
 
-        # Should have processed multiple groups (4 different combinations)
-        call_count = mock_ws.cell.call_count
-        assert call_count > 10  # Headers + multiple infra types + buckets + device rows
+        # Find all device type entries (should be 4 total: 3 Containers + 1 Virtual Machines)
+        device_type_entries = []
+        for (row, col), cell_mock in self.cell_writes.items():
+            if col == 3 and hasattr(cell_mock, 'value') and cell_mock.value in ['Containers', 'Virtual Machines']:
+                device_type_entries.append((row, cell_mock.value))
+
+        # Should have 4 device type entries total (3 different Container combinations + 1 VM)
+        assert len(device_type_entries) == 4, f'Should have 4 device type entries, got {len(device_type_entries)}'
+
+        # Count Containers and Virtual Machines entries
+        containers_count = sum(1 for _, device_type in device_type_entries if device_type == 'Containers')
+        vm_count = sum(1 for _, device_type in device_type_entries if device_type == 'Virtual Machines')
+
+        assert containers_count == 3, f'Should have 3 Container entries, got {containers_count}'
+        assert vm_count == 1, f'Should have 1 Virtual Machines entry, got {vm_count}'
+
+        # Verify that each entry has proper counts (1 unique, 1 total for each since no duplicates)
+        for row, device_type in device_type_entries:
+            unique_nodes = self.get_cell_value(row, 4)
+            total_nodes = self.get_cell_value(row, 5)
+            assert unique_nodes == 1, f'{device_type} at row {row} should have 1 unique node, got {unique_nodes}'
+            assert total_nodes == 1, f'{device_type} at row {row} should have 1 total node, got {total_nodes}'
 
     def test_spreadsheet_tab_generation_headers(self):
         """Test spreadsheet tab generation with correct headers."""
@@ -474,13 +570,11 @@ class TestInfrastructureSummaryUnit:
 
         report = ReportCCSPv2(dataframes, self.extra_params)
         mock_ws = self.create_mock_worksheet()
-        mock_cell = Mock()
-        mock_ws.cell.return_value = mock_cell
 
         current_row = report._build_data_section_infrastructure_summary(1, mock_ws, empty_df)
 
-        # Should show "No indirect nodes found" message
-        assert mock_cell.value == 'No indirect nodes found'
+        # Should show "No indirect nodes found" message using our tracking system
+        assert self.get_cell_value(1, 1) == 'No indirect nodes found'
         assert current_row == 2
 
     def test_mock_data_scenarios_various_device_types(self):
