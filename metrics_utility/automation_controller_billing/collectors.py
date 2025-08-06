@@ -429,6 +429,11 @@ def main_indirectmanagednodeaudit_table(since, full_path, until, **kwargs):
         return None
 
 
+@register('test_json', '1.0', format='json', description=_('JSON'), fnc_slicing=limit_slicing)
+def test_json(since, full_path, until, **kwargs):
+    return None
+
+
 @register('main_host', '1.0', format='csv', description=_('Inventory data'), fnc_slicing=limit_slicing)
 def main_host_table(since, full_path, until, **kwargs):
     if 'main_host' not in get_optional_collectors():
