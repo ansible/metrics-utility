@@ -5,6 +5,8 @@ import time
 
 import requests
 
+from helper_ocp_prepare import create_oc_environs
+
 
 # Configuration
 
@@ -14,13 +16,23 @@ USERNAME = os.getenv('USERNAME', 'admin')
 PASSWORD = os.getenv('PASSWORD', 'admin')
 
 SSH_URL = os.getenv('SSH_URL', None)
-SSH_USER = os.getenv('SSH_USER', None)
+SSH_USER = os.getenv('SSH_USER', 'ec2-user')
+
+OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
+
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
 print(f'PASSWORD: {PASSWORD}')
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
+print(f'ENVIRONMENT: {ENVIRONMENT}')
+print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
+
+if os.getenv('POD_NAME') and os.getenv('NAMESPACE'):
+    print(f'POD_NAME: {os.getenv("POD_NAME")}')
+    print(f'NAMESPACE: {os.getenv("NAMESPACE")}')
 
 
 VERIFY_SSL = False  # Set to True if you have valid SSL certificates
@@ -31,17 +43,78 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 
 
 def run(sql_script):
-    if SSH_URL is None:
-        command = ['docker', 'exec', '-i', 'tools_postgres_1', 'psql', '-U', 'awx']
-        process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
-    else:
-        # Send SQL script over SSH and pipe it into `sudo awx-manage dbshell`
-        remote_command = f'echo "{sql_script}" | sudo awx-manage dbshell'
-        ssh_command = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
-        process = subprocess.run(ssh_command, capture_output=True)
+    try:
+        print(sql_script)
+        stderr = ''
+        stdout = ''
+        if ENVIRONMENT == 'local':
+            command = ['docker', 'exec', '-i', 'tools_postgres_1', 'psql', '-U', 'awx']
+            process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
+            stderr = process.stderr.decode()
+            stdout = process.stdout.decode()
 
-    print(process.stderr.decode())
-    return process.stdout.decode()
+        if ENVIRONMENT == 'RPM':
+            # Send SQL script over SSH and pipe it into `sudo awx-manage dbshell`
+            remote_command = f'echo "{sql_script}" | sudo awx-manage dbshell'
+            ssh_command = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
+            process = subprocess.run(ssh_command, capture_output=True)
+            stderr = process.stderr.decode()
+            stdout = process.stdout.decode()
+
+        import base64
+
+        if ENVIRONMENT == 'containerized':
+            # base64-encode the whole SQL
+            b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
+            remote_command = f'echo {b64} | base64 --decode | podman exec -i automation-controller-web awx-manage dbshell'
+            print('remote command:', remote_command)
+            process = subprocess.run(['ssh', f'{SSH_USER}@{SSH_URL}', remote_command], capture_output=True, text=True)
+            stdout = process.stdout
+            stderr = process.stderr
+
+        if ENVIRONMENT == 'OpenShift':
+            # extract pod name from OC_COMMAND
+            pod_name = os.getenv('POD_NAME')
+            namespace = os.getenv('NAMESPACE')
+
+            print(f'pod_name: {pod_name}')
+            print(f'namespace: {namespace}')
+
+            # run the command
+            # sql_script is the variable that contains the sql script
+            # forget the OC_COMMAND, use the pod name and namespace to run the command
+            # note that -c does not work for dbshell
+
+            # pipe sql script to the command
+            command = [
+                'oc',
+                'exec',
+                '-i',  # keep STDIN open
+                '-n',
+                namespace,
+                pod_name,
+                '--',
+                'awx-manage',
+                'dbshell',
+            ]
+
+            # Run the command and pipe the SQL into STDIN
+            result = subprocess.run(
+                command,
+                input=sql_script,  # <<–– here's where the script goes
+                text=True,  # treat stdin/stdout as str instead of bytes
+                capture_output=True,  # optional: collect results for logging
+                check=True,  # raise if the command fails
+            )
+
+            stdout = result.stdout
+            stderr = result.stderr
+
+        print(stderr)
+        return stdout
+    except Exception as e:
+        print(f'Failed to run SQL script: {e}')
+        return ''
 
 
 def delete_job_templates():
@@ -90,6 +163,7 @@ def delete_job_template(id):
 
 def delete_main_project():
     # delete mock project
+
     url = f'{API_URL}/projects/?name=MockA_Test_Project'
     resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
     data = resp.json()
@@ -372,7 +446,19 @@ def set_different_modified_dates(dates):
     run(sql_update)
 
 
+def oc_login():
+    # subprocess run
+    subprocess.run(OC_LOGIN_COMMAND, shell=True)
+
+
 def main():
+    if ENVIRONMENT == 'OpenShift':
+        oc_login()
+        if not os.getenv('POD_NAME') or not os.getenv('NAMESPACE'):
+            create_oc_environs()
+
+    list_main_jobhostsummary()
+
     delete_main_project()
 
     delete_job_templates()
