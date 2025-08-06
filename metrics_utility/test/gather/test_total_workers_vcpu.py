@@ -48,7 +48,7 @@ class TestTotalWorkersVcpu:
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
-                assert logged_json['usage_based_billing_enabled'] == False
+                assert not logged_json['usage_based_billing_enabled']
 
             # Test when explicitly set to false
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
@@ -57,7 +57,7 @@ class TestTotalWorkersVcpu:
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
-                assert logged_json['usage_based_billing_enabled'] == False
+                assert not logged_json['usage_based_billing_enabled']
 
     def test_usage_based_billing_enabled_case_insensitive(self):
         """Test that METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is case insensitive."""
@@ -133,7 +133,7 @@ class TestTotalWorkersVcpu:
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
-                assert logged_json['usage_based_billing_enabled'] == False
+                assert not logged_json['usage_based_billing_enabled']
 
     def test_kubernetes_config_exception_handling(self):
         """Test that the function properly handles Kubernetes configuration exceptions."""
@@ -330,7 +330,7 @@ class TestTotalWorkersVcpu:
                 assert logged_json['timestamp'] == '2023-12-25T15:30:45+00:00'
                 assert logged_json['cluster_name'] == 'test-cluster'
                 assert logged_json['total_workers_vcpu'] == 4
-                assert logged_json['usage_based_billing_enabled'] == True
+                assert logged_json['usage_based_billing_enabled']
                 assert 'nodes' in logged_json
 
                 # Also verify the return value
