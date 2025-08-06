@@ -11,6 +11,7 @@ from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.automation_controller_billing.collectors import get_optional_collectors
 from metrics_utility.logger import logger
 
 from .collection import Collection
@@ -289,9 +290,21 @@ class Collector:
 
         last_key = None
 
+        disable_job_host_summary_str = os.environ.get('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
+        disable_job_host_summary = disable_job_host_summary_str.lower() == 'true'
+
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
             if last_key != collection.key:
-                logger.warning(f'Progress info: Now gathering {collection.key}')
+                write_enabled = False
+
+                if collection.key != 'job_host_summary' or not disable_job_host_summary:
+                    write_enabled = True
+
+                if collection.key in get_optional_collectors():
+                    write_enabled = True
+
+                if write_enabled:
+                    logger.warning(f'Progress info: Now gathering {collection.key}')
                 last_key = collection.key
 
             collection.gather(self._package_class().max_data_size())

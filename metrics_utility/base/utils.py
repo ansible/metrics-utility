@@ -16,3 +16,11 @@ def get_max_gather_period_days():
         logger.error('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer')
         # raise original exception
         raise
+
+
+def get_optional_collectors():
+    """
+    Get the list of optional collectors from environment variable.
+    Defaults to 'main_jobevent' if not set.
+    """
+    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
