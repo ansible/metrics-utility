@@ -204,7 +204,7 @@ def list_gathered_files(config):
 
     elif ENVIRONMENT == 'OpenShift':
         # OpenShift deployment via oc command
-        cmd = f'find /var/lib/awx/{ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
+        cmd = f'find {ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
         oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{cmd}"'
         print('Running OpenShift ls:', oc_cmd)
         result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
