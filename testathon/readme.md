@@ -1,4 +1,8 @@
-# testathon_data_prepare
+# printvars.py
+
+This will print env vars that are used in scripts. Its better than printvars command, more readable.
+
+# testathon_data_prepare.py
 
 If you run this directly without any parameters, it will prepopulate local environment db, provided that it runs
 at this url:
@@ -37,6 +41,10 @@ You can add it before script running:
 
 ssh-add ~/.ssh/id_ed19561
 
+You will find API_URL as gateway URL in inventory artifact of jenkins.
+
+SSH_URL is IP of controller server.
+
 ## RPM Example:
 
 export PASSWORD='**Fill here**'
@@ -53,6 +61,10 @@ uv run testathon_data_prepare.py
 Containerized build runs in one server and each service runs in containers.
 
 You can access it also using SSH and classic URL, the script then connect to the container by itself.
+
+SSH will be again for controller.
+
+You will find it again in inventory file of jenkins artifact.
 
 ## Openshift build
 
@@ -157,9 +169,9 @@ oc rsh -n aap-wrongly-airedale aap-bf37650a-controller-task-7798677c6c-zxmgz
 Once inside the pod shell, you can use the metrics-utility command
 
 
-# gather_all
+# gather_all.py
 
-Gather all gathers whole data from begining to datetime now. It uses SSH_URL and SSH_USER as previous script.
+Gather all gathers whole data from begining to datetime now. It uses the same env variables as previous script.
 
 ## Gather all example
 
