@@ -16,7 +16,6 @@ from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 from kubernetes import client
 from kubernetes import config as kube_config
-from kubernetes.client.rest import ApiException
 
 from metrics_utility.base import CsvFileSplitter, register
 from metrics_utility.base.utils import get_max_gather_period_days
@@ -581,8 +580,6 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     try:
         nodes = api_instance.list_node()
-    except ApiException as e:
-        raise MetricsException(f'Kubernetes API error when retrieving nodes: {e}')
     except Exception as e:
         raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
 

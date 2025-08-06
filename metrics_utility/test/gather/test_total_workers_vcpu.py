@@ -35,18 +35,29 @@ class TestTotalWorkersVcpu:
 
     def test_returns_hardcoded_value_when_vcpu_count_disabled(self):
         """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or false (default behavior)."""
-        with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+        ):
             mock_get.return_value = ['total_workers_vcpu']
 
             # Test when not set (default behavior)
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
+                
+                # Verify the logged JSON contains usage_based_billing_enabled = False
+                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                assert logged_json['usage_based_billing_enabled'] == False
 
             # Test when explicitly set to false
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
+                
+                # Verify the logged JSON contains usage_based_billing_enabled = False
+                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                assert logged_json['usage_based_billing_enabled'] == False
 
     def test_usage_based_billing_enabled_case_insensitive(self):
         """Test that METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is case insensitive."""
@@ -110,12 +121,19 @@ class TestTotalWorkersVcpu:
 
     def test_usage_based_billing_disabled_unset_returns_hardcoded_value(self):
         """Test that when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is unset, it returns hardcoded value."""
-        with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+        ):
             mock_get.return_value = ['total_workers_vcpu']
 
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': None}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
+                
+                # Verify the logged JSON contains usage_based_billing_enabled = False
+                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                assert logged_json['usage_based_billing_enabled'] == False
 
     def test_kubernetes_config_exception_handling(self):
         """Test that the function properly handles Kubernetes configuration exceptions."""
@@ -151,7 +169,7 @@ class TestTotalWorkersVcpu:
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 with pytest.raises(MetricsException) as exc_info:
                     total_workers_vcpu(None, None, None)
-                assert 'Could get a Kube CoreV1Api client' in str(exc_info.value)
+                assert 'Could not get a Kube CoreV1Api client' in str(exc_info.value)
 
     def test_successful_kubernetes_api_call_with_multiple_nodes(self):
         """Test successful K8s API call with multiple nodes and CPU calculation."""
@@ -312,6 +330,7 @@ class TestTotalWorkersVcpu:
                 assert logged_json['timestamp'] == '2023-12-25T15:30:45+00:00'
                 assert logged_json['cluster_name'] == 'test-cluster'
                 assert logged_json['total_workers_vcpu'] == 4
+                assert logged_json['usage_based_billing_enabled'] == True
                 assert 'nodes' in logged_json
 
                 # Also verify the return value
@@ -351,32 +370,7 @@ class TestTotalWorkersVcpu:
 
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 2}
 
-    def test_kubernetes_api_exception_handling(self):
-        """Test that the function properly handles Kubernetes API exceptions when listing nodes."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-            patch('metrics_utility.automation_controller_billing.collectors.ApiException') as mock_api_exception,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
-
-            # Mock the API instance to raise ApiException
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-            
-            # Create a proper exception class that inherits from Exception
-            class MockApiException(Exception):
-                pass
-            
-            mock_api_exception.side_effect = MockApiException('API error')
-            mock_api.list_node.side_effect = MockApiException('API error')
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
-                assert 'Kubernetes API error when retrieving nodes:' in str(exc_info.value)
+    
 
     def test_unexpected_exception_handling(self):
         """Test that the function properly handles unexpected exceptions when listing nodes."""
