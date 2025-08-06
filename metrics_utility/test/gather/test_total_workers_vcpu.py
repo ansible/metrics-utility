@@ -45,7 +45,7 @@ class TestTotalWorkersVcpu:
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
-                
+
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert logged_json['usage_based_billing_enabled'] == False
@@ -54,7 +54,7 @@ class TestTotalWorkersVcpu:
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
-                
+
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert logged_json['usage_based_billing_enabled'] == False
@@ -130,7 +130,7 @@ class TestTotalWorkersVcpu:
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': None}):
                 result = total_workers_vcpu(None, None, None)
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
-                
+
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert logged_json['usage_based_billing_enabled'] == False
@@ -369,8 +369,6 @@ class TestTotalWorkersVcpu:
                 mock_kube_config.load_kube_config.assert_called_once()
 
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 2}
-
-    
 
     def test_unexpected_exception_handling(self):
         """Test that the function properly handles unexpected exceptions when listing nodes."""
