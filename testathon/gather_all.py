@@ -6,13 +6,15 @@ import sys
 
 from datetime import date, timedelta
 
+from helper_ocp_prepare import create_oc_environs
+
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
 
 SSH_URL = os.getenv('SSH_URL')
 SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
-OC_COMMAND = os.getenv('OC_COMMAND', '')
+
 OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
 
 print(f'ENVIRONMENT: {ENVIRONMENT}')
@@ -20,8 +22,11 @@ print(f'ENVIRONMENT: {ENVIRONMENT}')
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
 
-print(f'OC_COMMAND: {OC_COMMAND}')
 print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
+
+if os.getenv('POD_NAME') and os.getenv('NAMESPACE'):
+    print(f'POD_NAME: {os.getenv("POD_NAME")}')
+    print(f'NAMESPACE: {os.getenv("NAMESPACE")}')
 
 # Configure the beginning of your range here
 START_DATE = date(2022, 1, 1)
@@ -135,8 +140,11 @@ def run_command(args, config):
         env_vars = ' '.join([f'{k}={v}' for k, v in config.items()])
         container_cmd = f'{env_vars} metrics-utility {" ".join(args)}'
 
+        NAMESPACE = os.getenv('NAMESPACE')
+        POD_NAME = os.getenv('POD_NAME')
+
         # Use oc exec to run the command
-        oc_cmd = f'{OC_COMMAND} -- /bin/bash -c "{container_cmd}"'
+        oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{container_cmd}"'  # noqa: E501
         print('Running OpenShift:', oc_cmd)
         return subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
 
@@ -155,6 +163,9 @@ def list_gathered_files(config):
     """
     ship_path = config.get('METRICS_UTILITY_SHIP_PATH', path_to_shipped_data)
     print(f'\n=== Listing gathered files in {ship_path} ===')
+
+    NAMESPACE = os.getenv('NAMESPACE')
+    POD_NAME = os.getenv('POD_NAME')
 
     if ENVIRONMENT == 'local':
         # For local environment, list files in the docker container
@@ -193,11 +204,10 @@ def list_gathered_files(config):
 
     elif ENVIRONMENT == 'OpenShift':
         # OpenShift deployment via oc command
-        container_cmd = f'find /var/lib/awx/{ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
-        oc_cmd = f'{OC_COMMAND} exec deployment/automation-controller-web -- /bin/bash -c "{container_cmd}"'
+        cmd = f'find /var/lib/awx/{ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
+        oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{cmd}"'
         print('Running OpenShift ls:', oc_cmd)
         result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
-
     else:
         print(f'Unsupported environment for listing files: {ENVIRONMENT}')
         return
@@ -212,6 +222,12 @@ def list_gathered_files(config):
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
+
+        if not os.getenv('POD_NAME') or not os.getenv('NAMESPACE'):
+            create_oc_environs()
+
+        print(f'POD_NAME: {os.getenv("POD_NAME")}')
+        print(f'NAMESPACE: {os.getenv("NAMESPACE")}')
 
     config = get_metrics_utility_config()
 
@@ -244,8 +260,10 @@ def main():
 
     # print commands how to connect manually to the terminal
     if ENVIRONMENT == 'OpenShift':
+        NAMESPACE = os.getenv('NAMESPACE')
+        POD_NAME = os.getenv('POD_NAME')
         print('To connect manually to the terminal, run:')
-        oc_rsh_command = OC_COMMAND.replace('oc exec', 'oc rsh')
+        oc_rsh_command = f'oc rsh -n {NAMESPACE} {POD_NAME}'
         print(oc_rsh_command)
 
     if ENVIRONMENT == 'containerized':

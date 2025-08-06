@@ -60,29 +60,20 @@ This build is very different.
 
 First, ensure oc is installed on the machine.
 
-You need to fill two env variables:
+You need to fill this env variable:
 
 OC_LOGIN_COMMAND
-OC_COMMAND
 
 Oc login command is used to login only once. It needs token.
-Oc command is command that will acess the pod and allows execution of console command.
 
-Below will be description how to obtain these two variables. Now we will show examples:
+Below will be description how to obtain this variable. Now we will show examples:
 
 OC_LOGIN_COMMAND:
 oc login --token={token} --server=https://api.aap-test-v418-x86-64-knmrp.ocp4.testing.ansible.com:6443
 
 Follow steps 1-3 below to fill OC_LOGIN_COMMAND
 
-OC_COMMAND:
-Will be computed on the fly if you run helper_ocp_prepare and will look something like this:
-
-oc exec -n aap-wrongly-airedale aap-cc3e0aa2-controller-task-5d75cd9d68-sz9kp
-
-If you want to set it manually, fully follow steps below.
-
-For manual access: instead of oc exec, use oc rsh
+POD_NAME and NAMESPACE is optional env variables, it will be computed on the fly if not empty, otherwise used.
 
 Below is detailed description by Mauricio Magnani and Apurva.
 

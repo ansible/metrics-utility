@@ -5,6 +5,8 @@ import time
 
 import requests
 
+from helper_ocp_prepare import create_oc_environs
+
 
 # Configuration
 
@@ -16,18 +18,9 @@ PASSWORD = os.getenv('PASSWORD', 'admin')
 SSH_URL = os.getenv('SSH_URL', None)
 SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
-OC_COMMAND = os.getenv('OC_COMMAND', '')
 OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
-
-if OC_COMMAND is not None and len(OC_COMMAND) > 0:
-    # command must begin with 'oc exec'
-    if not OC_COMMAND.startswith('oc exec'):
-        raise ValueError('OC_COMMAND must begin with "oc exec"')
-
-    if OC_COMMAND.startswith('oc rsh'):
-        raise ValueError('OC_COMMAND must not begin with "oc rsh"')
 
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
@@ -36,7 +29,10 @@ print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
 print(f'ENVIRONMENT: {ENVIRONMENT}')
 print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
-print(f'OC_COMMAND: {OC_COMMAND}')
+
+if os.getenv('POD_NAME') and os.getenv('NAMESPACE'):
+    print(f'POD_NAME: {os.getenv("POD_NAME")}')
+    print(f'NAMESPACE: {os.getenv("NAMESPACE")}')
 
 
 VERIFY_SSL = False  # Set to True if you have valid SSL certificates
@@ -78,9 +74,8 @@ def run(sql_script):
 
         if ENVIRONMENT == 'OpenShift':
             # extract pod name from OC_COMMAND
-            pod_name = OC_COMMAND.split()[-1]
-            # extract namespace from OC_COMMAND
-            namespace = OC_COMMAND.split()[-2]
+            pod_name = os.getenv('POD_NAME')
+            namespace = os.getenv('NAMESPACE')
 
             print(f'pod_name: {pod_name}')
             print(f'namespace: {namespace}')
@@ -459,6 +454,8 @@ def oc_login():
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
+        if not os.getenv('POD_NAME') or not os.getenv('NAMESPACE'):
+            create_oc_environs()
 
     list_main_jobhostsummary()
 
