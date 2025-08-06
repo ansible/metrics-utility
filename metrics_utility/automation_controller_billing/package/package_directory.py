@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 
 from django.conf import settings
 
@@ -60,6 +61,10 @@ class PackageDirectory(base.Package):
 
         os.makedirs(os.path.dirname(destination_path), exist_ok=True)
         shutil.copyfile(self.tar_path, destination_path)
+
+        # if args contains --verbose, print the destination path
+        if '--verbose' in sys.argv:
+            logger.info(f'tarball saved to: {destination_path}')
 
         self.shipping_successful = True
         return True
