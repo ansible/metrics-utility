@@ -558,7 +558,11 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if usage_based_billing_enabled_str and (usage_based_billing_enabled_str.lower() == 'true'):
         usage_based_billing_enabled = True
     if not usage_based_billing_enabled:
-        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': 1}
+        info['nodes'].append({'hourly_based': 1})
+        info['total_workers_vcpu'] = 1
+        # This message must always appear in the log regardless of the log level.
+        logger_info_level.info(json.dumps(info, indent=2))
+        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
 
     try:
         kube_config.load_incluster_config()
@@ -572,9 +576,17 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     # Create a CoreV1Api client
     api_instance = client.CoreV1Api()
     if not api_instance:
-        raise MetricsException('Could get a Kube CoreV1Api client')
+        raise MetricsException('Could not get a Kube CoreV1Api client')
 
-    nodes = api_instance.list_node()
+    try:
+        nodes = api_instance.list_node()
+    except client.exceptions.ApiException as e:
+        raise MetricsException(f'Kubernetes API error when retrieving nodes: {e}')
+    except Exception as e:
+        raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
+
+    if nodes is None:
+        raise MetricsException('No nodes found')
 
     total_workers_vcpu = 0
     # In SaaS case we have only Worker nodes and so we don't need to filter out the control plan.

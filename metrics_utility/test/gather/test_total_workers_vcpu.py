@@ -350,3 +350,64 @@ class TestTotalWorkersVcpu:
                 mock_kube_config.load_kube_config.assert_called_once()
 
                 assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 2}
+
+    def test_kubernetes_api_exception_handling(self):
+        """Test that the function properly handles Kubernetes API exceptions when listing nodes."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
+            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_kube_config.load_incluster_config.return_value = None
+
+            # Mock the API instance to raise ApiException
+            mock_api = MagicMock()
+            mock_client.CoreV1Api.return_value = mock_api
+            mock_client.exceptions.ApiException = Exception  # Mock the ApiException class
+            mock_api.list_node.side_effect = mock_client.exceptions.ApiException('API error')
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
+                assert 'Kubernetes API error when retrieving nodes:' in str(exc_info.value)
+
+    def test_unexpected_exception_handling(self):
+        """Test that the function properly handles unexpected exceptions when listing nodes."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
+            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_kube_config.load_incluster_config.return_value = None
+
+            # Mock the API instance to raise unexpected exception
+            mock_api = MagicMock()
+            mock_client.CoreV1Api.return_value = mock_api
+            mock_api.list_node.side_effect = RuntimeError('Unexpected error')
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
+                assert 'Unexpected error when retrieving nodes:' in str(exc_info.value)
+
+    def test_none_nodes_handling(self):
+        """Test that the function properly handles when nodes is None."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
+            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_kube_config.load_incluster_config.return_value = None
+
+            # Mock the API instance to return None
+            mock_api = MagicMock()
+            mock_client.CoreV1Api.return_value = mock_api
+            mock_api.list_node.return_value = None
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
+                assert 'No nodes found' in str(exc_info.value)

@@ -94,7 +94,7 @@ An example can be found in [Test package](tests/classes/package.py)
   - `METRICS_UTILITY_CLUSTER_NAME`: Contains the cluster name which is part of the collection payload.
   - `METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED`: [true/false] In case of true, the payload will contain the actual number of total vcpu accross all workers otherwise the total will be set to 1.
 
-N.B.: The SaaS solution doesn't have a control place and so all nodes are workers, if this collector is used for another solution then the filtering must be implemented.
+N.B.: The SaaS solution runs on ROSA HCP so all nodes are workers, if this collector is used for another solution then the filtering must be implemented.
 
 ## Collector module
 
