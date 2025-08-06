@@ -2,6 +2,7 @@ import os
 import sys
 
 from importlib import import_module
+from importlib.metadata import version
 
 import django.core.management as management
 
@@ -50,8 +51,7 @@ class ManagementUtility(management.ManagementUtility):
         # Special-cases: We want 'django-admin --version' and
         # 'django-admin --help' to work, for backwards compatibility.
         elif subcommand == 'version' or self.argv[1:] == ['--version']:
-            # sys.stdout.write(django.get_version() + "\n")
-            sys.stdout.write('0.6.1dev' + '\n')
+            sys.stdout.write(version('metrics-utility') + '\n')
         elif self.argv[1:] in (['--help'], ['-h']):
             sys.stdout.write(self.main_help_text() + '\n')
         else:
