@@ -16,6 +16,7 @@ from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
 from kubernetes import client
 from kubernetes import config as kube_config
+from kubernetes.client.rest import ApiException
 
 from metrics_utility.base import CsvFileSplitter, register
 from metrics_utility.base.utils import get_max_gather_period_days
@@ -557,8 +558,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     usage_based_billing_enabled = False
     if usage_based_billing_enabled_str and (usage_based_billing_enabled_str.lower() == 'true'):
         usage_based_billing_enabled = True
+    info['usage_based_billing_enabled'] = usage_based_billing_enabled
     if not usage_based_billing_enabled:
-        info['nodes'].append({'hourly_based': 1})
         info['total_workers_vcpu'] = 1
         # This message must always appear in the log regardless of the log level.
         logger_info_level.info(json.dumps(info, indent=2))
@@ -580,7 +581,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     try:
         nodes = api_instance.list_node()
-    except client.exceptions.ApiException as e:
+    except ApiException as e:
         raise MetricsException(f'Kubernetes API error when retrieving nodes: {e}')
     except Exception as e:
         raise MetricsException(f'Unexpected error when retrieving nodes: {e}')

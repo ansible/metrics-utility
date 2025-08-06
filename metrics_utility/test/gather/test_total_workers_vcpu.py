@@ -357,6 +357,7 @@ class TestTotalWorkersVcpu:
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
             patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+            patch('metrics_utility.automation_controller_billing.collectors.ApiException') as mock_api_exception,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             mock_kube_config.load_incluster_config.return_value = None
@@ -364,8 +365,13 @@ class TestTotalWorkersVcpu:
             # Mock the API instance to raise ApiException
             mock_api = MagicMock()
             mock_client.CoreV1Api.return_value = mock_api
-            mock_client.exceptions.ApiException = Exception  # Mock the ApiException class
-            mock_api.list_node.side_effect = mock_client.exceptions.ApiException('API error')
+            
+            # Create a proper exception class that inherits from Exception
+            class MockApiException(Exception):
+                pass
+            
+            mock_api_exception.side_effect = MockApiException('API error')
+            mock_api.list_node.side_effect = MockApiException('API error')
 
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
                 with pytest.raises(MetricsException) as exc_info:
