@@ -4,6 +4,7 @@ import pytest
 
 from metrics_utility.exceptions import MissingRequiredEnvVar
 from metrics_utility.management.validation import (
+    handle_directory_ship_target,
     handle_env_validation,
     validate_ccsp_report_sheets,
     validate_collectors,
@@ -230,10 +231,9 @@ def test_validate_ship_path_build_valid(monkeypatch):
 
 
 def test_validate_ship_path_build_empty_build_valid(monkeypatch):
-    errors = []
-    validate_ship_path(errors, 'directory', 'build')
-    assert errors
-    assert 'Invalid METRICS_UTILITY_SHIP_PATH' in errors[0]
+    with pytest.raises(MissingRequiredEnvVar) as excinfo:
+        handle_directory_ship_target()
+    assert str(excinfo.value).startswith('Missing required env variable METRICS_UTILITY_SHIP_PATH')
 
 
 def test_validate_ship_path_build_empty_gather_valid(monkeypatch):

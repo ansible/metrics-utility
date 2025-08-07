@@ -127,7 +127,7 @@ def handle_crc_ship_target():
     if billing_provider == 'aws':
         billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID')
         if not billing_account_id:
-            raise MissingRequiredEnvVar('Env var: METRICS_UTILITY_BILLING_ACCOUNT_ID, containing  AWS 12 digit customer id needs to be provided.')
+            raise MissingRequiredEnvVar('METRICS_UTILITY_BILLING_ACCOUNT_ID, containing AWS 12 digit customer id needs to be provided.')
         billing_provider_params['billing_account_id'] = billing_account_id
     else:
         raise MissingRequiredEnvVar('Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are [aws].')
@@ -259,7 +259,7 @@ def validate_ship_target(errors, method):
     if method == 'gather':
         ship_target_type = VALID_SHIP_TARGET_GATHER
     if ship_target is None:
-        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is Empty. Valid values: {", ".join(ship_target_type)}')
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is empty. Valid values: {", ".join(ship_target_type)}')
     if ship_target and ship_target not in ship_target_type:
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(ship_target_type)}')
     return ship_target
@@ -277,16 +277,13 @@ def validate_ship_path(errors, ship_target, method):
         - For 'directory' ship target, checks if METRICS_UTILITY_SHIP_PATH is an existing directory.
         - Appends an error message to 'errors' if the directory does not exist.
     """
-    no_path = 'No Path Provided'
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', no_path)
-    dir_paths = VALID_SHIP_TARGET_BUILD
-    if 's3' in dir_paths:
-        dir_paths.remove('s3')
-    if ship_target and ship_target in dir_paths and method == 'build':
-        if not os.path.isdir(ship_path):
-            errors.append(f'Invalid METRICS_UTILITY_SHIP_PATH: {ship_path} is not an existing directory.')
-    if ship_path == no_path and method == 'gather' and ship_target == 'directory':
-        logger.info('No path set under METRICS_UTILITY_SHIP_PATH. A directory will be created')
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
+    if not ship_path:
+        # already handled in handle_*_ship_target
+        return
+
+    if method == 'build' and ship_target in VALID_SHIP_TARGET_BUILD - {'s3'} and not os.path.isdir(ship_path):
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_PATH: {ship_path} is not an existing directory.')
 
 
 def validate_max_gather_period_days(errors):
