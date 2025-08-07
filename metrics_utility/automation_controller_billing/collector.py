@@ -9,11 +9,6 @@ from django.db import connection
 
 import metrics_utility.base as base
 
-
-# from awx.conf.license import get_license
-# from awx.main.models import Job
-# from awx.main.access import access_registry
-# from rest_framework.exceptions import PermissionDenied
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
 from metrics_utility.logger import logger
 
@@ -70,6 +65,7 @@ class Collector(base.Collector):
                 return None
 
             self._gather_json_collections()
+
             # Extend the config collection to contain billing specific info:
             config_collection = self.collections['config']
             data = json.loads(config_collection.data)
@@ -89,19 +85,10 @@ class Collector(base.Collector):
 
     def _is_valid_license(self):
         # TODO: which license to check? Any license will do?
-        #
-        # try:
-        #     if get_license().get('license_type', 'UNLICENSED') == 'open':
-        #         return False
-        #     access_registry[Job](None).check_license()
-        # except PermissionDenied:
-        #     logger.exception("A valid license was not found:")
-        #     return False
         return True
 
     def _is_shipping_configured(self):
         # This check is already done in each Package class
-
         return True
 
     @staticmethod

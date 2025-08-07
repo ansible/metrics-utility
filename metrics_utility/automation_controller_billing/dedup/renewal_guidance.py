@@ -358,12 +358,6 @@ class DedupRenewalExperimental(BaseDedupRenewal):
                 final_deduped_list.append(merged_data)
                 break
 
-    def _clean_serial_field(self, value):
-        """Clean serial field values similar to existing logic."""
-        if pd.isna(value) or value in ['', 'NA']:
-            return None
-        return value
-
     def _merge_hostname_groups(self, hostname_df, groups_to_merge):
         """Merge multiple hostname groups into a single group."""
         groups_data = hostname_df[hostname_df['hostname'].isin(groups_to_merge)]

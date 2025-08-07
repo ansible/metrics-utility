@@ -17,10 +17,6 @@ class S3Handler:
 
         self._session = None
 
-        self.s3 = self.get_s3_resource()
-        self.s3_bucket = self.get_s3_bucket()
-        self.s3_client = self.get_s3_client
-
     @property
     def session(self):
         if self._session is not None:
@@ -90,11 +86,3 @@ class S3Handler:
         for resp in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
             for ret_value in resp.get('Contents', []):
                 yield ret_value['Key']
-
-    def list_subdirs(self, prefix):
-        s3_resource = self.get_s3_resource()
-
-        paginator = s3_resource.meta.client.get_paginator('list_objects')
-        for resp in paginator.paginate(Bucket=self.bucket_name, Delimiter='/', Prefix=prefix):
-            for ret_value in resp.get('CommonPrefixes', []):
-                yield ret_value

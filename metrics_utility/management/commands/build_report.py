@@ -91,6 +91,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if options.get('verbose'):
             debug()
+
         handle_env_validation('build')
 
         opt_since, opt_until = validate_build_params(options, self.help_texts)
