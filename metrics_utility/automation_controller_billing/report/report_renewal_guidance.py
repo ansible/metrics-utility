@@ -21,7 +21,6 @@ class ReportRenewalGuidance(Base):
         self.extra_params = extra_params
 
         self.ephemeral_days = extra_params['ephemeral_days']
-        self.price_per_node = extra_params['price_per_node']
         self.report_period = extra_params['report_period']
 
         self.config = {
