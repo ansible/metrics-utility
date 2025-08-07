@@ -61,5 +61,7 @@ class PackageS3(base.Package):
         s3_handler = S3Handler(params=self.collector.billing_provider_params)
         s3_handler.upload_file(self.tar_path, object_name=destination_path)
 
+        logger.debug(f'tarball saved to: {destination_path}')
+
         self.shipping_successful = True
         return True

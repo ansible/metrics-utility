@@ -61,5 +61,7 @@ class PackageDirectory(base.Package):
         os.makedirs(os.path.dirname(destination_path), exist_ok=True)
         shutil.copyfile(self.tar_path, destination_path)
 
+        logger.debug(f'tarball saved to: {destination_path}')
+
         self.shipping_successful = True
         return True

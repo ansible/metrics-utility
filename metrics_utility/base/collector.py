@@ -17,7 +17,7 @@ from .collection import Collection
 from .collection_csv import CollectionCSV
 from .collection_json import CollectionJSON
 from .package import Package
-from .utils import get_max_gather_period_days
+from .utils import get_max_gather_period_days, get_optional_collectors
 
 
 class Collector:
@@ -278,6 +278,9 @@ class Collector:
         for collection in self.collections[Collection.COLLECTION_TYPE_JSON]:
             collection.gather(self._package_class().max_data_size())
 
+            if collection.is_empty() or not collection.gathering_successful:
+                continue
+
             self._add_collection_to_package(collection)
 
     def _gather_csv_collections(self):
@@ -289,9 +292,26 @@ class Collector:
 
         last_key = None
 
+        disable_job_host_summary_str = os.environ.get('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
+        disable_job_host_summary = disable_job_host_summary_str.lower() == 'true'
+
+        optional_collectors = get_optional_collectors()
+
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
             if last_key != collection.key:
-                logger.warning(f'Progress info: Now gathering {collection.key}')
+                write_enabled = False
+
+                if collection.key == 'job_host_summary' and not disable_job_host_summary:
+                    write_enabled = True
+
+                if collection.key in optional_collectors:
+                    write_enabled = True
+
+                if write_enabled:
+                    logger.warning(f'Progress info: Now gathering {collection.key}')
+                else:
+                    logger.warning(f'Progress info: Skipping {collection.key} because it is not enabled.')
+
                 last_key = collection.key
 
             collection.gather(self._package_class().max_data_size())

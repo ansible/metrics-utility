@@ -18,7 +18,7 @@ from kubernetes import client
 from kubernetes import config as kube_config
 
 from metrics_utility.base import CsvFileSplitter, register
-from metrics_utility.base.utils import get_max_gather_period_days
+from metrics_utility.base.utils import get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.logger import logger, logger_info_level
 
@@ -39,10 +39,6 @@ All functions - when called - will be passed a datetime.datetime object,
 functions - like those that return metadata about playbook runs, may return
 data _since_ the last report date - i.e., new data in the last 24 hours)
 """
-
-
-def get_optional_collectors():
-    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
 
 
 def daily_slicing(key, last_gather, **kwargs):
