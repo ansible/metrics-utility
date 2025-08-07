@@ -88,20 +88,25 @@ def limit_slicing(key, last_gather, **kwargs):
     yield (today, today)
 
 
+def get_install_type():
+    if os.getenv('container') == 'oci':
+        return 'openshift'
+
+    if os.getenv('KUBERNETES_SERVICE_PORT'):
+        return 'k8s'
+
+    return 'traditional'
+
+
 @register('config', '1.0', description=_('General platform configuration.'), config=True)
 def config(since, **kwargs):
     license_info = get_license()
-    install_type = 'traditional'
-    if os.getenv('container') == 'oci':
-        install_type = 'openshift'
-    elif 'KUBERNETES_SERVICE_PORT' in os.environ:
-        install_type = 'k8s'
     return {
         'platform': {
             'system': platform.system(),
             'dist': distro.linux_distribution(),
             'release': platform.release(),
-            'type': install_type,
+            'type': get_install_type(),
         },
         'install_uuid': settings.INSTALL_UUID,
         'instance_uuid': settings.SYSTEM_UUID,
