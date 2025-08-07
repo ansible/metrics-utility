@@ -278,6 +278,9 @@ class Collector:
         for collection in self.collections[Collection.COLLECTION_TYPE_JSON]:
             collection.gather(self._package_class().max_data_size())
 
+            if collection.is_empty() or not collection.gathering_successful:
+                continue
+
             self._add_collection_to_package(collection)
 
     def _gather_csv_collections(self):

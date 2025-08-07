@@ -24,7 +24,7 @@ class CollectionJSON(Collection):
         return len(self.data) if self.data else 0
 
     def is_empty(self):
-        return self.data is None
+        return self.data is None or self.data == 'null'
 
     def target(self):
         """Data attribute specific for this data type"""
