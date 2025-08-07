@@ -55,7 +55,7 @@ class Command(BaseCommand):
         until = parse_date_param(opt_until, self.help_texts, 'until')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
-        billing_provider_params = self._handle_ship_target(ship_target)
+        extra_params = self._handle_ship_target(ship_target)
 
         if opt_ship and opt_dry_run:
             logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
@@ -64,10 +64,10 @@ class Command(BaseCommand):
         collector = Collector(
             collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN,
             ship_target=ship_target,
-            billing_provider_params=billing_provider_params,
+            billing_provider_params=extra_params,
         )
 
-        tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params)
+        tgzfiles = collector.gather(since=since, until=until, billing_provider_params=extra_params)
         if not tgzfiles:
             logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')

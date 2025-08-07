@@ -2,7 +2,6 @@ import datetime
 import os
 
 from argparse import RawDescriptionHelpFormatter
-from datetime import timezone
 
 from django.core.management.base import BaseCommand
 
@@ -101,6 +100,8 @@ class Command(BaseCommand):
         opt_force = options.get('force')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
+
+        # FIXME: separate params per factory
         extra_params = self._handle_extra_params(ship_target)
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
@@ -109,24 +110,26 @@ class Command(BaseCommand):
         extra_params['month_until'] = next_month
         extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR') or None
 
-        extractor = ExtractorFactory(ship_target, extra_params).create()
-
         # Determine destination path for generated report and skip processing if it exists
+        report_type = extra_params['report_type']
+        ship_path = extra_params['ship_path']
         if opt_since is not None:
-            now = datetime.datetime.now().replace(second=0, microsecond=0, tzinfo=timezone.utc)
-            extra_params['since_date'] = opt_since.date()
-            extra_params['until_date'] = opt_until.date() if opt_until else now.date()
+            since_date = opt_since.date()
+            until_date = opt_until.date() if opt_until else datetime.date.today()
 
-            extra_params['report_period'] = f'{extra_params["since_date"]}, {extra_params["until_date"]}'
+            extra_params['since_date'] = since_date
+            extra_params['until_date'] = until_date
+
+            extra_params['report_period'] = f'{since_date}, {until_date}'
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
-                get_report_path(extra_params['ship_path'], extra_params['until_date']),
-                f'{extra_params["report_type"]}-{extra_params["since_date"]}--{extra_params["until_date"]}.xlsx',
+                get_report_path(ship_path, until_date),
+                f'{report_type}-{since_date}--{until_date}.xlsx',
             )
         else:
             extra_params['report_period'] = opt_month
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
-                get_report_path(extra_params['ship_path'], month),
-                f'{extra_params["report_type"]}-{opt_month}.xlsx',
+                get_report_path(ship_path, month),
+                f'{report_type}-{opt_month}.xlsx',
             )
 
         report_saver_engine = ReportSaverFactory(ship_target, extra_params=extra_params).create()
@@ -140,6 +143,9 @@ class Command(BaseCommand):
             )
             return
 
+        extractor = ExtractorFactory(ship_target, extra_params).create()
+
+        # FIXME move from month to extra_params
         dataframes = DataframeFactory(extractor=extractor, month=month, extra_params=extra_params).create()
 
         dedup = DedupFactory(dataframes=dataframes, extra_params=extra_params).create()
@@ -147,7 +153,7 @@ class Command(BaseCommand):
 
         if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes.items()):
             if opt_since is not None:
-                logger.info(f'No billing data for input date range {extra_params["since_date"]}--{extra_params["until_date"]}')
+                logger.info(f'No billing data for input date range {since_date}--{until_date}')
             else:
                 logger.info(f'No billing data for month {opt_month}')
             return
