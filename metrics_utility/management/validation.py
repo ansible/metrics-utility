@@ -528,7 +528,7 @@ def handle_month(month):
     """Process month argument"""
     if month is not None:
         try:
-            date = datetime.datetime.strptime(f'{month}', '%Y-%m')
+            date = datetime.datetime.strptime(month, '%Y-%m')
         except ValueError:
             raise DateFormatError('Invalid --month format. Supported date format: YYYY-MM')
     else:

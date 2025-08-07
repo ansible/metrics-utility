@@ -57,13 +57,13 @@ class ReportCCSPv2(Base):
         default_sku_description = [
             ['SKU', 'SKU Description', '', 'Term', 'Unit of Measure', 'Currency', 'MSRP'],
             [
-                f'{extra_params["report_sku"]}',
-                f'{extra_params["report_sku_description"]}',
+                extra_params['report_sku'],
+                extra_params['report_sku_description'],
                 '',
                 'MONTH',
                 'MANAGED NODE',
                 'USD',
-                f'{extra_params["price_per_node"]}',
+                str(extra_params['price_per_node']),
             ],
         ]
 
