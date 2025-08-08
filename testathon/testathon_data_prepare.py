@@ -554,8 +554,22 @@ def get_all_hosts(inventory_id):
     return resp.json()['results']
 
 
-def update_host_facts(inventory_id, host_name, facts):
+def search_controller_inventory_id(name):
+    url = f'{API_URL}/inventories?limit=100'
+    resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+    results = resp.json()['results']
+
+    for result in results:
+        if result['name'] == name:
+            print(f'Found inventory {name} with id {result["id"]}')
+            return result['id']
+    return None
+
+
+def update_host_facts(inventory_name, host_name, facts):
     # load all hosts from the inventory and search for host_name, return id
+    inventory_id = search_controller_inventory_id(inventory_name)
+
     hosts = get_all_hosts(inventory_id)
     for host in hosts:
         if host['name'] == host_name:
@@ -657,19 +671,33 @@ def main():
         )
     )
 
+    res.append(
+        create_inventory_and_template(
+            'mockA_dedup_test',
+            6,
+            projectId3,
+            {'variables': 'ansible_connection: local'},
+            org_id3,
+        )
+    )
+
     # Update hosts for dedup
 
     # these two should not join
-    update_host_facts(res[0]['inv_id'], 'mockA_test1_host_1', {'ansible_machine_id': 'machine_id_1'})
-    update_host_facts(res[0]['inv_id'], 'mockA_test1_host_2', {'ansible_machine_id': 'machine_id_1'})
+    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_1', {'ansible_machine_id': 'machine_id_1'})
+    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_2', {'ansible_machine_id': 'machine_id_1'})
 
     # these two should not join
-    update_host_facts(res[1]['inv_id'], 'mockA_test2_host_1', {'ansible_product_serial': 'product_serial_1'})
-    update_host_facts(res[1]['inv_id'], 'mockA_test2_host_2', {'ansible_product_serial': 'product_serial_1'})
+    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_3', {'ansible_product_serial': 'product_serial_1'})
+    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_4', {'ansible_product_serial': 'product_serial_1'})
 
     # these two should join
-    update_host_facts(res[2]['inv_id'], 'mockA_test3_host_1', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
-    update_host_facts(res[2]['inv_id'], 'mockA_test3_host_1', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
+    update_host_facts(
+        'mockA_dedup_test', 'mockA_dedup_test_host_5', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'}
+    )
+    update_host_facts(
+        'mockA_dedup_test', 'mockA_dedup_test_host_6', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'}
+    )
 
     jobs_count = 2
 
