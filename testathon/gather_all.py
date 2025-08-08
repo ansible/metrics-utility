@@ -84,6 +84,7 @@ def get_metrics_utility_config():
     env = {
         'METRICS_UTILITY_SHIP_PATH': path_to_shipped_data,
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
+        'METRICS_UTILITY_OPTIONAL_COLLECTORS': 'main_host,main_jobevent,main_indirectmanagednodeaudit',
     }
 
     return env

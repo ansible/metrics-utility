@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import subprocess
 import time
@@ -546,6 +547,30 @@ def search_controller_organization_id(name):
     return None
 
 
+def get_all_hosts(inventory_id):
+    # https://localhost:8030/api/controller/v2/inventories/487/hosts/
+    url = f'{API_URL}/inventories/{inventory_id}/hosts/'
+    resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+    return resp.json()['results']
+
+
+def update_host_facts(inventory_id, host_name, facts):
+    # load all hosts from the inventory and search for host_name, return id
+    hosts = get_all_hosts(inventory_id)
+    for host in hosts:
+        if host['name'] == host_name:
+            print(f'Found host {host_name} from inventory {inventory_id} with id {host["id"]}')
+            host_id = host['id']
+            break
+
+    # convert facts to jsonb
+    facts_json = json.dumps(facts).replace("'", "''")
+
+    # build SQL with JSONB cast
+    sql = f"UPDATE main_host SET ansible_facts = '{facts_json}'::jsonb WHERE id = {host_id};"
+    run(sql)
+
+
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
@@ -631,6 +656,20 @@ def main():
             org_id3,
         )
     )
+
+    # Update hosts for dedup
+
+    # these two should not join
+    update_host_facts(res[0]['inv_id'], 'mockA_test1_host_1', {'ansible_machine_id': 'machine_id_1'})
+    update_host_facts(res[0]['inv_id'], 'mockA_test1_host_2', {'ansible_machine_id': 'machine_id_1'})
+
+    # these two should not join
+    update_host_facts(res[1]['inv_id'], 'mockA_test2_host_1', {'ansible_product_serial': 'product_serial_1'})
+    update_host_facts(res[1]['inv_id'], 'mockA_test2_host_2', {'ansible_product_serial': 'product_serial_1'})
+
+    # these two should join
+    update_host_facts(res[2]['inv_id'], 'mockA_test3_host_1', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
+    update_host_facts(res[2]['inv_id'], 'mockA_test3_host_1', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
 
     jobs_count = 2
 
