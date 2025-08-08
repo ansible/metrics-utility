@@ -209,7 +209,7 @@ def create_main_project(organization_id):
     # repeatedly get the project and check field status: "successful"
     project_id = resp.json()['id']
     status = None
-    for _ in range(60):  # Try for up to 60 seconds
+    for _ in range(60):
         proj_resp = requests.get(f'{API_URL}/projects/{project_id}/', auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
         if proj_resp.status_code not in (200, 201, 202):
             print(f'Failed to get project status: {proj_resp.status_code} - {proj_resp.text}')
@@ -219,7 +219,7 @@ def create_main_project(organization_id):
         print(f'Project sync status: {status}')
         if status == 'successful':
             break
-        time.sleep(1)
+        time.sleep(5)
     else:
         print(f'Project {project_id} did not reach "successful" status after waiting.')
 
