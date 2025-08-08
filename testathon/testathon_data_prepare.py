@@ -194,7 +194,7 @@ def create_main_project(organization_id):
         'name': 'MockA_Test_Project',
         'organization': organization_id,
         'scm_type': 'git',
-        'scm_url': 'https://github.com/ansible/ansible-tower-samples',
+        'scm_url': 'https://github.com/MilanPospisil/PlaybookExamples',
     }
 
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
@@ -231,7 +231,7 @@ def create_job_template(name, inventory_id, project_id):
     # create with only name, inventory, project, playbook
     url = f'{API_URL}/job_templates/'
 
-    data = {'name': name, 'inventory': inventory_id, 'project': project_id, 'playbook': 'hello_world.yml'}
+    data = {'name': name, 'inventory': inventory_id, 'project': project_id, 'playbook': 'playbook.yml'}
 
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
     if resp.status_code not in (200, 201, 202):
@@ -383,6 +383,8 @@ def delete_main_jobhostsummary():
 def create_inventory_and_template(name, hosts_count, project_id, data={}, organization_id=1):
     variables = data.get('variables', '')
 
+    print(f'Creating inventory {name} for organization {organization_id}')
+
     inv_id = create_inventory(name, organization_id)
     job_template_id = create_job_template(name, inv_id, project_id)
     create_inventory_hosts(inv_id, f'{name}_host', hosts_count, variables, data)
@@ -523,6 +525,10 @@ def create_organization(name):
     else:
         print(f'Failed to create organization {name}: {resp.status_code} - {resp.text}')
 
+    # give gateway some time to create the organization in controller
+    print('Waiting some time for organization to be created in controller')
+    time.sleep(20)
+
     # waiting for controller sync
     id = search_controller_organization_id(name)
     return id
@@ -589,8 +595,8 @@ def main():
     )
 
     # for each project, create 1 inventory with 2 hosts with unique names
-    res.append(create_inventory_and_template('mockA_test7', 2, projectId2, {}, org_id2))
-    res.append(create_inventory_and_template('mockA_test8', 2, projectId3, {}, org_id3))
+    res.append(create_inventory_and_template('mockA_test7', 2, projectId2, {'host_names': ['mockA_test4_host_1', 'mockA_test4_host_2']}, org_id2))
+    res.append(create_inventory_and_template('mockA_test8', 2, projectId3, {'host_names': ['mockA_test5_host_1', 'mockA_test5_host_2']}, org_id3))
 
     jobs_count = 2
 
