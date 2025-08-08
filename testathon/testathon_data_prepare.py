@@ -12,6 +12,11 @@ from helper_ocp_prepare import create_oc_environs
 
 # get api url from env, if not provided, use default
 API_URL = os.getenv('API_URL', 'https://localhost:8030/api/controller/v2')
+
+if not API_URL.endswith('/api/controller/v2'):
+    API_URL += '/api/controller/v2'
+
+API_GATEWAY_URL = API_URL.replace('/controller/v2', '/gateway/v1')
 USERNAME = os.getenv('USERNAME', 'admin')
 PASSWORD = os.getenv('PASSWORD', 'admin')
 
@@ -29,6 +34,7 @@ print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
 print(f'ENVIRONMENT: {ENVIRONMENT}')
 print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
+print(f'API_GATEWAY_URL: {API_GATEWAY_URL}')
 
 if os.getenv('POD_NAME') and os.getenv('NAMESPACE'):
     print(f'POD_NAME: {os.getenv("POD_NAME")}')
@@ -293,9 +299,9 @@ def delete_inventories():
         delete_inventory(inv_id)
 
 
-def create_inventory(name):
+def create_inventory(name, organization_id=1):
     url = f'{API_URL}/inventories/'
-    data = {'name': name, 'organization': 1, 'prevent_instance_group_fallback': False, 'variables': ''}
+    data = {'name': name, 'organization': organization_id, 'prevent_instance_group_fallback': False, 'variables': ''}
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
     if resp.status_code in (200, 201, 202):
         print(f'Created inventory {name}: {resp.status_code}')
