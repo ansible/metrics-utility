@@ -167,10 +167,10 @@ def delete_job_template(id):
             break
 
 
-def delete_main_project():
+def delete_projects():
     # delete mock project
 
-    url = f'{API_URL}/projects/?name=MockA_Test_Project'
+    url = f'{API_URL}/projects/'
     resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
     data = resp.json()
     if data['count'] == 0:
@@ -187,15 +187,16 @@ def delete_main_project():
             print(f'Failed to delete project {project["name"]} (id={project_id}): {del_resp.status_code} - {del_resp.text}')
 
 
-def create_main_project():
+def create_main_project(organization_id):
     # https://localhost:8030/api/controller/v2/projects/
     url = f'{API_URL}/projects/'
     data = {
         'name': 'MockA_Test_Project',
-        'organization': 1,
+        'organization': organization_id,
         'scm_type': 'git',
         'scm_url': 'https://github.com/ansible/ansible-tower-samples',
     }
+
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
 
     if resp.status_code not in (200, 201, 202):
@@ -379,10 +380,10 @@ def delete_main_jobhostsummary():
 # make data optional, if not provided, use default values
 
 
-def create_inventory_and_template(name, hosts_count, project_id, data={}):
+def create_inventory_and_template(name, hosts_count, project_id, data={}, organization_id=1):
     variables = data.get('variables', '')
 
-    inv_id = create_inventory(name)
+    inv_id = create_inventory(name, organization_id)
     job_template_id = create_job_template(name, inv_id, project_id)
     create_inventory_hosts(inv_id, f'{name}_host', hosts_count, variables, data)
 
@@ -457,6 +458,88 @@ def oc_login():
     subprocess.run(OC_LOGIN_COMMAND, shell=True)
 
 
+def get_all_organizations():
+    """
+    Retrieve all organizations via paginated API.
+    Returns a list of organization objects.
+    """
+    organizations = []
+    url = f'{API_GATEWAY_URL}/organizations/'
+    params = {'order_by': 'name', 'page': 1, 'page_size': PAGE_SIZE}
+
+    while url:
+        response = requests.get(url, auth=(USERNAME, PASSWORD), params=params, verify=VERIFY_SSL)
+        response.raise_for_status()
+        data = response.json()
+
+        # DRF-style pagination: 'results' key
+        results = data.get('results', data)
+        organizations.extend(results)
+
+        # Next page URL (if any)
+        url = data.get('next')
+        params = {}  # Only send params on first request
+
+    return organizations
+
+
+def delete_organization(org_id):
+    """
+    Delete a single organization by ID.
+    """
+    url = f'{API_GATEWAY_URL}/organizations/{org_id}/'
+    resp = requests.delete(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+    if resp.status_code in (200, 202, 204):
+        print(f'Deleted organization {org_id}: {resp.status_code}')
+    else:
+        print(f'Failed to delete organization {org_id}: {resp.status_code} - {resp.text}')
+
+
+def delete_organizations():
+    """
+    Get all organizations and delete each one that is not named 'Default'.
+    """
+    all_orgs = get_all_organizations()
+    print(f'Found {len(all_orgs)} organizations.')
+
+    # Delete each organization except Default
+    for org in all_orgs:
+        if org.get('name') != 'Default':
+            org_id = org.get('id') if isinstance(org, dict) else org
+            delete_organization(org_id)
+        else:
+            print(f'Skipping deletion of Default organization (id={org.get("id")})')
+
+
+def create_organization(name):
+    """
+    Create a new organization.
+    """
+    url = f'{API_GATEWAY_URL}/organizations/'
+    data = {'name': name}
+    resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
+    if resp.status_code in (200, 201, 202):
+        print(f'Created organization {name}')
+    else:
+        print(f'Failed to create organization {name}: {resp.status_code} - {resp.text}')
+
+    # waiting for controller sync
+    id = search_controller_organization_id(name)
+    return id
+
+
+def search_controller_organization_id(name):
+    url = f'{API_URL}/organizations?limit=100'
+    resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+    results = resp.json()['results']
+
+    for result in results:
+        if result['name'] == name:
+            print(f'Found organization {name} with id {result["id"]}')
+            return result['id']
+    return None
+
+
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
@@ -465,29 +548,49 @@ def main():
 
     list_main_jobhostsummary()
 
-    delete_main_project()
-
+    delete_projects()
     delete_job_templates()
     delete_inventories()
     delete_main_jobhostsummary()
+    delete_organizations()
+
     print('remaining jobs')
     print(list_main_jobhostsummary())
 
     print('\n\n')
+
     res = []
 
-    projectId = create_main_project()
+    default_org_id = 1
+    projectId = create_main_project(default_org_id)
 
-    res.append(create_inventory_and_template('mockA_test1', 2, projectId, {'variables': 'ansible_connection: local'}))
-    res.append(create_inventory_and_template('mockA_test2', 3, projectId, {'variables': 'ansible_connection: local'}))
+    # create 2 new organizations
+    org_id2 = create_organization('mockA_test_org2')
+    org_id3 = create_organization('mockA_test_org3')
+
+    projectId2 = create_main_project(org_id2)
+    projectId3 = create_main_project(org_id3)
+
+    res.append(create_inventory_and_template('mockA_test1', 2, projectId, {'variables': 'ansible_connection: local'}, default_org_id))
+    res.append(create_inventory_and_template('mockA_test2', 3, projectId, {'variables': 'ansible_connection: local'}, default_org_id))
 
     # unreachable host
-    res.append(create_inventory_and_template('mockA_test3', 1, projectId))
+    res.append(create_inventory_and_template('mockA_test3', 1, projectId, {}, default_org_id))
 
     # some shared host names
-    res.append(create_inventory_and_template('mockA_test4', 2, projectId, {'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']}))
-    res.append(create_inventory_and_template('mockA_test5', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']}))
-    res.append(create_inventory_and_template('mockA_test6', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']}))
+    res.append(
+        create_inventory_and_template('mockA_test4', 2, projectId, {'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']}, default_org_id)
+    )
+    res.append(
+        create_inventory_and_template('mockA_test5', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']}, default_org_id)
+    )
+    res.append(
+        create_inventory_and_template('mockA_test6', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']}, default_org_id)
+    )
+
+    # for each project, create 1 inventory with 2 hosts with unique names
+    res.append(create_inventory_and_template('mockA_test7', 2, projectId2, {}, org_id2))
+    res.append(create_inventory_and_template('mockA_test8', 2, projectId3, {}, org_id3))
 
     jobs_count = 2
 
