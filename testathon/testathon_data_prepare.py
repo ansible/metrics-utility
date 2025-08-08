@@ -585,18 +585,52 @@ def main():
 
     # some shared host names
     res.append(
-        create_inventory_and_template('mockA_test4', 2, projectId, {'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']}, default_org_id)
+        create_inventory_and_template(
+            'mockA_test4',
+            2,
+            projectId,
+            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']},
+            default_org_id,
+        )
     )
     res.append(
-        create_inventory_and_template('mockA_test5', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']}, default_org_id)
+        create_inventory_and_template(
+            'mockA_test5',
+            2,
+            projectId,
+            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']},
+            default_org_id,
+        )
     )
     res.append(
-        create_inventory_and_template('mockA_test6', 2, projectId, {'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']}, default_org_id)
+        create_inventory_and_template(
+            'mockA_test6',
+            2,
+            projectId,
+            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']},
+            default_org_id,
+        )
     )
 
     # for each project, create 1 inventory with 2 hosts with unique names
-    res.append(create_inventory_and_template('mockA_test7', 2, projectId2, {'host_names': ['mockA_test4_host_1', 'mockA_test4_host_2']}, org_id2))
-    res.append(create_inventory_and_template('mockA_test8', 2, projectId3, {'host_names': ['mockA_test5_host_1', 'mockA_test5_host_2']}, org_id3))
+    res.append(
+        create_inventory_and_template(
+            'mockA_test7',
+            2,
+            projectId2,
+            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test4_host_1', 'mockA_test4_host_2']},
+            org_id2,
+        )
+    )
+    res.append(
+        create_inventory_and_template(
+            'mockA_test8',
+            2,
+            projectId3,
+            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test5_host_1', 'mockA_test5_host_2']},
+            org_id3,
+        )
+    )
 
     jobs_count = 2
 
