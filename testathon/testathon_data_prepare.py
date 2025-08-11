@@ -313,18 +313,6 @@ def create_inventory(name, organization_id=1):
     return resp.json()['id']
 
 
-def create_host(inventory_id, name, variables):
-    url = f'{API_URL}/inventories/{inventory_id}/hosts/'
-    data = {'name': name, 'inventory': inventory_id, 'variables': variables}
-    resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
-    if resp.status_code in (200, 201, 202):
-        print(f'Created host {name}: {resp.status_code}')
-    else:
-        print(f'Failed to create host {name}: {resp.status_code} - {resp.text}')
-
-    return resp.json()['id']
-
-
 def create_inventory_hosts(inv_id, prefix, count, variables, data):
     if not data:
         data = {}
@@ -583,6 +571,48 @@ def update_host_facts(inventory_name, host_name, facts):
     # build SQL with JSONB cast
     sql = f"UPDATE main_host SET ansible_facts = '{facts_json}'::jsonb WHERE id = {host_id};"
     run(sql)
+
+
+def create_host(inventory_id, host_name, variables='', facts=None):
+    """
+    Append a single host to an existing inventory with specified variables and facts.
+
+    Args:
+        inventory_id (int): The ID of the inventory to add the host to
+        host_name (str): The name of the host to create
+        variables (str): Ansible variables for the host (default: empty string)
+        facts (dict): Ansible facts to set for the host (default: None)
+
+    Returns:
+        int: The ID of the created host
+    """
+
+    url = f'{API_URL}/inventories/{inventory_id}/hosts/'
+    data = {'name': host_name, 'inventory': inventory_id, 'variables': variables}
+    resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
+    if resp.status_code in (200, 201, 202):
+        print(f'Created host {host_name}: {resp.status_code}')
+    else:
+        print(f'Failed to create host {host_name}: {resp.status_code} - {resp.text}')
+
+    return resp.json()['id']
+
+    # Create the host first
+    print(f'Creating host {host_name} in inventory {inventory_id}')
+    host_id = create_host(inventory_id, host_name, variables)
+
+    # Update facts if provided
+    if facts:
+        print(f'Updating facts for host {host_name} (id: {host_id})')
+        # convert facts to jsonb
+        facts_json = json.dumps(facts).replace("'", "''")
+
+        # build SQL with JSONB cast
+        sql = f"UPDATE main_host SET ansible_facts = '{facts_json}'::jsonb WHERE id = {host_id};"
+        run(sql)
+        print(f'Updated facts for host {host_name}')
+
+    return host_id
 
 
 def main():
