@@ -422,20 +422,30 @@ def set_different_modified_dates(dates):
     # sort job_ids
     job_ids.sort()
 
+    print('job_ids after set')
+    print(job_ids)
+
     job_id_to_index = {}
     for i, job_id in enumerate(job_ids):
         job_id_to_index[job_id] = i
+
+    print('job_id_to_index')
+    print(job_id_to_index)
+
+    print(dates)
+    print(dates)
 
     # do bulk update, concatenate all sql_update into one string
     sql_update = ''
     for row in data:
         job_id = int(row['job_id'])
-        modified_date = dates[job_id_to_index[job_id]]
+        index = job_id_to_index[job_id]
+        modified_date = dates[index]
         sql_update += f"""
-        UPDATE main_jobhostsummary SET modified = '{modified_date}' WHERE id = {int(row['id'])};
+        UPDATE main_jobhostsummary SET modified = '{modified_date}' WHERE job_id = {int(row['job_id'])};
         """
         sql_update += f"""
-        UPDATE main_jobhostsummary SET created = '{modified_date}' WHERE id = {int(row['id'])};
+        UPDATE main_jobhostsummary SET created = '{modified_date}' WHERE job_id = {int(row['job_id'])};
         """
     print(sql_update)
     run(sql_update)
@@ -704,7 +714,7 @@ def main():
     # Collect all inventories for later processing
     res = [inv1, inv2, inv3, inv4, inv5]
 
-    jobs_count = 2
+    jobs_count = 4
 
     hosts_count = []
     for r in res:
@@ -729,14 +739,16 @@ def main():
     dates = []
     basic_date = '2022-01-03 01:00:00'
 
-    for i in range(0, int(total_job_hosts_summary_count / 2)):
+    jobs_and_inv_count = jobs_count * len(res)
+
+    for i in range(0, int(jobs_and_inv_count / 2)):
         dates.append(basic_date)
         basic_date = (datetime.datetime.strptime(basic_date, '%Y-%m-%d %H:%M:%S') + datetime.timedelta(days=13)).strftime('%Y-%m-%d %H:%M:%S')
 
     basic_date = '2024-01-05 01:00:00'
 
     # make division integer
-    for i in range(0, int(total_job_hosts_summary_count / 2) + 1):
+    for i in range(0, int(jobs_and_inv_count / 2) + 1):
         dates.append(basic_date)
         basic_date = (datetime.datetime.strptime(basic_date, '%Y-%m-%d %H:%M:%S') + datetime.timedelta(days=13)).strftime('%Y-%m-%d %H:%M:%S')
 
