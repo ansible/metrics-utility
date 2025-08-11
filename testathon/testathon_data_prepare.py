@@ -643,6 +643,33 @@ def create_host(inventory_obj, host_name, variables='', facts=None):
     return host_id
 
 
+"""
+awx=> select * from main_indirectmanagednodeaudit;
+ id | created | name | canonical_facts | facts | events | count | host_id | inventory_id | job_id | organization_id
+
+ events is jsonb array of events
+"""
+
+
+def create_indirect_host(host_name, inventory_id, job_id, organization_id, facts=None, canonical_facts=None):
+    if not facts:
+        facts = {}
+
+    sql = f"""
+    INSERT INTO main_indirectmanagednodeaudit (name, created, inventory_id, job_id, organization_id, facts, canonical_facts, events, count)
+    VALUES ('{host_name}', now(), {inventory_id}, {job_id}, {organization_id}, '{json.dumps(facts)}', '{json.dumps(canonical_facts)}', '[]', 0);
+    """
+    run(sql)
+
+
+def list_indirect_hosts():
+    sql = """
+    SELECT * FROM main_indirectmanagednodeaudit;
+    """
+    res = run(sql)
+    print(res)
+
+
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
@@ -722,9 +749,15 @@ def main():
 
     print(hosts_count)
 
+    first_job_id = None
+    first_inventory_id = None
     for r in res:
         for i in range(jobs_count):
-            launch_job_template(r['job_template_id'])
+            id = launch_job_template(r['job_template_id'])
+            if first_job_id is None:
+                first_job_id = id
+            if first_inventory_id is None:
+                first_inventory_id = r['inv_id']
 
     print('Waiting for job completion')
 
@@ -754,6 +787,24 @@ def main():
 
     set_different_modified_dates(dates)
     list_main_jobhostsummary()
+
+    create_indirect_host(
+        'mockA_indirect1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'},
+    )
+    create_indirect_host('mockA_indirect2', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect3', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect4', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect5', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect6', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect7', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect8', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('mockA_indirect9', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host('host1', first_inventory_id, first_job_id, default_org_id)
+    list_indirect_hosts()
 
 
 if __name__ == '__main__':
