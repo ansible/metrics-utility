@@ -365,6 +365,7 @@ def delete_main_jobhostsummary():
     print('Deleting main_jobhostsummary')
     run(sql)
 
+
 def create_inventory_and_template(name, project_id, organization_id=1):
     """
     Create inventory and job template without creating any hosts.
@@ -569,12 +570,26 @@ def update_host_facts(inventory_name, host_name, facts):
     run(sql)
 
 
-def create_host(inventory_id, host_name, variables='', facts=None):
+def delete_all_hosts():
+    # using API
+    url = f'{API_URL}/hosts/?limit=100'
+    resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+    hosts = resp.json()['results']
+    print(f'Found {len(hosts)} hosts')
+    for host in hosts:
+        host_id = host['id']
+        url = f'{API_URL}/hosts/{host_id}/'
+        resp = requests.delete(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+        print(f'Deleted host {host_id}: {resp.status_code}')
+
+
+def create_host(inventory_obj, host_name, variables='', facts=None):
     """
     Append a single host to an existing inventory with specified variables and facts.
+    Automatically tracks host count in the inventory object.
 
     Args:
-        inventory_id (int): The ID of the inventory to add the host to
+        inventory_obj (dict): Inventory object with structure {'inv_id': int, 'job_template_id': int, 'name': str, 'hosts_count': int}
         host_name (str): The name of the host to create
         variables (str): Ansible variables for the host (default: empty string)
         facts (dict): Ansible facts to set for the host (default: None)
@@ -582,8 +597,10 @@ def create_host(inventory_id, host_name, variables='', facts=None):
     Returns:
         int: The ID of the created host
     """
+    inventory_id = inventory_obj['inv_id']
+
     # Create the host first
-    print(f'Creating host {host_name} in inventory {inventory_id}')
+    print(f'Creating host {host_name} in inventory {inventory_id} ({inventory_obj["name"]})')
     url = f'{API_URL}/inventories/{inventory_id}/hosts/'
     data = {'name': host_name, 'inventory': inventory_id, 'variables': variables}
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
@@ -605,6 +622,14 @@ def create_host(inventory_id, host_name, variables='', facts=None):
         run(sql)
         print(f'Updated facts for host {host_name}')
 
+    # Update host count in inventory object
+    if 'hosts_count' not in inventory_obj:
+        inventory_obj['hosts_count'] = 1
+    else:
+        inventory_obj['hosts_count'] += 1
+
+    print(f'Inventory {inventory_obj["name"]} now has {inventory_obj["hosts_count"]} hosts')
+
     return host_id
 
 
@@ -616,6 +641,7 @@ def main():
 
     list_main_jobhostsummary()
 
+    delete_all_hosts()
     delete_projects()
     delete_job_templates()
     delete_inventories()
@@ -644,85 +670,39 @@ def main():
     inv1 = create_inventory_and_template('mockA_test1', projectId, default_org_id)
     inv2 = create_inventory_and_template('mockA_test2', projectId, default_org_id)
     inv3 = create_inventory_and_template('mockA_test3', projectId, default_org_id)
-    inv4 = create_inventory_and_template('mockA_test4', projectId, default_org_id)
-    inv5 = create_inventory_and_template('mockA_test5', projectId, default_org_id)
-    inv6 = create_inventory_and_template('mockA_test6', projectId, default_org_id)
-    inv7 = create_inventory_and_template('mockA_test7', projectId2, org_id2)
-    inv8 = create_inventory_and_template('mockA_test8', projectId3, org_id3)
-    inv_dedup = create_inventory_and_template('mockA_dedup_test', projectId3, org_id3)
+    inv4 = create_inventory_and_template('mockA_test4', projectId2, org_id2)
+    inv5 = create_inventory_and_template('mockA_test5', projectId3, org_id3)
 
     # Now create hosts directly using create_host function
     print('Creating hosts...')
 
-    # mockA_test1: 2 hosts with ansible_connection: local
-    create_host(inv1['inv_id'], 'mockA_test1_host_1', 'ansible_connection: local')
-    create_host(inv1['inv_id'], 'mockA_test1_host_2', 'ansible_connection: local')
-    inv1['hosts_count'] = 2
+    create_host(inv1, 'host1', 'ansible_connection: local')
+    create_host(inv1, 'host2_host1', 'ansible_connection: local\nansible_host: host1')
 
-    # mockA_test2: 3 hosts with ansible_connection: local
-    create_host(inv2['inv_id'], 'mockA_test2_host_1', 'ansible_connection: local')
-    create_host(inv2['inv_id'], 'mockA_test2_host_2', 'ansible_connection: local')
-    create_host(inv2['inv_id'], 'mockA_test2_host_3', 'ansible_connection: local')
-    inv2['hosts_count'] = 3
+    create_host(inv2, 'host1', 'ansible_connection: local')
 
-    # mockA_test3: 1 unreachable host (no variables)
-    create_host(inv3['inv_id'], 'mockA_test3_host_1', '')
-    inv3['hosts_count'] = 1
+    # unreachable host
+    create_host(inv3, 'host3', '')
+    create_host(inv3, 'host4', 'ansible_connection: local')
 
-    # mockA_test4: 2 shared host names
-    create_host(inv4['inv_id'], 'mockA_test1_host_1', 'ansible_connection: local')
-    create_host(inv4['inv_id'], 'mockA_test2_host_1', 'ansible_connection: local')
-    inv4['hosts_count'] = 2
+    # should not join - different org
+    create_host(inv4, 'host1', 'ansible_connection: local')
 
-    # mockA_test5: 2 shared host names
-    create_host(inv5['inv_id'], 'mockA_test_localhost', 'ansible_connection: local')
-    create_host(inv5['inv_id'], 'mockA_test2_host_1', 'ansible_connection: local')
-    inv5['hosts_count'] = 2
+    # test dedup, hosts should not join
+    create_host(inv5, 'host5', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1'})
+    create_host(inv5, 'host6', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1'})
 
-    # mockA_test6: 2 shared host names
-    create_host(inv6['inv_id'], 'mockA_test_localhost', 'ansible_connection: local')
-    create_host(inv6['inv_id'], 'mockA_test3_host_1', 'ansible_connection: local')
-    inv6['hosts_count'] = 2
-
-    # mockA_test7: 2 hosts with unique names (org2)
-    create_host(inv7['inv_id'], 'mockA_test4_host_1', 'ansible_connection: local')
-    create_host(inv7['inv_id'], 'mockA_test4_host_2', 'ansible_connection: local')
-    inv7['hosts_count'] = 2
-
-    # mockA_test8: 2 hosts with unique names (org3)
-    create_host(inv8['inv_id'], 'mockA_test5_host_1', 'ansible_connection: local')
-    create_host(inv8['inv_id'], 'mockA_test5_host_2', 'ansible_connection: local')
-    inv8['hosts_count'] = 2
-
-    # mockA_dedup_test: 6 hosts for dedup testing
-    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_1', 'ansible_connection: local')
-    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_2', 'ansible_connection: local')
-    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_3', 'ansible_connection: local')
-    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_4', 'ansible_connection: local')
-    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_5', 'ansible_connection: local')
-    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_6', 'ansible_connection: local')
-    inv_dedup['hosts_count'] = 6
-
-    # Collect all inventories for later processing
-    res = [inv1, inv2, inv3, inv4, inv5, inv6, inv7, inv8, inv_dedup]
-
-    # Update hosts for dedup testing
-
-    # these two should not join
-    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_1', {'ansible_machine_id': 'machine_id_1'})
-    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_2', {'ansible_machine_id': 'machine_id_1'})
-
-    # these two should not join
-    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_3', {'ansible_product_serial': 'product_serial_1'})
-    update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_4', {'ansible_product_serial': 'product_serial_1'})
+    create_host(inv5, 'host7', 'ansible_connection: local', {'ansible_product_serial': 'product_serial_1'})
+    create_host(inv5, 'host8', 'ansible_connection: local', {'ansible_product_serial': 'product_serial_1'})
 
     # these two should join
-    update_host_facts(
-        'mockA_dedup_test', 'mockA_dedup_test_host_5', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'}
-    )
-    update_host_facts(
-        'mockA_dedup_test', 'mockA_dedup_test_host_6', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'}
-    )
+    create_host(inv5, 'host9', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
+    create_host(inv5, 'host10', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
+
+    create_host(inv4, 'host11', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
+
+    # Collect all inventories for later processing
+    res = [inv1, inv2, inv3, inv4, inv5]
 
     jobs_count = 2
 
