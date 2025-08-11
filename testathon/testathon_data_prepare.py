@@ -365,21 +365,17 @@ def delete_main_jobhostsummary():
     print('Deleting main_jobhostsummary')
     run(sql)
 
-
-# make data optional, if not provided, use default values
-
-
-def create_inventory_and_template(name, hosts_count, project_id, data={}, organization_id=1):
-    variables = data.get('variables', '')
-
-    print(f'Creating inventory {name} for organization {organization_id}')
+def create_inventory_and_template(name, project_id, organization_id=1):
+    """
+    Create inventory and job template without creating any hosts.
+    Hosts will be added separately using create_host function.
+    """
+    print(f'Creating inventory {name} for organization {organization_id} (no hosts)')
 
     inv_id = create_inventory(name, organization_id)
     job_template_id = create_job_template(name, inv_id, project_id)
-    create_inventory_hosts(inv_id, f'{name}_host', hosts_count, variables, data)
 
-    # return {}
-    return {'inv_id': inv_id, 'job_template_id': job_template_id, 'hosts_count': hosts_count}
+    return {'inv_id': inv_id, 'job_template_id': job_template_id, 'name': name}
 
 
 def sql_result_to_list(res):
@@ -586,7 +582,8 @@ def create_host(inventory_id, host_name, variables='', facts=None):
     Returns:
         int: The ID of the created host
     """
-
+    # Create the host first
+    print(f'Creating host {host_name} in inventory {inventory_id}')
     url = f'{API_URL}/inventories/{inventory_id}/hosts/'
     data = {'name': host_name, 'inventory': inventory_id, 'variables': variables}
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
@@ -595,11 +592,7 @@ def create_host(inventory_id, host_name, variables='', facts=None):
     else:
         print(f'Failed to create host {host_name}: {resp.status_code} - {resp.text}')
 
-    return resp.json()['id']
-
-    # Create the host first
-    print(f'Creating host {host_name} in inventory {inventory_id}')
-    host_id = create_host(inventory_id, host_name, variables)
+    host_id = resp.json()['id']
 
     # Update facts if provided
     if facts:
@@ -646,72 +639,74 @@ def main():
     projectId2 = create_main_project(org_id2)
     projectId3 = create_main_project(org_id3)
 
-    res.append(create_inventory_and_template('mockA_test1', 2, projectId, {'variables': 'ansible_connection: local'}, default_org_id))
-    res.append(create_inventory_and_template('mockA_test2', 3, projectId, {'variables': 'ansible_connection: local'}, default_org_id))
+    # Create inventories and templates WITHOUT hosts
+    print('Creating inventories and templates...')
+    inv1 = create_inventory_and_template('mockA_test1', projectId, default_org_id)
+    inv2 = create_inventory_and_template('mockA_test2', projectId, default_org_id)
+    inv3 = create_inventory_and_template('mockA_test3', projectId, default_org_id)
+    inv4 = create_inventory_and_template('mockA_test4', projectId, default_org_id)
+    inv5 = create_inventory_and_template('mockA_test5', projectId, default_org_id)
+    inv6 = create_inventory_and_template('mockA_test6', projectId, default_org_id)
+    inv7 = create_inventory_and_template('mockA_test7', projectId2, org_id2)
+    inv8 = create_inventory_and_template('mockA_test8', projectId3, org_id3)
+    inv_dedup = create_inventory_and_template('mockA_dedup_test', projectId3, org_id3)
 
-    # unreachable host
-    res.append(create_inventory_and_template('mockA_test3', 1, projectId, {}, default_org_id))
+    # Now create hosts directly using create_host function
+    print('Creating hosts...')
 
-    # some shared host names
-    res.append(
-        create_inventory_and_template(
-            'mockA_test4',
-            2,
-            projectId,
-            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test1_host_1', 'mockA_test2_host_1']},
-            default_org_id,
-        )
-    )
-    res.append(
-        create_inventory_and_template(
-            'mockA_test5',
-            2,
-            projectId,
-            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test_localhost', 'mockA_test2_host_1']},
-            default_org_id,
-        )
-    )
-    res.append(
-        create_inventory_and_template(
-            'mockA_test6',
-            2,
-            projectId,
-            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test_localhost', 'mockA_test3_host_1']},
-            default_org_id,
-        )
-    )
+    # mockA_test1: 2 hosts with ansible_connection: local
+    create_host(inv1['inv_id'], 'mockA_test1_host_1', 'ansible_connection: local')
+    create_host(inv1['inv_id'], 'mockA_test1_host_2', 'ansible_connection: local')
+    inv1['hosts_count'] = 2
 
-    # for each project, create 1 inventory with 2 hosts with unique names
-    res.append(
-        create_inventory_and_template(
-            'mockA_test7',
-            2,
-            projectId2,
-            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test4_host_1', 'mockA_test4_host_2']},
-            org_id2,
-        )
-    )
-    res.append(
-        create_inventory_and_template(
-            'mockA_test8',
-            2,
-            projectId3,
-            {'variables': 'ansible_connection: local', 'host_names': ['mockA_test5_host_1', 'mockA_test5_host_2']},
-            org_id3,
-        )
-    )
+    # mockA_test2: 3 hosts with ansible_connection: local
+    create_host(inv2['inv_id'], 'mockA_test2_host_1', 'ansible_connection: local')
+    create_host(inv2['inv_id'], 'mockA_test2_host_2', 'ansible_connection: local')
+    create_host(inv2['inv_id'], 'mockA_test2_host_3', 'ansible_connection: local')
+    inv2['hosts_count'] = 3
 
-    res.append(
-        create_inventory_and_template(
-            'mockA_dedup_test',
-            6,
-            projectId3,
-            {'variables': 'ansible_connection: local'},
-            org_id3,
-        )
-    )
+    # mockA_test3: 1 unreachable host (no variables)
+    create_host(inv3['inv_id'], 'mockA_test3_host_1', '')
+    inv3['hosts_count'] = 1
 
-    # Update hosts for dedup
+    # mockA_test4: 2 shared host names
+    create_host(inv4['inv_id'], 'mockA_test1_host_1', 'ansible_connection: local')
+    create_host(inv4['inv_id'], 'mockA_test2_host_1', 'ansible_connection: local')
+    inv4['hosts_count'] = 2
+
+    # mockA_test5: 2 shared host names
+    create_host(inv5['inv_id'], 'mockA_test_localhost', 'ansible_connection: local')
+    create_host(inv5['inv_id'], 'mockA_test2_host_1', 'ansible_connection: local')
+    inv5['hosts_count'] = 2
+
+    # mockA_test6: 2 shared host names
+    create_host(inv6['inv_id'], 'mockA_test_localhost', 'ansible_connection: local')
+    create_host(inv6['inv_id'], 'mockA_test3_host_1', 'ansible_connection: local')
+    inv6['hosts_count'] = 2
+
+    # mockA_test7: 2 hosts with unique names (org2)
+    create_host(inv7['inv_id'], 'mockA_test4_host_1', 'ansible_connection: local')
+    create_host(inv7['inv_id'], 'mockA_test4_host_2', 'ansible_connection: local')
+    inv7['hosts_count'] = 2
+
+    # mockA_test8: 2 hosts with unique names (org3)
+    create_host(inv8['inv_id'], 'mockA_test5_host_1', 'ansible_connection: local')
+    create_host(inv8['inv_id'], 'mockA_test5_host_2', 'ansible_connection: local')
+    inv8['hosts_count'] = 2
+
+    # mockA_dedup_test: 6 hosts for dedup testing
+    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_1', 'ansible_connection: local')
+    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_2', 'ansible_connection: local')
+    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_3', 'ansible_connection: local')
+    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_4', 'ansible_connection: local')
+    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_5', 'ansible_connection: local')
+    create_host(inv_dedup['inv_id'], 'mockA_dedup_test_host_6', 'ansible_connection: local')
+    inv_dedup['hosts_count'] = 6
+
+    # Collect all inventories for later processing
+    res = [inv1, inv2, inv3, inv4, inv5, inv6, inv7, inv8, inv_dedup]
+
+    # Update hosts for dedup testing
 
     # these two should not join
     update_host_facts('mockA_dedup_test', 'mockA_dedup_test_host_1', {'ansible_machine_id': 'machine_id_1'})
