@@ -302,8 +302,9 @@ def delete_inventories():
 
 
 def create_inventory(name, organization_id=1):
-    url = f'{API_URL}/inventories/'
+    # First, check if inventory already exists
     data = {'name': name, 'organization': organization_id, 'prevent_instance_group_fallback': False, 'variables': ''}
+    url = f'{API_URL}/inventories/'
     resp = requests.post(url, auth=(USERNAME, PASSWORD), json=data, verify=VERIFY_SSL)
     if resp.status_code in (200, 201, 202):
         print(f'Created inventory {name}: {resp.status_code}')
@@ -523,7 +524,7 @@ def create_organization(name):
 
     # give gateway some time to create the organization in controller
     print('Waiting some time for organization to be created in controller')
-    time.sleep(20)
+    time.sleep(30)
 
     # waiting for controller sync
     id = search_controller_organization_id(name)
@@ -651,13 +652,21 @@ awx=> select * from main_indirectmanagednodeaudit;
 """
 
 
-def create_indirect_host(host_name, inventory_id, job_id, organization_id, facts=None, canonical_facts=None):
+def create_indirect_host(host_name, inventory_id, job_id, organization_id, facts=None, canonical_facts=None, events=None):
     if not facts:
         facts = {}
+    if not events:
+        events = []
 
     sql = f"""
-    INSERT INTO main_indirectmanagednodeaudit (name, created, inventory_id, job_id, organization_id, facts, canonical_facts, events, count)
-    VALUES ('{host_name}', now(), {inventory_id}, {job_id}, {organization_id}, '{json.dumps(facts)}', '{json.dumps(canonical_facts)}', '[]', 0);
+    INSERT INTO main_indirectmanagednodeaudit (
+        name, created, inventory_id, job_id, organization_id,
+        facts, canonical_facts, events, count
+    )
+    VALUES (
+        '{host_name}', now(), {inventory_id}, {job_id}, {organization_id},
+        '{json.dumps(facts)}', '{json.dumps(canonical_facts)}', '{json.dumps(events)}', 0
+    );
     """
     run(sql)
 
@@ -704,11 +713,13 @@ def main():
 
     # Create inventories and templates WITHOUT hosts
     print('Creating inventories and templates...')
-    inv1 = create_inventory_and_template('mockA_test1', projectId, default_org_id)
-    inv2 = create_inventory_and_template('mockA_test2', projectId, default_org_id)
-    inv3 = create_inventory_and_template('mockA_test3', projectId, default_org_id)
-    inv4 = create_inventory_and_template('mockA_test4', projectId2, org_id2)
-    inv5 = create_inventory_and_template('mockA_test5', projectId3, org_id3)
+
+    inv_prefix = 'mockB'
+    inv1 = create_inventory_and_template(f'{inv_prefix}_test1', projectId, default_org_id)
+    inv2 = create_inventory_and_template(f'{inv_prefix}_test2', projectId, default_org_id)
+    inv3 = create_inventory_and_template(f'{inv_prefix}_test3', projectId, default_org_id)
+    inv4 = create_inventory_and_template(f'{inv_prefix}_test4', projectId2, org_id2)
+    inv5 = create_inventory_and_template(f'{inv_prefix}_test5', projectId3, org_id3)
 
     # Now create hosts directly using create_host function
     print('Creating hosts...')
@@ -793,17 +804,115 @@ def main():
         first_inventory_id,
         first_job_id,
         default_org_id,
-        {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'},
+        {
+            'device_type': 'Containers',
+            'infra_type': 'Public Cloud',
+            'infra_bucket': 'Storage',
+            'ansible_machine_id': 'machine_id_1',
+            'ansible_product_serial': 'product_serial_1',
+        },
+        {
+            'ansible_host': 'mockA_indirect1.example.com',
+            'ansible_distribution': 'RedHat',
+            'ansible_machine_id': 'machine_id_1',
+            'ansible_product_serial': 'product_serial_1',
+        },
+        ['containers.podman.info', 'kubernetes.core.k8s_info'],
     )
-    create_indirect_host('mockA_indirect2', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect3', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect4', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect5', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect6', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect7', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect8', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('mockA_indirect9', first_inventory_id, first_job_id, default_org_id)
-    create_indirect_host('host1', first_inventory_id, first_job_id, default_org_id)
+    create_indirect_host(
+        'mockA_indirect2',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Object Storage', 'infra_type': 'Hybrid Cloud', 'infra_bucket': 'Database'},
+        {
+            'ansible_host': 'mockA_indirect2.example.com',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_ec2_instance_id': 'i-1234567890abcdef2',
+            'ansible_ec2_placement_region': 'us-west-2',
+        },
+        ['amazon.aws.ec2_info', 'amazon.aws.s3_bucket'],
+    )
+    create_indirect_host(
+        'mockA_indirect3',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Container Platform', 'infra_type': 'kubernetes', 'infra_bucket': 'container'},
+        {'ansible_host': 'mockA_indirect3.k8s.local', 'ansible_distribution': 'CentOS', 'ansible_machine_id': 'k8s_node_machine_id_1'},
+        ['kubernetes.core.k8s_info', 'kubernetes.core.k8s_cluster_info'],
+    )
+    create_indirect_host(
+        'mockA_indirect4',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Database', 'infra_type': 'vmware', 'infra_bucket': 'virtual'},
+        {
+            'ansible_host': 'mockA_indirect4.vmware.local',
+            'ansible_distribution': 'Debian',
+            'ansible_product_serial': 'VMware-56 4d 3a 2f 8c 9b 12 34',
+        },
+    )
+    create_indirect_host(
+        'mockA_indirect5',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Network Equipment', 'infra_type': 'On-Premise', 'infra_bucket': 'Network'},
+        {'ansible_host': 'mockA_indirect5.network.local', 'ansible_distribution': 'Cisco', 'ansible_machine_id': 'cisco_device_serial_123'},
+    )
+    create_indirect_host(
+        'mockA_indirect6',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Edge Computing', 'infra_type': 'Edge Cloud', 'infra_bucket': 'Edge'},
+        {'ansible_host': 'mockA_indirect6.edge.local', 'ansible_distribution': 'Alpine', 'ansible_machine_id': 'edge_device_id_456'},
+    )
+    create_indirect_host(
+        'mockA_indirect7',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Virtual Machines', 'infra_type': 'Private Cloud', 'infra_bucket': 'Compute'},
+        {'ansible_host': 'mockA_indirect7.private.cloud', 'ansible_distribution': 'SUSE', 'ansible_product_serial': 'PRIVATE_CLOUD_VM_789'},
+    )
+    create_indirect_host(
+        'mockA_indirect8',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Load Balancer', 'infra_type': 'Public Cloud', 'infra_bucket': 'Network'},
+        {
+            'ansible_host': 'mockA_indirect8.aws.amazon.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_instance_id': 'i-0987654321fedcba0',
+            'ansible_ec2_placement_region': 'eu-west-1',
+        },
+        ['amazon.aws.elb_info', 'amazon.aws.ec2_elb_lb'],
+    )
+    create_indirect_host(
+        'mockA_indirect9',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Monitoring', 'infra_type': 'Hybrid Cloud', 'infra_bucket': 'Observability'},
+        {'ansible_host': 'mockA_indirect9.monitoring.local', 'ansible_distribution': 'RedHat', 'ansible_machine_id': 'monitoring_node_abc123'},
+    )
+    create_indirect_host(
+        'host1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Physical Server', 'infra_type': 'On-Premise', 'infra_bucket': 'Compute'},
+        {
+            'ansible_host': 'host1.company.local',
+            'ansible_distribution': 'RedHat',
+            'ansible_machine_id': 'physical_server_host1',
+            'ansible_product_serial': 'PHYS_SRV_001',
+        },
+    )
     list_indirect_hosts()
 
 
