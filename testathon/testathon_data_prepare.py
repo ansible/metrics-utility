@@ -698,6 +698,12 @@ def list_indirect_hosts():
     res = run(sql)
     print(res)
 
+def delete_indirect_hosts():
+    sql = """
+    DELETE FROM main_indirectmanagednodeaudit;
+    """
+    run(sql)
+
 
 def main():
     if ENVIRONMENT == 'OpenShift':
@@ -713,6 +719,7 @@ def main():
     delete_inventories()
     delete_main_jobhostsummary()
     delete_organizations()
+    delete_indirect_hosts()
 
     print('remaining jobs')
     print(list_main_jobhostsummary())
