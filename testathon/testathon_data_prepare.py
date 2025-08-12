@@ -283,6 +283,8 @@ def delete_inventory(inv_id):
     """
     url = f'{API_URL}/inventories/{inv_id}/'
     resp = requests.delete(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
+    # wait for 10 seconds
+    time.sleep(10)
     if resp.status_code in (200, 202, 204):
         print(f'Deleted inventory {inv_id}: {resp.status_code}')
     else:
@@ -714,7 +716,7 @@ def main():
     # Create inventories and templates WITHOUT hosts
     print('Creating inventories and templates...')
 
-    inv_prefix = 'mockB'
+    inv_prefix = 'mockC'
     inv1 = create_inventory_and_template(f'{inv_prefix}_test1', projectId, default_org_id)
     inv2 = create_inventory_and_template(f'{inv_prefix}_test2', projectId, default_org_id)
     inv3 = create_inventory_and_template(f'{inv_prefix}_test3', projectId, default_org_id)
@@ -912,6 +914,75 @@ def main():
             'ansible_machine_id': 'physical_server_host1',
             'ansible_product_serial': 'PHYS_SRV_001',
         },
+    )
+    create_indirect_host(
+        'mockA_indirect10',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Database', 'infra_type': 'Public Cloud', 'infra_bucket': 'Database'},
+        {
+            'ansible_host': 'mockA_indirect10.rds.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_instance_id': 'i-db123456789abcdef',
+            'ansible_ec2_placement_region': 'us-east-1',
+        },
+        ['amazon.aws.rds_info', 'amazon.aws.rds_instance'],
+    )
+    create_indirect_host(
+        'mockA_indirect11',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Container Platform', 'infra_type': 'Public Cloud', 'infra_bucket': 'container'},
+        {
+            'ansible_host': 'mockA_indirect11.eks.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_cluster_name': 'production-cluster',
+            'ansible_ec2_placement_region': 'us-west-1',
+        },
+        ['kubernetes.core.k8s_info', 'amazon.aws.eks_cluster'],
+    )
+    create_indirect_host(
+        'mockA_indirect12',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Virtual Machines', 'infra_type': 'vmware', 'infra_bucket': 'virtual'},
+        {
+            'ansible_host': 'mockA_indirect12.vcenter.local',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_product_serial': 'VMware-56 4d 3a 2f 8c 9b 56 78',
+            'ansible_machine_id': 'vmware_vm_567890',
+        },
+        ['community.vmware.vmware_vm_info'],
+    )
+    create_indirect_host(
+        'mockA_indirect13',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Object Storage', 'infra_type': 'Public Cloud', 'infra_bucket': 'Storage'},
+        {
+            'ansible_host': 'mockA_indirect13.s3.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_placement_region': 'ap-southeast-1',
+        },
+        ['amazon.aws.s3_bucket', 'amazon.aws.s3_object'],
+    )
+    create_indirect_host(
+        'mockA_indirect14',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Monitoring', 'infra_type': 'On-Premise', 'infra_bucket': 'Observability'},
+        {
+            'ansible_host': 'mockA_indirect14.monitoring.datacenter.local',
+            'ansible_distribution': 'CentOS',
+            'ansible_machine_id': 'monitoring_server_789xyz',
+            'ansible_product_serial': 'MONITOR_SRV_002',
+        },
+        ['ansible.builtin.systemd', 'community.general.grafana_dashboard'],
     )
     list_indirect_hosts()
 
