@@ -18,11 +18,19 @@ from datetime import datetime
 
 def get_environment_config():
     """Get environment configuration from environment variables."""
+    environment = os.getenv('ENVIRONMENT', 'local')
+
+    # Set default ship path based on environment like gather_all.py does
+    if environment == 'local' or environment == 'containerized':
+        default_ship_path = './shipped_data'
+    else:
+        default_ship_path = '/var/tmp/shipped_data'
+
     config = {
-        'ENVIRONMENT': os.getenv('ENVIRONMENT', 'local'),
+        'ENVIRONMENT': environment,
         'SSH_URL': os.getenv('SSH_URL'),
         'SSH_USER': os.getenv('SSH_USER', 'ec2-user'),
-        'SHIP_PATH': os.getenv('METRICS_UTILITY_SHIP_PATH', '/var/tmp/shipped_data'),
+        'SHIP_PATH': os.getenv('METRICS_UTILITY_SHIP_PATH', default_ship_path),
     }
 
     print('Environment Configuration:')
@@ -173,14 +181,20 @@ def generate_report_filename(report_type, since_date, until_date):
     return f'{report_type}-{since_date}--{until_date}.xlsx'
 
 
-def get_report_path(ship_path, until_date):
+def get_report_path(ship_path, until_date, environment='RPM'):
     """Get the expected report path based on ship_path and date."""
     # Parse until_date to get year and month
     until_dt = datetime.strptime(until_date, '%Y-%m-%d')
     year = until_dt.strftime('%Y')
     month = until_dt.strftime('%m')
 
-    return f'{ship_path}/reports/{year}/{month}'
+    # In containerized environments, the path inside container is /var/lib/awx/{ship_path}
+    if environment == 'containerized':
+        base_path = f'/var/lib/awx/{ship_path}'
+    else:
+        base_path = ship_path
+
+    return f'{base_path}/reports/{year}/{month}'
 
 
 def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destination='.'):
@@ -251,7 +265,7 @@ def main():
 
         # Generate expected report path
         report_filename = generate_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)
-        report_dir = get_report_path(ship_path, until_date)
+        report_dir = get_report_path(ship_path, until_date, environment)
         remote_report_path = f'{report_dir}/{report_filename}'
 
         print(f'\nExpected report location: {remote_report_path}')
