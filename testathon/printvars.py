@@ -3,7 +3,7 @@
 import os
 
 
-env_vars = ['API_URL', 'USERNAME', 'PASSWORD', 'SSH_URL', 'SSH_USER', 'ENVIRONMENT', 'POD_NAME', 'NAMESPACE', 'OC_LOGIN_COMMAND']
+env_vars = ['INV_PREFIX', 'API_URL', 'USERNAME', 'PASSWORD', 'SSH_URL', 'SSH_USER', 'ENVIRONMENT', 'POD_NAME', 'NAMESPACE', 'OC_LOGIN_COMMAND']
 
 for var in env_vars:
     value = os.getenv(var)

@@ -1,6 +1,8 @@
 import datetime
 import json
 import os
+import random
+import string
 import subprocess
 import time
 
@@ -27,6 +29,11 @@ SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
+INV_PREFIX = os.getenv('INV_PREFIX', None)
+
+if not INV_PREFIX:
+    # random 3 high letters
+    INV_PREFIX = 'mock' + ''.join(random.choices(string.ascii_uppercase, k=4))
 
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
@@ -34,6 +41,7 @@ print(f'PASSWORD: {PASSWORD}')
 print(f'SSH_URL: {SSH_URL}')
 print(f'SSH_USER: {SSH_USER}')
 print(f'ENVIRONMENT: {ENVIRONMENT}')
+print(f'INV_PREFIX: {INV_PREFIX}')
 print(f'OC_LOGIN_COMMAND: {OC_LOGIN_COMMAND}')
 print(f'API_GATEWAY_URL: {API_GATEWAY_URL}')
 
@@ -258,7 +266,7 @@ def get_all_inventories():
     Returns a list of inventory objects.
     """
     inventories = []
-    url = f'{API_URL}/inventories/?search=mockA_test'
+    url = f'{API_URL}/inventories/'
     params = {'order_by': 'name', 'page': 1, 'page_size': PAGE_SIZE}
 
     while url:
@@ -277,7 +285,7 @@ def get_all_inventories():
     return inventories
 
 
-def delete_inventory(inv_id):
+def delete_inventory(inv_id, name):
     """
     Delete a single inventory by ID.
     """
@@ -286,9 +294,9 @@ def delete_inventory(inv_id):
     # wait for 10 seconds
     time.sleep(10)
     if resp.status_code in (200, 202, 204):
-        print(f'Deleted inventory {inv_id}: {resp.status_code}')
+        print(f'Deleted inventory {inv_id}, {name}: {resp.status_code}')
     else:
-        print(f'Failed to delete inventory {inv_id}: {resp.status_code} - {resp.text}')
+        print(f'Failed to delete inventory {inv_id}, {name}: {resp.status_code} - {resp.text}')
 
 
 def delete_inventories():
@@ -296,11 +304,16 @@ def delete_inventories():
     all_invs = get_all_inventories()
     print(f'Found {len(all_invs)} inventories.')
 
+    # print only the names of the inventories
+    for inv in all_invs:
+        print(inv['name'])
+
     # Delete each inventory
     for inv in all_invs:
         # Inventory object may include 'id' key
         inv_id = inv.get('id') if isinstance(inv, dict) else inv
-        delete_inventory(inv_id)
+        name = inv.get('name') if isinstance(inv, dict) else inv
+        delete_inventory(inv_id, name)
 
 
 def create_inventory(name, organization_id=1):
@@ -716,12 +729,11 @@ def main():
     # Create inventories and templates WITHOUT hosts
     print('Creating inventories and templates...')
 
-    inv_prefix = 'mockC'
-    inv1 = create_inventory_and_template(f'{inv_prefix}_test1', projectId, default_org_id)
-    inv2 = create_inventory_and_template(f'{inv_prefix}_test2', projectId, default_org_id)
-    inv3 = create_inventory_and_template(f'{inv_prefix}_test3', projectId, default_org_id)
-    inv4 = create_inventory_and_template(f'{inv_prefix}_test4', projectId2, org_id2)
-    inv5 = create_inventory_and_template(f'{inv_prefix}_test5', projectId3, org_id3)
+    inv1 = create_inventory_and_template(f'{INV_PREFIX}_test1', projectId, default_org_id)
+    inv2 = create_inventory_and_template(f'{INV_PREFIX}_test2', projectId, default_org_id)
+    inv3 = create_inventory_and_template(f'{INV_PREFIX}_test3', projectId, default_org_id)
+    inv4 = create_inventory_and_template(f'{INV_PREFIX}_test4', projectId2, org_id2)
+    inv5 = create_inventory_and_template(f'{INV_PREFIX}_test5', projectId3, org_id3)
 
     # Now create hosts directly using create_host function
     print('Creating hosts...')
@@ -745,7 +757,7 @@ def main():
     create_host(inv5, 'host7', 'ansible_connection: local', {'ansible_product_serial': 'product_serial_1'})
     create_host(inv5, 'host8', 'ansible_connection: local', {'ansible_product_serial': 'product_serial_1'})
 
-    # these two should join
+    # these should join
     create_host(inv5, 'host9', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
     create_host(inv5, 'host10', 'ansible_connection: local', {'ansible_machine_id': 'machine_id_1', 'ansible_product_serial': 'product_serial_1'})
 
