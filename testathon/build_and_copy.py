@@ -75,7 +75,7 @@ def get_report_environment_variables():
     return env_vars
 
 
-def run_build_report_local(env_vars, ship_path, since_date='2022-01-01', until_date='2026-01-01'):
+def run_build_report_local(env_vars, ship_path, user_args):
     """Run build_report command in local environment."""
     print('Running build_report in local environment...')
 
@@ -88,10 +88,7 @@ def run_build_report_local(env_vars, ship_path, since_date='2022-01-01', until_d
     docker_env += ['-e', f'METRICS_UTILITY_SHIP_PATH={ship_path}']
 
     # Build docker command
-    build_cmd = (
-        f'cd awx-dev/metrics-utility && . /var/lib/awx/venv/awx/bin/activate && '
-        f'python3 ./manage.py build_report --force --since={since_date} --until={until_date}'
-    )
+    build_cmd = f'cd awx-dev/metrics-utility && . /var/lib/awx/venv/awx/bin/activate && python3 ./manage.py build_report {user_args}'
 
     docker_cmd = ['docker', 'exec', *docker_env, 'tools_awx_1', '/bin/sh', '-c', build_cmd]
 
@@ -101,7 +98,7 @@ def run_build_report_local(env_vars, ship_path, since_date='2022-01-01', until_d
     return result
 
 
-def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, since_date='2022-01-01', until_date='2026-01-01'):
+def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, user_args):
     """Run build_report command in RPM environment via SSH."""
     print('Running build_report in RPM environment...')
 
@@ -123,7 +120,8 @@ def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, since_date='202
     else:
         env_list.append(f'METRICS_UTILITY_SHIP_PATH={ship_path}')
 
-    # Build SSH command
+    # Build SSH command - split user_args into individual arguments
+    user_args_list = user_args.split()
     ssh_cmd = [
         'ssh',
         f'{ssh_user}@{ssh_url}',
@@ -133,9 +131,7 @@ def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, since_date='202
         *env_list,
         'metrics-utility',
         'build_report',
-        '--force',
-        f'--since={since_date}',
-        f'--until={until_date}',
+        *user_args_list,
     ]
 
     print(f'Executing: {" ".join(ssh_cmd)}')
@@ -144,7 +140,7 @@ def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, since_date='202
     return result
 
 
-def run_build_report_containerized(env_vars, ship_path, ssh_url, ssh_user, since_date='2022-01-01', until_date='2026-01-01'):
+def run_build_report_containerized(env_vars, ship_path, ssh_url, ssh_user, user_args):
     """Run build_report command in containerized environment via SSH."""
     print('Running build_report in containerized environment...')
 
@@ -164,7 +160,7 @@ def run_build_report_containerized(env_vars, ship_path, ssh_url, ssh_user, since
             env_list.append(f'{k}={v}')
 
     env_vars_str = ' '.join(env_list)
-    container_cmd = f'{env_vars_str} metrics-utility build_report --force --since={since_date} --until={until_date}'
+    container_cmd = f'{env_vars_str} metrics-utility build_report {user_args}'
 
     # Use podman exec to run the command inside automation-controller-web container
     remote_command = f'echo "{container_cmd}" | podman exec -i automation-controller-web /bin/bash'
@@ -256,11 +252,22 @@ def main():
     """Main function to orchestrate the build and copy process."""
     print('=== Build and Copy Report Script ===\n')
 
-    # Parse command line arguments
-    since_date = sys.argv[1] if len(sys.argv) > 1 else '2022-01-01'
-    until_date = sys.argv[2] if len(sys.argv) > 2 else '2026-01-01'
+    # Define default arguments string
+    default_args = '--force --since=2022-01-01 --until=2026-01-01'
 
-    print(f'Date range: {since_date} to {until_date}')
+    # Handle command line arguments
+    if len(sys.argv) == 1:
+        # No arguments provided - use defaults
+        user_args = default_args
+        print('No arguments provided, using default arguments')
+        print(f'Default arguments: {default_args}')
+    else:
+        # Arguments provided - use them as-is
+        user_args = ' '.join(sys.argv[1:])
+        print('Using provided arguments')
+        print(f'User arguments: {user_args}')
+
+    print()
 
     # Get configuration
     config = get_environment_config()
@@ -277,11 +284,11 @@ def main():
 
     try:
         if environment == 'local':
-            result = run_build_report_local(env_vars, ship_path, since_date, until_date)
+            result = run_build_report_local(env_vars, ship_path, user_args)
         elif environment == 'RPM':
-            result = run_build_report_rpm(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], since_date, until_date)
+            result = run_build_report_rpm(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         elif environment == 'containerized':
-            result = run_build_report_containerized(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], since_date, until_date)
+            result = run_build_report_containerized(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         else:
             raise ValueError(f'Unsupported environment: {environment}')
 
@@ -299,21 +306,38 @@ def main():
             print('ERROR: build_report command failed!')
             return 1
 
-        # Generate expected report path
-        report_filename = generate_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)
-        report_dir = get_report_path(ship_path, until_date, environment)
-        remote_report_path = f'{report_dir}/{report_filename}'
+        # Extract dates from user_args for report path generation
+        import re
 
-        print(f'\nExpected report location: {remote_report_path}')
+        since_match = re.search(r'--since=([^\s]+)', user_args)
+        until_match = re.search(r'--until=([^\s]+)', user_args)
+
+        if since_match and until_match:
+            since_date = since_match.group(1)
+            until_date = until_match.group(1)
+
+            # Generate expected report path
+            report_filename = generate_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)
+            report_dir = get_report_path(ship_path, until_date, environment)
+            remote_report_path = f'{report_dir}/{report_filename}'
+
+            print(f'\nExpected report location: {remote_report_path}')
+        else:
+            print(f'\nWarning: Could not extract date range from arguments: {user_args}')
+            print('Report location cannot be determined automatically.')
 
         # Copy report to local machine (only for remote environments)
-        if environment in ['RPM', 'containerized']:
-            copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
-            if copy_result.returncode != 0:
-                print('WARNING: Failed to copy report file')
-                return 1
-        elif environment == 'local':
-            print(f'Local environment: Report should be available at: {remote_report_path}')
+        if since_match and until_match:
+            if environment in ['RPM', 'containerized']:
+                copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
+                if copy_result.returncode != 0:
+                    print('WARNING: Failed to copy report file')
+                    return 1
+            elif environment == 'local':
+                print(f'Local environment: Report should be available at: {remote_report_path}')
+        else:
+            print('Skipping report copy due to inability to determine report location.')
+            print('Please check the build_report output for the actual report location.')
 
         print('\n=== Script completed successfully! ===')
         return 0
