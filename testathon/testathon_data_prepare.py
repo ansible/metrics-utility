@@ -698,6 +698,7 @@ def list_indirect_hosts():
     res = run(sql)
     print(res)
 
+
 def delete_indirect_hosts():
     sql = """
     DELETE FROM main_indirectmanagednodeaudit;
