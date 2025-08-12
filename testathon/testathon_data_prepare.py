@@ -35,6 +35,14 @@ if not INV_PREFIX:
     # random 3 high letters
     INV_PREFIX = 'mock' + ''.join(random.choices(string.ascii_uppercase, k=4))
 
+if SSH_URL and ENVIRONMENT is None:
+    print('ENVIRONMENT are not set, exiting')
+    exit(1)
+
+if OC_LOGIN_COMMAND and ENVIRONMENT is None:
+    print('ENVIRONMENT are not set, exiting')
+    exit(1)
+
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
 print(f'PASSWORD: {PASSWORD}')
