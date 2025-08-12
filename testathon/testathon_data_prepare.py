@@ -996,6 +996,329 @@ def main():
         },
         ['ansible.builtin.systemd', 'community.general.grafana_dashboard'],
     )
+
+    # Additional hosts to create multiple unique nodes in same infrastructure categories
+
+    # More Public Cloud + Storage + Containers hosts (currently 1, adding 2 more = 3 unique)
+    create_indirect_host(
+        'mockA_container_node1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {
+            'device_type': 'Containers',
+            'infra_type': 'Public Cloud',
+            'infra_bucket': 'Storage',
+            'ansible_machine_id': 'container_node_001',
+        },
+        {
+            'ansible_host': 'container-node1.aws.example.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_machine_id': 'container_node_001',
+        },
+        ['containers.podman.info'],
+    )
+    create_indirect_host(
+        'mockA_container_node2',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {
+            'device_type': 'Containers',
+            'infra_type': 'Public Cloud',
+            'infra_bucket': 'Storage',
+            'ansible_machine_id': 'container_node_002',
+        },
+        {
+            'ansible_host': 'container-node2.gcp.example.com',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_machine_id': 'container_node_002',
+        },
+        ['containers.podman.info', 'kubernetes.core.k8s_info'],
+    )
+
+    # More Public Cloud + Database + Database hosts (currently 1, adding 2 more = 3 unique)
+    create_indirect_host(
+        'mockA_database_cluster1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Database', 'infra_type': 'Public Cloud', 'infra_bucket': 'Database'},
+        {
+            'ansible_host': 'db-cluster1.rds.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_instance_id': 'i-dbcluster123456789',
+            'ansible_ec2_placement_region': 'us-west-2',
+        },
+        ['amazon.aws.rds_info', 'amazon.aws.rds_cluster'],
+    )
+    create_indirect_host(
+        'mockA_database_replica1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Database', 'infra_type': 'Public Cloud', 'infra_bucket': 'Database'},
+        {
+            'ansible_host': 'db-replica1.cloudsql.gcp.com',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_ec2_instance_id': 'i-dbreplica987654321',
+            'ansible_ec2_placement_region': 'us-central1',
+        },
+        ['google.cloud.gcp_sql_instance'],
+    )
+
+    # More VMware + virtual + Virtual Machines hosts (currently 1, adding 3 more = 4 unique)
+    create_indirect_host(
+        'mockA_vm_web1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Virtual Machines', 'infra_type': 'vmware', 'infra_bucket': 'virtual'},
+        {
+            'ansible_host': 'vm-web1.vcenter.datacenter.local',
+            'ansible_distribution': 'RedHat',
+            'ansible_product_serial': 'VMware-42 1a 5b 3c 7d 8e 9f 01',
+            'ansible_machine_id': 'vmware_web_vm_001',
+        },
+        ['community.vmware.vmware_vm_info'],
+    )
+    create_indirect_host(
+        'mockA_vm_app1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Virtual Machines', 'infra_type': 'vmware', 'infra_bucket': 'virtual'},
+        {
+            'ansible_host': 'vm-app1.vcenter.datacenter.local',
+            'ansible_distribution': 'CentOS',
+            'ansible_product_serial': 'VMware-99 8a 7b 6c 5d 4e 3f 02',
+            'ansible_machine_id': 'vmware_app_vm_002',
+        },
+        ['community.vmware.vmware_vm_info'],
+    )
+    create_indirect_host(
+        'mockA_vm_db1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Virtual Machines', 'infra_type': 'vmware', 'infra_bucket': 'virtual'},
+        {
+            'ansible_host': 'vm-db1.vcenter.datacenter.local',
+            'ansible_distribution': 'SUSE',
+            'ansible_product_serial': 'VMware-33 2b 1c 9d 8e 7f 6a 03',
+            'ansible_machine_id': 'vmware_db_vm_003',
+        },
+        ['community.vmware.vmware_vm_info'],
+    )
+
+    # More On-Premise + Compute + Physical Server hosts (currently 1, adding 2 more = 3 unique)
+    create_indirect_host(
+        'mockA_physical_server1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Physical Server', 'infra_type': 'On-Premise', 'infra_bucket': 'Compute'},
+        {
+            'ansible_host': 'server1.datacenter.company.local',
+            'ansible_distribution': 'CentOS',
+            'ansible_machine_id': 'physical_server_dc001',
+            'ansible_product_serial': 'PHYS_SRV_DC001',
+        },
+    )
+    create_indirect_host(
+        'mockA_physical_server2',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Physical Server', 'infra_type': 'On-Premise', 'infra_bucket': 'Compute'},
+        {
+            'ansible_host': 'server2.datacenter.company.local',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_machine_id': 'physical_server_dc002',
+            'ansible_product_serial': 'PHYS_SRV_DC002',
+        },
+    )
+
+    # More Public Cloud + container + Container Platform hosts (currently 1, adding 2 more = 3 unique)
+    create_indirect_host(
+        'mockA_k8s_worker1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Container Platform', 'infra_type': 'Public Cloud', 'infra_bucket': 'container'},
+        {
+            'ansible_host': 'k8s-worker1.eks.us-east-1.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_cluster_name': 'production-cluster-east',
+            'ansible_ec2_placement_region': 'us-east-1',
+        },
+        ['kubernetes.core.k8s_info', 'amazon.aws.eks_nodegroup'],
+    )
+    create_indirect_host(
+        'mockA_k8s_worker2',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Container Platform', 'infra_type': 'Public Cloud', 'infra_bucket': 'container'},
+        {
+            'ansible_host': 'k8s-worker2.gke.us-central1.gcp.com',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_ec2_cluster_name': 'staging-cluster-central',
+            'ansible_ec2_placement_region': 'us-central1',
+        },
+        ['kubernetes.core.k8s_info', 'google.cloud.gcp_container_cluster'],
+    )
+
+    # More Public Cloud + Network + Load Balancer hosts (currently 1, adding 2 more = 3 unique)
+    create_indirect_host(
+        'mockA_alb_frontend',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Load Balancer', 'infra_type': 'Public Cloud', 'infra_bucket': 'Network'},
+        {
+            'ansible_host': 'alb-frontend.elb.us-east-1.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_instance_id': 'i-alb123456789frontend',
+            'ansible_ec2_placement_region': 'us-east-1',
+        },
+        ['amazon.aws.elb_application_lb', 'amazon.aws.elb_target_group'],
+    )
+    create_indirect_host(
+        'mockA_nlb_backend',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Load Balancer', 'infra_type': 'Public Cloud', 'infra_bucket': 'Network'},
+        {
+            'ansible_host': 'nlb-backend.elb.us-west-2.amazonaws.com',
+            'ansible_distribution': 'Amazon',
+            'ansible_ec2_instance_id': 'i-nlb987654321backend',
+            'ansible_ec2_placement_region': 'us-west-2',
+        },
+        ['amazon.aws.elb_network_lb'],
+    )
+
+    # More On-Premise + Observability + Monitoring hosts (currently 1, adding 2 more = 3 unique)
+    create_indirect_host(
+        'mockA_monitoring_prometheus',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Monitoring', 'infra_type': 'On-Premise', 'infra_bucket': 'Observability'},
+        {
+            'ansible_host': 'prometheus.monitoring.datacenter.local',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_machine_id': 'prometheus_server_001',
+            'ansible_product_serial': 'PROMETHEUS_SRV_001',
+        },
+        ['community.general.prometheus'],
+    )
+    create_indirect_host(
+        'mockA_monitoring_grafana',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Monitoring', 'infra_type': 'On-Premise', 'infra_bucket': 'Observability'},
+        {
+            'ansible_host': 'grafana.monitoring.datacenter.local',
+            'ansible_distribution': 'RedHat',
+            'ansible_machine_id': 'grafana_server_001',
+            'ansible_product_serial': 'GRAFANA_SRV_001',
+        },
+        ['community.general.grafana_dashboard', 'community.general.grafana_datasource'],
+    )
+
+    # Add some brand new infrastructure categories with multiple hosts
+
+    # Edge Cloud + Edge + IoT Devices (3 unique nodes)
+    create_indirect_host(
+        'mockA_iot_sensor1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'IoT Devices', 'infra_type': 'Edge Cloud', 'infra_bucket': 'Edge'},
+        {
+            'ansible_host': 'iot-sensor1.edge.factory.local',
+            'ansible_distribution': 'Alpine',
+            'ansible_machine_id': 'iot_sensor_001',
+        },
+    )
+    create_indirect_host(
+        'mockA_iot_gateway1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'IoT Devices', 'infra_type': 'Edge Cloud', 'infra_bucket': 'Edge'},
+        {
+            'ansible_host': 'iot-gateway1.edge.factory.local',
+            'ansible_distribution': 'Ubuntu',
+            'ansible_machine_id': 'iot_gateway_001',
+        },
+    )
+    create_indirect_host(
+        'mockA_iot_controller1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'IoT Devices', 'infra_type': 'Edge Cloud', 'infra_bucket': 'Edge'},
+        {
+            'ansible_host': 'iot-controller1.edge.factory.local',
+            'ansible_distribution': 'CentOS',
+            'ansible_machine_id': 'iot_controller_001',
+        },
+    )
+
+    # Hybrid Cloud + Security + Security Appliances (4 unique nodes)
+    create_indirect_host(
+        'mockA_firewall1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Security Appliances', 'infra_type': 'Hybrid Cloud', 'infra_bucket': 'Security'},
+        {
+            'ansible_host': 'firewall1.security.hybrid.local',
+            'ansible_distribution': 'FortiOS',
+            'ansible_machine_id': 'firewall_001',
+        },
+    )
+    create_indirect_host(
+        'mockA_ids1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Security Appliances', 'infra_type': 'Hybrid Cloud', 'infra_bucket': 'Security'},
+        {
+            'ansible_host': 'ids1.security.hybrid.local',
+            'ansible_distribution': 'Suricata',
+            'ansible_machine_id': 'ids_001',
+        },
+    )
+    create_indirect_host(
+        'mockA_waf1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Security Appliances', 'infra_type': 'Hybrid Cloud', 'infra_bucket': 'Security'},
+        {
+            'ansible_host': 'waf1.security.hybrid.local',
+            'ansible_distribution': 'ModSecurity',
+            'ansible_machine_id': 'waf_001',
+        },
+    )
+    create_indirect_host(
+        'mockA_proxy1',
+        first_inventory_id,
+        first_job_id,
+        default_org_id,
+        {'device_type': 'Security Appliances', 'infra_type': 'Hybrid Cloud', 'infra_bucket': 'Security'},
+        {
+            'ansible_host': 'proxy1.security.hybrid.local',
+            'ansible_distribution': 'Squid',
+            'ansible_machine_id': 'proxy_001',
+        },
+    )
+
     list_indirect_hosts()
 
 
