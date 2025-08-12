@@ -190,19 +190,49 @@ def get_report_path(ship_path, until_date, environment='RPM'):
 
     # In containerized environments, the path inside container is /var/lib/awx/{ship_path}
     if environment == 'containerized':
-        base_path = f'/var/lib/awx/{ship_path}'
+        # Clean up the ship_path by removing './' prefix if present
+        clean_ship_path = ship_path.lstrip('./')
+        base_path = f'/var/lib/awx/{clean_ship_path}'
     else:
         base_path = ship_path
 
     return f'{base_path}/reports/{year}/{month}'
 
 
-def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destination='.'):
+def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destination='.', environment='RPM'):
     """Copy the generated report from remote server to local machine using scp."""
     print('Copying report from remote server...')
 
+    if environment == 'containerized':
+        # For containerized environment, we need to copy from container to host first
+        print('Copying from container to host first...')
+
+        # Extract filename from remote_report_path
+        filename = os.path.basename(remote_report_path)
+
+        # Copy from container to host /tmp directory
+        host_temp_path = f'/tmp/{filename}'
+        podman_copy_cmd = f'podman cp automation-controller-web:{remote_report_path} {host_temp_path}'
+
+        ssh_copy_cmd = ['ssh', f'{ssh_user}@{ssh_url}', podman_copy_cmd]
+
+        print(f'Executing: {" ".join(ssh_copy_cmd)}')
+        copy_result = subprocess.run(ssh_copy_cmd, check=False, capture_output=True, text=True)
+
+        if copy_result.returncode != 0:
+            print(f'Failed to copy from container to host. Error: {copy_result.stderr}')
+            return copy_result
+
+        print('Successfully copied from container to host')
+
+        # Now copy from host to local machine
+        remote_path_for_scp = host_temp_path
+    else:
+        # For non-containerized environments, use the original path
+        remote_path_for_scp = remote_report_path
+
     # Build scp command
-    scp_cmd = ['scp', f'{ssh_user}@{ssh_url}:{remote_report_path}', local_destination]
+    scp_cmd = ['scp', f'{ssh_user}@{ssh_url}:{remote_path_for_scp}', local_destination]
 
     print(f'Executing: {" ".join(scp_cmd)}')
     result = subprocess.run(scp_cmd, check=False, capture_output=True, text=True)
@@ -210,6 +240,12 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
     if result.returncode == 0:
         filename = os.path.basename(remote_report_path)
         print(f'Successfully copied report to: {os.path.join(local_destination, filename)}')
+
+        # Clean up temporary file on host for containerized environment
+        if environment == 'containerized':
+            cleanup_cmd = ['ssh', f'{ssh_user}@{ssh_url}', f'rm -f {host_temp_path}']
+            print(f'Cleaning up temporary file: {host_temp_path}')
+            subprocess.run(cleanup_cmd, check=False, capture_output=True, text=True)
     else:
         print(f'Failed to copy report. Error: {result.stderr}')
 
@@ -272,7 +308,7 @@ def main():
 
         # Copy report to local machine (only for remote environments)
         if environment in ['RPM', 'containerized']:
-            copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.')
+            copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
             if copy_result.returncode != 0:
                 print('WARNING: Failed to copy report file')
                 return 1

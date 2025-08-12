@@ -181,6 +181,11 @@ uv run gather_all.py
 
 It will run it locally, or if RPM variables (above) are set, it will gather in RPM.
 
+# build_and_copy.py
+
+Useful script that takes the same env variables as previous, connects to environment, runs build report with all of the parameters
+and input and then copy report back to the folder where it was called.
+
 
 
 
