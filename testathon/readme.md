@@ -66,6 +66,8 @@ SSH will be again for controller.
 
 You will find it again in inventory file of jenkins artifact.
 
+SSH_USER should be: ansible
+
 ## Openshift build
 
 This build is very different. 
