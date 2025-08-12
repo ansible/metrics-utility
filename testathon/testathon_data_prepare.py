@@ -84,7 +84,6 @@ def run(sql_script):
             stdout = process.stdout
             stderr = process.stderr
 
-
         if ENVIRONMENT == 'containerized':
             # Stream the SQL over SSH stdin directly into awx-manage dbshell inside the container.
             remote_cmd = 'podman exec -i automation-controller-web awx-manage dbshell'
