@@ -77,21 +77,18 @@ def run(sql_script):
             stdout = process.stdout.decode()
 
         if ENVIRONMENT == 'RPM':
-            # Send SQL script over SSH and pipe it into `sudo awx-manage dbshell`
-            remote_command = f'echo "{sql_script}" | sudo awx-manage dbshell'
-            ssh_command = ['ssh', f'{SSH_USER}@{SSH_URL}', remote_command]
-            process = subprocess.run(ssh_command, capture_output=True)
-            stderr = process.stderr.decode()
-            stdout = process.stdout.decode()
+            # Send SQL over SSH to awx-manage dbshell via stdin
+            process = subprocess.run(
+                ['ssh', f'{SSH_USER}@{SSH_URL}', 'sudo', 'awx-manage', 'dbshell'], input=sql_script, text=True, capture_output=True
+            )
+            stdout = process.stdout
+            stderr = process.stderr
 
-        import base64
 
         if ENVIRONMENT == 'containerized':
-            # base64-encode the whole SQL
-            b64 = base64.b64encode(sql_script.encode('utf-8')).decode('ascii')
-            remote_command = f'echo {b64} | base64 --decode | podman exec -i automation-controller-web awx-manage dbshell'
-            print('remote command:', remote_command)
-            process = subprocess.run(['ssh', f'{SSH_USER}@{SSH_URL}', remote_command], capture_output=True, text=True)
+            # Stream the SQL over SSH stdin directly into awx-manage dbshell inside the container.
+            remote_cmd = 'podman exec -i automation-controller-web awx-manage dbshell'
+            process = subprocess.run(['ssh', f'{SSH_USER}@{SSH_URL}', remote_cmd], input=sql_script, text=True, capture_output=True)
             stdout = process.stdout
             stderr = process.stderr
 
