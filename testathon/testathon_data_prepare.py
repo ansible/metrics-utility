@@ -604,6 +604,7 @@ def update_host_facts(inventory_name, host_name, facts):
 def delete_all_hosts():
     # using API
     url = f'{API_URL}/hosts/?limit=100'
+    print(f'Deleting all hosts from {url}')
     resp = requests.get(url, auth=(USERNAME, PASSWORD), verify=VERIFY_SSL)
     hosts = resp.json()['results']
     print(f'Found {len(hosts)} hosts')
