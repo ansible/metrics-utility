@@ -18,10 +18,10 @@ from datetime import datetime
 
 def get_environment_config():
     """Get environment configuration from environment variables."""
-    environment = os.getenv('ENVIRONMENT', 'local')
+    environment = os.getenv('ENVIRONMENT', 'RPM')
 
     # Set default ship path based on environment like gather_all.py does
-    if environment == 'local' or environment == 'containerized':
+    if environment == 'containerized':
         default_ship_path = './shipped_data'
     else:
         default_ship_path = '/var/tmp/shipped_data'
@@ -73,29 +73,6 @@ def get_report_environment_variables():
         env_vars[key] = os.getenv(key, default_value)
 
     return env_vars
-
-
-def run_build_report_local(env_vars, ship_path, user_args):
-    """Run build_report command in local environment."""
-    print('Running build_report in local environment...')
-
-    # Set up environment variables for docker exec
-    docker_env = []
-    for k, v in env_vars.items():
-        docker_env += ['-e', f'{k}={v}']
-
-    # Add ship path
-    docker_env += ['-e', f'METRICS_UTILITY_SHIP_PATH={ship_path}']
-
-    # Build docker command
-    build_cmd = f'cd awx-dev/metrics-utility && . /var/lib/awx/venv/awx/bin/activate && python3 ./manage.py build_report {user_args}'
-
-    docker_cmd = ['docker', 'exec', *docker_env, 'tools_awx_1', '/bin/sh', '-c', build_cmd]
-
-    print(f'Executing: {" ".join(docker_cmd)}')
-    result = subprocess.run(docker_cmd, check=False, capture_output=True, text=True)
-
-    return result
 
 
 def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, user_args):
@@ -283,14 +260,12 @@ def main():
     ship_path = config['SHIP_PATH']
 
     try:
-        if environment == 'local':
-            result = run_build_report_local(env_vars, ship_path, user_args)
-        elif environment == 'RPM':
+        if environment == 'RPM':
             result = run_build_report_rpm(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         elif environment == 'containerized':
             result = run_build_report_containerized(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         else:
-            raise ValueError(f'Unsupported environment: {environment}')
+            raise ValueError(f'Unsupported environment: {environment}. Only "RPM" and "containerized" are supported.')
 
         # Print command output
         print('=== Command Output ===')
@@ -326,15 +301,12 @@ def main():
             print(f'\nWarning: Could not extract date range from arguments: {user_args}')
             print('Report location cannot be determined automatically.')
 
-        # Copy report to local machine (only for remote environments)
+        # Copy report to local machine
         if since_match and until_match:
-            if environment in ['RPM', 'containerized']:
-                copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
-                if copy_result.returncode != 0:
-                    print('WARNING: Failed to copy report file')
-                    return 1
-            elif environment == 'local':
-                print(f'Local environment: Report should be available at: {remote_report_path}')
+            copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
+            if copy_result.returncode != 0:
+                print('WARNING: Failed to copy report file')
+                return 1
         else:
             print('Skipping report copy due to inability to determine report location.')
             print('Please check the build_report output for the actual report location.')
