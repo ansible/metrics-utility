@@ -9,10 +9,16 @@ Based on instructions in comments:
 4. Copy the generated report to local machine using scp
 
 Fill the env variables:
-ENVIRONMENT should be RPM or containerized
+ENVIRONMENT should be RPM, containerized or OpenShift
 API_URL=gateway api url
 SSH_URL=IP of controller instance
 SSH_USER=ec2-user or ansible for containerized
+
+OpenShift specific variables:
+- OC_LOGIN_COMMAND: oc login command to authenticate to the cluster
+  Example: oc login --token=... --server=https://api.example:6443
+- NAMESPACE (optional): OpenShift namespace with the controller pod. If not set, it will be auto-detected.
+- POD_NAME (optional): OpenShift controller pod name. If not set, it will be auto-detected.
 """
 
 import os
@@ -20,6 +26,8 @@ import subprocess
 import sys
 
 from datetime import datetime
+
+from helper_ocp_prepare import create_oc_environs
 
 
 def get_environment_config():
@@ -37,6 +45,9 @@ def get_environment_config():
         'SSH_URL': os.getenv('SSH_URL'),
         'SSH_USER': os.getenv('SSH_USER', 'ec2-user'),
         'SHIP_PATH': os.getenv('METRICS_UTILITY_SHIP_PATH', default_ship_path),
+        'OC_LOGIN_COMMAND': os.getenv('OC_LOGIN_COMMAND', ''),
+        'NAMESPACE': os.getenv('NAMESPACE'),
+        'POD_NAME': os.getenv('POD_NAME'),
     }
 
     print('Environment Configuration:')
@@ -44,6 +55,11 @@ def get_environment_config():
     print(f'SSH_URL: {config["SSH_URL"]}')
     print(f'SSH_USER: {config["SSH_USER"]}')
     print(f'SHIP_PATH: {config["SHIP_PATH"]}')
+    if config['ENVIRONMENT'] == 'OpenShift':
+        print(f'OC_LOGIN_COMMAND: {config["OC_LOGIN_COMMAND"]}')
+        if config['POD_NAME'] and config['NAMESPACE']:
+            print(f'POD_NAME: {config["POD_NAME"]}')
+            print(f'NAMESPACE: {config["NAMESPACE"]}')
     print()
 
     return config
@@ -155,6 +171,46 @@ def run_build_report_containerized(env_vars, ship_path, ssh_url, ssh_user, user_
     return result
 
 
+def run_build_report_openshift(env_vars, ship_path, user_args, namespace=None, pod_name=None, oc_login_command=''):
+    """Run build_report command in OpenShift environment using oc exec."""
+    print('Running build_report in OpenShift environment...')
+
+    # login if command provided
+    if oc_login_command:
+        print('Logging into OpenShift cluster...')
+        subprocess.run(oc_login_command, shell=True, check=False)
+
+    # Ensure NAMESPACE and POD_NAME are available
+    if not namespace or not pod_name:
+        print('Detecting OpenShift namespace and pod...')
+        create_oc_environs()
+        namespace = os.getenv('NAMESPACE')
+        pod_name = os.getenv('POD_NAME')
+
+    if not namespace or not pod_name:
+        raise ValueError('Failed to determine OpenShift NAMESPACE and POD_NAME')
+
+    # Prepare environment variables with proper quoting
+    env_vars_with_path = env_vars.copy()
+    env_vars_with_path['METRICS_UTILITY_SHIP_PATH'] = ship_path
+
+    env_list = []
+    for k, v in env_vars_with_path.items():
+        if ' ' in v or '(' in v or ')' in v or ',' in v:
+            env_list.append(f"{k}='{v}'")
+        else:
+            env_list.append(f'{k}={v}')
+
+    env_vars_str = ' '.join(env_list)
+    container_cmd = f'{env_vars_str} metrics-utility build_report {user_args}'
+
+    oc_cmd = f'oc exec -n {namespace} {pod_name} -- /bin/bash -c "{container_cmd}"'
+    print(f'Executing: {oc_cmd}')
+    result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+
+    return result
+
+
 def generate_report_filename(report_type, since_date, until_date):
     """Generate the expected report filename for since/until range."""
     return f'{report_type}-{since_date}--{until_date}.xlsx'
@@ -190,7 +246,7 @@ def get_report_path(ship_path, date_str, environment='RPM'):
 
 
 def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destination='.', environment='RPM'):
-    """Copy the generated report from remote server to local machine using scp."""
+    """Copy the generated report from remote server to local machine using scp or oc cp."""
     print('Copying report from remote server...')
 
     if environment == 'containerized':
@@ -217,6 +273,50 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
 
         # Now copy from host to local machine
         remote_path_for_scp = host_temp_path
+    elif environment == 'OpenShift':
+        # Copy directly from OpenShift pod to local using oc cp
+        namespace = os.getenv('NAMESPACE')
+        pod_name = os.getenv('POD_NAME')
+        if not namespace or not pod_name:
+            print('NAMESPACE/POD_NAME not set. Attempting to detect...')
+            create_oc_environs()
+            namespace = os.getenv('NAMESPACE')
+            pod_name = os.getenv('POD_NAME')
+        if not namespace or not pod_name:
+            raise ValueError('Failed to determine OpenShift NAMESPACE and POD_NAME for copying report')
+
+        print('Copying from OpenShift pod to local...')
+        oc_cp_cmd = ['oc', 'cp', f'{namespace}/{pod_name}:{remote_report_path}', local_destination]
+        print(f'Executing: {" ".join(oc_cp_cmd)}')
+        result = subprocess.run(oc_cp_cmd, check=False, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            filename = os.path.basename(remote_report_path)
+            print(f'Successfully copied report to: {os.path.join(local_destination, filename)}')
+            return result
+
+        # Fallback: use oc exec to stream file when oc cp is unavailable (e.g., missing tar in container)
+        print(f'Failed to copy report with oc cp (exit {result.returncode}). Attempting fallback using oc exec...')
+        filename = os.path.basename(remote_report_path)
+        local_file_path = (
+            os.path.join(local_destination, filename) if os.path.isdir(local_destination) or local_destination in ('.', '') else local_destination
+        )
+        oc_exec_cmd = ['oc', 'exec', '-n', namespace, pod_name, '--', '/bin/bash', '-c', f"cat '{remote_report_path}'"]
+        print(f'Executing: {" ".join(oc_exec_cmd)} > {local_file_path}')
+        stream_result = subprocess.run(oc_exec_cmd, check=False, capture_output=True, text=False)
+        if stream_result.returncode == 0:
+            try:
+                with open(local_file_path, 'wb') as f:
+                    f.write(stream_result.stdout)
+                print(f'Successfully copied report to: {local_file_path}')
+            except Exception as write_err:
+                print(f'Failed to write streamed file locally: {write_err}')
+                # Return the stream_result to surface the non-zero state upstream
+                return stream_result
+        else:
+            stderr = stream_result.stderr.decode('utf-8', errors='ignore') if stream_result.stderr else ''
+            print(f'Fallback copy failed. Error: {stderr}')
+        return stream_result
     else:
         # For non-containerized environments, use the original path
         remote_path_for_scp = remote_report_path
@@ -281,8 +381,17 @@ def main():
             result = run_build_report_rpm(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         elif environment == 'containerized':
             result = run_build_report_containerized(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
+        elif environment == 'OpenShift':
+            result = run_build_report_openshift(
+                env_vars,
+                ship_path,
+                user_args,
+                namespace=config.get('NAMESPACE'),
+                pod_name=config.get('POD_NAME'),
+                oc_login_command=config.get('OC_LOGIN_COMMAND', ''),
+            )
         else:
-            raise ValueError(f'Unsupported environment: {environment}. Only "RPM" and "containerized" are supported.')
+            raise ValueError(f'Unsupported environment: {environment}. Only "RPM", "containerized" and "OpenShift" are supported.')
 
         # Print command output
         print('=== Command Output ===')
@@ -333,7 +442,7 @@ def main():
 
         # Copy report to local machine
         if remote_report_path:
-            copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
+            copy_result = copy_report_from_remote(config.get('SSH_URL'), config.get('SSH_USER'), remote_report_path, '.', environment)
             if copy_result.returncode != 0:
                 print('WARNING: Failed to copy report file')
                 return 1
