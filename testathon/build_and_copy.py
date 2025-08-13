@@ -150,16 +150,27 @@ def run_build_report_containerized(env_vars, ship_path, ssh_url, ssh_user, user_
 
 
 def generate_report_filename(report_type, since_date, until_date):
-    """Generate the expected report filename."""
+    """Generate the expected report filename for since/until range."""
     return f'{report_type}-{since_date}--{until_date}.xlsx'
 
 
-def get_report_path(ship_path, until_date, environment='RPM'):
-    """Get the expected report path based on ship_path and date."""
-    # Parse until_date to get year and month
-    until_dt = datetime.strptime(until_date, '%Y-%m-%d')
-    year = until_dt.strftime('%Y')
-    month = until_dt.strftime('%m')
+def generate_month_report_filename(report_type, month_str):
+    """Generate the expected report filename for monthly reports (YYYY-MM)."""
+    return f'{report_type}-{month_str}.xlsx'
+
+
+def get_report_path(ship_path, date_str, environment='RPM'):
+    """Get the expected report path based on ship_path and date.
+
+    date_str can be either 'YYYY-MM-DD' or 'YYYY-MM'.
+    """
+    # Parse input into year and month
+    try:
+        dt = datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        dt = datetime.strptime(date_str, '%Y-%m')
+    year = dt.strftime('%Y')
+    month = dt.strftime('%m')
 
     # In containerized environments, the path inside container is /var/lib/awx/{ship_path}
     if environment == 'containerized':
@@ -286,23 +297,36 @@ def main():
 
         since_match = re.search(r'--since=([^\s]+)', user_args)
         until_match = re.search(r'--until=([^\s]+)', user_args)
+        month_match = re.search(r'--month=([0-9]{4}-[0-9]{2})', user_args)
 
-        if since_match and until_match:
+        remote_report_path = None
+
+        if since_match:
             since_date = since_match.group(1)
-            until_date = until_match.group(1)
+            if until_match:
+                until_date = until_match.group(1)
+            else:
+                # Default until to today's date in UTC when not provided
+                until_date = datetime.utcnow().strftime('%Y-%m-%d')
 
-            # Generate expected report path
+            # Generate expected report path for since/until
             report_filename = generate_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)
             report_dir = get_report_path(ship_path, until_date, environment)
             remote_report_path = f'{report_dir}/{report_filename}'
-
-            print(f'\nExpected report location: {remote_report_path}')
+            print(f'\nExpected report location (since/until): {remote_report_path}')
+        elif month_match:
+            month_str = month_match.group(1)
+            # Generate expected report path for monthly report
+            report_filename = generate_month_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], month_str)
+            report_dir = get_report_path(ship_path, month_str, environment)
+            remote_report_path = f'{report_dir}/{report_filename}'
+            print(f'\nExpected report location (monthly): {remote_report_path}')
         else:
-            print(f'\nWarning: Could not extract date range from arguments: {user_args}')
+            print(f'\nWarning: Could not extract date range or month from arguments: {user_args}')
             print('Report location cannot be determined automatically.')
 
         # Copy report to local machine
-        if since_match and until_match:
+        if remote_report_path:
             copy_result = copy_report_from_remote(config['SSH_URL'], config['SSH_USER'], remote_report_path, '.', environment)
             if copy_result.returncode != 0:
                 print('WARNING: Failed to copy report file')
