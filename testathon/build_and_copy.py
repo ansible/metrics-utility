@@ -8,17 +8,50 @@ Based on instructions in comments:
 3. Run the metrics-utility build_report command
 4. Copy the generated report to local machine using scp
 
-Fill the env variables:
-ENVIRONMENT should be RPM, containerized or OpenShift
-API_URL=gateway api url
-SSH_URL=IP of controller instance
-SSH_USER=ec2-user or ansible for containerized
+Required/optional environment variables:
+- ENVIRONMENT: "RPM", "containerized" or "OpenShift"
+- SSH_URL: IP or hostname of the controller instance (required for RPM/containerized)
+- SSH_USER: SSH user (default: ec2-user; use "ansible" for containerized)
+- METRICS_UTILITY_SHIP_PATH: ship path on remote (defaults to '/var/tmp/shipped_data' for RPM/OpenShift; './shipped_data' for containerized)
 
 OpenShift specific variables:
 - OC_LOGIN_COMMAND: oc login command to authenticate to the cluster
   Example: oc login --token=... --server=https://api.example:6443
 - NAMESPACE (optional): OpenShift namespace with the controller pod. If not set, it will be auto-detected.
 - POD_NAME (optional): OpenShift controller pod name. If not set, it will be auto-detected.
+
+Quick examples:
+- RPM environment (with explicit PO number unset):
+    ENVIRONMENT=RPM \
+    SSH_URL=1.2.3.4 \
+    SSH_USER=ec2-user \
+    METRICS_UTILITY_REPORT_PO_NUMBER=None \
+    ./testathon/build_and_copy.py --force --since=2022-01-01 --until=2026-01-01
+
+- Containerized environment:
+    ENVIRONMENT=containerized \
+    SSH_URL=1.2.3.4 \
+    SSH_USER=ansible \
+    ./testathon/build_and_copy.py --force --month=2025-07
+
+- OpenShift environment (namespace/pod auto-detected):
+    ENVIRONMENT=OpenShift \
+    OC_LOGIN_COMMAND='oc login --token=... --server=https://api.example:6443' \
+    ./testathon/build_and_copy.py --force --month=2025-07
+
+Report parameters via METRICS_UTILITY_* variables (optional):
+- This script prepares a set of METRICS_UTILITY_* variables (see get_report_environment_variables()).
+  If you do not export a variable, a sensible default is used and forwarded to the command.
+- To override a default, export the variable with your value, e.g.:
+    export METRICS_UTILITY_REPORT_COMPANY_NAME="Acme Corp"
+- To UNSET/omit a variable (so it is not sent at all and the downstream tool decides its own default),
+  export it with the literal string 'None' (case-insensitive), e.g.:
+    export METRICS_UTILITY_REPORT_PO_NUMBER=None
+  In this mode, the script still uses its internal default for filename/path computations but will NOT send
+  the variable to the remote command.
+- If a value contains spaces, commas, or parentheses, quoting is handled automatically when invoking the command.
+
+
 """
 
 import os
