@@ -2,6 +2,12 @@
 
 This will print env vars that are used in scripts. Its better than printvars command, more readable.
 
+Variable ENVIRONMENT is:
+None (local)
+RPM
+OpenShift
+containerized
+
 # testathon_data_prepare.py
 
 If you run this directly without any parameters, it will prepopulate local environment db, provided that it runs
