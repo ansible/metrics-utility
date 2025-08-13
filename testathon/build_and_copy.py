@@ -88,6 +88,7 @@ def get_report_environment_variables():
             'managed_nodes_by_organizations,usage_by_collections,usage_by_modules,'
             'usage_by_organizations,usage_by_roles,data_collection_status'
         ),
+        'METRICS_UTILITY_DEDUPLICATOR': 'ccsp-experimental',
     }
 
     # Allow overriding from environment
