@@ -246,7 +246,7 @@ def get_report_path(ship_path, date_str, environment='RPM'):
 
 
 def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destination='.', environment='RPM'):
-    """Copy the generated report from remote server to local machine using scp or oc cp."""
+    """Copy the generated report from remote server to local machine using scp or oc exec."""
     print('Copying report from remote server...')
 
     if environment == 'containerized':
@@ -274,7 +274,7 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
         # Now copy from host to local machine
         remote_path_for_scp = host_temp_path
     elif environment == 'OpenShift':
-        # Copy directly from OpenShift pod to local using oc cp
+        # Copy directly from OpenShift pod to local using oc exec (no oc cp)
         namespace = os.getenv('NAMESPACE')
         pod_name = os.getenv('POD_NAME')
         if not namespace or not pod_name:
@@ -285,18 +285,7 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
         if not namespace or not pod_name:
             raise ValueError('Failed to determine OpenShift NAMESPACE and POD_NAME for copying report')
 
-        print('Copying from OpenShift pod to local...')
-        oc_cp_cmd = ['oc', 'cp', f'{namespace}/{pod_name}:{remote_report_path}', local_destination]
-        print(f'Executing: {" ".join(oc_cp_cmd)}')
-        result = subprocess.run(oc_cp_cmd, check=False, capture_output=True, text=True)
-
-        if result.returncode == 0:
-            filename = os.path.basename(remote_report_path)
-            print(f'Successfully copied report to: {os.path.join(local_destination, filename)}')
-            return result
-
-        # Fallback: use oc exec to stream file when oc cp is unavailable (e.g., missing tar in container)
-        print(f'Failed to copy report with oc cp (exit {result.returncode}). Attempting fallback using oc exec...')
+        print('Copying from OpenShift pod to local using oc exec...')
         filename = os.path.basename(remote_report_path)
         local_file_path = (
             os.path.join(local_destination, filename) if os.path.isdir(local_destination) or local_destination in ('.', '') else local_destination
@@ -311,11 +300,10 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
                 print(f'Successfully copied report to: {local_file_path}')
             except Exception as write_err:
                 print(f'Failed to write streamed file locally: {write_err}')
-                # Return the stream_result to surface the non-zero state upstream
                 return stream_result
         else:
             stderr = stream_result.stderr.decode('utf-8', errors='ignore') if stream_result.stderr else ''
-            print(f'Fallback copy failed. Error: {stderr}')
+            print(f'Copy failed using oc exec. Error: {stderr}')
         return stream_result
     else:
         # For non-containerized environments, use the original path
