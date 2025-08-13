@@ -66,8 +66,13 @@ def get_environment_config():
 
 
 def get_report_environment_variables():
-    """Get all environment variables needed for the build_report command."""
-    env_vars = {
+    """Build env vars map using defaults overridden by current process environment.
+
+    Returns a tuple of (resolved_env_vars, overridden_env_vars) where overridden_env_vars
+    maps var name -> {'from': default_value, 'to': provided_value} for vars that were
+    provided via environment and changed the default.
+    """
+    defaults = {
         'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
         'METRICS_UTILITY_PRICE_PER_NODE': '11.55',
@@ -91,11 +96,19 @@ def get_report_environment_variables():
         'METRICS_UTILITY_DEDUPLICATOR': 'ccsp-experimental',
     }
 
-    # Allow overriding from environment
-    for key, default_value in env_vars.items():
-        env_vars[key] = os.getenv(key, default_value)
+    resolved = {}
+    overridden = {}
 
-    return env_vars
+    for key, default_value in defaults.items():
+        provided = os.getenv(key)
+        if provided is None:
+            resolved[key] = default_value
+        else:
+            resolved[key] = provided
+            if provided != default_value:
+                overridden[key] = {'from': default_value, 'to': provided}
+
+    return resolved, overridden
 
 
 def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, user_args):
@@ -354,12 +367,18 @@ def main():
 
     # Get configuration
     config = get_environment_config()
-    env_vars = get_report_environment_variables()
+    env_vars, overridden_env_vars = get_report_environment_variables()
 
     print('Environment variables for build_report:')
     for key, value in env_vars.items():
         print(f'  {key}={value}')
     print()
+
+    if overridden_env_vars:
+        print('Overrides from environment that changed defaults:')
+        for key, change in overridden_env_vars.items():
+            print(f'  {key}={change["to"]} (default was: {change["from"]})')
+        print()
 
     # Run build_report command based on environment
     environment = config['ENVIRONMENT']
