@@ -7,6 +7,12 @@ Based on instructions in comments:
 2. Set environment variables for build_report command
 3. Run the metrics-utility build_report command
 4. Copy the generated report to local machine using scp
+
+Fill the env variables:
+ENVIRONMENT should be RPM or containerized
+API_URL=gateway api url
+SSH_URL=IP of controller instance
+SSH_USER=ec2-user or ansible for containerized
 """
 
 import os
