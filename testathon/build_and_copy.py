@@ -66,11 +66,15 @@ def get_environment_config():
 
 
 def get_report_environment_variables():
-    """Build env vars map using defaults overridden by current process environment.
+    """Build env vars for metrics-utility using defaults and current process env.
 
-    Returns a tuple of (resolved_env_vars, overridden_env_vars) where overridden_env_vars
-    maps var name -> {'from': default_value, 'to': provided_value} for vars that were
-    provided via environment and changed the default.
+    Returns a tuple of (effective_env_vars, overridden_env_vars, env_vars_to_send):
+    - effective_env_vars: values used by this script for internal logic (e.g., filename generation).
+      If an environment variable is set to the string 'None' (case-insensitive), the default is used here.
+    - overridden_env_vars: maps var name -> {'from': default_value, 'to': provided_value or 'UNSET'}
+      for any variable provided via environment and changed the default. If provided value is 'None', 'to' is 'UNSET'.
+    - env_vars_to_send: the variables actually sent to the metrics-utility command. Variables explicitly set to the string
+      'None' (case-insensitive) are omitted entirely and not sent.
     """
     defaults = {
         'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
@@ -96,19 +100,31 @@ def get_report_environment_variables():
         'METRICS_UTILITY_DEDUPLICATOR': 'ccsp-experimental',
     }
 
-    resolved = {}
+    effective = {}
     overridden = {}
+    env_vars_to_send = {}
 
     for key, default_value in defaults.items():
         provided = os.getenv(key)
-        if provided is None:
-            resolved[key] = default_value
+        # Normalize textual None sentinel
+        is_reset = isinstance(provided, str) and provided.strip().lower() == 'none'
+        if provided is None or is_reset:
+            # For our internal logic, use default when not provided or reset
+            effective[key] = default_value
+            if provided is None:
+                # Not provided: send default downstream
+                env_vars_to_send[key] = default_value
+            elif is_reset:
+                # Explicit reset: do not send this var at all
+                overridden[key] = {'from': default_value, 'to': 'UNSET'}
         else:
-            resolved[key] = provided
+            # Provided and not reset sentinel: use provided
+            effective[key] = provided
+            env_vars_to_send[key] = provided
             if provided != default_value:
                 overridden[key] = {'from': default_value, 'to': provided}
 
-    return resolved, overridden
+    return effective, overridden, env_vars_to_send
 
 
 def run_build_report_rpm(env_vars, ship_path, ssh_url, ssh_user, user_args):
@@ -367,10 +383,10 @@ def main():
 
     # Get configuration
     config = get_environment_config()
-    env_vars, overridden_env_vars = get_report_environment_variables()
+    effective_env_vars, overridden_env_vars, env_vars_to_send = get_report_environment_variables()
 
-    print('Environment variables for build_report:')
-    for key, value in env_vars.items():
+    print('Environment variables for build_report (sent to metrics-utility):')
+    for key, value in env_vars_to_send.items():
         print(f'  {key}={value}')
     print()
 
@@ -386,12 +402,12 @@ def main():
 
     try:
         if environment == 'RPM':
-            result = run_build_report_rpm(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
+            result = run_build_report_rpm(env_vars_to_send, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         elif environment == 'containerized':
-            result = run_build_report_containerized(env_vars, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
+            result = run_build_report_containerized(env_vars_to_send, ship_path, config['SSH_URL'], config['SSH_USER'], user_args)
         elif environment == 'OpenShift':
             result = run_build_report_openshift(
-                env_vars,
+                env_vars_to_send,
                 ship_path,
                 user_args,
                 namespace=config.get('NAMESPACE'),
@@ -433,14 +449,14 @@ def main():
                 until_date = datetime.utcnow().strftime('%Y-%m-%d')
 
             # Generate expected report path for since/until
-            report_filename = generate_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)
+            report_filename = generate_report_filename(effective_env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)
             report_dir = get_report_path(ship_path, until_date, environment)
             remote_report_path = f'{report_dir}/{report_filename}'
             print(f'\nExpected report location (since/until): {remote_report_path}')
         elif month_match:
             month_str = month_match.group(1)
             # Generate expected report path for monthly report
-            report_filename = generate_month_report_filename(env_vars['METRICS_UTILITY_REPORT_TYPE'], month_str)
+            report_filename = generate_month_report_filename(effective_env_vars['METRICS_UTILITY_REPORT_TYPE'], month_str)
             report_dir = get_report_path(ship_path, month_str, environment)
             remote_report_path = f'{report_dir}/{report_filename}'
             print(f'\nExpected report location (monthly): {remote_report_path}')
