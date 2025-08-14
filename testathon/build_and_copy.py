@@ -128,7 +128,7 @@ def get_report_environment_variables():
         'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': (
             'ccsp_summary,indirectly_managed_nodes,inventory_scope,jobs,managed_nodes,'
             'managed_nodes_by_organizations,usage_by_collections,usage_by_modules,'
-            'usage_by_organizations,usage_by_roles,data_collection_status'
+            'usage_by_organizations,usage_by_roles,data_collection_status,infrastructure_summary'
         ),
         'METRICS_UTILITY_DEDUPLICATOR': 'ccsp-experimental',
     }
@@ -338,6 +338,11 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
         remote_path_for_scp = host_temp_path
     elif environment == 'OpenShift':
         # Copy directly from OpenShift pod to local using oc exec (no oc cp)
+        oc_login_command = os.getenv('OC_LOGIN_COMMAND', '')
+        if oc_login_command:
+            print('Logging into OpenShift cluster before copy...')
+            subprocess.run(oc_login_command, shell=True, check=False)
+
         namespace = os.getenv('NAMESPACE')
         pod_name = os.getenv('POD_NAME')
         if not namespace or not pod_name:
