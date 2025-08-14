@@ -6,15 +6,18 @@ from metrics_utility.management_utility import ManagementUtility
 
 
 def prepare():
-    # Tries to find awx modules. They are either in venv, or can be configured through AWX_PATH ENV
+    """Tries to find awx modules. Either we're already in the venv, or it can be configured through AWX_PATH, or we fall back to the mock."""
     spec = importlib.util.find_spec('awx')
     if spec is None:
         awx_path = os.getenv('AWX_PATH', '/awx_devel')
         sys.path.append(awx_path)
+
         spec = importlib.util.find_spec('awx')
         if spec is None:
             sys.stderr.write(f'Automation Controller modules not found in {awx_path} (AWX_PATH). Using mock and continuing.\n')
-            sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'mock_awx')))
+
+            mock_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'mock_awx'))
+            sys.path.append(mock_path)
 
     import django
 
