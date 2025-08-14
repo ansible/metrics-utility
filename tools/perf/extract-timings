@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+use v5.34;
+
+my $count = 0;
+my $variant = '';
+my $mem = '';
+my $time = '';
+
+say("rows\tvariant\tmemory\ttime");
+
+while (<>) {
+  chomp;
+
+  if (/: build ([\d,]+)$/) {
+    $count = $1 =~ s/,//gr;
+  }
+
+  if (/: (\w+) sheets$/) {
+    $variant = $1;
+  }
+
+  if (/^memory (\d+K)$/) {
+    $mem = $1;
+  }
+
+  if (/^time ([\d.]+s)$/) {
+    $time = $1;
+  }
+
+  if ($mem && $time) {
+    say("$count\t$variant\t$mem\t$time");
+
+    $mem = '';
+    $time = '';
+  }
+}
