@@ -1,25 +1,40 @@
 # measuring metrics-utility build\_report performance
 
-* `generator.py` - loads a tarball, duplicates and randomizes data, and saves to new tarball
 * `run-perf-gen` - runs the generator script to generate a 3 sets of 10k, 100k & 1M entries
 * `run-perf-build` - uses the 3 sets to run build\_report, with the default set of sheets, and with all available sheets
 * `extract-timings` - converts `run-perf-build` output to a table of count, variant, memory, time
+* `generator.py` - loads a tarball, duplicates and randomizes data, and saves to new tarball - wrapped by `run-perf-gen`
 
+## TLDR
 
-## `generator.py`
+```
+# run once - takes about 5 minutes
+tools/perf/run-perf-gen
 
-Loads a set of tarballs from `SOURCE_DATA_PATH` (glob),
-removes data outside `INPUT_DATE_FROM` - `INPUT_DATE_TO` range (defaults to current year),
-duplicates all data multiple times to reach a target `*_UNIQUE_SIZE` (per table),
-randomizes hostnames,
-duplicates all data again to reach target `*_SIZE`,
-randomizes timestamps (within target interval between `OUTPUT_DATE_FROM` & `OUTPUT_DATE_TO`),
-randomizes some product\_serial & machine\_id facts,
-and outputs a new set of tarballs to `OUTPUT_DATA_PATH` (dir, eg. `test_data/data/`).
+# run for every tested branch - takes about an hour
+tools/perf/run-perf-build | tee tmp
+tools/perf/extract-timings tmp
+```
 
-The counts can be adjusted per-table, tables can also be skipped by setting `SELECTED_DATA` (comma-separated).
+For example, to compare recent PRs:
 
-(Not expected to run this manually, use the `run-perf-gen` wrapper.)
+```
+#!/bin/sh
+set -e
+
+tools/perf/run-perf-gen
+
+git log --oneline --since='last week' devel | sed -e 's/ .*(#\([0-9]\+\))$/ \1/' | while read sha pr; do
+  echo; echo '----------------------- PR #'$pr; echo
+  git checkout "$sha"
+  tools/perf/run-perf-build | tee pr$pr
+  echo; echo
+done
+
+for pr in `ls --sort=time -r pr*`; do
+  tools/perf/extract-timings pr$pr
+done
+```
 
 
 ## `run-perf-gen`
@@ -60,3 +75,19 @@ rows	variant	memory	time
 100000	default	514496K	214.53s
 100000	all	544204K	228.76s
 ```
+
+
+## `generator.py`
+
+Loads a set of tarballs from `SOURCE_DATA_PATH` (glob),
+removes data outside `INPUT_DATE_FROM` - `INPUT_DATE_TO` range (defaults to current year),
+duplicates all data multiple times to reach a target `*_UNIQUE_SIZE` (per table),
+randomizes hostnames,
+duplicates all data again to reach target `*_SIZE`,
+randomizes timestamps (within target interval between `OUTPUT_DATE_FROM` & `OUTPUT_DATE_TO`),
+randomizes some product\_serial & machine\_id facts,
+and outputs a new set of tarballs to `OUTPUT_DATA_PATH` (dir, eg. `test_data/data/`).
+
+The counts can be adjusted per-table, tables can also be skipped by setting `SELECTED_DATA` (comma-separated).
+
+(Not expected to run this manually, use the `run-perf-gen` wrapper.)
