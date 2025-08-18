@@ -25,9 +25,8 @@ def handle_build_exception(env_vars, params, klass):
 
 
 def test_uses_since_and_until_values():
-    env_vars['METRICS_UTILITY_REPORT_TYPE'] = 'CCSPv2'
     args = {'since': '2025-02-25', 'until': '2025-02-26', 'force': True}
-    run_build_int(env_vars, args)
+    run_build_int({**env_vars, 'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2'}, args)
     try:
         workbook = load_workbook(filename=file_path)
         worksheet = read_excel(file_path, sheet_name='Usage Reporting')
@@ -37,9 +36,6 @@ def test_uses_since_and_until_values():
     finally:
         workbook.close()
         os.remove(file_path)
-
-
-month_file_path = './metrics_utility/test/test_data/reports/2025/04/CCSPv2-2025-04.xlsx'
 
 
 def test_accepts_month_and_ignores_since_until():
@@ -56,8 +52,9 @@ def test_renewal_guidance_fails_with_until_params():
         {'args': {'until': '2025-01-01'}},
         {'args': {'until': '2025-01-01', 'since': '2024-02-01'}},
     ]
+    env = {**env_vars, 'METRICS_UTILITY_REPORT_TYPE': 'RENEWAL_GUIDANCE', 'METRICS_UTILITY_SHIP_TARGET': 'controller_db'}
     for arg in command_args:
-        e = handle_build_exception({**env_vars, 'METRICS_UTILITY_REPORT_TYPE': 'RENEWAL_GUIDANCE'}, arg['args'], BadParameter)
+        e = handle_build_exception(env, arg['args'], BadParameter)
         assert e.name == 'The --until parameter is not allowed for renewal guidance report.'
 
 
@@ -108,10 +105,10 @@ def test_ephemeral_allowed():
         '4mon',
         '5mons',
     ]
-    env_vars['METRICS_UTILITY_REPORT_TYPE'] = 'RENEWAL_GUIDANCE'
 
+    env = {**env_vars, 'METRICS_UTILITY_REPORT_TYPE': 'RENEWAL_GUIDANCE', 'METRICS_UTILITY_SHIP_TARGET': 'controller_db'}
     for value in illegal_values:
-        e = handle_build_exception(env_vars, {'since': '2024-01-01', 'ephemeral': value}, UnparsableParameter)
+        e = handle_build_exception(env, {'since': '2024-01-01', 'ephemeral': value}, UnparsableParameter)
         expected = (
             'Duration in months or days to determine if host is ephemeral.'
             ' Months are considered as 30 days in duration. Example: --ephemeral=3months, or'
