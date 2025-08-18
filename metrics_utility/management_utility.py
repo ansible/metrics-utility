@@ -57,6 +57,13 @@ class ManagementUtility(management.ManagementUtility):
         else:
             self.run_subcommand(subcommand, self.argv)
 
+    def main_help_text(self, commands_only=False):
+        commands = 'Commands: build_report, gather_automation_controller_billing_data'
+        if commands_only:
+            return commands
+        else:
+            return f'Usage: manage.py <command> [options]\n{commands}'
+
     def fetch_command(self, subcommand):
         try:
             module = import_module(f'metrics_utility.management.commands.{subcommand}')
