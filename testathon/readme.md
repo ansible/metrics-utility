@@ -59,6 +59,7 @@ export API_URL='https://44.201.90.229/api/controller/v2'
 
 export SSH_USER='ec2-user'
 export SSH_URL='54.90.173.180'
+export ENVIRONMENT=RPM
 
 uv run testathon_data_prepare.py
 
