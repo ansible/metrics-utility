@@ -99,14 +99,14 @@ class Command(BaseCommand):
         opt_ephemeral = parse_number_of_days(options.get('ephemeral'))
         opt_force = options.get('force')
 
-        ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
+        ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
         extra_params = self._handle_extra_params(ship_target)
         extra_params['opt_since'] = opt_since
         extra_params['opt_until'] = opt_until
         extra_params['ephemeral_days'] = opt_ephemeral
         extra_params['month_since'] = month
         extra_params['month_until'] = next_month
-        extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR', None) or None
+        extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR') or None
 
         extractor = ExtractorFactory(ship_target, extra_params).create()
 
@@ -174,7 +174,7 @@ class Command(BaseCommand):
     def _handle_extra_params(self, ship_target=None):
         base = self._handle_ship_target(ship_target)
 
-        report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+        report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
         if not report_type:
@@ -205,7 +205,7 @@ class Command(BaseCommand):
                 'report_end_user_company_country': os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ''),
                 # Renewal guidance specific params
                 'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
-                'report_organization_filter': os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER', None),
+                'report_organization_filter': os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER'),
                 # optional bits
                 'optional_sheets': os.getenv(
                     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',

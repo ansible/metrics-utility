@@ -56,7 +56,7 @@ ship_path_description = 'place for collected data and built reports'
 
 
 def handle_directory_ship_target():
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
 
     if not ship_path:
         raise MissingRequiredEnvVar(f'Missing required env variable METRICS_UTILITY_SHIP_PATH - {ship_path_description}')
@@ -65,14 +65,14 @@ def handle_directory_ship_target():
 
 
 def handle_s3_ship_target():
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
-    bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME', None)
-    bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', None)
-    bucket_region = os.getenv('METRICS_UTILITY_BUCKET_REGION', None)  # optional
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
+    bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME')
+    bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT')
+    bucket_region = os.getenv('METRICS_UTILITY_BUCKET_REGION')  # optional
 
     # S3 credentials
-    bucket_access_key = os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', None)
-    bucket_secret_key = os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY', None)
+    bucket_access_key = os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY')
+    bucket_secret_key = os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY')
 
     missing = []
     if not bucket_name:
@@ -104,15 +104,15 @@ def handle_s3_ship_target():
 def handle_not_s3():
     surplus = []
 
-    if os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', None):
+    if os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY'):
         surplus += ['METRICS_UTILITY_BUCKET_ACCESS_KEY']
-    if os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', None):
+    if os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT'):
         surplus += ['METRICS_UTILITY_BUCKET_ENDPOINT']
-    if os.getenv('METRICS_UTILITY_BUCKET_NAME', None):
+    if os.getenv('METRICS_UTILITY_BUCKET_NAME'):
         surplus += ['METRICS_UTILITY_BUCKET_NAME']
-    if os.getenv('METRICS_UTILITY_BUCKET_REGION', None):
+    if os.getenv('METRICS_UTILITY_BUCKET_REGION'):
         surplus += ['METRICS_UTILITY_BUCKET_REGION']
-    if os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY', None):
+    if os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY'):
         surplus += ['METRICS_UTILITY_BUCKET_SECRET_KEY']
 
     if surplus:
@@ -120,12 +120,12 @@ def handle_not_s3():
 
 
 def handle_crc_ship_target():
-    billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None)
-    red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID', None)
+    billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
+    red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
 
     billing_provider_params = {'billing_provider': billing_provider}
     if billing_provider == 'aws':
-        billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', None)
+        billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID')
         if not billing_account_id:
             raise MissingRequiredEnvVar('Env var: METRICS_UTILITY_BILLING_ACCOUNT_ID, containing  AWS 12 digit customer id needs to be provided.')
         billing_provider_params['billing_account_id'] = billing_account_id
@@ -136,7 +136,7 @@ def handle_crc_ship_target():
         billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
     # only used for the other modes
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH', None)
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     if ship_path:
         allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
@@ -157,7 +157,7 @@ def validate_report_type(errors, method):
     Returns:
         str or None: The value of the 'METRICS_UTILITY_REPORT_TYPE' environment variable if set, otherwise None.
     """
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     if report_type and report_type not in VALID_REPORT_TYPES:
         errors.append(
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
@@ -230,7 +230,7 @@ def validate_collectors(errors):
           valid values.
     """
 
-    collectors = os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:
@@ -254,7 +254,7 @@ def validate_ship_target(errors, method):
         - The set of valid ship targets is defined by the global variable VALID_SHIP_TARGET.
         - Error messages include the invalid ship target and the list of valid values.
     """
-    ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET', None)
+    ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
     ship_target_type = VALID_SHIP_TARGET_BUILD
     if method == 'gather':
         ship_target_type = VALID_SHIP_TARGET_GATHER
@@ -303,7 +303,7 @@ def validate_max_gather_period_days(errors):
     Returns:
         int or None: The validated value as an integer if set and valid, otherwise None.
     """
-    max_gather_days_str = os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', None)
+    max_gather_days_str = os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS')
 
     if max_gather_days_str is None:
         return None
@@ -368,11 +368,11 @@ def handle_env_validation(method: str):
 def handle_not_crc():
     surplus = []
 
-    if os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', None):
+    if os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID'):
         surplus += ['METRICS_UTILITY_BILLING_ACCOUNT_ID']
-    if os.getenv('METRICS_UTILITY_BILLING_PROVIDER', None):
+    if os.getenv('METRICS_UTILITY_BILLING_PROVIDER'):
         surplus += ['METRICS_UTILITY_BILLING_PROVIDER']
-    if os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID', None):
+    if os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID'):
         surplus += ['METRICS_UTILITY_RED_HAT_ORG_ID']
 
     if surplus:
@@ -431,7 +431,7 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
 
 
 def validate_ccsp_params(options):
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
@@ -483,7 +483,7 @@ def parse_since_until(options, help_texts):
 
 
 def validate_build_params(options, help_texts):
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE', None)
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     if not report_type:
         return None, None
 

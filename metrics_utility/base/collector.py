@@ -292,7 +292,7 @@ class Collector:
 
         last_key = None
 
-        disable_job_host_summary_str = os.environ.get('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
+        disable_job_host_summary_str = os.getenv('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
         disable_job_host_summary = disable_job_host_summary_str.lower() == 'true'
 
         optional_collectors = get_optional_collectors()

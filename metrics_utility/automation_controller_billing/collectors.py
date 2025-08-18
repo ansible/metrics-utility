@@ -92,7 +92,7 @@ def limit_slicing(key, last_gather, **kwargs):
 def config(since, **kwargs):
     license_info = get_license()
     install_type = 'traditional'
-    if os.environ.get('container') == 'oci':
+    if os.getenv('container') == 'oci':
         install_type = 'openshift'
     elif 'KUBERNETES_SERVICE_PORT' in os.environ:
         install_type = 'k8s'
@@ -209,7 +209,7 @@ def yaml_and_json_parsing_functions():
 
 @register('job_host_summary', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
-    disable_job_host_summary_str = os.environ.get('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
+    disable_job_host_summary_str = os.getenv('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
     disable_job_host_summary = False
     if disable_job_host_summary_str and (disable_job_host_summary_str.lower() == 'true'):
         disable_job_host_summary = True
@@ -540,7 +540,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if 'total_workers_vcpu' not in get_optional_collectors():
         return None
 
-    cluster_name = os.environ.get('METRICS_UTILITY_CLUSTER_NAME')
+    cluster_name = os.getenv('METRICS_UTILITY_CLUSTER_NAME')
     if not cluster_name:
         logger.error('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
         raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
@@ -549,7 +549,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     info = {'cluster_name': cluster_name, 'timestamp': now.isoformat(), 'nodes': []}
     # If METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or set to false then it returns 1
-    usage_based_billing_enabled_str = os.environ.get('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
+    usage_based_billing_enabled_str = os.getenv('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
     usage_based_billing_enabled = False
     if usage_based_billing_enabled_str and (usage_based_billing_enabled_str.lower() == 'true'):
         usage_based_billing_enabled = True

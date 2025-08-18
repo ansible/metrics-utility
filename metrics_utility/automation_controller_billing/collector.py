@@ -55,7 +55,7 @@ class Collector(base.Collector):
             return None
 
         key = 'gather_automation_controller_billing_lock'
-        suffix = os.environ.get('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
+        suffix = os.getenv('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
         if suffix:
             key = f'gather_automation_controller_billing_{suffix}_lock'
 
@@ -137,7 +137,7 @@ class Collector(base.Collector):
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""
 
-        disabled_str = os.environ.get('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES', 'false')
+        disabled_str = os.getenv('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES', 'false')
         disabled = False
         if disabled_str and (disabled_str.lower() == 'true'):
             disabled = True

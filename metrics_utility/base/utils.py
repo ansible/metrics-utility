@@ -23,4 +23,4 @@ def get_optional_collectors():
     Get the list of optional collectors from environment variable.
     Defaults to 'main_jobevent' if not set.
     """
-    return os.environ.get('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+    return os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')

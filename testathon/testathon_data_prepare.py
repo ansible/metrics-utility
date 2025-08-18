@@ -23,13 +23,13 @@ API_GATEWAY_URL = API_URL.replace('/controller/v2', '/gateway/v1')
 USERNAME = os.getenv('USERNAME', 'admin')
 PASSWORD = os.getenv('PASSWORD', 'admin')
 
-SSH_URL = os.getenv('SSH_URL', None)
+SSH_URL = os.getenv('SSH_URL')
 SSH_USER = os.getenv('SSH_USER', 'ec2-user')
 
 OC_LOGIN_COMMAND = os.getenv('OC_LOGIN_COMMAND', '')
 
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'local')
-INV_PREFIX = os.getenv('INV_PREFIX', None)
+INV_PREFIX = os.getenv('INV_PREFIX')
 
 if not INV_PREFIX:
     # random 3 high letters
