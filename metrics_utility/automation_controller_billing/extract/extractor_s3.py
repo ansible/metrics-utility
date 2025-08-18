@@ -31,7 +31,7 @@ class ExtractorS3(Base):
                     local_path = os.path.join(temp_dir, 'source_tarball')
                     self.s3_handler.download_file(s3_path, local_path)
 
-                    yield self.process_tarballs(self, s3_path, temp_dir)
+                    yield self.process_tarballs(s3_path, temp_dir)
 
                 except Exception as e:
                     logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {s3_path} failed with {e}')
