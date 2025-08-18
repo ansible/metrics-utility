@@ -197,10 +197,8 @@ class Collector:
         elif until is None:
             until = _now
 
-        # ensure until is now at the end of the day
-        until = until.replace(hour=23, minute=59, second=59, microsecond=999999)
-
-        if since and since >= until:
+        # ensure since = until is valid and will not collect any data with timestamps
+        if since and since > until:
             logger.warning('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
