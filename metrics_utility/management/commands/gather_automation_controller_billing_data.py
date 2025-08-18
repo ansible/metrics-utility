@@ -28,7 +28,7 @@ class Command(BaseCommand):
     help = 'Gather Automation Controller billing data'
     help_texts = {
         'since': (f'Start date for collection, including. {date_format_text.format(name="since")}'),
-        'until': (f'End date for collection, including. {date_format_text.format(name="until")}'),
+        'until': (f'End date for collection, excluding. {date_format_text.format(name="until")}'),
         'dry-run': ('Gather billing metrics without shipping.'),
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
         'verbose': ('Print debug information to console.'),
