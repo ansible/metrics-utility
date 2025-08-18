@@ -40,11 +40,7 @@ def test_larger_range(cleanup_glob):
     text = result.stderr + '\n' + result.stdout
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-05 00:00:00+00:00' in text
     assert 'End of the collection interval is greater than 3 days from start, setting end to 2024-01-04 00:00:00+00:00.' in text
-    assert (
-        'Start of the collection interval is more than 3 days prior to 2024-01-04 23:59:59.999999+00:00, setting to 2024-01-01 23:59:59.999999+00:00.'
-        in text
-    )
-    assert 'Final since-until: 2024-01-01 23:59:59.999999+00:00 to 2024-01-04 23:59:59.999999+00:00' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -54,7 +50,7 @@ def test_smaller_range(cleanup_glob):
 
     text = result.stderr + '\n' + result.stdout
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
-    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 23:59:59.999999+00:00' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
 
 
 # test that it gathers only one file host scope optional collectors
@@ -67,9 +63,9 @@ def test_only_host_scope(cleanup_glob):
 
     text = result.stderr + '\n' + result.stdout
 
-    print(text)
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
-    assert 'Final since-until: 2024-01-01 23:59:59.999999+00:00 to 2024-01-01 23:59:59.999999+00:00' in text
+    assert 'End of the collection interval is greater than 0 days from start, setting end to 2024-01-01 00:00:00+00:00.' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-01 00:00:00+00:00' in text
 
     today = datetime.now()
     year = today.year
