@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
+from metrics_utility.automation_controller_billing.collectors import get_hour_boundaries, total_workers_vcpu
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.test.util import temporary_env
 
@@ -20,7 +20,7 @@ class TestTotalWorkersVcpu:
             result = total_workers_vcpu(None, None, None)
             assert result is None
 
-    def test_raises_metrics_exception_when_cluster_name_not_set(self):
+    def test_raises_missing_required_env_var_when_cluster_name_not_set(self):
         """Test that the function raises MissingRequiredEnvVar when METRICS_UTILITY_CLUSTER_NAME is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
@@ -30,10 +30,11 @@ class TestTotalWorkersVcpu:
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': None}):
                 with pytest.raises(MissingRequiredEnvVar) as exc_info:
                     total_workers_vcpu(None, None, None)
+
                 assert 'environment variable METRICS_UTILITY_CLUSTER_NAME is not set' in str(exc_info.value)
                 mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
 
-    def test_returns_hardcoded_value_when_vcpu_count_disabled(self):
+    def test_returns_hardcoded_value_when_usage_based_billing_disabled(self):
         """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or false (default behavior)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
@@ -44,16 +45,20 @@ class TestTotalWorkersVcpu:
             # Test when not set (default behavior)
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster'}):
                 result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
+                assert result['cluster_name'] == 'test-cluster'
+                assert result['total_workers_vcpu'] == 1
+                assert 'timestamp' in result
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert not logged_json['usage_based_billing_enabled']
+                assert logged_json['total_workers_vcpu'] == 1
 
             # Test when explicitly set to false
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
                 result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
+                assert result['cluster_name'] == 'test-cluster'
+                assert result['total_workers_vcpu'] == 1
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
@@ -63,61 +68,271 @@ class TestTotalWorkersVcpu:
         """Test that METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is case insensitive."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
         ):
             mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
 
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'worker-node-1'
-            mock_node1.status.capacity = {'cpu': '4'}
-
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1]
-            mock_api.list_node.return_value = mock_nodes
+            # Mock PrometheusClient
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 8.0
+            mock_prom_client_class.return_value = mock_prom_client
 
             # Test TRUE (case insensitive)
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'TRUE'}):
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'TRUE',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
                 result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 4}
+                assert result['cluster_name'] == 'test-cluster'
+                assert result['total_workers_vcpu'] == 8
 
-    def test_usage_based_billing_enabled_true_continues_to_k8s_api(self):
-        """Test that when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is true, it continues to K8s API."""
+    def test_raises_missing_required_env_var_when_prometheus_url_not_set(self):
+        """Test that the function raises MissingRequiredEnvVar when METRICS_UTILITY_PROMETHEUS_URL is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.ConfigException = Exception  # Mock the exception class
-            mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException('not in cluster')
-            mock_kube_config.load_kube_config.return_value = None
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': None,
+                }
+            ):
+                with pytest.raises(MissingRequiredEnvVar) as exc_info:
+                    total_workers_vcpu(None, None, None)
 
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
+                assert 'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set' in str(exc_info.value)
+                mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set')
 
-            # Create mock nodes
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'node1'
-            mock_node1.status.capacity = {'cpu': '4', 'memory': '8Gi'}
+    def test_prometheus_client_creation_failure_raises_metrics_exception(self):
+        """Test that PrometheusClient creation failure raises MetricsException."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_prom_client_class.side_effect = Exception('Failed to create Prometheus client')
 
-            mock_node2 = MagicMock()
-            mock_node2.metadata.name = 'node2'
-            mock_node2.status.capacity = {'cpu': '2', 'memory': '4Gi'}
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
 
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1, mock_node2]
-            mock_api.list_node.return_value = mock_nodes
+                assert 'Can not create a prometheus api client ERROR:' in str(exc_info.value)
 
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
+    def test_prometheus_query_failure_raises_metrics_exception(self):
+        """Test that Prometheus query failure raises MetricsException."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient that raises exception on query
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.side_effect = Exception('Prometheus query failed')
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
+
+                assert 'Unexpected error when retrieving nodes:' in str(exc_info.value)
+
+    def test_successful_prometheus_query_with_vcpu_calculation(self):
+        """Test successful Prometheus query with vCPU calculation."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 24.5  # Float value from Prometheus
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'my-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
                 result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 6}
+
+                assert result['cluster_name'] == 'my-cluster'
+                assert result['total_workers_vcpu'] == 24  # Should be converted to int
+                assert 'timestamp' in result
+
+                # Verify PrometheusClient was created with correct parameters
+                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090', use_mounted_token=True)
+
+                # Verify the query was called with correct PromQL
+                mock_prom_client.get_current_value.assert_called_once()
+                query_call = mock_prom_client.get_current_value.call_args[0][0]
+                assert 'max_over_time(sum(machine_cpu_cores)[1h:5m]' in query_call
+                assert '@' in query_call  # Should contain timestamp
+
+                # Verify logging
+                mock_logger_info.info.assert_called_once()
+                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                assert logged_json['cluster_name'] == 'my-cluster'
+                assert logged_json['total_workers_vcpu'] == 24
+                assert logged_json['usage_based_billing_enabled']
+
+    def test_prometheus_client_initialized_with_mounted_token(self):
+        """Test that PrometheusClient is initialized with use_mounted_token=True."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 16.0
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                total_workers_vcpu(None, None, None)
+
+                # Verify PrometheusClient was created with use_mounted_token=True
+                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090', use_mounted_token=True)
+
+    def test_prometheus_query_uses_correct_promql_with_hour_boundaries(self):
+        """Test that the Prometheus query uses correct PromQL with hour boundaries."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.datetime') as mock_datetime,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock datetime to return fixed timestamp
+            mock_now = datetime(2023, 12, 25, 15, 30, 45, tzinfo=timezone.utc)
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.timezone = timezone
+            mock_datetime.fromtimestamp = datetime.fromtimestamp  # Use real fromtimestamp
+
+            # Mock PrometheusClient
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 12.0
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                total_workers_vcpu(None, None, None)
+
+                # Calculate expected timestamp
+                current_ts = mock_now.timestamp()
+                expected_prev_hour_start, _ = get_hour_boundaries(current_ts)
+
+                # Verify the query was called with correct PromQL
+                mock_prom_client.get_current_value.assert_called_once()
+                query_call = mock_prom_client.get_current_value.call_args[0][0]
+                expected_query = f'max_over_time(sum(machine_cpu_cores)[1h:5m] @ {expected_prev_hour_start})'
+                assert query_call == expected_query
+
+    def test_vcpu_value_converted_to_int(self):
+        """Test that vCPU values from Prometheus (floats) are properly converted to integers."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient returning float value
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 15.9  # Float value
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                result = total_workers_vcpu(None, None, None)
+
+                assert result['total_workers_vcpu'] == 15  # Should be truncated to int
+                assert isinstance(result['total_workers_vcpu'], int)
+
+    @patch('metrics_utility.automation_controller_billing.collectors.datetime')
+    def test_timestamp_in_output_with_hour_boundaries(self, mock_datetime):
+        """Test that the function includes proper timestamp based on hour boundaries."""
+        # Mock the datetime.now() call
+        mock_now = datetime(2023, 12, 25, 15, 30, 45, tzinfo=timezone.utc)
+        mock_datetime.now.return_value = mock_now
+        mock_datetime.timezone = timezone
+        mock_datetime.fromtimestamp = datetime.fromtimestamp
+
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 8.0
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                result = total_workers_vcpu(None, None, None)
+
+                # Calculate expected timestamp
+                current_ts = mock_now.timestamp()
+                _, prev_hour_end = get_hour_boundaries(current_ts)
+                expected_timestamp = datetime.fromtimestamp(prev_hour_end).isoformat()
+
+                # Check result timestamp
+                assert 'timestamp' in result
+                assert result['timestamp'] == expected_timestamp
+
+                # Check logged JSON
+                mock_logger_info.info.assert_called_once()
+                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                assert logged_json['timestamp'] == expected_timestamp
+                assert logged_json['cluster_name'] == 'test-cluster'
+                assert logged_json['total_workers_vcpu'] == 8
+                assert logged_json['usage_based_billing_enabled']
 
     def test_usage_based_billing_disabled_unset_returns_hardcoded_value(self):
         """Test that when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is unset, it returns hardcoded value."""
@@ -129,283 +344,64 @@ class TestTotalWorkersVcpu:
 
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': None}):
                 result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 1}
+                assert result['cluster_name'] == 'test-cluster'
+                assert result['total_workers_vcpu'] == 1
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert not logged_json['usage_based_billing_enabled']
 
-    def test_kubernetes_config_exception_handling(self):
-        """Test that the function properly handles Kubernetes configuration exceptions."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.ConfigException = Exception  # Mock the exception class
-            mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException('not in cluster')
-            mock_kube_config.load_kube_config.side_effect = mock_kube_config.ConfigException('no kube config')
 
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                with pytest.raises(Exception) as exc_info:
-                    total_workers_vcpu(None, None, None)
-                assert 'Could not configure Kubernetes Python client ERROR:' in str(exc_info.value)
-                mock_logger.error.assert_called_once()
+class TestGetHourBoundaries:
+    """Test suite for the get_hour_boundaries helper function."""
 
-    def test_corev1api_client_none_raises_exception(self):
-        """Test that the function raises MetricsException when CoreV1Api client is None."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
+    def test_get_hour_boundaries_calculation(self):
+        """Test that get_hour_boundaries correctly calculates previous hour boundaries."""
+        # Test with a specific timestamp: 2023-12-25 15:30:45 UTC
+        test_datetime = datetime(2023, 12, 25, 15, 30, 45, tzinfo=timezone.utc)
+        current_ts = test_datetime.timestamp()
 
-            # Mock CoreV1Api to return None
-            mock_client.CoreV1Api.return_value = None
+        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
-                assert 'Could not get a Kube CoreV1Api client' in str(exc_info.value)
+        # Previous hour should be 14:00:00 to 14:59:59
+        expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
+        expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
 
-    def test_successful_kubernetes_api_call_with_multiple_nodes(self):
-        """Test successful K8s API call with multiple nodes and CPU calculation."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
+        assert prev_hour_start == expected_prev_hour_start
+        assert prev_hour_end == expected_prev_hour_end
 
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
+    def test_get_hour_boundaries_at_hour_boundary(self):
+        """Test get_hour_boundaries when current time is exactly at hour boundary."""
+        # Test at exactly 15:00:00
+        test_datetime = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc)
+        current_ts = test_datetime.timestamp()
 
-            # Create mock nodes with different CPU capacities
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'worker-node-1'
-            mock_node1.status.capacity = {'cpu': '16', 'memory': '32Gi', 'storage': '100Gi'}
+        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-            mock_node2 = MagicMock()
-            mock_node2.metadata.name = 'worker-node-2'
-            mock_node2.status.capacity = {'cpu': '8', 'memory': '16Gi'}
+        # Previous hour should be 14:00:00 to 14:59:59
+        expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
+        expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
 
-            mock_node3 = MagicMock()
-            mock_node3.metadata.name = 'worker-node-3'
-            mock_node3.status.capacity = {'cpu': '4', 'memory': '8Gi'}
+        assert prev_hour_start == expected_prev_hour_start
+        assert prev_hour_end == expected_prev_hour_end
 
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1, mock_node2, mock_node3]
-            mock_api.list_node.return_value = mock_nodes
+    def test_get_hour_boundaries_different_times(self):
+        """Test get_hour_boundaries with different times throughout the day."""
+        test_cases = [
+            # (hour, expected_prev_hour)
+            (1, 0),  # 01:xx -> previous hour is 00:xx
+            (12, 11),  # 12:xx -> previous hour is 11:xx
+            (23, 22),  # 23:xx -> previous hour is 22:xx
+        ]
 
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'my-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                result = total_workers_vcpu(None, None, None)
+        for current_hour, expected_prev_hour in test_cases:
+            test_datetime = datetime(2023, 12, 25, current_hour, 30, 0, tzinfo=timezone.utc)
+            current_ts = test_datetime.timestamp()
 
-                expected_total = 16 + 8 + 4  # 28 vCPUs
-                assert result == {'cluster_name': 'my-cluster', 'total_workers_vcpu': expected_total}
+            prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-    def test_nodes_with_no_cpu_capacity(self):
-        """Test handling of nodes that don't have CPU capacity information."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
+            expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
+            expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, tzinfo=timezone.utc).timestamp()
 
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-
-            # Create mock nodes - one with CPU, one without
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'worker-node-1'
-            mock_node1.status.capacity = {'cpu': '4', 'memory': '8Gi'}
-
-            mock_node2 = MagicMock()
-            mock_node2.metadata.name = 'worker-node-2'
-            mock_node2.status.capacity = {'memory': '8Gi'}  # No CPU capacity
-
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1, mock_node2]
-            mock_api.list_node.return_value = mock_nodes
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 4}
-
-    def test_empty_node_list(self):
-        """Test handling of empty node list from Kubernetes API."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
-
-            # Mock the API instance with empty node list
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-
-            mock_nodes = MagicMock()
-            mock_nodes.items = []
-            mock_api.list_node.return_value = mock_nodes
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                result = total_workers_vcpu(None, None, None)
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 0}
-
-    def test_cpu_values_as_strings_are_converted_to_int(self):
-        """Test that CPU values from K8s API (strings) are properly converted to integers."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
-
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'worker-node-1'
-            mock_node1.status.capacity = {'cpu': '12'}  # String value
-
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1]
-            mock_api.list_node.return_value = mock_nodes
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                result = total_workers_vcpu(None, None, None)
-
-                assert result is not None, 'Function returned None instead of expected result'
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 12}
-                assert isinstance(result['total_workers_vcpu'], int)
-
-    @patch('metrics_utility.automation_controller_billing.collectors.datetime')
-    def test_timestamp_in_output(self, mock_datetime):
-        """Test that the function includes a proper timestamp in the output."""
-        # Mock the datetime.now() call
-        mock_now = datetime(2023, 12, 25, 15, 30, 45, tzinfo=timezone.utc)
-        mock_datetime.now.return_value = mock_now
-        mock_datetime.timezone = timezone  # Keep the timezone reference
-
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
-
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'worker-node-1'
-            mock_node1.status.capacity = {'cpu': '4'}
-
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1]
-            mock_api.list_node.return_value = mock_nodes
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                result = total_workers_vcpu(None, None, None)
-
-                # Check that logger_info_level.info was called with JSON containing timestamp
-                mock_logger_info.info.assert_called_once()
-
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
-                assert 'timestamp' in logged_json
-                assert logged_json['timestamp'] == '2023-12-25T15:30:45+00:00'
-                assert logged_json['cluster_name'] == 'test-cluster'
-                assert logged_json['total_workers_vcpu'] == 4
-                assert logged_json['usage_based_billing_enabled']
-                assert 'nodes' in logged_json
-
-                # Also verify the return value
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 4}
-
-    def test_kube_config_fallback_from_incluster_to_file(self):
-        """Test that the function falls back from in-cluster config to file config."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            # First config method fails, second succeeds
-            mock_kube_config.ConfigException = Exception  # Mock the exception class
-            mock_kube_config.load_incluster_config.side_effect = mock_kube_config.ConfigException('not in cluster')
-            mock_kube_config.load_kube_config.return_value = None
-
-            # Mock the API instance and nodes
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-
-            mock_node1 = MagicMock()
-            mock_node1.metadata.name = 'worker-node-1'
-            mock_node1.status.capacity = {'cpu': '2'}
-
-            mock_nodes = MagicMock()
-            mock_nodes.items = [mock_node1]
-            mock_api.list_node.return_value = mock_nodes
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                result = total_workers_vcpu(None, None, None)
-
-                # Verify both config methods were called
-                mock_kube_config.load_incluster_config.assert_called_once()
-                mock_kube_config.load_kube_config.assert_called_once()
-
-                assert result == {'cluster_name': 'test-cluster', 'total_workers_vcpu': 2}
-
-    def test_unexpected_exception_handling(self):
-        """Test that the function properly handles unexpected exceptions when listing nodes."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
-
-            # Mock the API instance to raise unexpected exception
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-            mock_api.list_node.side_effect = RuntimeError('Unexpected error')
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
-                assert 'Unexpected error when retrieving nodes:' in str(exc_info.value)
-
-    def test_none_nodes_handling(self):
-        """Test that the function properly handles when nodes is None."""
-        with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.kube_config') as mock_kube_config,
-            patch('metrics_utility.automation_controller_billing.collectors.client') as mock_client,
-        ):
-            mock_get.return_value = ['total_workers_vcpu']
-            mock_kube_config.load_incluster_config.return_value = None
-
-            # Mock the API instance to return None
-            mock_api = MagicMock()
-            mock_client.CoreV1Api.return_value = mock_api
-            mock_api.list_node.return_value = None
-
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true'}):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
-                assert 'No nodes found' in str(exc_info.value)
+            assert prev_hour_start == expected_prev_hour_start
+            assert prev_hour_end == expected_prev_hour_end

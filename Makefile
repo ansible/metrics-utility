@@ -19,7 +19,7 @@ fix:
 	uv run ruff format
 
 compose:
-	docker compose -f tools/docker/docker-compose.yaml up
+	podman compose -f tools/docker/docker-compose.yaml up
 
 clean:
 	docker compose -f tools/docker/docker-compose.yaml down -v
