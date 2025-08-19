@@ -172,15 +172,15 @@ class Collector:
         _now = now()
         original_since = since
         original_until = until
-        logger.info(f'Original since-until: {original_since} to {original_until}')
+        logger.warning(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
             until = _now
-            logger.info(f'End of the collection interval is in the future, setting to {_now}.')
+            logger.warning(f'End of the collection interval is in the future, setting to {_now}.')
         if since is not None and since > _now:
             since = _now
-            logger.info(f'Start of the collection interval is in the future, setting to {_now}.')
+            logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
 
         # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
         # set it to `now`, but only if that isn't more than 28 days ahead of a passed-in
@@ -189,7 +189,7 @@ class Collector:
             if until is not None:
                 if until > since + timedelta(days=get_max_gather_period_days()):
                     until = since + timedelta(days=get_max_gather_period_days())
-                    logger.info(
+                    logger.warning(
                         f'End of the collection interval is greater than {get_max_gather_period_days()} days from start, setting end to {until}.'
                     )
             else:  # until is None
@@ -199,7 +199,7 @@ class Collector:
 
         # ensure since = until is valid and will not collect any data with timestamps
         if since and since > until:
-            logger.info('Start of the collection interval is later than the end, ignoring request.')
+            logger.warning('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
         # The ultimate beginning of the interval needs to be compared to 28 days prior to
@@ -209,18 +209,20 @@ class Collector:
         horizon = until - timedelta(days=get_max_gather_period_days())
         if since is not None and since < horizon:
             since = horizon
-            logger.info(f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.')
+            logger.warning(
+                f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
+            )
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
             last_gather = horizon
-            logger.info(f'Last analytics run was more than {get_max_gather_period_days()} days prior to {until}, using {horizon} instead.')
+            logger.warning(f'Last analytics run was more than {get_max_gather_period_days()} days prior to {until}, using {horizon} instead.')
 
         self.gather_since = since
         self.gather_until = until
         self.last_gather = last_gather
 
-        logger.info(f'Final since-until: {since} to {until}')
+        logger.warning(f'Final since-until: {since} to {until}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -304,9 +306,9 @@ class Collector:
                     write_enabled = True
 
                 if write_enabled:
-                    logger.info(f'Progress info: Now gathering {collection.key}')
+                    logger.warning(f'Progress info: Now gathering {collection.key}')
                 else:
-                    logger.info(f'Progress info: Skipping {collection.key} because it is not enabled.')
+                    logger.warning(f'Progress info: Skipping {collection.key} because it is not enabled.')
 
                 last_key = collection.key
 
