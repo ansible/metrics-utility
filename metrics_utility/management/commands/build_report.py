@@ -217,7 +217,9 @@ class Command(BaseCommand):
                 'optional_sheets': os.getenv(
                     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
                     'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-                ).rstrip(',').split(','),
+                )
+                .rstrip(',')
+                .split(','),
             }
         )
         return base
