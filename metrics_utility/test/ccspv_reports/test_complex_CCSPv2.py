@@ -26,6 +26,7 @@ env_vars = {
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,usage_by_organizations,'
     'usage_by_collections,usage_by_roles,usage_by_modules,data_collection_status',
+    'METRICS_UTILITY_ORGANIZATION_FILTER': 'Default;org1',
 }
 
 file_path = './metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13--2025-02-13.xlsx'
@@ -39,7 +40,26 @@ file_path = './metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13-
     ],
     indirect=True,
 )
-def test_command(cleanup):
+def test_command_without_trailing_comma(cleanup):
+    base_command(cleanup, env_vars)
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+@pytest.mark.parametrize(
+    'cleanup',
+    [
+        file_path,
+    ],
+    indirect=True,
+)
+def test_command_with_trailing_comma(cleanup):
+    env_vars_with_trailing_comma = env_vars.copy()
+    env_vars_with_trailing_comma['METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS'] += ','
+    env_vars_with_trailing_comma['METRICS_UTILITY_ORGANIZATION_FILTER'] += ';'
+    base_command(cleanup, env_vars_with_trailing_comma)
+
+
+def base_command(cleanup, env_vars):
     """Build xlsx report using build command and test its contents."""
 
     run_build_int(
