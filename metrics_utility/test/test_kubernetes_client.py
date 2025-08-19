@@ -210,6 +210,7 @@ class TestKubernetesClient:
             patch('kubernetes.client.CoreV1Api') as mock_core_api,
             patch('kubernetes.client.AuthenticationV1Api') as mock_auth_api,
             patch('os.path.exists') as mock_exists,
+            patch('builtins.open', mock_open(read_data='test-namespace')),
             patch.dict('os.environ', {'SERVICE_ACCOUNT_NAME': 'custom-sa'}),
         ):
             # Setup mocks
@@ -236,6 +237,7 @@ class TestKubernetesClient:
             patch('kubernetes.client.CoreV1Api') as mock_core_api,
             patch('kubernetes.client.AuthenticationV1Api') as mock_auth_api,
             patch('os.path.exists') as mock_exists,
+            patch('builtins.open', mock_open(read_data='test-namespace')),
             patch.dict('os.environ', {}, clear=True),
         ):
             # Setup mocks
