@@ -3,8 +3,9 @@ import sys
 import warnings
 
 
-VERBOSE = '--verbose' in sys.argv
-if not VERBOSE:
+first = sys.argv[0]
+
+if first.endswith('manage.py'):
     warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # FIXME: warning
