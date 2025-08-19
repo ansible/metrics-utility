@@ -24,43 +24,43 @@ class TestPrometheusClient:
         """Test successful initialization with valid token."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token-12345'
+        mock_k8s_client.get_current_token.return_value = 'test-token-12345'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Create client
-        client = PrometheusClient(url='https://prometheus.example.com:9090', use_mounted_token=False)
+        client = PrometheusClient(url='https://prometheus.example.com:9090')
 
         # Assertions
         assert client.url == 'https://prometheus.example.com:9090'
         assert client.token == 'test-token-12345'
         assert client.timeout == 30  # default
         assert client.session is not None
-        mock_k8s_client.create_token_for_current_service_account.assert_called_once_with(False)
+        mock_k8s_client.get_current_token.assert_called_once()
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_init_success_with_mounted_token(self, mock_k8s_client_class):
         """Test successful initialization requesting mounted token."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'mounted-token-67890'
+        mock_k8s_client.get_current_token.return_value = 'mounted-token-67890'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Create client
-        client = PrometheusClient(url='https://prometheus.example.com:9090', use_mounted_token=True, timeout=60)
+        client = PrometheusClient(url='https://prometheus.example.com:9090', timeout=60)
 
         # Assertions
         assert client.url == 'https://prometheus.example.com:9090'
         assert client.token == 'mounted-token-67890'
         assert client.timeout == 60
         assert client.session is not None
-        mock_k8s_client.create_token_for_current_service_account.assert_called_once_with(True)
+        mock_k8s_client.get_current_token.assert_called_once()
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_init_failure_no_token(self, mock_k8s_client_class):
         """Test initialization failure when no token can be obtained."""
         # Setup mock to return None
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = None
+        mock_k8s_client.get_current_token.return_value = None
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Test that MetricsException is raised
@@ -72,7 +72,7 @@ class TestPrometheusClient:
         """Test that trailing slash is removed from URL."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Create client with trailing slash
@@ -86,18 +86,27 @@ class TestPrometheusClient:
         """Test session setup with authentication token."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token-12345'
+        mock_k8s_client.get_current_token.return_value = 'test-token-12345'
         mock_k8s_client_class.return_value = mock_k8s_client
 
-        with patch('urllib3.disable_warnings') as mock_disable_warnings:
-            # Create client
+        with (
+            patch('urllib3.disable_warnings') as mock_disable_warnings,
+            patch('os.path.exists') as mock_exists,
+        ):
+            # Test when CA certificate exists
+            mock_exists.return_value = True
             client = PrometheusClient(url='https://prometheus.example.com:9090')
 
             # Assertions
             assert client.session.headers['Authorization'] == 'Bearer test-token-12345'
             assert client.session.headers['Content-Type'] == 'application/x-www-form-urlencoded'
-            assert client.session.cert == ('/etc/tls/tls.crt', '/etc/tls/tls.key')
-            assert client.session.verify is False
+            assert client.session.verify == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+            mock_disable_warnings.assert_not_called()
+
+            # Test when CA certificate doesn't exist
+            mock_exists.return_value = False
+            client2 = PrometheusClient(url='https://prometheus.example.com:9090')
+            assert client2.session.verify is False
             mock_disable_warnings.assert_called_once()
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
@@ -105,7 +114,7 @@ class TestPrometheusClient:
         """Test successful query execution."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response data
@@ -130,7 +139,7 @@ class TestPrometheusClient:
         """Test query execution with time parameter."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response data
@@ -157,7 +166,7 @@ class TestPrometheusClient:
         """Test query failure with Prometheus API error."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock error response
@@ -180,7 +189,7 @@ class TestPrometheusClient:
         """Test query failure with HTTP error."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with patch.object(requests.Session, 'get') as mock_get:
@@ -200,7 +209,7 @@ class TestPrometheusClient:
         """Test query failure with connection error."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with patch.object(requests.Session, 'get') as mock_get:
@@ -217,7 +226,7 @@ class TestPrometheusClient:
         """Test query failure with timeout error."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with patch.object(requests.Session, 'get') as mock_get:
@@ -234,7 +243,7 @@ class TestPrometheusClient:
         """Test query failure with JSON decode error."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with patch.object(requests.Session, 'get') as mock_get:
@@ -254,7 +263,7 @@ class TestPrometheusClient:
         """Test successful get_current_value execution."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response data
@@ -279,7 +288,7 @@ class TestPrometheusClient:
         """Test get_current_value with empty result."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock empty response data
@@ -303,7 +312,7 @@ class TestPrometheusClient:
         """Test get_current_value when underlying query fails."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with patch.object(requests.Session, 'get') as mock_get:
@@ -320,7 +329,7 @@ class TestPrometheusClient:
         """Test get_current_value with invalid value format."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response with invalid value format
@@ -346,10 +355,13 @@ class TestPrometheusClient:
         """Test that session is configured correctly."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
-        with patch('urllib3.disable_warnings') as mock_disable_warnings:
+        with (
+            patch('urllib3.disable_warnings') as mock_disable_warnings,
+            patch('os.path.exists', return_value=True),
+        ):
             # Create client
             client = PrometheusClient(url='https://prometheus.example.com:9090')
 
@@ -357,16 +369,15 @@ class TestPrometheusClient:
             assert isinstance(client.session, requests.Session)
             assert client.session.headers['Authorization'] == 'Bearer test-token'
             assert client.session.headers['Content-Type'] == 'application/x-www-form-urlencoded'
-            assert client.session.cert == ('/etc/tls/tls.crt', '/etc/tls/tls.key')
-            assert client.session.verify is False
-            mock_disable_warnings.assert_called_once()
+            assert client.session.verify == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+            mock_disable_warnings.assert_not_called()
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_custom_timeout(self, mock_k8s_client_class):
         """Test client with custom timeout."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response
@@ -391,7 +402,7 @@ class TestPrometheusClient:
         """Test query with unknown error status from Prometheus."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock error response without error message
@@ -417,7 +428,7 @@ class TestPrometheusClient:
         """Test query with missing data field in response."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response without data field
@@ -444,7 +455,7 @@ class TestPrometheusClient:
         """Test query with missing result field in data."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.create_token_for_current_service_account.return_value = 'test-token'
+        mock_k8s_client.get_current_token.return_value = 'test-token'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response without result field

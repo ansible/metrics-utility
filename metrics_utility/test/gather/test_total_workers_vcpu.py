@@ -89,13 +89,21 @@ class TestTotalWorkersVcpu:
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 8
 
-    def test_raises_missing_required_env_var_when_prometheus_url_not_set(self):
-        """Test that the function raises MissingRequiredEnvVar when METRICS_UTILITY_PROMETHEUS_URL is not set."""
+    def test_uses_default_prometheus_url_when_not_set(self):
+        """Test that the function uses default Prometheus URL when METRICS_UTILITY_PROMETHEUS_URL is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level'),
         ):
             mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = 16.0
+            mock_prom_client_class.return_value = mock_prom_client
+
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
@@ -103,11 +111,22 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': None,
                 }
             ):
-                with pytest.raises(MissingRequiredEnvVar) as exc_info:
-                    total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu(None, None, None)
 
-                assert 'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set' in str(exc_info.value)
-                mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set')
+                # Verify it uses the default URL
+                mock_prom_client_class.assert_called_once_with(url='https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091')
+                expected_message = (
+                    'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set,'
+                    '                     default https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091 will be assigned'
+                )
+                # Check that the expected message was called (not necessarily the last call)
+                mock_logger.info.assert_any_call(expected_message)
+                # Also verify the total_workers_vcpu value was logged
+                mock_logger.debug.assert_called_with('total_workers_vcpu: 16.0')
+
+                # Verify result is returned successfully
+                assert result['cluster_name'] == 'test-cluster'
+                assert result['total_workers_vcpu'] == 16
 
     def test_prometheus_client_creation_failure_raises_metrics_exception(self):
         """Test that PrometheusClient creation failure raises MetricsException."""
@@ -155,6 +174,37 @@ class TestTotalWorkersVcpu:
 
                 assert 'Unexpected error when retrieving nodes:' in str(exc_info.value)
 
+    def test_prometheus_query_returns_none_raises_metrics_exception(self):
+        """Test that the function raises MetricsException when Prometheus query returns None (no data available)."""
+        with (
+            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+
+            # Mock PrometheusClient that returns None (no data available)
+            mock_prom_client = MagicMock()
+            mock_prom_client.get_current_value.return_value = None
+            mock_prom_client_class.return_value = mock_prom_client
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
+                }
+            ):
+                with pytest.raises(MetricsException) as exc_info:
+                    total_workers_vcpu(None, None, None)
+
+                # Verify the exception message
+                assert 'No data availble yet, the cluster is probably running for less than an hour' in str(exc_info.value)
+
+                # Verify the warning message was logged
+                mock_logger.debug.assert_called_with('total_workers_vcpu: None')
+                mock_logger.warning.assert_called_with('No data availble yet, the cluster is probably running for less than an hour')
+
     def test_successful_prometheus_query_with_vcpu_calculation(self):
         """Test successful Prometheus query with vCPU calculation."""
         with (
@@ -183,7 +233,7 @@ class TestTotalWorkersVcpu:
                 assert 'timestamp' in result
 
                 # Verify PrometheusClient was created with correct parameters
-                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090', use_mounted_token=True)
+                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090')
 
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
@@ -198,8 +248,8 @@ class TestTotalWorkersVcpu:
                 assert logged_json['total_workers_vcpu'] == 24
                 assert logged_json['usage_based_billing_enabled']
 
-    def test_prometheus_client_initialized_with_mounted_token(self):
-        """Test that PrometheusClient is initialized with use_mounted_token=True."""
+    def test_prometheus_client_initialized_correctly(self):
+        """Test that PrometheusClient is initialized correctly."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
@@ -220,8 +270,8 @@ class TestTotalWorkersVcpu:
             ):
                 total_workers_vcpu(None, None, None)
 
-                # Verify PrometheusClient was created with use_mounted_token=True
-                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090', use_mounted_token=True)
+                # Verify PrometheusClient was created correctly
+                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090')
 
     def test_prometheus_query_uses_correct_promql_with_hour_boundaries(self):
         """Test that the Prometheus query uses correct PromQL with hour boundaries."""

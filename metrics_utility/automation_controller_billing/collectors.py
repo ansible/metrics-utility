@@ -570,11 +570,15 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
     if not url:
-        logger.error('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set')
-        raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set')
+        prometheus_default_url = 'https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091'
+        logger.info(
+            f'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set, \
+                    default {prometheus_default_url} will be assigned'
+        )
+        url = prometheus_default_url
 
     try:
-        prom = PrometheusClient(url=url, use_mounted_token=True)
+        prom = PrometheusClient(url=url)
     except Exception as e:
         raise MetricsException(f'Can not create a prometheus api client ERROR: {e}')
 
@@ -582,6 +586,14 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
         total_workers_vcpu = prom.get_current_value(f'max_over_time(sum(machine_cpu_cores)[1h:5m] @ {prev_hour_start})')
     except Exception as e:
         raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
+
+    logger.debug(f'total_workers_vcpu: {total_workers_vcpu}')
+
+    # This can happen when the prev_hour_start doesn't have data, it could be when the cluster just started or
+    # if for some reasons prometheus loss some data.
+    if total_workers_vcpu is None:
+        logger.warning('No data availble yet, the cluster is probably running for less than an hour')
+        raise MetricsException('No data availble yet, the cluster is probably running for less than an hour')
 
     info['total_workers_vcpu'] = int(total_workers_vcpu)
 

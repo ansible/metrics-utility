@@ -1,3 +1,5 @@
+import os
+
 from typing import Optional
 
 import requests
@@ -18,13 +20,13 @@ class PrometheusClient:
     - Query execution with proper error handling
     """
 
-    def __init__(self, url: str, use_mounted_token: bool = False, timeout: int = 30):
+    def __init__(self, url: str, timeout: int = 30):
         """
         Initialize Prometheus client.
 
         Args:
             url: Prometheus server URL
-            token: the token of the service account having permission to access prometheus
+            timeout: Request timeout in seconds (default: 30)
         """
         self.url = url.rstrip('/')  # Remove trailing slash
         self.timeout = timeout
@@ -32,18 +34,15 @@ class PrometheusClient:
         self.session = requests.Session()
 
         kube_client = KubernetesClient()
-        self.token = kube_client.create_token_for_current_service_account(use_mounted_token)
+        self.token = kube_client.get_current_token()
         if not self.token:
             raise MetricsException('Unable to create the token for the current service account')
 
         # Create PrometheusConnect client
         self._setup_session()
 
-    # def _format_timestamp(ts: int) -> str:
-    #     return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
-
     def _setup_session(self):
-        """Setup HTTP session with authentication headers"""
+        """Setup HTTP session with authentication headers and CA certificate"""
         if self.token:
             logger.info('Creating authenticated Prometheus client')
             logger.info(f'   URL: {self.url}')
@@ -53,28 +52,18 @@ class PrometheusClient:
             logger.info('Creating unauthenticated Prometheus client')
             logger.info(f'   URL: {self.url}')
 
-        self.session.cert = ('/etc/tls/tls.crt', '/etc/tls/tls.key')
+        # Use service CA certificate for SSL verification
+        ca_cert_path = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+        if os.path.exists(ca_cert_path):
+            self.session.verify = ca_cert_path
+            logger.info(f'Using service CA certificate: {ca_cert_path}')
+        else:
+            logger.warning(f'Service CA certificate not found at {ca_cert_path}, disabling SSL verification')
+            # Disable SSL warnings
+            import urllib3
 
-        # Disable SSL warnings
-        import urllib3
-
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        self.session.verify = False
-
-    # def _verify_service_account(self) -> bool:
-    #     """
-    #     Verify that the configured service account exists.
-
-    #     Returns:
-    #         True if service account exists or no service account is configured, False otherwise
-    #     """
-    #     if not self.service_account_name or not self.k8s_client:
-    #         return True  # No service account configured, so nothing to verify
-
-    #     return self.k8s_client.verify_service_account_exists(
-    #         self.service_account_name,
-    #         self.service_account_namespace
-    #     )
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            self.session.verify = False
 
     def query(self, query: str, time_param: Optional[float] = None) -> Optional[list]:
         """
@@ -96,8 +85,10 @@ class PrometheusClient:
 
             response = self.session.get(url, params=params, timeout=self.timeout)
 
+            logger.debug(f'response: {response}')
             if response.status_code == 200:
                 data = response.json()
+                logger.debug(f'data: {data}')
                 if data.get('status') == 'success':
                     return data.get('data', {}).get('result', [])
                 else:
