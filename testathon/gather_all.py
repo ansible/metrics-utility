@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import calendar
 import os
 import subprocess
 import sys
@@ -31,7 +30,7 @@ if os.getenv('POD_NAME') and os.getenv('NAMESPACE'):
 # Configure the beginning of your range here
 START_DATE = date(2022, 1, 1)
 # Uses today() as the end of the range; modify if you need a fixed end
-END_DATE = date.today()
+END_DATE = date.today() + timedelta(days=10)  # just for sure we are collecting really all the data
 
 path_to_shipped_data = '/var/tmp/shipped_data'
 
@@ -39,45 +38,17 @@ if ENVIRONMENT == 'local' or ENVIRONMENT == 'containerized':
     path_to_shipped_data = './shipped_data'
 
 
-def month_ranges(start_date, end_date):
-    """
-    Yield tuples (since_date, until_date) covering:
-      - First 4 weeks (28 days) of each month
-      - Remainder of the month
-
-    Ensure no collecting range extends beyond today's date
-    """
-    today = date.today()
-    current = date(start_date.year, start_date.month, 1)
+def enumerate_ranges(start_date, end_date):
+    current = start_date
 
     while current <= end_date:
-        year, month = current.year, current.month
-        first_of_month = date(year, month, 1)
-        last_day = calendar.monthrange(year, month)[1]
-        end_of_month = date(year, month, last_day)
+        end = current + timedelta(days=28)
+        if end > end_date + timedelta(days=1):
+            end = end_date + timedelta(days=1)
 
-        # Cap end_of_month to today's date
-        end_of_month = min(end_of_month, today)
+        yield (current, end)
 
-        # Skip if the month starts after today
-        if first_of_month > today:
-            break
-
-        # First window: first 28 days of month
-        first_window_end = first_of_month + timedelta(days=27)
-        first_window_end = min(first_window_end, end_of_month, today)
-
-        yield (first_of_month, first_window_end)
-
-        # Second window: remainder of month
-        remainder_start = first_window_end + timedelta(days=1)
-        if remainder_start <= end_of_month and remainder_start <= today:
-            yield (remainder_start, end_of_month)
-
-        # Advance to next month
-        next_month = month % 12 + 1
-        next_year = year + (month // 12)
-        current = date(next_year, next_month, 1)
+        current = end
 
 
 def get_metrics_utility_config():
@@ -232,7 +203,7 @@ def main():
 
     config = get_metrics_utility_config()
 
-    for since, until in month_ranges(START_DATE, END_DATE):
+    for since, until in enumerate_ranges(START_DATE, END_DATE):
         # Base command arguments
         args = [
             'gather_automation_controller_billing_data',

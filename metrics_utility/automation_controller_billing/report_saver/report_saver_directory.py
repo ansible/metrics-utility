@@ -1,7 +1,5 @@
 import os
 
-from metrics_utility.logger import logger
-
 
 class ReportSaverDirectory:
     def __init__(self, extra_params):
@@ -17,5 +15,3 @@ class ReportSaverDirectory:
         os.makedirs(os.path.dirname(self.report_spreadsheet_destination_path), exist_ok=True)
 
         report_spreadsheet.save(self.report_spreadsheet_destination_path)
-
-        logger.info(f'Report generated into: {self.report_spreadsheet_destination_path}')

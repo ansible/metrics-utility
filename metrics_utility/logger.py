@@ -1,5 +1,12 @@
 import logging
+import sys
+import warnings
 
+
+first = sys.argv[0]
+
+if first.endswith('manage.py'):
+    warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # FIXME: warning
 logging.basicConfig(format='%(message)s', level=logging.INFO)
