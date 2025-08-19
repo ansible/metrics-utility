@@ -603,7 +603,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     return {'timestamp': info['timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
 
 
-def get_hour_boundaries(current_timestamp: int) -> Tuple[int, int]:
+def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
     current_hour_start = (current_timestamp // 3600) * 3600
     previous_hour_start = current_hour_start - 3600
     previous_hour_end = current_hour_start - 1

@@ -27,11 +27,8 @@ class TestKubernetesClient:
                 '/var/run/secrets/kubernetes.io/serviceaccount/namespace',
             ]
 
-            # Create client
-            client_instance = KubernetesClient()
-
-            # Verify initialization succeeded
-            assert client_instance is not None
+            # Create client - if this succeeds without exception, the test passes
+            KubernetesClient()
 
     def test_init_failure_no_token(self):
         """Test initialization failure when token file doesn't exist."""
