@@ -267,7 +267,7 @@ class TestPrometheusClient:
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Mock response data - using whole number float as vCPU counts are always whole numbers
-        mock_response_data = {'status': 'success', 'data': {'result': [{'metric': {'__name__': 'test_metric'}, 'value': [1640995200, '42.0']}]}}
+        mock_response_data = {'status': 'success', 'data': {'result': [{'metric': {'__name__': 'test_metric'}, 'value': [1640995200, '42']}]}}
 
         with patch.object(requests.Session, 'get') as mock_get:
             mock_response = MagicMock()
@@ -280,7 +280,7 @@ class TestPrometheusClient:
             value = client.get_current_value('test_metric')
 
             # Assertions
-            assert value == 42.0
+            assert value == 42
             mock_get.assert_called_once_with('https://prometheus.example.com:9090/api/v1/query', params={'query': 'test_metric'}, timeout=30)
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
