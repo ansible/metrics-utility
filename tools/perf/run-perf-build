@@ -1,0 +1,56 @@
+#!/bin/sh
+set -e
+cd "`dirname "$0"`"
+
+TIME=`command -v gtime >/dev/null && echo 'gtime' || echo '/usr/bin/time'`
+measure() {
+  "$TIME" --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' -o /dev/stdout "$@"
+}
+
+log() {
+  echo `date -Iseconds`: "$@"
+}
+
+## cleanup
+rm -rf generated/reports
+
+## check prerequisites
+find generated/data/ -type f | grep -q .
+
+export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
+export METRICS_UTILITY_SHIP_PATH="./generated/"
+export METRICS_UTILITY_SHIP_TARGET="directory"
+
+run_default_sheets() {
+  unset METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
+  export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
+  unset METRICS_UTILITY_DEDUPLICATOR
+  export METRICS_UTILITY_DEDUPLICATOR
+
+  log "default sheets"
+  measure uv run ../../manage.py build_report --force "$@"
+}
+
+run_all_sheets() {
+  export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS="ccsp_summary,data_collection_status,indirectly_managed_nodes,infrastructure_summary,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles"
+  export METRICS_UTILITY_DEDUPLICATOR="ccsp-experimental"
+
+  log "all sheets"
+  measure uv run ../../manage.py build_report --force "$@"
+}
+
+log "build 10,000"
+run_default_sheets --month=2026-01
+run_all_sheets --month=2026-01
+
+log "build 100,000"
+run_default_sheets --month=2026-02
+run_all_sheets --month=2026-02
+
+log "build 1,000,000"
+run_default_sheets --month=2026-03
+run_all_sheets --month=2026-03
+
+## checkup
+set -x
+ls -lR generated/reports/

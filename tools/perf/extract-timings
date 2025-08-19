@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+import re
+import fileinput
+
+count = 0
+variant = ""
+mem = ""
+time = ""
+
+print("rows\tvariant\tmemory\ttime")
+
+for line in fileinput.input(encoding="utf-8"):
+    line = line.strip()
+
+    if m := re.search(r": build ([\d,]+)$", line):
+        count = int(m.group(1).replace(",", ""))
+
+    if m := re.search(r": (\w+) sheets$", line):
+        variant = m.group(1)
+
+    if m := re.match(r"^memory (\d+K)$", line):
+        mem = m.group(1)
+
+    if m := re.match(r"^time ([\d.]+s)$", line):
+        time = m.group(1)
+
+    if mem and time:
+        print(f"{count}\t{variant}\t{mem}\t{time}")
+        mem = ""
+        time = ""

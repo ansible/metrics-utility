@@ -11,11 +11,13 @@ import pathlib
 import random
 import tarfile
 import tempfile
+import uuid
 
 import numpy as np
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.extract.base import Base
+from metrics_utility.automation_controller_billing.helpers import parse_json
 from metrics_utility.base import CsvFileSplitter
 
 
@@ -39,18 +41,36 @@ def random_date(earliest, latest):
     return datetime.datetime.fromtimestamp(rand, tz=datetime.timezone.utc)
 
 
-def random_hostname():
+def random_adjective():
+    adjectives = 'bold brave bright calm cheerful clever cozy eager exuberant gentle graceful happy honest honorable jolly kind lively lucky merry \
+nice noble peaceful playful proud quick quiet shiny strong swift thoughtful vibrant warm wise witty'
+    return random.choice(adjectives.split(' '))
+
+
+def random_noun():
     nouns = 'armadillo axolotl badger beetle bison buffalo capybara cat caribou cassowary chameleon cheetah cobra coyote dolphin eagle elephant \
 falcon ferret flamingo fox gazelle giraffe hippo ibex jaguar kangaroo koala lemur leopard lion lynx macaw manul meerkat narwhal octopus orangutan \
 otter owl panda panther peacock pelican penguin pigeon puma rabbit raven rhino salmon sparrow tiger toucan turtle whale wolf wombat zebra'
-    adjectives = 'bold brave bright calm cheerful clever cozy eager exuberant gentle graceful happy honest honorable jolly kind lively lucky merry \
-nice noble peaceful playful proud quick quiet shiny strong swift thoughtful vibrant warm wise witty'
+    return random.choice(nouns.split(' '))
 
-    adjective = random.choice(adjectives.split(' '))
-    noun = random.choice(nouns.split(' '))
+
+def random_hostname():
+    adjective = random_adjective()
+    noun = random_noun()
     number = format(random.randrange(1000000), '06')
 
     return f'{adjective}-{noun}-{number}'
+
+
+def random_machine_id():
+    return str(uuid.uuid4())
+
+
+def random_product_serial():
+    noun = random_noun()
+    num = random.randint(0, 65536)
+
+    return f'{noun}{num:04x}'
 
 
 def rule_multiply(df, target_size):
@@ -91,6 +111,30 @@ def rule_hostname_or_null(df, fields):
     return df
 
 
+def rule_canonical_facts(df):
+    """adjusts canonical_facts - random choice of unchanged, unset, set, for both machine_id & product_serial"""
+
+    def process_row(val):
+        facts = parse_json(val) or {}
+
+        choice = random.choice([0, 1, 2])
+        if choice == 1:
+            facts['ansible_machine_id'] = None
+        if choice == 2:
+            facts['ansible_machine_id'] = random_machine_id()
+
+        choice = random.choice([0, 1, 2])
+        if choice == 1:
+            facts['ansible_product_serial'] = None
+        if choice == 2:
+            facts['ansible_product_serial'] = random_product_serial()
+
+        return json.dumps(facts)
+
+    df['canonical_facts'] = df['canonical_facts'].apply(process_row)
+    return df
+
+
 def job_host_summary_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
     df = rule_hostname(df, ['host_name'])
@@ -104,10 +148,12 @@ def job_host_summary_data(df, config, output_from, output_to):
 
 def main_host_data(df, config, output_from, output_to):
     df = rule_multiply(df, config[1])  # unique
+    df = rule_canonical_facts(df)
     df = rule_hostname(df, ['host_name'])
     df = rule_hostname_or_null(df, ['ansible_host_variable'])
     df = rule_multiply(df, config[0])  # total
     df = rule_crop(df, config[0])  # total
+    df = rule_canonical_facts(df)
     df = rule_ids(df, ['host_id'])
     df = rule_dates(df, ['last_automation'], output_from, output_to)
     return df

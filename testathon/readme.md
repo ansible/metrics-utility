@@ -21,7 +21,7 @@ and runs jobs that will populate this table again. It will then run updates to c
 can test different gather ranges.
 
 You can override url and credentails by environmental variables:
-USERNAME, PASSWORD, API_URL
+USERNAME, PASSWORD, API_URL, ENVIRONMENT (either set to local, RPM, OpenShift, containerized)
 
 ## Local Example:
 uv run testathon_data_prepare.py
@@ -59,6 +59,7 @@ export API_URL='https://44.201.90.229/api/controller/v2'
 
 export SSH_USER='ec2-user'
 export SSH_URL='54.90.173.180'
+export ENVIRONMENT=RPM
 
 uv run testathon_data_prepare.py
 
