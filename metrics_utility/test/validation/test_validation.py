@@ -188,7 +188,7 @@ def test_validate_ship_target_valid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'directory')
     VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
     errors = []
-    result = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
+    result = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD, 'CCSPv2')
     assert result == 'directory'
     assert not errors
 
@@ -197,7 +197,7 @@ def test_validate_ship_target_invalid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid')
     VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
     errors = []
-    result = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD)
+    result = validate_ship_target(errors, VALID_SHIP_TARGET_BUILD, 'CCSPv2')
     assert result == 'invalid'
     assert errors
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in errors[0]
@@ -207,7 +207,7 @@ def test_validate_ship_target_gather_valid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'directory')
     VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
     errors = []
-    result = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER)
+    result = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER, None)
     assert result == 'directory'
     assert not errors
 
@@ -216,7 +216,7 @@ def test_validate_ship_target_gather_invalid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_TARGET', 'invalid')
     VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
     errors = []
-    result = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER)
+    result = validate_ship_target(errors, VALID_SHIP_TARGET_GATHER, None)
     assert result == 'invalid'
     assert errors
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in errors[0]

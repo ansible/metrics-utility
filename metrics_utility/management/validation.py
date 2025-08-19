@@ -190,10 +190,14 @@ def validate_ccsp_report_sheets(errors, report_type):
         - If 'ccsp_sheets' is not set or 'report_type' is None, no validation is performed.
         - The set of valid sheets for each report type is defined in the global 'VALID_SHEETS' dictionary.
     """
-    ccsp_sheets = os.getenv(
-        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-        'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-    ).split(',')
+    ccsp_sheets = (
+        os.getenv(
+            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
+            'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
+        )
+        .rstrip(',')
+        .split(',')
+    )
     if ccsp_sheets and report_type:
         ccsp_sheets_set = set(ccsp_sheets)
         if report_type in VALID_SHEETS:
@@ -230,14 +234,14 @@ def validate_collectors(errors):
           valid values.
     """
 
-    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').rstrip(',').split(',')
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:
             errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
 
 
-def validate_ship_target(errors, method):
+def validate_ship_target(errors, method, report_type):
     """
     Validates the 'METRICS_UTILITY_SHIP_TARGET' environment variable against a set of valid ship targets.
 
@@ -262,6 +266,8 @@ def validate_ship_target(errors, method):
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is empty. Valid values: {", ".join(ship_target_type)}')
     if ship_target and ship_target not in ship_target_type:
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(ship_target_type)}')
+    if report_type == 'RENEWAL_GUIDANCE' and ship_target != 'controller_db':
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Only "controller_db" is allowed for "RENEWAL_GUIDANCE"')
     return ship_target
 
 
@@ -354,9 +360,7 @@ def handle_env_validation(method: str):
     validate_max_gather_period_days(errors)
     if method == 'build':
         validate_ccsp_report_sheets(errors, report_type)
-        ship_target = validate_ship_target(errors, method)
-    else:
-        ship_target = validate_ship_target(errors, method)
+    ship_target = validate_ship_target(errors, method, report_type)
     validate_ship_path(errors, ship_target, method)
     if errors:
         raise MissingRequiredEnvVar('\n'.join(errors))

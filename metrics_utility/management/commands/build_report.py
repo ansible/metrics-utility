@@ -32,6 +32,13 @@ def get_report_path(ship_path, date):
     return f'{ship_path}/reports/{year}/{month}'
 
 
+def get_organization_filter():
+    # handle None or empty string
+    if not os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER'):
+        return None
+    return os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER').rstrip(';')
+
+
 class Command(BaseCommand):
     """
     Build Report
@@ -212,12 +219,14 @@ class Command(BaseCommand):
                 'report_end_user_company_country': os.getenv('METRICS_UTILITY_REPORT_END_USER_COUNTRY', ''),
                 # Renewal guidance specific params
                 'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
-                'report_organization_filter': os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER'),
+                'report_organization_filter': get_organization_filter(),
                 # optional bits
                 'optional_sheets': os.getenv(
                     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
                     'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-                ).split(','),
+                )
+                .rstrip(',')
+                .split(','),
             }
         )
         return base

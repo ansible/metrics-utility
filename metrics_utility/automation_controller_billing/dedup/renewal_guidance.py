@@ -58,6 +58,10 @@ class DedupRenewal(BaseDedupRenewal):
     """Original deduplication logic with iterative relationship discovery."""
 
     def run(self):
+        # Check if dataframe is empty or missing required columns
+        if self.dataframe is None or self.dataframe.empty:
+            return {'host_metric': pd.DataFrame()}
+
         self._cleanup_null_values()
         deduped_list = []
         processed_dupes_index = set()
@@ -106,7 +110,7 @@ class DedupRenewalHostname(BaseDedupRenewal):
 
     def run(self):
         # Check if dataframe is empty or missing required columns
-        if self.dataframe.empty:
+        if self.dataframe is None or self.dataframe.empty:
             return {'host_metric': pd.DataFrame()}
 
         # Ensure required columns exist
@@ -151,8 +155,8 @@ class DedupRenewalExperimental(BaseDedupRenewal):
     """
 
     def run(self):
-        # Check if dataframe is empty
-        if self.dataframe.empty:
+        # Check if dataframe is empty or missing required columns
+        if self.dataframe is None or self.dataframe.empty:
             return {'host_metric': pd.DataFrame()}
 
         # Step 1: Apply hostname-based deduplication first
