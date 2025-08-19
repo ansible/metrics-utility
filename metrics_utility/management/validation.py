@@ -190,10 +190,14 @@ def validate_ccsp_report_sheets(errors, report_type):
         - If 'ccsp_sheets' is not set or 'report_type' is None, no validation is performed.
         - The set of valid sheets for each report type is defined in the global 'VALID_SHEETS' dictionary.
     """
-    ccsp_sheets = os.getenv(
-        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-        'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-    ).split(',')
+    ccsp_sheets = (
+        os.getenv(
+            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
+            'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
+        )
+        .rstrip(',')
+        .split(',')
+    )
     if ccsp_sheets and report_type:
         ccsp_sheets_set = set(ccsp_sheets)
         if report_type in VALID_SHEETS:
@@ -230,7 +234,7 @@ def validate_collectors(errors):
           valid values.
     """
 
-    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').split(',')
+    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').rstrip(',').split(',')
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:

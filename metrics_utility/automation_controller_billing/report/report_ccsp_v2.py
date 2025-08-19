@@ -83,7 +83,7 @@ class ReportCCSPv2(Base):
 
     def _apply_filter(self, job_host_summary_dataframe, events_dataframe):
         if self.extra_params['report_organization_filter'] is not None:
-            org_filter = self.extra_params['report_organization_filter'].split(';')
+            org_filter = self.extra_params['report_organization_filter'].rstrip(';').split(';')
             job_host_summary_dataframe = job_host_summary_dataframe[job_host_summary_dataframe['organization_name'].isin(org_filter)].copy()
 
             # TODO: not filtering events fight now, but we can filter events by the job_remote_id
