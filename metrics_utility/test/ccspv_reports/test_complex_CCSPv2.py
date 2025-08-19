@@ -42,7 +42,7 @@ file_path = './metrics_utility/test/test_data/reports/2025/02/CCSPv2-2025-02-13-
 def test_command(cleanup):
     """Build xlsx report using build command and test its contents."""
 
-    result = run_build_int(
+    run_build_int(
         env_vars,
         {
             'since': '2025-02-13',
@@ -50,7 +50,6 @@ def test_command(cleanup):
             'force': True,
         },
     )
-    print(result)
 
     try:
         workbook = openpyxl.load_workbook(filename=file_path)
