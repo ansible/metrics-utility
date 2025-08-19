@@ -7,6 +7,7 @@
 # Change the cronjob to use that image rather then the original one.
 # Change the imagePullPolicy to Always
 # Change  the "command" attribute in the cronjob yaml and add at the end `; sleep 3600`. This will keep alive the pod for an hour
+# Check the suspend option, should be false
 # Connect to the pod launched by the cronjob.
 # Launch for example:
 #  source /var/lib/awx/venv/awx/bin/activate

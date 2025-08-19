@@ -2,6 +2,7 @@ import json
 import os
 import os.path
 import platform
+from typing import Dict, Tuple
 
 from datetime import datetime, timezone
 
@@ -14,8 +15,7 @@ from django.db import connection
 from django.db.utils import ProgrammingError
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
-from kubernetes import client
-from kubernetes import config as kube_config
+from .prometheus_client import PrometheusClient
 
 from metrics_utility.base import CsvFileSplitter, register
 from metrics_utility.base.utils import get_max_gather_period_days, get_optional_collectors
@@ -551,8 +551,10 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
         raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
 
     now = datetime.now(timezone.utc)
+    current_ts = now.timestamp()
+    prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-    info = {'cluster_name': cluster_name, 'timestamp': now.isoformat(), 'nodes': []}
+    info = {'cluster_name': cluster_name, 'timestamp': datetime.fromtimestamp(prev_hour_end).isoformat()}
     # If METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or set to false then it returns 1
     usage_based_billing_enabled_str = os.getenv('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
     usage_based_billing_enabled = False
@@ -563,42 +565,32 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
         info['total_workers_vcpu'] = 1
         # This message must always appear in the log regardless of the log level.
         logger_info_level.info(json.dumps(info, indent=2))
-        return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+        return {'timestamp': info['timestamp'],'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
 
     try:
-        kube_config.load_incluster_config()
-    except kube_config.ConfigException:
-        try:
-            kube_config.load_kube_config()
-        except kube_config.ConfigException as e:
-            logger.error(f'Could not configure Kubernetes Python client ERROR: {e}')
-            raise MetricsException(f'Could not configure Kubernetes Python client ERROR: {e}')
+        url =  os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
+        if not url:
+            logger.error('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set')
+            raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set')
 
-    # Create a CoreV1Api client
-    api_instance = client.CoreV1Api()
-    if not api_instance:
-        raise MetricsException('Could not get a Kube CoreV1Api client')
+        prom = PrometheusClient(url=url,use_mounted_token=True)
+    except Exception as e:
+        raise MetricsException(f'Can not create a prometheus api client ERROR: {e}')
 
     try:
-        nodes = api_instance.list_node()
+        total_workers_vcpu = prom.get_current_value(f"max_over_time(sum(machine_cpu_cores)[1h:5m] @ {prev_hour_start})")
     except Exception as e:
         raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
 
-    if nodes is None:
-        raise MetricsException('No nodes found')
-
-    total_workers_vcpu = 0
-    # In SaaS case we have only Worker nodes and so we don't need to filter out the control plan.
-    # If it used for other environement, we might need to implement the filtering.
-    for node_info in nodes.items:
-        for resource, value in node_info.status.capacity.items():
-            if resource == 'cpu':
-                info['nodes'].append({node_info.metadata.name: int(value)})
-                total_workers_vcpu += int(value)
-
-    info['total_workers_vcpu'] = total_workers_vcpu
+    info['total_workers_vcpu'] = int(total_workers_vcpu)
 
     # This message must always appear in the log regardless of the log level.
     logger_info_level.info(json.dumps(info, indent=2))
 
-    return {'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+    return {'timestamp': info['timestamp'],'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+
+def get_hour_boundaries(current_timestamp: int) -> Tuple[int, int]:
+    current_hour_start = (current_timestamp // 3600) * 3600
+    previous_hour_start = current_hour_start - 3600
+    previous_hour_end = current_hour_start - 1
+    return previous_hour_start, previous_hour_end
