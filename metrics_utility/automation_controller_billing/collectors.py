@@ -553,9 +553,14 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     now = datetime.now(timezone.utc)
     current_ts = now.timestamp()
-    prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
+    prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
 
-    info = {'cluster_name': cluster_name, 'timestamp': datetime.fromtimestamp(prev_hour_end).isoformat()}
+    info = {
+        'cluster_name': cluster_name,
+        'timestamp': datetime.fromtimestamp(prev_hour_end).isoformat(),
+        'start_timestamp': datetime.fromtimestamp(prev_hour_start).isoformat(),
+        'end_timestamp': datetime.fromtimestamp(current_hour_start).isoformat(),
+    }
     # If METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or set to false then it returns 1
     usage_based_billing_enabled_str = os.getenv('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
     usage_based_billing_enabled = False
@@ -582,8 +587,11 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     except Exception as e:
         raise MetricsException(f'Can not create a prometheus api client ERROR: {e}')
 
+    promql_query = f'max_over_time(sum(machine_cpu_cores)[1h:5m] @ {prev_hour_start})'
+    info['promql_query'] = promql_query
+
     try:
-        total_workers_vcpu = prom.get_current_value(f'max_over_time(sum(machine_cpu_cores)[1h:5m] @ {prev_hour_start})')
+        total_workers_vcpu = prom.get_current_value(promql_query)
     except Exception as e:
         raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
 
@@ -603,8 +611,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     return {'timestamp': info['timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
 
 
-def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
+def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float, float]:
     current_hour_start = (current_timestamp // 3600) * 3600
     previous_hour_start = current_hour_start - 3600
     previous_hour_end = current_hour_start - 1
-    return previous_hour_start, previous_hour_end
+    return previous_hour_start, previous_hour_end, current_hour_start

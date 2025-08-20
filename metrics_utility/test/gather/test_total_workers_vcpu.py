@@ -49,10 +49,14 @@ class TestTotalWorkersVcpu:
                 assert result['total_workers_vcpu'] == 1
                 assert 'timestamp' in result
 
-                # Verify the logged JSON contains usage_based_billing_enabled = False
+                # Verify the logged JSON contains usage_based_billing_enabled = False and all required fields
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert not logged_json['usage_based_billing_enabled']
                 assert logged_json['total_workers_vcpu'] == 1
+                assert 'cluster_name' in logged_json
+                assert 'timestamp' in logged_json
+                assert 'start_timestamp' in logged_json
+                assert 'end_timestamp' in logged_json
 
             # Test when explicitly set to false
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
@@ -95,7 +99,7 @@ class TestTotalWorkersVcpu:
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level'),
+            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -127,6 +131,18 @@ class TestTotalWorkersVcpu:
                 # Verify result is returned successfully
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 16
+
+                # Verify that the logged info contains all expected fields
+                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                assert 'cluster_name' in logged_json
+                assert 'timestamp' in logged_json
+                assert 'start_timestamp' in logged_json
+                assert 'end_timestamp' in logged_json
+                assert 'usage_based_billing_enabled' in logged_json
+                assert 'promql_query' in logged_json
+                assert 'total_workers_vcpu' in logged_json
+                assert logged_json['usage_based_billing_enabled'] is True
+                assert 'max_over_time(sum(machine_cpu_cores)[1h:5m]' in logged_json['promql_query']
 
     def test_prometheus_client_creation_failure_raises_metrics_exception(self):
         """Test that PrometheusClient creation failure raises MetricsException."""
@@ -304,7 +320,7 @@ class TestTotalWorkersVcpu:
 
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
-                expected_prev_hour_start, _ = get_hour_boundaries(current_ts)
+                expected_prev_hour_start, _, _ = get_hour_boundaries(current_ts)
 
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
@@ -369,7 +385,7 @@ class TestTotalWorkersVcpu:
 
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
-                _, prev_hour_end = get_hour_boundaries(current_ts)
+                _, prev_hour_end, _ = get_hour_boundaries(current_ts)
                 expected_timestamp = datetime.fromtimestamp(prev_hour_end).isoformat()
 
                 # Check result timestamp
@@ -411,7 +427,7 @@ class TestGetHourBoundaries:
         test_datetime = datetime(2023, 12, 25, 15, 30, 45, tzinfo=timezone.utc)
         current_ts = test_datetime.timestamp()
 
-        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
+        prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
 
         # Previous hour should be 14:00:00 to 14:59:59
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
@@ -426,7 +442,7 @@ class TestGetHourBoundaries:
         test_datetime = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc)
         current_ts = test_datetime.timestamp()
 
-        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
+        prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
 
         # Previous hour should be 14:00:00 to 14:59:59
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
@@ -448,7 +464,7 @@ class TestGetHourBoundaries:
             test_datetime = datetime(2023, 12, 25, current_hour, 30, 0, tzinfo=timezone.utc)
             current_ts = test_datetime.timestamp()
 
-            prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
+            prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
 
             expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
             expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, tzinfo=timezone.utc).timestamp()
