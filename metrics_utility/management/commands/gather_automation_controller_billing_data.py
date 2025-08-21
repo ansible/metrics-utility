@@ -1,5 +1,7 @@
 import os
 
+from argparse import RawDescriptionHelpFormatter
+
 from django.core.management.base import BaseCommand
 
 from metrics_utility.automation_controller_billing.collector import Collector
@@ -33,6 +35,52 @@ class Command(BaseCommand):
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
         'verbose': ('Print debug information to console.'),
     }
+
+    def create_parser(self, prog_name, subcommand, **kwargs):
+        return super().create_parser(
+            prog_name,
+            subcommand,
+            # ensure newlines are preserved in descriptions and epilog
+            formatter_class=RawDescriptionHelpFormatter,
+            epilog='\n'.join(
+                [
+                    'ENVIRONMENT',
+                    '',
+                    '  Core Configuration:',
+                    "    METRICS_UTILITY_SHIP_TARGET (required): one of 'crc', 'directory', 's3' - input/output mechanism",
+                    '    METRICS_UTILITY_SHIP_PATH (required): directory path for data collection and storage',
+                    '',
+                    '  Collection Configuration:',
+                    '    METRICS_UTILITY_CLUSTER_NAME (optional): cluster name for total_workers_vcpu collector (required when enabled)',  # noqa: E501
+                    '    METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX (optional): custom lock name for total_workers_vcpu collector',
+                    '    METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR (optional): disable job_host_summary collector',  # noqa: E501
+                    '    METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES (optional): skip updating last gather info from controller settings',  # noqa: E501
+                    '    METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS (optional): maximum length of collection interval in days (default: 28)',  # noqa: E501
+                    '    METRICS_UTILITY_OPTIONAL_COLLECTORS (optional): optional collectors, comma-separated list',
+                    '    METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)',  # noqa: E501
+                    '',
+                    '  Billing Provider Configuration:',
+                    '    METRICS_UTILITY_BILLING_ACCOUNT_ID (optional): AWS account ID for billing',
+                    '    METRICS_UTILITY_BILLING_PROVIDER (optional): billing provider type',
+                    '    METRICS_UTILITY_RED_HAT_ORG_ID (optional): Red Hat organization ID',
+                    '',
+                    '  S3 Configuration:',
+                    '    METRICS_UTILITY_BUCKET_NAME (optional): S3 bucket name',
+                    '    METRICS_UTILITY_BUCKET_ENDPOINT (optional): S3 endpoint URL',
+                    '    METRICS_UTILITY_BUCKET_ACCESS_KEY (optional): S3 access key',
+                    '    METRICS_UTILITY_BUCKET_SECRET_KEY (optional): S3 secret key',
+                    '    METRICS_UTILITY_BUCKET_REGION (optional): S3 region',
+                    '',
+                    '  CRC Configuration:',
+                    '    METRICS_UTILITY_CRC_INGRESS_URL (optional): CRC upload URL',
+                    '    METRICS_UTILITY_CRC_SSO_URL (optional): CRC login URL',
+                    '    METRICS_UTILITY_PROXY_URL (optional): upload proxy URL',
+                    '    METRICS_UTILITY_SERVICE_ACCOUNT_ID (optional): service account ID',
+                    '    METRICS_UTILITY_SERVICE_ACCOUNT_SECRET (optional): service account secret',
+                ]
+            ),
+            **kwargs,
+        )
 
     def add_arguments(self, parser):
         parser.add_argument('--dry-run', dest='dry-run', action='store_true', help=self.help_texts.get('dry-run'))

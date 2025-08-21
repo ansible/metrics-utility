@@ -70,17 +70,41 @@ class Command(BaseCommand):
             epilog='\n'.join(
                 [
                     'ENVIRONMENT',
-                    "    METRICS_UTILITY_REPORT_TYPE (required, case sensitive): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE'",
-                    "        determines which kind of report we're generating",
                     '',
-                    "    METRICS_UTILITY_SHIP_TARGET (required): one of 'directory', 's3', 'controller_db'",
-                    '        input/output mechanism',
+                    '  Core Configuration:',
+                    "    METRICS_UTILITY_REPORT_TYPE (required): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE' - determines which kind of report we're generating",  # noqa: E501
+                    "    METRICS_UTILITY_SHIP_TARGET (required): one of 'directory', 's3', 'controller_db' - input/output mechanism",
+                    '    METRICS_UTILITY_SHIP_PATH (required): local or s3 directory path, input tarballs in path/data/, output xlsx in path/reports/',  # noqa: E501
                     '',
-                    '    METRICS_UTILITY_SHIP_PATH (required): a path',
-                    '        local or s3 directory path, input tarballs in path/data/, output xlsx in path/reports/',
+                    '  Optional Configuration:',
+                    "    METRICS_UTILITY_DEDUPLICATOR (optional): one of 'ccsp', 'renewal', 'ccsp-experimental' - choice of deduplication algorithm",  # noqa: E501
+                    '    METRICS_UTILITY_ORGANIZATION_FILTER (optional): CCSPv2 only, semicolon-separated list of org names to filter by',  # noqa: E501
+                    '    METRICS_UTILITY_PRICE_PER_NODE (optional): price per node multiplier for cost calculations',
+                    '    METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS (optional): enables optional report sheets, comma-separated list',  # noqa: E501
+                    '    REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS (optional): max dedup iterations for renewal guidance (default: 3)',  # noqa: E501
                     '',
-                    "    METRICS_UTILITY_DEDUPLICATOR (optional): one of 'ccsp', 'renewal', 'ccsp-experimental'",
-                    "        choice of deduplication algorithm, defaults to 'ccsp' or 'renewal' based on the chosen report type",
+                    '  Report Customization (Optional):',
+                    '    METRICS_UTILITY_REPORT_SKU (optional): SKU identifier for the report',
+                    '    METRICS_UTILITY_REPORT_SKU_DESCRIPTION (optional): SKU description for the report',
+                    '    METRICS_UTILITY_REPORT_H1_HEADING (optional): main heading for the report',
+                    '    METRICS_UTILITY_REPORT_COMPANY_NAME (optional): company name for the report',
+                    '    METRICS_UTILITY_REPORT_EMAIL (optional): contact email for the report',
+                    '    METRICS_UTILITY_REPORT_RHN_LOGIN (optional): Red Hat Network login for the report',
+                    '    METRICS_UTILITY_REPORT_PO_NUMBER (optional): purchase order number for the report',
+                    '    METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER (optional): business leader name for the report',  # noqa: E501
+                    '    METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER (optional): procurement leader name for the report',  # noqa: E501
+                    '    METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME (optional): end user company name for the report',  # noqa: E501
+                    '    METRICS_UTILITY_REPORT_END_USER_CITY (optional): end user company city for the report',
+                    '    METRICS_UTILITY_REPORT_END_USER_STATE (optional): end user company state for the report',
+                    '    METRICS_UTILITY_REPORT_END_USER_COUNTRY (optional): end user company country for the report',
+                    '',
+                    '  S3 Configuration:',
+                    '    METRICS_UTILITY_BUCKET_NAME (optional): S3 bucket name',
+                    '    METRICS_UTILITY_BUCKET_ENDPOINT (optional): S3 endpoint URL',
+                    '    METRICS_UTILITY_BUCKET_ACCESS_KEY (optional): S3 access key',
+                    '    METRICS_UTILITY_BUCKET_SECRET_KEY (optional): S3 secret key',
+                    '    METRICS_UTILITY_BUCKET_REGION (optional): S3 region',
+                    '',
                 ]
             ),
             **kwargs,
