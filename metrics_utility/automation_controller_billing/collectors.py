@@ -587,7 +587,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     except Exception as e:
         raise MetricsException(f'Can not create a prometheus api client ERROR: {e}')
 
-    promql_query = f'max_over_time(sum(machine_cpu_cores)[1h:5m] @ {prev_hour_start})'
+    promql_query = f'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ {prev_hour_start})'
     info['promql_query'] = promql_query
 
     try:
