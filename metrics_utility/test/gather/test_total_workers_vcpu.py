@@ -35,7 +35,7 @@ class TestTotalWorkersVcpu:
                 mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
 
     def test_returns_hardcoded_value_when_usage_based_billing_disabled(self):
-        """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or false (default behavior)."""
+        """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is not set or false (default behavior)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
@@ -59,7 +59,7 @@ class TestTotalWorkersVcpu:
                 assert 'end_timestamp' in logged_json
 
             # Test when explicitly set to false
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'false'}):
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'false'}):
                 result = total_workers_vcpu(None, None, None)
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 1
@@ -69,7 +69,7 @@ class TestTotalWorkersVcpu:
                 assert not logged_json['usage_based_billing_enabled']
 
     def test_usage_based_billing_enabled_case_insensitive(self):
-        """Test that METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is case insensitive."""
+        """Test that METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is case insensitive."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
@@ -85,7 +85,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'TRUE',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'TRUE',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -111,7 +111,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': None,
                 }
             ):
@@ -156,7 +156,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -181,7 +181,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -207,7 +207,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -238,7 +238,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'my-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -280,7 +280,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -312,7 +312,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -344,7 +344,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -377,7 +377,7 @@ class TestTotalWorkersVcpu:
             with temporary_env(
                 {
                     'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
-                    'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': 'true',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
@@ -401,14 +401,14 @@ class TestTotalWorkersVcpu:
                 assert logged_json['usage_based_billing_enabled']
 
     def test_usage_based_billing_disabled_unset_returns_hardcoded_value(self):
-        """Test that when METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is unset, it returns hardcoded value."""
+        """Test that when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is unset, it returns hardcoded value."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
-            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED': None}):
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': None}):
                 result = total_workers_vcpu(None, None, None)
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 1

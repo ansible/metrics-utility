@@ -561,8 +561,8 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
         'start_timestamp': datetime.fromtimestamp(prev_hour_start).isoformat(),
         'end_timestamp': datetime.fromtimestamp(current_hour_start).isoformat(),
     }
-    # If METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED is not set or set to false then it returns 1
-    usage_based_billing_enabled_str = os.getenv('METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED')
+    # If METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is not set or set to false then it returns 1
+    usage_based_billing_enabled_str = os.getenv('METRICS_UTILITY_USAGE_BASED_METERING_ENABLED')
     usage_based_billing_enabled = False
     if usage_based_billing_enabled_str and (usage_based_billing_enabled_str.lower() == 'true'):
         usage_based_billing_enabled = True

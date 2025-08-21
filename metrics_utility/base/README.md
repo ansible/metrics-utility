@@ -92,7 +92,7 @@ An example can be found in [Test package](tests/classes/package.py)
 ### Environment variables for total_workers_vcpu collector:
 
   - `METRICS_UTILITY_CLUSTER_NAME`: Contains the cluster name which is part of the collection payload.
-  - `METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED`: [true/false] In case of true, the payload will contain the actual number of total vcpu accross all workers otherwise the total will be set to 1.
+  - `METRICS_UTILITY_USAGE_BASED_METERING_ENABLED`: [true/false] In case of true, the payload will contain the actual number of total vcpu accross all workers otherwise the total will be set to 1.
 
 N.B.: The SaaS solution runs on ROSA HCP so all nodes are workers, if this collector is used for another solution then the filtering must be implemented.
 

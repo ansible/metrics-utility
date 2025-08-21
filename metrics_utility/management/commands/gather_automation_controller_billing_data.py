@@ -57,7 +57,7 @@ class Command(BaseCommand):
                     '    METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES (optional): skip updating last gather info from controller settings',  # noqa: E501
                     '    METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS (optional): maximum length of collection interval in days (default: 28)',  # noqa: E501
                     '    METRICS_UTILITY_OPTIONAL_COLLECTORS (optional): optional collectors, comma-separated list',
-                    '    METRICS_UTILITY_USAGE_BASED_BILLING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)',  # noqa: E501
+                    '    METRICS_UTILITY_USAGE_BASED_METERING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)',  # noqa: E501
                     '',
                     '  Billing Provider Configuration:',
                     '    METRICS_UTILITY_BILLING_ACCOUNT_ID (optional): AWS account ID for billing',
