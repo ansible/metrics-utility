@@ -142,7 +142,7 @@ class TestTotalWorkersVcpu:
                 assert 'promql_query' in logged_json
                 assert 'total_workers_vcpu' in logged_json
                 assert logged_json['usage_based_billing_enabled'] is True
-                assert 'max_over_time(sum(machine_cpu_cores)[1h:5m]' in logged_json['promql_query']
+                assert 'max_over_time(sum(machine_cpu_cores)[59m59s:5m]' in logged_json['promql_query']
 
     def test_prometheus_client_creation_failure_raises_metrics_exception(self):
         """Test that PrometheusClient creation failure raises MetricsException."""
@@ -254,7 +254,7 @@ class TestTotalWorkersVcpu:
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
                 query_call = mock_prom_client.get_current_value.call_args[0][0]
-                assert 'max_over_time(sum(machine_cpu_cores)[1h:5m]' in query_call
+                assert 'max_over_time(sum(machine_cpu_cores)[59m59s:5m]' in query_call
                 assert '@' in query_call  # Should contain timestamp
 
                 # Verify logging
@@ -325,7 +325,7 @@ class TestTotalWorkersVcpu:
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
                 query_call = mock_prom_client.get_current_value.call_args[0][0]
-                expected_query = f'max_over_time(sum(machine_cpu_cores)[1h:5m] @ {expected_prev_hour_start})'
+                expected_query = f'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ {expected_prev_hour_start})'
                 assert query_call == expected_query
 
     def test_vcpu_value_converted_to_int(self):
