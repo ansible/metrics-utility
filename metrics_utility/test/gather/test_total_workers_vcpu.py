@@ -430,11 +430,14 @@ class TestGetHourBoundaries:
         prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
 
         # Previous hour should be 14:00:00 to 14:59:59
+        # Current hour should be 15:00:00
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
         expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
+        expected_current_hour_start = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc).timestamp()
 
         assert prev_hour_start == expected_prev_hour_start
         assert prev_hour_end == expected_prev_hour_end
+        assert current_hour_start == expected_current_hour_start
 
     def test_get_hour_boundaries_at_hour_boundary(self):
         """Test get_hour_boundaries when current time is exactly at hour boundary."""
@@ -445,11 +448,14 @@ class TestGetHourBoundaries:
         prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
 
         # Previous hour should be 14:00:00 to 14:59:59
+        # Current hour should be 15:00:00 (exactly at boundary)
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
         expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
+        expected_current_hour_start = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc).timestamp()
 
         assert prev_hour_start == expected_prev_hour_start
         assert prev_hour_end == expected_prev_hour_end
+        assert current_hour_start == expected_current_hour_start
 
     def test_get_hour_boundaries_different_times(self):
         """Test get_hour_boundaries with different times throughout the day."""
@@ -468,6 +474,8 @@ class TestGetHourBoundaries:
 
             expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
             expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, tzinfo=timezone.utc).timestamp()
+            expected_current_hour_start = datetime(2023, 12, 25, current_hour, 0, 0, tzinfo=timezone.utc).timestamp()
 
             assert prev_hour_start == expected_prev_hour_start
             assert prev_hour_end == expected_prev_hour_end
+            assert current_hour_start == expected_current_hour_start
