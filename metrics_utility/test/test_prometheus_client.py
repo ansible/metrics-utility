@@ -476,3 +476,106 @@ class TestPrometheusClient:
 
             # Should return empty list when result field is missing
             assert result == []
+
+    @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
+    def test_query_range_success(self, mock_k8s_client_class):
+        """Test successful query_range execution."""
+        # Setup mock
+        mock_k8s_client = MagicMock()
+        mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client_class.return_value = mock_k8s_client
+
+        # Mock response data for range query
+        mock_response_data = {
+            'status': 'success',
+            'data': {'result': [{'metric': {'__name__': 'test_metric'}, 'values': [[1640995200, '16'], [1640995260, '18'], [1640995320, '16']]}]},
+        }
+
+        with patch.object(requests.Session, 'get') as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_get.return_value = mock_response
+
+            # Create client and execute range query
+            client = PrometheusClient(url='https://prometheus.example.com:9090')
+            result = client.query_range('test_metric', 1640995200, 1640995320, '1m')
+
+            # Assertions
+            assert result == mock_response_data
+            mock_get.assert_called_once_with(
+                'https://prometheus.example.com:9090/api/v1/query_range',
+                params={'query': 'test_metric', 'start': 1640995200, 'end': 1640995320, 'step': '1m'},
+                timeout=30,
+            )
+
+    @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
+    def test_query_range_default_step(self, mock_k8s_client_class):
+        """Test query_range with default step parameter."""
+        # Setup mock
+        mock_k8s_client = MagicMock()
+        mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client_class.return_value = mock_k8s_client
+
+        mock_response_data = {'status': 'success', 'data': {'result': []}}
+
+        with patch.object(requests.Session, 'get') as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_get.return_value = mock_response
+
+            # Create client and execute range query without step parameter
+            client = PrometheusClient(url='https://prometheus.example.com:9090')
+            client.query_range('test_metric', 1640995200, 1640995320)
+
+            # Should use default step of '5m'
+            mock_get.assert_called_once_with(
+                'https://prometheus.example.com:9090/api/v1/query_range',
+                params={'query': 'test_metric', 'start': 1640995200, 'end': 1640995320, 'step': '5m'},
+                timeout=30,
+            )
+
+    @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
+    def test_query_range_prometheus_error(self, mock_k8s_client_class):
+        """Test query_range with Prometheus API error."""
+        # Setup mock
+        mock_k8s_client = MagicMock()
+        mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client_class.return_value = mock_k8s_client
+
+        # Mock error response
+        mock_response_data = {'status': 'error', 'error': 'invalid query'}
+
+        with patch.object(requests.Session, 'get') as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_get.return_value = mock_response
+
+            # Create client and execute range query
+            client = PrometheusClient(url='https://prometheus.example.com:9090')
+            result = client.query_range('invalid_query', 1640995200, 1640995320)
+
+            # Should return None for error status
+            assert result is None
+
+    @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
+    def test_query_range_http_error(self, mock_k8s_client_class):
+        """Test query_range with HTTP error."""
+        # Setup mock
+        mock_k8s_client = MagicMock()
+        mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client_class.return_value = mock_k8s_client
+
+        with patch.object(requests.Session, 'get') as mock_get:
+            mock_response = MagicMock()
+            mock_response.status_code = 400
+            mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError('400 Bad Request')
+            mock_get.return_value = mock_response
+
+            # Create client and execute range query
+            client = PrometheusClient(url='https://prometheus.example.com:9090')
+
+            with pytest.raises(requests.exceptions.HTTPError):
+                client.query_range('test_metric', 1640995200, 1640995320)

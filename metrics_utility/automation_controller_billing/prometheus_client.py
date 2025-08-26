@@ -113,3 +113,33 @@ class PrometheusClient:
         if result and len(result) > 0:
             return float(result[0]['value'][1])
         return None
+
+    def query_range(self, query: str, start_time: float, end_time: float, step: str = '5m') -> Optional[dict]:
+        """
+        Execute a range query against Prometheus.
+        Args:
+            query: PromQL instant query (not range query)
+            start_time: Start time (Unix timestamp)
+            end_time: End time (Unix timestamp)
+            step: Query resolution step (e.g., '1m', '5m')
+        """
+        params = {'query': query, 'start': start_time, 'end': end_time, 'step': step}
+
+        try:
+            url = f'{self.url}/api/v1/query_range'
+            logger.debug(f'Range query URL: {url}')
+            logger.debug(f'Range query params: {params}')
+
+            response = self.session.get(url, params=params, timeout=self.timeout)
+            response.raise_for_status()
+
+            data = response.json()
+            if data.get('status') == 'success':
+                return data
+            else:
+                logger.error(f'Prometheus range query failed: {data.get("error", "Unknown error")}')
+                return None
+
+        except Exception as e:
+            logger.error(f'Range query failed: {e}')
+            raise

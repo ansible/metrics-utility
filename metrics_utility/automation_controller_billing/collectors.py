@@ -587,13 +587,14 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     except Exception as e:
         raise MetricsException(f'Can not create a prometheus api client ERROR: {e}')
 
-    promql_query = f'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ {prev_hour_start})'
-    info['promql_query'] = promql_query
-
     try:
-        total_workers_vcpu = prom.get_current_value(promql_query)
-    except Exception as e:
+        total_workers_vcpu, promql_query = get_total_workers_cpu(prom, prev_hour_start)
+        timeline = get_cpu_timeline(prom, prev_hour_start, prev_hour_end)
+    except MetricsException as e:
         raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
+
+    info['promql_query'] = promql_query
+    info['timeline'] = timeline
 
     logger.debug(f'total_workers_vcpu: {total_workers_vcpu}')
 
@@ -616,3 +617,43 @@ def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float, float]:
     previous_hour_start = current_hour_start - 3600
     previous_hour_end = current_hour_start - 1
     return previous_hour_start, previous_hour_end, current_hour_start
+
+
+def get_total_workers_cpu(prom: PrometheusClient, base_timestamp: float) -> Tuple[float, str]:
+    promql_query = f'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ {base_timestamp})'
+
+    try:
+        total_workers_vcpu = prom.get_current_value(promql_query)
+    except Exception as e:
+        raise MetricsException(f'Unexpected error when retrieving nodes: {e}')
+
+    return total_workers_vcpu, promql_query
+
+
+def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_end: float) -> dict:
+    """
+    Get array of timestamp/CPU pairs for the hour leading up to base_timestamp
+    Returns:
+        List of dicts with 'timestamp' (ISO format) and 'cpu_sum' keys
+    """
+    # Use instant query - query_range will handle the time range
+    query = 'sum(machine_cpu_cores)'
+
+    try:
+        response = prom.query_range(query=query, start_time=previous_hour_start, end_time=previous_hour_end, step='5m')
+
+        result = []
+        if response and 'data' in response and 'result' in response['data']:
+            for series in response['data']['result']:
+                if 'values' in series:
+                    for timestamp_val, cpu_val in series['values']:
+                        result.append(
+                            {'timestamp': datetime.fromtimestamp(float(timestamp_val), timezone.utc).isoformat(), 'cpu_sum': float(cpu_val)}
+                        )
+
+        # Sort by timestamp
+        result.sort(key=lambda x: x['timestamp'])
+        return result
+
+    except Exception as e:
+        raise MetricsException(f'Error querying CPU timeline: {e}')

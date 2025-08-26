@@ -98,6 +98,8 @@ class TestTotalWorkersVcpu:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.get_total_workers_cpu') as mock_get_cpu,
+            patch('metrics_utility.automation_controller_billing.collectors.get_cpu_timeline') as mock_get_timeline,
             patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
         ):
@@ -105,8 +107,14 @@ class TestTotalWorkersVcpu:
 
             # Mock PrometheusClient
             mock_prom_client = MagicMock()
-            mock_prom_client.get_current_value.return_value = 16.0
             mock_prom_client_class.return_value = mock_prom_client
+
+            # Mock helper functions
+            mock_get_cpu.return_value = (16.0, 'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ 1234567890)')
+            mock_get_timeline.return_value = [
+                {'timestamp': '2023-01-01T10:00:00+00:00', 'cpu_sum': 16.0},
+                {'timestamp': '2023-01-01T10:05:00+00:00', 'cpu_sum': 16.0},
+            ]
 
             with temporary_env(
                 {
@@ -128,6 +136,10 @@ class TestTotalWorkersVcpu:
                 # Also verify the total_workers_vcpu value was logged
                 mock_logger.debug.assert_called_with('total_workers_vcpu: 16.0')
 
+                # Verify helper functions were called
+                mock_get_cpu.assert_called_once()
+                mock_get_timeline.assert_called_once()
+
                 # Verify result is returned successfully
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 16
@@ -140,6 +152,7 @@ class TestTotalWorkersVcpu:
                 assert 'end_timestamp' in logged_json
                 assert 'usage_based_billing_enabled' in logged_json
                 assert 'promql_query' in logged_json
+                assert 'timeline' in logged_json
                 assert 'total_workers_vcpu' in logged_json
                 assert logged_json['usage_based_billing_enabled'] is True
                 assert 'max_over_time(sum(machine_cpu_cores)[59m59s:5m]' in logged_json['promql_query']
