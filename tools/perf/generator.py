@@ -400,14 +400,16 @@ Environment vars:
             return
 
         if table == 'main_host':
-            # main_host - only generate csvs once, not filtered by since/until; use for each daily tarball
+            # main_host - only generate csvs once, not filtered by since/until; output once, at end of the month
             with tempfile.TemporaryDirectory(prefix=f'metrics-generator-save-{table}') as temp_dir:
                 file_list = self.save_csvs(table, temp_dir, df)
 
                 for since, until in daily_slicing(since=self.output_from, until=self.output_to):
-                    logger.info(f'{table} - {since}-{until}')
-                    for file in file_list:
-                        self.tarify(table, since, until, file)
+                    pass  # just need the last set of values from the generator
+
+                logger.info(f'{table} - {since}-{until}')
+                for file in file_list:
+                    self.tarify(table, since, until, file)
         else:
             # generate csvs daily, filtered by since/until
             for since, until in daily_slicing(since=self.output_from, until=self.output_to):
