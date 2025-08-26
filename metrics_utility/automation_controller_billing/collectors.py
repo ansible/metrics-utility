@@ -630,7 +630,7 @@ def get_total_workers_cpu(prom: PrometheusClient, base_timestamp: float) -> Tupl
     return total_workers_vcpu, promql_query
 
 
-def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_end: float) -> dict:
+def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_end: float) -> list:
     """
     Get array of timestamp/CPU pairs for the hour leading up to base_timestamp
     Returns:
