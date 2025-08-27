@@ -1,3 +1,84 @@
+# TLDR
+
+For testathon, how to fill data:
+
+BEWARE the script will remove data that may already be there (must implement the flag to insert without deletion).
+In your local computer inside root of metrics-utility:
+
+cd testathon
+
+## RPM:
+
+export PASSWORD='Fill here gateway password'
+export USERNAME='admin'
+
+--API_URL is url of gateway
+export API_URL='https://44.201.90.229'
+export SSH_USER='ec2-user'
+
+--URL of controller
+export SSH_URL='54.90.173.180'
+export ENVIRONMENT=RPM
+
+uv run testathon_data_prepare.py
+uv run gather_all.py
+
+You can also run:
+
+uv run build_and_copy.py
+
+This will connect to RPM, runs build_report command and copy output file into the /testathon folder.
+You can provide arguments, for example uv run build_and_copy.py --month=2025-08
+
+And you can set environment variables, all env variables that begins with METRICS_UTILITY will be also set in remote machine when executing build command remotely
+
+This way, you can test it much easier, otherwise you will need to copy your file back every time you execute build_command
+
+## Containerized:
+
+The same as above, but:
+
+export SSH_USER='ansible'
+export ENVIRONMENT=containerized
+
+## Openshift:
+
+First, ensure oc is installed on the machine.
+
+You need to fill this env variable:
+OC_LOGIN_COMMAND
+
+How to do it:
+
+### Step 1: Access OpenShift Web Console
+
+Open the hive_cluster_claim.yml file
+Locate the hive_cluster_deployment_web_console_url field
+Copy the URL (example: https://console-openshift-console.apps.aap-test-v418-x86-64-klfxw.ocp4.testing.ansible.com)
+Open the URL in your web browser
+
+### Step 2: Login to OpenShift Console
+
+Username: kubeadmin Password: Retrieve from the hive_cluster_claim_admin_password file
+
+Click Log in
+
+### Step 3: Configure CLI Access
+
+In the OpenShift web console, click on kube:admin (top right corner)
+Select Copy login command
+A new tab will open - click Display Token
+Copy the command under Log in with this token
+
+This is your:
+OC_LOGIN_COMMAND env variable
+
+set also:
+export ENVIRONMENT=OpenShift
+
+You do not need to specify POD_NAME and NAMESPACE, the script will handle it by itself.
+Then again run data prepare and gather all scripts.
+
 # printvars.py
 
 This will print env vars that are used in scripts. Its better than printvars command, more readable.
