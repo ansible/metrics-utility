@@ -1,0 +1,31 @@
+#!/bin/sh
+set -e
+cd "`dirname "$0"`"
+
+export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
+export METRICS_UTILITY_SHIP_PATH="$$"
+export METRICS_UTILITY_SHIP_TARGET="s3"
+
+export METRICS_UTILITY_BUCKET_ACCESS_KEY="myuseraccesskey"
+export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:9000"
+export METRICS_UTILITY_BUCKET_NAME="metricsutilitys3"
+export METRICS_UTILITY_BUCKET_REGION="us-east-1"
+export METRICS_UTILITY_BUCKET_SECRET_KEY="myusersecretkey"
+
+if ! pg_isready -h localhost; then
+  echo "run-s3-gather-build: DB not ready, run make compose first"
+  exit 1
+fi
+
+minio-mc alias set local "$METRICS_UTILITY_BUCKET_ENDPOINT" "$METRICS_UTILITY_BUCKET_ACCESS_KEY" "$METRICS_UTILITY_BUCKET_SECRET_KEY"
+echo
+echo minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"
+minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"
+echo
+uv run ./manage.py gather_automation_controller_billing_data --ship --since=2025-06-01 --until=2025-07-01 --force
+echo
+minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"/data
+echo
+uv run ./manage.py build_report --month=2025-06 --force
+echo
+minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"/reports
