@@ -157,13 +157,16 @@ def validate_report_type(errors, method):
     Returns:
         str or None: The value of the 'METRICS_UTILITY_REPORT_TYPE' environment variable if set, otherwise None.
     """
+    if method == 'gather':
+        return None
+
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     if report_type and report_type not in VALID_REPORT_TYPES:
         errors.append(
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
         )
-    if method == 'build' and report_type is None:
+    if report_type is None:
         errors.append(
             f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
@@ -266,7 +269,7 @@ def validate_ship_target(errors, method, report_type):
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is empty. Valid values: {", ".join(ship_target_type)}')
     if ship_target and ship_target not in ship_target_type:
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(ship_target_type)}')
-    if report_type == 'RENEWAL_GUIDANCE' and ship_target != 'controller_db':
+    if method == 'build' and report_type == 'RENEWAL_GUIDANCE' and ship_target != 'controller_db':
         errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Only "controller_db" is allowed for "RENEWAL_GUIDANCE"')
     return ship_target
 
@@ -340,19 +343,15 @@ def handle_env_validation(method: str):
     - Validating the max gather period days.
 
     Args:
-        method (str): Determines which set of valid ship targets to use for validation.
-            Should be either 'gather' or another supported method.
+        method (str): Determines which command is running, for command-specific logic
+            Should be either 'gather' or 'build'
+
+    Raises:
+        MissingRequiredEnvVar: If any required environment variable or configuration is missing or invalid.
 
     Notes:
-        - The function accumulates all errors before raising an exception, providing a comprehensive
-          error message.
-        - The specific validation functions (`validate_report_type`, `validate_ccsp_report_sheets`,
-          `validate_collectors`, `validate_ship_target`, `validate_ship_path`, `validate_max_gather_period_days`) are expected to
-          append error messages to the provided `errors` list.
-        - The `method` parameter controls which ship target validation set is used.
-        - Raises:
-            MissingRequiredEnvVar: If any required environment variable or configuration is missing
-            or invalid.
+        - The function accumulates all errors before raising an exception, providing a comprehensive error message.
+        - The specific validation functions (`validate_*`) are expected to append error messages to the provided `errors` list.
     """
     errors = []
     report_type = validate_report_type(errors, method)
