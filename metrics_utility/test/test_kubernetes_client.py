@@ -17,15 +17,12 @@ class TestKubernetesClient:
     """Test suite for the simplified KubernetesClient class."""
 
     def test_init_success(self):
-        """Test successful initialization when service account files exist."""
+        """Test successful initialization when service account token file exists."""
         with (
             patch('os.path.exists') as mock_exists,
         ):
-            # Setup mocks - both files exist
-            mock_exists.side_effect = lambda path: path in [
-                '/var/run/secrets/kubernetes.io/serviceaccount/token',
-                '/var/run/secrets/kubernetes.io/serviceaccount/namespace',
-            ]
+            # Setup mocks - token file exists
+            mock_exists.side_effect = lambda path: path == '/var/run/secrets/kubernetes.io/serviceaccount/token'
 
             # Create client - if this succeeds without exception, the test passes
             KubernetesClient()
@@ -35,23 +32,11 @@ class TestKubernetesClient:
         with (
             patch('os.path.exists') as mock_exists,
         ):
-            # Setup mocks - only namespace exists
-            mock_exists.side_effect = lambda path: path == '/var/run/secrets/kubernetes.io/serviceaccount/namespace'
+            # Setup mocks - token file doesn't exist
+            mock_exists.return_value = False
 
             # Test that MetricsException is raised
             with pytest.raises(MetricsException, match='Service account token not found'):
-                KubernetesClient()
-
-    def test_init_failure_no_namespace(self):
-        """Test initialization failure when namespace file doesn't exist."""
-        with (
-            patch('os.path.exists') as mock_exists,
-        ):
-            # Setup mocks - only token exists
-            mock_exists.side_effect = lambda path: path == '/var/run/secrets/kubernetes.io/serviceaccount/token'
-
-            # Test that MetricsException is raised
-            with pytest.raises(MetricsException, match='Service account namespace not found'):
                 KubernetesClient()
 
     def test_init_failure_no_files(self):

@@ -54,7 +54,7 @@ class TestTotalWorkersVcpu:
                 assert not logged_json['usage_based_billing_enabled']
                 assert logged_json['total_workers_vcpu'] == 1
                 assert 'cluster_name' in logged_json
-                assert 'timestamp' in logged_json
+                assert 'collection_timestamp' in logged_json
                 assert 'start_timestamp' in logged_json
                 assert 'end_timestamp' in logged_json
 
@@ -147,7 +147,7 @@ class TestTotalWorkersVcpu:
                 # Verify that the logged info contains all expected fields
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
                 assert 'cluster_name' in logged_json
-                assert 'timestamp' in logged_json
+                assert 'collection_timestamp' in logged_json
                 assert 'start_timestamp' in logged_json
                 assert 'end_timestamp' in logged_json
                 assert 'usage_based_billing_enabled' in logged_json
@@ -333,7 +333,7 @@ class TestTotalWorkersVcpu:
 
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
-                expected_prev_hour_start, _, _ = get_hour_boundaries(current_ts)
+                expected_prev_hour_start, _ = get_hour_boundaries(current_ts)
 
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
@@ -398,7 +398,7 @@ class TestTotalWorkersVcpu:
 
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
-                _, prev_hour_end, _ = get_hour_boundaries(current_ts)
+                _, prev_hour_end = get_hour_boundaries(current_ts)
                 expected_timestamp = datetime.fromtimestamp(prev_hour_end).isoformat()
 
                 # Check result timestamp
@@ -408,7 +408,7 @@ class TestTotalWorkersVcpu:
                 # Check logged JSON
                 mock_logger_info.info.assert_called_once()
                 logged_json = json.loads(mock_logger_info.info.call_args[0][0])
-                assert logged_json['timestamp'] == expected_timestamp
+                assert logged_json['end_timestamp'] == expected_timestamp
                 assert logged_json['cluster_name'] == 'test-cluster'
                 assert logged_json['total_workers_vcpu'] == 8
                 assert logged_json['usage_based_billing_enabled']
@@ -440,17 +440,14 @@ class TestGetHourBoundaries:
         test_datetime = datetime(2023, 12, 25, 15, 30, 45, tzinfo=timezone.utc)
         current_ts = test_datetime.timestamp()
 
-        prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
+        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
         # Previous hour should be 14:00:00 to 14:59:59
-        # Current hour should be 15:00:00
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
         expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
-        expected_current_hour_start = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc).timestamp()
 
         assert prev_hour_start == expected_prev_hour_start
         assert prev_hour_end == expected_prev_hour_end
-        assert current_hour_start == expected_current_hour_start
 
     def test_get_hour_boundaries_at_hour_boundary(self):
         """Test get_hour_boundaries when current time is exactly at hour boundary."""
@@ -458,17 +455,14 @@ class TestGetHourBoundaries:
         test_datetime = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc)
         current_ts = test_datetime.timestamp()
 
-        prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
+        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
         # Previous hour should be 14:00:00 to 14:59:59
-        # Current hour should be 15:00:00 (exactly at boundary)
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
         expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
-        expected_current_hour_start = datetime(2023, 12, 25, 15, 0, 0, tzinfo=timezone.utc).timestamp()
 
         assert prev_hour_start == expected_prev_hour_start
         assert prev_hour_end == expected_prev_hour_end
-        assert current_hour_start == expected_current_hour_start
 
     def test_get_hour_boundaries_different_times(self):
         """Test get_hour_boundaries with different times throughout the day."""
@@ -483,12 +477,10 @@ class TestGetHourBoundaries:
             test_datetime = datetime(2023, 12, 25, current_hour, 30, 0, tzinfo=timezone.utc)
             current_ts = test_datetime.timestamp()
 
-            prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
+            prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
             expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
             expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, tzinfo=timezone.utc).timestamp()
-            expected_current_hour_start = datetime(2023, 12, 25, current_hour, 0, 0, tzinfo=timezone.utc).timestamp()
 
             assert prev_hour_start == expected_prev_hour_start
             assert prev_hour_end == expected_prev_hour_end
-            assert current_hour_start == expected_current_hour_start

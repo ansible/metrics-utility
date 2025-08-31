@@ -64,7 +64,7 @@ class TestPrometheusClient:
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Test that MetricsException is raised
-        with pytest.raises(MetricsException, match='Unable to create the token for the current service account'):
+        with pytest.raises(MetricsException, match='Unable to retrieve the token for the current service account'):
             PrometheusClient(url='https://prometheus.example.com:9090')
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
@@ -577,5 +577,5 @@ class TestPrometheusClient:
             # Create client and execute range query
             client = PrometheusClient(url='https://prometheus.example.com:9090')
 
-            with pytest.raises(requests.exceptions.HTTPError):
+            with pytest.raises(MetricsException):
                 client.query_range('test_metric', 1640995200, 1640995320)

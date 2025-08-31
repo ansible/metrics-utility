@@ -553,13 +553,13 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
 
     now = datetime.now(timezone.utc)
     current_ts = now.timestamp()
-    prev_hour_start, prev_hour_end, current_hour_start = get_hour_boundaries(current_ts)
+    prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
     info = {
         'cluster_name': cluster_name,
-        'timestamp': datetime.fromtimestamp(prev_hour_end).isoformat(),
+        'collection_timestamp': datetime.fromtimestamp(current_ts).isoformat(),
         'start_timestamp': datetime.fromtimestamp(prev_hour_start).isoformat(),
-        'end_timestamp': datetime.fromtimestamp(current_hour_start).isoformat(),
+        'end_timestamp': datetime.fromtimestamp(prev_hour_end).isoformat(),
     }
     # If METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is not set or set to false then it returns 1
     usage_based_billing_enabled_str = os.getenv('METRICS_UTILITY_USAGE_BASED_METERING_ENABLED')
@@ -571,7 +571,7 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
         info['total_workers_vcpu'] = 1
         # This message must always appear in the log regardless of the log level.
         logger_info_level.info(json.dumps(info, indent=2))
-        return {'timestamp': info['timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+        return {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
 
     url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
     if not url:
@@ -609,14 +609,14 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     # This message must always appear in the log regardless of the log level.
     logger_info_level.info(json.dumps(info, indent=2))
 
-    return {'timestamp': info['timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+    return {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
 
 
 def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float, float]:
     current_hour_start = (current_timestamp // 3600) * 3600
     previous_hour_start = current_hour_start - 3600
     previous_hour_end = current_hour_start - 1
-    return previous_hour_start, previous_hour_end, current_hour_start
+    return previous_hour_start, previous_hour_end
 
 
 def get_total_workers_cpu(prom: PrometheusClient, base_timestamp: float) -> Tuple[float, str]:
@@ -632,7 +632,7 @@ def get_total_workers_cpu(prom: PrometheusClient, base_timestamp: float) -> Tupl
 
 def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_end: float) -> list:
     """
-    Get array of timestamp/CPU pairs for the hour leading up to base_timestamp
+    Get array of timestamp/CPU pairs for the hour leading up to previous_hour_end
     Returns:
         List of dicts with 'timestamp' (ISO format) and 'cpu_sum' keys
     """

@@ -36,9 +36,9 @@ class PrometheusClient:
         kube_client = KubernetesClient()
         self.token = kube_client.get_current_token()
         if not self.token:
-            raise MetricsException('Unable to create the token for the current service account')
+            raise MetricsException('Unable to retrieve the token for the current service account')
 
-        # Create PrometheusConnect client
+        # Setup session
         self._setup_session()
 
     def _setup_session(self):
@@ -142,4 +142,4 @@ class PrometheusClient:
 
         except Exception as e:
             logger.error(f'Range query failed: {e}')
-            raise
+            raise MetricsException(e)
