@@ -61,12 +61,6 @@ class PrometheusClient:
             logger.info(f'Using service CA certificate: {self.ca_cert_path}')
         else:
             raise MetricsException(f'CA_CERT not found at {self.ca_cert_path}')
-            # logger.warning(f'Service CA certificate not found at {self.ca_cert_path}, disabling SSL verification')
-            # # Disable SSL warnings
-            # import urllib3
-
-            # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            # self.session.verify = False
 
     def query(self, query: str, time_param: Optional[float] = None) -> Optional[list]:
         """
