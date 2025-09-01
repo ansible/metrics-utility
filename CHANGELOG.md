@@ -72,6 +72,15 @@
 - dev: standalone mode with just postgres; python 3.13
 - dev: merge in insights-analytics-generator base lib
 
-## 0.5.1dev
+## 0.6.0
 
-- TODO
+- more validation for parameters / environment variables validation
+- more tailored error messages for known exceptions, better --help
+- deduplication: optional deduplication modes, adds `product_serial` & `machine_id` to hostnames-based dedup
+- job host summary gather optimizations
+- indirect node summary report tab
+- vcpu workers collector
+- dev: use mirror.gcr.io for dev containers; code cleanups; more MacOS X compatible scripts
+- dev: tests set up awx environment by default; more tests
+- dev: perf tests split up to make testing branches easier
+- dev: remove pytz
