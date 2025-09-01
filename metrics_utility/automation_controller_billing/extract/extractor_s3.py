@@ -14,16 +14,10 @@ class ExtractorS3(Base):
 
         self.s3_handler = S3Handler(params=self.extra_params)
 
-    def iter_batches(self, date, columns=None, batch_size=None):
-        if batch_size is None:
-            batch_size = self.batch_size()
-
+    def iter_batches(self, date, columns=None):
         # Read tarball in memory in batches
         logger.debug(f'{self.LOG_PREFIX} Processing {date}')
         s3_paths = self.fetch_partition_paths(date)
-
-        if batch_size is None:
-            batch_size = self.batch_size()
 
         for s3_path in s3_paths:
             with tempfile.TemporaryDirectory(prefix='automation_controller_billing_data_') as temp_dir:
@@ -41,7 +35,3 @@ class ExtractorS3(Base):
 
         paths = [file for file in self.s3_handler.list_files(prefix)]
         return paths
-
-    @staticmethod
-    def batch_size():
-        return 100000
