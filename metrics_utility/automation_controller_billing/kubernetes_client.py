@@ -5,6 +5,7 @@ from metrics_utility.logger import logger
 
 
 TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+CA_CERT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
 
 
 class KubernetesClient:
@@ -46,3 +47,12 @@ class KubernetesClient:
             return token
         except Exception as e:
             raise MetricsException(f'Error reading token: {e}')
+
+    def get_ca_cert_path(self) -> str:
+        """
+        Get the current pod's service account ca_cert from the mounted file.
+
+        Returns:
+            Current service account ca_cert
+        """
+        return CA_CERT_PATH

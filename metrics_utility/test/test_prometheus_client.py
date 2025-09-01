@@ -19,23 +19,30 @@ from metrics_utility.exceptions import MetricsException
 class TestPrometheusClient:
     """Test cases for PrometheusClient class."""
 
+    def _setup_kubernetes_client_mock(self, mock_k8s_client, token='test-token'):
+        """Helper method to set up KubernetesClient mock with common return values."""
+        mock_k8s_client.get_current_token.return_value = token
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+        return mock_k8s_client
+
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_init_success_with_token(self, mock_k8s_client_class):
         """Test successful initialization with valid token."""
         # Setup mock
         mock_k8s_client = MagicMock()
-        mock_k8s_client.get_current_token.return_value = 'test-token-12345'
+        self._setup_kubernetes_client_mock(mock_k8s_client, 'test-token-12345')
         mock_k8s_client_class.return_value = mock_k8s_client
 
-        # Create client
-        client = PrometheusClient(url='https://prometheus.example.com:9090')
+        with patch('os.path.exists', return_value=True):
+            # Create client
+            client = PrometheusClient(url='https://prometheus.example.com:9090')
 
-        # Assertions
-        assert client.url == 'https://prometheus.example.com:9090'
-        assert client.token == 'test-token-12345'
-        assert client.timeout == 30  # default
-        assert client.session is not None
-        mock_k8s_client.get_current_token.assert_called_once()
+            # Assertions
+            assert client.url == 'https://prometheus.example.com:9090'
+            assert client.token == 'test-token-12345'
+            assert client.timeout == 30  # default
+            assert client.session is not None
+            mock_k8s_client.get_current_token.assert_called_once()
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_init_success_with_mounted_token(self, mock_k8s_client_class):
@@ -43,17 +50,19 @@ class TestPrometheusClient:
         # Setup mock
         mock_k8s_client = MagicMock()
         mock_k8s_client.get_current_token.return_value = 'mounted-token-67890'
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
         mock_k8s_client_class.return_value = mock_k8s_client
 
-        # Create client
-        client = PrometheusClient(url='https://prometheus.example.com:9090', timeout=60)
+        with patch('os.path.exists', return_value=True):
+            # Create client
+            client = PrometheusClient(url='https://prometheus.example.com:9090', timeout=60)
 
-        # Assertions
-        assert client.url == 'https://prometheus.example.com:9090'
-        assert client.token == 'mounted-token-67890'
-        assert client.timeout == 60
-        assert client.session is not None
-        mock_k8s_client.get_current_token.assert_called_once()
+            # Assertions
+            assert client.url == 'https://prometheus.example.com:9090'
+            assert client.token == 'mounted-token-67890'
+            assert client.timeout == 60
+            assert client.session is not None
+            mock_k8s_client.get_current_token.assert_called_once()
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_init_failure_no_token(self, mock_k8s_client_class):
@@ -61,6 +70,7 @@ class TestPrometheusClient:
         # Setup mock to return None
         mock_k8s_client = MagicMock()
         mock_k8s_client.get_current_token.return_value = None
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         # Test that MetricsException is raised
@@ -73,13 +83,15 @@ class TestPrometheusClient:
         # Setup mock
         mock_k8s_client = MagicMock()
         mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
         mock_k8s_client_class.return_value = mock_k8s_client
 
-        # Create client with trailing slash
-        client = PrometheusClient(url='https://prometheus.example.com:9090/')
+        with patch('os.path.exists', return_value=True):
+            # Create client with trailing slash
+            client = PrometheusClient(url='https://prometheus.example.com:9090/')
 
-        # Assertions
-        assert client.url == 'https://prometheus.example.com:9090'
+            # Assertions
+            assert client.url == 'https://prometheus.example.com:9090'
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_setup_session_with_token(self, mock_k8s_client_class):
@@ -87,6 +99,7 @@ class TestPrometheusClient:
         # Setup mock
         mock_k8s_client = MagicMock()
         mock_k8s_client.get_current_token.return_value = 'test-token-12345'
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with (
@@ -101,13 +114,13 @@ class TestPrometheusClient:
             assert client.session.headers['Authorization'] == 'Bearer test-token-12345'
             assert client.session.headers['Content-Type'] == 'application/x-www-form-urlencoded'
             assert client.session.verify == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+            assert client.ca_cert_path == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
             mock_disable_warnings.assert_not_called()
 
-            # Test when CA certificate doesn't exist
+            # Test when CA certificate doesn't exist - should raise exception
             mock_exists.return_value = False
-            client2 = PrometheusClient(url='https://prometheus.example.com:9090')
-            assert client2.session.verify is False
-            mock_disable_warnings.assert_called_once()
+            with pytest.raises(MetricsException, match='CA_CERT not found at'):
+                PrometheusClient(url='https://prometheus.example.com:9090')
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_query_success(self, mock_k8s_client_class):
@@ -356,6 +369,7 @@ class TestPrometheusClient:
         # Setup mock
         mock_k8s_client = MagicMock()
         mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
         mock_k8s_client_class.return_value = mock_k8s_client
 
         with (
@@ -370,7 +384,22 @@ class TestPrometheusClient:
             assert client.session.headers['Authorization'] == 'Bearer test-token'
             assert client.session.headers['Content-Type'] == 'application/x-www-form-urlencoded'
             assert client.session.verify == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+            assert client.ca_cert_path == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
             mock_disable_warnings.assert_not_called()
+
+    @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
+    def test_init_failure_ca_cert_not_found(self, mock_k8s_client_class):
+        """Test initialization failure when CA certificate file doesn't exist."""
+        # Setup mock
+        mock_k8s_client = MagicMock()
+        mock_k8s_client.get_current_token.return_value = 'test-token'
+        mock_k8s_client.get_ca_cert_path.return_value = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+        mock_k8s_client_class.return_value = mock_k8s_client
+
+        with patch('os.path.exists', return_value=False):
+            # Test that MetricsException is raised when CA cert doesn't exist
+            with pytest.raises(MetricsException, match='CA_CERT not found at /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'):
+                PrometheusClient(url='https://prometheus.example.com:9090')
 
     @patch('metrics_utility.automation_controller_billing.prometheus_client.KubernetesClient')
     def test_custom_timeout(self, mock_k8s_client_class):

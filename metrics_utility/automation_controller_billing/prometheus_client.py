@@ -31,12 +31,15 @@ class PrometheusClient:
         self.url = url.rstrip('/')  # Remove trailing slash
         self.timeout = timeout
         self.token = None
+        self.ca_cert_path = None
         self.session = requests.Session()
 
         kube_client = KubernetesClient()
         self.token = kube_client.get_current_token()
         if not self.token:
             raise MetricsException('Unable to retrieve the token for the current service account')
+
+        self.ca_cert_path = kube_client.get_ca_cert_path()
 
         # Setup session
         self._setup_session()
@@ -53,17 +56,17 @@ class PrometheusClient:
             logger.info(f'   URL: {self.url}')
 
         # Use service CA certificate for SSL verification
-        ca_cert_path = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
-        if os.path.exists(ca_cert_path):
-            self.session.verify = ca_cert_path
-            logger.info(f'Using service CA certificate: {ca_cert_path}')
+        if os.path.exists(self.ca_cert_path):
+            self.session.verify = self.ca_cert_path
+            logger.info(f'Using service CA certificate: {self.ca_cert_path}')
         else:
-            logger.warning(f'Service CA certificate not found at {ca_cert_path}, disabling SSL verification')
-            # Disable SSL warnings
-            import urllib3
+            raise MetricsException(f'CA_CERT not found at {self.ca_cert_path}')
+            # logger.warning(f'Service CA certificate not found at {self.ca_cert_path}, disabling SSL verification')
+            # # Disable SSL warnings
+            # import urllib3
 
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            self.session.verify = False
+            # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            # self.session.verify = False
 
     def query(self, query: str, time_param: Optional[float] = None) -> Optional[list]:
         """

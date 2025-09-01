@@ -9,7 +9,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-from metrics_utility.automation_controller_billing.kubernetes_client import KubernetesClient
+from metrics_utility.automation_controller_billing.kubernetes_client import CA_CERT_PATH, KubernetesClient
 from metrics_utility.exceptions import MetricsException
 
 
@@ -88,3 +88,14 @@ class TestKubernetesClient:
             # Assertions - both calls should return the same token
             assert token1 == 'multi-op-token'
             assert token2 == 'multi-op-token'
+
+    def test_get_ca_cert_path(self):
+        """Test that get_ca_cert_path returns the correct CA certificate path."""
+        with patch('os.path.exists', return_value=True):
+            # Create client and test
+            client_instance = KubernetesClient()
+            ca_cert_path = client_instance.get_ca_cert_path()
+
+            # Assertions
+            assert ca_cert_path == CA_CERT_PATH
+            assert ca_cert_path == '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
