@@ -1,9 +1,8 @@
-from ..util import collector, copy_table
+from ..util import collector, copy_table, date_where
 
 
-@collector
-def main_host(*, db=None, output_dir=None):
-    query = """
+def _main_host_query(where):
+    return f"""
         SELECT
             main_host.name as host_name,
             main_host.id AS host_id,
@@ -82,8 +81,23 @@ def main_host(*, db=None, output_dir=None):
         LEFT JOIN main_inventory ON main_inventory.id = main_host.inventory_id
         LEFT JOIN main_organization ON main_organization.id = main_inventory.organization_id
         LEFT JOIN main_unifiedjob ON main_unifiedjob.id = main_host.last_job_id
-        WHERE enabled='t'
+        WHERE {where}
         ORDER BY main_host.id ASC
     """
 
+
+@collector
+def main_host(*, db=None, output_dir=None):
+    query = _main_host_query("enabled='t'")
     return copy_table(db=db, table='main_host', query=query, prepend_query=True, output_dir=output_dir)
+
+
+@collector
+def main_host_daily(*, db=None, since=None, until=None, output_dir=None):
+    where = f"""
+        enabled='t'
+        AND ({date_where('main_host.created', since, until)}
+        OR {date_where('main_host.modified', since, until)})
+    """
+    query = _main_host_query(where)
+    return copy_table(db=db, table='main_host_daily', query=query, prepend_query=True, output_dir=output_dir)
