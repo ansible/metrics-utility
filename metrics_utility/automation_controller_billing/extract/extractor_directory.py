@@ -8,16 +8,10 @@ from metrics_utility.logger import logger
 class ExtractorDirectory(Base):
     LOG_PREFIX = '[ExtractorDirectory]'
 
-    def iter_batches(self, date, columns=None, batch_size=None):
-        if batch_size is None:
-            batch_size = self.batch_size()
-
+    def iter_batches(self, date, columns=None):
         # Read tarball in memory in batches
         logger.debug(f'{self.LOG_PREFIX} Processing {date}')
         paths = self.fetch_partition_paths(date)
-
-        if batch_size is None:
-            batch_size = self.batch_size()
 
         for path in paths:
             if not path.endswith('.tar.gz'):
@@ -39,7 +33,3 @@ class ExtractorDirectory(Base):
             paths = []
 
         return paths
-
-    @staticmethod
-    def batch_size():
-        return 100000

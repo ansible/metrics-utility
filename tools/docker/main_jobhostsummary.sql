@@ -521,7 +521,7 @@ $yaml$,
         0,-- changed
         0,-- dark
         0,-- failures
-        0,-- ok
+        1,-- ok
         0,-- processed
         0,-- skipped
         false,-- failed

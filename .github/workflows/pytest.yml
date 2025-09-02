@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout metrics-utility (${{ github.ref }})"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{ ! github.base_ref }}
 
       - name: "Checkout metrics-utility (${{ github.event.pull_request.head.ref }})"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{ github.base_ref }}
         with:
           ref: ${{ github.event.pull_request.head.ref }}
