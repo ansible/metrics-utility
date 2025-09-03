@@ -252,6 +252,7 @@ class Main:
         self.main_host = (
             int(os.getenv('MAIN_HOST_SIZE', '10000')),
             int(os.getenv('MAIN_HOST_UNIQUE_SIZE', '2000')),
+            int(os.getenv('MAIN_HOST_FREQUENCY', '1')),  # every N days; or once when 0
         )
         self.main_indirectmanagednodeaudit = (
             int(os.getenv('MAIN_INDIRECT_SIZE', '10000')),
@@ -287,6 +288,7 @@ Environment vars:
     MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE (default: 2000)
     MAIN_HOST_SIZE (default: 10000)
     MAIN_HOST_UNIQUE_SIZE (default: 2000)
+    MAIN_HOST_FREQUENCY (default: 1)
     MAIN_INDIRECT_SIZE (default: 10000)
     MAIN_INDIRECT_UNIQUE_SIZE (default: 2000)
     MAIN_JOBEVENT_SIZE (default: 10000)
@@ -400,16 +402,28 @@ Environment vars:
             return
 
         if table == 'main_host':
-            # main_host - only generate csvs once, not filtered by since/until; output once, at end of the month
+            # main_host - only generate csvs once, not filtered by since/until
             with tempfile.TemporaryDirectory(prefix=f'metrics-generator-save-{table}') as temp_dir:
                 file_list = self.save_csvs(table, temp_dir, df)
 
+                # output every N days (MAIN_HOST_FREQUENCY=1), or at the end of the period if 0
+                frequency = self.main_host[2]
+                idx = 0
                 for since, until in daily_slicing(since=self.output_from, until=self.output_to):
-                    pass  # just need the last set of values from the generator
+                    idx += 1
+                    if not frequency:
+                        continue
+                    if idx % frequency:
+                        continue
 
-                logger.info(f'{table} - {since}-{until}')
-                for file in file_list:
-                    self.tarify(table, since, until, file)
+                    logger.info(f'{table} - {since}-{until}')
+                    for file in file_list:
+                        self.tarify(table, since, until, file)
+
+                if not frequency:
+                    logger.info(f'{table} - {since}-{until}')
+                    for file in file_list:
+                        self.tarify(table, since, until, file)
         else:
             # generate csvs daily, filtered by since/until
             for since, until in daily_slicing(since=self.output_from, until=self.output_to):

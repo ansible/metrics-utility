@@ -19,6 +19,7 @@ run_generator() {
   export MAIN_JOBHOSTSUMMARY_UNIQUE_SIZE="$2"
   export MAIN_HOST_SIZE="$1"
   export MAIN_HOST_UNIQUE_SIZE="$2"
+  export MAIN_HOST_FREQUENCY="$5"
   export MAIN_INDIRECT_SIZE="$1"
   export MAIN_INDIRECT_UNIQUE_SIZE="$2"
   export MAIN_JOBEVENT_SIZE="$1"
@@ -35,13 +36,13 @@ run_generator() {
 
 ## generator
 log "gen 10,000"
-run_generator 10000 2000 2026-01-01 2026-02-01
+run_generator 10000 2000 2026-01-01 2026-02-01 1
 
 log "gen 100,000"
-run_generator 100000 20000 2026-02-01 2026-03-01
+run_generator 100000 20000 2026-02-01 2026-03-01 7
 
 log "gen 1,000,000"
-run_generator 1000000 200000 2026-03-01 2026-04-01
+run_generator 1000000 200000 2026-03-01 2026-04-01 0
 
 ## checkup
 set -x
