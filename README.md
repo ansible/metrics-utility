@@ -241,6 +241,7 @@ As the project grows, more guides and references will be added to the `/docs` fo
 |-|-|
 |0.4.1|2.4\*|
 |0.5.0|2.5-20250507|
+|0.6.0|2.5.20250924 & 2.6|
 
 ## Contributing
 
