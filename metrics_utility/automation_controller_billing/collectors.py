@@ -8,6 +8,7 @@ from importlib.metadata import version
 from typing import Tuple
 
 import distro
+import psycopg
 
 from django.db import connection
 from django.db.utils import ProgrammingError
@@ -435,7 +436,7 @@ def main_indirectmanagednodeaudit_table(since, full_path, until, **kwargs):
             query=f'COPY ({query}) TO STDOUT WITH CSV HEADER',
             path=full_path,
         )
-    except ProgrammingError as e:
+    except (ProgrammingError, psycopg.errors.UndefinedTable) as e:
         logger.warning(
             'main_indirectmanagednodeaudit table missing in the database schema: %s.'
             ' Falling back to behavior without indirect managed node audit data.',
