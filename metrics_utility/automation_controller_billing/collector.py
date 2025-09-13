@@ -22,6 +22,18 @@ except ImportError:
     from ansible_base.lib.utils.db import advisory_lock
 
 
+def _last_gathered_entries():
+    # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
+    # We can safely do this, by making sure we use the same lock as Analytics, before we persist
+    # these settings.
+    from awx.conf.models import Setting
+
+    last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+    last_gathered_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+
+    return last_gathered_entries
+
+
 class Collector(base.Collector):
     def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
         if collector_module is None:
@@ -113,14 +125,7 @@ class Collector(base.Collector):
         pass
 
     def _load_last_gathered_entries(self):
-        # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
-        # We can safely do this, by making sure we use the same lock as Analytics, before we persist
-        # these settings.
-        from awx.conf.models import Setting
-
-        last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
-        last_gathered_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
-        return last_gathered_entries
+        return _last_gathered_entries()
 
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""

@@ -3,10 +3,11 @@ import os
 import tarfile
 
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
-from metrics_utility.test.util import run_gather_ext
+from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
 env_vars = {
@@ -98,11 +99,20 @@ def test_only_host_scope(cleanup_glob):
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
-def test_no_since(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship', '--until=2024-01-03'])
+def test_no_since(cleanup_glob, caplog):
+    result = run_gather_ext(env_vars, ['--ship', '--until=2024-01-04'])
     validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
-    assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
-    # TODO not None :)
-    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
+    assert 'Original since-until: None to 2024-01-04 00:00:00+00:00' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
+
+    # mock last gather to 2024-01-04
+    with patch('metrics_utility.automation_controller_billing.collector._last_gathered_entries') as mock:
+        mock.return_value = {'job_host_summary': '2024-01-04T00:00:00Z'}
+        run_gather_int(env_vars, {'ship': True, 'until': '2024-01-05'})
+
+    validate_exists(file_glob)
+
+    assert 'Original since-until: None to 2024-01-05 00:00:00+00:00' in caplog.messages
+    assert 'Final since-until: 2024-01-04 00:00:00+00:00 to 2024-01-05 00:00:00+00:00' in caplog.messages
