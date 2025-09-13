@@ -95,3 +95,14 @@ def test_only_host_scope(cleanup_glob):
         print(tar.getnames())
         # ensure main_host.csv is present
         # assert './main_host.csv' in tar.getnames()
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_no_since(cleanup_glob):
+    result = run_gather_ext(env_vars, ['--ship', '--until=2024-01-03'])
+    validate_exists(file_glob)
+
+    text = result.stderr + '\n' + result.stdout
+    assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
+    # TODO not None :)
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
