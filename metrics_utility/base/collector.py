@@ -142,14 +142,10 @@ class Collector:
             logger.log(self.log_level, 'Invalid License provided, or No License Provided')
             return False
 
-        if self.is_shipping_enabled():
+        if not self.is_dry_run():
             return self._is_shipping_configured()
 
         return True
-
-    def is_shipping_enabled(self):
-        """Shipping is enabled in manual/scheduled mode"""
-        return not self.is_dry_run()
 
     def last_gathered_entry_for(self, key):
         return self.last_gathered_entries.get(key)
@@ -371,17 +367,18 @@ class Collector:
         """
         if not package.processed:
             package.make_tgz()
-            if self.is_shipping_enabled():
+            if not self.is_dry_run():
                 package.ship()
             package.delete_collected_files()
             package.processed = True
 
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""
-        if self.is_shipping_enabled():
-            self._update_last_gathered_entries()
+        if self.is_dry_run():
+            return
 
-            self._save_last_gather()
+        self._update_last_gathered_entries()
+        self._save_last_gather()
 
     def _gather_cleanup(self):
         """Deleting temp files"""

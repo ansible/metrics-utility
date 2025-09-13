@@ -134,15 +134,17 @@ class Collector(base.Collector):
         if disabled_str and (disabled_str.lower() == 'true'):
             disabled = True
 
-        if self.is_shipping_enabled() and not disabled:
-            # We need to wait on analytics lock, to update the last collected timestamp settings
-            # so we don't clash with analytics job collection.
-            with self._pg_advisory_lock('gather_analytics_lock', wait=True):
-                # We need to load fresh settings again as we're obtaning the lock, since
-                # Analytics job could have changed this on the background and we'd be resetting
-                # the Analytics values here.
-                self._load_last_gathered_entries()
-                self._update_last_gathered_entries()
+        if self.is_dry_run() or disabled:
+            return
+
+        # We need to wait on analytics lock, to update the last collected timestamp settings
+        # so we don't clash with analytics job collection.
+        with self._pg_advisory_lock('gather_analytics_lock', wait=True):
+            # We need to load fresh settings again as we're obtaning the lock, since
+            # Analytics job could have changed this on the background and we'd be resetting
+            # the Analytics values here.
+            self._load_last_gathered_entries()
+            self._update_last_gathered_entries()
 
     def _save_last_gathered_entries(self, last_gathered_entries):
         settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)

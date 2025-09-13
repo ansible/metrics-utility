@@ -82,25 +82,25 @@ class Collection:
         since = self.collector.gather_since
         until = self.collector.gather_until
         last_gather = self.collector.last_gather
+
         # These slicer functions may return a generator. The `since` parameter is
         # allowed to be None, and will fall back to LAST_ENTRIES[key] or to
         # LAST_GATHER (truncated appropriately to match the 28-day limit).
         #
         # Or it can force full table sync if interval is given
-        if self.fnc_slicing:
-            if self.full_sync_enabled:
-                slices = self.fnc_slicing(self.key, last_gather, full_sync_enabled=True)
-            else:
-                slices = self.fnc_slicing(self.key, last_gather, since=since, until=until)
-        else:
-            # Start/end of gathering based on settings excluding slices
-            last_entry = max(
-                self.last_gathered_entry or self.collector.last_gather,
-                self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
-            )
-            slices = [(self.collector.gather_since or last_entry, self.collector.gather_until)]
+        if self.fnc_slicing and self.full_sync_enabled:
+            return self.fnc_slicing(self.key, last_gather, full_sync_enabled=True)
 
-        return slices
+        if self.fnc_slicing:
+            return self.fnc_slicing(self.key, last_gather, since=since, until=until)
+
+        # Start/end of gathering based on settings excluding slices
+        last_entry = max(
+            self.last_gathered_entry or self.collector.last_gather,
+            self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
+        )
+
+        return [(self.collector.gather_since or last_entry, self.collector.gather_until)]
 
     def ship_immediately(self):
         """
