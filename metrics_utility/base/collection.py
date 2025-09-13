@@ -63,7 +63,6 @@ class Collection:
                 until=self.until,
                 max_data_size=max_data_size,
                 full_path=self.collector.gather_dir,
-                collection_type=self.collector.collection_type,
             )
             self._save_gathering(result)
 

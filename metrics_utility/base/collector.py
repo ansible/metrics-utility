@@ -43,15 +43,14 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(self, collection_type=DRY_RUN, collector_module=None, licensed=True):
-        self.licensed = licensed
+    def __init__(self, collection_type=DRY_RUN, collector_module=None):
         self.collector_module = collector_module
-        self.collection_type = collection_type
         self.collections = {}
         self.packages = {}
 
         self.last_gathered_entries = None
-        self.log_level = logging.ERROR if self.collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
+        self.log_level = logging.ERROR if collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
+        self.ship = collection_type != self.DRY_RUN  # shipping is enabled in manual/scheduled mode
 
         self.tmp_dir = None
         self.gather_dir = None
@@ -108,9 +107,6 @@ class Collector:
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        if not self.is_enabled():
-            return None
-
         with self._pg_advisory_lock('gather_analytics_lock', wait=False) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
@@ -132,24 +128,6 @@ class Collector:
             self._gather_cleanup()
 
             return self.all_tar_paths()
-
-    def is_dry_run(self):
-        return self.collection_type == self.DRY_RUN
-
-    def is_enabled(self):
-        """Checks for license and shipping data (like credentials)"""
-        if not self._is_valid_license() and self.licensed:
-            logger.log(self.log_level, 'Invalid License provided, or No License Provided')
-            return False
-
-        if self.is_shipping_enabled():
-            return self._is_shipping_configured()
-
-        return True
-
-    def is_shipping_enabled(self):
-        """Shipping is enabled in manual/scheduled mode"""
-        return not self.is_dry_run()
 
     def last_gathered_entry_for(self, key):
         return self.last_gathered_entries.get(key)
@@ -213,7 +191,7 @@ class Collector:
                 f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
             )
 
-        last_gather = self._last_gathering() or horizon
+        last_gather = horizon
         if last_gather < horizon:
             last_gather = horizon
             logger.warning(f'Last analytics run was more than {get_max_gather_period_days()} days prior to {until}, using {horizon} instead.')
@@ -248,8 +226,6 @@ class Collector:
         return available_package
 
     def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        logger.debug(f'Last analytics run was: {self._last_gathering()}')
-
         self._init_tmp_dir(tmp_root_dir)
 
         self.last_gathered_entries = self._load_last_gathered_entries()
@@ -372,51 +348,28 @@ class Collector:
         """
         if not package.processed:
             package.make_tgz()
-            if self.is_shipping_enabled():
+            if self.ship:
                 package.ship()
             package.delete_collected_files()
             package.processed = True
 
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""
-        if self.is_shipping_enabled():
-            self._update_last_gathered_entries()
+        if not self.ship:
+            return
 
-            self._save_last_gather()
+        self._update_last_gathered_entries()
 
     def _gather_cleanup(self):
         """Deleting temp files"""
         shutil.rmtree(self.tmp_dir, ignore_errors=True)  # clean up individual artifact files
-        if not self.is_dry_run():
+        if self.ship:
             self.delete_tarballs()
 
     def _init_tmp_dir(self, tmp_root_dir=None):
         self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
         self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
-
-    @abstractmethod
-    def _is_shipping_configured(self):
-        """Custom check for shipping availability should contain:
-        1) Is Insights for Ansible Automation Platform enabled?
-        2) Is URL and credentials present?
-        :return: bool
-        """
-        pass
-
-    @abstractmethod
-    def _is_valid_license(self):
-        """License check
-        :return: bool
-        """
-        pass
-
-    @abstractmethod
-    def _last_gathering(self):
-        """Returns timestamp of last successful gathering
-        Complement to _save_last_gathering()
-        """
-        pass
 
     @abstractmethod
     def _load_last_gathered_entries(self):
@@ -447,13 +400,6 @@ class Collector:
         """Saves dictionary with timestamps to persistent storage
         Complement to the _load_last_gathered_entries()
         :param last_gathered_entries: dict
-        """
-        pass
-
-    @abstractmethod
-    def _save_last_gather(self):
-        """Persists timestamp of last successful gathering
-        Complement to _last_gathering()
         """
         pass
 

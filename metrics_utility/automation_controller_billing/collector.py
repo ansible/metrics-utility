@@ -46,8 +46,6 @@ class Collector(base.Collector):
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        if not self.is_enabled():
-            return None
 
         key = 'gather_automation_controller_billing_lock'
         suffix = os.getenv('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
@@ -88,14 +86,6 @@ class Collector(base.Collector):
 
         return True
 
-    def _is_valid_license(self):
-        # TODO: which license to check? Any license will do?
-        return True
-
-    def _is_shipping_configured(self):
-        # This check is already done in each Package class
-        return True
-
     @staticmethod
     def db_connection():
         return connection
@@ -112,16 +102,11 @@ class Collector(base.Collector):
         with advisory_lock(key, wait=wait) as lock:
             yield lock
 
-    def _last_gathering(self):
-        # Not needed in this implementation, but we need to define an abstract method
-        pass
-
     def _load_last_gathered_entries(self):
         # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
         # We can safely do this, by making sure we use the same lock as Analytics, before we persist
         # these settings.
-        last_entries = get_last_entries_from_db()
-        return last_entries
+        return get_last_entries_from_db()
 
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""
@@ -131,7 +116,7 @@ class Collector(base.Collector):
         if disabled_str and (disabled_str.lower() == 'true'):
             disabled = True
 
-        if self.is_shipping_enabled() and not disabled:
+        if self.ship and not disabled:
             # We need to wait on analytics lock, to update the last collected timestamp settings
             # so we don't clash with analytics job collection.
             with self._pg_advisory_lock('gather_analytics_lock', wait=True):
