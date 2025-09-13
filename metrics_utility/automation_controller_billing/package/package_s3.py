@@ -10,12 +10,7 @@ from metrics_utility.logger import logger
 
 class PackageS3(base.Package):
     def _batch_since_and_until(self):
-        # TODO: how to verify this is the daily batch of job_host_summary?
-        # self.collection_keys is: ['job_host_summary', 'manifest']
-        # So we can take this and acess cherrypicked collections, if we need to
-        # collect more collections in the future
-        # But the main collection should always be first.
-
+        # FIXME: get from config
         return self.collections[0].since, self.collections[0].until
 
     def _tarname_base(self):
@@ -47,7 +42,7 @@ class PackageS3(base.Package):
 
     def ship(self):
         """
-        Ship gathered metrics to the Directory
+        Ship gathered metrics to S3
         """
         if not self.is_shipping_configured():
             self.shipping_successful = False

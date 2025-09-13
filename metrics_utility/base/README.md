@@ -71,14 +71,8 @@ See the [test_gathering.py](tests/functional/test_gathering.py) for details
 
 Package is also abstract class. You have to implement basically info for POST request to cloud.
 
-- `PAYLOAD_CONTENT_TYPE`: contains registered content type for cloud's ingress service
 - `MAX_DATA_SIZE`: maximum size in bytes of **uncompressed** data for one tarball. Ingress limits uploads to 100MB. Defaults to
   200MB.
-- `get_ingress_url`: Cloud's ingress service URL
-- `_get_rh_user`: User for POST request 
-- `_get_rh_password`: Password for POST request
-- `_get_x_rh_identity`: X-RH Identity Used for local testing instead of user and password
-- `_get_http_request_headers`: Dict with any custom headers for POST request 
  
 An example can be found in [Test package](tests/classes/package.py)
 
