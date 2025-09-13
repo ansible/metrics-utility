@@ -25,7 +25,6 @@ Collector is an Abstract class, implement abstract methods.
 
 - `_package_class`: Returns class of your implementation of Package   
 - `_is_valid_license`: Check for valid license specific to your service
-- `_is_shipping_configured`: Check if shipping to cloud is configured
 - `_last_gathering`: returns datetime. Loading last successful run from some persistent storage
 - `_save_last_gather`: Persisting last successful run
 - `_load_last_gathered_entries`: Has to fill dictionary `self.last_gathered_entries`. Load from persistent storage 

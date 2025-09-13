@@ -12,9 +12,6 @@ class AnalyticsCollector(Collector):
     def _package_class():
         return Package
 
-    def _is_shipping_configured(self):
-        return False
-
     def _is_valid_license(self):
         return True
 

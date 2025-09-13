@@ -142,9 +142,6 @@ class Collector:
             logger.log(self.log_level, 'Invalid License provided, or No License Provided')
             return False
 
-        if not self.is_dry_run():
-            return self._is_shipping_configured()
-
         return True
 
     def last_gathered_entry_for(self, key):
@@ -390,15 +387,6 @@ class Collector:
         self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
         self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
-
-    @abstractmethod
-    def _is_shipping_configured(self):
-        """Custom check for shipping availability should contain:
-        1) Is Insights for Ansible Automation Platform enabled?
-        2) Is URL and credentials present?
-        :return: bool
-        """
-        pass
 
     @abstractmethod
     def _is_valid_license(self):

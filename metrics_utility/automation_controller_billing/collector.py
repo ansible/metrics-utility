@@ -92,10 +92,6 @@ class Collector(base.Collector):
         # TODO: which license to check? Any license will do?
         return True
 
-    def _is_shipping_configured(self):
-        # This check is already done in each Package class
-        return True
-
     @staticmethod
     def db_connection():
         return connection
