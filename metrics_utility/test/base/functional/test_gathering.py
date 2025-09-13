@@ -20,7 +20,6 @@ def collector(mocker):
         collector_module=base.functional.collector_module,
         collection_type=AnalyticsCollector.DRY_RUN,
     )
-    mocker.patch.object(collector, '_is_valid_license', return_value=True)
 
     return collector
 

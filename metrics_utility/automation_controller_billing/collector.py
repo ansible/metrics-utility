@@ -58,8 +58,6 @@ class Collector(base.Collector):
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        if not self.is_enabled():
-            return None
 
         key = 'gather_automation_controller_billing_lock'
         suffix = os.getenv('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
@@ -100,10 +98,6 @@ class Collector(base.Collector):
 
         return True
 
-    def _is_valid_license(self):
-        # TODO: which license to check? Any license will do?
-        return True
-
     @staticmethod
     def db_connection():
         return connection
@@ -119,10 +113,6 @@ class Collector(base.Collector):
         """Use awx specific implementation to pass tests with sqlite3"""
         with advisory_lock(key, wait=wait) as lock:
             yield lock
-
-    def _last_gathering(self):
-        # Not needed in this implementation, but we need to define an abstract method
-        pass
 
     def _load_last_gathered_entries(self):
         return _last_gathered_entries()

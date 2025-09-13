@@ -43,8 +43,7 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(self, collection_type=DRY_RUN, collector_module=None, licensed=True):
-        self.licensed = licensed
+    def __init__(self, collection_type=DRY_RUN, collector_module=None):
         self.collector_module = collector_module
         self.collection_type = collection_type
         self.collections = {}
@@ -108,9 +107,6 @@ class Collector:
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        if not self.is_enabled():
-            return None
-
         with self._pg_advisory_lock('gather_analytics_lock', wait=False) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
@@ -135,14 +131,6 @@ class Collector:
 
     def is_dry_run(self):
         return self.collection_type == self.DRY_RUN
-
-    def is_enabled(self):
-        """Checks for license and shipping data (like credentials)"""
-        if not self._is_valid_license() and self.licensed:
-            logger.log(self.log_level, 'Invalid License provided, or No License Provided')
-            return False
-
-        return True
 
     def last_gathered_entry_for(self, key):
         return self.last_gathered_entries.get(key)
@@ -205,7 +193,7 @@ class Collector:
             since = horizon
             logger.warning(f'Start of the collection interval is more than {_max} days prior to {until}, setting to {horizon}.')
 
-        last_gather = self._last_gathering() or horizon
+        last_gather = horizon
         if last_gather < horizon:
             last_gather = horizon
             logger.warning(f'Last analytics run was more than {_max} days prior to {until}, using {horizon} instead.')
@@ -240,8 +228,6 @@ class Collector:
         return available_package
 
     def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        logger.debug(f'Last analytics run was: {self._last_gathering()}')
-
         self._init_tmp_dir(tmp_root_dir)
 
         self.last_gathered_entries = self._load_last_gathered_entries()
@@ -375,7 +361,6 @@ class Collector:
             return
 
         self._update_last_gathered_entries()
-        self._save_last_gather()
 
     def _gather_cleanup(self):
         """Deleting temp files"""
@@ -387,20 +372,6 @@ class Collector:
         self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
         self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
-
-    @abstractmethod
-    def _is_valid_license(self):
-        """License check
-        :return: bool
-        """
-        pass
-
-    @abstractmethod
-    def _last_gathering(self):
-        """Returns timestamp of last successful gathering
-        Complement to _save_last_gathering()
-        """
-        pass
 
     @abstractmethod
     def _load_last_gathered_entries(self):
@@ -431,13 +402,6 @@ class Collector:
         """Saves dictionary with timestamps to persistent storage
         Complement to the _load_last_gathered_entries()
         :param last_gathered_entries: dict
-        """
-        pass
-
-    @abstractmethod
-    def _save_last_gather(self):
-        """Persists timestamp of last successful gathering
-        Complement to _last_gathering()
         """
         pass
 
