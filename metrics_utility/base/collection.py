@@ -93,7 +93,12 @@ class Collection:
             else:
                 slices = self.fnc_slicing(self.key, last_gather, since=since, until=until)
         else:
-            slices = [(self._gather_since(), self._gather_until())]
+            # Start/end of gathering based on settings excluding slices
+            last_entry = max(
+                self.last_gathered_entry or self.collector.last_gather,
+                self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
+            )
+            slices = [(self.collector.gather_since or last_entry, self.collector.gather_until)]
 
         return slices
 
@@ -141,19 +146,6 @@ class Collection:
 
         last_full_sync = self.collector.last_gathered_entry_for(f'{self.key}_full')
         return not last_full_sync or last_full_sync < now() - timedelta(days=interval_days)
-
-    def _gather_since(self):
-        """Start of gathering based on settings excluding slices"""
-
-        last_entry = max(
-            self.last_gathered_entry or self.collector.last_gather,
-            self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
-        )
-        return self.collector.gather_since or last_entry
-
-    def _gather_until(self):
-        """End of gathering based on settings excluding slices"""
-        return self.collector.gather_until
 
     @abstractmethod
     def _save_gathering(self, data):
