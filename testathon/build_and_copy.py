@@ -58,7 +58,7 @@ import os
 import subprocess
 import sys
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from helper_ocp_prepare import create_oc_environs
 
@@ -484,7 +484,7 @@ def main():
                 until_date = until_match.group(1)
             else:
                 # Default until to today's date in UTC when not provided
-                until_date = datetime.utcnow().strftime('%Y-%m-%d')
+                until_date = datetime.now(tz=timezone.utc).strftime('%Y-%m-%d')
 
             # Generate expected report path for since/until
             report_filename = generate_report_filename(effective_env_vars['METRICS_UTILITY_REPORT_TYPE'], since_date, until_date)

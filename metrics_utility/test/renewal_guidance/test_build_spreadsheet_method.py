@@ -65,7 +65,6 @@ def setup_report_renewal_guidance_instance(fixed_now, setup_build_spreadsheet_mo
         patch(patch_target_dataframe_to_rows, new=setup_build_spreadsheet_mocks['mocks_for_instance']['dataframe_to_rows_func']),
     ):
         mock_datetime_module.datetime.now.return_value = fixed_now
-        mock_datetime_module.datetime.utcnow().return_value = fixed_now.replace(tzinfo=None)
         mock_datetime_module.timedelta = dt_actual.timedelta
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc

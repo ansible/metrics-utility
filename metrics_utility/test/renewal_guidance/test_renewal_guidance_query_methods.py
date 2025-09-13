@@ -19,7 +19,6 @@ def setup_report_renewal_guidance_instance(fixed_now):
 
     with patch(patch_target) as mock_datetime_module:
         mock_datetime_module.datetime.now.return_value = fixed_now
-        mock_datetime_module.datetime.utcnow.return_value = fixed_now.replace(tzinfo=None)
         mock_datetime_module.timedelta = dt_actual.timedelta
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
@@ -93,7 +92,6 @@ def test_renewal_guidance_queries_with_empty_data(fixed_now):
 
     with patch(patch_target) as mock_datetime_module:
         mock_datetime_module.datetime.now.return_value = fixed_now
-        mock_datetime_module.datetime.utcnow.return_value = fixed_now.replace(tzinfo=None)
         mock_datetime_module.timedelta = dt_actual.timedelta
         mock_datetime_module.timezone = MagicMock(spec=dt_actual.timezone)
         mock_datetime_module.timezone.utc = dt_actual.timezone.utc
