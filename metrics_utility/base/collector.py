@@ -211,6 +211,7 @@ class Collector:
         # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
         # case to know whether to use the bookkeeping settings variables to decide the start of
         # the interval.
+        # FIXME: but we also want to log the real since...
         horizon = until - _timedelta
         if since is not None and since < horizon:
             since = horizon

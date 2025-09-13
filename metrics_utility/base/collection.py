@@ -92,14 +92,17 @@ class Collection:
             return self.fnc_slicing(self.key, last_gather, full_sync_enabled=True)
 
         if self.fnc_slicing:
+            # TODO: accepts since=None? or just never used that way?
             return self.fnc_slicing(self.key, last_gather, since=since, until=until)
 
         # Start/end of gathering based on settings excluding slices
+        # FIXME: merge with collector _calculate_collection_interval?
         last_entry = max(
             self.last_gathered_entry or self.collector.last_gather,
             self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
         )
 
+        ## TODO: gather_since OR last_entry is the answer to Final since-until .. except both ^returns too
         return [(self.collector.gather_since or last_entry, self.collector.gather_until)]
 
     def ship_immediately(self):

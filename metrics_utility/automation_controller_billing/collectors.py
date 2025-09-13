@@ -49,6 +49,7 @@ def daily_slicing(key, last_gather, **kwargs):
     else:
         from awx.conf.models import Setting
 
+        # FIXME: merge with collector _calculate_collection_interval?
         horizon = until - timedelta(days=get_max_gather_period_days())
         last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
         last_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
@@ -173,6 +174,7 @@ def _copy_table_aap_2_5_and_above(cursor, query, file):
     with cursor.copy(query) as copy:
         while data := copy.read():
             byte_data = bytes(data)
+            # byte_data is individual CSV lines here
             file.write(byte_data.decode())
 
 

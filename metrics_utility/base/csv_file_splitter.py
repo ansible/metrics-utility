@@ -55,6 +55,7 @@ class CsvFileSplitter(io.StringIO):
         """Writes to file and creates new one if file exceedes threshold"""
         if not self.header:
             self.header = s[: s.index('\n')]
+        # this goes over the limit before cycling, but ensures we write at least once, and this is before gz anyway
         self.counter += self.currentfile.write(s)
         if self.counter >= self.max_file_size:
             self.cycle_file()
