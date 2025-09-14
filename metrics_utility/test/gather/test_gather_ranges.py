@@ -108,7 +108,7 @@ def test_no_since(cleanup_glob, caplog):
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
 
     # mock last gather to 2024-01-04
-    with patch('metrics_utility.automation_controller_billing.collector._last_gathered_entries') as mock:
+    with patch('metrics_utility.base.collector._last_gathered_entries') as mock:
         mock.return_value = {'job_host_summary': '2024-01-04T00:00:00Z'}
         run_gather_int(env_vars, {'ship': True, 'until': '2024-01-05'})
 

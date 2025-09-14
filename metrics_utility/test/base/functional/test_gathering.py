@@ -1,5 +1,4 @@
 import json
-import logging
 import tarfile
 
 from unittest.mock import patch
@@ -29,7 +28,7 @@ def test_missing_config(mocker, collector):
         tgz_files = collector.gather(subset=['json_collection_1', 'json_collection_2'])
 
         assert tgz_files is None
-        mock_logger.log.assert_called_with(logging.ERROR, "'config' collector data is missing")
+        mock_logger.error.assert_called_with("'config' collector data is missing")
 
 
 def test_json_collections(collector):
@@ -46,7 +45,10 @@ def test_json_collections(collector):
         assert './json_collection_1.json' in files.keys()
         assert './json_collection_2.json' in files.keys()
 
-        assert json.loads(files['./config.json'].read()) == {'version': '1.0'}
+        assert json.loads(files['./config.json'].read()) == {
+            'version': '1.0',
+            'billing_provider_params': None,
+        }
         assert json.loads(files['./json_collection_1.json'].read()) == {'json1': 'True'}
         assert json.loads(files['./json_collection_2.json'].read()) == {'json2': 'True'}
 

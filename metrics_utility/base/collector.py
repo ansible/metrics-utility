@@ -1,14 +1,15 @@
 import contextlib
-import hashlib
 import inspect
-import logging
+import json
 import os
 import pathlib
 import shutil
 import tempfile
 
-from abc import abstractmethod
-
+from awx.main.utils import datetime_hook
+from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import connection
 from django.utils.timezone import now, timedelta
 
 from metrics_utility.logger import logger
@@ -16,56 +17,79 @@ from metrics_utility.logger import logger
 from .collection import Collection
 from .collection_csv import CollectionCSV
 from .collection_json import CollectionJSON
-from .package import Package
 from .utils import get_max_gather_period_days, get_optional_collectors
 
 
+# work around https://github.com/ansible/awx/pull/15676
+try:
+    # 2.4, early 2.5
+    from awx.main.utils.pglock import advisory_lock
+except ImportError:
+    # later 2.5, 2.6
+    from ansible_base.lib.utils.db import advisory_lock
+
+
+def _last_gathered_entries():
+    # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
+    # We can safely do this, by making sure we use the same lock as Analytics, before we persist
+    # these settings.
+    from awx.conf.models import Setting
+
+    last_entries = Setting.objects.filter(key='AUTOMATION_ANALYTICS_LAST_ENTRIES').first()
+    last_gathered_entries = json.loads((last_entries.value if last_entries is not None else '') or '{}', object_hook=datetime_hook)
+
+    return last_gathered_entries
+
+
 class Collector:
-    """Abstract class. The Collector is an entry-point for gathering data
+    """The Collector is an entry-point for gathering data
        from awx to cloud.
-    Abstract and following methods has to be implemented:
-    - _package_class() - reference to your implementation of Package
 
     There are several params:
     - collection_type:
-      - manual/scheduled - data are gathered and shipped, local timestamps about gathering are updated
+      - manual - data are gathered and shipped, local timestamps about gathering are updated
       - dry-run - data are gathered, but not shipped, tarballs from /tmp not deleted (testing mode)
     - collector_module: module with functions with decorator `@register` - they define what data are collected
       - collector functions are wrapped by kind of Collection object
       - Collections are grouped by Package, and Packages are creating tarballs and shipping them.
-
-    Collector is an abstract class, example of implementation is in tests/classes
 
     Data are gathered maximally 28 days ago and can be set to less (see gather(since, until,..))
     """
 
     MANUAL_COLLECTION = 'manual'
     DRY_RUN = 'dry-run'
-    SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(self, collection_type=DRY_RUN, collector_module=None):
+    def __init__(self, collection_type, collector_module=None, ship_target=None, billing_provider_params=None):
+        if collector_module is None:
+            from metrics_utility.automation_controller_billing import collectors
+
+            collector_module = collectors
+
         self.collector_module = collector_module
         self.collection_type = collection_type
         self.collections = {}
         self.packages = {}
 
-        self.last_gathered_entries = None
-        self.log_level = logging.ERROR if self.collection_type != self.SCHEDULED_COLLECTION else logging.DEBUG
+        self.ship_target = ship_target
+        self.billing_provider_params = billing_provider_params
 
         self.tmp_dir = None
         self.gather_dir = None
         self.gather_since = None
         self.gather_until = None
         self.last_gather = None
+        self.last_gathered_entries = None
 
-    #
-    # Class methods -----------------------------
-    #
     @classmethod
-    def registered_collectors(cls, module):
+    def registered_collectors(cls, module=None):
         """
         Returns all functions in 'module' defined with "@register" decorator
         """
+        if module is None:
+            from metrics_utility.automation_controller_billing import collectors
+
+            module = collectors
+
         return {
             func.__insights_analytics_key__: {
                 'name': func.__insights_analytics_key__,
@@ -76,9 +100,6 @@ class Collector:
             if inspect.isfunction(func) and hasattr(func, '__insights_analytics_key__')
         }
 
-    #
-    # Public methods ----------------------------
-    #
     def config_present(self):
         """
         Checks if collector_module contains 'config' method (required)
@@ -88,7 +109,6 @@ class Collector:
         return self.collections.get('config') is not None
 
     @staticmethod
-    @abstractmethod
     def db_connection():
         """
         DB connection for advisory lock. Can be
@@ -96,9 +116,9 @@ class Collector:
         - sqlalchemy.engine.base.Engine.raw_connection()
         - etc.
         """
-        pass
+        return connection
 
-    def gather(self, dest=None, subset=None, since=None, until=None):
+    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
@@ -107,9 +127,15 @@ class Collector:
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        with self._pg_advisory_lock('gather_analytics_lock', wait=False) as acquired:
+
+        key = 'gather_automation_controller_billing_lock'
+        suffix = os.getenv('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
+        if suffix:
+            key = f'gather_automation_controller_billing_{suffix}_lock'
+
+        with self._pg_advisory_lock(key, wait=False) as acquired:
             if not acquired:
-                logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
+                logger.error('Not gathering Automation Controller billing data, another task holds lock')
                 return None
 
             self._gather_initialize(dest, subset, since, until)
@@ -146,9 +172,6 @@ class Collector:
         for path in self.all_tar_paths():
             os.remove(path)
 
-    #
-    # Private methods ---------------------------
-    #
     def _calculate_collection_interval(self, since, until):
         _now = now()
         _max = get_max_gather_period_days()
@@ -243,11 +266,18 @@ class Collector:
         TODO: add "always" flag to @register decorator
         """
         if not self.config_present():
-            logger.log(self.log_level, "'config' collector data is missing")
+            logger.error("'config' collector data is missing")
             return False
-        else:
-            self.collections['config'].gather(self._package_class().max_data_size())
-            return True
+
+        self.collections['config'].gather(self._package_class().max_data_size())
+
+        # Extend the config collection to contain billing specific info:
+        config_collection = self.collections['config']
+        data = json.loads(config_collection.data)
+        data['billing_provider_params'] = self.billing_provider_params
+        config_collection._save_gathering(data)
+
+        return True
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
@@ -312,27 +342,9 @@ class Collector:
 
     @contextlib.contextmanager
     def _pg_advisory_lock(self, key, wait=False):
-        """Postgres db lock"""
-        connection = self.db_connection()
-
-        if connection is None:
-            yield True
-        else:
-            # Build 64-bit integer out of the resource id
-            resource_key = int(hashlib.sha512(key.encode()).hexdigest(), 16) % 2**63
-
-            cursor = connection.cursor()
-
-            try:
-                if wait:
-                    cursor.execute('SELECT pg_advisory_lock(%s);', (resource_key,))
-                else:
-                    cursor.execute('SELECT pg_try_advisory_lock(%s);', (resource_key,))
-                acquired = cursor.fetchall()[0][0]
-                yield acquired
-            finally:
-                cursor.execute('SELECT pg_advisory_unlock(%s);', (resource_key,))
-                cursor.close()
+        """Use awx specific implementation to pass tests with sqlite3"""
+        with advisory_lock(key, wait=wait) as lock:
+            yield lock
 
     def _process_packages(self):
         for group, packages in self.packages.items():
@@ -356,11 +368,23 @@ class Collector:
             package.processed = True
 
     def _gather_finalize(self):
-        """Persisting timestamps (manual/schedule mode only)"""
+        """Persisting timestamps (manual mode only)"""
         if self.is_dry_run():
             return
 
-        self._update_last_gathered_entries()
+        # FIXME via billing_provider_params
+        disabled = os.getenv('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES', 'false').lower() == 'true'
+        if disabled:
+            return
+
+        # We need to wait on analytics lock, to update the last collected timestamp settings
+        # so we don't clash with analytics job collection.
+        with self._pg_advisory_lock('gather_analytics_lock', wait=True):
+            # We need to load fresh settings again as we're obtaning the lock, since
+            # Analytics job could have changed this on the background and we'd be resetting
+            # the Analytics values here.
+            self._load_last_gathered_entries()
+            self._update_last_gathered_entries()
 
     def _gather_cleanup(self):
         """Deleting temp files"""
@@ -373,13 +397,12 @@ class Collector:
         self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
 
-    @abstractmethod
     def _load_last_gathered_entries(self):
         """Loads persisted timestamps named by keys from collector_module
         Complement to the _save_last_gathered_entries()
         :return dict
         """
-        pass
+        return _last_gathered_entries()
 
     def _update_last_gathered_entries(self):
         last_gathered_updates = {'keys': {}, 'locked': set()}
@@ -397,13 +420,12 @@ class Collector:
 
         self._save_last_gathered_entries(self.last_gathered_entries)
 
-    @abstractmethod
     def _save_last_gathered_entries(self, last_gathered_entries):
         """Saves dictionary with timestamps to persistent storage
         Complement to the _load_last_gathered_entries()
         :param last_gathered_entries: dict
         """
-        pass
+        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
 
     def _create_collections(self, subset=None):
         """Creates Collections from decorated functions (by @register) from self.collector_module
@@ -452,12 +474,12 @@ class Collector:
 
     def _create_package(self):
         package_class = self._package_class()
-        return package_class(self)
+        return package_class(collector=self)
 
-    @staticmethod
-    def _package_class():
-        """Has to be redefined by your Package implementation"""
-        return Package
+    def _package_class(self):
+        from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+
+        return PackageFactory(ship_target=self.ship_target).create()
 
     def _reset_collections_and_packages(self):
         self.collections = {
