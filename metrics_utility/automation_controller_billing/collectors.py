@@ -657,3 +657,46 @@ def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_
 
     except Exception as e:
         raise MetricsException(f'Error querying CPU timeline: {e}')
+
+@register('unified_jobs_table', '1.4', format='csv', description=_('Data on jobs run'), slicing_fnc=daily_slicing)
+def unified_jobs_table(since, full_path, until, **kwargs):
+    unified_job_query = '''COPY (SELECT main_unifiedjob.id,
+                                 main_unifiedjob.polymorphic_ctype_id,
+                                 django_content_type.model,
+                                 main_unifiedjob.organization_id,
+                                 main_organization.name as organization_name,
+                                 main_executionenvironment.image as execution_environment_image,
+                                 main_job.inventory_id,
+                                 main_inventory.name as inventory_name,
+                                 main_unifiedjob.created,
+                                 main_unifiedjob.name,
+                                 main_unifiedjob.unified_job_template_id,
+                                 main_unifiedjob.launch_type,
+                                 main_unifiedjob.schedule_id,
+                                 main_unifiedjob.execution_node,
+                                 main_unifiedjob.controller_node,
+                                 main_unifiedjob.cancel_flag,
+                                 main_unifiedjob.status,
+                                 main_unifiedjob.failed,
+                                 main_unifiedjob.started,
+                                 main_unifiedjob.finished,
+                                 main_unifiedjob.elapsed,
+                                 main_unifiedjob.job_explanation,
+                                 main_unifiedjob.instance_group_id,
+                                 main_unifiedjob.installed_collections,
+                                 main_unifiedjob.ansible_version,
+                                 main_job.forks
+                                 FROM main_unifiedjob
+                                 JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
+                                 LEFT JOIN main_job ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
+                                 LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
+                                 LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
+                                 LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
+                                 WHERE ((main_unifiedjob.created > '{0}' AND main_unifiedjob.created <= '{1}')
+                                       OR (main_unifiedjob.finished > '{0}' AND main_unifiedjob.finished <= '{1}'))
+                                       AND main_unifiedjob.launch_type != 'sync'
+                                 ORDER BY main_unifiedjob.id ASC) TO STDOUT WITH CSV HEADER
+                        '''.format(
+        since.isoformat(), until.isoformat()
+    )
+    return _copy_table(table='unified_jobs', query=unified_job_query, path=full_path)
