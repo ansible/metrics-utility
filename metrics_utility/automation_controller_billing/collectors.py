@@ -824,68 +824,55 @@ def main_jobevent_table(since, full_path, until, **kwargs):
     event_data = rf"replace(main_jobevent.event_data, '\u', '\u005cu')::jsonb"
 
     query = f"""
-    WITH job_scope AS (
+    WITH jobs_in_window AS (
         SELECT
-            main_jobhostsummary.id AS main_jobhostsummary_id,
-            main_jobhostsummary.created AS main_jobhostsummary_created,
-            main_jobhostsummary.modified AS main_jobhostsummary_modified,
-            main_unifiedjob.created AS job_created,
-            main_jobhostsummary.job_id AS job_id,
-            main_jobhostsummary.host_name
-        FROM main_jobhostsummary
-        JOIN main_unifiedjob
-          ON main_unifiedjob.id = main_jobhostsummary.job_id
-        WHERE (
-            main_jobhostsummary.modified >= '{since.isoformat()}'
-            AND main_jobhostsummary.modified < '{until.isoformat()}'
-        )
+            uj.id      AS job_id,
+            uj.created AS job_created
+        FROM main_unifiedjob uj
+        WHERE uj.finished >= '{since.isoformat()}'
+          AND uj.finished <  '{until.isoformat()}'
     )
     SELECT
-        job_scope.main_jobhostsummary_id,
-        job_scope.main_jobhostsummary_created,
-        job_scope.main_jobhostsummary_modified,
-
-        main_jobevent.id,
-        main_jobevent.created,
-        main_jobevent.modified,
-        main_jobevent.job_created,
-        main_jobevent.uuid,
-        main_jobevent.parent_uuid,
-        main_jobevent.event,
+        e.id,
+        e.created,
+        e.modified,
+        e.job_created,
+        e.uuid,
+        e.parent_uuid,
+        e.event,
 
         -- JSON extracted fields
-        ({event_data}->>'task_action')::TEXT AS task_action,
-        ({event_data}->>'resolved_action')::TEXT AS resolved_action,
-        ({event_data}->>'resolved_role')::TEXT AS resolved_role,
-        ({event_data}->>'duration')::TEXT AS duration,
-        ({event_data}->>'start')::timestamptz AS start,
-        ({event_data}->>'end')::timestamptz AS end,
+        ({event_data}->>'task_action')::TEXT       AS task_action,
+        ({event_data}->>'resolved_action')::TEXT   AS resolved_action,
+        ({event_data}->>'resolved_role')::TEXT     AS resolved_role,
+        ({event_data}->>'duration')::TEXT          AS duration,
+        ({event_data}->>'start')::timestamptz      AS start,
+        ({event_data}->>'end')::timestamptz        AS end,
 
-        CASE WHEN main_jobevent.event = 'playbook_on_stats'
+        CASE WHEN e.event = 'playbook_on_stats'
              THEN {event_data} - 'artifact_data'
         END AS playbook_on_stats,
 
-        main_jobevent.failed,
-        main_jobevent.changed,
-        main_jobevent.playbook,
-        main_jobevent.play,
-        main_jobevent.task,
-        main_jobevent.role,
-        main_jobevent.job_id AS job_remote_id,
-        main_jobevent.host_id AS host_remote_id,
-        main_jobevent.host_name,
+        e.failed,
+        e.changed,
+        e.playbook,
+        e.play,
+        e.task,
+        e.role,
+        e.job_id  AS job_remote_id,
+        e.host_id AS host_remote_id,
+        e.host_name,
 
         -- Warnings and deprecations (json arrays)
-        {event_data}->'res'->'warnings' AS warnings,
+        {event_data}->'res'->'warnings'     AS warnings,
         {event_data}->'res'->'deprecations' AS deprecations
 
-    FROM main_jobevent
-    JOIN job_scope
-      ON job_scope.job_created = main_jobevent.job_created
-     AND job_scope.job_id = main_jobevent.job_id
-     AND job_scope.host_name = main_jobevent.host_name
-    """  # dropped WHERE {tbl}.event IN (...) because we want to collect all events
-    
+    FROM main_jobevent e
+    JOIN jobs_in_window j
+      ON e.job_created = j.job_created
+     AND e.job_id      = j.job_id
+    """
+
     return _copy_table(
         table='main_jobevent',
         query=f'COPY ({query}) TO STDOUT WITH CSV HEADER',
