@@ -738,73 +738,83 @@ def job_host_summary_table(since, full_path, until, **kwargs):
         $$
         LANGUAGE plpgsql;
     """
+
     query = f"""
     WITH
-    filtered_hosts AS (
-        SELECT DISTINCT main_jobhostsummary.host_id
-        FROM main_jobhostsummary
-        WHERE (main_jobhostsummary.modified >= '{since.isoformat()}'
-        AND main_jobhostsummary.modified < '{until.isoformat()}')
+    -- First: restrict to jobs that FINISHED in the window (uses index on main_unifiedjob.finished if present)
+    filtered_jobs AS (
+        SELECT mu.id
+        FROM main_unifiedjob mu
+        WHERE mu.finished >= '{since.isoformat()}'
+          AND mu.finished <  '{until.isoformat()}'
+          AND mu.finished IS NOT NULL
     ),
-    hosts_variables as (
+    --
+    -- Then: only host summaries that belong to those jobs (uses index on main_jobhostsummary.job_id)
+    filtered_hosts AS (
+        SELECT DISTINCT mjs.host_id
+        FROM main_jobhostsummary mjs
+        JOIN filtered_jobs fj ON fj.id = mjs.job_id
+    ),
+    --
+    hosts_variables AS (
         SELECT
-            filtered_hosts.host_id,
+            fh.host_id,
             CASE
-                WHEN (metrics_utility_is_valid_json(main_host.variables))
-                        THEN main_host.variables::jsonb->>'ansible_host'
-                    ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_host' )
-                END AS ansible_host_variable,
-                CASE
-                    WHEN (metrics_utility_is_valid_json(main_host.variables))
-                        THEN main_host.variables::jsonb->>'ansible_connection'
-                    ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
-                END AS ansible_connection_variable
+                WHEN metrics_utility_is_valid_json(h.variables)
+                    THEN h.variables::jsonb->>'ansible_host'
+                ELSE metrics_utility_parse_yaml_field(h.variables, 'ansible_host')
+            END AS ansible_host_variable,
+            CASE
+                WHEN metrics_utility_is_valid_json(h.variables)
+                    THEN h.variables::jsonb->>'ansible_connection'
+                ELSE metrics_utility_parse_yaml_field(h.variables, 'ansible_connection')
+            END AS ansible_connection_variable
+        FROM filtered_hosts fh
+        LEFT JOIN main_host h ON h.id = fh.host_id
+    )
 
-        FROM filtered_hosts
-        LEFT JOIN main_host ON main_host.id = filtered_hosts.host_id)
-
-        SELECT main_jobhostsummary.id,
-            main_jobhostsummary.created,
-            main_jobhostsummary.modified,
-            main_jobhostsummary.host_name,
-            main_jobhostsummary.host_id as host_remote_id,
-            hosts_variables.ansible_host_variable,
-            hosts_variables.ansible_connection_variable,
-            main_jobhostsummary.changed,
-            main_jobhostsummary.dark,
-            main_jobhostsummary.failures,
-            main_jobhostsummary.ok,
-            main_jobhostsummary.processed,
-            main_jobhostsummary.skipped,
-            main_jobhostsummary.failed,
-            main_jobhostsummary.ignored,
-            main_jobhostsummary.rescued,
-            main_unifiedjob.created AS job_created,
-            main_jobhostsummary.job_id AS job_remote_id,
-            main_unifiedjob.unified_job_template_id AS job_template_remote_id,
-            main_unifiedjob.name AS job_template_name,
-            main_inventory.id AS inventory_remote_id,
-            main_inventory.name AS inventory_name,
-            main_organization.id AS organization_remote_id,
-            main_organization.name AS organization_name,
-            main_unifiedjobtemplate_project.id AS project_remote_id,
-            main_unifiedjobtemplate_project.name AS project_name
-            FROM main_jobhostsummary
-            -- connect to main_job, that has connections into inventory and project
-            LEFT JOIN main_job ON main_jobhostsummary.job_id = main_job.unifiedjob_ptr_id
-            -- get project name from project_options
-            LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project ON main_unifiedjobtemplate_project.id = main_job.project_id
-            -- get inventory name from main_inventory
-            LEFT JOIN main_inventory ON main_inventory.id = main_job.inventory_id
-            -- get job name from main_unifiedjob
-            LEFT JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
-            -- get organization name from main_organization
-            LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
-            -- get variables from precomputed hosts_variables
-            LEFT JOIN hosts_variables ON hosts_variables.host_id = main_jobhostsummary.host_id
-            WHERE (main_jobhostsummary.modified >= '{since.isoformat()}'
-            AND main_jobhostsummary.modified < '{until.isoformat()}')
-            ORDER BY main_jobhostsummary.modified ASC
+    SELECT
+        mjs.id,
+        mjs.created,
+        mjs.modified,
+        mjs.host_name,
+        mjs.host_id AS host_remote_id,
+        hv.ansible_host_variable,
+        hv.ansible_connection_variable,
+        mjs.changed,
+        mjs.dark,
+        mjs.failures,
+        mjs.ok,
+        mjs.processed,
+        mjs.skipped,
+        mjs.failed,
+        mjs.ignored,
+        mjs.rescued,
+        mu.created AS job_created,
+        mjs.job_id AS job_remote_id,
+        mu.unified_job_template_id AS job_template_remote_id,
+        mu.name AS job_template_name,
+        mi.id AS inventory_remote_id,
+        mi.name AS inventory_name,
+        mo.id AS organization_remote_id,
+        mo.name AS organization_name,
+        mup.id AS project_remote_id,
+        mup.name AS project_name
+    FROM filtered_jobs fj
+    JOIN main_jobhostsummary mjs ON mjs.job_id = fj.id
+    LEFT JOIN main_job mj ON mjs.job_id = mj.unifiedjob_ptr_id
+    LEFT JOIN main_unifiedjob mu ON mu.id = mjs.job_id
+    LEFT JOIN main_unifiedjobtemplate AS mup ON mup.id = mj.project_id
+    LEFT JOIN main_inventory mi ON mi.id = mj.inventory_id
+    LEFT JOIN main_organization mo ON mo.id = mu.organization_id
+    LEFT JOIN hosts_variables hv ON hv.host_id = mjs.host_id
+    ORDER BY mu.finished ASC
     """
 
-    return _copy_table(table='main_jobhostsummary', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
+    return _copy_table(
+        table='main_jobhostsummary',
+        query=f'COPY ({query}) TO STDOUT WITH CSV HEADER',
+        path=full_path,
+        prepend_query=prepend_query
+    )
