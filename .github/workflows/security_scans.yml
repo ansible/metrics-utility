@@ -1,16 +1,13 @@
 name: SAST Snyk Code
 on:
   schedule:
-    - cron: '23 14 * * *'
-  push:
-    branches:
-      - 'main'
+    - cron: '23 14 * * 6'
   workflow_dispatch:
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v5
 
       - uses: snyk/actions/setup@master
 
