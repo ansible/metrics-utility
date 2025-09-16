@@ -9,9 +9,10 @@ import pytest
 
 from metrics_utility.base.collection import Collection
 from metrics_utility.test.util import run_gather_ext, run_gather_int
+from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
 
 env_vars = {
-    'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
+    'METRICS_UTILITY_SHIP_PATH': './out',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
 }
 
@@ -32,6 +33,78 @@ json_lines_skip_ids_columns = [
     'schedule_id',
     'instance_group_id',
 ]
+
+# where to find the tar.gz (match jobhostsummary test layout)
+uuid = '00000000-0000-0000-0000-000000000000'
+file_glob = f'./out/data/2025/06/*/{uuid}-*.tar.gz'
+file_paths = f'./out/data/2025/06/13/{uuid}-*.tar.gz'
+
+
+@pytest.fixture
+def cleanup_glob():
+    yield
+    for file in glob.glob(file_glob):
+        os.remove(file)
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_unified_jobs_table_command(cleanup_glob):
+    """Build and validate unified_jobs_table.csv contents in the generated tarball."""
+    # prepare env
+    test_env = env_vars.copy()
+    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
+    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'unified_jobs_table'
+
+    # run the gather command
+    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+
+    jobs_found = False
+
+    # locate the generated tarball(s)
+    for file_path in glob.glob(file_paths):
+        with SafeTarFile(file_path) as tar:
+            # look for the CSV inside (members are already filtered for safety)
+            try:
+                member = next(m for m in tar.getmembers() if m.name.endswith('unified_jobs_table.csv'))
+            except StopIteration:
+                continue
+
+            jobs_found = True
+            f = tar.extractfile(member)
+            assert f is not None, 'Could not extract unified_jobs_table.csv'
+
+            # read CSV rows
+            text = f.read().decode('utf-8').splitlines()
+            reader = csv.reader(text)
+            rows = list(reader)
+
+            # expected header and rows
+            expected_header = jobs_lines[0].split(',')
+            expected_rows = [line.split(',') for line in jobs_lines[1:]]
+
+            # check header exactly
+            header = rows[0]
+            assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
+
+            # check number of data rows
+            actual_data = rows[1:]
+            assert len(actual_data) == len(expected_rows), f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
+
+            # compare each cell, skipping unstable ID columns
+            skip_columns = set(json_lines_skip_ids_columns)
+            for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
+                for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
+                    col_name = header[idx]
+                    if col_name in skip_columns:
+                        # skip unstable ID
+                        continue
+                    assert exp_cell == act_cell, (
+                        f'\nData mismatch on row {i + 1}, column "{col_name}" (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
+                    )
+            break
+
+    if not jobs_found:
+        pytest.fail('unified_jobs_table.csv not found in any tarballs.')
 
 
 
