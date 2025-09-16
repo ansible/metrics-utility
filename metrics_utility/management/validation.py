@@ -48,7 +48,18 @@ VALID_SHEETS = {
         'managed_nodes_by_organizations',
     },
 }
-VALID_COLLECTORS = {'main_host', 'main_jobevent', 'main_indirectmanagednodeaudit', 'total_workers_vcpu', 'unified_jobs_table', 'job_host_summary_service', 'main_jobevent_service', 'execution_environments', ''}
+VALID_COLLECTORS = {
+    'main_host',
+    'main_jobevent',
+    'main_indirectmanagednodeaudit',
+    'total_workers_vcpu',
+    'unified_jobs_table',
+    'job_host_summary_service',
+    'main_jobevent_service',
+    'execution_environments',
+    '',
+}
+
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 

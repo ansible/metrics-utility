@@ -658,13 +658,13 @@ def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_
     except Exception as e:
         raise MetricsException(f'Error querying CPU timeline: {e}')
 
+
 @register('unified_jobs_table', '1.4', format='csv', description=_('Data on jobs run'), fnc_slicing=daily_slicing)
 def unified_jobs_table(since, full_path, until, **kwargs):
-    
     if 'unified_jobs_table' not in get_optional_collectors():
         return None
-    
-    unified_job_query = '''COPY (SELECT main_unifiedjob.id,
+
+    unified_job_query = """COPY (SELECT main_unifiedjob.id,
                                  main_unifiedjob.polymorphic_ctype_id,
                                  django_content_type.model,
                                  main_unifiedjob.organization_id,
@@ -700,18 +700,15 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                                        OR (main_unifiedjob.finished > '{0}' AND main_unifiedjob.finished <= '{1}'))
                                        AND main_unifiedjob.launch_type != 'sync'
                                  ORDER BY main_unifiedjob.id ASC) TO STDOUT WITH CSV HEADER
-                        '''.format(
-        since.isoformat(), until.isoformat()
-    )
+                        """.format(since.isoformat(), until.isoformat())
     return _copy_table(table='unified_jobs', query=unified_job_query, path=full_path)
 
 
 @register('job_host_summary_service', '1.4', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_service_table(since, full_path, until, **kwargs):
-    
     if 'job_host_summary_service' not in get_optional_collectors():
         return None
-    
+
     prepend_query = """
         -- Define function for parsing field out of yaml encoded as text
         CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
@@ -819,19 +816,14 @@ def job_host_summary_service_table(since, full_path, until, **kwargs):
     ORDER BY mu.finished ASC
     """
 
-    return _copy_table(
-        table='main_jobhostsummary',
-        query=f'COPY ({query}) TO STDOUT WITH CSV HEADER',
-        path=full_path,
-        prepend_query=prepend_query
-    )
+    return _copy_table(table='main_jobhostsummary', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
+
 
 @register('main_jobevent_service', '1.4', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_service_table(since, full_path, until, **kwargs):
-    
     if 'main_jobevent_service' not in get_optional_collectors():
         return None
-    
+
     # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
     event_data = r"replace(e.event_data, '\u', '\u005cu')::jsonb"
 
@@ -847,20 +839,17 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
 
     # do raw sql for django.db connection
     with connection.cursor() as cursor:
-        cursor.execute(jobs_query, {"since": since, "until": until})
+        cursor.execute(jobs_query, {'since': since, 'until': until})
         jobs = cursor.fetchall()
 
     # 2) Build a literal WHERE clause that preserves (job_id, job_created) pairing
     if jobs:
         # (e.job_id, e.job_created) IN (VALUES (id1, 'ts1'::timestamptz), ...)
-        pairs_sql = ",\n".join(
-            f"({jid}, '{jcreated.isoformat()}'::timestamptz)"
-            for jid, jcreated in jobs
-        )
-        where_clause = f"(e.job_id, e.job_created) IN (VALUES {pairs_sql})"
+        pairs_sql = ',\n'.join(f"({jid}, '{jcreated.isoformat()}'::timestamptz)" for jid, jcreated in jobs)
+        where_clause = f'(e.job_id, e.job_created) IN (VALUES {pairs_sql})'
     else:
         # No jobs in the window → no events
-        where_clause = "FALSE"
+        where_clause = 'FALSE'
 
     # 3) Final event query
     query = f"""
@@ -905,19 +894,15 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
         WHERE {where_clause}
     """
 
-    return _copy_table(
-        table='main_jobevent',
-        query=f'COPY ({query}) TO STDOUT WITH CSV HEADER',
-        path=full_path
-    )
+    return _copy_table(table='main_jobevent', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path)
+
 
 @register('execution_environments', '1.4', format='csv', description=_('Execution environments'), fnc_slicing=limit_slicing)
 def execution_environments_table(since, full_path, until, **kwargs):
-
     if 'execution_environments' not in get_optional_collectors():
         return None
 
-    sql="""
+    sql = """
         SELECT
         id,
         created,
@@ -934,8 +919,4 @@ def execution_environments_table(since, full_path, until, **kwargs):
         FROM public.main_executionenvironment
     """
 
-    return _copy_table(
-        table='main_executionenvironment',
-        query=f'COPY ({sql}) TO STDOUT WITH CSV HEADER',
-        path=full_path
-    )
+    return _copy_table(table='main_executionenvironment', query=f'COPY ({sql}) TO STDOUT WITH CSV HEADER', path=full_path)
