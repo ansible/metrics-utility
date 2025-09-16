@@ -821,56 +821,71 @@ def job_host_summary_table(since, full_path, until, **kwargs):
 
 @register('main_jobevent_service', '1.1', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_table(since, full_path, until, **kwargs):
-    event_data = rf"replace(main_jobevent.event_data, '\u', '\u005cu')::jsonb"
+    # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
+    event_data = r"replace(e.event_data, '\u', '\u005cu')::jsonb"
 
-    query = f"""
-    WITH jobs_in_window AS (
-        SELECT
-            uj.id      AS job_id,
-            uj.created AS job_created
+    # 1) Load finished jobs in the window
+    jobs_query = """
+        SELECT uj.id AS job_id,
+               uj.created AS job_created
         FROM main_unifiedjob uj
-        WHERE uj.finished >= '{since.isoformat()}'
-          AND uj.finished <  '{until.isoformat()}'
-    )
-    SELECT
-        e.id,
-        e.created,
-        e.modified,
-        e.job_created,
-        e.uuid,
-        e.parent_uuid,
-        e.event,
+        WHERE uj.finished >= %(since)s
+          AND uj.finished <  %(until)s
+    """
+    result = connection.execute(jobs_query, {"since": since, "until": until})
+    jobs = result.fetchall()
 
-        -- JSON extracted fields
-        ({event_data}->>'task_action')::TEXT       AS task_action,
-        ({event_data}->>'resolved_action')::TEXT   AS resolved_action,
-        ({event_data}->>'resolved_role')::TEXT     AS resolved_role,
-        ({event_data}->>'duration')::TEXT          AS duration,
-        ({event_data}->>'start')::timestamptz      AS start,
-        ({event_data}->>'end')::timestamptz        AS end,
+    # 2) Build a literal WHERE clause that preserves (job_id, job_created) pairing
+    if jobs:
+        # (e.job_id, e.job_created) IN (VALUES (id1, 'ts1'::timestamptz), ...)
+        pairs_sql = ",\n".join(
+            f"({jid}, '{jcreated.isoformat()}'::timestamptz)"
+            for jid, jcreated in jobs
+        )
+        where_clause = f"(e.job_id, e.job_created) IN (VALUES {pairs_sql})"
+    else:
+        # No jobs in the window → no events
+        where_clause = "FALSE"
 
-        CASE WHEN e.event = 'playbook_on_stats'
-             THEN {event_data} - 'artifact_data'
-        END AS playbook_on_stats,
+    # 3) Final event query
+    query = f"""
+        SELECT
+            e.id,
+            e.created,
+            e.modified,
+            e.job_created,
+            e.uuid,
+            e.parent_uuid,
+            e.event,
 
-        e.failed,
-        e.changed,
-        e.playbook,
-        e.play,
-        e.task,
-        e.role,
-        e.job_id  AS job_remote_id,
-        e.host_id AS host_remote_id,
-        e.host_name,
+            -- JSON extracted fields
+            ({event_data}->>'task_action')       AS task_action,
+            ({event_data}->>'resolved_action')   AS resolved_action,
+            ({event_data}->>'resolved_role')     AS resolved_role,
+            ({event_data}->>'duration')          AS duration,
+            ({event_data}->>'start')::timestamptz AS start,
+            ({event_data}->>'end')::timestamptz   AS end,
 
-        -- Warnings and deprecations (json arrays)
-        {event_data}->'res'->'warnings'     AS warnings,
-        {event_data}->'res'->'deprecations' AS deprecations
+            CASE WHEN e.event = 'playbook_on_stats'
+                 THEN {event_data} - 'artifact_data'
+            END AS playbook_on_stats,
 
-    FROM main_jobevent e
-    JOIN jobs_in_window j
-      ON e.job_created = j.job_created
-     AND e.job_id      = j.job_id
+            e.failed,
+            e.changed,
+            e.playbook,
+            e.play,
+            e.task,
+            e.role,
+            e.job_id  AS job_remote_id,
+            e.host_id AS host_remote_id,
+            e.host_name,
+
+            -- Warnings and deprecations (json arrays)
+            {event_data}->'res'->'warnings'     AS warnings,
+            {event_data}->'res'->'deprecations' AS deprecations
+
+        FROM main_jobevent e
+        WHERE {where_clause}
     """
 
     return _copy_table(
@@ -878,3 +893,4 @@ def main_jobevent_table(since, full_path, until, **kwargs):
         query=f'COPY ({query}) TO STDOUT WITH CSV HEADER',
         path=full_path
     )
+
