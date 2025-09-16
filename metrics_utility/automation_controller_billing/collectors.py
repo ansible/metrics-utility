@@ -869,6 +869,7 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
             e.created,
             e.modified,
             e.job_created,
+            uj.finished,
             e.uuid,
             e.parent_uuid,
             e.event,
@@ -880,10 +881,6 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
             ({event_data}->>'duration')          AS duration,
             ({event_data}->>'start')::timestamptz AS start,
             ({event_data}->>'end')::timestamptz   AS end,
-
-            CASE WHEN e.event = 'playbook_on_stats'
-                 THEN {event_data} - 'artifact_data'
-            END AS playbook_on_stats,
 
             e.failed,
             e.changed,
@@ -897,9 +894,14 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
 
             -- Warnings and deprecations (json arrays)
             {event_data}->'res'->'warnings'     AS warnings,
-            {event_data}->'res'->'deprecations' AS deprecations
+            {event_data}->'res'->'deprecations' AS deprecations,
+
+            CASE WHEN e.event = 'playbook_on_stats'
+                 THEN {event_data} - 'artifact_data'
+            END AS playbook_on_stats
 
         FROM main_jobevent e
+        LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
         WHERE {where_clause}
     """
 
@@ -929,7 +931,7 @@ def execution_environments_table(since, full_path, until, **kwargs):
         organization_id,
         name,
         pull
-        FROM public.main_executionenvironment;
+        FROM public.main_executionenvironment
     """
 
     return _copy_table(
