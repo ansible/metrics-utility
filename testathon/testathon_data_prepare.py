@@ -706,6 +706,13 @@ def delete_indirect_hosts():
     run(sql)
 
 
+def delete_events():
+    sql = """
+    DELETE FROM main_jobevent;
+    """
+    run(sql)
+
+
 def main():
     if ENVIRONMENT == 'OpenShift':
         oc_login()
@@ -714,6 +721,7 @@ def main():
 
     list_main_jobhostsummary()
 
+    delete_events()
     delete_all_hosts()
     delete_projects()
     delete_job_templates()
