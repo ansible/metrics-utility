@@ -843,8 +843,12 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
         WHERE uj.finished >= %(since)s
           AND uj.finished <  %(until)s
     """
-    result = connection.execute(jobs_query, {"since": since, "until": until})
-    jobs = result.fetchall()
+    jobs = []
+
+    # do raw sql for django.db connection
+    with connection.cursor() as cursor:
+        cursor.execute(jobs_query, {"since": since, "until": until})
+        jobs = cursor.fetchall()
 
     # 2) Build a literal WHERE clause that preserves (job_id, job_created) pairing
     if jobs:
