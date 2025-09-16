@@ -702,7 +702,7 @@ def unified_jobs_table(since, full_path, until, **kwargs):
     return _copy_table(table='unified_jobs', query=unified_job_query, path=full_path)
 
 
-@register('job_host_summary_service', '1.2', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
+@register('job_host_summary_service', '1.4', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_table(since, full_path, until, **kwargs):
     
     prepend_query = """
@@ -819,7 +819,7 @@ def job_host_summary_table(since, full_path, until, **kwargs):
         prepend_query=prepend_query
     )
 
-@register('main_jobevent_service', '1.1', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
+@register('main_jobevent_service', '1.4', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_table(since, full_path, until, **kwargs):
     # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
     event_data = r"replace(e.event_data, '\u', '\u005cu')::jsonb"
@@ -894,3 +894,28 @@ def main_jobevent_table(since, full_path, until, **kwargs):
         path=full_path
     )
 
+@register('execution_environments', '1.4', format='csv', description=_('Execution environments'), fnc_slicing=limit_slicing)
+def main_jobevent_table(since, full_path, until, **kwargs):
+
+    sql="""
+        SELECT
+        id,
+        created,
+        modified,
+        description,
+        image,
+        managed,
+        created_by_id,
+        credential_id,
+        modified_by_id,
+        organization_id,
+        name,
+        pull
+        FROM public.main_executionenvironment;
+    """
+
+    return _copy_table(
+        table='main_executionenvironment',
+        query=f'COPY ({sql}) TO STDOUT WITH CSV HEADER',
+        path=full_path
+    )
