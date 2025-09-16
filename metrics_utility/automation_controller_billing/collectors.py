@@ -660,6 +660,10 @@ def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_
 
 @register('unified_jobs_table', '1.4', format='csv', description=_('Data on jobs run'), slicing_fnc=daily_slicing)
 def unified_jobs_table(since, full_path, until, **kwargs):
+    
+    if 'unified_jobs_table' not in get_optional_collectors():
+        return None
+    
     unified_job_query = '''COPY (SELECT main_unifiedjob.id,
                                  main_unifiedjob.polymorphic_ctype_id,
                                  django_content_type.model,
@@ -703,7 +707,10 @@ def unified_jobs_table(since, full_path, until, **kwargs):
 
 
 @register('job_host_summary_service', '1.4', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
-def job_host_summary_table(since, full_path, until, **kwargs):
+def job_host_summary_service_table(since, full_path, until, **kwargs):
+    
+    if 'job_host_summary_service' not in get_optional_collectors():
+        return None
     
     prepend_query = """
         -- Define function for parsing field out of yaml encoded as text
@@ -820,7 +827,11 @@ def job_host_summary_table(since, full_path, until, **kwargs):
     )
 
 @register('main_jobevent_service', '1.4', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
-def main_jobevent_table(since, full_path, until, **kwargs):
+def main_jobevent_service_table(since, full_path, until, **kwargs):
+    
+    if 'main_jobevent_service' not in get_optional_collectors():
+        return None
+    
     # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
     event_data = r"replace(e.event_data, '\u', '\u005cu')::jsonb"
 
@@ -895,7 +906,10 @@ def main_jobevent_table(since, full_path, until, **kwargs):
     )
 
 @register('execution_environments', '1.4', format='csv', description=_('Execution environments'), fnc_slicing=limit_slicing)
-def main_jobevent_table(since, full_path, until, **kwargs):
+def execution_environments_table(since, full_path, until, **kwargs):
+
+    if 'execution_environments' not in get_optional_collectors():
+        return None
 
     sql="""
         SELECT
