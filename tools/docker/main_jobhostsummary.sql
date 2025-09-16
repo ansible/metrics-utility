@@ -361,6 +361,7 @@ $yaml$,
   FOR i IN 1..job_count LOOP
     INSERT INTO public.main_unifiedjob (
       created,
+      finished,
       modified,
       description,
       name,
@@ -388,6 +389,7 @@ $yaml$,
     )
     VALUES (
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- finished
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- modified
       ''::text,                               -- description
       'default_unified_job_' || random_suffix, -- name
