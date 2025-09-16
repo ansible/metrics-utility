@@ -691,16 +691,17 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                                  main_unifiedjob.ansible_version,
                                  main_job.forks
                                  FROM main_unifiedjob
-                                 JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
+                                 LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
                                  LEFT JOIN main_job ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
                                  LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
                                  LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
                                  LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
-                                 WHERE ((main_unifiedjob.created > '{0}' AND main_unifiedjob.created <= '{1}')
-                                       OR (main_unifiedjob.finished > '{0}' AND main_unifiedjob.finished <= '{1}'))
+                                 WHERE ((main_unifiedjob.created >= '{0}' AND main_unifiedjob.created < '{1}')
+                                       OR (main_unifiedjob.finished >= '{0}' AND main_unifiedjob.finished < '{1}'))
                                        AND main_unifiedjob.launch_type != 'sync'
                                  ORDER BY main_unifiedjob.id ASC) TO STDOUT WITH CSV HEADER
                         """.format(since.isoformat(), until.isoformat())
+
     return _copy_table(table='unified_jobs', query=unified_job_query, path=full_path)
 
 
