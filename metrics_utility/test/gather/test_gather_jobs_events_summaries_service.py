@@ -101,6 +101,8 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
 
 @pytest.fixture
 def cleanup_glob():
+    for file in glob.glob(file_glob):
+        os.remove(file)
     yield
     for file in glob.glob(file_glob):
         os.remove(file)
@@ -120,11 +122,32 @@ def test_unified_jobs_command(cleanup_glob):
     # validate CSV inside generated tarball(s)
     validate_csv_in_tarballs(file_paths, 'unified_jobs.csv', jobs_lines, json_lines_skip_ids_columns)
 
+jobs_host_summary_service_lines = [
+    "id,created,modified,host_name,host_remote_id,ansible_host_variable,ansible_connection_variable,changed,dark,failures,ok,processed,skipped,failed,ignored,rescued,job_created,job_remote_id,job_template_remote_id,job_template_name,inventory_remote_id,inventory_name,organization_remote_id,organization_name,project_remote_id,project_name",
+    "1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
+    "2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
+    "3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
+    "4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
+    "5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
+    "6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13"
+]
+
+jobs_host_summary_service_skip_columns = [
+    'id',
+    'host_remote_id',
+    'job_remote_id',
+    'job_template_remote_id',
+    'inventory_remote_id',
+    'organization_remote_id',
+    'project_remote_id',
+]
+
+
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
-def test_jobs_host_summary_service_command(cleanup_glob):
-    """Build and validate jobs_host_summary_service_table.csv contents in the generated tarball."""
+def test_job_host_summary_service_command(cleanup_glob):
+    """Build and validate jobs_host_summary_service.csv contents in the generated tarball."""
     # prepare env
-    return
+
     test_env = env_vars.copy()
     test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
     test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'job_host_summary_service'
@@ -133,7 +156,7 @@ def test_jobs_host_summary_service_command(cleanup_glob):
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'jobs_host_summary_service_table.csv', jobs_lines, json_lines_skip_ids_columns)
+    validate_csv_in_tarballs(file_paths, 'job_host_summary_service.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
 
 
 
