@@ -299,6 +299,7 @@ main_jobevent_service_skip_columns = [
     'host_remote_id',
 ]
 
+
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_main_jobevent_service_command(cleanup_glob):
     """Build and validate main_jobevent_service.csv contents in the generated tarball."""
@@ -313,6 +314,7 @@ def test_main_jobevent_service_command(cleanup_glob):
 
     # validate CSV inside generated tarball(s)
     validate_csv_in_tarballs(file_paths, 'main_jobevent_service.csv', main_jobevent_service_lines, main_jobevent_service_skip_columns)
+
 
 execution_environments_lines = [
     'id,created,modified,description,image,managed,created_by_id,credential_id,modified_by_id,organization_id,name,pull',
@@ -333,6 +335,7 @@ execution_environments_skip_columns = [
     'modified_by_id',
     'organization_id',
 ]
+
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_execution_environments_command(cleanup_glob):
