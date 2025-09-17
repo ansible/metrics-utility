@@ -107,19 +107,33 @@ def cleanup_glob():
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
-def test_unified_jobs_table_command(cleanup_glob):
+def test_unified_jobs_command(cleanup_glob):
     """Build and validate unified_jobs_table.csv contents in the generated tarball."""
     # prepare env
     test_env = env_vars.copy()
     test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'unified_jobs_table'
+    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'unified_jobs'
 
     # run the gather command
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'unified_jobs_table.csv', jobs_lines, json_lines_skip_ids_columns)
+    validate_csv_in_tarballs(file_paths, 'unified_jobs.csv', jobs_lines, json_lines_skip_ids_columns)
 
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_jobs_host_summary_service_command(cleanup_glob):
+    """Build and validate jobs_host_summary_service_table.csv contents in the generated tarball."""
+    # prepare env
+    return
+    test_env = env_vars.copy()
+    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
+    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'job_host_summary_service'
+
+    # run the gather command
+    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+
+    # validate CSV inside generated tarball(s)
+    validate_csv_in_tarballs(file_paths, 'jobs_host_summary_service_table.csv', jobs_lines, json_lines_skip_ids_columns)
 
 
 

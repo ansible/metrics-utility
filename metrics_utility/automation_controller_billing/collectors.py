@@ -659,9 +659,9 @@ def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_
         raise MetricsException(f'Error querying CPU timeline: {e}')
 
 
-@register('unified_jobs_table', '1.4', format='csv', description=_('Data on jobs run'), fnc_slicing=daily_slicing)
+@register('unified_jobs', '1.4', format='csv', description=_('Data on jobs run'), fnc_slicing=daily_slicing)
 def unified_jobs_table(since, full_path, until, **kwargs):
-    if 'unified_jobs_table' not in get_optional_collectors():
+    if 'unified_jobs' not in get_optional_collectors():
         return None
 
     unified_job_query = """COPY (SELECT main_unifiedjob.id,

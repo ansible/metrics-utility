@@ -53,7 +53,7 @@ VALID_COLLECTORS = {
     'main_jobevent',
     'main_indirectmanagednodeaudit',
     'total_workers_vcpu',
-    'unified_jobs_table',
+    'unified_jobs',
     'job_host_summary_service',
     'main_jobevent_service',
     'execution_environments',
