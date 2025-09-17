@@ -539,6 +539,15 @@ $yaml$,
                array_length(unified_jobs,1),
                array_length(host_ids,1);
 
+  -- Ensure hourly partition exists for 2025-06-13 10:00
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_schema = 'public' AND table_name = 'main_jobevent_20250613_10'
+  ) THEN
+    EXECUTE 'CREATE TABLE public.main_jobevent_20250613_10 (LIKE public.main_jobevent INCLUDING DEFAULTS INCLUDING CONSTRAINTS)';
+    EXECUTE 'ALTER TABLE public.main_jobevent ATTACH PARTITION public.main_jobevent_20250613_10 FOR VALUES FROM (''2025-06-13 10:00:00+00'') TO (''2025-06-13 11:00:00+00'')';
+  END IF;
+
   -- Job Events (two per job-host), timestamps use fixed literal
   FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
     unified_job_id := unified_jobs[i];
