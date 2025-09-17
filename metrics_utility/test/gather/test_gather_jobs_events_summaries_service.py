@@ -1,39 +1,17 @@
 import csv
 import glob
 import os
-import tarfile
-
-from unittest.mock import patch
 
 import pytest
 
-from metrics_utility.base.collection import Collection
-from metrics_utility.test.util import run_gather_ext, run_gather_int
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
+from metrics_utility.test.util import run_gather_ext
+
 
 env_vars = {
     'METRICS_UTILITY_SHIP_PATH': './out',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
 }
-
-jobs_lines = [
-    "id,polymorphic_ctype_id,model,organization_id,organization_name,execution_environment_image,inventory_id,inventory_name,created,name,unified_job_template_id,launch_type,schedule_id,execution_node,controller_node,cancel_flag,status,failed,started,finished,elapsed,job_explanation,instance_group_id,installed_collections,ansible_version,forks",
-    "1,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0",
-    "2,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0",
-    "3,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0",
-]
-
-
-# we have to skip columns containing ids because they can change
-json_lines_skip_ids_columns = [
-    'id',
-    'polymorphic_ctype_id',
-    'organization_id',
-    'inventory_id',
-    'unified_job_template_id',
-    'schedule_id',
-    'instance_group_id',
-]
 
 # where to find the tar.gz (match jobhostsummary test layout)
 uuid = '00000000-0000-0000-0000-000000000000'
@@ -65,7 +43,7 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
             text = f.read().decode('utf-8').splitlines()
 
             print('original --------------------------------')
-            #print(text)
+            # print(text)
             for line in text:
                 print(line)
             print('--------------------------------\n\n')
@@ -82,7 +60,9 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
             assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
 
             actual_data = rows[1:]
-            assert len(actual_data) == len(expected_rows), f'\nRow count mismatch in {csv_filename}: expected {len(expected_rows)}, got {len(actual_data)}'
+            assert len(actual_data) == len(expected_rows), (
+                f'\nRow count mismatch in {csv_filename}: expected {len(expected_rows)}, got {len(actual_data)}'
+            )
 
             skip_columns = set(skip_columns_names)
             for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
@@ -91,8 +71,12 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
                     if col_name in skip_columns:
                         continue
                     assert exp_cell == act_cell, (
-                        f'\nData mismatch in {csv_filename} on row {i + 1}, column "{col_name}" (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
+                        f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
+                        f'(index {idx}):\n'
+                        f'Expected: {exp_cell!r}\n'
+                        f'Actual:   {act_cell!r}'
                     )
+
             break
 
     if not found:
@@ -106,6 +90,43 @@ def cleanup_glob():
     yield
     for file in glob.glob(file_glob):
         os.remove(file)
+
+
+jobs_lines = [
+    (
+        'id,polymorphic_ctype_id,model,organization_id,organization_name,'
+        'execution_environment_image,inventory_id,inventory_name,created,'
+        'name,unified_job_template_id,launch_type,schedule_id,execution_node,'
+        'controller_node,cancel_flag,status,failed,started,finished,elapsed,'
+        'job_explanation,instance_group_id,installed_collections,ansible_version,forks'
+    ),
+    (
+        '1,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
+        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0'
+    ),
+    (
+        '2,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
+        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0'
+    ),
+    (
+        '3,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
+        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0'
+    ),
+]
+
+# we have to skip columns containing ids because they can change
+json_lines_skip_ids_columns = [
+    'id',
+    'polymorphic_ctype_id',
+    'organization_id',
+    'inventory_id',
+    'unified_job_template_id',
+    'schedule_id',
+    'instance_group_id',
+]
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -122,15 +143,59 @@ def test_unified_jobs_command(cleanup_glob):
     # validate CSV inside generated tarball(s)
     validate_csv_in_tarballs(file_paths, 'unified_jobs.csv', jobs_lines, json_lines_skip_ids_columns)
 
+
 jobs_host_summary_service_lines = [
-    "id,created,modified,host_name,host_remote_id,ansible_host_variable,ansible_connection_variable,changed,dark,failures,ok,processed,skipped,failed,ignored,rescued,job_created,job_remote_id,job_template_remote_id,job_template_name,inventory_remote_id,inventory_name,organization_remote_id,organization_name,project_remote_id,project_name",
-    "1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
-    "2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
-    "3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
-    "4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
-    "5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13",
-    "6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,4,default_inventory_2025-06-13,2,default_org_2025-06-13,1,default_unified_job_template_2025-06-13"
+    (
+        'id,created,modified,host_name,host_remote_id,ansible_host_variable,'
+        'ansible_connection_variable,changed,dark,failures,ok,processed,skipped,'
+        'failed,ignored,rescued,job_created,job_remote_id,job_template_remote_id,'
+        'job_template_name,inventory_remote_id,inventory_name,organization_remote_id,'
+        'organization_name,project_remote_id,project_name'
+    ),
+    (
+        '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
+        '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,4,'
+        'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
+        '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,4,'
+        'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
+        '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,4,'
+        'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
+        '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,4,'
+        'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
+        '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,4,'
+        'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
+        '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,4,'
+        'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
 ]
+
 
 jobs_host_summary_service_skip_columns = [
     'id',
@@ -157,10 +222,3 @@ def test_job_host_summary_service_command(cleanup_glob):
 
     # validate CSV inside generated tarball(s)
     validate_csv_in_tarballs(file_paths, 'job_host_summary_service.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
-
-
-
-
-
-
-
