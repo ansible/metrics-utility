@@ -539,6 +539,110 @@ $yaml$,
                array_length(unified_jobs,1),
                array_length(host_ids,1);
 
+  -- Job Events (two per job-host), timestamps use fixed literal
+  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
+    unified_job_id := unified_jobs[i];
+
+    FOREACH host_id IN ARRAY host_ids LOOP
+      -- get host name
+      SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
+
+      -- event 1
+      INSERT INTO public.main_jobevent (
+        created,
+        modified,
+        event,
+        event_data,
+        failed,
+        changed,
+        host_name,
+        play,
+        role,
+        task,
+        counter,
+        host_id,
+        job_id,
+        uuid,
+        parent_uuid,
+        end_line,
+        playbook,
+        start_line,
+        stdout,
+        verbosity,
+        job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_start',
+        '{}'::text,
+        false,
+        false,
+        host_name,
+        'default_play',
+        'default_role',
+        'default_task',
+        1,
+        host_id,
+        unified_job_id,
+        gen_random_uuid()::text,
+        ''::text,
+        1,
+        'default_playbook.yml',
+        1,
+        ''::text,
+        0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+
+      -- event 2
+      INSERT INTO public.main_jobevent (
+        created,
+        modified,
+        event,
+        event_data,
+        failed,
+        changed,
+        host_name,
+        play,
+        role,
+        task,
+        counter,
+        host_id,
+        job_id,
+        uuid,
+        parent_uuid,
+        end_line,
+        playbook,
+        start_line,
+        stdout,
+        verbosity,
+        job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        '{}'::text,
+        false,
+        false,
+        host_name,
+        'default_play',
+        'default_role',
+        'default_task',
+        2,
+        host_id,
+        unified_job_id,
+        gen_random_uuid()::text,
+        ''::text,
+        2,
+        'default_playbook.yml',
+        2,
+        'ok: ' || host_name,
+        0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+    END LOOP;
+  END LOOP;
+
 END
 $$;
 
