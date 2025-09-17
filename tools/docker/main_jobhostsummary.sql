@@ -654,7 +654,7 @@ $yaml$,
   --
   -- Execution Environments
   --
-  INSERT INTO main_executionenvironment (
+  INSERT INTO public.main_executionenvironment (
     created,
     modified,
     description,
