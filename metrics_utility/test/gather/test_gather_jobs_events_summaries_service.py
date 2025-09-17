@@ -2,6 +2,8 @@ import csv
 import glob
 import os
 
+from datetime import datetime
+
 import pytest
 
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
@@ -224,84 +226,71 @@ def test_job_host_summary_service_command(cleanup_glob):
     validate_csv_in_tarballs(file_paths, 'job_host_summary_service.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
 
 
-
 main_jobevent_service_lines = [
-    "id,created,modified,job_created,finished,uuid,parent_uuid,event,"
-    "task_action,resolved_action,resolved_role,duration,start,end,failed,"
-    "changed,playbook,play,task,role,job_remote_id,host_remote_id,"
-    "host_name,warnings,deprecations,playbook_on_stats",
-
-    "1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "d34ed5d9-fce8-427b-94e3-ed46f81e0071,,runner_on_start,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,1,31,"
-    "default_host_1_2025-06-13,,,",
-
-    "2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "765ea843-a379-4c6e-a89a-df8c37b3cfec,,runner_on_ok,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,1,31,"
-    "default_host_1_2025-06-13,,,",
-
-    "3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "984de595-b7df-4107-83cf-101defdef80f,,runner_on_start,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,1,32,"
-    "default_host_2_2025-06-13,,,",
-
-    "4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "07c717dd-4e7b-43b0-9bb9-257ada77cb19,,runner_on_ok,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,1,32,"
-    "default_host_2_2025-06-13,,,",
-
-    "5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "0f1745e3-b611-4a21-9684-5e6cb6f6307f,,runner_on_start,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,2,31,"
-    "default_host_1_2025-06-13,,,",
-
-    "6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "3b83b139-fd0a-4ede-9a58-d0a6c50faa9d,,runner_on_ok,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,2,31,"
-    "default_host_1_2025-06-13,,,",
-
-    "7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "3edfc47b-09fe-4cb0-89d1-6c7ed6bcbc17,,runner_on_start,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,2,32,"
-    "default_host_2_2025-06-13,,,",
-
-    "8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "8f3fbb4a-c0c0-44d2-a2a3-d188ce40b27b,,runner_on_ok,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,2,32,"
-    "default_host_2_2025-06-13,,,",
-
-    "9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "72b20910-9623-43fd-935e-ef78623ae60c,,runner_on_start,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,3,31,"
-    "default_host_1_2025-06-13,,,",
-
-    "10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "d0e307d0-c787-4bb4-b93c-05b97423b395,,runner_on_ok,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,3,31,"
-    "default_host_1_2025-06-13,,,",
-
-    "11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "51858aba-7fd9-4f40-b2e1-1fe93cc78d8b,,runner_on_start,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,3,32,"
-    "default_host_2_2025-06-13,,,",
-
-    "12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,"
-    "ed8c6f8b-4ac9-4247-8a6c-3f4c2d96b157,,runner_on_ok,,,,,,,f,f,"
-    "default_playbook.yml,default_play,default_task,default_role,3,32,"
-    "default_host_2_2025-06-13,,,",
+    'id,created,modified,job_created,finished,uuid,parent_uuid,event,'
+    'task_action,resolved_action,resolved_role,duration,start,end,failed,'
+    'changed,playbook,play,task,role,job_remote_id,host_remote_id,'
+    'host_name,warnings,deprecations,playbook_on_stats',
+    '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_start,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,1,31,'
+    'default_host_1_2025-06-13,,,',
+    '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_ok,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,1,31,'
+    'default_host_1_2025-06-13,,,',
+    '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_start,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,1,32,'
+    'default_host_2_2025-06-13,,,',
+    '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_ok,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,1,32,'
+    'default_host_2_2025-06-13,,,',
+    '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_start,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,2,31,'
+    'default_host_1_2025-06-13,,,',
+    '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_ok,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,2,31,'
+    'default_host_1_2025-06-13,,,',
+    '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_start,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,2,32,'
+    'default_host_2_2025-06-13,,,',
+    '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_ok,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,2,32,'
+    'default_host_2_2025-06-13,,,',
+    '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_start,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,3,31,'
+    'default_host_1_2025-06-13,,,',
+    '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_ok,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,3,31,'
+    'default_host_1_2025-06-13,,,',
+    '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_start,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,3,32,'
+    'default_host_2_2025-06-13,,,',
+    '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'UUID,,runner_on_ok,,,,,,,f,f,'
+    'default_playbook.yml,default_play,default_task,default_role,3,32,'
+    'default_host_2_2025-06-13,,,',
 ]
 
 main_jobevent_service_skip_columns = [
@@ -326,3 +315,46 @@ def test_main_jobevent_service_command(cleanup_glob):
     # validate CSV inside generated tarball(s)
     validate_csv_in_tarballs(file_paths, 'main_jobevent_service.csv', main_jobevent_service_lines, main_jobevent_service_skip_columns)
 
+
+execution_environments_lines = [
+    'id,created,modified,description,image,managed,created_by_id,credential_id,modified_by_id,organization_id,name,pull',
+    '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'Python 3.11 environment with common ML libraries,'
+    'registry.example.com/envs/python-ml:3.11,t,,,,,'
+    'Python ML Environment,always',
+    '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    'Node.js 20 environment for backend services,'
+    'registry.example.com/envs/node-backend:20,f,,,,,'
+    'Node Backend Environment,missing',
+]
+
+execution_environments_skip_columns = [
+    'id',
+    'created_by_id',
+    'credential_id',
+    'modified_by_id',
+    'organization_id',
+]
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_execution_environments_command(cleanup_glob):
+    """Build and validate execution_environments.csv contents in the generated tarball."""
+    # prepare env
+
+    test_env = env_vars.copy()
+    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
+    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'execution_environments'
+
+    # run the gather command
+    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+
+    # validate CSV inside generated tarball(s)
+    # file_paths should be found in datetime.now file path YYYY/MM/DD
+    year = datetime.now().strftime('%Y')
+    month = datetime.now().strftime('%m')
+    day = datetime.now().strftime('%d')
+
+    file_paths = f'./out/data/{year}/{month}/{day}/{uuid}-*.tar.gz'
+
+    validate_csv_in_tarballs(file_paths, 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)

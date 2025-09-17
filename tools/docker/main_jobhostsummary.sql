@@ -593,8 +593,8 @@ $yaml$,
         1,
         host_id,
         unified_job_id,
-        gen_random_uuid()::text,
-        ''::text,
+        'UUID',
+        '',
         1,
         'default_playbook.yml',
         1,
@@ -640,8 +640,8 @@ $yaml$,
         2,
         host_id,
         unified_job_id,
-        gen_random_uuid()::text,
-        ''::text,
+        'UUID',
+        '',
         2,
         'default_playbook.yml',
         2,
@@ -651,7 +651,36 @@ $yaml$,
       );
     END LOOP;
   END LOOP;
-
+  --
+  -- Execution Environments
+  --
+  INSERT INTO main_executionenvironment (
+    created,
+    modified,
+    description,
+    image,
+    managed,
+    name,
+    pull
+) VALUES 
+(
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'Python 3.11 environment with common ML libraries',
+    'registry.example.com/envs/python-ml:3.11',
+    TRUE,
+    'Python ML Environment',
+    'always'
+),
+(
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'Node.js 20 environment for backend services',
+    'registry.example.com/envs/node-backend:20',
+    FALSE,
+    'Node Backend Environment',
+    'missing'
+);
 END
 $$;
 
