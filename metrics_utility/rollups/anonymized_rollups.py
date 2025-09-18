@@ -1,9 +1,8 @@
-
-
+import pandas as pd
 
 class Event_Rollups:
     """
-    Event rollups operate over main_jobevent collector data
+    Event rollups operate over main_jobevent_service collector data
     """
     def base(dataframe):
         """
@@ -17,19 +16,46 @@ class Event_Rollups:
         """
         json_data = {}
 
-        # Avg number of modules used in a playbook
-        json_data['avg_modules_used'] = dataframe['modules_used'].mean()
+        # add module column into the dataframe based on dataframe_content_usage.py approach
+        dataframe['task_action'] = dataframe.resolved_action.fillna(dataframe.task_action).astype(str)
+        dataframe.rename(columns={'task_action': 'module_name'}, inplace=True)
 
-        # Failure/Success rate for each module
+        # ------------------------------------------------------------
+        # avg number of modules used in a playbook
+        avg_modules = dataframe.groupby("playbook")["module_name"].nunique().mean()
+
+        # ------------------------------------------------------------
+        # failure/success rate of modules
+        # Define event categories
+        ok_events = {"runner_on_ok", "runner_on_changed", "runner_on_async_ok"}
+        failed_events = {"runner_on_failed", "runner_on_unreachable", "runner_on_async_failed"}
+
+        # Create new columns for classification
+        dataframe["is_success"] = dataframe["event"].isin(ok_events)
+        dataframe["is_failure"] = dataframe["event"].isin(failed_events)
         
-        
-        
+        module_stats = (
+            dataframe.groupby("module_name")
+            .agg(
+                failures=("is_failure", "sum"),
+                successes=("is_success", "sum")
+            )
+        )
+
+        # total = failures + successes
+        module_stats["total_runs"] = module_stats["failures"] + module_stats["successes"]
+
+        # failure rate = failures / total
+        module_stats["failure_rate"] = module_stats["failures"] / module_stats["total_runs"]
+
+        # ------------------------------------------------------------
+        # modules used to automate (sum of all distinct modules used)
+        modules_used = dataframe["module_name"].nunique()
+
+        # the dataframe should be converted to json
+        json_data = {
+
+        }
+
 
         return json_data
-
-
-    def aggregate(json_data):
-        """
-        This function will create rollups from aggregations, it should accept json (result of base function) 
-        and should produce the same jsob, but with aggregated values, so I can create monthly and yearly rollups
-        """
