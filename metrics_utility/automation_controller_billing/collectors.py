@@ -890,7 +890,9 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
 
             CASE WHEN e.event = 'playbook_on_stats'
                  THEN {event_data} - 'artifact_data'
-            END AS playbook_on_stats
+            END AS playbook_on_stats,
+
+            uj.failed as job_failed
 
         FROM main_jobevent e
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
