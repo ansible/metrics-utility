@@ -100,22 +100,26 @@ jobs_lines = [
         'execution_environment_image,inventory_id,inventory_name,created,'
         'name,unified_job_template_id,launch_type,schedule_id,execution_node,'
         'controller_node,cancel_flag,status,failed,started,finished,elapsed,'
-        'job_explanation,instance_group_id,installed_collections,ansible_version,forks'
+        'job_explanation,instance_group_id,installed_collections,ansible_version,forks,'
+        'job_template_name'
     ),
     (
         '1,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0'
+        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'default_unified_job_template_2025-06-13'
     ),
     (
         '2,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0'
+        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'default_unified_job_template_2025-06-13'
     ),
     (
         '3,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0'
+        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'default_unified_job_template_2025-06-13'
     ),
 ]
 

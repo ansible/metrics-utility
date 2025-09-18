@@ -3,6 +3,7 @@ class Event_Anonymized_Rollups:
     Event rollups operate over main_jobevent_service collector data
     """
 
+    @staticmethod
     def base(dataframe):
         """
         This function will create first level aggregation of the event dataframe, the result is json

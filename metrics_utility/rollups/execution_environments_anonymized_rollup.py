@@ -3,6 +3,7 @@ class Execution_Environments_Anonymized_Rollups:
     Collector - execution_environment_service collector data
     """
 
+    @staticmethod
     def base(dataframe):
         """
         Number of execution enviornment configured in the controller
