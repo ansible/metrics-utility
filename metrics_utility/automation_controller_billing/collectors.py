@@ -689,8 +689,10 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                                  main_unifiedjob.instance_group_id,
                                  main_unifiedjob.installed_collections,
                                  main_unifiedjob.ansible_version,
-                                 main_job.forks
+                                 main_job.forks,
+                                 main_unifiedjobtemplate.name as job_template_name
                                  FROM main_unifiedjob
+                                 LEFT JOIN main_unifiedjobtemplate ON main_unifiedjobtemplate.id = main_unifiedjob.unified_job_template_id
                                  LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
                                  LEFT JOIN main_job ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
                                  LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
