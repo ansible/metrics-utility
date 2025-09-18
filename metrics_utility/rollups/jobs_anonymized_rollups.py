@@ -65,13 +65,13 @@ class Jobs_Anonymized_Rollups:
         
         return {
             'number_of_jobs_executed': number_of_jobs_executed,
-            'number_of_jobs_failed': number_of_jobs_failed,
-            'number_of_jobs_succeeded': number_of_jobs_succeeded,
-            'job_duration_average_in_seconds_by_template': job_duration_average_in_seconds_by_template.to_dict(orient='records'),
-            'job_duration_maximum_seconds_by_template': job_duration_maximum_seconds_by_template.to_dict(orient='records'),
-            'job_duration_minimum_seconds_by_template': job_duration_minimum_seconds_by_template.to_dict(orient='records'),
-            'job_total_seconds_by_template': job_total_seconds_by_template.to_dict(orient='records'),
-            'active_number_of_customers': active_number_of_customers,
-            'active_number_of_clusters_by_controller_version': active_number_of_clusters_by_controller_version.to_dict(orient='records'),
-            'number_of_templates_executed_by_company': number_of_templates_executed_by_company.to_dict(orient='records'),
+            'number_of_jobs_failed': int(number_of_jobs_failed),
+            'number_of_jobs_succeeded': int(number_of_jobs_succeeded),
+            'job_duration_average_in_seconds_by_template': job_duration_average_in_seconds_by_template.to_dict(),
+            'job_duration_maximum_seconds_by_template': job_duration_maximum_seconds_by_template.to_dict(),
+            'job_duration_minimum_seconds_by_template': job_duration_minimum_seconds_by_template.to_dict(),
+            'job_total_seconds_by_template': job_total_seconds_by_template.to_dict(),
+            'active_number_of_customers': int(active_number_of_customers),
+            'active_number_of_clusters_by_controller_version': active_number_of_clusters_by_controller_version.to_dict(),
+            'number_of_templates_executed_by_company': number_of_templates_executed_by_company.to_dict(),
         }
