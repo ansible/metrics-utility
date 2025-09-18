@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from metrics_utility.rollups.events_anonymized_rollups import Event_Rollups
+from metrics_utility.rollups.events_anonymized_rollups import Event_Anonymized_Rollups
 
 
 def test_event_rollups_base_aggregation():
@@ -18,7 +18,7 @@ def test_event_rollups_base_aggregation():
     ]
     df = pd.DataFrame(data)
 
-    result = Event_Rollups.base(df)
+    result = Event_Anonymized_Rollups.base(df)
 
     # avg distinct modules per playbook: pb1 -> {copy, file} = 2, pb2 -> {template, copy} = 2; mean = 2.0
     assert result['avg_modules_per_playbook'] == pytest.approx(2.0)
