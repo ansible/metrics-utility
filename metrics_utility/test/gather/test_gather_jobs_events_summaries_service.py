@@ -234,67 +234,79 @@ main_jobevent_service_lines = [
     'id,created,modified,job_created,finished,uuid,parent_uuid,event,'
     'task_action,resolved_action,resolved_role,duration,start,end,failed,'
     'changed,playbook,play,task,role,job_remote_id,host_remote_id,'
-    'host_name,warnings,deprecations,playbook_on_stats',
+    'host_name,warnings,deprecations,playbook_on_stats,job_failed',
+
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,31,'
-    'default_host_1_2025-06-13,,,',
+    'default_host_1_2025-06-13,,,,f',
+
     '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,31,'
-    'default_host_1_2025-06-13,,,',
+    'default_host_1_2025-06-13,,,,f,',
+
     '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,32,'
-    'default_host_2_2025-06-13,,,',
+    'default_host_2_2025-06-13,,,,f,',
+
     '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,32,'
-    'default_host_2_2025-06-13,,,',
+    'default_host_2_2025-06-13,,,,f,',
+
     '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,31,'
-    'default_host_1_2025-06-13,,,',
+    'default_host_1_2025-06-13,,,,f,',
+
     '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,31,'
-    'default_host_1_2025-06-13,,,',
+    'default_host_1_2025-06-13,,,,f,',
+
     '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,32,'
-    'default_host_2_2025-06-13,,,',
+    'default_host_2_2025-06-13,,,,f,',
+
     '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,32,'
-    'default_host_2_2025-06-13,,,',
+    'default_host_2_2025-06-13,,,,f,',
+
     '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,31,'
-    'default_host_1_2025-06-13,,,',
+    'default_host_1_2025-06-13,,,,f,',
+
     '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,31,'
-    'default_host_1_2025-06-13,,,',
+    'default_host_1_2025-06-13,,,,f,',
+
     '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,32,'
-    'default_host_2_2025-06-13,,,',
+    'default_host_2_2025-06-13,,,,f,',
+
     '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,32,'
-    'default_host_2_2025-06-13,,,',
+    'default_host_2_2025-06-13,,,,f,',
 ]
 
 main_jobevent_service_skip_columns = [

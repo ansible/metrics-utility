@@ -578,7 +578,7 @@ $yaml$,
         start_line,
         stdout,
         verbosity,
-        job_created
+        job_created,
       ) VALUES (
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
