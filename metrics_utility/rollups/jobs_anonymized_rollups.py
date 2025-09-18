@@ -8,16 +8,16 @@ class Jobs_Anonymized_Rollups:
         """
         This function will create first level aggregation of the job dataframe, the result is json
 
-        Number of jobs executed 
+        Number of jobs executed
         Number of jobs failed
-        Number of jobs that succeeded 
+        Number of jobs that succeeded
 
         Job duration average in seconds - by template
         Job duration maximum seconds- by template
         Job duration minimum seconds - by template
         Job total seconds by template
 
-        Active number of customer by Controller Version 
+        Active number of customer by Controller Version
         Active number of Customers
         Active number of Customers (anonymized? - the same as above?)
         Number of templates executed by company
@@ -62,7 +62,7 @@ class Jobs_Anonymized_Rollups:
         # Number of templates executed by company
         # column job_template_name, group by controller_node, count distinct job_template_name
         number_of_templates_executed_by_company = dataframe.groupby('controller_node')['job_template_name'].nunique()
-        
+
         return {
             'number_of_jobs_executed': number_of_jobs_executed,
             'number_of_jobs_failed': int(number_of_jobs_failed),
