@@ -44,5 +44,8 @@ metrics_utility/test/test_data/data/**/*.json
 # Shipped data - for regular usage during developement
 /shipped_data/
 
+# out - for gather tests - so they do not collide with the test_data
+/out/
+
 # Perf test data
 /tools/perf/generated/
