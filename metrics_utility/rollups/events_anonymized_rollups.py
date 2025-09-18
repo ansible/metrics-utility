@@ -1,4 +1,4 @@
-class Event_Rollups:
+class Event_Anonymized_Rollups:
     """
     Event rollups operate over main_jobevent_service collector data
     """
