@@ -3,48 +3,61 @@ import pytest
 
 from metrics_utility.rollups.jobs_anonymized_rollups import Jobs_Anonymized_Rollups
 
+
 data = [
     # controller A, version v1, template T1
     {
-        'started': 1_000_000, 'finished': 1_003_000, 'failed': 0,
-        'job_template_name': 'T1', 'controller_node': 'ctrl-A', 'ansible_version': 'v1'
+        'started': 1_000_000,
+        'finished': 1_003_000,
+        'failed': 0,
+        'job_template_name': 'T1',
+        'controller_node': 'ctrl-A',
+        'ansible_version': 'v1',
     },  # duration 3000 ms -> 3.0 s
     {
-        'started': 1_010_000, 'finished': 1_015_000, 'failed': 1,
-        'job_template_name': 'T1', 'controller_node': 'ctrl-A', 'ansible_version': 'v1'
+        'started': 1_010_000,
+        'finished': 1_015_000,
+        'failed': 1,
+        'job_template_name': 'T1',
+        'controller_node': 'ctrl-A',
+        'ansible_version': 'v1',
     },  # duration 5000 ms -> 5.0 s (failed)
     # controller A, version v1, template T2
     {
-        'started': 2_000_000, 'finished': 2_007_000, 'failed': 0,
-        'job_template_name': 'T2', 'controller_node': 'ctrl-A', 'ansible_version': 'v1'
+        'started': 2_000_000,
+        'finished': 2_007_000,
+        'failed': 0,
+        'job_template_name': 'T2',
+        'controller_node': 'ctrl-A',
+        'ansible_version': 'v1',
     },  # duration 7000 ms -> 7.0 s
     # controller B, version v2, template T1
     {
-        'started': 3_000_000, 'finished': 3_002_000, 'failed': 0,
-        'job_template_name': 'T1', 'controller_node': 'ctrl-B', 'ansible_version': 'v2'
+        'started': 3_000_000,
+        'finished': 3_002_000,
+        'failed': 0,
+        'job_template_name': 'T1',
+        'controller_node': 'ctrl-B',
+        'ansible_version': 'v2',
     },  # duration 2000 ms -> 2.0 s
     # Row with missing finished should be filtered out
-    {
-        'started': 4_000_000, 'finished': None, 'failed': 0,
-        'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'
-    },
+    {'started': 4_000_000, 'finished': None, 'failed': 0, 'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'},
     # Row with missing started should be filtered out
-    {
-        'started': None, 'finished': 5_000_000, 'failed': 0,
-        'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'
-    },
+    {'started': None, 'finished': 5_000_000, 'failed': 0, 'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'},
 ]
+
 
 def test_jobs_anonymized_rollups_base_aggregation():
     # Build a DataFrame mimicking unified_jobs collector output columns we use
     # Times are in milliseconds epoch to match the code dividing by 1000
-   
+
     df = pd.DataFrame(data)
 
     result = Jobs_Anonymized_Rollups.base(df)
 
     from pprint import pprint
-    print("\n")
+
+    print('\n')
     pprint(result)
 
     # counts
