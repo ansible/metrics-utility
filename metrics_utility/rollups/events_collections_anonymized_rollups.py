@@ -19,7 +19,7 @@ def extract_collection_name(x):
         return None
 
 
-class Jobs_Events_Collections_Anonymized_Rollups:
+class Events_Collections_Anonymized_Rollups:
     """
     Collectors -
     - unified_jobs
@@ -27,7 +27,7 @@ class Jobs_Events_Collections_Anonymized_Rollups:
     """
 
     @staticmethod
-    def base(events, jobs):
+    def base(dataframe):
         """
         events, jobs - dataframes from collectors
         This function will create first level aggregation of the job dataframe, the result is json
