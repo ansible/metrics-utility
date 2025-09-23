@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 
@@ -8,7 +9,7 @@ from django.conf import settings
 
 import metrics_utility.base as base
 
-from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.exceptions import FailedToUploadPayload, MetricsException
 from metrics_utility.logger import logger
 
 
@@ -38,6 +39,11 @@ class PackageCRC(base.Package):
     def _get_http_request_headers(self):
         return get_awx_http_client_headers()
 
+    # only service_account was reachable in 0.6.0 without changing code; identity still isn't
+    # FIXME: only use for service if needed, remove if not
+    def _shipping_auth(self):
+        return os.getenv('METRICS_UTILITY_SHIP_AUTH', 'service_account')  # identity | mutual_tls | service_account | user_pass
+
     def is_shipping_configured(self):
         if not self.tar_path:
             logger.error('Insights for Ansible Automation Platform TAR not found')
@@ -54,17 +60,19 @@ class PackageCRC(base.Package):
             logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
             return False
 
-        if not self._get_sso_url():
-            logger.error('METRICS_UTILITY_CRC_SSO_URL is not set')
-            return False
+        if self._shipping_auth() == 'service_account':
+            if not self._get_sso_url():
+                logger.error('METRICS_UTILITY_CRC_SSO_URL is not set')
+                return False
 
-        if not self._get_rh_user():
-            logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set')
-            return False
+        if self._shipping_auth() in ('service_account', 'user_pass'):
+            if not self._get_rh_user():
+                logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_ID is not set')
+                return False
 
-        if not self._get_rh_password():
-            logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set')
-            return False
+            if not self._get_rh_password():
+                logger.error('METRICS_UTILITY_SERVICE_ACCOUNT_SECRET is not set')
+                return False
 
         # _get_proxy_url is optional
 
@@ -89,43 +97,110 @@ class PackageCRC(base.Package):
                 )
             }
 
-            s = requests.Session()
-            s.headers = self._get_http_request_headers()
-            s.headers.pop('Content-Type')
+            response = self._request(files)
 
-            url = self._get_ingress_url()
-            self.shipping_successful = self._send_data(url, files, s)
+            # Accept 2XX status_codes
+            if response.status_code >= 300:
+                raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
 
-        return self.shipping_successful
+            self.shipping_successful = True
+            return True
 
-    def _send_data(self, url, files, session):
-        sso_url = self._get_sso_url()
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    def _session(self):
+        session = requests.Session()
+        session.headers = self._get_http_request_headers()
+        session.headers.pop('Content-Type')
 
-        data = {'client_id': self._get_rh_user(), 'client_secret': self._get_rh_password(), 'grant_type': 'client_credentials'}
+        session.verify = self.CERT_PATH
+        session.timeout = (31, 31)
 
-        r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
-        access_token = json.loads(r.content)['access_token']
+        return session
 
-        # Query crc with bearer token
-        headers = session.headers
-        headers['authorization'] = f'Bearer {access_token}'
-
-        proxies = {}
-        if self._get_proxy_url():
-            proxies = {'https': self._get_proxy_url()}
-
-        response = session.post(
-            url,
-            files=files,
-            verify=self.CERT_PATH,
-            proxies=proxies,
-            headers=headers,
+    def _bearer(self):
+        response = requests.post(
+            self._get_sso_url(),
+            data={'client_id': self._get_rh_user(), 'client_secret': self._get_rh_password(), 'grant_type': 'client_credentials'},
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
             timeout=(31, 31),
+            verify=self.CERT_PATH,
         )
 
-        # Accept 2XX status_codes
-        if response.status_code >= 300:
-            raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
+        return json.loads(response.content)['access_token']
 
-        return True
+    def _proxies(self):
+        if not self._get_proxy_url():
+            return {}
+
+        return {'https': self._get_proxy_url()}
+
+    def _identity(self, url, files):
+        session = self._session()
+
+        # FIXME: make parametrizable, if used
+        identity = {
+            'identity': {
+                'type': 'User',
+                'account_number': '0000001',
+                'user': {'is_org_admin': True},
+                'internal': {'org_id': '000001'},
+            }
+        }
+        session.headers['x-rh-identity'] = base64.b64encode(json.dumps(identity).encode('utf8'))
+
+        return session.post(
+            url,
+            files=files,
+            proxies=self._proxies(),
+        )
+
+    def _mutual_tls(self, url, files):
+        session = self._session()
+
+        # a single file (containing the private key and the certificate)
+        # or a tuple of both files paths (cert_file, keyfile)
+        session.cert = (
+            '/etc/pki/consumer/cert.pem',
+            '/etc/pki/consumer/key.pem',
+        )
+
+        return session.post(
+            url,
+            files=files,
+            proxies=self._proxies(),
+        )
+
+    def _service_account(self, url, files):
+        session = self._session()
+
+        access_token = self._bearer()
+        session.headers['authorization'] = f'Bearer {access_token}'
+
+        return session.post(
+            url,
+            files=files,
+            proxies=self._proxies(),
+        )
+
+    def _user_pass(self, url, files):
+        session = self._session()
+        session.auth = (self._get_rh_user(), self._get_rh_password())
+
+        return session.post(
+            url,
+            files=files,
+            proxies=self._proxies(),
+        )
+
+    def _request(self, url, files):
+        url = self._get_ingress_url()
+        mode = self._shipping_auth()
+        if mode == 'identity':
+            return self._identity(url, files)
+        elif mode == 'mutual_tls':
+            return self._mutual_tls(url, files)
+        elif mode == 'service_account':
+            return self._service_account(url, files)
+        elif mode == 'user_pass':
+            return self._user_pass(url, files)
+        else:
+            raise MetricsException(f'Invalid METRICS_UTILITY_SHIP_AUTH {mode}: identity | mutual_tls | service_account (default) | user_pass')
