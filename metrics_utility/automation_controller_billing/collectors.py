@@ -861,7 +861,7 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
             e.created,
             e.modified,
             e.job_created,
-            uj.finished,
+            uj.finished as job_finished,
             e.uuid,
             e.parent_uuid,
             e.event,
@@ -892,7 +892,8 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
                  THEN {event_data} - 'artifact_data'
             END AS playbook_on_stats,
 
-            uj.failed as job_failed
+            uj.failed as job_failed,
+            uj.started as job_started
 
         FROM main_jobevent e
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
