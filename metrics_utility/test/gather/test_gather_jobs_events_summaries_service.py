@@ -106,19 +106,19 @@ jobs_lines = [
     (
         '1,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
         'default_unified_job_template_2025-06-13'
     ),
     (
         '2,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
         'default_unified_job_template_2025-06-13'
     ),
     (
         '3,,,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
         'default_unified_job_template_2025-06-13'
     ),
 ]
@@ -231,82 +231,70 @@ def test_job_host_summary_service_command(cleanup_glob):
 
 
 main_jobevent_service_lines = [
-    'id,created,modified,job_created,finished,uuid,parent_uuid,event,'
+    'id,created,modified,job_created,job_finished,uuid,parent_uuid,event,'
     'task_action,resolved_action,resolved_role,duration,start,end,failed,'
     'changed,playbook,play,task,role,job_remote_id,host_remote_id,'
-    'host_name,warnings,deprecations,playbook_on_stats,job_failed',
-
+    'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,31,'
-    'default_host_1_2025-06-13,,,,f',
-
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00,',
     '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,31,'
-    'default_host_1_2025-06-13,,,,f,',
-
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,32,'
-    'default_host_2_2025-06-13,,,,f,',
-
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,32,'
-    'default_host_2_2025-06-13,,,,f,',
-
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,31,'
-    'default_host_1_2025-06-13,,,,f,',
-
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,31,'
-    'default_host_1_2025-06-13,,,,f,',
-
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,32,'
-    'default_host_2_2025-06-13,,,,f,',
-
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,32,'
-    'default_host_2_2025-06-13,,,,f,',
-
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,31,'
-    'default_host_1_2025-06-13,,,,f,',
-
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,31,'
-    'default_host_1_2025-06-13,,,,f,',
-
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_start,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,32,'
-    'default_host_2_2025-06-13,,,,f,',
-
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     'UUID,,runner_on_ok,,,,,,,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,32,'
-    'default_host_2_2025-06-13,,,,f,',
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
 ]
 
 main_jobevent_service_skip_columns = [
