@@ -66,13 +66,6 @@ class Collector(base.Collector):
 
             self._gather_json_collections()
 
-            # Extend the config collection to contain billing specific info:
-            config_collection = self.collections['config']
-            data = json.loads(config_collection.data)
-            data['billing_provider_params'] = billing_provider_params
-            config_collection._save_gathering(data)
-            # End of extension
-
             self._gather_csv_collections()
 
             self._process_packages()
@@ -82,6 +75,18 @@ class Collector(base.Collector):
             self._gather_cleanup()
 
             return self.all_tar_paths()
+
+    def _gather_config(self):
+        if not super()._gather_config():
+            return False
+
+        # Extend the config collection to contain billing specific info:
+        config_collection = self.collections['config']
+        data = json.loads(config_collection.data)
+        data['billing_provider_params'] = self.billing_provider_params
+        config_collection._save_gathering(data)
+
+        return True
 
     def _is_valid_license(self):
         # TODO: which license to check? Any license will do?
