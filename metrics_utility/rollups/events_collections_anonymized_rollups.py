@@ -32,14 +32,17 @@ class Events_Collections_Anonymized_Rollups:
         events, jobs - dataframes from collectors
         This function will create first level aggregation of the job dataframe, the result is json
 
-        Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-        Average job duration for validated content vs. community content.
-        Average number of hosts automated per job for validated vs. community content.
-        Number of jobs executed that use a specific partner collection.
-        Number of jobs using certified content that have failed due to a known bug.
-        Success/failure rate of jobs using validated vs. community content.
-        """
+        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+        *Average job duration for collection sources
+        *Average number of hosts automated per job for each collection source.
+        *Number of jobs per collection source that have failed.
+        *Success/failure rate of jobs per collection source.
 
+        ?Number of jobs executed that use a specific partner collection.
+        """
+        events = dataframe
+
+        events = events.assign(job_failed=events['job_failed'].fillna(False).astype(bool))
         events['collection_name'] = events['module_name'].apply(extract_collection_name)
 
         events['job_duration'] = events['finished'] - events['started']
@@ -48,37 +51,34 @@ class Events_Collections_Anonymized_Rollups:
         # fill collection source from collections_types
         events['collection_source'] = events['collection_name'].map(collections_types)
 
-        # Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-        # group by collection source and count distinct job_id
-        collection_source_jobs = events.groupby('collection_source')['job_id'].nunique()
+        # Total jobs executed by collection source
+        total_jobs_by_collection_source = events.groupby('collection_source')['job_id'].nunique()
 
-        # Average job duration for validated content vs. community content.
-        # group by collection_source, average all duration of events per each job and average jobs
-        # Step 1: drop duplicates so each (job_id, content_source) pair has one duration
-        df_unique = dataframe.drop_duplicates(subset=['job_id', 'content_source'])
+        # Average job duration by collection source
+        # drop duplicates so each (job_id, collection_source) pair has one duration
+        dropped_duplicates = events.drop_duplicates(subset=['job_id', 'collection_source'])
+        avg_job_duration_by_collection_source = dropped_duplicates.groupby('collection_source')['job_duration'].mean()
 
-        # Step 2: compute average job duration by content_source
-        avg_durations = df_unique.groupby('content_source')['duration'].mean()
+        # Success/failure rate of jobs per collection source.
+        # column job_failed
+        failed_jobs_by_collection_source = (
+            events[events['job_failed']].groupby('collection_source')['job_id'].nunique().reindex(total_jobs_by_collection_source.index, fill_value=0)
+        )
+        success_rate_by_collection_source = (total_jobs_by_collection_source - failed_jobs_by_collection_source) / total_jobs_by_collection_source
 
-        # Average number of hosts automated per job for validated vs. community content.
-        # group by collection_source and job_id count total hosts per job and average them
-        hosts_per_job = dataframe.groupby(['collection_source', 'job_id'])['host_id'].nunique().reset_index(name='hosts_automated')
-
-        # Step 2: average across jobs, per collection_source
-        avg_hosts_per_job_per_collection_source = (
-            hosts_per_job.groupby('collection_source')['hosts_automated'].mean().reset_index(name='avg_hosts_per_job')
+        # Average number of hosts automated per job for each collection source.
+        # split data by collection source, count the number of unique host_id per job_id
+        # then average the number of hosts per job for each collection source
+        avg_hosts_per_job_by_collection_source = (
+            events.groupby(['collection_source', 'job_id'])['host_id'].nunique().groupby('collection_source').mean()
         )
 
-        # Number of jobs executed that use a specific partner collection. TODO
-        # group by collection_source, count distinct job_id
-        # TODO - what is partner collection?
+        result = {
+            'total_jobs_by_collection_source': total_jobs_by_collection_source,
+            'avg_job_duration_by_collection_source': avg_job_duration_by_collection_source,
+            'failed_jobs_by_collection_source': failed_jobs_by_collection_source,
+            'success_rate_by_collection_source': success_rate_by_collection_source,
+            'avg_hosts_per_job_by_collection_source': avg_hosts_per_job_by_collection_source,
+        }
 
-        # TODO - probably for all content, not only just certified
-        # Number of jobs using content that have failed due to a known bug.
-        # use column job_failed (boolean)
-        # first filter certified content
-
-        failed_jobs = dataframe[dataframe['job_failed'] == True]
-
-        # count distinct job_id
-        number_of_failed_jobs_certified_content = failed_jobs['job_id'].nunique()
+        return result
