@@ -45,8 +45,8 @@ class Events_Collections_Anonymized_Rollups:
         events = events.assign(job_failed=events['job_failed'].fillna(False).astype(bool))
         events['collection_name'] = events['module_name'].apply(extract_collection_name)
 
-        events['job_duration'] = events['finished'] - events['started']
-        events['job_waiting_time'] = events['started'] - events['job_created']
+        events['job_duration'] = events['job_finished'] - events['job_started']
+        events['job_waiting_time'] = events['job_started'] - events['job_created']
 
         # fill collection source from collections_types
         events['collection_source'] = events['collection_name'].map(collections_types)
