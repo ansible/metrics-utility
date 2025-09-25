@@ -14,41 +14,28 @@ class Event_Anonymized_Rollups:
             - Modules Used to Automate
             - Total number of modules automated
         """
+
         # add module column into the dataframe based on dataframe_content_usage.py approach
         dataframe['task_action'] = dataframe.resolved_action.fillna(dataframe.task_action).astype(str)
         dataframe.rename(columns={'task_action': 'module_name'}, inplace=True)
 
-        # ------------------------------------------------------------
-        # avg number of modules used in a playbook
-        avg_modules = dataframe.groupby('playbook')['module_name'].nunique().mean()
+        # group by playbook, module, include job_failed column
+        aggregations_by_playbook_module = (
+            dataframe.groupby(['playbook', 'module_name'])
+            .agg(
+                job_failed=('job_failed', 'max'),
+                job_total=('job_id', 'nunique'),
+            )
+            .reset_index()  # <-- make keys real columns
+        )
 
-        # ------------------------------------------------------------
-        # failure/success rate of modules
-        # Define event categories
-        ok_events = {'runner_on_ok', 'runner_on_changed', 'runner_on_async_ok'}
-        failed_events = {'runner_on_failed', 'runner_on_unreachable', 'runner_on_async_failed'}
+        # modules used to automate
+        list_of_modules_used_to_automate = aggregations_by_playbook_module['module_name'].unique().tolist()
+        total_modules_used_to_automate = len(list_of_modules_used_to_automate)
 
-        # Create new columns for classification
-        dataframe['is_success'] = dataframe['event'].isin(ok_events)
-        dataframe['is_failure'] = dataframe['event'].isin(failed_events)
-
-        module_stats = dataframe.groupby('module_name').agg(failures=('is_failure', 'sum'), successes=('is_success', 'sum'))
-
-        # total = failures + successes
-        module_stats['total_runs'] = module_stats['failures'] + module_stats['successes']
-
-        # failure rate = failures / total
-        module_stats['failure_rate'] = module_stats['failures'] / module_stats['total_runs']
-
-        # ------------------------------------------------------------
-        # modules used to automate (sum of all distinct modules used)
-        modules_used = dataframe['module_name'].nunique()
-
-        # the dataframe should be converted to json
-        json_data = {
-            'avg_modules_per_playbook': avg_modules,
-            'modules_used': modules_used,
-            'modules_failure_rate': module_stats.reset_index().to_dict(orient='records'),
+        # return as object that can be converted to json
+        return {
+            'aggregations_by_playbook_module': aggregations_by_playbook_module.to_dict(orient='records'),
+            'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
+            'total_modules_used_to_automate': total_modules_used_to_automate,
         }
-
-        return json_data

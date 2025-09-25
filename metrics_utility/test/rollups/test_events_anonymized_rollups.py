@@ -1,53 +1,47 @@
 import pandas as pd
-import pytest
 
 from metrics_utility.rollups.events_anonymized_rollups import Event_Anonymized_Rollups
 
 
 def test_event_rollups_base_aggregation():
-    # Build a DataFrame mimicking main_jobevent_service output columns we use
+    # Build a DataFrame matching the new implementation's expected columns
     data = [
-        # playbook pb1 uses modules copy (success+fail) and file (success)
-        {'resolved_action': 'copy', 'task_action': None, 'playbook': 'pb1.yml', 'event': 'runner_on_ok'},
-        {'resolved_action': 'copy', 'task_action': None, 'playbook': 'pb1.yml', 'event': 'runner_on_failed'},
-        {'resolved_action': None, 'task_action': 'file', 'playbook': 'pb1.yml', 'event': 'runner_on_ok'},
-        # playbook pb2 uses modules template (success + skipped) and copy (failure)
-        {'resolved_action': 'template', 'task_action': None, 'playbook': 'pb2.yml', 'event': 'runner_on_ok'},
-        {'resolved_action': 'copy', 'task_action': None, 'playbook': 'pb2.yml', 'event': 'runner_on_unreachable'},
-        {'resolved_action': 'template', 'task_action': None, 'playbook': 'pb2.yml', 'event': 'runner_on_skipped'},
+        # pb1 uses modules copy (one success, one failure) and file (success)
+        {'resolved_action': 'copy', 'task_action': None, 'playbook': 'pb1.yml', 'job_failed': False, 'job_id': 1},
+        {'resolved_action': 'copy', 'task_action': None, 'playbook': 'pb1.yml', 'job_failed': True, 'job_id': 2},
+        {'resolved_action': None, 'task_action': 'file', 'playbook': 'pb1.yml', 'job_failed': False, 'job_id': 1},
+        # pb2 uses modules template (two successes) and copy (failure)
+        {'resolved_action': 'template', 'task_action': None, 'playbook': 'pb2.yml', 'job_failed': False, 'job_id': 5},
+        {'resolved_action': 'copy', 'task_action': None, 'playbook': 'pb2.yml', 'job_failed': True, 'job_id': 6},
+        {'resolved_action': 'template', 'task_action': None, 'playbook': 'pb2.yml', 'job_failed': False, 'job_id': 7},
     ]
     df = pd.DataFrame(data)
 
     result = Event_Anonymized_Rollups.base(df)
 
-    # avg distinct modules per playbook: pb1 -> {copy, file} = 2, pb2 -> {template, copy} = 2; mean = 2.0
-    assert result['avg_modules_per_playbook'] == pytest.approx(2.0)
+    # Ensure new keys are present
+    assert isinstance(result, dict)
+    assert 'aggregations_by_playbook_module' in result
+    assert 'list_of_modules_used_to_automate' in result
+    assert 'total_modules_used_to_automate' in result
 
-    # total distinct modules across all events
-    assert result['modules_used'] == 3
+    # Validate modules list and total
+    expected_modules = {'copy', 'file', 'template'}
+    modules_list = set(result['list_of_modules_used_to_automate'])
+    assert expected_modules.issubset(modules_list)
+    assert result['total_modules_used_to_automate'] == len(expected_modules)
 
-    # per-module stats and failure rates
-    # copy: successes=1 (ok), failures=2 (failed + unreachable) -> total=3, failure_rate=2/3
-    # file: successes=1, failures=0 -> total=1, failure_rate=0
-    # template: successes=1, failures=0 (skipped does not count) -> total=1, failure_rate=0
-    stats_by_module = {row['module_name']: row for row in result['modules_failure_rate']}
+    # Validate aggregation structure
+    aggs = result['aggregations_by_playbook_module']
+    assert isinstance(aggs, list)
+    # We expect one group per (playbook, module): (pb1,copy), (pb1,file), (pb2,template), (pb2,copy)
+    assert len(aggs) == 4
 
-    assert 'copy' in stats_by_module and 'file' in stats_by_module and 'template' in stats_by_module
+    # Each aggregation record should include failure flag and job count
+    sample = aggs[0]
+    assert 'job_failed' in sample
+    assert 'job_total' in sample
 
-    copy_stats = stats_by_module['copy']
-    assert copy_stats['successes'] == 1
-    assert copy_stats['failures'] == 2
-    assert copy_stats['total_runs'] == 3
-    assert copy_stats['failure_rate'] == pytest.approx(2 / 3)
-
-    file_stats = stats_by_module['file']
-    assert file_stats['successes'] == 1
-    assert file_stats['failures'] == 0
-    assert file_stats['total_runs'] == 1
-    assert file_stats['failure_rate'] == pytest.approx(0.0)
-
-    template_stats = stats_by_module['template']
-    assert template_stats['successes'] == 1
-    assert template_stats['failures'] == 0
-    assert template_stats['total_runs'] == 1
-    assert template_stats['failure_rate'] == pytest.approx(0.0)
+    # At least one group should have failed and all groups should have at least one job
+    assert any(bool(row.get('job_failed')) for row in aggs)
+    assert all(int(row.get('job_total')) >= 1 for row in aggs)
