@@ -9,27 +9,30 @@ class JobHostSummary_Anonymized_Rollup:
         """
         Avg tasks by template (column job_template_name)
         Number of tasks executed (sum of all tasks executed in dataframe)
-        Success ratio of tasks exectuted (ratio between ok and failed tasks (and others))
+        Success ratio of tasks executed (ratio between ok and failed tasks (and others))
         """
 
         task_columns = ['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']
 
         dataframe['executed'] = dataframe[task_columns].sum(axis=1)
 
-        avg_tasks_by_template = dataframe.groupby('job_template_name')['executed'].mean().reset_index(name='avg_tasks')
+        total_jobs_per_template = dataframe.groupby('job_template_name')['job_id'].nunique().reset_index(name='total_jobs')
+        total_dark_per_template = dataframe.groupby('job_template_name')['dark'].sum().reset_index(name='total_dark')
+        total_failures_per_template = dataframe.groupby('job_template_name')['failures'].sum().reset_index(name='total_failures')
+        total_ok_per_template = dataframe.groupby('job_template_name')['ok'].sum().reset_index(name='total_ok')
+        total_skipped_per_template = dataframe.groupby('job_template_name')['skipped'].sum().reset_index(name='total_skipped')
+        total_ignored_per_template = dataframe.groupby('job_template_name')['ignored'].sum().reset_index(name='total_ignored')
+        total_rescued_per_template = dataframe.groupby('job_template_name')['rescued'].sum().reset_index(name='total_rescued')
 
-        average_tasks_over_all_templates = avg_tasks_by_template['avg_tasks'].mean()
+        average_executed_per_template = dataframe.groupby('job_template_name')['executed'].mean().reset_index(name='average_executed')
 
-        total_tasks_executed = dataframe['executed'].sum()
-
-        success_ratio = dataframe.apply(
-            lambda row: row['ok'] / row['executed'] if row['executed'] > 0 else 0, axis=1
-        )
-
-        # avg tasks by template should be converted to json
         return {
-            'average_tasks_over_all_templates': average_tasks_over_all_templates,
-            'total_tasks_executed': total_tasks_executed,
-            'avg_tasks_by_template': avg_tasks_by_template.to_dict(orient='records'),
-            'success_ratio': success_ratio.mean(),
+            'total_jobs_per_template': total_jobs_per_template.to_dict(orient='records'),
+            'total_dark_per_template': total_dark_per_template.to_dict(orient='records'),
+            'total_failures_per_template': total_failures_per_template.to_dict(orient='records'),
+            'total_ok_per_template': total_ok_per_template.to_dict(orient='records'),
+            'total_skipped_per_template': total_skipped_per_template.to_dict(orient='records'),
+            'total_ignored_per_template': total_ignored_per_template.to_dict(orient='records'),
+            'total_rescued_per_template': total_rescued_per_template.to_dict(orient='records'),
+            'average_executed_per_template': average_executed_per_template.to_dict(orient='records'),
         }
