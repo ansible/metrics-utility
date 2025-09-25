@@ -1,5 +1,3 @@
-import math
-
 import pandas as pd
 
 from metrics_utility.rollups.jobhostsummary_anonymized_rollup import JobHostSummary_Anonymized_Rollup
@@ -44,15 +42,32 @@ def test_jobhostsummary_anonymized():
 
     print(result)
 
-    # average tasks over all templates
-    assert result['average_tasks_over_all_templates'] == 4
+    # result should be a list of dicts, one per template
+    # convert to mapping for easy assertions
+    by_template = {item['job_template_name']: item for item in result}
 
-    # total tasks over all hosts and all jobs
-    assert result['total_tasks_executed'] == 60
+    assert set(by_template.keys()) == {'T1', 'T2'}
 
-    assert result['avg_tasks_by_template'] == [
-        {'job_template_name': 'T1', 'avg_tasks': 3.0},
-        {'job_template_name': 'T2', 'avg_tasks': 5.0},
-    ]
+    assert by_template['T1']['total_jobs'] == 2
+    assert by_template['T2']['total_jobs'] == 2
 
-    assert math.isclose(result['success_ratio'], 0.866, abs_tol=0.001)
+    assert by_template['T1']['total_dark'] == 0
+    assert by_template['T2']['total_dark'] == 0
+
+    assert by_template['T1']['total_failures'] == 2
+    assert by_template['T2']['total_failures'] == 4
+
+    assert by_template['T1']['total_ok'] == 26
+    assert by_template['T2']['total_ok'] == 26
+
+    assert by_template['T1']['total_skipped'] == 2
+    assert by_template['T2']['total_skipped'] == 0
+
+    assert by_template['T1']['total_ignored'] == 0
+    assert by_template['T2']['total_ignored'] == 0
+
+    assert by_template['T1']['total_rescued'] == 0
+    assert by_template['T2']['total_rescued'] == 0
+
+    assert by_template['T1']['average_tasks_executed'] == 3.0
+    assert by_template['T2']['average_tasks_executed'] == 5.0
