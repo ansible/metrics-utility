@@ -16,15 +16,19 @@ class JobHostSummary_Anonymized_Rollup:
 
         dataframe['tasks_executed'] = dataframe[task_columns].sum(axis=1)
 
-        aggregated = dataframe.groupby('job_template_name').agg(
-            total_jobs=('job_id', 'nunique'),
-            total_dark=('dark', 'sum'),
-            total_failures=('failures', 'sum'),
-            total_ok=('ok', 'sum'),
-            total_skipped=('skipped', 'sum'),
-            total_ignored=('ignored', 'sum'),
-            total_rescued=('rescued', 'sum'),
-            average_tasks_executed=('tasks_executed', 'mean'),
-        ).reset_index()
+        aggregated = (
+            dataframe.groupby('job_template_name')
+            .agg(
+                total_jobs=('job_id', 'nunique'),
+                total_dark=('dark', 'sum'),
+                total_failures=('failures', 'sum'),
+                total_ok=('ok', 'sum'),
+                total_skipped=('skipped', 'sum'),
+                total_ignored=('ignored', 'sum'),
+                total_rescued=('rescued', 'sum'),
+                average_tasks_executed=('tasks_executed', 'mean'),
+            )
+            .reset_index()
+        )
 
         return aggregated.to_dict(orient='records')
