@@ -26,6 +26,7 @@ class Events_Collections_Anonymized_Rollups:
     - main_jobevent_service
     """
 
+    # TODO - will use rollup data from events rollups - need to update events rollups
     @staticmethod
     def base(dataframe):
         """
