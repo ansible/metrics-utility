@@ -3,6 +3,8 @@ class JobHostSummary_Anonymized_Rollup:
     Collector - job_host_summary_service collector data
     """
 
+    # TODO - will probably reuse the jobhostsummary CCSP rollup
+    @staticmethod
     def base(dataframe):
         """
         Avg tasks by template (column job_template_name)
@@ -20,7 +22,9 @@ class JobHostSummary_Anonymized_Rollup:
 
         total_tasks_executed = dataframe['executed'].sum()
 
-        success_ratio = dataframe['ok'] / dataframe['executed']
+        success_ratio = dataframe.apply(
+            lambda row: row['ok'] / row['executed'] if row['executed'] > 0 else 0, axis=1
+        )
 
         # avg tasks by template should be converted to json
         return {
