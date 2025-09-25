@@ -3,6 +3,7 @@ class Event_Anonymized_Rollups:
     Event rollups operate over main_jobevent_service collector data
     """
 
+    # TODO - will use rollup data from events rollups - need to update events rollups
     @staticmethod
     def base(dataframe):
         """

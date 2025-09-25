@@ -3,7 +3,7 @@ class JobHostSummary_Anonymized_Rollup:
     Collector - job_host_summary_service collector data
     """
 
-    # TODO - will probably reuse the jobhostsummary CCSP rollup
+    # TODO - will reuse the jobhostsummary rollup for CCSP
     @staticmethod
     def base(dataframe):
         """
