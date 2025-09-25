@@ -13,6 +13,10 @@ data = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
+        'job_created': 999_000,  # waiting 1.0s
+        'number_of_jobs_executed': 1,
+        'number_of_jobs_failed': 0,
+        'number_of_jobs_succeeded': 1,
     },  # duration 3000 ms -> 3.0 s
     {
         'started': 1_010_000,
@@ -21,6 +25,10 @@ data = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
+        'job_created': 1_008_000,  # waiting 2.0s
+        'number_of_jobs_executed': 1,
+        'number_of_jobs_failed': 1,
+        'number_of_jobs_succeeded': 0,
     },  # duration 5000 ms -> 5.0 s (failed)
     # controller A, version v1, template T2
     {
@@ -30,6 +38,10 @@ data = [
         'job_template_name': 'T2',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
+        'job_created': 1_996_000,  # waiting 4.0s
+        'number_of_jobs_executed': 1,
+        'number_of_jobs_failed': 0,
+        'number_of_jobs_succeeded': 1,
     },  # duration 7000 ms -> 7.0 s
     # controller B, version v2, template T1
     {
@@ -39,6 +51,10 @@ data = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-B',
         'ansible_version': 'v2',
+        'job_created': 2_999_500,  # waiting 0.5s
+        'number_of_jobs_executed': 1,
+        'number_of_jobs_failed': 0,
+        'number_of_jobs_succeeded': 1,
     },  # duration 2000 ms -> 2.0 s
     # Row with missing finished should be filtered out
     {'started': 4_000_000, 'finished': None, 'failed': 0, 'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'},
@@ -55,44 +71,44 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     result = Jobs_Anonymized_Rollups.base(df)
 
-    from pprint import pprint
+    # New version returns list of per-template aggregates
+    assert isinstance(result, list)
 
-    print('\n')
-    pprint(result)
+    # There should be 2 templates (T1 and T2); rows with missing timestamps are filtered
+    assert len(result) == 2
 
-    # counts
-    assert result['number_of_jobs_executed'] == 4
-    assert result['number_of_jobs_failed'] == 1
-    assert result['number_of_jobs_succeeded'] == 3
+    # Identify records by count of jobs (T1 has 3, T2 has 1)
+    rec_t1 = next(r for r in result if r['number_of_jobs_executed'] == 3)
+    rec_t2 = next(r for r in result if r['number_of_jobs_executed'] == 1)
 
-    # durations by template (seconds)
-    # T1 durations: 3.0, 5.0, 2.0 -> avg= (3+5+2)/3= 10/3 ≈ 3.333..., min=2.0, max=5.0, sum=10.0
-    # T2 durations: 7.0
-    avg_by_template = result['job_duration_average_in_seconds_by_template']
-    max_by_template = result['job_duration_maximum_seconds_by_template']
-    min_by_template = result['job_duration_minimum_seconds_by_template']
-    sum_by_template = result['job_total_seconds_by_template']
+    # T1 counts
+    assert rec_t1['number_of_jobs_failed'] == 1
+    assert rec_t1['number_of_jobs_succeeded'] == 2
 
-    assert pytest.approx(avg_by_template['T1'], rel=1e-6) == 10 / 3
-    assert pytest.approx(avg_by_template['T2'], rel=1e-6) == 7.0
+    # T1 durations (seconds): 3.0, 5.0, 2.0
+    assert pytest.approx(rec_t1['job_duration_average_in_seconds'], rel=1e-6) == 10 / 3
+    assert pytest.approx(rec_t1['job_duration_maximum_in_seconds'], rel=1e-6) == 5.0
+    assert pytest.approx(rec_t1['job_duration_minimum_in_seconds'], rel=1e-6) == 2.0
+    assert pytest.approx(rec_t1['job_duration_total_in_seconds'], rel=1e-6) == 10.0
 
-    assert pytest.approx(max_by_template['T1'], rel=1e-6) == 5.0
-    assert pytest.approx(max_by_template['T2'], rel=1e-6) == 7.0
+    # T1 waiting times (seconds): 1.0, 2.0, 0.5
+    assert pytest.approx(rec_t1['job_waiting_time_average_in_seconds'], rel=1e-6) == (1.0 + 2.0 + 0.5) / 3
+    assert pytest.approx(rec_t1['job_waiting_time_maximum_in_seconds'], rel=1e-6) == 2.0
+    assert pytest.approx(rec_t1['job_waiting_time_minimum_in_seconds'], rel=1e-6) == 0.5
+    assert pytest.approx(rec_t1['job_waiting_time_total_in_seconds'], rel=1e-6) == 3.5
 
-    assert pytest.approx(min_by_template['T1'], rel=1e-6) == 2.0
-    assert pytest.approx(min_by_template['T2'], rel=1e-6) == 7.0
+    # T2 counts
+    assert rec_t2['number_of_jobs_failed'] == 0
+    assert rec_t2['number_of_jobs_succeeded'] == 1
 
-    assert pytest.approx(sum_by_template['T1'], rel=1e-6) == 10.0
-    assert pytest.approx(sum_by_template['T2'], rel=1e-6) == 7.0
+    # T2 duration (seconds): 7.0
+    assert pytest.approx(rec_t2['job_duration_average_in_seconds'], rel=1e-6) == 7.0
+    assert pytest.approx(rec_t2['job_duration_maximum_in_seconds'], rel=1e-6) == 7.0
+    assert pytest.approx(rec_t2['job_duration_minimum_in_seconds'], rel=1e-6) == 7.0
+    assert pytest.approx(rec_t2['job_duration_total_in_seconds'], rel=1e-6) == 7.0
 
-    # active customers and by controller version
-    assert result['active_number_of_customers'] == 2  # ctrl-A, ctrl-B
-
-    by_version = result['active_number_of_clusters_by_controller_version']
-    # v1 has ctrl-A once, v2 has ctrl-B once
-    assert by_version == {'v1': 1, 'v2': 1}
-
-    # number of templates executed by company (controller node)
-    # ctrl-A used templates {T1, T2} = 2, ctrl-B used {T1} = 1
-    templates_by_company = result['number_of_templates_executed_by_company']
-    assert templates_by_company == {'ctrl-A': 2, 'ctrl-B': 1}
+    # T2 waiting (seconds): 4.0
+    assert pytest.approx(rec_t2['job_waiting_time_average_in_seconds'], rel=1e-6) == 4.0
+    assert pytest.approx(rec_t2['job_waiting_time_maximum_in_seconds'], rel=1e-6) == 4.0
+    assert pytest.approx(rec_t2['job_waiting_time_minimum_in_seconds'], rel=1e-6) == 4.0
+    assert pytest.approx(rec_t2['job_waiting_time_total_in_seconds'], rel=1e-6) == 4.0
