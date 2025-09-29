@@ -1,5 +1,7 @@
 import re
 
+import pandas as pd
+
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 
 
@@ -26,6 +28,28 @@ class DataframeContentUsage(Base):
                 # If the dataframe is empty, skip additional processing
                 if events.empty:
                     continue
+
+                # fill job_failed to false if empty and if column is not present and if present and empty = false
+                # the same for job_created, job_started, job_finished - they should be not a timestamp
+                if 'job_failed' not in events.columns:
+                    events['job_failed'] = False
+                else:
+                    events['job_failed'] = events['job_failed'].fillna(False)
+
+                if 'job_created' not in events.columns:
+                    events['job_created'] = pd.NaT
+                else:
+                    events['job_created'] = events['job_created'].fillna(pd.NaT)
+
+                if 'job_started' not in events.columns:
+                    events['job_started'] = pd.NaT
+                else:
+                    events['job_started'] = events['job_started'].fillna(pd.NaT)
+
+                if 'job_finished' not in events.columns:
+                    events['job_finished'] = pd.NaT
+                else:
+                    events['job_finished'] = events['job_finished'].fillna(pd.NaT)
 
                 events['install_uuid'] = data['config']['install_uuid']
 
@@ -71,6 +95,11 @@ class DataframeContentUsage(Base):
         group = dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
             task_runs=('module_name', 'count'),
             duration=('duration', 'sum'),
+            job_failed=('job_failed', 'first'),
+            job_created=('job_created', 'first'),
+            job_started=('job_started', 'first'),
+            job_finished=('job_finished', 'first'),
+            playbook=('playbook', 'first'),
         )
 
         # Duration is null in older versions of Controller
@@ -84,6 +113,11 @@ class DataframeContentUsage(Base):
         return dataframe.groupby(self.unique_index_columns(), dropna=False).agg(
             task_runs=('task_runs', 'sum'),
             duration=('duration', 'sum'),
+            job_failed=('job_failed', 'first'),
+            job_created=('job_created', 'first'),
+            job_started=('job_started', 'first'),
+            job_finished=('job_finished', 'first'),
+            playbook=('playbook', 'first'),
         )
 
     @staticmethod
