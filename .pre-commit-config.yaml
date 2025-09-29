@@ -3,3 +3,14 @@ repos:
     rev: v0.9.2
     hooks:
       - id: ruff
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: sync-requirements
+        name: Sync requirements files from uv.lock
+        entry: ./sync-requirements.sh
+        language: script
+        files: ^(uv\.lock|pyproject\.toml)$
+        pass_filenames: false
+        description: Auto-sync requirements.txt and dev-requirements.txt from uv.lock

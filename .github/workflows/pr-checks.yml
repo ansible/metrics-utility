@@ -6,6 +6,9 @@ on:
 jobs:
   pr-checks:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: "Checkout metrics-utility (${{ github.ref }})"
         uses: actions/checkout@v5
@@ -27,6 +30,47 @@ jobs:
             exit 1  # Fail the job
           fi
 
+      - name: "Generate and check requirements files"
+        run: |
+          # Generate requirements files
+          uv export --format requirements-txt --no-dev > requirements.txt.new
+          uv export --format requirements-txt > dev-requirements.txt.new
+
+          # Check if requirements.txt exists and compare
+          if [ -f "requirements.txt" ]; then
+            if ! diff -q requirements.txt requirements.txt.new > /dev/null; then
+              echo "❌ requirements.txt is out of sync with uv.lock"
+              echo "Please run './sync-requirements.sh' or 'uv export --format requirements-txt --no-dev > requirements.txt'"
+              echo ""
+              echo "Differences found:"
+              diff requirements.txt requirements.txt.new || true
+              exit 1
+            fi
+          else
+            echo "⚠️  requirements.txt not found, creating it..."
+            mv requirements.txt.new requirements.txt
+          fi
+
+          # Check if dev-requirements.txt exists and compare
+          if [ -f "dev-requirements.txt" ]; then
+            if ! diff -q dev-requirements.txt dev-requirements.txt.new > /dev/null; then
+              echo "❌ dev-requirements.txt is out of sync with uv.lock"
+              echo "Please run './sync-requirements.sh' or 'uv export --format requirements-txt > dev-requirements.txt'"
+              echo ""
+              echo "Differences found:"
+              diff dev-requirements.txt dev-requirements.txt.new || true
+              exit 1
+            fi
+          else
+            echo "⚠️  dev-requirements.txt not found, creating it..."
+            mv dev-requirements.txt.new dev-requirements.txt
+          fi
+
+          # Clean up temp files
+          rm -f requirements.txt.new dev-requirements.txt.new
+
+          echo "✅ Requirements files are in sync with uv.lock"
+
       - name: "Run ruff check"
         run: |
           uvx ruff check --output-format=github .
@@ -34,6 +78,25 @@ jobs:
       - name: "Check ruff format"
         run: |
           uvx ruff format --check
+
+      - name: "Validate sync-requirements.sh"
+        run: |
+          # Check if sync script is executable
+          if [ ! -x "./sync-requirements.sh" ]; then
+            echo "❌ sync-requirements.sh is not executable"
+            echo "Run: chmod +x sync-requirements.sh"
+            exit 1
+          fi
+
+          # Validate shell script syntax (similar to ruff for Python)
+          if command -v shellcheck &> /dev/null; then
+            echo "🔍 Running shellcheck on sync-requirements.sh"
+            shellcheck ./sync-requirements.sh
+          else
+            echo "⚠️  shellcheck not available, skipping shell script linting"
+          fi
+
+          echo "✅ sync-requirements.sh validation passed"
 
       - name: "One logger to rule them all"
         run: |
