@@ -328,64 +328,6 @@ def job_host_summary_table(since, full_path, until, **kwargs):
 
     return _copy_table(table='main_jobhostsummary', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
 
-
-@register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
-def main_jobevent_table(since, full_path, until, **kwargs):
-    if 'main_jobevent' not in get_optional_collectors():
-        return None
-
-    tbl = 'main_jobevent'
-    event_data = rf"replace({tbl}.event_data, '\u', '\u005cu')::jsonb"
-
-    query = f"""
-        WITH job_scope AS (
-            SELECT main_jobhostsummary.id AS main_jobhostsummary_id,
-                   main_jobhostsummary.created AS main_jobhostsummary_created,
-                   main_jobhostsummary.modified AS main_jobhostsummary_modified,
-                   main_unifiedjob.created AS job_created,
-                   main_jobhostsummary.job_id AS job_id,
-                   main_jobhostsummary.host_name
-            FROM main_jobhostsummary
-            JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
-            WHERE (main_jobhostsummary.modified >= '{since.isoformat()}' AND main_jobhostsummary.modified < '{until.isoformat()}')
-        )
-        SELECT
-            job_scope.main_jobhostsummary_id,
-            job_scope.main_jobhostsummary_created,
-            {tbl}.id,
-            {tbl}.created,
-            {tbl}.modified,
-            {tbl}.job_created as job_created,
-            {tbl}.event,
-            ({event_data}->>'task_action')::TEXT AS task_action,
-            ({event_data}->>'resolved_action')::TEXT AS resolved_action,
-            ({event_data}->>'resolved_role')::TEXT AS resolved_role,
-            ({event_data}->>'duration')::TEXT AS duration,
-            {tbl}.failed,
-            {tbl}.changed,
-            {tbl}.playbook,
-            {tbl}.play,
-            {tbl}.task,
-            {tbl}.role,
-            {tbl}.job_id as job_remote_id,
-            {tbl}.host_id as host_remote_id,
-            {tbl}.host_name
-
-        FROM {tbl}
-        JOIN job_scope ON job_scope.job_created = {tbl}.job_created AND job_scope.job_id={tbl}.job_id AND job_scope.host_name={tbl}.host_name
-        WHERE {tbl}.event IN ('runner_on_ok',
-                              'runner_on_failed',
-                              'runner_on_unreachable',
-                              'runner_on_skipped',
-                              'runner_retry',
-                              'runner_on_async_ok',
-                              'runner_item_on_ok',
-                              'runner_item_on_failed',
-                              'runner_item_on_skipped')
-        """
-    return _copy_table(table=tbl, query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path)
-
-
 @register('main_indirectmanagednodeaudit', '1.0', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def main_indirectmanagednodeaudit_table(since, full_path, until, **kwargs):
     if 'main_indirectmanagednodeaudit' not in get_optional_collectors():
@@ -820,9 +762,9 @@ def job_host_summary_service_table(since, full_path, until, **kwargs):
     return _copy_table(table='main_jobhostsummary', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
 
 
-@register('main_jobevent_service', '1.4', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
+@register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_service_table(since, full_path, until, **kwargs):
-    if 'main_jobevent_service' not in get_optional_collectors():
+    if 'main_jobevent' not in get_optional_collectors():
         return None
 
     # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
