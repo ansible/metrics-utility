@@ -2,6 +2,7 @@ import re
 
 from metrics_utility.anonymized_rollups.collections_types import collections_types
 
+
 def collection_regexp():
     return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
 
@@ -17,6 +18,7 @@ def extract_collection_name(x):
     else:
         return None
 
+
 class Event_Anonymized_Rollups:
     """
     Event rollups operate over main_jobevent_service collector data
@@ -24,7 +26,7 @@ class Event_Anonymized_Rollups:
 
     @staticmethod
     def prepare_data(dataframe):
-         # Prepare data
+        # Prepare data
 
         # add module column into the dataframe based on dataframe_content_usage.py approach
         dataframe['task_action'] = dataframe.resolved_action.fillna(dataframe.task_action).astype(str)
@@ -44,7 +46,6 @@ class Event_Anonymized_Rollups:
                 dataframe[col] = False  # create with default False
             dataframe[col] = dataframe[col].fillna(False).astype(bool)
 
-
         dataframe = dataframe[
             dataframe['module_name'].notna()
             & dataframe['host_id'].notna()
@@ -60,13 +61,13 @@ class Event_Anonymized_Rollups:
 
     @staticmethod
     def event_collections_aggregations(dataframe):
-        '''
-          *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-            *Average job duration for collection sources
-            *Average number of hosts automated per job for each collection source.
-            *Number of jobs per collection source that have failed.
-            *Success/failure rate of jobs per collection source.
-        '''
+        """
+        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+          *Average job duration for collection sources
+          *Average number of hosts automated per job for each collection source.
+          *Number of jobs per collection source that have failed.
+          *Success/failure rate of jobs per collection source.
+        """
 
         # drop duplicates so each (job_id, collection_source) pair has one duration, waiting time and etc.
         dropped_duplicates = dataframe.drop_duplicates(subset=['job_id', 'collection_source'])
@@ -106,13 +107,13 @@ class Event_Anonymized_Rollups:
 
     @staticmethod
     def events_modules_aggregations(dataframe):
-        '''
+        """
         ?Number of jobs executed that use a specific partner collection.
         *Avg number of modules used in a playbook
         *Failure/Success rate of modules
         *Modules Used to Automate
         *Total number of modules automated
-        '''
+        """
 
         # ?Number of jobs executed that use a specific partner collection.
 
@@ -124,9 +125,7 @@ class Event_Anonymized_Rollups:
         total_modules_used_to_automate = len(list_of_modules_used_to_automate)
 
         # Avg number of modules used in a playbook
-        avg_number_of_modules_used_in_a_playbook = (
-            dataframe.groupby('playbook')['module_name'].nunique().mean()
-        )
+        avg_number_of_modules_used_in_a_playbook = dataframe.groupby('playbook')['module_name'].nunique().mean()
 
         # Failure/Success rate of modules
 
@@ -143,13 +142,13 @@ class Event_Anonymized_Rollups:
         task_summary = (
             dataframe.groupby(['job_id', 'module_name', 'task_uuid', 'host_id'])
             .agg(
-                task_success=('task_success_event', 'max'),   # any success seen?
-                failed_attempts=('task_failed_event', 'sum')  # number of fails
+                task_success=('task_success_event', 'max'),  # any success seen?
+                failed_attempts=('task_failed_event', 'sum'),  # number of fails
             )
             .reset_index()
             .assign(
                 task_failed=lambda x: (~x['task_success']) & (x['failed_attempts'] > 0),
-                task_other=lambda x: (~x['task_success']) & (~x['task_failed'])   # skipped, ignored, etc.
+                task_other=lambda x: (~x['task_success']) & (~x['task_failed']),  # skipped, ignored, etc.
             )
         )
 
@@ -164,7 +163,7 @@ class Event_Anonymized_Rollups:
                 runs_success=('task_success', 'sum'),
                 runs_failed=('task_failed', 'sum'),
                 runs_other=('task_other', 'sum'),
-                total_failed_attempts=('failed_attempts', 'sum')
+                total_failed_attempts=('failed_attempts', 'sum'),
             )
             .reset_index()
         )
@@ -173,13 +172,11 @@ class Event_Anonymized_Rollups:
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
             'total_modules_used_to_automate': total_modules_used_to_automate,
             'avg_number_of_modules_used_in_a_playbook': avg_number_of_modules_used_in_a_playbook,
-            'module_stats': module_stats.to_dict(orient="records"),
+            'module_stats': module_stats.to_dict(orient='records'),
         }
-    
 
     @staticmethod
     def base(dataframe):
-       
         dataframe = Event_Anonymized_Rollups.prepare_data(dataframe)
 
         event_collections_aggregations = Event_Anonymized_Rollups.event_collections_aggregations(dataframe)

@@ -298,7 +298,6 @@ main_jobevent_service_lines = [
 ]
 
 
-
 main_jobevent_service_skip_columns = [
     'id',
     'job_remote_id',

@@ -1,8 +1,11 @@
 # events data for tests for anonymized events rollups
 
 from datetime import datetime, timedelta
-from metrics_utility.anonymized_rollups.events_anonymized_rollups import Event_Anonymized_Rollups
+
 import pandas as pd
+
+from metrics_utility.anonymized_rollups.events_anonymized_rollups import Event_Anonymized_Rollups
+
 
 base_time = datetime(2024, 1, 1, 9, 0, 0)
 
@@ -80,7 +83,6 @@ events_data = [
         'job_failed': False,
         'task_uuid': 'job1-task2-host-b',
     },
-
     # job_2: db.yml, failing job
     {
         'event': 'runner_on_failed',
@@ -130,7 +132,6 @@ events_data = [
         'job_failed': True,
         'task_uuid': 'job2-task1-host-b',
     },
-
     # job_3: web.yml, mixed results, some events use task_action (no resolved_action)
     {
         'event': 'runner_on_skipped',
@@ -204,7 +205,6 @@ events_data = [
         'job_failed': False,
         'task_uuid': 'job3-task2-host-b',
     },
-
     # job_4: infra.yml, unreachable then recovered
     {
         'event': 'runner_on_unreachable',
@@ -266,7 +266,6 @@ events_data = [
         'job_failed': False,
         'task_uuid': 'job4-task2-host-b',
     },
-
     # job_5: security.yml, mixed and failing overall
     {
         'event': 'runner_on_failed',
@@ -340,7 +339,6 @@ events_data = [
         'job_failed': True,
         'task_uuid': 'job5-task2-host-b',
     },
-
     # job_6: ops.yml, multiple modules
     {
         'event': 'runner_on_ok',
@@ -442,26 +440,27 @@ events_data = [
 
 # test the Event_Anonymized_Rollups
 
+
 def test_events_anonymized_rollups():
     df = pd.DataFrame(events_data)
     result = Event_Anonymized_Rollups.base(df)
-    
-    events_collections = result["event_collections_aggregations"]
-    events_modules = result["events_modules_aggregations"]
+
+    events_collections = result['event_collections_aggregations']
+    events_modules = result['events_modules_aggregations']
 
     # --- event_collections_aggregations ---
-    assert str(events_collections["total_jobs_by_collection_source"].dtype) == "int64"
-    assert str(events_collections["avg_job_duration_by_collection_source"].dtype) == "timedelta64[ns]"
-    assert str(events_collections["avg_job_waiting_time_by_collection_source"].dtype) == "timedelta64[ns]"
-    assert str(events_collections["avg_hosts_per_job_by_collection_source"].dtype) == "float64"
-    assert str(events_collections["failed_jobs_by_collection_source"].dtype) == "int64"
-    assert str(events_collections["success_jobs_by_collection_source"].dtype) == "int64"
-    assert str(events_collections["success_rate_by_collection_source"].dtype) == "float64"
+    assert str(events_collections['total_jobs_by_collection_source'].dtype) == 'int64'
+    assert str(events_collections['avg_job_duration_by_collection_source'].dtype) == 'timedelta64[ns]'
+    assert str(events_collections['avg_job_waiting_time_by_collection_source'].dtype) == 'timedelta64[ns]'
+    assert str(events_collections['avg_hosts_per_job_by_collection_source'].dtype) == 'float64'
+    assert str(events_collections['failed_jobs_by_collection_source'].dtype) == 'int64'
+    assert str(events_collections['success_jobs_by_collection_source'].dtype) == 'int64'
+    assert str(events_collections['success_rate_by_collection_source'].dtype) == 'float64'
 
     # --- events_modules_aggregations ---
-    assert events_modules["total_modules_used_to_automate"] == 12
-    assert events_modules["avg_number_of_modules_used_in_a_playbook"] == 2.3333333333333335
-    assert events_modules["list_of_modules_used_to_automate"] == [
+    assert events_modules['total_modules_used_to_automate'] == 12
+    assert events_modules['avg_number_of_modules_used_in_a_playbook'] == 2.3333333333333335
+    assert events_modules['list_of_modules_used_to_automate'] == [
         'collection_1.network.ping',
         'collection_1.network.traceroute',
         'collection_2.system.user',
@@ -477,18 +476,126 @@ def test_events_anonymized_rollups():
     ]
 
     expected_module_stats = [
-        {'module_name': 'collection_1.network.ping', 'jobs_total': 2, 'hosts_total': 2, 'runs_total': 3, 'runs_success': 3, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_1.network.traceroute', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 2, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_2.system.package', 'jobs_total': 1, 'hosts_total': 1, 'runs_total': 1, 'runs_success': 1, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_2.system.user', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 0, 'runs_failed': 2, 'runs_other': 0, 'total_failed_attempts': 4},
-        {'module_name': 'collection_3.files.copy', 'jobs_total': 2, 'hosts_total': 2, 'runs_total': 3, 'runs_success': 3, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_3.service.restart', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 2, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_4.cloud.create', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 2, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_4.cloud.scale', 'jobs_total': 1, 'hosts_total': 1, 'runs_total': 1, 'runs_success': 1, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 0},
-        {'module_name': 'collection_4.storage.volume', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 2, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 0},
-        {'module_name': 'collection_5.audit.scan', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 1, 'runs_failed': 1, 'runs_other': 0, 'total_failed_attempts': 2},
-        {'module_name': 'collection_5.security.audit', 'jobs_total': 1, 'hosts_total': 1, 'runs_total': 1, 'runs_success': 1, 'runs_failed': 0, 'runs_other': 0, 'total_failed_attempts': 1},
-        {'module_name': 'collection_5.security.firewall', 'jobs_total': 1, 'hosts_total': 2, 'runs_total': 2, 'runs_success': 1, 'runs_failed': 1, 'runs_other': 0, 'total_failed_attempts': 2},
+        {
+            'module_name': 'collection_1.network.ping',
+            'jobs_total': 2,
+            'hosts_total': 2,
+            'runs_total': 3,
+            'runs_success': 3,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_1.network.traceroute',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 2,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_2.system.package',
+            'jobs_total': 1,
+            'hosts_total': 1,
+            'runs_total': 1,
+            'runs_success': 1,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_2.system.user',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 0,
+            'runs_failed': 2,
+            'runs_other': 0,
+            'total_failed_attempts': 4,
+        },
+        {
+            'module_name': 'collection_3.files.copy',
+            'jobs_total': 2,
+            'hosts_total': 2,
+            'runs_total': 3,
+            'runs_success': 3,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_3.service.restart',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 2,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_4.cloud.create',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 2,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_4.cloud.scale',
+            'jobs_total': 1,
+            'hosts_total': 1,
+            'runs_total': 1,
+            'runs_success': 1,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 0,
+        },
+        {
+            'module_name': 'collection_4.storage.volume',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 2,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 0,
+        },
+        {
+            'module_name': 'collection_5.audit.scan',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 1,
+            'runs_failed': 1,
+            'runs_other': 0,
+            'total_failed_attempts': 2,
+        },
+        {
+            'module_name': 'collection_5.security.audit',
+            'jobs_total': 1,
+            'hosts_total': 1,
+            'runs_total': 1,
+            'runs_success': 1,
+            'runs_failed': 0,
+            'runs_other': 0,
+            'total_failed_attempts': 1,
+        },
+        {
+            'module_name': 'collection_5.security.firewall',
+            'jobs_total': 1,
+            'hosts_total': 2,
+            'runs_total': 2,
+            'runs_success': 1,
+            'runs_failed': 1,
+            'runs_other': 0,
+            'total_failed_attempts': 2,
+        },
     ]
 
-    assert events_modules["module_stats"] == expected_module_stats
+    assert events_modules['module_stats'] == expected_module_stats
