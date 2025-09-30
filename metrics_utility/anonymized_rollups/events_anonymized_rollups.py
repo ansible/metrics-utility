@@ -6,18 +6,14 @@ from metrics_utility.anonymized_rollups.collections_types import collections_typ
 def collection_regexp():
     return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
 
-def collection_regexp():
-    # match the first segment before a dot
-    return r"^([^.]+)"
-
 def extract_collection_name(x):
     if x is None:
         return None
 
     m = re.match(collection_regexp(), x)
+
     if m:
-        name = m.group(1)   # only the first group
-        return name
+        return f'{m.groups()[0]}.{m.groups()[1]}'
     else:
         return None
 
@@ -61,6 +57,7 @@ class Event_Anonymized_Rollups:
             & (dataframe['job_id'].str.strip() != '')
         ]
 
+        
         return dataframe
 
     @staticmethod
@@ -72,6 +69,8 @@ class Event_Anonymized_Rollups:
           *Number of jobs per collection source that have failed.
           *Success/failure rate of jobs per collection source.
         """
+
+
 
         # drop duplicates so each (job_id, collection_source) pair has one duration, waiting time and etc.
         dropped_duplicates = dataframe.drop_duplicates(subset=['job_id', 'collection_source'])
@@ -99,14 +98,15 @@ class Event_Anonymized_Rollups:
         # Success/failure rate of jobs per collection source.
         success_rate_by_collection_source = success_jobs_by_collection_source / total_jobs_by_collection_source
 
+        # make sure everything is converted to python records
         return {
-            'total_jobs_by_collection_source': total_jobs_by_collection_source,
-            'avg_job_duration_by_collection_source': avg_job_duration_by_collection_source,
-            'avg_job_waiting_time_by_collection_source': avg_job_waiting_time_by_collection_source,
-            'avg_hosts_per_job_by_collection_source': avg_hosts_per_job_by_collection_source,
-            'failed_jobs_by_collection_source': failed_jobs_by_collection_source,
-            'success_jobs_by_collection_source': success_jobs_by_collection_source,
-            'success_rate_by_collection_source': success_rate_by_collection_source,
+            'total_jobs_by_collection_source': total_jobs_by_collection_source.to_dict(),
+            'avg_job_duration_by_collection_source': avg_job_duration_by_collection_source.to_dict(),
+            'avg_job_waiting_time_by_collection_source': avg_job_waiting_time_by_collection_source.to_dict(),
+            'avg_hosts_per_job_by_collection_source': avg_hosts_per_job_by_collection_source.to_dict(),
+            'failed_jobs_by_collection_source': failed_jobs_by_collection_source.to_dict(),
+            'success_jobs_by_collection_source': success_jobs_by_collection_source.to_dict(),
+            'success_rate_by_collection_source': success_rate_by_collection_source.to_dict(),
         }
 
     @staticmethod
