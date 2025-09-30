@@ -182,3 +182,8 @@ class Event_Anonymized_Rollups:
 
         event_collections_aggregations = Event_Anonymized_Rollups.event_collections_aggregations(dataframe)
         events_modules_aggregations = Event_Anonymized_Rollups.events_modules_aggregations(dataframe)
+
+        return {
+            'event_collections_aggregations': event_collections_aggregations,
+            'events_modules_aggregations': events_modules_aggregations,
+        }
