@@ -39,9 +39,11 @@ class Event_Anonymized_Rollups:
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
 
-        # for task success and failure
-        dataframe['task_success_event'] = dataframe['task_success_event'].fillna(False).astype(bool)
-        dataframe['task_failed_event'] = dataframe['task_failed_event'].fillna(False).astype(bool)
+        for col in ['task_success_event', 'task_failed_event']:
+            if col not in dataframe.columns:
+                dataframe[col] = False  # create with default False
+            dataframe[col] = dataframe[col].fillna(False).astype(bool)
+
 
         dataframe = dataframe[
             dataframe['module_name'].notna()
