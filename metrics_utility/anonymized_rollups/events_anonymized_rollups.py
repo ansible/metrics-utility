@@ -6,17 +6,21 @@ from metrics_utility.anonymized_rollups.collections_types import collections_typ
 def collection_regexp():
     return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
 
+def collection_regexp():
+    # match the first segment before a dot
+    return r"^([^.]+)"
 
 def extract_collection_name(x):
     if x is None:
         return None
 
     m = re.match(collection_regexp(), x)
-
     if m:
-        return f'{m.groups()[0]}.{m.groups()[1]}'
+        name = m.group(1)   # only the first group
+        return name
     else:
         return None
+
 
 
 class Event_Anonymized_Rollups:
