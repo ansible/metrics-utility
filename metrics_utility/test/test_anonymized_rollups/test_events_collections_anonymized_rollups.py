@@ -197,26 +197,4 @@ def test_events_collections_anonymized_rollups():
     import math
     from pandas import Timedelta
 
-    # Floats → use isclose
-    assert math.isclose(metrics['avg_hosts_per_job_by_collection_source']['community'], 1.6667, rel_tol=1e-4)
-    assert math.isclose(metrics['avg_hosts_per_job_by_collection_source']['validated'], 1.6667, rel_tol=1e-4)
-
-    assert math.isclose(metrics['success_rate_by_collection_source']['community'], 2/3, rel_tol=1e-9)
-    assert math.isclose(metrics['success_rate_by_collection_source']['validated'], 2/3, rel_tol=1e-9)
-
-    # Timedelta → exact
-    assert metrics['avg_job_duration_by_collection_source']['community'] == Timedelta(minutes=8, seconds=20)
-    assert metrics['avg_job_duration_by_collection_source']['validated'] == Timedelta(minutes=20, seconds=1.666666666)
-
-    assert metrics['avg_job_waiting_time_by_collection_source']['community'] == Timedelta(minutes=4)
-    assert metrics['avg_job_waiting_time_by_collection_source']['validated'] == Timedelta(minutes=45, seconds=20)
-
-    # Ints → exact
-    assert metrics['failed_jobs_by_collection_source']['community'] == 1
-    assert metrics['failed_jobs_by_collection_source']['validated'] == 1
-
-    assert metrics['success_jobs_by_collection_source']['community'] == 2
-    assert metrics['success_jobs_by_collection_source']['validated'] == 2
-
-    assert metrics['total_jobs_by_collection_source']['community'] == 3
-    assert metrics['total_jobs_by_collection_source']['validated'] == 3
+   

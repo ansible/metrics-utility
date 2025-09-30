@@ -41,6 +41,8 @@ class Event_Anonymized_Rollups:
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
 
+        print(dataframe['collection_source'])
+
         for col in ['task_success_event', 'task_failed_event']:
             if col not in dataframe.columns:
                 dataframe[col] = False  # create with default False
@@ -69,8 +71,6 @@ class Event_Anonymized_Rollups:
           *Number of jobs per collection source that have failed.
           *Success/failure rate of jobs per collection source.
         """
-
-
 
         # drop duplicates so each (job_id, collection_source) pair has one duration, waiting time and etc.
         dropped_duplicates = dataframe.drop_duplicates(subset=['job_id', 'collection_source'])
