@@ -873,6 +873,7 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
             ({event_data}->>'duration')          AS duration,
             ({event_data}->>'start')::timestamptz AS start,
             ({event_data}->>'end')::timestamptz   AS end,
+            ({event_data}->>'task_uuid')        AS task_uuid,
 
             e.failed,
             e.changed,
