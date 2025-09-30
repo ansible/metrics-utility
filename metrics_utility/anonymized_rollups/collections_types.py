@@ -1,7 +1,7 @@
 # mocked data for now
 # pair collection name and ansible source type - validated, community, rh-certified etc.
 
-collection_types = {
+collections_types = {
     'collection_1': 'validated',
     'collection_2': 'community',
     'collection_3': 'rh-certified',
