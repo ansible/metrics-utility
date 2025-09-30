@@ -1,6 +1,6 @@
 import pandas as pd
 
-from metrics_utility.rollups.jobhostsummary_anonymized_rollup import JobHostSummary_Anonymized_Rollup
+from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummary_Anonymized_Rollup
 
 
 data = [

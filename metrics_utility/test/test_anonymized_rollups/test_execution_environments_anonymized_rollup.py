@@ -1,6 +1,6 @@
 import pandas as pd
 
-from metrics_utility.rollups.execution_environments_anonymized_rollup import Execution_Environments_Anonymized_Rollups
+from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import Execution_Environments_Anonymized_Rollups
 
 
 def test_base_counts():

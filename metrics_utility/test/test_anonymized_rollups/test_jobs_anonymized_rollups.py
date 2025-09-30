@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from metrics_utility.rollups.jobs_anonymized_rollups import Jobs_Anonymized_Rollups
+from metrics_utility.anonymized_rollups.jobs_anonymized_rollups import Jobs_Anonymized_Rollups
 
 
 data = [

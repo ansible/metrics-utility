@@ -1,6 +1,6 @@
 import pandas as pd
 
-from metrics_utility.rollups.events_anonymized_rollups import Event_Anonymized_Rollups
+from metrics_utility.anonymized_rollups.events_anonymized_rollups import Event_Anonymized_Rollups
 
 
 def test_event_rollups_base_aggregation():
