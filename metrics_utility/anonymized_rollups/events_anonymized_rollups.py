@@ -26,17 +26,6 @@ class Event_Anonymized_Rollups:
     def prepare_data(dataframe):
          # Prepare data
 
-        dataframe = dataframe[
-            dataframe['module_name'].notna()
-            & dataframe['host_id'].notna()
-            & dataframe['playbook'].notna()
-            & dataframe['job_id'].notna()
-            & (dataframe['module_name'].str.strip() != '')
-            & (dataframe['host_id'].str.strip() != '')
-            & (dataframe['playbook'].str.strip() != '')
-            & (dataframe['job_id'].str.strip() != '')
-        ]
-
         # add module column into the dataframe based on dataframe_content_usage.py approach
         dataframe['task_action'] = dataframe.resolved_action.fillna(dataframe.task_action).astype(str)
         dataframe.rename(columns={'task_action': 'module_name'}, inplace=True)
@@ -53,6 +42,17 @@ class Event_Anonymized_Rollups:
         # for task success and failure
         dataframe['task_success_event'] = dataframe['task_success_event'].fillna(False).astype(bool)
         dataframe['task_failed_event'] = dataframe['task_failed_event'].fillna(False).astype(bool)
+
+        dataframe = dataframe[
+            dataframe['module_name'].notna()
+            & dataframe['host_id'].notna()
+            & dataframe['playbook'].notna()
+            & dataframe['job_id'].notna()
+            & (dataframe['module_name'].str.strip() != '')
+            & (dataframe['host_id'].str.strip() != '')
+            & (dataframe['playbook'].str.strip() != '')
+            & (dataframe['job_id'].str.strip() != '')
+        ]
 
         return dataframe
 
@@ -166,6 +166,13 @@ class Event_Anonymized_Rollups:
             )
             .reset_index()
         )
+
+        return {
+            'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
+            'total_modules_used_to_automate': total_modules_used_to_automate,
+            'avg_number_of_modules_used_in_a_playbook': avg_number_of_modules_used_in_a_playbook,
+            'module_stats': module_stats.to_dict(orient="records"),
+        }
     
 
     @staticmethod
@@ -174,4 +181,4 @@ class Event_Anonymized_Rollups:
         dataframe = Event_Anonymized_Rollups.prepare_data(dataframe)
 
         event_collections_aggregations = Event_Anonymized_Rollups.event_collections_aggregations(dataframe)
-        events_aggregations = Event_Anonymized_Rollups.events_aggregations(dataframe)
+        events_modules_aggregations = Event_Anonymized_Rollups.events_modules_aggregations(dataframe)
