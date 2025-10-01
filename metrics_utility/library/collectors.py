@@ -1,70 +1,62 @@
+def collector(func):
+    """Decorator that creates a collector class and returns a constructor function."""
+    class CollectorClass(BaseCollector):
+        collector_fn = staticmethod(func)
+        collector_key = func.__name__
+
+    def constructor(**kwargs):
+        return CollectorClass(**kwargs)
+
+    return constructor
+
+
 class BaseCollector:
     def __init__(self, **kwargs):
         print(f"library.collectors {self.__class__.__name__}.__init__")
+        self.kwargs = kwargs
 
     def gather(self):
         print(f"library.collectors {self.__class__.__name__}.gather")
-        return {"fake": "data"}
+        return self.collector_fn(**self.kwargs)
 
 
-class AnonymousCollector(BaseCollector):
-    pass
-
-
-class ConfigCollector(BaseCollector):
-    pass
-
-
-class JobHostSummaryCollector(BaseCollector):
-    pass
-
-
-class MainHostCollector(BaseCollector):
-    pass
-
-
-class MainJobEventCollector(BaseCollector):
-    pass
-
-
-class MainIndirectManagedNodeAuditCollector(BaseCollector):
-    pass
-
-
-class HostMetricCollector(BaseCollector):
-    pass
-
-
+@collector
 def anonymous(db=None, since=None, until=None, custom_params=None):
     print("library.collectors anonymous")
-    return AnonymousCollector()
+    return {"fake": "anonymous_data"}
 
 
+@collector
 def config(db=None):
     print("library.collectors config")
-    return ConfigCollector()
+    return {"fake": "config_data"}
 
 
+@collector
 def job_host_summary(db=None, since=None, until=None):
     print("library.collectors job_host_summary")
-    return JobHostSummaryCollector()
+    return {"fake": "job_host_summary_data"}
 
 
+@collector
 def main_host(db=None):
     print("library.collectors main_host")
-    return MainHostCollector()
+    return {"fake": "main_host_data"}
 
 
+@collector
 def main_jobevent(db=None, since=None, until=None):
     print("library.collectors main_jobevent")
-    return MainJobEventCollector()
+    return {"fake": "main_jobevent_data"}
 
 
+@collector
 def main_indirectmanagednodeaudit(db=None, since=None, until=None):
     print("library.collectors main_indirectmanagednodeaudit")
-    return MainIndirectManagedNodeAuditCollector()
+    return {"fake": "main_indirectmanagednodeaudit_data"}
 
 
+@collector
 def host_metric(db=None, since=None):
     print("library.collectors host_metric")
-    return HostMetricCollector()
+    return {"fake": "host_metric_data"}
