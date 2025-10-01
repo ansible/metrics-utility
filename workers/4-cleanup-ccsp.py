@@ -9,7 +9,7 @@ worker_key = 'cleanup-ccsp'
 
 s3_storage = library.storage.StorageS3(settings.s3_storage)
 
-until = library.instants.months_ago(settings.retention)
+until = library.instants.months_ago(settings.retention.get(worker_key) or 12)
 
 files = s3_storage.glob(glob='CCSP*.xlsx', until=until)
 
