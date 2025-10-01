@@ -70,42 +70,24 @@ class Event_Anonymized_Rollups:
           *Success/failure rate of jobs per collection source.
         """
 
-        # drop duplicates so each (job_id, collection_source) pair has one duration, waiting time and etc.
-        dropped_duplicates = dataframe.drop_duplicates(subset=['job_id', 'collection_source'])
-
-        # Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community)
-        total_jobs_by_collection_source = dataframe.groupby('collection_source')['job_id'].nunique()
-
-        # average job duration and waiting time for collection sources
-        # problem is that we need to drop duplicates so each (job_id, collection_source) pair has one duration
-        avg_job_duration_by_collection_source = dropped_duplicates.groupby('collection_source')['job_duration'].mean()
-        avg_job_waiting_time_by_collection_source = dropped_duplicates.groupby('collection_source')['job_waiting_time'].mean()
-
-        # Average number of hosts automated per job for each collection source.
-        avg_hosts_per_job_by_collection_source = (
-            dataframe.groupby(['collection_source', 'job_id'])['host_id'].nunique().groupby('collection_source').mean()
+        result = dataframe.groupby('collection_source').agg(
+            total_jobs=('job_id', 'nunique'),
+            total_hosts=('host_id', 'nunique'),
+            total_job_duration=('job_duration', 'sum'),
+            total_job_waiting_time=('job_waiting_time', 'sum'),
+            total_jobs_failed=('job_failed', 'sum'),
+        )
+        .assign(
+            avg_job_duration=lambda x: x['total_job_duration'] / x['total_jobs'],
+            avg_job_waiting_time=lambda x: x['total_job_waiting_time'] / x['total_jobs'],
+            success_rate=lambda x: x['total_jobs_failed'] / x['total_jobs'],
         )
 
-        # Number of jobs per collection source that have failed.
-        # job_failed columns is True
-        # first we must filter failed jobs and count them by collection source
-        failed_jobs_by_collection_source = dropped_duplicates[dropped_duplicates['job_failed']].groupby('collection_source')['job_id'].nunique()
-
-        success_jobs_by_collection_source = total_jobs_by_collection_source - failed_jobs_by_collection_source
-
-        # Success/failure rate of jobs per collection source.
-        success_rate_by_collection_source = success_jobs_by_collection_source / total_jobs_by_collection_source
+        # transform result to dict
+        result = result.to_dict(orient='records')
 
         # make sure everything is converted to python records
-        return {
-            'total_jobs_by_collection_source': total_jobs_by_collection_source.to_dict(),
-            'avg_job_duration_by_collection_source': avg_job_duration_by_collection_source.to_dict(),
-            'avg_job_waiting_time_by_collection_source': avg_job_waiting_time_by_collection_source.to_dict(),
-            'avg_hosts_per_job_by_collection_source': avg_hosts_per_job_by_collection_source.to_dict(),
-            'failed_jobs_by_collection_source': failed_jobs_by_collection_source.to_dict(),
-            'success_jobs_by_collection_source': success_jobs_by_collection_source.to_dict(),
-            'success_rate_by_collection_source': success_rate_by_collection_source.to_dict(),
-        }
+        return result
 
     @staticmethod
     def events_modules_aggregations(dataframe):
@@ -127,7 +109,8 @@ class Event_Anonymized_Rollups:
         total_modules_used_to_automate = len(list_of_modules_used_to_automate)
 
         # Avg number of modules used in a playbook
-        avg_number_of_modules_used_in_a_playbook = dataframe.groupby('playbook')['module_name'].nunique().mean()
+        avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook')['module_name'].nunique().mean()
+        total_modules_used_per_playbook = dataframe.groupby('playbook')['module_name'].nunique().sum()
 
         # Failure/Success rate of modules
 
@@ -176,8 +159,9 @@ class Event_Anonymized_Rollups:
         return {
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
             'total_modules_used_to_automate': total_modules_used_to_automate,
-            'avg_number_of_modules_used_in_a_playbook': avg_number_of_modules_used_in_a_playbook,
+            'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'module_stats': module_stats.to_dict(orient='records'),
+            'total_modules_used_per_playbook': total_modules_used_per_playbook.to_dict(orient='records'),
         }
 
     @staticmethod
