@@ -96,7 +96,7 @@ jobs:
           uv run pytest -s -v --cov=. --cov-report=xml
 
       - name: "Send code coverage report to Sonar Cloud"
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         if: ${{ github.base_ref }}
         env:
           SONAR_HOST_URL: https://sonarcloud.io
@@ -116,7 +116,7 @@ jobs:
             -Dsonar.python.coverage.reportPaths=coverage.xml
 
       - name: "Send code coverage report to Sonar Cloud"
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         if: ${{ ! github.base_ref }}
         env:
           SONAR_HOST_URL: https://sonarcloud.io
