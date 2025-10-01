@@ -47,6 +47,9 @@ metrics_utility/test/test_data/data/**/*.json
 # Perf test data
 /tools/perf/generated/
 
+# AI
+/.claude/*
+
 # Temporary collection files
 /tools/collections/collections.json
 /tools/collections/galaxy.[0-9]*
