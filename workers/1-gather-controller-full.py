@@ -1,9 +1,9 @@
 # metrics-utility gather_automation_controller_billing_data --since=2d --until=1d --ship equivalent with S3 and all traditional collectors
 
 from django.db import connection
+from settings import settings
 
 from metrics_utility import library
-from settings import settings
 
 
 worker_key = 'gather-controller-full'

@@ -1,9 +1,9 @@
 # Hypothetical renewal report (might actually go separate collect, rollup, report too)
 
 from django.db import connection
+from settings import settings
 
 from metrics_utility import library
-from settings import settings
 
 
 worker_key = 'report-renewal'

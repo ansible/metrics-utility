@@ -1,7 +1,8 @@
 # CCSPv2 report worker (2/4 dataframes, combining tarballs and rollups just as an example)
 
-from metrics_utility import library
 from settings import settings
+
+from metrics_utility import library
 
 
 worker_key = 'report-ccspv2'

@@ -1,45 +1,45 @@
 class BaseDataframe:
     def __init__(self):
-        print(f"library.dataframes {self.__class__.__name__}.__init__")
+        print(f'library.dataframes {self.__class__.__name__}.__init__')
 
     def add_csv(self, csv):
-        print(f"library.dataframes {self.__class__.__name__}.add_csv")
+        print(f'library.dataframes {self.__class__.__name__}.add_csv')
         self.regroup(csv, format='csv')
 
     def add_parquet(self, local):
-        print(f"library.dataframes {self.__class__.__name__}.add_parquet")
+        print(f'library.dataframes {self.__class__.__name__}.add_parquet')
         self.regroup(local, format='parquet')
 
     def add(self, data):
-        print(f"library.dataframes {self.__class__.__name__}.add")
+        print(f'library.dataframes {self.__class__.__name__}.add')
         self.regroup(data, format='data')
 
     def to_parquet(self):
-        print(f"library.dataframes {self.__class__.__name__}.to_parquet")
-        return b"fake_parquet_data"
+        print(f'library.dataframes {self.__class__.__name__}.to_parquet')
+        return b'fake_parquet_data'
 
     def to_sql(self):
-        print(f"library.dataframes {self.__class__.__name__}.to_sql")
+        print(f'library.dataframes {self.__class__.__name__}.to_sql')
 
     def regroup(self, data, format):
-        print(f"library.dataframes {self.__class__.__name__}.regroup")
+        print(f'library.dataframes {self.__class__.__name__}.regroup')
 
 
 class DataframeHost(BaseDataframe):
     def regroup(self, data, format):
-        print(f"library.dataframes DataframeHost.regroup")
+        print('library.dataframes DataframeHost.regroup')
 
 
 class DataframeJobHostSummary(BaseDataframe):
     def regroup(self, data, format):
-        print(f"library.dataframes DataframeJobHostSummary.regroup")
+        print('library.dataframes DataframeJobHostSummary.regroup')
 
 
 class DataframeCollectionStatus(BaseDataframe):
     def regroup(self, data, format):
-        print(f"library.dataframes DataframeCollectionStatus.regroup")
+        print('library.dataframes DataframeCollectionStatus.regroup')
 
 
 class DataframeHostMetric(BaseDataframe):
     def regroup(self, data, format):
-        print(f"library.dataframes DataframeHostMetric.regroup")
+        print('library.dataframes DataframeHostMetric.regroup')

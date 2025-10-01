@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 class PackageTarballs:
     def __init__(self, config=None, collectors=None, max_size=None, tarball_format=None, payload_format=None):
-        print("library.package PackageTarballs.__init__")
+        print('library.package PackageTarballs.__init__')
         self.config = config
         self.collectors = collectors
         self.max_size = max_size
@@ -13,7 +13,7 @@ class PackageTarballs:
         self._counter = 0
 
     def done(self):
-        print("library.package PackageTarballs.done")
+        print('library.package PackageTarballs.done')
         self._counter += 1
         if self._counter >= 3:
             self._done = True
@@ -21,5 +21,5 @@ class PackageTarballs:
 
     @contextmanager
     def next(self):
-        print("library.package PackageTarballs.next")
-        yield f"/tmp/fake-tarball-{self._counter}.tar.gz"
+        print('library.package PackageTarballs.next')
+        yield f'/tmp/fake-tarball-{self._counter}.tar.gz'

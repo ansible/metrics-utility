@@ -1,7 +1,8 @@
 # Cleanup worker for eg. reports:
 
-from metrics_utility import library
 from settings import settings
+
+from metrics_utility import library
 
 
 worker_key = 'cleanup-ccsp'

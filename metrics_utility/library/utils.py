@@ -1,11 +1,12 @@
-from contextlib import contextmanager
-import tempfile
 import os
+import tempfile
+
+from contextlib import contextmanager
 
 
 @contextmanager
 def lock(db=None, key=None, wait=None):
-    print("library.utils lock")
+    print('library.utils lock')
     try:
         yield
     finally:
@@ -14,7 +15,7 @@ def lock(db=None, key=None, wait=None):
 
 @contextmanager
 def tempdir(prefix=None):
-    print("library.utils tempdir")
+    print('library.utils tempdir')
     temp_dir = tempfile.mkdtemp(prefix=prefix)
     try:
         original_dir = os.getcwd()
@@ -26,9 +27,9 @@ def tempdir(prefix=None):
 
 
 def last_gather(db=None, key=None):
-    print("library.utils last_gather")
+    print('library.utils last_gather')
     return None
 
 
 def save_last_gather(db=None, key=None, value=None):
-    print("library.utils save_last_gather")
+    print('library.utils save_last_gather')

@@ -5,14 +5,14 @@ class FakeCSV:
 
 class ExtractorTarballs:
     def __init__(self):
-        print("library.extractors ExtractorTarballs.__init__")
+        print('library.extractors ExtractorTarballs.__init__')
 
     def extract(self, local, only=None):
-        print("library.extractors ExtractorTarballs.extract")
+        print('library.extractors ExtractorTarballs.extract')
         if isinstance(only, str):
-            yield FakeCSV(f"./{only}")
+            yield FakeCSV(f'./{only}')
         elif isinstance(only, list):
             for filename in only:
-                yield FakeCSV(f"./{filename}")
+                yield FakeCSV(f'./{filename}')
         else:
-            yield FakeCSV("./default.csv")
+            yield FakeCSV('./default.csv')

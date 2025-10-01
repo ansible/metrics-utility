@@ -1,9 +1,9 @@
 # Just one JSON collector, shipping to CRC.
 
 from django.db import connection
+from settings import settings
 
 from metrics_utility import library
-from settings import settings
 
 
 worker_key = 'gather-controller-crc'
