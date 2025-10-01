@@ -1,40 +1,45 @@
-class DataframeHost:
+class BaseDataframe:
     def __init__(self):
-        print("library.dataframes DataframeHost.__init__")
+        print(f"library.dataframes {self.__class__.__name__}.__init__")
 
     def add_csv(self, csv):
-        print("library.dataframes DataframeHost.add_csv")
+        print(f"library.dataframes {self.__class__.__name__}.add_csv")
+        self.regroup(csv, format='csv')
 
     def add_parquet(self, local):
-        print("library.dataframes DataframeHost.add_parquet")
+        print(f"library.dataframes {self.__class__.__name__}.add_parquet")
+        self.regroup(local, format='parquet')
+
+    def add(self, data):
+        print(f"library.dataframes {self.__class__.__name__}.add")
+        self.regroup(data, format='data')
 
     def to_parquet(self):
-        print("library.dataframes DataframeHost.to_parquet")
+        print(f"library.dataframes {self.__class__.__name__}.to_parquet")
         return b"fake_parquet_data"
 
     def to_sql(self):
-        print("library.dataframes DataframeHost.to_sql")
+        print(f"library.dataframes {self.__class__.__name__}.to_sql")
+
+    def regroup(self, data, format):
+        print(f"library.dataframes {self.__class__.__name__}.regroup")
 
 
-class DataframeJobHostSummary:
-    def __init__(self):
-        print("library.dataframes DataframeJobHostSummary.__init__")
-
-    def add_csv(self, csv):
-        print("library.dataframes DataframeJobHostSummary.add_csv")
+class DataframeHost(BaseDataframe):
+    def regroup(self, data, format):
+        print(f"library.dataframes DataframeHost.regroup")
 
 
-class DataframeCollectionStatus:
-    def __init__(self):
-        print("library.dataframes DataframeCollectionStatus.__init__")
-
-    def add_csv(self, csv):
-        print("library.dataframes DataframeCollectionStatus.add_csv")
+class DataframeJobHostSummary(BaseDataframe):
+    def regroup(self, data, format):
+        print(f"library.dataframes DataframeJobHostSummary.regroup")
 
 
-class DataframeHostMetric:
-    def __init__(self):
-        print("library.dataframes DataframeHostMetric.__init__")
+class DataframeCollectionStatus(BaseDataframe):
+    def regroup(self, data, format):
+        print(f"library.dataframes DataframeCollectionStatus.regroup")
 
-    def add(self, data):
-        print("library.dataframes DataframeHostMetric.add")
+
+class DataframeHostMetric(BaseDataframe):
+    def regroup(self, data, format):
+        print(f"library.dataframes DataframeHostMetric.regroup")
