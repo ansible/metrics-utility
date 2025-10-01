@@ -1,75 +1,83 @@
 from contextlib import contextmanager
 
+from .debug import indent, log
+
 
 class StorageCRCMutual:
     def __init__(self, settings):
-        print('library.storage StorageCRCMutual.__init__')
+        log('library.storage StorageCRCMutual.__init__')
         self.settings = settings
 
     def ship(self, data):
-        print('library.storage StorageCRCMutual.ship')
+        log('library.storage StorageCRCMutual.ship')
         return True
 
 
 class StorageS3:
     def __init__(self, settings):
-        print('library.storage StorageS3.__init__')
+        log('library.storage StorageS3.__init__')
         self.settings = settings
 
     def ship(self, tarball):
-        print('library.storage StorageS3.ship')
+        log('library.storage StorageS3.ship')
         return True
 
     def glob(self, glob, since=None, until=None):
-        print('library.storage StorageS3.glob')
+        log('library.storage StorageS3.glob')
         return [f'fake-file-{i}.tar.gz' for i in range(3)]
 
     @contextmanager
     def get(self, remote):
-        print('library.storage StorageS3.get')
+        log('library.storage StorageS3.get')
+        indent(1)
         yield f'/tmp/local-{remote}'
+        indent(-1)
+        log('/library.storage StorageS3.get')
 
     def put(self, path=None, data=None, file=None):
-        print('library.storage StorageS3.put')
+        log('library.storage StorageS3.put')
         return True
 
     def remove(self, files):
-        print('library.storage StorageS3.remove')
+        log('library.storage StorageS3.remove')
         return True
 
 
 class StorageCRC:
     def __init__(self, settings):
-        print('library.storage StorageCRC.__init__')
+        log('library.storage StorageCRC.__init__')
         self.settings = settings
 
     def ship(self, data):
-        print('library.storage StorageCRC.ship')
+        log('library.storage StorageCRC.ship')
         return True
 
 
 class StorageDirectory:
     def __init__(self, settings):
-        print('library.storage StorageDirectory.__init__')
+        log('library.storage StorageDirectory.__init__')
         self.settings = settings
 
     def ship(self, data):
-        print('library.storage StorageDirectory.ship')
+        log('library.storage StorageDirectory.ship')
         return True
 
     def glob(self, glob, since=None, until=None):
-        print('library.storage StorageDirectory.glob')
+        log('library.storage StorageDirectory.glob')
         return [f'fake-file-{i}.tar.gz' for i in range(3)]
 
     @contextmanager
     def get(self, remote):
-        print('library.storage StorageDirectory.get')
+        log('library.storage StorageDirectory.get')
+        indent(1)
         yield f'/tmp/local-{remote}'
+        indent(-1)
+        log('/library.storage StorageDirectory.get')
 
     def put(self, path=None, data=None, file=None):
-        print('library.storage StorageDirectory.put')
+        log('library.storage StorageDirectory.put')
         return True
 
     def remove(self, files):
-        print('library.storage StorageDirectory.remove')
+        log('library.storage StorageDirectory.remove')
         return True

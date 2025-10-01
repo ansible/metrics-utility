@@ -1,3 +1,6 @@
+from .debug import log
+
+
 class FakeCSV:
     def __init__(self, tarname):
         self.tarname = tarname
@@ -5,10 +8,10 @@ class FakeCSV:
 
 class ExtractorTarballs:
     def __init__(self):
-        print('library.extractors ExtractorTarballs.__init__')
+        log('library.extractors ExtractorTarballs.__init__')
 
     def extract(self, local, only=None):
-        print('library.extractors ExtractorTarballs.extract')
+        log('library.extractors ExtractorTarballs.extract')
         if isinstance(only, str):
             yield FakeCSV(f'./{only}')
         elif isinstance(only, list):

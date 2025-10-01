@@ -3,19 +3,24 @@ import tempfile
 
 from contextlib import contextmanager
 
+from .debug import indent, log
+
 
 @contextmanager
 def lock(db=None, key=None, wait=None):
-    print('library.utils lock')
+    log('library.utils lock')
+    indent(1)
     try:
         yield
     finally:
-        pass
+        indent(-1)
+        log('/library.utils lock')
 
 
 @contextmanager
 def tempdir(prefix=None):
-    print('library.utils tempdir')
+    log('library.utils tempdir')
+    indent(1)
     temp_dir = tempfile.mkdtemp(prefix=prefix)
     try:
         original_dir = os.getcwd()
@@ -24,12 +29,14 @@ def tempdir(prefix=None):
     finally:
         os.chdir(original_dir)
         # In a real implementation, we'd clean up the temp directory
+        indent(-1)
+        log('/library.utils tempdir')
 
 
 def last_gather(db=None, key=None):
-    print('library.utils last_gather')
+    log('library.utils last_gather')
     return None
 
 
 def save_last_gather(db=None, key=None, value=None):
-    print('library.utils save_last_gather')
+    log('library.utils save_last_gather')
