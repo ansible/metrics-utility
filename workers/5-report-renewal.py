@@ -1,6 +1,6 @@
 # Hypothetical renewal report (might actually go separate collect, rollup, report too)
 
-from django.db import connection
+from django.db.utils import ConnectionHandler
 from settings import settings
 
 from metrics_utility import library
@@ -8,8 +8,8 @@ from metrics_utility import library
 
 worker_key = 'report-renewal'
 
-controller_db = connection(settings.controller_db)
-metrics_db = connection(settings.metrics_db)
+controller_db = ConnectionHandler(settings.controller_db)
+metrics_db = ConnectionHandler(settings.metrics_db)
 s3_storage = library.storage.StorageS3(settings.s3_storage)
 
 # our db, no lock needed

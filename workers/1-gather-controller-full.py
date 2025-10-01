@@ -1,6 +1,6 @@
 # metrics-utility gather_automation_controller_billing_data --since=2d --until=1d --ship equivalent with S3 and all traditional collectors
 
-from django.db import connection
+from django.db.utils import ConnectionHandler
 from settings import settings
 
 from metrics_utility import library
@@ -8,8 +8,8 @@ from metrics_utility import library
 
 worker_key = 'gather-controller-full'
 
-controller_db = connection(settings.controller_db)
-metrics_db = connection(settings.metrics_db)
+controller_db = ConnectionHandler(settings.controller_db)
+metrics_db = ConnectionHandler(settings.metrics_db)
 s3_storage = library.storage.StorageS3(settings.s3_storage)
 
 since = library.instants.last_day()
