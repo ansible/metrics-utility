@@ -4,6 +4,11 @@ from contextlib import contextmanager
 class PackageTarballs:
     def __init__(self, config=None, collectors=None, max_size=None, tarball_format=None, payload_format=None):
         print("library.package PackageTarballs.__init__")
+        self.config = config
+        self.collectors = collectors
+        self.max_size = max_size
+        self.tarball_format = tarball_format
+        self.payload_format = payload_format
         self._done = False
         self._counter = 0
 

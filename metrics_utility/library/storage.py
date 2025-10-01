@@ -4,6 +4,7 @@ from contextlib import contextmanager
 class StorageCRCMutual:
     def __init__(self, settings):
         print("library.storage StorageCRCMutual.__init__")
+        self.settings = settings
 
     def ship(self, data):
         print("library.storage StorageCRCMutual.ship")
@@ -13,6 +14,7 @@ class StorageCRCMutual:
 class StorageS3:
     def __init__(self, settings):
         print("library.storage StorageS3.__init__")
+        self.settings = settings
 
     def ship(self, tarball):
         print("library.storage StorageS3.ship")
@@ -39,6 +41,7 @@ class StorageS3:
 class StorageCRC:
     def __init__(self, settings):
         print("library.storage StorageCRC.__init__")
+        self.settings = settings
 
     def ship(self, data):
         print("library.storage StorageCRC.ship")
@@ -48,6 +51,7 @@ class StorageCRC:
 class StorageDirectory:
     def __init__(self, settings):
         print("library.storage StorageDirectory.__init__")
+        self.settings = settings
 
     def ship(self, data):
         print("library.storage StorageDirectory.ship")
