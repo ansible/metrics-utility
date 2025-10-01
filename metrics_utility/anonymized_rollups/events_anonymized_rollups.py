@@ -6,6 +6,7 @@ from metrics_utility.anonymized_rollups.collections_types import collections_typ
 def collection_regexp():
     return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
 
+
 def extract_collection_name(x):
     if x is None:
         return None
@@ -16,7 +17,6 @@ def extract_collection_name(x):
         return f'{m.groups()[0]}.{m.groups()[1]}'
     else:
         return None
-
 
 
 class Event_Anonymized_Rollups:
@@ -57,7 +57,6 @@ class Event_Anonymized_Rollups:
             & (dataframe['job_id'].str.strip() != '')
         ]
 
-        
         return dataframe
 
     @staticmethod
@@ -70,17 +69,20 @@ class Event_Anonymized_Rollups:
           *Success/failure rate of jobs per collection source.
         """
 
-        result = dataframe.groupby('collection_source').agg(
-            total_jobs=('job_id', 'nunique'),
-            total_hosts=('host_id', 'nunique'),
-            total_job_duration=('job_duration', 'sum'),
-            total_job_waiting_time=('job_waiting_time', 'sum'),
-            total_jobs_failed=('job_failed', 'sum'),
-        )
-        .assign(
-            avg_job_duration=lambda x: x['total_job_duration'] / x['total_jobs'],
-            avg_job_waiting_time=lambda x: x['total_job_waiting_time'] / x['total_jobs'],
-            success_rate=lambda x: x['total_jobs_failed'] / x['total_jobs'],
+        result = (
+            dataframe.groupby('collection_source')
+            .agg(
+                total_jobs=('job_id', 'nunique'),
+                total_hosts=('host_id', 'nunique'),
+                total_job_duration=('job_duration', 'sum'),
+                total_job_waiting_time=('job_waiting_time', 'sum'),
+                total_jobs_failed=('job_failed', 'sum'),
+            )
+            .assign(
+                avg_job_duration=lambda x: x['total_job_duration'].div(x['total_jobs']),
+                avg_job_waiting_time=lambda x: x['total_job_waiting_time'].div(x['total_jobs']),
+                success_rate=lambda x: 1 - x['total_jobs_failed'].div(x['total_jobs']),
+            )
         )
 
         # transform result to dict
@@ -110,7 +112,8 @@ class Event_Anonymized_Rollups:
 
         # Avg number of modules used in a playbook
         avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook')['module_name'].nunique().mean()
-        total_modules_used_per_playbook = dataframe.groupby('playbook')['module_name'].nunique().sum()
+
+        total_modules_used_per_playbook = dataframe.groupby('playbook')['module_name'].nunique()
 
         # Failure/Success rate of modules
 
@@ -124,6 +127,9 @@ class Event_Anonymized_Rollups:
         # Collapse events  one row per (job, module, task)
         # summarize all failed events as number of failed attempts
         # if one success events is seen, task is successful
+        # problem is that each task_uuid can have multiple ok and success events
+        # when at least one success event is seen, task is successful
+        # failed event can be repeated multiple times, we are counting failed attempts
         task_summary = (
             dataframe.groupby(['job_id', 'module_name', 'task_uuid', 'host_id'])
             .agg(
@@ -150,9 +156,7 @@ class Event_Anonymized_Rollups:
                 runs_other=('task_other', 'sum'),
                 total_failed_attempts=('failed_attempts', 'sum'),
             )
-            .assign(
-                runs_total=lambda x: x['runs_success'] + x['runs_failed'] + x['runs_other']
-            )
+            .assign(runs_total=lambda x: x['runs_success'] + x['runs_failed'] + x['runs_other'])
             .reset_index()
         )
 
@@ -161,7 +165,7 @@ class Event_Anonymized_Rollups:
             'total_modules_used_to_automate': total_modules_used_to_automate,
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'module_stats': module_stats.to_dict(orient='records'),
-            'total_modules_used_per_playbook': total_modules_used_per_playbook.to_dict(orient='records'),
+            'total_modules_used_per_playbook': total_modules_used_per_playbook.to_dict(),
         }
 
     @staticmethod
