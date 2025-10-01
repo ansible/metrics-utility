@@ -138,6 +138,7 @@ class Event_Anonymized_Rollups:
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
         dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list)
 
+        '''
         # Collapse events → one row per (job, module, task)
         # summarize all failed events as number of failed attempts
         # if one success events is seen, task is successful
@@ -161,11 +162,27 @@ class Event_Anonymized_Rollups:
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 hosts_total=('host_id', 'nunique'),
-                runs_total=('task_uuid', 'count'),
+                tasks_unique_runs=('task_uuid', 'nunique'),
                 runs_success=('task_success', 'sum'),
                 runs_failed=('task_failed', 'sum'),
                 runs_other=('task_other', 'sum'),
                 total_failed_attempts=('failed_attempts', 'sum'),
+            )
+            .reset_index()
+        )'''
+
+        module_stats = (
+            dataframe.groupby('module_name')
+            .agg(
+                jobs_total=('job_id', 'nunique'),
+                hosts_total=('host_id', 'nunique'),
+                tasks_unique_runs=('task_uuid', 'nunique'),
+                task_runs_success=('task_success_event', 'sum'),
+                task_failed_attempts=('task_failed_event', 'sum')
+            )
+            .assign(
+                # task failed = tasks_unique_runs - task_runs_success
+                tasks_failed_total=lambda x: x['tasks_unique_runs'] - x['task_runs_success'],
             )
             .reset_index()
         )
