@@ -1,17 +1,17 @@
 # Just one JSON collector, shipping to CRC.
 
 from django.db import connection
-from TODO import SETTINGS
 
 from metrics_utility import library
+from settings import settings
 
 
 worker_key = 'gather-controller-crc'
 
 # assume exceptions are logged & saved in task results by what's running the worker
-controller_db = connection(SETTINGS)
-metrics_db = connection(SETTINGS)
-crc_storage = library.storage.StorageCRCMutual(SETTINGS)
+controller_db = connection(settings.controller_db)
+metrics_db = connection(settings.metrics_db)
+crc_storage = library.storage.StorageCRCMutual(settings.s3_storage)
 
 # wrappers around datetime, timedelta, timezone - always a datetime with timezone
 since = library.instants.last_day()

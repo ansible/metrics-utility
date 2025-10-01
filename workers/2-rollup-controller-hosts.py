@@ -1,13 +1,12 @@
 # Hosts rollup worker.
 
-from TODO import SETTINGS
-
 from metrics_utility import library
+from settings import settings
 
 
 worker_key = 'rollup-controller-hosts'
 
-s3_storage = library.storage.StorageS3(SETTINGS)
+s3_storage = library.storage.StorageS3(settings.s3_storage)
 
 since = library.instants.last_week()
 until = library.instants.this_week()

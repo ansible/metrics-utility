@@ -1,16 +1,16 @@
 # Hypothetical renewal report (might actually go separate collect, rollup, report too)
 
 from django.db import connection
-from TODO import SETTINGS
 
 from metrics_utility import library
+from settings import settings
 
 
 worker_key = 'report-renewal'
 
-controller_db = connection(SETTINGS)
-metrics_db = connection(SETTINGS)
-s3_storage = library.storage.StorageS3(SETTINGS)
+controller_db = connection(settings.controller_db)
+metrics_db = connection(settings.metrics_db)
+s3_storage = library.storage.StorageS3(settings.s3_storage)
 
 # our db, no lock needed
 since = library.last_gather(db=metrics_db, key=worker_key) or library.instants.last_month()
