@@ -1,6 +1,9 @@
 from datetime import datetime
 
 import pandas as pd
+import math
+from datetime import timedelta
+from pytest import approx
 
 from metrics_utility.anonymized_rollups.events_anonymized_rollups import Event_Anonymized_Rollups
 
@@ -182,14 +185,46 @@ events = [
 ]
 
 
+'''
+        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+          *Average job duration for collection sources
+          *Average number of hosts automated per job for each collection source.
+          *Number of jobs per collection source that have failed.
+          *Success/failure rate of jobs per collection source.
+'''
+
 def test_events_collections_anonymized_rollups():
     df = pd.DataFrame(events)
     df = Event_Anonymized_Rollups.prepare_data(df)
-    metrics = Event_Anonymized_Rollups.event_collections_aggregations(df)
+    data = Event_Anonymized_Rollups.event_collections_aggregations(df)
 
     from pprint import pprint
 
     print('\n\n\n')
-    pprint(metrics)
+    pprint(data)
 
-    # Assertions
+    # times are in seconds
+    # First dictionary 
+    assert data[0]['avg_job_duration'] == approx(700.0)
+    assert data[0]['avg_job_waiting_time'] == approx(380.0)
+    assert data[0]['collection_source'] == 'community'
+    assert data[0]['success_rate'] == approx(0.6666666666666667)
+    assert data[0]['total_hosts'] == 5
+    assert data[0]['total_job_duration'] == approx(2100.0)
+    assert data[0]['total_job_waiting_time'] == approx(1140.0)
+    assert data[0]['total_jobs'] == 3
+    assert data[0]['total_jobs_failed'] == 1
+
+    # Second dictionary
+    assert data[1]['avg_job_duration'] == approx(2401.6666666666665)
+    assert data[1]['avg_job_waiting_time'] == approx(5420.0)
+    assert data[1]['collection_source'] == 'validated'
+    assert data[1]['success_rate'] == approx(0.33333333333333337)
+    assert data[1]['total_hosts'] == 5
+    assert data[1]['total_job_duration'] == approx(7205.0)
+    assert data[1]['total_job_waiting_time'] == approx(16260.0)
+    assert data[1]['total_jobs'] == 3
+    assert data[1]['total_jobs_failed'] == 2
+
+
+    

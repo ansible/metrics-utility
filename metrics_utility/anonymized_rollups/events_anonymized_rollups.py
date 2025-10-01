@@ -35,8 +35,9 @@ class Event_Anonymized_Rollups:
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
         dataframe['collection_name'] = dataframe['module_name'].apply(extract_collection_name)
 
-        dataframe['job_duration'] = dataframe['job_finished'] - dataframe['job_started']
-        dataframe['job_waiting_time'] = dataframe['job_started'] - dataframe['job_created']
+        dataframe['job_duration'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
+        dataframe['job_waiting_time'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
+
 
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
@@ -83,10 +84,9 @@ class Event_Anonymized_Rollups:
                 avg_job_waiting_time=lambda x: x['total_job_waiting_time'].div(x['total_jobs']),
                 success_rate=lambda x: 1 - x['total_jobs_failed'].div(x['total_jobs']),
             )
+            .reset_index()   # <-- bring collection_source back as a column
+            .to_dict(orient='records')
         )
-
-        # transform result to dict
-        result = result.to_dict(orient='records')
 
         # make sure everything is converted to python records
         return result
