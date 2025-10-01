@@ -41,8 +41,6 @@ class Event_Anonymized_Rollups:
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
 
-        print(dataframe['collection_source'])
-
         for col in ['task_success_event', 'task_failed_event']:
             if col not in dataframe.columns:
                 dataframe[col] = False  # create with default False
