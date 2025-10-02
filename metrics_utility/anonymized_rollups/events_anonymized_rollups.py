@@ -22,6 +22,42 @@ def extract_collection_name(x):
 class Event_Anonymized_Rollups:
     """
     Event rollups operate over main_jobevent_service collector data
+
+    Important columns in data:
+    module_name (task_action) - name of the module that was executed
+    job_id - id of the job that was executed
+    host_id - id of the host that was automated
+    playbook - name of the playbook that was executed
+    job_created - timestamp of the job creation
+    job_started - timestamp of the job start
+    job_finished - timestamp of the job finish
+    event - name of the event that was executed
+    task_uuid - uuid of the task that was executed
+    
+    Computed columns:
+    job_duration - duration of the job in seconds (computed from job_started and job_finished)
+    job_waiting_time - waiting time of the job in seconds (computed from job_created and job_started)
+    job_failed - boolean flag indicating if the job failed
+    collection_name - name of the collection that was used - from module_name
+    collection_source - source of the collection (e.g. Red Hat, Partner A, Community) - from collections_types
+
+    task_success_event - boolean flag indicating if the task was successful
+    task_failed_event - boolean flag indicating if the task failed
+
+    How the events works?
+    Job is created and executed on each host - defined by playbook.
+    Task is a single action that is executed on a host. Task calls module. Module is also part of the collection.
+    Collection can come from different sources:
+    - Red Hat
+    - Partner A
+    - Community
+    - Validated
+    - etc.
+    
+    When task fails, it can be retried multiple times.
+    When task is successful, it is not retried.
+    When task is skipped, it is not retried.
+    When task is ignored, it is not retried.
     """
 
     @staticmethod
@@ -42,10 +78,14 @@ class Event_Anonymized_Rollups:
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
 
-        for col in ['task_success_event', 'task_failed_event']:
-            if col not in dataframe.columns:
-                dataframe[col] = False  # create with default False
-            dataframe[col] = dataframe[col].fillna(False).astype(bool)
+        # Failure/Success rate of modules
+
+        success_events_list = ['runner_on_ok', 'runner_on_async_ok']
+        failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_on_unreachable']
+     
+        # Mark events
+        dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
+        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list)
 
         dataframe = dataframe[
             dataframe['module_name'].notna()
@@ -60,45 +100,17 @@ class Event_Anonymized_Rollups:
 
         return dataframe
 
-    @staticmethod
-    def event_collections_aggregations(dataframe):
-        """
-        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-          *Average job duration for collection sources
-          *Average number of hosts automated per job for each collection source.
-          *Number of jobs per collection source that have failed.
-          *Success/failure rate of jobs per collection source.
-        """
-
-        result = (
-            dataframe.groupby('collection_source')
-            .agg(
-                total_jobs=('job_id', 'nunique'),
-                total_hosts=('host_id', 'nunique'),
-                total_job_duration=('job_duration', 'sum'),
-                total_job_waiting_time=('job_waiting_time', 'sum'),
-                total_jobs_failed=('job_failed', 'sum'),
-            )
-            .assign(
-                avg_job_duration=lambda x: x['total_job_duration'].div(x['total_jobs']),
-                avg_job_waiting_time=lambda x: x['total_job_waiting_time'].div(x['total_jobs']),
-                success_rate=lambda x: 1 - x['total_jobs_failed'].div(x['total_jobs']),
-            )
-            .reset_index()   # <-- bring collection_source back as a column
-            .to_dict(orient='records')
-        )
-
-        # make sure everything is converted to python records
-        return result
+   
 
     @staticmethod
     def events_modules_aggregations(dataframe):
         """
-        ?Number of jobs executed that use a specific partner collection.
         *Avg number of modules used in a playbook
         *Failure/Success rate of modules
         *Modules Used to Automate
         *Total number of modules automated
+
+        dataframe corresponds to events
         """
 
         # ?Number of jobs executed that use a specific partner collection.
@@ -115,14 +127,6 @@ class Event_Anonymized_Rollups:
 
         total_modules_used_per_playbook = dataframe.groupby('playbook')['module_name'].nunique()
 
-        # Failure/Success rate of modules
-
-        success_events_list = ['runner_on_ok', 'runner_on_async_ok']
-        failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_on_unreachable']
-
-        # Mark events
-        dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
-        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list)
 
         # Collapse events  one row per (job, module, task)
         # summarize all failed events as number of failed attempts
@@ -134,12 +138,11 @@ class Event_Anonymized_Rollups:
             dataframe.groupby(['job_id', 'module_name', 'task_uuid', 'host_id'])
             .agg(
                 task_success=('task_success_event', 'max'),  # any success seen?
-                failed_attempts=('task_failed_event', 'sum'),  # number of fails
+                total_failed_attempts=('task_failed_event', 'sum'),  # number of failed attempts due to retries
             )
             .reset_index()
             .assign(
-                task_failed=lambda x: (~x['task_success']) & (x['failed_attempts'] > 0),
-                task_other=lambda x: (~x['task_success']) & (~x['task_failed']),  # skipped, ignored, etc.
+                task_failed=lambda x: (~x['task_success']) & (x['retry_attempts'] > 0),     
             )
         )
 
@@ -150,14 +153,16 @@ class Event_Anonymized_Rollups:
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 hosts_total=('host_id', 'nunique'),
-                tasks_unique_runs=('task_uuid', 'nunique'),
-                runs_success=('task_success', 'sum'),
-                runs_failed=('task_failed', 'sum'),
-                runs_other=('task_other', 'sum'),
-                total_failed_attempts=('failed_attempts', 'sum'),
+                tasks_unique_runs_total=('task_uuid', 'nunique'),
+                runs_success_total=('task_success', 'sum'),
+                runs_failed_total=('task_failed', 'sum'),
+                total_failed_attempts=('total_failed_attempts', 'sum'),
             )
-            .assign(runs_total=lambda x: x['runs_success'] + x['runs_failed'] + x['runs_other'])
             .reset_index()
+            .assign(
+                # success rate = success_rate / (success_rate + failed_rate)
+                success_rate=lambda x: x['runs_success_total'].div(x['runs_success_total'] + x['runs_failed_total']),
+            )
         )
 
         return {
@@ -167,6 +172,39 @@ class Event_Anonymized_Rollups:
             'module_stats': module_stats.to_dict(orient='records'),
             'total_modules_used_per_playbook': total_modules_used_per_playbook.to_dict(),
         }
+
+     @staticmethod
+    def event_collections_aggregations(dataframe):
+        """
+        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+          *Average job duration for collection sources
+          *Average number of hosts automated per job for each collection source.
+          *Number of jobs per collection source that have failed.
+          *Success/failure rate of jobs per collection source.
+          ?Number of jobs executed that use a specific partner collection.
+        """
+
+        result = (
+            dataframe.groupby('collection_source')
+            .agg(
+                jobs_total=('job_id', 'nunique'),
+                hosts_total=('host_id', 'nunique'),
+                job_duration_total=('job_duration', 'sum'),
+                job_waiting_time_total=('job_waiting_time', 'sum'),
+                jobs_failed_total=('job_failed', 'sum'),
+            )
+            .assign(
+                avg_job_duration=lambda x: x['total_job_duration'].div(x['total_jobs']),
+                avg_job_waiting_time=lambda x: x['total_job_waiting_time'].div(x['total_jobs']),
+                success_rate=lambda x: 1 - x['total_jobs_failed'].div(x['total_jobs']),
+                avg_hosts_per_job=lambda x: x['total_hosts'].div(x['total_jobs']),
+            )
+            .reset_index()   # <-- bring collection_source back as a column
+            .to_dict(orient='records')
+        )
+
+        # make sure everything is converted to python records
+        return result
 
     @staticmethod
     def base(dataframe):
