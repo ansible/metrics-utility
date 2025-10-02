@@ -119,9 +119,9 @@ class Event_Anonymized_Rollups:
         per_job = (
             dataframe.groupby(['job_id', 'collection_source'], as_index=False)
             .agg(
-                job_duration_seconds=('job_duration_seconds', 'first'),   # assume consistent per job
+                job_duration_seconds=('job_duration_seconds', 'first'),   
                 job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-                job_failed=('job_failed', 'max'),  # if any row failed → job failed
+                job_failed=('job_failed', 'first'), 
                 host_count=('host_id', 'nunique')
             )
         )
