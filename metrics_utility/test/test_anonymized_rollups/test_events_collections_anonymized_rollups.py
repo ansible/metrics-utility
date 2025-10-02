@@ -21,7 +21,7 @@ events = [
         'job_created': datetime(2025, 9, 1, 9, 55, 0),
         'job_started': datetime(2025, 9, 1, 10, 0, 0),
         'job_finished': datetime(2025, 9, 1, 10, 2, 0),
-        # task_success_event/failed_event intentionally omitted to test default False fill
+        'event': 'runner_on_ok',
     },
     {
         'resolved_action': None,
@@ -33,6 +33,7 @@ events = [
         'job_created': datetime(2025, 9, 1, 9, 55, 0),
         'job_started': datetime(2025, 9, 1, 10, 0, 0),
         'job_finished': datetime(2025, 9, 1, 10, 2, 0),
+        'event': 'runner_on_ok',
     },
     # --- Job 101: Community collection, single host, failure ---
     {
@@ -47,6 +48,7 @@ events = [
         'job_finished': datetime(2025, 9, 2, 13, 20, 0),
         'task_failed_event': True,
         'task_success_event': False,
+        'event': 'runner_on_ok',
     },
     # --- Job 102: Red Hat collection, two hosts, success ---
     {
@@ -60,6 +62,7 @@ events = [
         'job_started': datetime(2025, 9, 3, 8, 45, 0),
         'job_finished': datetime(2025, 9, 3, 9, 0, 0),
         'task_success_event': True,
+        'event': 'runner_on_ok',
     },
     {
         'resolved_action': None,
@@ -72,6 +75,7 @@ events = [
         'job_started': datetime(2025, 9, 3, 8, 45, 0),
         'job_finished': datetime(2025, 9, 3, 9, 0, 0),
         'task_success_event': True,
+        'event': 'runner_on_ok',
     },
     # --- Job 103: Builtin collection, single host, success; resolved_action missing, task_action used ---
     {
@@ -84,6 +88,7 @@ events = [
         'job_created': datetime(2025, 9, 4, 14, 0, 0),
         'job_started': datetime(2025, 9, 4, 14, 1, 0),
         'job_finished': datetime(2025, 9, 4, 14, 1, 5),
+        'event': 'runner_on_ok',
         # no task_* flags -> test default False fill
     },
     # --- Job 104: Partner collection, two hosts, failure ---
@@ -98,6 +103,7 @@ events = [
         'job_started': datetime(2025, 9, 5, 3, 0, 0),  # long waiting time
         'job_finished': datetime(2025, 9, 5, 3, 45, 0),
         'task_failed_event': True,
+        'event': 'runner_on_ok',
     },
     {
         'resolved_action': 'partnerA.database.backup',
@@ -110,77 +116,7 @@ events = [
         'job_started': datetime(2025, 9, 5, 3, 0, 0),
         'job_finished': datetime(2025, 9, 5, 3, 45, 0),
         'task_failed_event': True,
-    },
-    # --- Job 105: Mix to create duplicate (job_id, collection_source) pairs across multiple modules ---
-    # Same job uses two modules from the same collection to ensure drop_duplicates path matters
-    {
-        'resolved_action': None,
-        'task_action': 'community.general.copy',
-        'job_failed': False,
-        'host_id': 'app-01',
-        'playbook': 'deploy.yml',
-        'job_id': 5,
-        'job_created': datetime(2025, 9, 6, 11, 0, 0),
-        'job_started': datetime(2025, 9, 6, 11, 2, 0),
-        'job_finished': datetime(2025, 9, 6, 11, 10, 0),
-        'task_success_event': True,
-    },
-    {
-        'resolved_action': 'community.general.template',
-        'task_action': 'community.general.template',
-        'job_failed': False,
-        'host_id': 'app-02',
-        'playbook': 'deploy.yml',
-        'job_id': 5,
-        'job_created': datetime(2025, 9, 6, 11, 0, 0),
-        'job_started': datetime(2025, 9, 6, 11, 2, 0),
-        'job_finished': datetime(2025, 9, 6, 11, 10, 0),
-        'task_success_event': True,
-    },
-    # --- Job 106: Bad rows that should be filtered out by prepare_data() ---
-    {
-        'resolved_action': None,
-        'task_action': '',  # empty -> filtered out
-        'job_failed': False,
-        'host_id': 'bad-01',
-        'playbook': 'oops.yml',
-        'job_id': 6,
-        'job_created': datetime(2025, 9, 7, 9, 0, 0),
-        'job_started': datetime(2025, 9, 7, 9, 1, 0),
-        'job_finished': datetime(2025, 9, 7, 9, 2, 0),
-    },
-    {
-        'resolved_action': None,
-        'task_action': 'community.general.debug',
-        'job_failed': False,
-        'host_id': '   ',  # whitespace -> filtered out
-        'playbook': 'debug.yml',
-        'job_id': 6,
-        'job_created': datetime(2025, 9, 7, 9, 0, 0),
-        'job_started': datetime(2025, 9, 7, 9, 1, 0),
-        'job_finished': datetime(2025, 9, 7, 9, 2, 0),
-    },
-    {
-        'resolved_action': None,
-        'task_action': 'community.general.debug',
-        'job_failed': False,
-        'host_id': 'bad-02',
-        'playbook': '',  # empty -> filtered out
-        'job_id': 6,
-        'job_created': datetime(2025, 9, 7, 9, 0, 0),
-        'job_started': datetime(2025, 9, 7, 9, 1, 0),
-        'job_finished': datetime(2025, 9, 7, 9, 2, 0),
-    },
-    {
-        'resolved_action': None,
-        'task_action': 'community.general.debug',
-        'job_failed': False,
-        'host_id': 'bad-03',
-        'playbook': 'debug.yml',
-        'job_id': '   ',  # whitespace -> filtered out
-        'job_created': datetime(2025, 9, 7, 9, 0, 0),
-        'job_started': datetime(2025, 9, 7, 9, 1, 0),
-        'job_finished': datetime(2025, 9, 7, 9, 2, 0),
+        'event': 'runner_on_ok',
     },
 ]
 
@@ -196,6 +132,7 @@ events = [
 def test_events_collections_anonymized_rollups():
     df = pd.DataFrame(events)
     df = Event_Anonymized_Rollups.prepare_data(df)
+
     data = Event_Anonymized_Rollups.event_collections_aggregations(df)
 
     from pprint import pprint

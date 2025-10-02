@@ -93,14 +93,48 @@ class Event_Anonymized_Rollups:
             & dataframe['playbook'].notna()
             & dataframe['job_id'].notna()
             & (dataframe['module_name'].str.strip() != '')
-            & (dataframe['host_id'].str.strip() != '')
             & (dataframe['playbook'].str.strip() != '')
-            & (dataframe['job_id'].str.strip() != '')
         ]
 
         return dataframe
 
    
+    @staticmethod
+    def event_collections_aggregations(dataframe):
+        """
+          *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+          *Average job duration for collection sources
+          *Average number of hosts automated per job for each collection source.
+          *Number of jobs per collection source that have failed.
+          *Success/failure rate of jobs per collection source.
+          ?Number of jobs executed that use a specific partner collection.
+        """
+
+        avg_hosts_per_job_for_collection_source = dataframe.groupby(['collection_source', 'job_id'])['host_id'].nunique().groupby('collection_source').mean()
+
+        result = (
+            dataframe.groupby('collection_source')
+            .agg(
+                jobs_total=('job_id', 'nunique'),
+                job_duration_total_seconds=('job_duration_seconds', 'sum'),
+                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
+                jobs_failed_total=('job_failed', 'sum'),
+            )
+            .assign(
+                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'].div(x['jobs_total']),
+                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'].div(x['jobs_total']),
+                success_rate=lambda x: 1 - x['jobs_failed_total'].div(x['jobs_total']),
+            )
+            .reset_index()   # <-- bring collection_source back as a column
+            .to_dict(orient='records')
+        )
+
+        # avg_hosts_per_job_for_collection_source should be added to result
+        for row in result:
+            row['avg_hosts_per_job'] = avg_hosts_per_job_for_collection_source.get(row['collection_source'], 0)
+
+        # make sure everything is converted to python records
+        return result
 
     @staticmethod
     def events_modules_aggregations(dataframe):
@@ -173,38 +207,7 @@ class Event_Anonymized_Rollups:
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
         }
 
-    @staticmethod
-    def event_collections_aggregations(dataframe):
-        """
-        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-          *Average job duration for collection sources
-          *Average number of hosts automated per job for each collection source.
-          *Number of jobs per collection source that have failed.
-          *Success/failure rate of jobs per collection source.
-          ?Number of jobs executed that use a specific partner collection.
-        """
 
-        result = (
-            dataframe.groupby('collection_source')
-            .agg(
-                jobs_total=('job_id', 'nunique'),
-                hosts_total=('host_id', 'nunique'),
-                job_duration_total=('job_duration', 'sum'),
-                job_waiting_time_total=('job_waiting_time', 'sum'),
-                jobs_failed_total=('job_failed', 'sum'),
-            )
-            .assign(
-                avg_job_duration=lambda x: x['total_job_duration'].div(x['total_jobs']),
-                avg_job_waiting_time=lambda x: x['total_job_waiting_time'].div(x['total_jobs']),
-                success_rate=lambda x: 1 - x['total_jobs_failed'].div(x['total_jobs']),
-                avg_hosts_per_job=lambda x: x['total_hosts'].div(x['total_jobs']),
-            )
-            .reset_index()   # <-- bring collection_source back as a column
-            .to_dict(orient='records')
-        )
-
-        # make sure everything is converted to python records
-        return result
 
     @staticmethod
     def base(dataframe):
