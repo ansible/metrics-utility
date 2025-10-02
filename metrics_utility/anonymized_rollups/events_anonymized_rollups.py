@@ -1,5 +1,7 @@
 import re
 
+import pandas as pd
+
 from metrics_utility.anonymized_rollups.collections_types import collections_types
 
 
@@ -63,6 +65,11 @@ class Event_Anonymized_Rollups:
     @staticmethod
     def prepare_data(dataframe):
         # Prepare data
+
+        # Coerce datetime-like columns to pandas datetimes (UTC) to accept strings like '...+00'
+        for col in ['job_created', 'job_started', 'job_finished']:
+            if col in dataframe.columns:
+                dataframe[col] = pd.to_datetime(dataframe[col], errors='coerce', utc=True)
 
         # add module column into the dataframe based on dataframe_content_usage.py approach
         dataframe['task_action'] = dataframe.resolved_action.fillna(dataframe.task_action).astype(str)
