@@ -1,3 +1,6 @@
+import pandas as pd
+
+
 class Jobs_Anonymized_Rollups:
     """
     Collector - unified_jobs collector data
@@ -26,6 +29,12 @@ class Jobs_Anonymized_Rollups:
 
         dataframe corresponds to jobs
         """
+
+        # Coerce datetime-like columns to pandas datetimes (timezone-aware if possible)
+        # This allows inputs like '2025-09-29 13:16:53.637988+00'
+        for col in ['started', 'finished', 'job_created']:
+            if col in dataframe.columns:
+                dataframe[col] = pd.to_datetime(dataframe[col], errors='coerce', utc=True)
 
         # create view from dataframe where finished is not null and started is not null
         dataframe = dataframe[dataframe['finished'].notna() & dataframe['started'].notna()]

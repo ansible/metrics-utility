@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pandas as pd
 import pytest
 
@@ -10,26 +8,26 @@ data = [
     # controller A, version v1, template T1
     {
         'id': 1,
-        'started': datetime(2024, 1, 1, 0, 0, 0),
-        'finished': datetime(2024, 1, 1, 0, 0, 3),  # +3s
+        'started': '2024-01-01 00:00:00.000000+00',
+        'finished': '2024-01-01 00:00:03.000000+00',  # +3s
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': datetime(2024, 1, 1, 0, 0, 0),
+        'job_created': '2024-01-01 00:00:00.000000+00',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
-    },  # duration 3s, wait 1s
+    },  # duration 3s, wait 0s
     {
         'id': 2,
-        'started': datetime(2024, 1, 1, 0, 0, 10),
-        'finished': datetime(2024, 1, 1, 0, 0, 15),  # +5s
+        'started': '2024-01-01 00:00:10.000000+00',
+        'finished': '2024-01-01 00:00:15.000000+00',  # +5s
         'failed': 1,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': datetime(2024, 1, 1, 0, 0, 8),  # wait 2s
+        'job_created': '2024-01-01 00:00:08.000000+00',  # wait 2s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
@@ -37,13 +35,13 @@ data = [
     # controller A, version v1, template T2
     {
         'id': 3,
-        'started': datetime(2024, 1, 1, 0, 1, 40),
-        'finished': datetime(2024, 1, 1, 0, 1, 47),  # +7s
+        'started': '2024-01-01 00:01:40.000000+00',
+        'finished': '2024-01-01 00:01:47.000000+00',  # +7s
         'failed': 0,
         'job_template_name': 'T2',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': datetime(2024, 1, 1, 0, 1, 36),  # wait 4s
+        'job_created': '2024-01-01 00:01:36.000000+00',  # wait 4s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -51,13 +49,13 @@ data = [
     # controller B, version v2, template T1
     {
         'id': 4,
-        'started': datetime(2024, 1, 1, 0, 3, 20),
-        'finished': datetime(2024, 1, 1, 0, 3, 22),  # +2s
+        'started': '2024-01-01 00:03:20.000000+00',
+        'finished': '2024-01-01 00:03:22.000000+00',  # +2s
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-B',
         'ansible_version': 'v2',
-        'job_created': datetime(2024, 1, 1, 0, 3, 19),  # wait 1s
+        'job_created': '2024-01-01 00:03:19.000000+00',  # wait 1s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -65,7 +63,7 @@ data = [
     # invalid rows (should be filtered out)
     {
         'id': 5,
-        'started': datetime(2024, 1, 1, 0, 6, 40),
+        'started': '2024-01-01 00:06:40.000000+00',
         'finished': None,
         'failed': 0,
         'job_template_name': 'T3',
@@ -75,7 +73,7 @@ data = [
     {
         'id': 6,
         'started': None,
-        'finished': datetime(2024, 1, 1, 0, 8, 20),
+        'finished': '2024-01-01 00:08:20.000000+00',
         'failed': 0,
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
@@ -86,7 +84,7 @@ data = [
 
 def test_jobs_anonymized_rollups_base_aggregation():
     # Build a DataFrame mimicking unified_jobs collector output columns we use
-    # Times are in milliseconds epoch to match the code dividing by 1000
+    # Times are ISO-like strings with explicit UTC offset (+00)
 
     df = pd.DataFrame(data)
 
