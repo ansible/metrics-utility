@@ -7,3 +7,19 @@ Scripts to download a list of collections from Galaxy & Hub.
 `./process.sh` - creates a `./collections.json` (FIXME: move to where `collections_types.py` expects it)
 
 `./cleanup.sh` - cleans up
+
+---
+
+Using together:
+
+```
+cd metrics-utility/
+
+tools/collections/galaxy-download.sh
+CLIENT_ID=123 CLIENT_SECRET=456 tools/collections/hub-download.sh
+
+tools/collections/process.sh
+mv tools/collections/collections.json metrics_utility/anonymized_rollups/collections.json
+
+tools/collections/cleanup.sh
+```
