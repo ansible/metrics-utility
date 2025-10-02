@@ -153,10 +153,8 @@ class Event_Anonymized_Rollups:
         *Modules Used to Automate
         *Total number of modules automated
 
-        dataframe corresponds to events
+        dataframe corresponds to events joined with jobs
         """
-
-        # ?Number of jobs executed that use a specific partner collection.
 
         # Modules used to automate
         # distinct name of modules used to automate
@@ -185,7 +183,11 @@ class Event_Anonymized_Rollups:
             )
             .reset_index()
             .assign(
-                task_failed=lambda x: (~x['task_success']) & (x['failed_attempts_total'] > 0),     
+                task_failed=lambda x: (~x['task_success']) & (x['failed_attempts_total'] > 0),
+                task_success_with_failed_attempts=lambda x: x['task_success'] & (x['failed_attempts_total'] > 0), 
+                task_success_without_failed_attempts=lambda x: x['task_success'] & (x['failed_attempts_total'] == 0),
+                # task other - neither success or failure
+                task_other=lambda x: (~x['task_success']) & (x['failed_attempts_total'] == 0),
             )
         )
 
@@ -196,15 +198,21 @@ class Event_Anonymized_Rollups:
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 hosts_total=('host_id', 'nunique'),
-                tasks_unique_runs_total=('task_uuid', 'nunique'),
-                runs_success_total=('task_success', 'sum'),
-                runs_failed_total=('task_failed', 'sum'),
+                tasks_success_total=('task_success', 'sum'),
+                tasks_success_with_failed_attempts_total=('task_success_with_failed_attempts', 'sum'),
+                tasks_success_without_failed_attempts_total=('task_success_without_failed_attempts', 'sum'),
+                tasks_failed_total=('task_failed', 'sum'),
                 failed_attempts_total=('failed_attempts_total', 'sum'),
+                tasks_other_total=('task_other', 'sum'),
+                # total success + failure
+                total_success_and_failure=lambda x: x['tasks_success_total'] + x['tasks_failed_total'],
             )
             .reset_index()
             .assign(
                 # success rate = success_rate / (success_rate + failed_rate)
-                success_rate=lambda x: x['runs_success_total'].div(x['runs_success_total'] + x['runs_failed_total']),
+                success_rate=lambda x: x['tasks_success_total'].div(x['total_success_and_failure']),
+                success_rate_with_failed_attempts=lambda x: x['tasks_success_with_failed_attempts_total'].div(x['total_success_and_failure']),
+                success_rate_without_failed_attempts=lambda x: x['tasks_success_without_failed_attempts_total'].div(x['total_success_and_failure']),
             )
         )
 
