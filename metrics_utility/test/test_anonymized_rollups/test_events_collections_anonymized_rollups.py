@@ -1,8 +1,8 @@
+
 from datetime import datetime
 
 import pandas as pd
-import math
-from datetime import timedelta
+
 from pytest import approx
 
 from metrics_utility.anonymized_rollups.events_anonymized_rollups import Event_Anonymized_Rollups
@@ -121,13 +121,14 @@ events = [
 ]
 
 
-'''
+"""
         *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
           *Average job duration for collection sources
           *Average number of hosts automated per job for each collection source.
           *Number of jobs per collection source that have failed.
           *Success/failure rate of jobs per collection source.
-'''
+"""
+
 
 def test_events_collections_anonymized_rollups():
     df = pd.DataFrame(events)
@@ -141,7 +142,7 @@ def test_events_collections_anonymized_rollups():
     pprint(data)
 
     # times are in seconds
-    # First dictionary 
+    # First dictionary
     assert data[0]['avg_job_duration_seconds'] == approx(510.0)
     assert data[0]['avg_job_waiting_time_seconds'] == approx(300.0)
     assert data[0]['collection_source'] == 'community'
@@ -162,6 +163,3 @@ def test_events_collections_anonymized_rollups():
     assert data[1]['job_waiting_time_total_seconds'] == approx(8160.0)
     assert data[1]['jobs_total'] == 3
     assert data[1]['jobs_failed_total'] == 1
-
-
-    

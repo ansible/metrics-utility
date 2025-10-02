@@ -33,7 +33,7 @@ class Event_Anonymized_Rollups:
     job_finished - timestamp of the job finish
     event - name of the event that was executed
     task_uuid - uuid of the task that was executed
-    
+
     Computed columns:
     job_duration - duration of the job in seconds (computed from job_started and job_finished)
     job_waiting_time - waiting time of the job in seconds (computed from job_created and job_started)
@@ -53,7 +53,7 @@ class Event_Anonymized_Rollups:
     - Community
     - Validated
     - etc.
-    
+
     When task fails, it can be retried multiple times.
     When task is successful, it is not retried.
     When task is skipped, it is not retried.
@@ -74,7 +74,6 @@ class Event_Anonymized_Rollups:
         dataframe['job_duration_seconds'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
 
-
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
 
@@ -82,7 +81,7 @@ class Event_Anonymized_Rollups:
 
         success_events_list = ['runner_on_ok', 'runner_on_async_ok']
         failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_on_unreachable']
-     
+
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
         dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list)
@@ -98,7 +97,6 @@ class Event_Anonymized_Rollups:
 
         return dataframe
 
-   
     @staticmethod
     def event_collections_aggregations(dataframe):
         """
@@ -110,20 +108,17 @@ class Event_Anonymized_Rollups:
           * Number of jobs per collection source that have failed.
           * Success/failure rate of jobs per collection source.
           * Number of jobs executed that use a specific partner collection.
-        
+
         dataframe corresponds to events joined with jobs, also collection_source is added - validated, rh-certified, community, etc.
         dataframe contains job durations and waiting times unique per job_id
         """
 
         # Collapse to one record per (job_id, collection_source)
-        per_job = (
-            dataframe.groupby(['job_id', 'collection_source'], as_index=False)
-            .agg(
-                job_duration_seconds=('job_duration_seconds', 'first'),   
-                job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-                job_failed=('job_failed', 'first'), 
-                host_count=('host_id', 'nunique')
-            )
+        per_job = dataframe.groupby(['job_id', 'collection_source'], as_index=False).agg(
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            job_failed=('job_failed', 'first'),
+            host_count=('host_id', 'nunique'),
         )
 
         # Aggregate at collection_source level
@@ -146,7 +141,6 @@ class Event_Anonymized_Rollups:
         )
 
         return result
-
 
     @staticmethod
     def events_modules_aggregations(dataframe):
@@ -171,7 +165,6 @@ class Event_Anonymized_Rollups:
 
         modules_used_per_playbook_total = dataframe.groupby('playbook')['module_name'].nunique()
 
-
         # Collapse events  one row per (job, module, task)
         # summarize all failed events as number of failed attempts
         # if one success events is seen, task is successful
@@ -187,7 +180,7 @@ class Event_Anonymized_Rollups:
             .reset_index()
             .assign(
                 task_failed=lambda x: (~x['task_success']) & (x['failed_attempts_total'] > 0),
-                task_success_with_failed_attempts=lambda x: x['task_success'] & (x['failed_attempts_total'] > 0), 
+                task_success_with_failed_attempts=lambda x: x['task_success'] & (x['failed_attempts_total'] > 0),
                 task_success_without_failed_attempts=lambda x: x['task_success'] & (x['failed_attempts_total'] == 0),
                 # task other - neither success or failure
                 task_other=lambda x: (~x['task_success']) & (x['failed_attempts_total'] == 0),
@@ -211,9 +204,7 @@ class Event_Anonymized_Rollups:
             .reset_index()
             .assign(
                 total_success_and_failure=lambda x: x['tasks_success_total'] + x['tasks_failed_total'],
-                success_rate=lambda x: x['tasks_success_total'].div(
-                    x['tasks_success_total'] + x['tasks_failed_total']
-                ),
+                success_rate=lambda x: x['tasks_success_total'].div(x['tasks_success_total'] + x['tasks_failed_total']),
                 success_rate_with_failed_attempts=lambda x: x['tasks_success_with_failed_attempts_total'].div(
                     x['tasks_success_total'] + x['tasks_failed_total']
                 ),
@@ -223,7 +214,6 @@ class Event_Anonymized_Rollups:
             )
         )
 
-
         return {
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
             'modules_used_to_automate_total': modules_used_to_automate_total,
@@ -231,8 +221,6 @@ class Event_Anonymized_Rollups:
             'module_stats': module_stats.to_dict(orient='records'),
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
         }
-
-
 
     @staticmethod
     def base(dataframe):
