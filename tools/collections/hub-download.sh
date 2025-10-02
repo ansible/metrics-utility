@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+cd "`dirname "$0"`"
 
 SSO='https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token'
 CLIENT_ID=${CLIENT_ID:?Missing CLIENT_ID}
@@ -18,6 +19,6 @@ LIMIT=100
 while [ "$OFFSET" -lt "$COUNT" ]; do
   sleep $(( RANDOM % 8 + 8 ))
   echo GET $OFFSET - $((OFFSET + LIMIT - 1))
-  curl -H "Authorization: Bearer $BEARER" -s "$API""$FILTERS""&offset=$OFFSET&limit=$LIMIT" | jq > hub."$OFFSET"
+  curl -H "Authorization: Bearer $BEARER" -s "$API""$FILTERS""&offset=$OFFSET&limit=$LIMIT" | jq > hub."$OFFSET".json
   OFFSET=$((OFFSET + LIMIT))
 done
