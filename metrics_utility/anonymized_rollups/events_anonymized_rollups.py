@@ -102,39 +102,48 @@ class Event_Anonymized_Rollups:
     @staticmethod
     def event_collections_aggregations(dataframe):
         """
-          *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-          *Average job duration for collection sources
-          *Average number of hosts automated per job for each collection source.
-          *Number of jobs per collection source that have failed.
-          *Success/failure rate of jobs per collection source.
-          ?Number of jobs executed that use a specific partner collection.
+        Aggregates job-level metrics by collection source:
+
+          * Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+          * Average job duration for collection sources.
+          * Average number of hosts automated per job for each collection source.
+          * Number of jobs per collection source that have failed.
+          * Success/failure rate of jobs per collection source.
+          * Number of jobs executed that use a specific partner collection.
         """
 
-        avg_hosts_per_job_for_collection_source = dataframe.groupby(['collection_source', 'job_id'])['host_id'].nunique().groupby('collection_source').mean()
+        # Collapse to one record per (job_id, collection_source)
+        per_job = (
+            dataframe.groupby(['job_id', 'collection_source'], as_index=False)
+            .agg(
+                job_duration_seconds=('job_duration_seconds', 'first'),   # assume consistent per job
+                job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+                job_failed=('job_failed', 'max'),  # if any row failed → job failed
+                host_count=('host_id', 'nunique')
+            )
+        )
 
+        # Aggregate at collection_source level
         result = (
-            dataframe.groupby('collection_source')
+            per_job.groupby('collection_source')
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
                 jobs_failed_total=('job_failed', 'sum'),
+                avg_hosts_per_job=('host_count', 'mean'),
             )
             .assign(
-                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'].div(x['jobs_total']),
-                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'].div(x['jobs_total']),
-                success_rate=lambda x: 1 - x['jobs_failed_total'].div(x['jobs_total']),
+                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
+                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
+                success_rate=lambda x: 1 - (x['jobs_failed_total'] / x['jobs_total']),
             )
-            .reset_index()   # <-- bring collection_source back as a column
+            .reset_index()
             .to_dict(orient='records')
         )
 
-        # avg_hosts_per_job_for_collection_source should be added to result
-        for row in result:
-            row['avg_hosts_per_job'] = avg_hosts_per_job_for_collection_source.get(row['collection_source'], 0)
-
-        # make sure everything is converted to python records
         return result
+
 
     @staticmethod
     def events_modules_aggregations(dataframe):
