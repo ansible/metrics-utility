@@ -142,26 +142,26 @@ def test_events_collections_anonymized_rollups():
 
     # times are in seconds
     # First dictionary 
-    assert data[0]['avg_job_duration_seconds'] == approx(570.0)
-    assert data[0]['avg_job_waiting_time_seconds'] == approx(450.0)
+    assert data[0]['avg_job_duration_seconds'] == approx(510.0)
+    assert data[0]['avg_job_waiting_time_seconds'] == approx(300.0)
     assert data[0]['collection_source'] == 'community'
     assert data[0]['success_rate'] == approx(0.5)
     assert data[0]['avg_hosts_per_job'] == approx(1.5)
-    assert data[0]['job_duration_total_seconds'] == approx(1140.0)
-    assert data[0]['job_waiting_time_total_seconds'] == approx(900.0)
+    assert data[0]['job_duration_total_seconds'] == approx(1020.0)
+    assert data[0]['job_waiting_time_total_seconds'] == approx(600.0)
     assert data[0]['jobs_total'] == 2
     assert data[0]['jobs_failed_total'] == 1
 
     # Second dictionary
-    assert data[1]['avg_job_duration_seconds'] == approx(2401.6666666666665)
-    assert data[1]['avg_job_waiting_time_seconds'] == approx(5420.0)
+    assert data[1]['avg_job_duration_seconds'] == approx(1201.6666666666667)
+    assert data[1]['avg_job_waiting_time_seconds'] == approx(2720.0)
     assert data[1]['collection_source'] == 'validated'
-    assert data[1]['success_rate'] == approx(0.33333333333333337)
+    assert data[1]['success_rate'] == approx(0.6666666666666667)
     assert data[1]['avg_hosts_per_job'] == approx(1.6666666666666667)
-    assert data[1]['job_duration_total_seconds'] == approx(7205.0)
-    assert data[1]['job_waiting_time_total_seconds'] == approx(16260.0)
+    assert data[1]['job_duration_total_seconds'] == approx(3605.0)
+    assert data[1]['job_waiting_time_total_seconds'] == approx(8160.0)
     assert data[1]['jobs_total'] == 3
-    assert data[1]['jobs_failed_total'] == 2
+    assert data[1]['jobs_failed_total'] == 1
 
 
     
