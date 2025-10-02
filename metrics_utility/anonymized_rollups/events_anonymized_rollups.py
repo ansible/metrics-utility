@@ -110,6 +110,9 @@ class Event_Anonymized_Rollups:
           * Number of jobs per collection source that have failed.
           * Success/failure rate of jobs per collection source.
           * Number of jobs executed that use a specific partner collection.
+        
+        dataframe corresponds to events joined with jobs, also collection_source is added - validated, rh-certified, community, etc.
+        dataframe contains job durations and waiting times unique per job_id
         """
 
         # Collapse to one record per (job_id, collection_source)

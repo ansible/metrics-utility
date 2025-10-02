@@ -256,23 +256,23 @@ def test_events_modules_aggregations_basic():
 
     # ansible.builtin.copy: six task runs (t1@h1, t1@h2, t3@h1, t4@h2, t14@h3, t15@h4), all success; 2 failed attempts total
     copy_stats = stats_by_module['ansible.builtin.copy']
-    assert copy_stats['tasks_unique_runs_total'] == 6
-    assert copy_stats['runs_success_total'] == 6
-    assert copy_stats['runs_failed_total'] == 0
+    assert copy_stats['total_success_and_failure'] == 6
+    assert copy_stats['tasks_success_total'] == 6
+    assert copy_stats['tasks_failed_total'] == 0
     assert copy_stats['failed_attempts_total'] == 2
     assert copy_stats['jobs_total'] == 2
     assert copy_stats['hosts_total'] == 4
 
     # community.general.yum: three task runs; one success, two failed; three failed attempts
     yum_stats = stats_by_module['community.general.yum']
-    assert yum_stats['tasks_unique_runs_total'] == 3
-    assert yum_stats['runs_success_total'] == 1
-    assert yum_stats['runs_failed_total'] == 2
+    assert yum_stats['total_success_and_failure'] == 3
+    assert yum_stats['tasks_success_total'] == 1
+    assert yum_stats['tasks_failed_total'] == 2
     assert yum_stats['failed_attempts_total'] == 3
 
     # community.mongodb.insert: two task runs; one success, one failed; three failed attempts
     mongo_stats = stats_by_module['community.mongodb.insert']
-    assert mongo_stats['tasks_unique_runs_total'] == 2
-    assert mongo_stats['runs_success_total'] == 1
-    assert mongo_stats['runs_failed_total'] == 1
+    assert mongo_stats['total_success_and_failure'] == 2
+    assert mongo_stats['tasks_success_total'] == 1
+    assert mongo_stats['tasks_failed_total'] == 1
     assert mongo_stats['failed_attempts_total'] == 3
