@@ -107,7 +107,7 @@ class Event_Anonymized_Rollups:
           * Average number of hosts automated per job for each collection source.
           * Number of jobs per collection source that have failed.
           * Success/failure rate of jobs per collection source.
-          * Number of jobs executed that use a specific partner collection.
+          * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
 
         dataframe corresponds to events joined with jobs, also collection_source is added - validated, rh-certified, community, etc.
         dataframe contains job durations and waiting times unique per job_id
