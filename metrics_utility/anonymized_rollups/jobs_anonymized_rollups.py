@@ -34,6 +34,10 @@ class Jobs_Anonymized_Rollups:
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['job_created']).dt.total_seconds()
 
+        # guard against negative times
+        dataframe = dataframe[dataframe['job_duration_seconds'] >= 0]
+        dataframe = dataframe[dataframe['job_waiting_time_seconds'] >= 0]
+
         aggregations_by_template = (
             dataframe.groupby('job_template_name')
             .agg(

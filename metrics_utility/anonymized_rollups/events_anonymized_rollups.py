@@ -74,11 +74,13 @@ class Event_Anonymized_Rollups:
         dataframe['job_duration_seconds'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
 
+        dataframe = dataframe[dataframe['job_duration_seconds'] >= 0]
+        dataframe = dataframe[dataframe['job_waiting_time_seconds'] >= 0]
+
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
 
         # Failure/Success rate of modules
-
         success_events_list = ['runner_on_ok', 'runner_on_async_ok']
         failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_on_unreachable']
 
