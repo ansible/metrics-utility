@@ -33,17 +33,18 @@ class Jobs_Anonymized_Rollups:
         dataframe['waiting_time'] = (dataframe['started'] - dataframe['job_created']) / 1000
 
         aggregations_by_template = dataframe.groupby('job_template_name').agg(
-            number_of_jobs_executed=('number_of_jobs_executed', 'sum'),
-            number_of_jobs_failed=('number_of_jobs_failed', 'sum'),
-            number_of_jobs_succeeded=('number_of_jobs_succeeded', 'sum'),
+            number_of_jobs_executed=('job_id', 'nunique'),
+            number_of_jobs_failed=('job_failed', 'sum'),
             job_duration_average_in_seconds=('duration', 'mean'),
             job_duration_maximum_in_seconds=('duration', 'max'),
             job_duration_minimum_in_seconds=('duration', 'min'),
             job_duration_total_in_seconds=('duration', 'sum'),
+            job_duration_median_in_seconds=('duration', 'median'),
             job_waiting_time_average_in_seconds=('waiting_time', 'mean'),
             job_waiting_time_maximum_in_seconds=('waiting_time', 'max'),
             job_waiting_time_minimum_in_seconds=('waiting_time', 'min'),
             job_waiting_time_total_in_seconds=('waiting_time', 'sum'),
+            job_waiting_time_median_in_seconds=('waiting_time', 'median'),
         )
 
         # return as object that can be converted to json
