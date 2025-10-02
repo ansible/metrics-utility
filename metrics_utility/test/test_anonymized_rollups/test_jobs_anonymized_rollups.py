@@ -1,27 +1,26 @@
+from datetime import datetime
+
 import pandas as pd
 import pytest
 
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollups import Jobs_Anonymized_Rollups
 
 
-from datetime import datetime
-
 data = [
     # controller A, version v1, template T1
     {
         'id': 1,
         'started': datetime(2024, 1, 1, 0, 0, 0),
-        'finished': datetime(2024, 1, 1, 0, 0, 3),   # +3s
+        'finished': datetime(2024, 1, 1, 0, 0, 3),  # +3s
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': datetime(2024, 1, 1, 0, 0, 0),  # wait 1s before start
+        'job_created': datetime(2024, 1, 1, 0, 0, 0),
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
     },  # duration 3s, wait 1s
-
     {
         'id': 2,
         'started': datetime(2024, 1, 1, 0, 0, 10),
@@ -35,7 +34,6 @@ data = [
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
     },  # duration 5s (failed), wait 2s
-
     # controller A, version v1, template T2
     {
         'id': 3,
@@ -50,7 +48,6 @@ data = [
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
     },  # duration 7s, wait 4s
-
     # controller B, version v2, template T1
     {
         'id': 4,
@@ -65,7 +62,6 @@ data = [
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
     },  # duration 2s, wait 1s
-
     # invalid rows (should be filtered out)
     {
         'id': 5,
@@ -88,8 +84,6 @@ data = [
 ]
 
 
-
-
 def test_jobs_anonymized_rollups_base_aggregation():
     # Build a DataFrame mimicking unified_jobs collector output columns we use
     # Times are in milliseconds epoch to match the code dividing by 1000
@@ -99,6 +93,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     result = Jobs_Anonymized_Rollups.base(df)
 
     import pprint
+
     pprint.pprint(result)
 
     # New version returns list of per-template aggregates
@@ -121,11 +116,11 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pytest.approx(rec_t1['job_duration_minimum_in_seconds'], rel=1e-6) == 2.0
     assert pytest.approx(rec_t1['job_duration_total_in_seconds'], rel=1e-6) == 10.0
 
-    # T1 waiting times (seconds): 1.0, 2.0, 0.5
-    assert pytest.approx(rec_t1['job_waiting_time_average_in_seconds'], rel=1e-6) == (1.0 + 2.0 + 0.5) / 3
+    # T1 waiting times (seconds): 0.0, 2.0, 1.0
+    assert pytest.approx(rec_t1['job_waiting_time_average_in_seconds'], rel=1e-6) == 1.0
     assert pytest.approx(rec_t1['job_waiting_time_maximum_in_seconds'], rel=1e-6) == 2.0
-    assert pytest.approx(rec_t1['job_waiting_time_minimum_in_seconds'], rel=1e-6) == 0.5
-    assert pytest.approx(rec_t1['job_waiting_time_total_in_seconds'], rel=1e-6) == 3.5
+    assert pytest.approx(rec_t1['job_waiting_time_minimum_in_seconds'], rel=1e-6) == 0.0
+    assert pytest.approx(rec_t1['job_waiting_time_total_in_seconds'], rel=1e-6) == 3.0
 
     # T2 counts
     assert rec_t2['number_of_jobs_failed'] == 0
