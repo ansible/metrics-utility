@@ -173,7 +173,7 @@ class Event_Anonymized_Rollups:
             'total_modules_used_per_playbook': total_modules_used_per_playbook.to_dict(),
         }
 
-     @staticmethod
+    @staticmethod
     def event_collections_aggregations(dataframe):
         """
         *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
