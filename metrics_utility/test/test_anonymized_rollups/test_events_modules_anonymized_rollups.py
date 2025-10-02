@@ -240,13 +240,13 @@ def test_events_modules_aggregations_basic():
 
     # list and count of unique modules
     assert set(result['list_of_modules_used_to_automate']) == expected_modules
-    assert result['total_modules_used_to_automate'] == len(expected_modules)
+    assert result['modules_used_to_automate_total'] == len(expected_modules)
 
     # average number of modules per playbook: both playbooks use 3 modules → avg 3
     assert result['avg_number_of_modules_used_in_a_playbooks'] == 3
 
     # total modules used per playbook
-    assert result['total_modules_used_per_playbook'] == {
+    assert result['modules_used_per_playbook_total'] == {
         'site.yml': 3,
         'db.yml': 3,
     }
@@ -256,26 +256,23 @@ def test_events_modules_aggregations_basic():
 
     # ansible.builtin.copy: six task runs (t1@h1, t1@h2, t3@h1, t4@h2, t14@h3, t15@h4), all success; 2 failed attempts total
     copy_stats = stats_by_module['ansible.builtin.copy']
-    assert copy_stats['runs_total'] == 6
-    assert copy_stats['runs_success'] == 6
-    assert copy_stats['runs_failed'] == 0
-    assert copy_stats['runs_other'] == 0
-    assert copy_stats['total_failed_attempts'] == 2
+    assert copy_stats['tasks_unique_runs_total'] == 6
+    assert copy_stats['runs_success_total'] == 6
+    assert copy_stats['runs_failed_total'] == 0
+    assert copy_stats['failed_attempts_total'] == 2
     assert copy_stats['jobs_total'] == 2
     assert copy_stats['hosts_total'] == 4
 
     # community.general.yum: three task runs; one success, two failed; three failed attempts
     yum_stats = stats_by_module['community.general.yum']
-    assert yum_stats['runs_total'] == 3
-    assert yum_stats['runs_success'] == 1
-    assert yum_stats['runs_failed'] == 2
-    assert yum_stats['runs_other'] == 0
-    assert yum_stats['total_failed_attempts'] == 3
+    assert yum_stats['tasks_unique_runs_total'] == 3
+    assert yum_stats['runs_success_total'] == 1
+    assert yum_stats['runs_failed_total'] == 2
+    assert yum_stats['failed_attempts_total'] == 3
 
     # community.mongodb.insert: two task runs; one success, one failed; three failed attempts
     mongo_stats = stats_by_module['community.mongodb.insert']
-    assert mongo_stats['runs_total'] == 2
-    assert mongo_stats['runs_success'] == 1
-    assert mongo_stats['runs_failed'] == 1
-    assert mongo_stats['runs_other'] == 0
-    assert mongo_stats['total_failed_attempts'] == 3
+    assert mongo_stats['tasks_unique_runs_total'] == 2
+    assert mongo_stats['runs_success_total'] == 1
+    assert mongo_stats['runs_failed_total'] == 1
+    assert mongo_stats['failed_attempts_total'] == 3

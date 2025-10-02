@@ -71,8 +71,8 @@ class Event_Anonymized_Rollups:
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
         dataframe['collection_name'] = dataframe['module_name'].apply(extract_collection_name)
 
-        dataframe['job_duration'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
-        dataframe['job_waiting_time'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
+        dataframe['job_duration_seconds'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
+        dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
 
 
         # fill collection source from collections_types
@@ -120,12 +120,12 @@ class Event_Anonymized_Rollups:
         list_of_modules_used_to_automate = dataframe['module_name'].unique().tolist()
 
         # Total number of modules automated
-        total_modules_used_to_automate = len(list_of_modules_used_to_automate)
+        modules_used_to_automate_total = len(list_of_modules_used_to_automate)
 
         # Avg number of modules used in a playbook
         avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook')['module_name'].nunique().mean()
 
-        total_modules_used_per_playbook = dataframe.groupby('playbook')['module_name'].nunique()
+        modules_used_per_playbook_total = dataframe.groupby('playbook')['module_name'].nunique()
 
 
         # Collapse events  one row per (job, module, task)
@@ -138,11 +138,11 @@ class Event_Anonymized_Rollups:
             dataframe.groupby(['job_id', 'module_name', 'task_uuid', 'host_id'])
             .agg(
                 task_success=('task_success_event', 'max'),  # any success seen?
-                total_failed_attempts=('task_failed_event', 'sum'),  # number of failed attempts due to retries
+                failed_attempts_total=('task_failed_event', 'sum'),  # number of failed attempts due to retries
             )
             .reset_index()
             .assign(
-                task_failed=lambda x: (~x['task_success']) & (x['retry_attempts'] > 0),     
+                task_failed=lambda x: (~x['task_success']) & (x['failed_attempts_total'] > 0),     
             )
         )
 
@@ -156,7 +156,7 @@ class Event_Anonymized_Rollups:
                 tasks_unique_runs_total=('task_uuid', 'nunique'),
                 runs_success_total=('task_success', 'sum'),
                 runs_failed_total=('task_failed', 'sum'),
-                total_failed_attempts=('total_failed_attempts', 'sum'),
+                failed_attempts_total=('failed_attempts_total', 'sum'),
             )
             .reset_index()
             .assign(
@@ -167,10 +167,10 @@ class Event_Anonymized_Rollups:
 
         return {
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
-            'total_modules_used_to_automate': total_modules_used_to_automate,
+            'modules_used_to_automate_total': modules_used_to_automate_total,
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'module_stats': module_stats.to_dict(orient='records'),
-            'total_modules_used_per_playbook': total_modules_used_per_playbook.to_dict(),
+            'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
         }
 
     @staticmethod
