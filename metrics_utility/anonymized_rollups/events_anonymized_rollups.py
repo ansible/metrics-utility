@@ -204,17 +204,22 @@ class Event_Anonymized_Rollups:
                 tasks_failed_total=('task_failed', 'sum'),
                 failed_attempts_total=('failed_attempts_total', 'sum'),
                 tasks_other_total=('task_other', 'sum'),
-                # total success + failure
-                total_success_and_failure=lambda x: x['tasks_success_total'] + x['tasks_failed_total'],
             )
             .reset_index()
             .assign(
-                # success rate = success_rate / (success_rate + failed_rate)
-                success_rate=lambda x: x['tasks_success_total'].div(x['total_success_and_failure']),
-                success_rate_with_failed_attempts=lambda x: x['tasks_success_with_failed_attempts_total'].div(x['total_success_and_failure']),
-                success_rate_without_failed_attempts=lambda x: x['tasks_success_without_failed_attempts_total'].div(x['total_success_and_failure']),
+                total_success_and_failure=lambda x: x['tasks_success_total'] + x['tasks_failed_total'],
+                success_rate=lambda x: x['tasks_success_total'].div(
+                    x['tasks_success_total'] + x['tasks_failed_total']
+                ),
+                success_rate_with_failed_attempts=lambda x: x['tasks_success_with_failed_attempts_total'].div(
+                    x['tasks_success_total'] + x['tasks_failed_total']
+                ),
+                success_rate_without_failed_attempts=lambda x: x['tasks_success_without_failed_attempts_total'].div(
+                    x['tasks_success_total'] + x['tasks_failed_total']
+                ),
             )
         )
+
 
         return {
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
