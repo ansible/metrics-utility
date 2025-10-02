@@ -4,63 +4,90 @@ import pytest
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollups import Jobs_Anonymized_Rollups
 
 
+from datetime import datetime
+
 data = [
     # controller A, version v1, template T1
     {
-        'started': 1_000_000,
-        'finished': 1_003_000,
+        'id': 1,
+        'started': datetime(2024, 1, 1, 0, 0, 0),
+        'finished': datetime(2024, 1, 1, 0, 0, 3),   # +3s
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': 999_000,  # waiting 1.0s
+        'job_created': datetime(2024, 1, 1, 0, 0, 0),  # wait 1s before start
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
-    },  # duration 3000 ms -> 3.0 s
+    },  # duration 3s, wait 1s
+
     {
-        'started': 1_010_000,
-        'finished': 1_015_000,
+        'id': 2,
+        'started': datetime(2024, 1, 1, 0, 0, 10),
+        'finished': datetime(2024, 1, 1, 0, 0, 15),  # +5s
         'failed': 1,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': 1_008_000,  # waiting 2.0s
+        'job_created': datetime(2024, 1, 1, 0, 0, 8),  # wait 2s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
-    },  # duration 5000 ms -> 5.0 s (failed)
+    },  # duration 5s (failed), wait 2s
+
     # controller A, version v1, template T2
     {
-        'started': 2_000_000,
-        'finished': 2_007_000,
+        'id': 3,
+        'started': datetime(2024, 1, 1, 0, 1, 40),
+        'finished': datetime(2024, 1, 1, 0, 1, 47),  # +7s
         'failed': 0,
         'job_template_name': 'T2',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': 1_996_000,  # waiting 4.0s
+        'job_created': datetime(2024, 1, 1, 0, 1, 36),  # wait 4s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
-    },  # duration 7000 ms -> 7.0 s
+    },  # duration 7s, wait 4s
+
     # controller B, version v2, template T1
     {
-        'started': 3_000_000,
-        'finished': 3_002_000,
+        'id': 4,
+        'started': datetime(2024, 1, 1, 0, 3, 20),
+        'finished': datetime(2024, 1, 1, 0, 3, 22),  # +2s
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-B',
         'ansible_version': 'v2',
-        'job_created': 2_999_500,  # waiting 0.5s
+        'job_created': datetime(2024, 1, 1, 0, 3, 19),  # wait 1s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
-    },  # duration 2000 ms -> 2.0 s
-    # Row with missing finished should be filtered out
-    {'started': 4_000_000, 'finished': None, 'failed': 0, 'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'},
-    # Row with missing started should be filtered out
-    {'started': None, 'finished': 5_000_000, 'failed': 0, 'job_template_name': 'T3', 'controller_node': 'ctrl-C', 'ansible_version': 'v3'},
+    },  # duration 2s, wait 1s
+
+    # invalid rows (should be filtered out)
+    {
+        'id': 5,
+        'started': datetime(2024, 1, 1, 0, 6, 40),
+        'finished': None,
+        'failed': 0,
+        'job_template_name': 'T3',
+        'controller_node': 'ctrl-C',
+        'ansible_version': 'v3',
+    },
+    {
+        'id': 6,
+        'started': None,
+        'finished': datetime(2024, 1, 1, 0, 8, 20),
+        'failed': 0,
+        'job_template_name': 'T3',
+        'controller_node': 'ctrl-C',
+        'ansible_version': 'v3',
+    },
 ]
+
+
 
 
 def test_jobs_anonymized_rollups_base_aggregation():
@@ -70,6 +97,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     df = pd.DataFrame(data)
 
     result = Jobs_Anonymized_Rollups.base(df)
+
+    import pprint
+    pprint.pprint(result)
 
     # New version returns list of per-template aggregates
     assert isinstance(result, list)
