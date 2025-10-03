@@ -59,12 +59,12 @@ class Base:
             logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
 
     def process_tarballs(self, path, temp_dir, enabled_set=None):
-        _safe_extract(path, temp_dir)
+        _safe_extract(path, temp_dir, enabled_set=enabled_set)
         self.enabled_set = enabled_set
 
         empty_dataframe = pd.DataFrame([{}])
         needed_data = {
-            'config': dict(),
+            'config': None,
             'data_collection_status': empty_dataframe,
             'main_indirectmanagednodeaudit': empty_dataframe,
             'job_host_summary': empty_dataframe,
@@ -130,7 +130,7 @@ class Base:
         Checks if any sheets_required item is in METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
         Returns a boolean so we know which sheets to provide in the report.
         """
-        sheet_options = self.extra_params.get('optional_sheets')
+        sheet_options = self.extra_params.get('optional_sheets') or []
         return bool(set(sheet_options) & set(sheets_required))
 
     def filter_tarball_paths(self, paths, collections):
@@ -182,7 +182,7 @@ def _write_member(member_path, file_obj, max_size, total_extracted_size):
     return total_extracted_size
 
 
-def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 1024):
+def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 1024, enabled_set=None):
     """
     Safely extract a tar archive from 'tar_path' into 'extract_path' with constraints:
       - Only extract *.json or *.csv files
@@ -190,7 +190,7 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
       - Limit number of extracted files to 'max_files'
       - Limit total uncompressed size to 'max_size' bytes
     """
-    extracted_files = 0
+    extracted_files = []
     total_extracted_size = 0
 
     # Ensure the extraction directory exists
@@ -198,32 +198,36 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
     with tarfile.open(tar_path, 'r:*') as tar:
         for member in tar.getmembers():
-            # 1) Skip directories and links
+            # Skip directories and links
             if member.isdir():
                 continue
             if member.issym() or member.islnk():
                 logger.warning(f'Skipping link: {member.name}')
                 continue
 
-            # 2) Only allow .json or .csv
+            # Only allow .json or .csv
             if not (member.name.endswith('.json') or member.name.endswith('.csv')):
                 continue
 
-            # 3) Build a fully qualified path for this member
-            #    and ensure it stays within extract_path.
+            # Only files from enabled_set (+ extension)
+            basename = os.path.basename(member.name)
+            if enabled_set:
+                if not any(basename.startswith(item + '.') for item in enabled_set):
+                    continue
+
+            # Build a fully qualified path for this member and ensure it stays within extract_path
             member_path = os.path.abspath(os.path.join(extract_path, member.name))
             extract_path_abs = os.path.abspath(extract_path)
             if not member_path.startswith(extract_path_abs + os.sep):
                 logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
                 continue
 
-            # 4) Limit total files
-            if extracted_files >= max_files:
+            # Limit total files
+            if len(extracted_files) >= max_files:
                 logger.warning(f'Reached max file limit of {max_files}.')
                 break
 
-            # 5) Extract file contents manually, in chunks,
-            #    to avoid trusting the tar's metadata size.
+            # Extract file contents manually in chunks to avoid trusting the tar's metadata size
             file_obj = tar.extractfile(member)
             if file_obj is None:
                 # Could not read the file content for some reason
@@ -235,6 +239,8 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
             # Write out the file, limiting max size
             total_extracted_size = _write_member(member_path, file_obj, max_size, total_extracted_size)
 
-            extracted_files += 1
+            extracted_files.append(basename)
 
-    logger.debug(f'Extraction complete. Files extracted: {extracted_files}, Total size: {total_extracted_size} bytes.')
+    file_count = len(extracted_files)
+    file_list = '", "'.join(sorted(extracted_files))
+    logger.debug(f'Extraction complete. Files extracted: {file_count} ("{file_list}"), Total size: {total_extracted_size} bytes.')

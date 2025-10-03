@@ -206,9 +206,6 @@ def process_tarballs(path, temp_dir, enabled_set):
             with open(file_path) as f:
                 return json.loads(f.read())
 
-        def sheet_enabled(self, _sheets):
-            return True
-
     # extract csv based on generator SELECTED_DATA
     return ProcessTarballs(extra_params=dict()).process_tarballs(path, temp_dir, enabled_set)
 
