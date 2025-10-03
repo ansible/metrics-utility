@@ -139,7 +139,7 @@ class Package:
             tarname_base = self._tarname_base()
             path = pathlib.Path(target)
             index = len(list(path.glob(f'{tarname_base}-*.*')))
-            tarname = f'{tarname_base}-{index}.tar.gz'
+            tarname = f'{tarname_base}-{index}-unknown.tar.gz'
 
             with tarfile.open(target.joinpath(tarname), 'w:gz') as f:
                 for collection in self.collections:
@@ -152,6 +152,15 @@ class Package:
                 self._manifest_to_tar(f)
 
                 self.tar_path = f.name
+
+            try:
+                orig_path = self.tar_path
+                new_path = orig_path.replace('-unknown.', f'-{collection.key}.')
+                os.rename(orig_path, new_path)
+                self.tar_path = new_path
+            except Exception as e:
+                logger.error(f'Failed to identify collection type: {e}')
+
             return True
         except Exception as e:
             logger.exception(f'Failed to write analytics archive file: {e}')
