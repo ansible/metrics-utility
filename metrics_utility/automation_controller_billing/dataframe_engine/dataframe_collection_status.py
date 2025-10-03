@@ -10,7 +10,8 @@ class DataframeCollectionStatus(Base):
         dataframe = None
 
         for date in self.dates():
-            for data in self.extractor.iter_batches(date=date):
+            # collections=None because data_collection_status is in every tarball, and none of them are named after it
+            for data in self.extractor.iter_batches(date=date, collections=None, optional=['data_collection_status']):
                 batch = data['data_collection_status']
                 if batch.empty:
                     continue

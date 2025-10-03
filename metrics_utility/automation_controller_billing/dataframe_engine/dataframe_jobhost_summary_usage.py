@@ -5,7 +5,7 @@ from metrics_utility.automation_controller_billing.helpers import merge_arrays, 
 from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
-# dataframe for job_host_summary / indirect_nodes
+# dataframe for job_host_summary / main_indirectmanagednodeaudit
 class DataframeJobhostSummaryUsage(Base):
     def build_dataframe(self):
         # A daily rollup dataframe
@@ -16,12 +16,16 @@ class DataframeJobhostSummaryUsage(Base):
             # Generate the monthly dataset for report
             ###############################
 
-            for data in self.extractor.iter_batches(date=date):
+            for data in self.extractor.iter_batches(
+                date=date,
+                collections=['job_host_summary', 'main_indirectmanagednodeaudit'],
+                optional=['config'],
+            ):
                 billing_data = data['job_host_summary']
                 managed_node_type = DIRECT
 
                 if billing_data.empty:
-                    billing_data = data['indirect_nodes']
+                    billing_data = data['main_indirectmanagednodeaudit']
                     managed_node_type = INDIRECT
 
                 if billing_data.empty:

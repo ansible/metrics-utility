@@ -1,9 +1,11 @@
 import json
 import os
+import re
 import tarfile
 
 import pandas as pd
 
+from metrics_utility.exceptions import MetricsException
 from metrics_utility.logger import logger
 
 
@@ -56,19 +58,22 @@ class Base:
         except FileNotFoundError:
             logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
 
-    def process_tarballs(self, path, temp_dir):
+    def process_tarballs(self, path, temp_dir, enabled_set=None):
         _safe_extract(path, temp_dir)
-        config = self.load_config(os.path.join(temp_dir, 'config.json'))
+        self.enabled_set = enabled_set
 
         empty_dataframe = pd.DataFrame([{}])
         needed_data = {
-            'config': config,
+            'config': dict(),
             'data_collection_status': empty_dataframe,
-            'indirect_nodes': empty_dataframe,
+            'main_indirectmanagednodeaudit': empty_dataframe,
             'job_host_summary': empty_dataframe,
             'main_host': empty_dataframe,
             'main_jobevent': empty_dataframe,
         }
+
+        if self.csv_enabled('config'):
+            needed_data['config'] = self.load_config(os.path.join(temp_dir, 'config.json'))
 
         if self.csv_enabled('data_collection_status'):
             needed_data['data_collection_status'] = self.build_data_batch(temp_dir, 'data_collection_status')
@@ -77,7 +82,7 @@ class Base:
             needed_data['job_host_summary'] = self.build_data_batch(temp_dir, 'job_host_summary')
 
         if self.csv_enabled('main_indirectmanagednodeaudit'):
-            needed_data['indirect_nodes'] = self.build_data_batch(temp_dir, 'main_indirectmanagednodeaudit')
+            needed_data['main_indirectmanagednodeaudit'] = self.build_data_batch(temp_dir, 'main_indirectmanagednodeaudit')
 
         if self.csv_enabled('main_jobevent'):
             needed_data['main_jobevent'] = self.build_data_batch(temp_dir, 'main_jobevent')
@@ -98,8 +103,17 @@ class Base:
             return pd.DataFrame([{}])
 
     def csv_enabled(self, name):
-        """Enable CSV extraction based on list of rendered sheets"""
-        return self.sheet_enabled(CSV_SHEETS[name])
+        """
+        Enable CSV extraction based on list of rendered sheets, but also enabled_set if set
+        Only true if there's both a sheet that needs it and we're called by a dataframe that asks for it
+        """
+        if name in CSV_SHEETS and not self.sheet_enabled(CSV_SHEETS[name]):
+            return False
+
+        if self.enabled_set is None:
+            return True
+
+        return name in self.enabled_set
 
     def get_path_prefix(self, date):
         """Return the data/Y/m/d path"""
@@ -118,6 +132,36 @@ class Base:
         """
         sheet_options = self.extra_params.get('optional_sheets')
         return bool(set(sheet_options) & set(sheets_required))
+
+    def filter_tarball_paths(self, paths, collections):
+        # collections=['main_host', 'foo'] - returns only filenames matching *-main_host.tar.gz or *-foo.tar.gz
+        if collections is None:
+            return paths
+
+        if 'data_collection_status' in collections:
+            raise MetricsException('data_collection_status is not a valid tarball name filter')
+
+        if 'config' in collections:
+            raise MetricsException('config is not a valid tarball name filter')
+
+        def match(s):
+            # should not happen, but make sure we're not ignoring data if it does
+            if s.find('-unknown.') or s.find('-config.'):
+                return True
+
+            # include all files produced by 0.6.0 and lower
+            if re.search(r'-\d+.tar.gz$', s):
+                return True
+
+            # match against collections
+            for key in collections:
+                if s.find(f'-{key}.') != -1:
+                    return True
+
+            return False
+
+        paths = filter(match, paths)
+        return list(paths)
 
 
 def _write_member(member_path, file_obj, max_size, total_extracted_size):

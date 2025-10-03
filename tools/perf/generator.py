@@ -206,11 +206,11 @@ def process_tarballs(path, temp_dir, enabled_set):
             with open(file_path) as f:
                 return json.loads(f.read())
 
-        # extract csv based on generator SELECTED_DATA
-        def csv_enabled(self, name):
-            return name in enabled_set
+        def sheet_enabled(self, _sheets):
+            return True
 
-    return ProcessTarballs(extra_params=dict()).process_tarballs(path, temp_dir)
+    # extract csv based on generator SELECTED_DATA
+    return ProcessTarballs(extra_params=dict()).process_tarballs(path, temp_dir, enabled_set)
 
 
 # metrics_utility.automation_controller_billing.collectors daily_slicing, but without the awx imports
@@ -338,7 +338,7 @@ Environment vars:
 
                 self.concat('job_host_summary', data['job_host_summary'])
                 self.concat('main_host', data['main_host'])
-                self.concat('main_indirectmanagednodeaudit', data['indirect_nodes'])
+                self.concat('main_indirectmanagednodeaudit', data['main_indirectmanagednodeaudit'])
                 self.concat('main_jobevent', data['main_jobevent'])
                 self.config_json = data['config']
 

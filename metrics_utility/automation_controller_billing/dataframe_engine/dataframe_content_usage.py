@@ -13,7 +13,7 @@ class DataframeContentUsage(Base):
             ###############################
             # Start a daily rollup code here
             ###############################
-            for data in self.extractor.iter_batches(date=date):
+            for data in self.extractor.iter_batches(date=date, collections=['main_jobevent'], optional=['config']):
                 # If the dataframe is empty, skip additional processing
                 events = data['main_jobevent']
                 if events.empty:
