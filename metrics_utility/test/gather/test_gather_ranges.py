@@ -83,7 +83,7 @@ def test_only_host_scope(cleanup_glob):
         f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/'
         f'00000000-0000-0000-0000-000000000000-'
         f'{year}-{month}-{day}-000000+0000-'
-        f'{year}-{month}-{day}-000000+0000-0.tar.gz'
+        f'{year}-{month}-{day}-000000+0000-0-main_host.tar.gz'
     )
 
     # ensure no other tarballs are present in the directory for current date
