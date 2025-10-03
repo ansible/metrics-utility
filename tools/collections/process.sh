@@ -4,9 +4,9 @@ cd "`dirname "$0"`"
 
 (
 for f in galaxy.[0-9]*.json; do
-  cat "$f" | jq '.data | map(.collection_version) | map( .namespace + "." + .name )' | sed -e 's/\[//g' -e 's/\]//g' -e 's/"//g' -e 's/,$//' -e 's/\s*//g' -e '/^$/d'
+  jq -S '.data | map( { key: (.collection_version.namespace + "." + .collection_version.name), value: "community" } ) | from_entries' "$f"
 done
 for f in hub.[0-9]*.json; do
-  cat "$f" | jq '.data | map(.collection_version) | map( .namespace + "." + .name )' | sed -e 's/\[//g' -e 's/\]//g' -e 's/"//g' -e 's/,$//' -e 's/\s*//g' -e '/^$/d'
+  jq -S '.data | map( { key: (.collection_version.namespace + "." + .collection_version.name), value: (if .repository.name == "published" then "certified" else "validated" end) } ) | from_entries' "$f"
 done
-) | sort -u | sed -e 's/^/  "/' -e 's/$/",/' -e '1s/^/[/' -e '$s/,$/]/' | jq > collections.json
+) | jq -S -s add > collections.json
