@@ -130,7 +130,12 @@ class Base:
         Checks if any sheets_required item is in METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
         Returns a boolean so we know which sheets to provide in the report.
         """
-        sheet_options = self.extra_params.get('optional_sheets') or []
+        sheet_options = self.extra_params.get('optional_sheets')
+
+        # no optional_sheets in rollups & generator - allow everything
+        if sheet_options is None:
+            return True
+
         return bool(set(sheet_options) & set(sheets_required))
 
     def filter_tarball_paths(self, paths, collections):
