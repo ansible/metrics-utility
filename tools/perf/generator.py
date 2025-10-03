@@ -378,7 +378,7 @@ Environment vars:
         name_base = f'{uuid}-{frm}-{to}'
 
         index = len(list(target.glob(f'{name_base}-*.*')))
-        tarname = f'{name_base}-{index}.tar.gz'
+        tarname = f'{name_base}-{index}-{table}.tar.gz'
 
         filename = target.joinpath(tarname)
         with tarfile.open(filename, 'w:gz') as tar:
