@@ -19,6 +19,8 @@ export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
 export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 
+export METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS="ccsp_summary,data_collection_status,indirectly_managed_nodes,infrastructure_summary,inventory_scope,jobs,managed_nodes,managed_nodes_by_organizations,usage_by_collections,usage_by_modules,usage_by_organizations,usage_by_roles"
+
 TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py build_report --month=2024-04 --force "$@"
