@@ -24,7 +24,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: "Set up Python"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: "pyproject.toml"
 
@@ -96,7 +96,7 @@ jobs:
           uv run pytest -s -v --cov=. --cov-report=xml
 
       - name: "Send code coverage report to Sonar Cloud"
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         if: ${{ github.base_ref }}
         env:
           SONAR_HOST_URL: https://sonarcloud.io
@@ -109,14 +109,14 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=ansible
             -Dsonar.projectKey=ansible_metrics-utility
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
-            -Dsonar.pullrequest.branch=${{ github.head_ref }}
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            "-Dsonar.pullrequest.base=${{ github.base_ref }}"
+            "-Dsonar.pullrequest.branch=${{ github.head_ref }}"
+            "-Dsonar.pullrequest.key=${{ github.event.pull_request.number }}"
             -Dsonar.pullrequest.provider=github
             -Dsonar.python.coverage.reportPaths=coverage.xml
 
       - name: "Send code coverage report to Sonar Cloud"
-        uses: SonarSource/sonarqube-scan-action@v5
+        uses: SonarSource/sonarqube-scan-action@v6
         if: ${{ ! github.base_ref }}
         env:
           SONAR_HOST_URL: https://sonarcloud.io
