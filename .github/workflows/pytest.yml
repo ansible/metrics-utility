@@ -109,9 +109,9 @@ jobs:
             -Dsonar.host.url=https://sonarcloud.io
             -Dsonar.organization=ansible
             -Dsonar.projectKey=ansible_metrics-utility
-            -Dsonar.pullrequest.base=${{ github.base_ref }}
-            -Dsonar.pullrequest.branch=${{ github.head_ref }}
-            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }}
+            "-Dsonar.pullrequest.base=${{ github.base_ref }}"
+            "-Dsonar.pullrequest.branch=${{ github.head_ref }}"
+            "-Dsonar.pullrequest.key=${{ github.event.pull_request.number }}"
             -Dsonar.pullrequest.provider=github
             -Dsonar.python.coverage.reportPaths=coverage.xml
 
