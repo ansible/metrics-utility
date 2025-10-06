@@ -1,6 +1,7 @@
 import pandas as pd
 
-from metrics_utility.anonymized_rollups.events_anonymized_rollups import Event_Anonymized_Rollups
+from metrics_utility.anonymized_rollups.events_common_anonymized_rollups import Event_Common_Anonymized_Rollups
+from metrics_utility.anonymized_rollups.events_modules_anonymized_rollups import Event_Modules_Anonymized_Rollups
 
 
 events = [
@@ -223,8 +224,8 @@ def test_events_modules_aggregations_basic():
     # ensure string-typed columns for .str-based filtering in prepare_data
     for col in ['host_id', 'job_id', 'playbook']:
         df[col] = df[col].astype(str)
-    prepared = Event_Anonymized_Rollups.prepare_data(df.copy())
-    result = Event_Anonymized_Rollups.events_modules_aggregations(prepared)
+    prepared = Event_Common_Anonymized_Rollups.prepare_data(df.copy())
+    result = Event_Modules_Anonymized_Rollups.events_modules_aggregations(prepared)
 
     import pprint
 
