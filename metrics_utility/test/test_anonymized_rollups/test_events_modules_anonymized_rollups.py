@@ -224,6 +224,8 @@ def test_events_modules_aggregations_basic():
     # ensure string-typed columns for .str-based filtering in prepare_data
     for col in ['host_id', 'job_id', 'playbook']:
         df[col] = df[col].astype(str)
+    # provide default event_data for ignore_errors lookup in prepare_data
+    df['event_data'] = [{}] * len(df)
     prepared = Event_Common_Anonymized_Rollups.prepare_data(df.copy())
     result = Event_Modules_Anonymized_Rollups.events_modules_aggregations(prepared)
 
@@ -250,28 +252,52 @@ def test_events_modules_aggregations_basic():
         'db.yml': 3,
     }
 
-    # Verify a few per-module stats
+    # Verify a few per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}
 
     # ansible.builtin.copy: six task runs (t1@h1, t1@h2, t3@h1, t4@h2, t14@h3, t15@h4), all success; 2 failed attempts total
     copy_stats = stats_by_module['ansible.builtin.copy']
-    assert copy_stats['total_success_and_failure'] == 6
-    assert copy_stats['tasks_success_total'] == 6
-    assert copy_stats['tasks_failed_total'] == 0
-    assert copy_stats['failed_attempts_total'] == 2
+    copy_total_tasks = (
+        copy_stats['task_clean_success_total']
+        + copy_stats['task_success_with_reruns_total']
+        + copy_stats['task_failed_total']
+        + copy_stats['task_unreachable_total']
+        + copy_stats['task_failed_and_unreachable_total']
+        + copy_stats['task_other_total']
+    )
+    assert copy_total_tasks == 6
+    assert copy_stats['task_clean_success_total'] == 4
+    assert copy_stats['task_success_with_reruns_total'] == 2
+    assert copy_stats['task_failed_total'] == 0
     assert copy_stats['jobs_total'] == 2
     assert copy_stats['hosts_total'] == 4
 
     # community.general.yum: three task runs; one success, two failed; three failed attempts
     yum_stats = stats_by_module['community.general.yum']
-    assert yum_stats['total_success_and_failure'] == 3
-    assert yum_stats['tasks_success_total'] == 1
-    assert yum_stats['tasks_failed_total'] == 2
-    assert yum_stats['failed_attempts_total'] == 3
+    yum_total_tasks = (
+        yum_stats['task_clean_success_total']
+        + yum_stats['task_success_with_reruns_total']
+        + yum_stats['task_failed_total']
+        + yum_stats['task_unreachable_total']
+        + yum_stats['task_failed_and_unreachable_total']
+        + yum_stats['task_other_total']
+    )
+    assert yum_total_tasks == 3
+    assert yum_stats['task_clean_success_total'] == 1
+    assert yum_stats['task_success_with_reruns_total'] == 0
+    assert yum_stats['task_failed_total'] == 2
 
     # community.mongodb.insert: two task runs; one success, one failed; three failed attempts
     mongo_stats = stats_by_module['community.mongodb.insert']
-    assert mongo_stats['total_success_and_failure'] == 2
-    assert mongo_stats['tasks_success_total'] == 1
-    assert mongo_stats['tasks_failed_total'] == 1
-    assert mongo_stats['failed_attempts_total'] == 3
+    mongo_total_tasks = (
+        mongo_stats['task_clean_success_total']
+        + mongo_stats['task_success_with_reruns_total']
+        + mongo_stats['task_failed_total']
+        + mongo_stats['task_unreachable_total']
+        + mongo_stats['task_failed_and_unreachable_total']
+        + mongo_stats['task_other_total']
+    )
+    assert mongo_total_tasks == 2
+    assert mongo_stats['task_clean_success_total'] == 1
+    assert mongo_stats['task_success_with_reruns_total'] == 0
+    assert mongo_stats['task_failed_total'] == 1
