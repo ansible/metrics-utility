@@ -1,6 +1,3 @@
-
-
-
 class Event_Collections_Anonymized_Rollups:
     """
     Event collections rollups operate over main_jobevent_service collector data
@@ -86,4 +83,3 @@ class Event_Collections_Anonymized_Rollups:
         )
 
         return result
-
