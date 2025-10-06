@@ -22,6 +22,8 @@ class Event_Modules_Anonymized_Rollups:
 
     task_success_event - boolean flag indicating if the task was successful
     task_failed_event - boolean flag indicating if the task failed
+    task_unreachable_event - boolean flag indicating if the task was unreachable
+    task_skipped_event - boolean flag indicating if the task was skipped
 
     How the events works?
     Job is created and executed on each host - defined by playbook.
@@ -47,6 +49,9 @@ class Event_Modules_Anonymized_Rollups:
         *Modules Used to Automate
         *Total number of modules automated
 
+        *Total number of modules automated per collection source
+        *Failure/Success rate of modules per collection source
+
         dataframe corresponds to events joined with jobs
         """
 
@@ -69,7 +74,7 @@ class Event_Modules_Anonymized_Rollups:
         # when at least one success event is seen, task is successful
         # failed event can be repeated multiple times, we are counting failed attempts
         task_summary = (
-            dataframe.groupby(['job_id', 'host_id', 'task_uuid'])
+            dataframe.groupby(['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source'])
             .agg(
                 seen_success=('task_success_event', 'max'),
                 seen_failed=('task_failed_event', 'max'),
@@ -90,7 +95,7 @@ class Event_Modules_Anonymized_Rollups:
         # Per-module counts
         # receiver of this data can easily calculate success rates
         module_stats = (
-            task_summary.groupby('module_name')
+            task_summary.groupby(['module_name', 'collection_source'])
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 hosts_total=('host_id', 'nunique'),
@@ -98,8 +103,21 @@ class Event_Modules_Anonymized_Rollups:
                 task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
                 task_failed_total=('task_failed', 'sum'),
                 task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum'),
-                task_other_total=('task_other', 'sum'),
+                task_skipped_total=('task_skipped', 'sum')
+            )
+            .reset_index()
+        )
+
+        collection_stats = (
+            task_summary.groupby('collection_source')
+            .agg(
+                jobs_total=('job_id', 'nunique'),
+                hosts_total=('host_id', 'nunique'),
+                task_clean_success_total=('task_clean_success', 'sum'),
+                task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
+                task_failed_total=('task_failed', 'sum'),
+                task_unreachable_total=('task_unreachable', 'sum'),
+                task_skipped_total=('task_skipped', 'sum')
             )
             .reset_index()
         )
@@ -110,4 +128,5 @@ class Event_Modules_Anonymized_Rollups:
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'module_stats': module_stats.to_dict(orient='records'),
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
+            'collection_stats': collection_stats.to_dict(orient='records'),
         }
