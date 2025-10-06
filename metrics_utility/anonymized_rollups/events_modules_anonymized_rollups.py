@@ -87,7 +87,7 @@ class Event_Modules_Anonymized_Rollups:
         dataframe = dataframe[dataframe['job_waiting_time_seconds'] >= 0]
 
         # fill collection source from collections_types
-        dataframe['collection_source'] = dataframe['collection_name'].map(collections_types)
+        dataframe['collection_source'] = dataframe['collection_name'].map(collections_types).fillna('Unknown')
 
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok']
@@ -97,13 +97,12 @@ class Event_Modules_Anonymized_Rollups:
 
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
-        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list) & ~dataframe['event_data'].apply(
-            lambda d: d.get('ignore_errors', False)
-        )
 
-        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(failed_events_list) & dataframe['event_data'].apply(
-            lambda d: d.get('ignore_errors', False)
-        )
+        def _ignore_errors_flag(d):
+            return isinstance(d, dict) and d.get('ignore_errors', False)
+
+        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list) & ~dataframe['event_data'].apply(_ignore_errors_flag)
+        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(failed_events_list) & dataframe['event_data'].apply(_ignore_errors_flag)
         dataframe['task_unreachable_event'] = dataframe['event'].isin(unreachable_events_list)
         dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
 
@@ -158,6 +157,8 @@ class Event_Modules_Anonymized_Rollups:
                 seen_unreachable=('task_unreachable_event', 'max'),
                 seen_skipped=('task_skipped_event', 'max'),
                 seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
+                job_duration_seconds=('job_duration_seconds', 'first'),
+                job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             )
             .reset_index()
             .assign(
@@ -169,10 +170,10 @@ class Event_Modules_Anonymized_Rollups:
                 task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
                 task_skipped=lambda x: (
                     x['seen_skipped']
-                    and not x['seen_success']
-                    and not x['seen_failed']
-                    and not x['seen_unreachable']
-                    and not x['seen_failed_and_ignored']
+                    & ~x['seen_success']
+                    & ~x['seen_failed']
+                    & ~x['seen_unreachable']
+                    & ~x['seen_failed_and_ignored']
                 ),
             )
         )
@@ -189,6 +190,7 @@ class Event_Modules_Anonymized_Rollups:
                 task_failed_total=('task_failed', 'sum'),
                 task_unreachable_total=('task_unreachable', 'sum'),
                 task_skipped_total=('task_skipped', 'sum'),
+                task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
             )
             .reset_index()
         )
@@ -203,6 +205,9 @@ class Event_Modules_Anonymized_Rollups:
                 task_failed_total=('task_failed', 'sum'),
                 task_unreachable_total=('task_unreachable', 'sum'),
                 task_skipped_total=('task_skipped', 'sum'),
+                task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
+                job_duration_seconds=('job_duration_seconds', 'sum'),
+                job_waiting_time_seconds=('job_waiting_time_seconds', 'sum'),
             )
             .reset_index()
         )
