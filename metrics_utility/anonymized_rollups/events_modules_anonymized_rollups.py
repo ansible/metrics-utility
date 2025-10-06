@@ -69,22 +69,21 @@ class Event_Modules_Anonymized_Rollups:
         # when at least one success event is seen, task is successful
         # failed event can be repeated multiple times, we are counting failed attempts
         task_summary = (
-            dataframe.groupby(['job_id', 'module_name', 'task_uuid', 'host_id'])
+            dataframe.groupby(['job_id', 'host_id', 'task_uuid'])
             .agg(
-                task_success=('task_success_event', 'max'),  # any success seen?
-                failed_attempts_total=('task_failed_event', 'sum'),  # number of failed attempts due to retries
-                task_unreachable_attemts_total=('task_unreachable_event', 'sum'),
+                seen_success=('task_success_event', 'max'),
+                seen_failed=('task_failed_event', 'max'),
+                seen_unreachable=('task_unreachable_event', 'max'),
+                seen_skipped=('task_skipped_event', 'max'),
             )
             .reset_index()
             .assign(
-                task_clean_success=lambda x: x['task_success'] & (x['failed_attempts_total'] == 0) & (x['task_unreachable_attemts_total'] == 0),
-                task_success_with_reruns=lambda x: x['task_success'] & ((x['failed_attempts_total'] > 0) | (x['task_unreachable_attemts_total'] > 0)),
-                task_failed=lambda x: (~x['task_success']) & (x['failed_attempts_total'] > 0) & (x['task_unreachable_attemts_total'] == 0),
-                task_unreachable=lambda x: (~x['task_success']) & (x['task_unreachable_attemts_total'] > 0) & (x['failed_attempts_total'] == 0),
-                task_failed_and_unreachable=lambda x: (~x['task_success'])
-                & (x['failed_attempts_total'] > 0)
-                & (x['task_unreachable_attemts_total'] > 0),
-                task_other=lambda x: (~x['task_success']) & (x['failed_attempts_total'] == 0) & (x['task_unreachable_attemts_total'] == 0),
+                # mutually exclusive categories - only one can be true
+                task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
+                task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
+                task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
+                task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'],
+                task_skipped=lambda x: x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'],
             )
         )
 
@@ -99,7 +98,7 @@ class Event_Modules_Anonymized_Rollups:
                 task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
                 task_failed_total=('task_failed', 'sum'),
                 task_unreachable_total=('task_unreachable', 'sum'),
-                task_failed_and_unreachable_total=('task_failed_and_unreachable', 'sum'),
+                task_skipped_total=('task_skipped', 'sum'),
                 task_other_total=('task_other', 'sum'),
             )
             .reset_index()

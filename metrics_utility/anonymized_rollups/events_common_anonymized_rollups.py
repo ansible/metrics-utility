@@ -51,6 +51,7 @@ class Event_Common_Anonymized_Rollups:
         success_events_list = ['runner_on_ok', 'runner_on_async_ok']
         failed_events_list = ['runner_on_failed', 'runner_on_async_failed']
         unreachable_events_list = ['runner_on_unreachable']
+        skipped_events_list = ['runner_on_skipped']
 
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
@@ -58,6 +59,7 @@ class Event_Common_Anonymized_Rollups:
             lambda d: d.get('ignore_errors', False)
         )
         dataframe['task_unreachable_event'] = dataframe['event'].isin(unreachable_events_list)
+        dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
 
         dataframe = dataframe[
             dataframe['module_name'].notna()
