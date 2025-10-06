@@ -5,20 +5,13 @@ import pandas as pd
 from metrics_utility.anonymized_rollups.collections_types import collections_types
 
 
-def collection_regexp():
-    return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
+_COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
 
-
-def extract_collection_name(x):
-    if x is None:
+def extract_collection_name(x: str | None) -> str | None:
+    if not x:
         return None
-
-    m = re.match(collection_regexp(), x)
-
-    if m:
-        return f'{m.groups()[0]}.{m.groups()[1]}'
-    else:
-        return None
+    m = _COLLECTION_RE.match(x)
+    return f"{m.group(1)}.{m.group(2)}" if m else None
 
 
 class Event_Modules_Anonymized_Rollups:
@@ -74,8 +67,11 @@ class Event_Modules_Anonymized_Rollups:
                 dataframe[col] = pd.to_datetime(dataframe[col], errors='coerce', utc=True)
 
         # add module column into the dataframe based on dataframe_content_usage.py approach
-        dataframe['task_action'] = dataframe.resolved_action.fillna(dataframe.task_action).astype(str)
-        dataframe.rename(columns={'task_action': 'module_name'}, inplace=True)
+        dataframe['module_name'] = (
+            dataframe['resolved_action']
+            .fillna(dataframe['task_action'])
+            .where(lambda s: s.notna() & (s.astype(str).str.strip() != ''))
+        )
 
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
         dataframe['collection_name'] = dataframe['module_name'].apply(extract_collection_name)
@@ -98,6 +94,7 @@ class Event_Modules_Anonymized_Rollups:
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
 
+        # TODO - load it in collector
         def _ignore_errors_flag(d):
             return isinstance(d, dict) and d.get('ignore_errors', False)
 
@@ -174,7 +171,10 @@ class Event_Modules_Anonymized_Rollups:
                     x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
                 ),
             )
-            .assign(job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed'] | df['task_unreachable']))
+            .assign(
+                job_id_that_contained_failed_task=lambda df: df['job_id']
+                .where(df['task_failed'] | df['task_unreachable'] | df['task_failed_and_ignored'])
+            )
         )
 
         # Per-module counts
