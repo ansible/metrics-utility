@@ -1,4 +1,3 @@
-
 import re
 
 import pandas as pd
@@ -20,6 +19,7 @@ def extract_collection_name(x):
         return f'{m.groups()[0]}.{m.groups()[1]}'
     else:
         return None
+
 
 class Event_Modules_Anonymized_Rollups:
     """
@@ -97,14 +97,12 @@ class Event_Modules_Anonymized_Rollups:
 
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
-        dataframe['task_failed_event'] = (
-            dataframe['event'].isin(failed_events_list)
-            & ~dataframe['event_data'].apply(lambda d: d.get('ignore_errors', False))
+        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list) & ~dataframe['event_data'].apply(
+            lambda d: d.get('ignore_errors', False)
         )
 
-        dataframe['task_failed_and_ignored_event'] = (
-            dataframe['event'].isin(failed_events_list)
-            & dataframe['event_data'].apply(lambda d: d.get('ignore_errors', False))
+        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(failed_events_list) & dataframe['event_data'].apply(
+            lambda d: d.get('ignore_errors', False)
         )
         dataframe['task_unreachable_event'] = dataframe['event'].isin(unreachable_events_list)
         dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
@@ -119,7 +117,6 @@ class Event_Modules_Anonymized_Rollups:
         ]
 
         return dataframe
-
 
     @staticmethod
     def events_modules_aggregations(dataframe):
@@ -170,13 +167,13 @@ class Event_Modules_Anonymized_Rollups:
                 task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
                 task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
                 task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
-                task_skipped = lambda x: (
+                task_skipped=lambda x: (
                     x['seen_skipped']
                     and not x['seen_success']
                     and not x['seen_failed']
                     and not x['seen_unreachable']
                     and not x['seen_failed_and_ignored']
-                )
+                ),
             )
         )
 
@@ -191,7 +188,7 @@ class Event_Modules_Anonymized_Rollups:
                 task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
                 task_failed_total=('task_failed', 'sum'),
                 task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum')
+                task_skipped_total=('task_skipped', 'sum'),
             )
             .reset_index()
         )
@@ -205,7 +202,7 @@ class Event_Modules_Anonymized_Rollups:
                 task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
                 task_failed_total=('task_failed', 'sum'),
                 task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum')
+                task_skipped_total=('task_skipped', 'sum'),
             )
             .reset_index()
         )

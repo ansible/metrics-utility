@@ -1,6 +1,5 @@
 import pandas as pd
 
-from metrics_utility.anonymized_rollups.events_common_anonymized_rollups import Event_Common_Anonymized_Rollups
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollups import Event_Modules_Anonymized_Rollups
 
 
@@ -226,7 +225,7 @@ def test_events_modules_aggregations_basic():
         df[col] = df[col].astype(str)
     # provide default event_data for ignore_errors lookup in prepare_data
     df['event_data'] = [{}] * len(df)
-    prepared = Event_Common_Anonymized_Rollups.prepare_data(df.copy())
+    prepared = Event_Modules_Anonymized_Rollups.prepare_data(df.copy())
     result = Event_Modules_Anonymized_Rollups.events_modules_aggregations(prepared)
 
     import pprint

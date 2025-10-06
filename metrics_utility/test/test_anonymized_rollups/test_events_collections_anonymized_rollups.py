@@ -1,9 +1,9 @@
 import pandas as pd
 
+from metric_utils.anonymized_rollups.events_modules_anonymized_rollups import Event_Modules_Anonymized_Rollups
 from pytest import approx
 
 from metrics_utility.anonymized_rollups.events_collections_anonymized_rollups import Event_Collections_Anonymized_Rollups
-from metrics_utility.anonymized_rollups.events_common_anonymized_rollups import Event_Common_Anonymized_Rollups
 
 
 # Synthetic event stream for testing
@@ -130,7 +130,7 @@ events = [
 
 def test_events_collections_anonymized_rollups():
     df = pd.DataFrame(events)
-    df = Event_Common_Anonymized_Rollups.prepare_data(df)
+    df = Event_Modules_Anonymized_Rollups.prepare_data(df)
 
     data = Event_Collections_Anonymized_Rollups.event_collections_aggregations(df)
 
