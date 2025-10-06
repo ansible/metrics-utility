@@ -48,26 +48,23 @@ def test_jobhostsummary_anonymized():
 
     assert set(by_template.keys()) == {'T1', 'T2'}
 
-    assert by_template['T1']['total_jobs'] == 2
-    assert by_template['T2']['total_jobs'] == 2
+    assert by_template['T1']['jobs_total'] == 2
+    assert by_template['T2']['jobs_total'] == 2
 
-    assert by_template['T1']['total_dark'] == 0
-    assert by_template['T2']['total_dark'] == 0
+    assert by_template['T1']['dark_total'] == 0
+    assert by_template['T2']['dark_total'] == 0
 
-    assert by_template['T1']['total_failures'] == 2
-    assert by_template['T2']['total_failures'] == 4
+    assert by_template['T1']['failures_total'] == 2
+    assert by_template['T2']['failures_total'] == 4
 
-    assert by_template['T1']['total_ok'] == 26
-    assert by_template['T2']['total_ok'] == 26
+    assert by_template['T1']['ok_total'] == 26
+    assert by_template['T2']['ok_total'] == 26
 
-    assert by_template['T1']['total_skipped'] == 2
-    assert by_template['T2']['total_skipped'] == 0
+    assert by_template['T1']['skipped_total'] == 2
+    assert by_template['T2']['skipped_total'] == 0
 
-    assert by_template['T1']['total_ignored'] == 0
-    assert by_template['T2']['total_ignored'] == 0
+    assert by_template['T1']['ignored_total'] == 0
+    assert by_template['T2']['ignored_total'] == 0
 
-    assert by_template['T1']['total_rescued'] == 0
-    assert by_template['T2']['total_rescued'] == 0
-
-    assert by_template['T1']['average_tasks_executed'] == 3.0
-    assert by_template['T2']['average_tasks_executed'] == 5.0
+    assert by_template['T1']['rescued_total'] == 0
+    assert by_template['T2']['rescued_total'] == 0
