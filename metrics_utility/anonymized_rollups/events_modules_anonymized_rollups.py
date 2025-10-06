@@ -90,10 +90,10 @@ class Event_Modules_Anonymized_Rollups:
         dataframe['collection_source'] = dataframe['collection_name'].map(collections_types).fillna('Unknown')
 
         # Failure/Success rate of modules
-        success_events_list = ['runner_on_ok', 'runner_on_async_ok']
-        failed_events_list = ['runner_on_failed', 'runner_on_async_failed']
-        unreachable_events_list = ['runner_on_unreachable']
-        skipped_events_list = ['runner_on_skipped']
+        success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
+        failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed']
+        unreachable_events_list = ['runner_on_unreachable', 'runner_item_on_unreachable']
+        skipped_events_list = ['runner_on_skipped', 'runner_item_on_skipped']
 
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
@@ -125,8 +125,13 @@ class Event_Modules_Anonymized_Rollups:
         *Modules Used to Automate
         *Total number of modules automated
 
-        *Total number of modules automated per collection source
-        *Failure/Success rate of modules per collection source
+        *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
+        * Average job duration for collection sources (total job duration / number of jobs).
+        * Average number of hosts automated per job for each collection source.
+        * Number of jobs per collection source that have failed.
+        * Success/failure rate of jobs per collection source (number of jobs that have failed / number of jobs).
+        * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
+
 
         dataframe corresponds to events joined with jobs
         """
@@ -140,7 +145,6 @@ class Event_Modules_Anonymized_Rollups:
 
         # Avg number of modules used in a playbook
         avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook')['module_name'].nunique().mean()
-
         modules_used_per_playbook_total = dataframe.groupby('playbook')['module_name'].nunique()
 
         # Collapse events  one row per (job, module, task)
@@ -157,8 +161,6 @@ class Event_Modules_Anonymized_Rollups:
                 seen_unreachable=('task_unreachable_event', 'max'),
                 seen_skipped=('task_skipped_event', 'max'),
                 seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
-                job_duration_seconds=('job_duration_seconds', 'first'),
-                job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             )
             .reset_index()
             .assign(
@@ -169,13 +171,10 @@ class Event_Modules_Anonymized_Rollups:
                 task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
                 task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
                 task_skipped=lambda x: (
-                    x['seen_skipped']
-                    & ~x['seen_success']
-                    & ~x['seen_failed']
-                    & ~x['seen_unreachable']
-                    & ~x['seen_failed_and_ignored']
+                    x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
                 ),
             )
+            .assign(job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed'] | df['task_unreachable']))
         )
 
         # Per-module counts
@@ -200,14 +199,29 @@ class Event_Modules_Anonymized_Rollups:
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 hosts_total=('host_id', 'nunique'),
-                task_clean_success_total=('task_clean_success', 'sum'),
-                task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
-                task_failed_total=('task_failed', 'sum'),
-                task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum'),
-                task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
-                job_duration_seconds=('job_duration_seconds', 'sum'),
-                job_waiting_time_seconds=('job_waiting_time_seconds', 'sum'),
+                failed_total=('job_id_that_contained_failed_task', 'nunique'),
+            )
+            .reset_index()
+        )
+
+        # Collapse to one record per (job_id, collection_source)
+        per_job = dataframe.groupby(['job_id', 'collection_source'], as_index=False).agg(
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            host_count=('host_id', 'nunique'),
+        )
+
+        job_time_stats = (
+            per_job.groupby('collection_source')
+            .agg(
+                jobs_total=('job_id', 'nunique'),
+                job_duration_total_seconds=('job_duration_seconds', 'sum'),
+                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
+                avg_hosts_per_job=('host_count', 'mean'),
+            )
+            .assign(
+                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
+                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
             )
             .reset_index()
         )
@@ -216,7 +230,8 @@ class Event_Modules_Anonymized_Rollups:
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
             'modules_used_to_automate_total': modules_used_to_automate_total,
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
-            'module_stats': module_stats.to_dict(orient='records'),
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'collection_stats': collection_stats.to_dict(orient='records'),
+            'module_stats': module_stats.to_dict(orient='records'),
+            'job_time_stats_per_collection_source': job_time_stats.to_dict(orient='records'),
         }
