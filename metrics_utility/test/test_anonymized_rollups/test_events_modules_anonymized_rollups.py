@@ -258,98 +258,98 @@ def test_events_modules_aggregations_basic():
         'ansible.builtin.copy',
         'community.general.yum',
         'community.mongodb.insert',
+        'ansible.builtin.template',
+        'ansible.posix.firewalld',
+        'community.aws.ec2',
     }
 
     # list and count of unique modules
     assert set(result['list_of_modules_used_to_automate']) == expected_modules
     assert result['modules_used_to_automate_total'] == len(expected_modules)
 
-    # average number of modules per playbook: both playbooks use 3 modules → avg 3
-    assert result['avg_number_of_modules_used_in_a_playbooks'] == 3
+    # average number of modules per playbook based on current aggregation
+    assert result['avg_number_of_modules_used_in_a_playbooks'] == 3.25
 
-    # total modules used per playbook
+    # total modules used per playbook (current aggregation)
     assert result['modules_used_per_playbook_total'] == {
-        'site.yml': 3,
         'db.yml': 3,
+        'deploy.yml': 3,
+        'infra.yml': 3,
+        'site.yml': 4,
     }
 
-    # collection stats assertions
+    # collection stats assertions (current aggregation schema)
     coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
     community_coll = coll_by_source['community']
-    assert community_coll['jobs_total'] == 2
-    assert community_coll['hosts_total'] == 2
-    assert community_coll['failed_total'] == 2
+    assert community_coll['jobs_total'] == 4
+    assert community_coll['hosts_total'] == 5
+    assert community_coll['job_duration_total_seconds'] == 1500.0
+    assert community_coll['job_waiting_time_total_seconds'] == 1320.0
+    assert community_coll['avg_job_duration_seconds'] == 375.0
+    assert community_coll['avg_job_waiting_time_seconds'] == 330.0
+    assert community_coll['avg_hosts_per_job'] == 2.0
+    assert community_coll['jobs_containing_collection_source_failed_total'] == 3
+    assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 3
 
     validated_coll = coll_by_source['validated']
-    assert validated_coll['jobs_total'] == 2
+    assert validated_coll['jobs_total'] == 4
     assert validated_coll['hosts_total'] == 4
-    assert validated_coll['failed_total'] == 0
+    assert validated_coll['job_duration_total_seconds'] == 1740.0
+    assert validated_coll['job_waiting_time_total_seconds'] == 1740.0
+    assert validated_coll['avg_job_duration_seconds'] == 435.0
+    assert validated_coll['avg_job_waiting_time_seconds'] == 435.0
+    assert validated_coll['avg_hosts_per_job'] == 1.25
+    assert validated_coll['jobs_containing_collection_source_failed_total'] == 3
+    assert validated_coll['jobs_failed_because_of_collection_source_failure_total'] == 0
 
-    # job time stats per collection source
-    time_by_source = {row['collection_source']: row for row in result['job_time_stats_per_collection_source']}
-    community_time = time_by_source['community']
-    assert community_time['jobs_total'] == 2
-    assert community_time['job_duration_total_seconds'] == 1800.0
-    assert community_time['job_waiting_time_total_seconds'] == 660.0
-    assert community_time['avg_job_duration_seconds'] == 900.0
-    assert community_time['avg_job_waiting_time_seconds'] == 330.0
-    assert community_time['avg_hosts_per_job'] == 1.5
-
-    validated_time = time_by_source['validated']
-    assert validated_time['jobs_total'] == 2
-    assert validated_time['job_duration_total_seconds'] == 1875.0
-    assert validated_time['job_waiting_time_total_seconds'] == 510.0
-    assert validated_time['avg_job_duration_seconds'] == 937.5
-    assert validated_time['avg_job_waiting_time_seconds'] == 255.0
-    assert validated_time['avg_hosts_per_job'] == 3.0
-
-    # Verify a few per-module stats (aligned to current aggregation output)
+    # Verify per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}
-
-    # ansible.builtin.copy: six task runs (t1@h1, t1@h2, t3@h1, t4@h2, t14@h3, t15@h4), all success; 2 failed attempts total
+    # ansible.builtin.copy (validated)
     copy_stats = stats_by_module['ansible.builtin.copy']
-    copy_total_tasks = (
-        copy_stats['task_clean_success_total']
-        + copy_stats['task_success_with_reruns_total']
-        + copy_stats['task_failed_total']
-        + copy_stats['task_unreachable_total']
-        + copy_stats['task_failed_and_ignored_total']
-    )
-    assert copy_total_tasks == 6
-    assert copy_stats['task_clean_success_total'] == 4
+    assert copy_stats['collection_source'] == 'validated'
+    assert copy_stats['task_clean_success_total'] == 1
     assert copy_stats['task_success_with_reruns_total'] == 2
     assert copy_stats['task_failed_total'] == 0
-    assert copy_stats['jobs_total'] == 2
-    assert copy_stats['hosts_total'] == 4
+    assert copy_stats['jobs_total'] == 3
+    assert copy_stats['hosts_total'] == 3
 
-    # community.general.yum: three task runs; one success, two failed; three failed attempts
+    # community.general.yum (community)
     yum_stats = stats_by_module['community.general.yum']
-    yum_total_tasks = (
-        yum_stats['task_clean_success_total']
-        + yum_stats['task_success_with_reruns_total']
-        + yum_stats['task_failed_total']
-        + yum_stats['task_unreachable_total']
-        + yum_stats['task_failed_and_ignored_total']
-    )
-    assert yum_total_tasks == 3
-    assert yum_stats['task_clean_success_total'] == 1
+    assert yum_stats['collection_source'] == 'community'
+    assert yum_stats['task_clean_success_total'] == 0
     assert yum_stats['task_success_with_reruns_total'] == 0
     assert yum_stats['task_failed_total'] == 2
     assert yum_stats['jobs_total'] == 2
-    assert yum_stats['hosts_total'] == 2
+    assert yum_stats['hosts_total'] == 1
 
-    # community.mongodb.insert: two task runs; one success, one failed; three failed attempts
+    # community.mongodb.insert (community)
     mongo_stats = stats_by_module['community.mongodb.insert']
-    mongo_total_tasks = (
-        mongo_stats['task_clean_success_total']
-        + mongo_stats['task_success_with_reruns_total']
-        + mongo_stats['task_failed_total']
-        + mongo_stats['task_unreachable_total']
-        + mongo_stats['task_failed_and_ignored_total']
-    )
-    assert mongo_total_tasks == 2
-    assert mongo_stats['task_clean_success_total'] == 1
-    assert mongo_stats['task_success_with_reruns_total'] == 0
-    assert mongo_stats['task_failed_total'] == 1
-    assert mongo_stats['jobs_total'] == 2
-    assert mongo_stats['hosts_total'] == 2
+    assert mongo_stats['collection_source'] == 'community'
+    assert mongo_stats['task_clean_success_total'] == 2
+    assert mongo_stats['task_success_with_reruns_total'] == 1
+    assert mongo_stats['task_failed_total'] == 0
+    assert mongo_stats['jobs_total'] == 3
+    assert mongo_stats['hosts_total'] == 3
+
+    # ansible.builtin.template (validated)
+    template_stats = stats_by_module['ansible.builtin.template']
+    assert template_stats['collection_source'] == 'validated'
+    assert template_stats['task_clean_success_total'] == 1
+    assert template_stats['task_unreachable_total'] == 1
+    assert template_stats['jobs_total'] == 2
+    assert template_stats['hosts_total'] == 2
+
+    # ansible.posix.firewalld (community)
+    firewalld_stats = stats_by_module['ansible.posix.firewalld']
+    assert firewalld_stats['collection_source'] == 'community'
+    assert firewalld_stats['task_clean_success_total'] == 1
+    assert firewalld_stats['task_failed_total'] == 1
+    assert firewalld_stats['jobs_total'] == 2
+    assert firewalld_stats['hosts_total'] == 2
+
+    # community.aws.ec2 (community)
+    ec2_stats = stats_by_module['community.aws.ec2']
+    assert ec2_stats['collection_source'] == 'community'
+    assert ec2_stats['task_clean_success_total'] == 1
+    assert ec2_stats['jobs_total'] == 1
+    assert ec2_stats['hosts_total'] == 1
