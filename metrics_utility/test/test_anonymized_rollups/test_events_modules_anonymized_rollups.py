@@ -7,7 +7,7 @@ events = [
     # ================================================================
     # Job 1 – site.yml – partial failures → job_failed=True
     # ================================================================
-    # Job 1 Host 1 – task_uuid t001 (failed then recovered)
+    # Job 1 Host 1 – t001 (copy failed then recovered)
     {
         'job_id': 1,
         'playbook': 'site.yml',
@@ -17,7 +17,7 @@ events = [
         'task_action': 'ansible.builtin.copy',
         'job_created': '2024-01-01 00:00:00+00',
         'job_started': '2024-01-01 00:01:00+00',
-        'job_finished': '2024-01-01 00:05:00+00',
+        'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
@@ -29,12 +29,12 @@ events = [
         'event': 'runner_on_ok',
         'task_action': 'ansible.builtin.copy',
         'job_created': '2024-01-01 00:00:00+00',
-        'job_started': '2024-01-01 00:05:30+00',
-        'job_finished': '2024-01-01 00:06:00+00',
+        'job_started': '2024-01-01 00:01:00+00',
+        'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
-    # Job 1 Host 2 – task_uuid t002 (yum failed final)
+    # Job 1 Host 2 – t002 (yum failed final)
     {
         'job_id': 1,
         'playbook': 'site.yml',
@@ -43,12 +43,12 @@ events = [
         'event': 'runner_on_failed',
         'task_action': 'community.general.yum',
         'job_created': '2024-01-01 00:00:00+00',
-        'job_started': '2024-01-01 00:03:00+00',
-        'job_finished': '2024-01-01 00:07:00+00',
+        'job_started': '2024-01-01 00:01:00+00',
+        'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
-    # Job 1 Host 3 – task_uuid t003 (mongodb insert success)
+    # Job 1 Host 3 – t003 (mongodb insert async success)
     {
         'job_id': 1,
         'playbook': 'site.yml',
@@ -57,12 +57,12 @@ events = [
         'event': 'runner_on_async_ok',
         'task_action': 'community.mongodb.insert',
         'job_created': '2024-01-01 00:00:00+00',
-        'job_started': '2024-01-01 00:04:00+00',
-        'job_finished': '2024-01-01 00:08:00+00',
+        'job_started': '2024-01-01 00:01:00+00',
+        'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
-    # Job 1 Host 4 – task_uuid t004 (unreachable)
+    # Job 1 Host 4 – t004 (template unreachable)
     {
         'job_id': 1,
         'playbook': 'site.yml',
@@ -71,25 +71,26 @@ events = [
         'event': 'runner_on_unreachable',
         'task_action': 'ansible.builtin.template',
         'job_created': '2024-01-01 00:00:00+00',
-        'job_started': '2024-01-01 00:02:00+00',
+        'job_started': '2024-01-01 00:01:00+00',
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
+
     # ================================================================
     # Job 2 – db.yml – async failure on one host → job_failed=True
     # ================================================================
-    # Job 2 Host 1 – task_uuid t005 (failed, then retried and ok)
+    # Job 2 Host 1 – t003 (mongodb failed, then ok)
     {
         'job_id': 2,
         'playbook': 'db.yml',
         'host_id': 1,
-        'task_uuid': 't005',
+        'task_uuid': 't003',
         'event': 'runner_on_failed',
         'task_action': 'community.mongodb.insert',
         'job_created': '2024-01-02 12:00:00+00',
         'job_started': '2024-01-02 12:04:00+00',
-        'job_finished': '2024-01-02 12:10:00+00',
+        'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
@@ -97,47 +98,48 @@ events = [
         'job_id': 2,
         'playbook': 'db.yml',
         'host_id': 1,
-        'task_uuid': 't005',
+        'task_uuid': 't003',
         'event': 'runner_on_ok',
         'task_action': 'community.mongodb.insert',
         'job_created': '2024-01-02 12:00:00+00',
-        'job_started': '2024-01-02 12:11:00+00',
-        'job_finished': '2024-01-02 12:13:00+00',
-        'job_failed': True,
-        'resolved_action': None,
-    },
-    # Job 2 Host 2 – task_uuid t006 (async failed final)
-    {
-        'job_id': 2,
-        'playbook': 'db.yml',
-        'host_id': 2,
-        'task_uuid': 't006',
-        'event': 'runner_on_async_failed',
-        'task_action': 'community.general.yum',
-        'job_created': '2024-01-02 12:00:00+00',
-        'job_started': '2024-01-02 12:07:00+00',
-        'job_finished': '2024-01-02 12:15:00+00',
-        'job_failed': True,
-        'resolved_action': None,
-    },
-    # Job 2 Host 3 – task_uuid t007 (copy ok)
-    {
-        'job_id': 2,
-        'playbook': 'db.yml',
-        'host_id': 3,
-        'task_uuid': 't007',
-        'event': 'runner_on_ok',
-        'task_action': 'ansible.builtin.copy',
-        'job_created': '2024-01-02 12:00:00+00',
-        'job_started': '2024-01-02 12:09:00+00',
+        'job_started': '2024-01-02 12:04:00+00',
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
+    # Job 2 Host 2 – t002 (yum async failed final)
+    {
+        'job_id': 2,
+        'playbook': 'db.yml',
+        'host_id': 2,
+        'task_uuid': 't002',
+        'event': 'runner_on_async_failed',
+        'task_action': 'community.general.yum',
+        'job_created': '2024-01-02 12:00:00+00',
+        'job_started': '2024-01-02 12:04:00+00',
+        'job_finished': '2024-01-02 12:20:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+    },
+    # Job 2 Host 3 – t001 (copy ok)
+    {
+        'job_id': 2,
+        'playbook': 'db.yml',
+        'host_id': 3,
+        'task_uuid': 't001',
+        'event': 'runner_on_ok',
+        'task_action': 'ansible.builtin.copy',
+        'job_created': '2024-01-02 12:00:00+00',
+        'job_started': '2024-01-02 12:04:00+00',
+        'job_finished': '2024-01-02 12:20:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+    },
+
     # ================================================================
     # Job 3 – infra.yml – all success → job_failed=False
     # ================================================================
-    # Job 3 Host 1 – task_uuid t008 (firewalld ok)
+    # Job 3 Host 1 – t008 (firewalld ok)
     {
         'job_id': 3,
         'playbook': 'infra.yml',
@@ -147,11 +149,11 @@ events = [
         'task_action': 'ansible.posix.firewalld',
         'job_created': '2024-01-03 08:00:00+00',
         'job_started': '2024-01-03 08:05:00+00',
-        'job_finished': '2024-01-03 08:10:00+00',
+        'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
     },
-    # Job 3 Host 2 – task_uuid t009 (ec2 provision ok)
+    # Job 3 Host 2 – t009 (ec2 provision ok)
     {
         'job_id': 3,
         'playbook': 'infra.yml',
@@ -160,34 +162,35 @@ events = [
         'event': 'runner_on_ok',
         'task_action': 'community.aws.ec2',
         'job_created': '2024-01-03 08:00:00+00',
-        'job_started': '2024-01-03 08:06:00+00',
-        'job_finished': '2024-01-03 08:15:00+00',
-        'job_failed': False,
-        'resolved_action': None,
-    },
-    # Job 3 Host 3 – task_uuid t010 (template ok)
-    {
-        'job_id': 3,
-        'playbook': 'infra.yml',
-        'host_id': 3,
-        'task_uuid': 't010',
-        'event': 'runner_item_on_ok',
-        'task_action': 'ansible.builtin.template',
-        'job_created': '2024-01-03 08:00:00+00',
-        'job_started': '2024-01-03 08:07:00+00',
+        'job_started': '2024-01-03 08:05:00+00',
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
     },
+    # Job 3 Host 3 – t004 (template ok)
+    {
+        'job_id': 3,
+        'playbook': 'infra.yml',
+        'host_id': 3,
+        'task_uuid': 't004',
+        'event': 'runner_item_on_ok',
+        'task_action': 'ansible.builtin.template',
+        'job_created': '2024-01-03 08:00:00+00',
+        'job_started': '2024-01-03 08:05:00+00',
+        'job_finished': '2024-01-03 08:18:00+00',
+        'job_failed': False,
+        'resolved_action': None,
+    },
+
     # ================================================================
     # Job 4 – deploy.yml – one host failed → job_failed=True
     # ================================================================
-    # Job 4 Host 4 – task_uuid t011 (firewalld fail final)
+    # Job 4 Host 4 – t008 (firewalld fail final)
     {
         'job_id': 4,
         'playbook': 'deploy.yml',
         'host_id': 4,
-        'task_uuid': 't011',
+        'task_uuid': 't008',
         'event': 'runner_on_failed',
         'task_action': 'ansible.posix.firewalld',
         'job_created': '2024-01-05 18:00:00+00',
@@ -196,17 +199,17 @@ events = [
         'job_failed': True,
         'resolved_action': None,
     },
-    # Job 4 Host 5 – task_uuid t012 (copy retried and success)
+    # Job 4 Host 5 – t001 (copy retried and success)
     {
         'job_id': 4,
         'playbook': 'deploy.yml',
         'host_id': 5,
-        'task_uuid': 't012',
+        'task_uuid': 't001',
         'event': 'runner_on_failed',
         'task_action': 'ansible.builtin.copy',
         'job_created': '2024-01-05 18:00:00+00',
-        'job_started': '2024-01-05 18:12:00+00',
-        'job_finished': '2024-01-05 18:15:00+00',
+        'job_started': '2024-01-05 18:10:00+00',
+        'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
@@ -214,30 +217,31 @@ events = [
         'job_id': 4,
         'playbook': 'deploy.yml',
         'host_id': 5,
-        'task_uuid': 't012',
+        'task_uuid': 't001',
         'event': 'runner_on_ok',
         'task_action': 'ansible.builtin.copy',
         'job_created': '2024-01-05 18:00:00+00',
-        'job_started': '2024-01-05 18:16:00+00',
-        'job_finished': '2024-01-05 18:17:30+00',
+        'job_started': '2024-01-05 18:10:00+00',
+        'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
-    # Job 4 Host 6 – task_uuid t013 (mongodb insert ok)
+    # Job 4 Host 6 – t009 (ec2 ok)  ← changed from mongodb.insert to ec2 to satisfy multi-host rule
     {
         'job_id': 4,
         'playbook': 'deploy.yml',
         'host_id': 6,
-        'task_uuid': 't013',
+        'task_uuid': 't009',
         'event': 'runner_on_ok',
-        'task_action': 'community.mongodb.insert',
+        'task_action': 'community.aws.ec2',
         'job_created': '2024-01-05 18:00:00+00',
-        'job_started': '2024-01-05 18:14:00+00',
-        'job_finished': '2024-01-05 18:18:00+00',
+        'job_started': '2024-01-05 18:10:00+00',
+        'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
     },
 ]
+
 
 
 def test_events_modules_aggregations_basic():
