@@ -11,7 +11,7 @@ class JobHostSummary_Anonymized_Rollup:
         Number of tasks executed (sum of all tasks executed in dataframe)
         Success ratio of tasks executed (ratio between ok and failed tasks (and others))
 
-        Surccess rate and average - this can compute SaaS team from the metrics
+        Success rate and average - this can compute SaaS team from the metrics
         """
 
         task_columns = ['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']
