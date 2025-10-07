@@ -261,8 +261,7 @@ def test_events_modules_aggregations_basic():
         + copy_stats['task_success_with_reruns_total']
         + copy_stats['task_failed_total']
         + copy_stats['task_unreachable_total']
-        + copy_stats['task_failed_and_unreachable_total']
-        + copy_stats['task_other_total']
+        + copy_stats['task_failed_and_ignored_total']
     )
     assert copy_total_tasks == 6
     assert copy_stats['task_clean_success_total'] == 4
@@ -278,8 +277,7 @@ def test_events_modules_aggregations_basic():
         + yum_stats['task_success_with_reruns_total']
         + yum_stats['task_failed_total']
         + yum_stats['task_unreachable_total']
-        + yum_stats['task_failed_and_unreachable_total']
-        + yum_stats['task_other_total']
+        + yum_stats['task_failed_and_ignored_total']
     )
     assert yum_total_tasks == 3
     assert yum_stats['task_clean_success_total'] == 1
@@ -293,8 +291,7 @@ def test_events_modules_aggregations_basic():
         + mongo_stats['task_success_with_reruns_total']
         + mongo_stats['task_failed_total']
         + mongo_stats['task_unreachable_total']
-        + mongo_stats['task_failed_and_unreachable_total']
-        + mongo_stats['task_other_total']
+        + mongo_stats['task_failed_and_ignored_total']
     )
     assert mongo_total_tasks == 2
     assert mongo_stats['task_clean_success_total'] == 1

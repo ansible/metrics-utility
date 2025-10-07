@@ -7,11 +7,12 @@ from metrics_utility.anonymized_rollups.collections_types import collections_typ
 
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
 
+
 def extract_collection_name(x: str | None) -> str | None:
     if not x:
         return None
     m = _COLLECTION_RE.match(x)
-    return f"{m.group(1)}.{m.group(2)}" if m else None
+    return f'{m.group(1)}.{m.group(2)}' if m else None
 
 
 class Event_Modules_Anonymized_Rollups:
@@ -68,9 +69,7 @@ class Event_Modules_Anonymized_Rollups:
 
         # add module column into the dataframe based on dataframe_content_usage.py approach
         dataframe['module_name'] = (
-            dataframe['resolved_action']
-            .fillna(dataframe['task_action'])
-            .where(lambda s: s.notna() & (s.astype(str).str.strip() != ''))
+            dataframe['resolved_action'].fillna(dataframe['task_action']).where(lambda s: s.notna() & (s.astype(str).str.strip() != ''))
         )
 
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
@@ -172,8 +171,9 @@ class Event_Modules_Anonymized_Rollups:
                 ),
             )
             .assign(
-                job_id_that_contained_failed_task=lambda df: df['job_id']
-                .where(df['task_failed'] | df['task_unreachable'] | df['task_failed_and_ignored'])
+                job_id_that_contained_failed_task=lambda df: df['job_id'].where(
+                    df['task_failed'] | df['task_unreachable'] | df['task_failed_and_ignored']
+                )
             )
         )
 
