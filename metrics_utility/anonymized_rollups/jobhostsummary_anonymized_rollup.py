@@ -1,4 +1,4 @@
-class JobHostSummary_Anonymized_Rollup:
+class JobHostSummaryAnonymizedRollup:
     """
     Collector - job_host_summary_service collector data
     """

@@ -1,4 +1,4 @@
-class Execution_Environments_Anonymized_Rollups:
+class ExecutionEnvironmentsAnonymizedRollups:
     """
     Collector - execution_environment_service collector data
     """

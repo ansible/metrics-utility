@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from metrics_utility.anonymized_rollups.jobs_anonymized_rollups import Jobs_Anonymized_Rollups
+from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollups
 
 
 data = [
@@ -88,7 +88,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     df = pd.DataFrame(data)
 
-    result = Jobs_Anonymized_Rollups.base(df)
+    result = JobsAnonymizedRollups.base(df)
 
     import pprint
 
