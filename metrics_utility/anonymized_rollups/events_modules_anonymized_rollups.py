@@ -228,8 +228,10 @@ class Event_Modules_Anonymized_Rollups:
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             host_count=('host_id', 'nunique'),
-            job_containing_collection_source_failed=('job_failed', 'first'),
+            job_containing_collection_source_failed=('job_failed', 'max'),
         )
+
+        
 
         job_time_stats = (
             per_job.groupby('collection_source')

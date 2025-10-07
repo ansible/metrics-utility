@@ -15,7 +15,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:02:30.000000+00',
         'job_finished': '2024-01-01 00:11:15.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -28,7 +28,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:02:30.000000+00',
         'job_finished': '2024-01-01 00:11:15.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -41,7 +41,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:02:30.000000+00',
         'job_finished': '2024-01-01 00:11:15.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -54,7 +54,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:02:30.000000+00',
         'job_finished': '2024-01-01 00:11:15.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -67,7 +67,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:06:00.000000+00',
         'job_finished': '2024-01-02 12:28:30.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -80,7 +80,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:06:00.000000+00',
         'job_finished': '2024-01-02 12:28:30.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -93,7 +93,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:02:30.000000+00',
         'job_finished': '2024-01-01 00:11:15.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -106,7 +106,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:06:00.000000+00',
         'job_finished': '2024-01-02 12:28:30.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -119,7 +119,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:01:00.000000+00',
         'job_finished': '2024-01-01 00:10:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': 'ansible.builtin.copy',
     },
     {
@@ -132,7 +132,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:01:00.000000+00',
         'job_finished': '2024-01-01 00:10:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -145,7 +145,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:01:00.000000+00',
         'job_finished': '2024-01-01 00:10:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -158,7 +158,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:06:00.000000+00',
         'job_finished': '2024-01-02 12:28:30.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -171,7 +171,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:05:00.000000+00',
         'job_finished': '2024-01-02 12:30:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     # community.general.yum
@@ -185,7 +185,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:03:30.000000+00',
         'job_finished': '2024-01-01 00:12:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -198,7 +198,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:03:30.000000+00',
         'job_finished': '2024-01-01 00:12:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -211,7 +211,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:03:30.000000+00',
         'job_finished': '2024-01-01 00:12:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -224,7 +224,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:07:30.000000+00',
         'job_finished': '2024-01-02 12:29:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -237,7 +237,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:03:30.000000+00',
         'job_finished': '2024-01-01 00:12:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -250,7 +250,7 @@ events = [
         'job_created': '2024-01-01 00:00:00.000000+00',
         'job_started': '2024-01-01 00:03:30.000000+00',
         'job_finished': '2024-01-01 00:12:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     {
@@ -263,7 +263,7 @@ events = [
         'job_created': '2024-01-02 12:00:00.000000+00',
         'job_started': '2024-01-02 12:07:30.000000+00',
         'job_finished': '2024-01-02 12:29:00.000000+00',
-        'job_failed': False,
+        'job_failed': True,
         'resolved_action': None,
     },
     # community.mongodb.insert
