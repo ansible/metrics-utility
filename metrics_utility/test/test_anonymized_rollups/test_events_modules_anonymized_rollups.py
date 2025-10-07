@@ -76,7 +76,6 @@ events = [
         'job_failed': True,
         'resolved_action': None,
     },
-
     # ================================================================
     # Job 2 – db.yml – async failure on one host → job_failed=True
     # ================================================================
@@ -135,7 +134,6 @@ events = [
         'job_failed': True,
         'resolved_action': None,
     },
-
     # ================================================================
     # Job 3 – infra.yml – all success → job_failed=False
     # ================================================================
@@ -181,7 +179,6 @@ events = [
         'job_failed': False,
         'resolved_action': None,
     },
-
     # ================================================================
     # Job 4 – deploy.yml – one host failed → job_failed=True
     # ================================================================
@@ -241,7 +238,6 @@ events = [
         'resolved_action': None,
     },
 ]
-
 
 
 def test_events_modules_aggregations_basic():
