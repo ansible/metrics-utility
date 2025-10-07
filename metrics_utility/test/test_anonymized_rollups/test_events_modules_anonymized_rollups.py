@@ -394,6 +394,36 @@ def test_events_modules_aggregations_basic():
         'db.yml': 3,
     }
 
+    # collection stats assertions
+    coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
+    community_coll = coll_by_source['community']
+    assert community_coll['jobs_total'] == 2
+    assert community_coll['hosts_total'] == 2
+    assert community_coll['failed_total'] == 2
+
+    validated_coll = coll_by_source['validated']
+    assert validated_coll['jobs_total'] == 2
+    assert validated_coll['hosts_total'] == 4
+    assert validated_coll['failed_total'] == 0
+
+    # job time stats per collection source
+    time_by_source = {row['collection_source']: row for row in result['job_time_stats_per_collection_source']}
+    community_time = time_by_source['community']
+    assert community_time['jobs_total'] == 2
+    assert community_time['job_duration_total_seconds'] == 2040.0
+    assert community_time['job_waiting_time_total_seconds'] == 360.0
+    assert community_time['avg_job_duration_seconds'] == 1020.0
+    assert community_time['avg_job_waiting_time_seconds'] == 180.0
+    assert community_time['avg_hosts_per_job'] == 1.5
+
+    validated_time = time_by_source['validated']
+    assert validated_time['jobs_total'] == 2
+    assert validated_time['job_duration_total_seconds'] == 2040.0
+    assert validated_time['job_waiting_time_total_seconds'] == 360.0
+    assert validated_time['avg_job_duration_seconds'] == 1020.0
+    assert validated_time['avg_job_waiting_time_seconds'] == 180.0
+    assert validated_time['avg_hosts_per_job'] == 3.0
+
     # Verify a few per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}
 
@@ -426,6 +456,8 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['task_clean_success_total'] == 1
     assert yum_stats['task_success_with_reruns_total'] == 0
     assert yum_stats['task_failed_total'] == 2
+    assert yum_stats['jobs_total'] == 2
+    assert yum_stats['hosts_total'] == 2
 
     # community.mongodb.insert: two task runs; one success, one failed; three failed attempts
     mongo_stats = stats_by_module['community.mongodb.insert']
@@ -440,3 +472,5 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_clean_success_total'] == 1
     assert mongo_stats['task_success_with_reruns_total'] == 0
     assert mongo_stats['task_failed_total'] == 1
+    assert mongo_stats['jobs_total'] == 2
+    assert mongo_stats['hosts_total'] == 2
