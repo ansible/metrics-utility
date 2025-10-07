@@ -14,8 +14,8 @@ def extract_collection_name(x: str | None) -> str | None:
     m = _COLLECTION_RE.match(x)
     return f'{m.group(1)}.{m.group(2)}' if m else None
 
-def merge_collection_source(obj1, obj2):
 
+def merge_collection_source(obj1, obj2):
     merged = {}
 
     for entry in obj1 + obj2:
@@ -183,11 +183,7 @@ class Event_Modules_Anonymized_Rollups:
                     x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
                 ),
             )
-            .assign(
-                job_id_that_contained_failed_task=lambda df: df['job_id'].where(
-                    df['task_failed'] | df['task_unreachable'] | df['task_failed_and_ignored']
-                )
-            )
+            .assign(job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']))
         )
 
         # Per-module counts
@@ -203,6 +199,7 @@ class Event_Modules_Anonymized_Rollups:
                 task_unreachable_total=('task_unreachable', 'sum'),
                 task_skipped_total=('task_skipped', 'sum'),
                 task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
+                jobs_failed_because_of_module_failure_total=('job_id_that_contained_failed_task', 'nunique'),
             )
             .reset_index()
         )
@@ -211,8 +208,7 @@ class Event_Modules_Anonymized_Rollups:
             task_summary.groupby('collection_source')
             .agg(
                 hosts_total=('host_id', 'nunique'),
-                jobs_failed_because_of_collection_source_total=('job_id_that_contained_failed_task', 'nunique'),
-
+                jobs_failed_because_of_collection_source_failure_total=('job_id_that_contained_failed_task', 'nunique'),
                 task_clean_success_total=('task_clean_success', 'sum'),
                 task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
                 task_failed_total=('task_failed', 'sum'),
@@ -230,8 +226,6 @@ class Event_Modules_Anonymized_Rollups:
             host_count=('host_id', 'nunique'),
             job_containing_collection_source_failed=('job_failed', 'max'),
         )
-
-        
 
         job_time_stats = (
             per_job.groupby('collection_source')
