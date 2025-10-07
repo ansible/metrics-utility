@@ -215,19 +215,17 @@ jobs_host_summary_service_skip_columns = [
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
-def test_job_host_summary_service_command(cleanup_glob):
-    """Build and validate jobs_host_summary_service.csv contents in the generated tarball."""
+def test_job_host_summary_command(cleanup_glob):
+    """Build and validate jobs_host_summary.csv contents in the generated tarball."""
     # prepare env
 
     test_env = env_vars.copy()
-    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'job_host_summary_service'
 
     # run the gather command
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'job_host_summary_service.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
+    validate_csv_in_tarballs(file_paths, 'job_host_summary.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
 
 
 main_jobevent_service_lines = [

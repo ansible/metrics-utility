@@ -54,7 +54,6 @@ VALID_COLLECTORS = {
     'main_indirectmanagednodeaudit',
     'total_workers_vcpu',
     'unified_jobs',
-    'job_host_summary_service',
     'main_jobevent_service',
     'execution_environments',
     '',
