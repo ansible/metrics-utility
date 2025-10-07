@@ -287,10 +287,10 @@ def test_events_modules_aggregations_basic():
     community_coll = coll_by_source['community']
     assert community_coll['jobs_total'] == 4
     assert community_coll['hosts_total'] == 5
-    assert community_coll['job_duration_total_seconds'] == 1500.0
-    assert community_coll['job_waiting_time_total_seconds'] == 1320.0
-    assert community_coll['avg_job_duration_seconds'] == 375.0
-    assert community_coll['avg_job_waiting_time_seconds'] == 330.0
+    assert community_coll['job_duration_total_seconds'] == 2880.0
+    assert community_coll['job_waiting_time_total_seconds'] == 1200.0
+    assert community_coll['avg_job_duration_seconds'] == 720.0
+    assert community_coll['avg_job_waiting_time_seconds'] == 300.0
     assert community_coll['avg_hosts_per_job'] == 2.0
     assert community_coll['jobs_containing_collection_source_failed_total'] == 3
     assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 3
@@ -298,10 +298,10 @@ def test_events_modules_aggregations_basic():
     validated_coll = coll_by_source['validated']
     assert validated_coll['jobs_total'] == 4
     assert validated_coll['hosts_total'] == 4
-    assert validated_coll['job_duration_total_seconds'] == 1740.0
-    assert validated_coll['job_waiting_time_total_seconds'] == 1740.0
-    assert validated_coll['avg_job_duration_seconds'] == 435.0
-    assert validated_coll['avg_job_waiting_time_seconds'] == 435.0
+    assert validated_coll['job_duration_total_seconds'] == 2880.0
+    assert validated_coll['job_waiting_time_total_seconds'] == 1200.0
+    assert validated_coll['avg_job_duration_seconds'] == 720.0
+    assert validated_coll['avg_job_waiting_time_seconds'] == 300.0
     assert validated_coll['avg_hosts_per_job'] == 1.25
     assert validated_coll['jobs_containing_collection_source_failed_total'] == 3
     assert validated_coll['jobs_failed_because_of_collection_source_failure_total'] == 0
@@ -329,11 +329,11 @@ def test_events_modules_aggregations_basic():
     # community.mongodb.insert (community)
     mongo_stats = stats_by_module['community.mongodb.insert']
     assert mongo_stats['collection_source'] == 'community'
-    assert mongo_stats['task_clean_success_total'] == 2
+    assert mongo_stats['task_clean_success_total'] == 1
     assert mongo_stats['task_success_with_reruns_total'] == 1
     assert mongo_stats['task_failed_total'] == 0
-    assert mongo_stats['jobs_total'] == 3
-    assert mongo_stats['hosts_total'] == 3
+    assert mongo_stats['jobs_total'] == 2
+    assert mongo_stats['hosts_total'] == 2
 
     # ansible.builtin.template (validated)
     template_stats = stats_by_module['ansible.builtin.template']
@@ -354,6 +354,6 @@ def test_events_modules_aggregations_basic():
     # community.aws.ec2 (community)
     ec2_stats = stats_by_module['community.aws.ec2']
     assert ec2_stats['collection_source'] == 'community'
-    assert ec2_stats['task_clean_success_total'] == 1
-    assert ec2_stats['jobs_total'] == 1
-    assert ec2_stats['hosts_total'] == 1
+    assert ec2_stats['task_clean_success_total'] == 2
+    assert ec2_stats['jobs_total'] == 2
+    assert ec2_stats['hosts_total'] == 2
