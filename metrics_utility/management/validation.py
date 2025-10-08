@@ -58,6 +58,7 @@ VALID_COLLECTORS = {
     'execution_environments',
     'job_host_summary_deprecated',
     'main_jobevent_deprecated',
+    '',
 }
 
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
