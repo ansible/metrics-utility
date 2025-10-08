@@ -56,7 +56,7 @@ VALID_COLLECTORS = {
     'unified_jobs',
     'main_jobevent_service',
     'execution_environments',
-    '',
+    'job_host_summary_deprecated',
 }
 
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
