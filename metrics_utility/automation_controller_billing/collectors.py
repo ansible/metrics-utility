@@ -214,9 +214,10 @@ def yaml_and_json_parsing_functions():
     return query
 
 
-@register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
-def main_jobevent_table(since, full_path, until, **kwargs):
-    if 'main_jobevent' not in get_optional_collectors():
+# We need to keep older version, so the perf tests have easy access to it, then we can remove it
+@register('main_jobevent_deprecated', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
+def main_jobevent_table_deprecated(since, full_path, until, **kwargs):
+    if 'main_jobevent_deprecated' not in get_optional_collectors():
         return None
 
     tbl = 'main_jobevent'
@@ -824,9 +825,9 @@ def job_host_summary_table_deprecated(since, full_path, until, **kwargs):
     return _copy_table(table='main_jobhostsummary', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
 
 
-@register('main_jobevent_service', '1.4', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
-def main_jobevent_service_table(since, full_path, until, **kwargs):
-    if 'main_jobevent_service' not in get_optional_collectors():
+@register('main_jobevent', '1.0', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
+def main_jobevent_table(since, full_path, until, **kwargs):
+    if 'main_jobevent' not in get_optional_collectors():
         return None
 
     # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
