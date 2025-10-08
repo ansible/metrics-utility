@@ -1,0 +1,249 @@
+classDiagram
+    %% Core Base Classes
+    class Collector {
+        <<abstract>>
+        +collector_module
+        +collection_type
+        +collections
+        +packages
+        +gather()
+        +is_enabled()
+        +_package_class()*
+        +db_connection()*
+    }
+
+    class Package {
+        <<abstract>>
+        +collections[]
+        +collector
+        +tar_path
+        +make_tgz()
+        +ship()*
+        +is_shipping_configured()*
+        +_tarname_base()*
+    }
+
+    class Collection {
+        <<abstract>>
+        +collector
+        +fnc_collecting
+        +key
+        +data_type
+        +gather()*
+        +is_empty()
+        +add_to_tar()
+    }
+
+    %% Collection Implementations
+    class CollectionJSON {
+        +data
+        +filename
+        +gather()
+    }
+
+    class CollectionCSV {
+        +data_filepath
+        +sub_collections[]
+        +gather()
+    }
+
+    class CollectionDataStatus {
+        +package
+    }
+
+    class CollectionManifest {
+        +collections[]
+    }
+
+    %% Package Implementations  
+    class PackageDirectory {
+        +ship()
+        +_destination_path()
+    }
+
+    class PackageS3 {
+        +ship()
+        +_destination_path()
+    }
+
+    class PackageCRC {
+        +ship()
+        +get_sso_url()
+        +get_ingress_url()
+    }
+
+    class PackageSegment {
+        +ship()
+        +_anonymize_and_create_segment_events()
+        +_process_jobhost_summary_anonymization()
+    }
+
+    %% Collector Implementations
+    class AutomationControllerCollector {
+        +ship_target
+        +billing_provider_params
+        +gather()
+        +_gather_config()
+    }
+
+    %% Factory Classes
+    class PackageFactory {
+        +ship_target
+        +create()
+    }
+
+    %% Anonymization Classes
+    class JobHostSummaryAnonymizedRollup {
+        <<static>>
+        +base(dataframe)
+    }
+
+    class JobsAnonymizedRollups {
+        <<static>>
+        +base(dataframe)
+    }
+
+    class EventModulesAnonymizedRollups {
+        <<static>>
+        +base(dataframe)
+    }
+
+    class ExecutionEnvironmentsAnonymizedRollups {
+        <<static>>  
+        +base(dataframe)
+    }
+
+    %% Dataframe Engine Classes
+    class DataframeJobhostSummaryUsage {
+        +build_dataframe()
+        +group()
+        +dedup()
+    }
+
+    class DataframeContentUsage {
+        +build_dataframe()
+    }
+
+    class DataframeCollectionStatus {
+        +build_dataframe()
+    }
+
+    class DataframeInventoryScope {
+        +build_dataframe()
+    }
+
+    %% Report Classes
+    class ReportCCSP {
+        +build()
+        +save()
+    }
+
+    class ReportCCSPv2 {
+        +build()
+        +save()
+    }
+
+    class ReportRenewalGuidance {
+        +build()
+        +save()
+    }
+
+    %% Deduplication Classes
+    class DedupCCSP {
+        +dataframes
+        +extra_params
+        +experimental
+    }
+
+    class DedupRenewal {
+        +dedup()
+    }
+
+    class DedupRenewalHostname {
+        +dedup()
+    }
+
+    class DedupRenewalExperimental {
+        +dedup()
+    }
+
+    %% Management Classes
+    class ManagementUtility {
+        +execute()
+    }
+
+    class BuildReportCommand {
+        +handle()
+    }
+
+    class GatherDataCommand {
+        +handle()
+    }
+
+    %% Exception Classes
+    class MetricsException {
+        <<exception>>
+    }
+
+    class BadParameter {
+        <<exception>>
+    }
+
+    class FailedToUploadPayload {
+        <<exception>>
+    }
+
+    class NotSupportedFactory {
+        <<exception>>
+    }
+
+    %% Inheritance Relationships
+    Collection <|-- CollectionJSON
+    Collection <|-- CollectionCSV
+    CollectionCSV <|-- CollectionDataStatus
+    CollectionJSON <|-- CollectionManifest
+
+    Package <|-- PackageDirectory
+    Package <|-- PackageS3
+    Package <|-- PackageCRC
+    Package <|-- PackageSegment
+
+    Collector <|-- AutomationControllerCollector
+
+    MetricsException <|-- BadParameter
+    MetricsException <|-- FailedToUploadPayload
+    MetricsException <|-- NotSupportedFactory
+
+    %% Composition Relationships
+    Collector *-- Collection : contains
+    Collector *-- Package : creates
+    Package *-- Collection : packages
+    PackageFactory --> Package : creates
+    AutomationControllerCollector --> PackageFactory : uses
+
+    %% Anonymization Dependencies
+    PackageSegment ..> JobHostSummaryAnonymizedRollup : uses
+    PackageSegment ..> JobsAnonymizedRollups : uses
+    PackageSegment ..> EventModulesAnonymizedRollups : uses
+    PackageSegment ..> ExecutionEnvironmentsAnonymizedRollups : uses
+
+    %% Data Processing Flow
+    AutomationControllerCollector --> DataframeJobhostSummaryUsage : processes
+    DataframeJobhostSummaryUsage --> ReportCCSP : feeds
+    DataframeJobhostSummaryUsage --> ReportCCSPv2 : feeds
+    DataframeJobhostSummaryUsage --> ReportRenewalGuidance : feeds
+
+    %% Management Commands
+    ManagementUtility --> BuildReportCommand : executes
+    ManagementUtility --> GatherDataCommand : executes
+    GatherDataCommand --> AutomationControllerCollector : uses
+    BuildReportCommand --> ReportCCSP : builds
+    BuildReportCommand --> ReportCCSPv2 : builds
+    BuildReportCommand --> ReportRenewalGuidance : builds
+
+    %% Styling
+    classDef abstractClass fill:#e1f5fe
+    classDef concreteClass fill:#f3e5f5
+    classDef factoryClass fill:#fff3e0
+    classDef anonymizationClass fill:#e8f5e8
+    classDef exceptionClass fill:#ffebee
