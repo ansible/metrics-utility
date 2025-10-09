@@ -150,12 +150,14 @@ class Base:
             raise MetricsException('config is not a valid tarball name filter')
 
         def match(s):
-            # should not happen, but make sure we're not ignoring data if it does
-            if s.find('-unknown.') or s.find('-config.'):
+            # include all files produced by 0.6.0 and lower, and anything with an unexpected name
+            if re.search(r'-\d+.tar.gz$', s):
+                return True
+            if re.search(r'-\d+-\w+.tar.gz$', s) is None:
                 return True
 
-            # include all files produced by 0.6.0 and lower
-            if re.search(r'-\d+.tar.gz$', s):
+            # should not happen, but make sure we're not ignoring data if it does
+            if s.find('-unknown.') or s.find('-config.'):
                 return True
 
             # match against collections

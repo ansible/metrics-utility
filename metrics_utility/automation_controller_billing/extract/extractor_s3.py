@@ -31,6 +31,7 @@ class ExtractorS3(Base):
                     logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {s3_path} failed with {e}')
 
     def fetch_partition_paths(self, date, collections):
+        # FIXME: apply collections= filtering, so we don't download files from S3 if we know they don't have the right thing
         prefix = self.get_path_prefix(date)
         paths = self.s3_handler.list_files(prefix)
 
