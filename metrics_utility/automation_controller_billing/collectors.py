@@ -928,3 +928,20 @@ def execution_environments_table(since, full_path, until, **kwargs):
     """
 
     return _copy_table(table='main_executionenvironment', query=f'COPY ({sql}) TO STDOUT WITH CSV HEADER', path=full_path)
+
+
+@register('projects', '1.4', format='csv', description=_('Projects grouped by scm_type'), fnc_slicing=limit_slicing)
+def projects_table(since, full_path, until, **kwargs):
+    if 'projects' not in get_optional_collectors():
+        return None
+
+    sql = """
+        SELECT
+            COALESCE(scm_type, '') AS scm_type,
+            COUNT(*) AS project_count
+        FROM public.main_project
+        GROUP BY COALESCE(scm_type, '')
+        ORDER BY COALESCE(scm_type, '')
+    """
+
+    return _copy_table(table='projects', query=f'COPY ({sql}) TO STDOUT WITH CSV HEADER', path=full_path)
