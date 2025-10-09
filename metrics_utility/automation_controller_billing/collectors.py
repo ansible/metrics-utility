@@ -883,7 +883,9 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
             e.task,
             e.role,
             e.job_id  AS job_remote_id,
+            e.job_id,
             e.host_id AS host_remote_id,
+            e.host_id,
             e.host_name,
 
             -- Warnings and deprecations (json arrays)
