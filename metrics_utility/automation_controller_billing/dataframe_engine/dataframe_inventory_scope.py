@@ -1,6 +1,6 @@
 import pandas as pd
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
+from metrics_utility.automation_controller_billing.dataframe_engine.base import MergeBase, merge_setdicts, merge_sets
 from metrics_utility.automation_controller_billing.helpers import merge_json_sets, parse_json
 
 
@@ -12,17 +12,10 @@ def compute_serial(row):
 
 
 # dataframe for main_host
-class DataframeInventoryScope(Base):
-    def build_dataframe(self):
-        # A daily rollup dataframe
-
-        billing_data_monthly_rollup = None
-
+class DataframeInventoryScope(MergeBase):
+    def iter_batches(self):
         for date in self.dates():
-            ###############################
             # Generate the monthly dataset for report
-            ###############################
-
             for data in self.extractor.iter_batches(date=date, collections=['main_host', 'main_host_daily'], optional=['config']):
                 # If the dataframe is empty, skip additional processing
                 billing_data = data['main_host']
@@ -31,45 +24,46 @@ class DataframeInventoryScope(Base):
                 if billing_data.empty:
                     continue
 
-                billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
-                billing_data['install_uuid'] = data['config']['install_uuid']
+                config = data['config']
+                yield (billing_data, config)
 
-                # Store the original host name for mapping purposes
-                billing_data['original_host_name'] = billing_data['host_name']
-                if 'ansible_host_variable' in billing_data.columns:
-                    # Replace missing ansible_host_variable with host name
-                    billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
-                    # And use the new ansible_host_variable instead of host_name, since
-                    # what is in ansible_host_variable should be the actual host we count
-                    billing_data['host_name'] = billing_data['ansible_host_variable']
+    def build_dataframe(self):
+        # A daily rollup dataframe
+        self.rollup = None
 
-                billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
+        for billing_data, config in self.iter_batches():
+            billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
+            billing_data['install_uuid'] = config['install_uuid']
 
-                billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
+            # Store the original host name for mapping purposes
+            billing_data['original_host_name'] = billing_data['host_name']
+            if 'ansible_host_variable' in billing_data.columns:
+                # Replace missing ansible_host_variable with host name
+                billing_data['ansible_host_variable'] = billing_data.ansible_host_variable.fillna(billing_data['host_name'])
+                # And use the new ansible_host_variable instead of host_name, since
+                # what is in ansible_host_variable should be the actual host we count
+                billing_data['host_name'] = billing_data['ansible_host_variable']
 
-                experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
-                if experimental_dedup:
-                    billing_data['host_names_before_dedup'] = billing_data['host_name']
-                else:
-                    # Always create the column for consistent structure, but keep it empty when dedup is not enabled
-                    billing_data['host_names_before_dedup'] = None
+            billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
-                ################################
-                # Do the aggregation
-                ################################
+            billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
 
-                billing_data_group = self.group(billing_data)
+            experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
+            if experimental_dedup:
+                billing_data['host_names_before_dedup'] = billing_data['host_name']
+            else:
+                # Always create the column for consistent structure, but keep it empty when dedup is not enabled
+                billing_data['host_names_before_dedup'] = None
 
-                ################################
-                # Merge aggregations of multiple batches
-                ################################
+            # Do the aggregation, merge aggregations of multiple batches
+            self.add_grouped_rows(self.group(billing_data))
 
-                billing_data_monthly_rollup = self.merge(billing_data_monthly_rollup, billing_data_group)
+        if self.rollup is None or self.rollup.empty:
+            self.rollup = self.empty()
+            return self.rollup
 
-        if billing_data_monthly_rollup is None or billing_data_monthly_rollup.empty:
-            return self.empty()
-
-        return billing_data_monthly_rollup.reset_index()
+        self.rollup = self.rollup.reset_index()
+        return self.rollup
 
     # Do the aggregation
     def group(self, dataframe):
@@ -82,7 +76,7 @@ class DataframeInventoryScope(Base):
             serials=('serial', set),
             host_names_before_dedup=('host_names_before_dedup', set),
         )
-        return self.cast_dataframe(group, self.cast_types())
+        return self.cast_dataframe(group)
 
     # Merge pre-aggregated
     def regroup(self, dataframe):

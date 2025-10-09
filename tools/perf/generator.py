@@ -16,8 +16,9 @@ import uuid
 import numpy as np
 import pandas as pd
 
+from metrics_utility.library.dataframes.base_traditional import parse_json
+
 from metrics_utility.automation_controller_billing.extract.base import Base
-from metrics_utility.automation_controller_billing.helpers import parse_json
 from metrics_utility.library import CsvFileSplitter
 
 

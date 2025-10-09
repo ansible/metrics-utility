@@ -1,9 +1,12 @@
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_collection_status import DataframeCollectionStatus
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_inventory_scope import DataframeInventoryScope
-from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_jobhost_summary_usage import DataframeJobhostSummaryUsage
-from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric import DBDataframeHostMetric
+from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 from metrics_utility.exceptions import NotSupportedFactory
+from metrics_utility.library.dataframes import (
+    DataframeDataCollectionStatus,
+    DataframeHostMetric,
+    DataframeJobHostSummary,
+    DataframeMainHost,
+    DataframeMainJobevent,
+)
 
 
 class Factory:  # DataframeFactory
@@ -23,20 +26,20 @@ class Factory:  # DataframeFactory
 
         if report_type == 'CCSP':
             return {
-                'job_host_summary': DataframeJobhostSummaryUsage(**kwargs),
-                'main_jobevent': DataframeContentUsage(**kwargs),
-                'main_host': DataframeInventoryScope(**kwargs),
+                'job_host_summary': Base(**kwargs, klass=DataframeJobHostSummary),
+                'main_jobevent': Base(**kwargs, klass=DataframeMainJobevent),
+                'main_host': Base(**kwargs, klass=DataframeMainHost),
             }
 
         if report_type == 'CCSPv2':
             return {
-                'job_host_summary': DataframeJobhostSummaryUsage(**kwargs),
-                'main_jobevent': DataframeContentUsage(**kwargs),
-                'main_host': DataframeInventoryScope(**kwargs),
-                'data_collection_status': DataframeCollectionStatus(**kwargs),
+                'job_host_summary': Base(**kwargs, klass=DataframeJobHostSummary),
+                'main_jobevent': Base(**kwargs, klass=DataframeMainJobevent),
+                'main_host': Base(**kwargs, klass=DataframeMainHost),
+                'data_collection_status': Base(**kwargs, klass=DataframeDataCollectionStatus),
             }
 
         if report_type == 'RENEWAL_GUIDANCE':
-            return {'host_metric': DBDataframeHostMetric(**kwargs)}
+            return {'host_metric': Base(**kwargs, klass=DataframeHostMetric)}
 
         raise NotSupportedFactory(f'Factory for {report_type} not supported')

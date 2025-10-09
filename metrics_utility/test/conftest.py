@@ -7,8 +7,10 @@ import openpyxl
 import pandas as pd
 import pytest
 
+from metrics_utility.library.dataframes.host_metric import DataframeHostMetric
+
 from metrics_utility import prepare
-from metrics_utility.automation_controller_billing.dataframe_engine.db_dataframe_host_metric import DBDataframeHostMetric
+from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 from metrics_utility.test.util import generate_renewal_guidance_dataframe
 
 
@@ -29,7 +31,7 @@ def fixed_now():
 def setup_processed_dataframe(fixed_now):
     """
     Sets up a processed Pandas DataFrame ready for use by report methods.
-    It mocks the DBDataframeHostMetric's data extraction to provide consistent data.
+    It mocks the DataframeHostMetric's data extraction to provide consistent data.
     """
     mock_full_dataframe_raw = generate_renewal_guidance_dataframe(is_empty=False, current_datetime=fixed_now)
 
@@ -46,10 +48,11 @@ def setup_processed_dataframe(fixed_now):
     mock_extractor = MagicMock()
     mock_extractor.iter_batches.return_value = (batch for batch in mock_batches)
 
-    db_host_metric_instance = DBDataframeHostMetric(
+    db_host_metric_instance = Base(
         extractor=mock_extractor,
         month=fixed_now.strftime('%Y-%m'),
         extra_params={},
+        klass=DataframeHostMetric,
     )
 
     processed_df = db_host_metric_instance.build_dataframe()

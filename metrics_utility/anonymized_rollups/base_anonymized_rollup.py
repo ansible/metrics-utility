@@ -8,15 +8,15 @@ from datetime import datetime
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
+from metrics_utility.library.dataframes import BaseDataframe
 
 
-class BaseAnonymizedRollup:
+class BaseAnonymizedRollup(BaseDataframe):
     def __init__(self, rollup_name: str):
+        super().__init__()
+
         self.rollup_name = rollup_name
         self.collector_names = []
-
-    def merge(self, dataframe_all, dataframe_new):
-        return pd.concat([dataframe_all, dataframe_new], ignore_index=True)
 
     def rollup(self, dataframe_all, dataframe_new):
         # not implemented in base class, return empty dataframe
