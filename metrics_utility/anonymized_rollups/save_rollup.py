@@ -24,7 +24,9 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
             value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
         elif isinstance(value, pd.Series):
             print(f'Key {key} is a Series')
-            value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
+            # Convert Series to DataFrame to preserve index with proper column names
+            df = value.reset_index()
+            df.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
         elif isinstance(value, list):
             print(f'Key {key} is a list')
             with open(os.path.join(rollup_path, f'{key}.json'), 'w') as f:
