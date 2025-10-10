@@ -85,6 +85,12 @@
 - dev: perf tests split up to make testing branches easier
 - dev: remove pytz
 
-## 0.6.1dev
+## 0.6.1
+
+- vcpu collector - use prometheus
+- gather: fix empty config.json when `job_host_summary` disabled
+- dev: future optional collectors
+
+## 0.7.0dev
 
 - TODO
