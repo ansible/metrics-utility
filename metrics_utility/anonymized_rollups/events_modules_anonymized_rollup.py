@@ -246,16 +246,40 @@ class EventModulesAnonymizedRollups:
         )
 
         # merge collection_stats and job_time_stats into one list based on collection_source
-        collection_stats = collection_stats.to_dict(orient='records')
-        job_time_stats = job_time_stats.to_dict(orient='records')
+        collection_stats_dict = collection_stats.to_dict(orient='records')
+        job_time_stats_dict = job_time_stats.to_dict(orient='records')
 
-        merged_list = merge_collection_source(collection_stats, job_time_stats)
+        merged_list = merge_collection_source(collection_stats_dict, job_time_stats_dict)
 
-        return {
+        # Prepare rollup data (dataframes before conversion)
+        rollup_data = {
+            # list[str]
+            'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
+            # int (scalar)
+            'modules_used_to_automate_total': modules_used_to_automate_total,
+            # float (scalar)
+            'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
+            # pandas.Series
+            'modules_used_per_playbook_total': modules_used_per_playbook_total,
+            # pandas.DataFrame
+            'module_stats': module_stats,
+            # pandas.DataFrame
+            'collection_stats': collection_stats,
+            # pandas.DataFrame
+            'job_time_stats': job_time_stats,
+        }
+
+        # Prepare JSON data (converted to dicts/lists)
+        json_data = {
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
             'modules_used_to_automate_total': modules_used_to_automate_total,
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': module_stats.to_dict(orient='records'),
             'collection_stats': merged_list,
+        }
+
+        return {
+            'json': json_data,
+            'rollup': rollup_data,
         }

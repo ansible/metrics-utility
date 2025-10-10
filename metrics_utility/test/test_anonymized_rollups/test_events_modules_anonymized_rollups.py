@@ -295,6 +295,7 @@ def test_events_modules_aggregations_basic():
     df['event_data'] = [{}] * len(df)
     prepared = EventModulesAnonymizedRollups.prepare_data(df.copy())
     result = EventModulesAnonymizedRollups.events_modules_aggregations(prepared)
+    result = result['json']
 
     import pprint
 
