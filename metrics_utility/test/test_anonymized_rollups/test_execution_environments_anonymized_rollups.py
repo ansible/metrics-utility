@@ -2,10 +2,17 @@ import pandas as pd
 
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollups
 
+execution_environments = [
+    {'managed': True},
+    {'managed': False},
+    {'managed': True},
+    {'managed': False},
+    {'managed': False},
+]
 
 def test_base_counts():
     # Sample dataframe with managed column
-    df = pd.DataFrame({'managed': [True, False, True, False, False]})
+    df = pd.DataFrame(execution_environments)
 
     result = ExecutionEnvironmentsAnonymizedRollups.base(df)
     result = result['json']

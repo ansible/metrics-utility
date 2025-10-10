@@ -3,7 +3,7 @@ import pandas as pd
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 
 
-data = [
+jobhostsummary = [
     # job_template T1, job_id 1001, 3 tasks per job, 5 hosts
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
@@ -36,7 +36,7 @@ data = [
 
 
 def test_jobhostsummary_anonymized():
-    df = pd.DataFrame(data, columns=['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued', 'host_name', 'job_id', 'job_template_name'])
+    df = pd.DataFrame(jobhostsummary, columns=['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued', 'host_name', 'job_id', 'job_template_name'])
 
     result = JobHostSummaryAnonymizedRollup.base(df)
     result = result['json']
