@@ -75,6 +75,13 @@ class EventModulesAnonymizedRollups:
     def prepare_data(dataframe):
         # Prepare data
 
+        # if missing ignore_errors column, insert it, default is False. If values is null, set it to False
+        if 'ignore_errors' not in dataframe.columns:
+            dataframe['ignore_errors'] = False
+
+        dataframe['ignore_errors'] = dataframe['ignore_errors'].fillna(False).astype(bool)
+        
+
         # Coerce datetime-like columns to pandas datetimes (UTC) to accept strings like '...+00'
         for col in ['job_created', 'job_started', 'job_finished']:
             if col in dataframe.columns:

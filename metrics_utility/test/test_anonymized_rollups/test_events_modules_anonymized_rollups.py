@@ -20,6 +20,7 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     {
         'job_id': 1,
@@ -33,6 +34,7 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 1 Host 2 – t002 (yum failed final)
     {
@@ -47,6 +49,7 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 1 Host 3 – t003 (mongodb insert async success)
     {
@@ -61,6 +64,7 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 1 Host 4 – t004 (template unreachable)
     {
@@ -75,6 +79,7 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # ================================================================
     # Job 2 – db.yml – async failure on one host → job_failed=True
@@ -92,6 +97,7 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     {
         'job_id': 2,
@@ -105,6 +111,7 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 2 Host 2 – t002 (yum async failed final)
     {
@@ -119,6 +126,7 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 2 Host 3 – t001 (copy ok)
     {
@@ -133,6 +141,7 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # ================================================================
     # Job 3 – infra.yml – all success → job_failed=False
@@ -150,6 +159,7 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 3 Host 2 – t009 (ec2 provision ok)
     {
@@ -164,6 +174,7 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 3 Host 3 – t004 (template ok)
     {
@@ -178,6 +189,7 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # ================================================================
     # Job 4 – deploy.yml – one host failed → job_failed=True
@@ -195,6 +207,7 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     # Job 4 Host 5 – t001 (copy retried and success)
     {
@@ -209,6 +222,7 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
     },
     {
         'job_id': 4,
@@ -222,6 +236,7 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        # ignore_errors is not set
     },
     # Job 4 Host 6 – t009 (ec2 ok)  ← changed from mongodb.insert to ec2 to satisfy multi-host rule
     {
@@ -236,6 +251,22 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'ignore_errors': False,
+    },
+        # Job 4 Host 7 – t009 failed, but ignored
+    {
+        'job_id': 4,
+        'playbook': 'deploy.yml',
+        'host_id': 7,
+        'task_uuid': 't009',
+        'event': 'runner_on_failed',
+        'task_action': 'community.aws.ec2',
+        'job_created': '2024-01-05 18:00:00+00',
+        'job_started': '2024-01-05 18:10:00+00',
+        'job_finished': '2024-01-05 18:20:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': True,
     },
 ]
 
