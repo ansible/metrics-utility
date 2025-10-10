@@ -271,7 +271,7 @@ class EventModulesAnonymizedRollups:
             # pandas.DataFrame
             'job_time_stats': job_time_stats,
             # int (scalar)
-            'total_hosts_automated' : total_hosts_automated,
+            'total_hosts_automated': total_hosts_automated,
         }
 
         # Prepare JSON data (converted to dicts/lists)
