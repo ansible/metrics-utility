@@ -253,7 +253,7 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
-        # Job 4 Host 7 – t009 failed, but ignored
+    # Job 4 Host 7 – t009 failed, but ignored
     {
         'job_id': 4,
         'playbook': 'deploy.yml',
@@ -268,7 +268,7 @@ events = [
         'resolved_action': None,
         'ignore_errors': True,
     },
-        # Job 4 Host 8 – t009 skipped
+    # Job 4 Host 8 – t009 skipped
     {
         'job_id': 4,
         'playbook': 'deploy.yml',

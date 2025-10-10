@@ -80,7 +80,6 @@ class EventModulesAnonymizedRollups:
             dataframe['ignore_errors'] = False
 
         dataframe['ignore_errors'] = dataframe['ignore_errors'].fillna(False).astype(bool)
-        
 
         # Coerce datetime-like columns to pandas datetimes (UTC) to accept strings like '...+00'
         for col in ['job_created', 'job_started', 'job_finished']:
