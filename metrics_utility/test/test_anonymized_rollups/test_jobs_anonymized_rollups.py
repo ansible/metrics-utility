@@ -89,12 +89,13 @@ def test_jobs_anonymized_rollups_base_aggregation():
     df = pd.DataFrame(data)
 
     result = JobsAnonymizedRollups.base(df)
+    result = result['json']
 
     import pprint
 
     pprint.pprint(result)
 
-    # New version returns list of per-template aggregates
+    # New version returns list of per-template aggregates in 'json' field
     assert isinstance(result, list)
 
     # There should be 2 templates (T1 and T2); rows with missing timestamps are filtered

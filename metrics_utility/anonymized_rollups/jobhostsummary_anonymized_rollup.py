@@ -33,4 +33,16 @@ class JobHostSummaryAnonymizedRollup:
             .reset_index()
         )
 
-        return aggregated.to_dict(orient='records')
+        # Prepare rollup data (dataframe before conversion)
+        rollup_data = {
+            # pandas.DataFrame
+            'aggregated': aggregated,
+        }
+
+        # Prepare JSON data (converted to list of dicts)
+        json_data = aggregated.to_dict(orient='records')
+
+        return {
+            'json': json_data,
+            'rollup': rollup_data,
+        }

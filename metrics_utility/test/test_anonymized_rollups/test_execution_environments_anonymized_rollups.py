@@ -8,6 +8,7 @@ def test_base_counts():
     df = pd.DataFrame({'managed': [True, False, True, False, False]})
 
     result = ExecutionEnvironmentsAnonymizedRollups.base(df)
+    result = result['json']
 
     # Expected values
     assert result['total_EE'] == 5
