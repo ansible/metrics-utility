@@ -4,7 +4,7 @@ import pytest
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollups
 
 
-data = [
+jobs = [
     # controller A, version v1, template T1
     {
         'id': 1,
@@ -86,7 +86,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # Build a DataFrame mimicking unified_jobs collector output columns we use
     # Times are ISO-like strings with explicit UTC offset (+00)
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(jobs)
 
     result = JobsAnonymizedRollups.base(df)
     result = result['json']
