@@ -39,7 +39,7 @@ class EventModulesAnonymizedRollups:
     playbook - name of the playbook that was executed
     job_created - timestamp of the job creation
     job_started - timestamp of the job start
-    job_finished - timestamp of the job finish
+    job_finished - timestamps of the job finish
     event - name of the event that was executed
     task_uuid - uuid of the task that was executed
 
@@ -70,6 +70,14 @@ class EventModulesAnonymizedRollups:
     When task is skipped, it is not retried.
     When task is ignored, it is not retried.
     """
+
+    @staticmethod
+    def base(dataframe):
+        """
+        Main entry point that prepares data and computes aggregations.
+        """
+        prepared = EventModulesAnonymizedRollups.prepare_data(dataframe)
+        return EventModulesAnonymizedRollups.events_modules_aggregations(prepared)
 
     @staticmethod
     def prepare_data(dataframe):
