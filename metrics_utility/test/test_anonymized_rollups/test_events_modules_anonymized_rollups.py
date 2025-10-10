@@ -268,6 +268,21 @@ events = [
         'resolved_action': None,
         'ignore_errors': True,
     },
+        # Job 4 Host 8 – t009 skipped
+    {
+        'job_id': 4,
+        'playbook': 'deploy.yml',
+        'host_id': 8,
+        'task_uuid': 't009',
+        'event': 'runner_on_skipped',
+        'task_action': 'community.aws.ec2',
+        'job_created': '2024-01-05 18:00:00+00',
+        'job_started': '2024-01-05 18:10:00+00',
+        'job_finished': '2024-01-05 18:20:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
 ]
 
 
@@ -313,19 +328,19 @@ def test_events_modules_aggregations_basic():
     coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
     community_coll = coll_by_source['community']
     assert community_coll['jobs_total'] == 4
-    assert community_coll['hosts_total'] == 6
+    assert community_coll['hosts_total'] == 7
     assert community_coll['job_duration_total_seconds'] == 2880.0
     assert community_coll['job_waiting_time_total_seconds'] == 1200.0
     assert community_coll['avg_job_duration_seconds'] == 720.0
     assert community_coll['avg_job_waiting_time_seconds'] == 300.0
-    assert community_coll['avg_hosts_per_job'] == 2.25
+    assert community_coll['avg_hosts_per_job'] == 2.5
     assert community_coll['jobs_containing_collection_source_failed_total'] == 3
     assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 3
     assert community_coll['task_clean_success_total'] == 4
     assert community_coll['task_success_with_reruns_total'] == 1
     assert community_coll['task_failed_total'] == 3
     assert community_coll['task_failed_and_ignored_total'] == 1
-    assert community_coll['task_skipped_total'] == 0
+    assert community_coll['task_skipped_total'] == 1
     assert community_coll['task_unreachable_total'] == 0
 
     validated_coll = coll_by_source['validated']
@@ -414,7 +429,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['task_success_with_reruns_total'] == 0
     assert ec2_stats['task_failed_total'] == 0
     assert ec2_stats['task_failed_and_ignored_total'] == 1
-    assert ec2_stats['task_skipped_total'] == 0
+    assert ec2_stats['task_skipped_total'] == 1
     assert ec2_stats['task_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
-    assert ec2_stats['hosts_total'] == 3
+    assert ec2_stats['hosts_total'] == 4
