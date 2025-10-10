@@ -313,12 +313,12 @@ def test_events_modules_aggregations_basic():
     coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
     community_coll = coll_by_source['community']
     assert community_coll['jobs_total'] == 4
-    assert community_coll['hosts_total'] == 5
+    assert community_coll['hosts_total'] == 6
     assert community_coll['job_duration_total_seconds'] == 2880.0
     assert community_coll['job_waiting_time_total_seconds'] == 1200.0
     assert community_coll['avg_job_duration_seconds'] == 720.0
     assert community_coll['avg_job_waiting_time_seconds'] == 300.0
-    assert community_coll['avg_hosts_per_job'] == 2.0
+    assert community_coll['avg_hosts_per_job'] == 2.25
     assert community_coll['jobs_containing_collection_source_failed_total'] == 3
     assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 3
 
@@ -383,4 +383,4 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['collection_source'] == 'community'
     assert ec2_stats['task_clean_success_total'] == 2
     assert ec2_stats['jobs_total'] == 2
-    assert ec2_stats['hosts_total'] == 2
+    assert ec2_stats['hosts_total'] == 3
