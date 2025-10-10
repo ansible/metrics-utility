@@ -321,6 +321,12 @@ def test_events_modules_aggregations_basic():
     assert community_coll['avg_hosts_per_job'] == 2.25
     assert community_coll['jobs_containing_collection_source_failed_total'] == 3
     assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 3
+    assert community_coll['task_clean_success_total'] == 4
+    assert community_coll['task_success_with_reruns_total'] == 1
+    assert community_coll['task_failed_total'] == 3
+    assert community_coll['task_failed_and_ignored_total'] == 1
+    assert community_coll['task_skipped_total'] == 0
+    assert community_coll['task_unreachable_total'] == 0
 
     validated_coll = coll_by_source['validated']
     assert validated_coll['jobs_total'] == 4
@@ -332,6 +338,12 @@ def test_events_modules_aggregations_basic():
     assert validated_coll['avg_hosts_per_job'] == 1.25
     assert validated_coll['jobs_containing_collection_source_failed_total'] == 3
     assert validated_coll['jobs_failed_because_of_collection_source_failure_total'] == 0
+    assert validated_coll['task_clean_success_total'] == 2
+    assert validated_coll['task_success_with_reruns_total'] == 2
+    assert validated_coll['task_failed_total'] == 0
+    assert validated_coll['task_failed_and_ignored_total'] == 0
+    assert validated_coll['task_skipped_total'] == 0
+    assert validated_coll['task_unreachable_total'] == 1
 
     # Verify per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}
@@ -341,6 +353,9 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['task_clean_success_total'] == 1
     assert copy_stats['task_success_with_reruns_total'] == 2
     assert copy_stats['task_failed_total'] == 0
+    assert copy_stats['task_failed_and_ignored_total'] == 0
+    assert copy_stats['task_skipped_total'] == 0
+    assert copy_stats['task_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['hosts_total'] == 3
 
@@ -350,6 +365,9 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['task_clean_success_total'] == 0
     assert yum_stats['task_success_with_reruns_total'] == 0
     assert yum_stats['task_failed_total'] == 2
+    assert yum_stats['task_failed_and_ignored_total'] == 0
+    assert yum_stats['task_skipped_total'] == 0
+    assert yum_stats['task_unreachable_total'] == 0
     assert yum_stats['jobs_total'] == 2
     assert yum_stats['hosts_total'] == 1
 
@@ -359,6 +377,9 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_clean_success_total'] == 1
     assert mongo_stats['task_success_with_reruns_total'] == 1
     assert mongo_stats['task_failed_total'] == 0
+    assert mongo_stats['task_failed_and_ignored_total'] == 0
+    assert mongo_stats['task_skipped_total'] == 0
+    assert mongo_stats['task_unreachable_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['hosts_total'] == 2
 
@@ -366,6 +387,10 @@ def test_events_modules_aggregations_basic():
     template_stats = stats_by_module['ansible.builtin.template']
     assert template_stats['collection_source'] == 'validated'
     assert template_stats['task_clean_success_total'] == 1
+    assert template_stats['task_success_with_reruns_total'] == 0
+    assert template_stats['task_failed_total'] == 0
+    assert template_stats['task_failed_and_ignored_total'] == 0
+    assert template_stats['task_skipped_total'] == 0
     assert template_stats['task_unreachable_total'] == 1
     assert template_stats['jobs_total'] == 2
     assert template_stats['hosts_total'] == 2
@@ -374,7 +399,11 @@ def test_events_modules_aggregations_basic():
     firewalld_stats = stats_by_module['ansible.posix.firewalld']
     assert firewalld_stats['collection_source'] == 'community'
     assert firewalld_stats['task_clean_success_total'] == 1
+    assert firewalld_stats['task_success_with_reruns_total'] == 0
     assert firewalld_stats['task_failed_total'] == 1
+    assert firewalld_stats['task_failed_and_ignored_total'] == 0
+    assert firewalld_stats['task_skipped_total'] == 0
+    assert firewalld_stats['task_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['hosts_total'] == 2
 
@@ -382,5 +411,10 @@ def test_events_modules_aggregations_basic():
     ec2_stats = stats_by_module['community.aws.ec2']
     assert ec2_stats['collection_source'] == 'community'
     assert ec2_stats['task_clean_success_total'] == 2
+    assert ec2_stats['task_success_with_reruns_total'] == 0
+    assert ec2_stats['task_failed_total'] == 0
+    assert ec2_stats['task_failed_and_ignored_total'] == 1
+    assert ec2_stats['task_skipped_total'] == 0
+    assert ec2_stats['task_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['hosts_total'] == 3
