@@ -135,6 +135,7 @@ class EventModulesAnonymizedRollups:
         *Failure/Success rate of modules
         *Modules Used to Automate
         *Total number of modules automated
+        *Total hosts automated
 
         *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
         * Average job duration for collection sources (total job duration / number of jobs).
@@ -157,6 +158,8 @@ class EventModulesAnonymizedRollups:
         # Avg number of modules used in a playbook
         avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook')['module_name'].nunique().mean()
         modules_used_per_playbook_total = dataframe.groupby('playbook')['module_name'].nunique()
+
+        total_hosts_automated = dataframe['host_id'].nunique()
 
         # Collapse events  one row per (job, module, task)
         # summarize all failed events as number of failed attempts
@@ -267,6 +270,8 @@ class EventModulesAnonymizedRollups:
             'collection_stats': collection_stats,
             # pandas.DataFrame
             'job_time_stats': job_time_stats,
+            # int (scalar)
+            'total_hosts_automated' : total_hosts_automated,
         }
 
         # Prepare JSON data (converted to dicts/lists)
@@ -277,6 +282,7 @@ class EventModulesAnonymizedRollups:
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': module_stats.to_dict(orient='records'),
             'collection_stats': merged_list,
+            'total_hosts_automated': total_hosts_automated,
         }
 
         return {

@@ -325,6 +325,8 @@ def test_events_modules_aggregations_basic():
         'site.yml': 4,
     }
 
+    assert result['total_hosts_automated'] == 8
+
     # collection stats assertions (current aggregation schema)
     coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
     community_coll = coll_by_source['community']
