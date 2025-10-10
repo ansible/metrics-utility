@@ -18,10 +18,14 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
     os.makedirs(rollup_path, exist_ok=True)
 
     for key, value in rollup_data.items():
+        print(f'Saving {key} to {rollup_path}')
         if isinstance(value, pd.DataFrame):
+            print(f'Key {key} is a DataFrame')
             value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
         elif isinstance(value, pd.Series):
+            print(f'Key {key} is a Series')
             value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
         elif isinstance(value, list):
+            print(f'Key {key} is a list')
             with open(os.path.join(rollup_path, f'{key}.json'), 'w') as f:
                 json.dump(value, f)
