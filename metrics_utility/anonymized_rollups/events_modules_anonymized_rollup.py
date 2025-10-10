@@ -106,12 +106,8 @@ class EventModulesAnonymizedRollups:
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
 
-        # TODO - load it in collector
-        def _ignore_errors_flag(d):
-            return isinstance(d, dict) and d.get('ignore_errors', False)
-
-        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list) & ~dataframe['event_data'].apply(_ignore_errors_flag)
-        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(failed_events_list) & dataframe['event_data'].apply(_ignore_errors_flag)
+        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list) & ~dataframe['ignore_errors']
+        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(failed_events_list) & dataframe['ignore_errors']
         dataframe['task_unreachable_event'] = dataframe['event'].isin(unreachable_events_list)
         dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
 

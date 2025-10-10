@@ -232,7 +232,7 @@ def test_job_host_summary_service_command(cleanup_glob):
 
 main_jobevent_service_lines = [
     'id,created,modified,job_created,job_finished,uuid,parent_uuid,event,'
-    'task_action,resolved_action,resolved_role,duration,start,end,task_uuid,failed,'
+    'task_action,resolved_action,resolved_role,duration,start,end,task_uuid,ignore_errors,failed,'
     'changed,playbook,play,task,role,job_remote_id,job_id,host_remote_id,host_id,'
     'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
