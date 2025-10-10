@@ -237,62 +237,62 @@ main_jobevent_service_lines = [
     'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,'
+    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00,',
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,1_default_host_1_2025-06-13_2,f,f,'
+    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,1_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,'
+    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,1_default_host_2_2025-06-13_2,f,f,'
+    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,1_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,'
+    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,2_default_host_1_2025-06-13_2,f,f,'
+    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,2_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,'
+    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,2_default_host_2_2025-06-13_2,f,f,'
+    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,2_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,'
+    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,3_default_host_1_2025-06-13_2,f,f,'
+    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,3_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,'
+    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,3_default_host_2_2025-06-13_2,f,f,'
+    'UUID,,runner_on_ok,amazon.aws.s3_bucket,,,,,,3_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
 ]

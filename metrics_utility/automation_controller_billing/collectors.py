@@ -875,7 +875,7 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
             ({event_data}->>'start')::timestamptz AS start,
             ({event_data}->>'end')::timestamptz   AS end,
             ({event_data}->>'task_uuid')        AS task_uuid,
-            ({event_data}->>'ignore_errors')::boolean AS ignore_errors,
+            COALESCE( ({event_data}->>'ignore_errors')::boolean, false ) AS ignore_errors,
             e.failed,
             e.changed,
             e.playbook,
