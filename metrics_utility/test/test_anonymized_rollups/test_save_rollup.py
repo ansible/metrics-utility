@@ -46,19 +46,19 @@ def test_save_rollup(cleanup_glob):
     events_modules_rollup = EventModulesAnonymizedRollups.base(events_df)
     execution_environments_rollup = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
     jobhostsummary_rollup = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
-    # jobs_rollup = JobsAnonymizedRollups.base(jobs_df)
+    jobs_rollup = JobsAnonymizedRollups.base(jobs_df)
 
     # read the 'rollup' field from the anonymized rollups
     events_modules_rollup = events_modules_rollup['rollup']
     execution_environments_rollup = execution_environments_rollup['rollup']
     jobhostsummary_rollup = jobhostsummary_rollup['rollup']
-    # jobs_rollup = jobs_rollup['rollup']
+    jobs_rollup = jobs_rollup['rollup']
 
     # save the rollups
     save_rollup(events_modules_rollup, 'events_modules', './out', '2024', 1, 1)
     save_rollup(execution_environments_rollup, 'execution_environments', './out', '2024', 1, 1)
     save_rollup(jobhostsummary_rollup, 'jobhostsummary', './out', '2024', 1, 1)
-    # save_rollup(jobs_rollup, 'jobs', './out', '2024', 1, 1)
+    save_rollup(jobs_rollup, 'jobs', './out', '2024', 1, 1)
 
     # assert the files are created
 
