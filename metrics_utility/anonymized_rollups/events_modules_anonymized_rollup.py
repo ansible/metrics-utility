@@ -277,7 +277,7 @@ class EventModulesAnonymizedRollups:
             # pandas.DataFrame
             'collection_stats': collection_stats,
             # pandas.DataFrame
-            'job_time_stats': job_time_stats,
+            'job_time_stats_per_collection_source': job_time_stats,
             # int (scalar)
             'total_hosts_automated': total_hosts_automated,
         }

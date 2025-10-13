@@ -80,29 +80,3 @@ def test_save_rollup(cleanup_glob):
     with open('./out/rollups/2024/1/1/unified.json', 'w') as f:
         # pretty json
         json.dump(unified_json, f, indent=4)
-
-    # assert the files are created
-
-    # events_modules
-    """
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/list_of_modules_used_to_automate.json')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/modules_used_to_automate_total.json')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/avg_number_of_modules_used_in_a_playbooks.json')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/modules_used_per_playbook_total.json')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/module_stats.csv')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/collection_stats.csv')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/job_time_stats.csv')
-    assert os.path.exists('./out/rollups/events_modules/2024/1/1/total_hosts_automated.json')
-
-    # execution_environments
-    assert os.path.exists('./out/rollups/execution_environments/2024/1/1/execution_environments.csv')
-    assert os.path.exists('./out/rollups/execution_environments/2024/1/1/execution_environments_usage.csv')
-
-    # jobhostsummary
-    assert os.path.exists('./out/rollups/jobhostsummary/2024/1/1/jobhostsummary.csv')
-    assert os.path.exists('./out/rollups/jobhostsummary/2024/1/1/jobhostsummary_usage.csv')
-
-    # jobs
-    assert os.path.exists('./out/rollups/jobs/2024/1/1/jobs.csv')
-    assert os.path.exists('./out/rollups/jobs/2024/1/1/jobs_usage.csv')
-    """
