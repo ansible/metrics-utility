@@ -43,22 +43,37 @@ def test_save_rollup(cleanup_glob):
     # TODO - Saving EE does not work yet
 
     # call the anonymized rollups
-    events_modules_rollup = EventModulesAnonymizedRollups.base(events_df)
-    execution_environments_rollup = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
-    jobhostsummary_rollup = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
-    jobs_rollup = JobsAnonymizedRollups.base(jobs_df)
+    events_modules = EventModulesAnonymizedRollups.base(events_df)
+    execution_environments = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
+    jobhostsummary = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
+    jobs = JobsAnonymizedRollups.base(jobs_df)
+
+    # read json
+    events_modules_json = events_modules['json']
+    execution_environments_json = execution_environments['json']
+    jobhostsummary_json = jobhostsummary['json']
+    jobs_json = jobs['json']
 
     # read the 'rollup' field from the anonymized rollups
-    events_modules_rollup = events_modules_rollup['rollup']
-    execution_environments_rollup = execution_environments_rollup['rollup']
-    jobhostsummary_rollup = jobhostsummary_rollup['rollup']
-    jobs_rollup = jobs_rollup['rollup']
+    events_modules_rollup = events_modules['rollup']
+    execution_environments_rollup = execution_environments['rollup']
+    jobhostsummary_rollup = jobhostsummary['rollup']
+    jobs_rollup = jobs['rollup']
 
     # save the rollups
     save_rollup(events_modules_rollup, 'events_modules', './out', '2024', 1, 1)
     save_rollup(execution_environments_rollup, 'execution_environments', './out', '2024', 1, 1)
     save_rollup(jobhostsummary_rollup, 'jobhostsummary', './out', '2024', 1, 1)
     save_rollup(jobs_rollup, 'jobs', './out', '2024', 1, 1)
+
+    # create unified json from the partial json results
+    unified_json = {
+        'events_modules': events_modules,
+        'execution_environments': execution_environments_rollup,
+        'jobhostsummary': jobhostsummary_rollup,
+        'jobs': jobs_rollup,
+    }
+    with open('./out/rollups/unified.json', 'w') as f:
 
     # assert the files are created
 
