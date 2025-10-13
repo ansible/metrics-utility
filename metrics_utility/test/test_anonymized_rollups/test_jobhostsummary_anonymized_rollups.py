@@ -8,29 +8,89 @@ jobhostsummary = [
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 1001, 'job_template_name': 'T1'},
-    {'dark': 0, 'failures': 1, 'ok': 2, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 1001, 'job_template_name': 'T1'},  # 1 failure
+    {
+        'dark': 0,
+        'failures': 1,
+        'ok': 2,
+        'skipped': 0,
+        'ignored': 0,
+        'rescued': 0,
+        'host_name': 'h2',
+        'job_id': 1001,
+        'job_template_name': 'T1',
+    },  # 1 failure
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 1001, 'job_template_name': 'T1'},
-    {'dark': 0, 'failures': 0, 'ok': 2, 'skipped': 1, 'ignored': 0, 'rescued': 0, 'host_name': 'h4', 'job_id': 1001, 'job_template_name': 'T1'},  # 1 skipped
+    {
+        'dark': 0,
+        'failures': 0,
+        'ok': 2,
+        'skipped': 1,
+        'ignored': 0,
+        'rescued': 0,
+        'host_name': 'h4',
+        'job_id': 1001,
+        'job_template_name': 'T1',
+    },  # 1 skipped
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h5', 'job_id': 1001, 'job_template_name': 'T1'},
     # job_template T1, job_id 1002, one host skips a task, another fails
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 1002, 'job_template_name': 'T1'},
-    {'dark': 0, 'failures': 1, 'ok': 2, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 1002, 'job_template_name': 'T1'},  # 1 failure
-    {'dark': 0, 'failures': 0, 'ok': 2, 'skipped': 1, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 1002, 'job_template_name': 'T1'},  # 1 skipped
+    {
+        'dark': 0,
+        'failures': 1,
+        'ok': 2,
+        'skipped': 0,
+        'ignored': 0,
+        'rescued': 0,
+        'host_name': 'h2',
+        'job_id': 1002,
+        'job_template_name': 'T1',
+    },  # 1 failure
+    {
+        'dark': 0,
+        'failures': 0,
+        'ok': 2,
+        'skipped': 1,
+        'ignored': 0,
+        'rescued': 0,
+        'host_name': 'h3',
+        'job_id': 1002,
+        'job_template_name': 'T1',
+    },  # 1 skipped
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h4', 'job_id': 1002, 'job_template_name': 'T1'},
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h5', 'job_id': 1002, 'job_template_name': 'T1'},
     # job_template T2, job_id 2001, 5 tasks per job, 3 hosts
     # number of tasks = 5
     # total tasks = 5 * 3 = 15
     {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 2001, 'job_template_name': 'T2'},
-    {'dark': 0, 'failures': 1, 'ok': 4, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 2001, 'job_template_name': 'T2'},  # 1 failure
+    {
+        'dark': 0,
+        'failures': 1,
+        'ok': 4,
+        'skipped': 0,
+        'ignored': 0,
+        'rescued': 0,
+        'host_name': 'h2',
+        'job_id': 2001,
+        'job_template_name': 'T2',
+    },  # 1 failure
     {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 2001, 'job_template_name': 'T2'},
     # job_template T2, job_id 2002, one host executes only 4 tasks, another fails
     # number of tasks = 5
     # total tasks = 5 * 3 = 15
     {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 2002, 'job_template_name': 'T2'},
-    {'dark': 0, 'failures': 2, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 2002, 'job_template_name': 'T2'},  # 2 failures
+    {
+        'dark': 0,
+        'failures': 2,
+        'ok': 3,
+        'skipped': 0,
+        'ignored': 0,
+        'rescued': 0,
+        'host_name': 'h2',
+        'job_id': 2002,
+        'job_template_name': 'T2',
+    },  # 2 failures
     {'dark': 0, 'failures': 1, 'ok': 4, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 2002, 'job_template_name': 'T2'},
 ]
 
