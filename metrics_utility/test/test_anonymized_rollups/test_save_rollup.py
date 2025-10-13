@@ -5,6 +5,8 @@
 
 # make sure we are cleaning any file in the out directory
 
+import json
+
 import pandas as pd
 import pytest
 
@@ -43,22 +45,22 @@ def test_save_rollup(cleanup_glob):
     # TODO - Saving EE does not work yet
 
     # call the anonymized rollups
-    events_modules = EventModulesAnonymizedRollups.base(events_df)
-    execution_environments = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
-    jobhostsummary = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
-    jobs = JobsAnonymizedRollups.base(jobs_df)
+    events_modules_result = EventModulesAnonymizedRollups.base(events_df)
+    execution_environments_result = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
+    jobhostsummary_result = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
+    jobs_result = JobsAnonymizedRollups.base(jobs_df)
 
     # read json
-    events_modules_json = events_modules['json']
-    execution_environments_json = execution_environments['json']
-    jobhostsummary_json = jobhostsummary['json']
-    jobs_json = jobs['json']
+    events_modules_json = events_modules_result['json']
+    execution_environments_json = execution_environments_result['json']
+    jobhostsummary_json = jobhostsummary_result['json']
+    jobs_json = jobs_result['json']
 
     # read the 'rollup' field from the anonymized rollups
-    events_modules_rollup = events_modules['rollup']
-    execution_environments_rollup = execution_environments['rollup']
-    jobhostsummary_rollup = jobhostsummary['rollup']
-    jobs_rollup = jobs['rollup']
+    events_modules_rollup = events_modules_result['rollup']
+    execution_environments_rollup = execution_environments_result['rollup']
+    jobhostsummary_rollup = jobhostsummary_result['rollup']
+    jobs_rollup = jobs_result['rollup']
 
     # save the rollups
     save_rollup(events_modules_rollup, 'events_modules', './out', '2024', 1, 1)
@@ -68,12 +70,16 @@ def test_save_rollup(cleanup_glob):
 
     # create unified json from the partial json results
     unified_json = {
-        'events_modules': events_modules,
-        'execution_environments': execution_environments_rollup,
-        'jobhostsummary': jobhostsummary_rollup,
-        'jobs': jobs_rollup,
+        'events_modules': events_modules_json,
+        'execution_environments': execution_environments_json,
+        'jobhostsummary': jobhostsummary_json,
+        'jobs': jobs_json,
     }
-    with open('./out/rollups/unified.json', 'w') as f:
+
+    # path is year/month/day/unified.json
+    with open('./out/rollups/2024/1/1/unified.json', 'w') as f:
+        # pretty json
+        json.dump(unified_json, f, indent=4)
 
     # assert the files are created
 
