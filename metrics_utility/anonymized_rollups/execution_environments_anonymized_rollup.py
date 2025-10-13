@@ -17,21 +17,16 @@ class ExecutionEnvironmentsAnonymizedRollups:
         default_ee = dataframe['managed'].sum()  # since True=1, False=0
         custom_ee = total_ee - default_ee
 
-        # Prepare rollup data (raw values before conversion)
-        rollup_data = {
-            # int (scalar)
-            'total_EE': total_ee,
-            # int (scalar)
-            'default_EE': default_ee,
-            # int (scalar)
-            'custom_EE': custom_ee,
-        }
-
         # Prepare JSON data (same as rollup for scalar values)
         json_data = {
             'total_EE': total_ee,
             'default_EE': default_ee,
             'custom_EE': custom_ee,
+        }
+
+        # Prepare rollup data (raw values before conversion)
+        rollup_data = {
+            'execution_environments': json_data,
         }
 
         return {

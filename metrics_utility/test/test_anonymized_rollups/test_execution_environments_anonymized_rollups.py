@@ -2,6 +2,7 @@ import pandas as pd
 
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollups
 
+
 execution_environments = [
     {'managed': True},
     {'managed': False},
@@ -9,6 +10,7 @@ execution_environments = [
     {'managed': False},
     {'managed': False},
 ]
+
 
 def test_base_counts():
     # Sample dataframe with managed column
