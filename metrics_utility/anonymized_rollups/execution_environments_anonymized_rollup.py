@@ -13,8 +13,8 @@ class ExecutionEnvironmentsAnonymizedRollups:
         # default vs custom EE - field Managed in table (true for default).
         # simple count of rows that has managed = true
 
-        total_ee = len(dataframe)
-        default_ee = dataframe['managed'].sum()  # since True=1, False=0
+        total_ee = int(len(dataframe))
+        default_ee = int(dataframe['managed'].sum())
         custom_ee = total_ee - default_ee
 
         # Prepare JSON data (same as rollup for scalar values)

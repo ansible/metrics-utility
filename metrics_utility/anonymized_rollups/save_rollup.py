@@ -13,9 +13,13 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
 
     # file will be stored inside base_path/rollups/rollup_name/year/month/day
 
-    rollup_path = os.path.join(base_path, 'rollups', rollup_name, str(year), str(month), str(day))
+    rollup_path = os.path.join(base_path, 'rollups', str(year), str(month), str(day), rollup_name)
 
     os.makedirs(rollup_path, exist_ok=True)
+
+    print('--------------------------------')
+    print(f'rollup_name: {rollup_name}')
+    print('--------------------------------')
 
     for key, value in rollup_data.items():
         print(f'Saving {key} to {rollup_path}')
@@ -31,3 +35,10 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
             print(f'Key {key} is a list')
             with open(os.path.join(rollup_path, f'{key}.json'), 'w') as f:
                 json.dump(value, f)
+        elif isinstance(value, dict):
+            print(f'Key {key} is a dict')
+            with open(os.path.join(rollup_path, f'{key}.json'), 'w') as f:
+                json.dump(value, f)
+        # the rest
+        else:
+            print('Key {key} is a unknown type')

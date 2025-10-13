@@ -11,6 +11,8 @@ import pytest
 # import base from anonymized rollups
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollups
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollups
+from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
+from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollups
 
 # import save_rollup
 from metrics_utility.anonymized_rollups.save_rollup import save_rollup
@@ -43,19 +45,19 @@ def test_save_rollup(cleanup_glob):
     # call the anonymized rollups
     events_modules_rollup = EventModulesAnonymizedRollups.base(events_df)
     execution_environments_rollup = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
-    # jobhostsummary_rollup = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
+    jobhostsummary_rollup = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
     # jobs_rollup = JobsAnonymizedRollups.base(jobs_df)
 
     # read the 'rollup' field from the anonymized rollups
     events_modules_rollup = events_modules_rollup['rollup']
     execution_environments_rollup = execution_environments_rollup['rollup']
-    # jobhostsummary_rollup = jobhostsummary_rollup['rollup']
+    jobhostsummary_rollup = jobhostsummary_rollup['rollup']
     # jobs_rollup = jobs_rollup['rollup']
 
     # save the rollups
     save_rollup(events_modules_rollup, 'events_modules', './out', '2024', 1, 1)
     save_rollup(execution_environments_rollup, 'execution_environments', './out', '2024', 1, 1)
-    # save_rollup(jobhostsummary_rollup, 'jobhostsummary', './out', '2024', 1, 1)
+    save_rollup(jobhostsummary_rollup, 'jobhostsummary', './out', '2024', 1, 1)
     # save_rollup(jobs_rollup, 'jobs', './out', '2024', 1, 1)
 
     # assert the files are created

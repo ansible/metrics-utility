@@ -7,36 +7,36 @@ jobhostsummary = [
     # job_template T1, job_id 1001, 3 tasks per job, 5 hosts
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
-    [0, 0, 3, 0, 0, 0, 'h1', 1001, 'T1'],
-    [0, 1, 2, 0, 0, 0, 'h2', 1001, 'T1'],  # 1 failure
-    [0, 0, 3, 0, 0, 0, 'h3', 1001, 'T1'],
-    [0, 0, 2, 1, 0, 0, 'h4', 1001, 'T1'],  # 1 skipped
-    [0, 0, 3, 0, 0, 0, 'h5', 1001, 'T1'],
+    {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 1001, 'job_template_name': 'T1'},
+    {'dark': 0, 'failures': 1, 'ok': 2, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 1001, 'job_template_name': 'T1'},  # 1 failure
+    {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 1001, 'job_template_name': 'T1'},
+    {'dark': 0, 'failures': 0, 'ok': 2, 'skipped': 1, 'ignored': 0, 'rescued': 0, 'host_name': 'h4', 'job_id': 1001, 'job_template_name': 'T1'},  # 1 skipped
+    {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h5', 'job_id': 1001, 'job_template_name': 'T1'},
     # job_template T1, job_id 1002, one host skips a task, another fails
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
-    [0, 0, 3, 0, 0, 0, 'h1', 1002, 'T1'],
-    [0, 1, 2, 0, 0, 0, 'h2', 1002, 'T1'],  # 1 failure
-    [0, 0, 2, 1, 0, 0, 'h3', 1002, 'T1'],  # 1 skipped
-    [0, 0, 3, 0, 0, 0, 'h4', 1002, 'T1'],
-    [0, 0, 3, 0, 0, 0, 'h5', 1002, 'T1'],
+    {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 1002, 'job_template_name': 'T1'},
+    {'dark': 0, 'failures': 1, 'ok': 2, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 1002, 'job_template_name': 'T1'},  # 1 failure
+    {'dark': 0, 'failures': 0, 'ok': 2, 'skipped': 1, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 1002, 'job_template_name': 'T1'},  # 1 skipped
+    {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h4', 'job_id': 1002, 'job_template_name': 'T1'},
+    {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h5', 'job_id': 1002, 'job_template_name': 'T1'},
     # job_template T2, job_id 2001, 5 tasks per job, 3 hosts
     # number of tasks = 5
     # total tasks = 5 * 3 = 15
-    [0, 0, 5, 0, 0, 0, 'h1', 2001, 'T2'],
-    [0, 1, 4, 0, 0, 0, 'h2', 2001, 'T2'],  # 1 failure
-    [0, 0, 5, 0, 0, 0, 'h3', 2001, 'T2'],
+    {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 2001, 'job_template_name': 'T2'},
+    {'dark': 0, 'failures': 1, 'ok': 4, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 2001, 'job_template_name': 'T2'},  # 1 failure
+    {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 2001, 'job_template_name': 'T2'},
     # job_template T2, job_id 2002, one host executes only 4 tasks, another fails
     # number of tasks = 5
     # total tasks = 5 * 3 = 15
-    [0, 0, 5, 0, 0, 0, 'h1', 2002, 'T2'],
-    [0, 2, 3, 0, 0, 0, 'h2', 2002, 'T2'],  # 2 failures
-    [0, 1, 4, 0, 0, 0, 'h3', 2002, 'T2'],
+    {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h1', 'job_id': 2002, 'job_template_name': 'T2'},
+    {'dark': 0, 'failures': 2, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h2', 'job_id': 2002, 'job_template_name': 'T2'},  # 2 failures
+    {'dark': 0, 'failures': 1, 'ok': 4, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 2002, 'job_template_name': 'T2'},
 ]
 
 
 def test_jobhostsummary_anonymized():
-    df = pd.DataFrame(jobhostsummary, columns=['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued', 'host_name', 'job_id', 'job_template_name'])
+    df = pd.DataFrame(jobhostsummary)
 
     result = JobHostSummaryAnonymizedRollup.base(df)
     result = result['json']
