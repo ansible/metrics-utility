@@ -7,14 +7,14 @@ events = [
     # ================================================================
     # Job 1 – site.yml – partial failures → job_failed=True
     # ================================================================
-    # Job 1 Host 1 – t001 (copy failed then recovered)
+    # Job 1 Host 1 – t001 (win_copy failed then recovered)
     {
         'job_id': 1,
         'playbook': 'site.yml',
         'host_id': 1,
         'task_uuid': 't001',
         'event': 'runner_on_failed',
-        'task_action': 'ansible.builtin.copy',
+        'task_action': 'ansible.windows.win_copy',
         'job_created': '2024-01-01 00:00:00+00',
         'job_started': '2024-01-01 00:01:00+00',
         'job_finished': '2024-01-01 00:10:00+00',
@@ -28,7 +28,7 @@ events = [
         'host_id': 1,
         'task_uuid': 't001',
         'event': 'runner_on_ok',
-        'task_action': 'ansible.builtin.copy',
+        'task_action': 'ansible.windows.win_copy',
         'job_created': '2024-01-01 00:00:00+00',
         'job_started': '2024-01-01 00:01:00+00',
         'job_finished': '2024-01-01 00:10:00+00',
@@ -66,14 +66,14 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
-    # Job 1 Host 4 – t004 (template unreachable)
+    # Job 1 Host 4 – t004 (cli_config unreachable)
     {
         'job_id': 1,
         'playbook': 'site.yml',
         'host_id': 4,
         'task_uuid': 't004',
         'event': 'runner_on_unreachable',
-        'task_action': 'ansible.builtin.template',
+        'task_action': 'ansible.netcommon.cli_config',
         'job_created': '2024-01-01 00:00:00+00',
         'job_started': '2024-01-01 00:01:00+00',
         'job_finished': '2024-01-01 00:10:00+00',
@@ -128,14 +128,14 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
-    # Job 2 Host 3 – t001 (copy ok)
+    # Job 2 Host 3 – t001 (win_copy ok)
     {
         'job_id': 2,
         'playbook': 'db.yml',
         'host_id': 3,
         'task_uuid': 't001',
         'event': 'runner_on_ok',
-        'task_action': 'ansible.builtin.copy',
+        'task_action': 'ansible.windows.win_copy',
         'job_created': '2024-01-02 12:00:00+00',
         'job_started': '2024-01-02 12:04:00+00',
         'job_finished': '2024-01-02 12:20:00+00',
@@ -176,14 +176,14 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
-    # Job 3 Host 3 – t004 (template ok)
+    # Job 3 Host 3 – t004 (cli_config ok)
     {
         'job_id': 3,
         'playbook': 'infra.yml',
         'host_id': 3,
         'task_uuid': 't004',
         'event': 'runner_item_on_ok',
-        'task_action': 'ansible.builtin.template',
+        'task_action': 'ansible.netcommon.cli_config',
         'job_created': '2024-01-03 08:00:00+00',
         'job_started': '2024-01-03 08:05:00+00',
         'job_finished': '2024-01-03 08:18:00+00',
@@ -209,14 +209,14 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
-    # Job 4 Host 5 – t001 (copy retried and success)
+    # Job 4 Host 5 – t001 (win_copy retried and success)
     {
         'job_id': 4,
         'playbook': 'deploy.yml',
         'host_id': 5,
         'task_uuid': 't001',
         'event': 'runner_on_failed',
-        'task_action': 'ansible.builtin.copy',
+        'task_action': 'ansible.windows.win_copy',
         'job_created': '2024-01-05 18:00:00+00',
         'job_started': '2024-01-05 18:10:00+00',
         'job_finished': '2024-01-05 18:20:00+00',
@@ -230,7 +230,7 @@ events = [
         'host_id': 5,
         'task_uuid': 't001',
         'event': 'runner_on_ok',
-        'task_action': 'ansible.builtin.copy',
+        'task_action': 'ansible.windows.win_copy',
         'job_created': '2024-01-05 18:00:00+00',
         'job_started': '2024-01-05 18:10:00+00',
         'job_finished': '2024-01-05 18:20:00+00',
@@ -302,10 +302,10 @@ def test_events_modules_aggregations_basic():
     pprint.pprint(result)
 
     expected_modules = {
-        'ansible.builtin.copy',
+        'ansible.windows.win_copy',
         'community.general.yum',
         'community.mongodb.insert',
-        'ansible.builtin.template',
+        'ansible.netcommon.cli_config',
         'ansible.posix.firewalld',
         'community.aws.ec2',
     }
@@ -329,45 +329,48 @@ def test_events_modules_aggregations_basic():
 
     # collection stats assertions (current aggregation schema)
     coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
+
+    # Certified collection (ansible.posix, ansible.windows, ansible.netcommon)
+    certified_coll = coll_by_source['certified']
+    assert certified_coll['jobs_total'] == 4
+    assert certified_coll['hosts_total'] == 4
+    assert certified_coll['job_duration_total_seconds'] == 2880.0
+    assert certified_coll['job_waiting_time_total_seconds'] == 1200.0
+    assert certified_coll['avg_job_duration_seconds'] == 720.0
+    assert certified_coll['avg_job_waiting_time_seconds'] == 300.0
+    assert certified_coll['avg_hosts_per_job'] == 1.75
+    assert certified_coll['jobs_containing_collection_source_failed_total'] == 3
+    assert certified_coll['jobs_failed_because_of_collection_source_failure_total'] == 1
+    assert certified_coll['task_clean_success_total'] == 3
+    assert certified_coll['task_success_with_reruns_total'] == 2
+    assert certified_coll['task_failed_total'] == 1
+    assert certified_coll['task_failed_and_ignored_total'] == 0
+    assert certified_coll['task_skipped_total'] == 0
+    assert certified_coll['task_unreachable_total'] == 1
+
+    # Community collection
     community_coll = coll_by_source['community']
     assert community_coll['jobs_total'] == 4
-    assert community_coll['hosts_total'] == 7
+    assert community_coll['hosts_total'] == 6
     assert community_coll['job_duration_total_seconds'] == 2880.0
     assert community_coll['job_waiting_time_total_seconds'] == 1200.0
     assert community_coll['avg_job_duration_seconds'] == 720.0
     assert community_coll['avg_job_waiting_time_seconds'] == 300.0
-    assert community_coll['avg_hosts_per_job'] == 2.5
+    assert community_coll['avg_hosts_per_job'] == 2.0
     assert community_coll['jobs_containing_collection_source_failed_total'] == 3
-    assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 3
-    assert community_coll['task_clean_success_total'] == 4
+    assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 2
+    assert community_coll['task_clean_success_total'] == 3
     assert community_coll['task_success_with_reruns_total'] == 1
-    assert community_coll['task_failed_total'] == 3
+    assert community_coll['task_failed_total'] == 2
     assert community_coll['task_failed_and_ignored_total'] == 1
     assert community_coll['task_skipped_total'] == 1
     assert community_coll['task_unreachable_total'] == 0
 
-    validated_coll = coll_by_source['validated']
-    assert validated_coll['jobs_total'] == 4
-    assert validated_coll['hosts_total'] == 4
-    assert validated_coll['job_duration_total_seconds'] == 2880.0
-    assert validated_coll['job_waiting_time_total_seconds'] == 1200.0
-    assert validated_coll['avg_job_duration_seconds'] == 720.0
-    assert validated_coll['avg_job_waiting_time_seconds'] == 300.0
-    assert validated_coll['avg_hosts_per_job'] == 1.25
-    assert validated_coll['jobs_containing_collection_source_failed_total'] == 3
-    assert validated_coll['jobs_failed_because_of_collection_source_failure_total'] == 0
-    assert validated_coll['task_clean_success_total'] == 2
-    assert validated_coll['task_success_with_reruns_total'] == 2
-    assert validated_coll['task_failed_total'] == 0
-    assert validated_coll['task_failed_and_ignored_total'] == 0
-    assert validated_coll['task_skipped_total'] == 0
-    assert validated_coll['task_unreachable_total'] == 1
-
     # Verify per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}
-    # ansible.builtin.copy (validated)
-    copy_stats = stats_by_module['ansible.builtin.copy']
-    assert copy_stats['collection_source'] == 'validated'
+    # ansible.windows.win_copy (certified)
+    copy_stats = stats_by_module['ansible.windows.win_copy']
+    assert copy_stats['collection_source'] == 'certified'
     assert copy_stats['task_clean_success_total'] == 1
     assert copy_stats['task_success_with_reruns_total'] == 2
     assert copy_stats['task_failed_total'] == 0
@@ -376,6 +379,42 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['task_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['hosts_total'] == 3
+
+    # ansible.netcommon.cli_config (certified)
+    template_stats = stats_by_module['ansible.netcommon.cli_config']
+    assert template_stats['collection_source'] == 'certified'
+    assert template_stats['task_clean_success_total'] == 1
+    assert template_stats['task_success_with_reruns_total'] == 0
+    assert template_stats['task_failed_total'] == 0
+    assert template_stats['task_failed_and_ignored_total'] == 0
+    assert template_stats['task_skipped_total'] == 0
+    assert template_stats['task_unreachable_total'] == 1
+    assert template_stats['jobs_total'] == 2
+    assert template_stats['hosts_total'] == 2
+
+    # ansible.posix.firewalld (certified)
+    firewalld_stats = stats_by_module['ansible.posix.firewalld']
+    assert firewalld_stats['collection_source'] == 'certified'
+    assert firewalld_stats['task_clean_success_total'] == 1
+    assert firewalld_stats['task_success_with_reruns_total'] == 0
+    assert firewalld_stats['task_failed_total'] == 1
+    assert firewalld_stats['task_failed_and_ignored_total'] == 0
+    assert firewalld_stats['task_skipped_total'] == 0
+    assert firewalld_stats['task_unreachable_total'] == 0
+    assert firewalld_stats['jobs_total'] == 2
+    assert firewalld_stats['hosts_total'] == 2
+
+    # community.aws.ec2 (community)
+    ec2_stats = stats_by_module['community.aws.ec2']
+    assert ec2_stats['collection_source'] == 'community'
+    assert ec2_stats['task_clean_success_total'] == 2
+    assert ec2_stats['task_success_with_reruns_total'] == 0
+    assert ec2_stats['task_failed_total'] == 0
+    assert ec2_stats['task_failed_and_ignored_total'] == 1
+    assert ec2_stats['task_skipped_total'] == 1
+    assert ec2_stats['task_unreachable_total'] == 0
+    assert ec2_stats['jobs_total'] == 2
+    assert ec2_stats['hosts_total'] == 4
 
     # community.general.yum (community)
     yum_stats = stats_by_module['community.general.yum']
@@ -400,39 +439,3 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_unreachable_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['hosts_total'] == 2
-
-    # ansible.builtin.template (validated)
-    template_stats = stats_by_module['ansible.builtin.template']
-    assert template_stats['collection_source'] == 'validated'
-    assert template_stats['task_clean_success_total'] == 1
-    assert template_stats['task_success_with_reruns_total'] == 0
-    assert template_stats['task_failed_total'] == 0
-    assert template_stats['task_failed_and_ignored_total'] == 0
-    assert template_stats['task_skipped_total'] == 0
-    assert template_stats['task_unreachable_total'] == 1
-    assert template_stats['jobs_total'] == 2
-    assert template_stats['hosts_total'] == 2
-
-    # ansible.posix.firewalld (community)
-    firewalld_stats = stats_by_module['ansible.posix.firewalld']
-    assert firewalld_stats['collection_source'] == 'community'
-    assert firewalld_stats['task_clean_success_total'] == 1
-    assert firewalld_stats['task_success_with_reruns_total'] == 0
-    assert firewalld_stats['task_failed_total'] == 1
-    assert firewalld_stats['task_failed_and_ignored_total'] == 0
-    assert firewalld_stats['task_skipped_total'] == 0
-    assert firewalld_stats['task_unreachable_total'] == 0
-    assert firewalld_stats['jobs_total'] == 2
-    assert firewalld_stats['hosts_total'] == 2
-
-    # community.aws.ec2 (community)
-    ec2_stats = stats_by_module['community.aws.ec2']
-    assert ec2_stats['collection_source'] == 'community'
-    assert ec2_stats['task_clean_success_total'] == 2
-    assert ec2_stats['task_success_with_reruns_total'] == 0
-    assert ec2_stats['task_failed_total'] == 0
-    assert ec2_stats['task_failed_and_ignored_total'] == 1
-    assert ec2_stats['task_skipped_total'] == 1
-    assert ec2_stats['task_unreachable_total'] == 0
-    assert ec2_stats['jobs_total'] == 2
-    assert ec2_stats['hosts_total'] == 4
