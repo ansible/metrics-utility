@@ -188,7 +188,7 @@ class EventModulesAnonymizedRollups:
         # when at least one success event is seen, task is successful
         # failed event can be repeated multiple times, we are counting failed attempts
         task_summary = (
-            dataframe.groupby(['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source'])
+            dataframe.groupby(['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'])
             .agg(
                 seen_success=('task_success_event', 'max'),
                 seen_failed=('task_failed_event', 'max'),
