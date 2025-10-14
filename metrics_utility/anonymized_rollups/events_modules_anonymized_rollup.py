@@ -217,7 +217,7 @@ class EventModulesAnonymizedRollups:
             .reset_index()
         )
 
-        collection_stats = (
+        collection_source_stats = (
             task_summary.groupby('collection_source')
             .agg(
                 hosts_total=('host_id', 'nunique'),
@@ -233,15 +233,15 @@ class EventModulesAnonymizedRollups:
         )
 
         # Collapse to one record per (job_id, collection_source)
-        per_job = dataframe.groupby(['job_id', 'collection_source'], as_index=False).agg(
+        per_job_collection_source = dataframe.groupby(['job_id', 'collection_source'], as_index=False).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             host_count=('host_id', 'nunique'),
             job_containing_collection_source_failed=('job_failed', 'max'),
         )
 
-        job_time_stats = (
-            per_job.groupby('collection_source')
+        job_time_stats_collection_source = (
+            per_job_collection_source.groupby('collection_source')
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
@@ -257,10 +257,10 @@ class EventModulesAnonymizedRollups:
         )
 
         # merge collection_stats and job_time_stats into one list based on collection_source
-        collection_stats_dict = collection_stats.to_dict(orient='records')
-        job_time_stats_dict = job_time_stats.to_dict(orient='records')
+        collection_source_stats_dict = collection_source_stats.to_dict(orient='records')
+        job_time_stats_collection_source_dict = job_time_stats_collection_source.to_dict(orient='records')
 
-        merged_list = merge_collection_source(collection_stats_dict, job_time_stats_dict)
+        merged_list = merge_collection_source(collection_source_stats_dict, job_time_stats_collection_source_dict)
 
         # Prepare rollup data (dataframes before conversion)
         rollup_data = {
@@ -275,9 +275,9 @@ class EventModulesAnonymizedRollups:
             # pandas.DataFrame
             'module_stats': module_stats,
             # pandas.DataFrame
-            'collection_stats': collection_stats,
+            'collection_source_stats': collection_source_stats,
             # pandas.DataFrame
-            'job_time_stats_per_collection_source': job_time_stats,
+            'job_time_stats_per_collection_source': job_time_stats_collection_source,
             # int (scalar)
             'total_hosts_automated': total_hosts_automated,
         }
@@ -289,7 +289,7 @@ class EventModulesAnonymizedRollups:
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': module_stats.to_dict(orient='records'),
-            'collection_stats': merged_list,
+            'collection_source_stats': merged_list,
             'total_hosts_automated': total_hosts_automated,
         }
 
