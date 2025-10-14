@@ -328,7 +328,8 @@ def test_events_modules_aggregations_basic():
     assert result['total_hosts_automated'] == 8
 
     # collection stats assertions (current aggregation schema)
-    coll_by_source = {row['collection_source']: row for row in result['collection_stats']}
+    coll_by_source = {row['collection_source']: row for row in result['collection_source_stats']}
+    coll_by_name = {row['collection_name']: row for row in result['collection_name_stats']}
 
     # Certified collection (ansible.posix, ansible.windows, ansible.netcommon)
     certified_coll = coll_by_source['certified']
@@ -439,3 +440,119 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_unreachable_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['hosts_total'] == 2
+
+    # collection_name_stats assertions
+
+    # ansible.netcommon
+    netcommon_coll = coll_by_name['ansible.netcommon']
+    assert netcommon_coll['collection_source'] == 'certified'
+    assert netcommon_coll['jobs_total'] == 2
+    assert netcommon_coll['hosts_total'] == 2
+    assert netcommon_coll['job_duration_total_seconds'] == 1320.0
+    assert netcommon_coll['job_waiting_time_total_seconds'] == 360.0
+    assert netcommon_coll['avg_job_duration_seconds'] == 660.0
+    assert netcommon_coll['avg_job_waiting_time_seconds'] == 180.0
+    assert netcommon_coll['avg_hosts_per_job'] == 1.0
+    assert netcommon_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert netcommon_coll['jobs_failed_because_of_collection_name_failure_total'] == 0
+    assert netcommon_coll['task_clean_success_total'] == 1
+    assert netcommon_coll['task_success_with_reruns_total'] == 0
+    assert netcommon_coll['task_failed_total'] == 0
+    assert netcommon_coll['task_failed_and_ignored_total'] == 0
+    assert netcommon_coll['task_skipped_total'] == 0
+    assert netcommon_coll['task_unreachable_total'] == 1
+
+    # ansible.posix
+    posix_coll = coll_by_name['ansible.posix']
+    assert posix_coll['collection_source'] == 'certified'
+    assert posix_coll['jobs_total'] == 2
+    assert posix_coll['hosts_total'] == 2
+    assert posix_coll['job_duration_total_seconds'] == 1380.0
+    assert posix_coll['job_waiting_time_total_seconds'] == 900.0
+    assert posix_coll['avg_job_duration_seconds'] == 690.0
+    assert posix_coll['avg_job_waiting_time_seconds'] == 450.0
+    assert posix_coll['avg_hosts_per_job'] == 1.0
+    assert posix_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert posix_coll['jobs_failed_because_of_collection_name_failure_total'] == 1
+    assert posix_coll['task_clean_success_total'] == 1
+    assert posix_coll['task_success_with_reruns_total'] == 0
+    assert posix_coll['task_failed_total'] == 1
+    assert posix_coll['task_failed_and_ignored_total'] == 0
+    assert posix_coll['task_skipped_total'] == 0
+    assert posix_coll['task_unreachable_total'] == 0
+
+    # ansible.windows
+    windows_coll = coll_by_name['ansible.windows']
+    assert windows_coll['collection_source'] == 'certified'
+    assert windows_coll['jobs_total'] == 3
+    assert windows_coll['hosts_total'] == 3
+    assert windows_coll['job_duration_total_seconds'] == 2100.0
+    assert windows_coll['job_waiting_time_total_seconds'] == 900.0
+    assert windows_coll['avg_job_duration_seconds'] == 700.0
+    assert windows_coll['avg_job_waiting_time_seconds'] == 300.0
+    assert windows_coll['avg_hosts_per_job'] == 1.0
+    assert windows_coll['jobs_containing_collection_name_failed_total'] == 3
+    assert windows_coll['jobs_failed_because_of_collection_name_failure_total'] == 0
+    assert windows_coll['task_clean_success_total'] == 1
+    assert windows_coll['task_success_with_reruns_total'] == 2
+    assert windows_coll['task_failed_total'] == 0
+    assert windows_coll['task_failed_and_ignored_total'] == 0
+    assert windows_coll['task_skipped_total'] == 0
+    assert windows_coll['task_unreachable_total'] == 0
+
+    # community.aws
+    aws_coll = coll_by_name['community.aws']
+    assert aws_coll['collection_source'] == 'community'
+    assert aws_coll['jobs_total'] == 2
+    assert aws_coll['hosts_total'] == 4
+    assert aws_coll['job_duration_total_seconds'] == 1380.0
+    assert aws_coll['job_waiting_time_total_seconds'] == 900.0
+    assert aws_coll['avg_job_duration_seconds'] == 690.0
+    assert aws_coll['avg_job_waiting_time_seconds'] == 450.0
+    assert aws_coll['avg_hosts_per_job'] == 2.0
+    assert aws_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert aws_coll['jobs_failed_because_of_collection_name_failure_total'] == 0
+    assert aws_coll['task_clean_success_total'] == 2
+    assert aws_coll['task_success_with_reruns_total'] == 0
+    assert aws_coll['task_failed_total'] == 0
+    assert aws_coll['task_failed_and_ignored_total'] == 1
+    assert aws_coll['task_skipped_total'] == 1
+    assert aws_coll['task_unreachable_total'] == 0
+
+    # community.general
+    general_coll = coll_by_name['community.general']
+    assert general_coll['collection_source'] == 'community'
+    assert general_coll['jobs_total'] == 2
+    assert general_coll['hosts_total'] == 1
+    assert general_coll['job_duration_total_seconds'] == 1500.0
+    assert general_coll['job_waiting_time_total_seconds'] == 300.0
+    assert general_coll['avg_job_duration_seconds'] == 750.0
+    assert general_coll['avg_job_waiting_time_seconds'] == 150.0
+    assert general_coll['avg_hosts_per_job'] == 1.0
+    assert general_coll['jobs_containing_collection_name_failed_total'] == 2
+    assert general_coll['jobs_failed_because_of_collection_name_failure_total'] == 2
+    assert general_coll['task_clean_success_total'] == 0
+    assert general_coll['task_success_with_reruns_total'] == 0
+    assert general_coll['task_failed_total'] == 2
+    assert general_coll['task_failed_and_ignored_total'] == 0
+    assert general_coll['task_skipped_total'] == 0
+    assert general_coll['task_unreachable_total'] == 0
+
+    # community.mongodb
+    mongodb_coll = coll_by_name['community.mongodb']
+    assert mongodb_coll['collection_source'] == 'community'
+    assert mongodb_coll['jobs_total'] == 2
+    assert mongodb_coll['hosts_total'] == 2
+    assert mongodb_coll['job_duration_total_seconds'] == 1500.0
+    assert mongodb_coll['job_waiting_time_total_seconds'] == 300.0
+    assert mongodb_coll['avg_job_duration_seconds'] == 750.0
+    assert mongodb_coll['avg_job_waiting_time_seconds'] == 150.0
+    assert mongodb_coll['avg_hosts_per_job'] == 1.0
+    assert mongodb_coll['jobs_containing_collection_name_failed_total'] == 2
+    assert mongodb_coll['jobs_failed_because_of_collection_name_failure_total'] == 0
+    assert mongodb_coll['task_clean_success_total'] == 1
+    assert mongodb_coll['task_success_with_reruns_total'] == 1
+    assert mongodb_coll['task_failed_total'] == 0
+    assert mongodb_coll['task_failed_and_ignored_total'] == 0
+    assert mongodb_coll['task_skipped_total'] == 0
+    assert mongodb_coll['task_unreachable_total'] == 0

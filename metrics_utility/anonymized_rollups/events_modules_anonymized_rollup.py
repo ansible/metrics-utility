@@ -27,6 +27,7 @@ def merge_collection_source(obj1, obj2):
 
     return merged_list
 
+
 def merge_collection_name(obj1, obj2):
     merged = {}
 
