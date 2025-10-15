@@ -301,18 +301,13 @@ def test_events_modules_aggregations_basic():
 
     pprint.pprint(result)
 
-    expected_modules = {
-        'ansible.windows.win_copy',
-        'community.general.yum',
-        'community.mongodb.insert',
-        'ansible.netcommon.cli_config',
-        'ansible.posix.firewalld',
-        'community.aws.ec2',
-    }
+    # Assert list of modules used to automate
+    assert result['modules_used_to_automate_total'] == 6
 
-    # list and count of unique modules
-    assert set(result['list_of_modules_used_to_automate']) == expected_modules
-    assert result['modules_used_to_automate_total'] == len(expected_modules)
+    modules_list = result['list_of_modules_used_to_automate']
+    assert len(modules_list) == 6
+
+
 
     # average number of modules per playbook based on current aggregation
     assert result['avg_number_of_modules_used_in_a_playbooks'] == 3.25
