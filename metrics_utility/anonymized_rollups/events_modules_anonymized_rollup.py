@@ -160,13 +160,9 @@ class EventModulesAnonymizedRollups:
         # distinct name of modules used to automate
 
         # pick unique module name and associated collection source
-        list_of_modules_used_to_automate = (
-        dataframe.groupby('module_name', as_index=False)
-        .agg({
-            'collection_source': lambda x: x.unique()[0],
-            'collection_name': lambda x: x.unique()[0]
-        })
-)
+        list_of_modules_used_to_automate = dataframe.groupby('module_name', as_index=False).agg(
+            {'collection_source': lambda x: x.unique()[0], 'collection_name': lambda x: x.unique()[0]}
+        )
 
         print(list_of_modules_used_to_automate)
 

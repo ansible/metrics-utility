@@ -26,6 +26,20 @@ events = [
         'job_id': 1,
         'playbook': 'site.yml',
         'host_id': 1,
+        'task_uuid': 't121',
+        'event': 'runner_on_ok',
+        'task_action': 'custom.user.collection',
+        'job_created': '2024-01-01 00:00:00+00',
+        'job_started': '2024-01-01 00:01:00+00',
+        'job_finished': '2024-01-01 00:10:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
+    {
+        'job_id': 1,
+        'playbook': 'site.yml',
+        'host_id': 1,
         'task_uuid': 't001',
         'event': 'runner_on_ok',
         'task_action': 'ansible.windows.win_copy',
@@ -302,10 +316,10 @@ def test_events_modules_aggregations_basic():
     pprint.pprint(result)
 
     # Assert list of modules used to automate
-    assert result['modules_used_to_automate_total'] == 6
+    assert result['modules_used_to_automate_total'] == 7
 
     modules_list = result['list_of_modules_used_to_automate']
-    assert len(modules_list) == 6
+    assert len(modules_list) == 7
 
     assert result['list_of_modules_used_to_automate'] == [
         {'module_name': 'ansible.netcommon.cli_config', 'collection_source': 'certified', 'collection_name': 'ansible.netcommon'},
@@ -314,17 +328,18 @@ def test_events_modules_aggregations_basic():
         {'module_name': 'community.aws.ec2', 'collection_source': 'community', 'collection_name': 'community.aws'},
         {'module_name': 'community.general.yum', 'collection_source': 'community', 'collection_name': 'community.general'},
         {'module_name': 'community.mongodb.insert', 'collection_source': 'community', 'collection_name': 'community.mongodb'},
+        {'module_name': 'custom.user.collection', 'collection_source': 'Unknown', 'collection_name': 'custom.user'},
     ]
 
     # average number of modules per playbook based on current aggregation
-    assert result['avg_number_of_modules_used_in_a_playbooks'] == 3.25
+    assert result['avg_number_of_modules_used_in_a_playbooks'] == 3.5
 
     # total modules used per playbook (current aggregation)
     assert result['modules_used_per_playbook_total'] == {
         'db.yml': 3,
         'deploy.yml': 3,
         'infra.yml': 3,
-        'site.yml': 4,
+        'site.yml': 5,
     }
 
     assert result['total_hosts_automated'] == 8
@@ -345,6 +360,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['task_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['hosts_total'] == 3
+    assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
 
     # ansible.netcommon.cli_config (certified)
     template_stats = stats_by_module['ansible.netcommon.cli_config']
@@ -357,6 +373,7 @@ def test_events_modules_aggregations_basic():
     assert template_stats['task_unreachable_total'] == 1
     assert template_stats['jobs_total'] == 2
     assert template_stats['hosts_total'] == 2
+    assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
 
     # ansible.posix.firewalld (certified)
     firewalld_stats = stats_by_module['ansible.posix.firewalld']
@@ -369,6 +386,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['task_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['hosts_total'] == 2
+    assert firewalld_stats['jobs_failed_because_of_module_failure_total'] == 1
 
     # community.aws.ec2 (community)
     ec2_stats = stats_by_module['community.aws.ec2']
@@ -381,6 +399,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['task_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['hosts_total'] == 4
+    assert ec2_stats['jobs_failed_because_of_module_failure_total'] == 0
 
     # community.general.yum (community)
     yum_stats = stats_by_module['community.general.yum']
@@ -393,6 +412,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['task_unreachable_total'] == 0
     assert yum_stats['jobs_total'] == 2
     assert yum_stats['hosts_total'] == 1
+    assert yum_stats['jobs_failed_because_of_module_failure_total'] == 2
 
     # community.mongodb.insert (community)
     mongo_stats = stats_by_module['community.mongodb.insert']
@@ -405,6 +425,20 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_unreachable_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['hosts_total'] == 2
+    assert mongo_stats['jobs_failed_because_of_module_failure_total'] == 0
+
+    # custom.user.collection (Unknown)
+    custom_stats = stats_by_module['custom.user.collection']
+    assert custom_stats['collection_source'] == 'Unknown'
+    assert custom_stats['task_clean_success_total'] == 1
+    assert custom_stats['task_success_with_reruns_total'] == 0
+    assert custom_stats['task_failed_total'] == 0
+    assert custom_stats['task_failed_and_ignored_total'] == 0
+    assert custom_stats['task_skipped_total'] == 0
+    assert custom_stats['task_unreachable_total'] == 0
+    assert custom_stats['jobs_total'] == 1
+    assert custom_stats['hosts_total'] == 1
+    assert custom_stats['jobs_failed_because_of_module_failure_total'] == 0
 
     # collection_name_stats assertions
 
@@ -521,3 +555,22 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['task_failed_and_ignored_total'] == 0
     assert mongodb_coll['task_skipped_total'] == 0
     assert mongodb_coll['task_unreachable_total'] == 0
+
+    # custom.user
+    custom_coll = coll_by_name['custom.user']
+    assert custom_coll['collection_source'] == 'Unknown'
+    assert custom_coll['jobs_total'] == 1
+    assert custom_coll['hosts_total'] == 1
+    assert custom_coll['job_duration_total_seconds'] == 540.0
+    assert custom_coll['job_waiting_time_total_seconds'] == 60.0
+    assert custom_coll['avg_job_duration_seconds'] == 540.0
+    assert custom_coll['avg_job_waiting_time_seconds'] == 60.0
+    assert custom_coll['avg_hosts_per_job'] == 1.0
+    assert custom_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert custom_coll['jobs_failed_because_of_collection_name_failure_total'] == 0
+    assert custom_coll['task_clean_success_total'] == 1
+    assert custom_coll['task_success_with_reruns_total'] == 0
+    assert custom_coll['task_failed_total'] == 0
+    assert custom_coll['task_failed_and_ignored_total'] == 0
+    assert custom_coll['task_skipped_total'] == 0
+    assert custom_coll['task_unreachable_total'] == 0
