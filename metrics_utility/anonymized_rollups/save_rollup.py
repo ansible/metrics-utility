@@ -6,10 +6,7 @@ import tarfile
 import pandas as pd
 
 
-save_csv = False
-
-
-def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month: int, day: int) -> None:
+def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month: int, day: int, save_csv: bool = False) -> None:
     # rollup data is dictionary
     # the dictionary can have those values:
     # scalar, list, pandas.Series, pandas.DataFrame
@@ -17,6 +14,8 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
     # file will be dataframe or json for rest of the values
 
     # file will be stored inside base_path/rollups/rollup_name/year/month/day
+
+    # save_csv is for testing purposes only - so we can check content of files easily
 
     rollup_path = os.path.join(base_path, 'rollups', str(year), str(month), str(day), rollup_name)
 

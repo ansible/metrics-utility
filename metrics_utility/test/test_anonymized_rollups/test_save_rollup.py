@@ -63,10 +63,10 @@ def test_save_rollup(cleanup_glob):
     jobs_rollup = jobs_result['rollup']
 
     # save the rollups
-    save_rollup(events_modules_rollup, 'events_modules', './out', '2024', 1, 1)
-    save_rollup(execution_environments_rollup, 'execution_environments', './out', '2024', 1, 1)
-    save_rollup(jobhostsummary_rollup, 'jobhostsummary', './out', '2024', 1, 1)
-    save_rollup(jobs_rollup, 'jobs', './out', '2024', 1, 1)
+    save_rollup(events_modules_rollup, 'events_modules', './out', '2024', 1, 1, save_csv=True)
+    save_rollup(execution_environments_rollup, 'execution_environments', './out', '2024', 1, 1, save_csv=True)
+    save_rollup(jobhostsummary_rollup, 'jobhostsummary', './out', '2024', 1, 1, save_csv=True)
+    save_rollup(jobs_rollup, 'jobs', './out', '2024', 1, 1, save_csv=True)
 
     # create unified json from the partial json results
     unified_json = {
