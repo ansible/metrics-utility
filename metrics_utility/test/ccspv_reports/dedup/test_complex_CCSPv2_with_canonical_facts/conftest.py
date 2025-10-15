@@ -14,13 +14,13 @@ def transform_sheet(sheet):
     Handles mixed data types and malformed data gracefully.
     """
     if not isinstance(sheet, dict):
-        print(f"⚠ transform_sheet received non-dict data: {type(sheet)}")
+        print(f'⚠ transform_sheet received non-dict data: {type(sheet)}')
         return {}
 
     rows = {}
     # Iterate over each column and its data
     for col, col_data in sheet.items():
-        col = col.replace("\n", " ")
+        col = col.replace('\n', ' ')
 
         # Handle cases where col_data is not a dictionary
         if not isinstance(col_data, dict):
@@ -45,14 +45,14 @@ def get_xlsx_content_hash(file_path):
 
         # Hash all sheet names and their content
         for sheet_name in sorted(workbook.sheetnames):
-            hash_sha256.update(sheet_name.encode("utf-8"))
+            hash_sha256.update(sheet_name.encode('utf-8'))
             sheet = workbook[sheet_name]
 
             # Hash all cell values
             for row in sheet.iter_rows():
                 for cell in row:
                     if cell.value is not None:
-                        hash_sha256.update(str(cell.value).encode("utf-8"))
+                        hash_sha256.update(str(cell.value).encode('utf-8'))
 
         workbook.close()
         return hash_sha256.hexdigest()
@@ -64,8 +64,8 @@ def get_xlsx_content_hash(file_path):
 def get_file_hash(file_path):
     """Calculate SHA256 hash of file content."""
     hash_sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(4096), b''):
             hash_sha256.update(chunk)
     return hash_sha256.hexdigest()
 
@@ -75,7 +75,7 @@ def copy_if_content_changed(source_path, dest_path):
     # If destination doesn't exist, copy the file
     if not dest_path.exists():
         shutil.copy2(source_path, dest_path)
-        print(f"Created test report: {dest_path}")
+        print(f'Created test report: {dest_path}')
         return
 
     # Calculate content hashes of both XLSX files (ignoring metadata)
@@ -85,9 +85,9 @@ def copy_if_content_changed(source_path, dest_path):
     # Only copy if content is different
     if source_hash != dest_hash:
         shutil.copy2(source_path, dest_path)
-        print(f"Updated test report (content changed): {dest_path}")
+        print(f'Updated test report (content changed): {dest_path}')
     else:
-        print(f"Test report unchanged: {dest_path}")
+        print(f'Test report unchanged: {dest_path}')
 
 
 def _sort_list_values(value_list):
