@@ -168,11 +168,9 @@ class Collector:
     #
     # Private methods ---------------------------
     #
-    def _calculate_collection_interval(self, since, until):
+    def _adjust_future_dates(self, since, until):
+        """Adjust since/until dates if they are in the future."""
         _now = now()
-        original_since = since
-        original_until = until
-        logger.warning(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
@@ -182,9 +180,13 @@ class Collector:
             since = _now
             logger.warning(f'Start of the collection interval is in the future, setting to {_now}.')
 
-        # The value of `until` needs to be concrete, so resolve it.  If it wasn't passed in,
-        # set it to `now`, but only if that isn't more than 28 days ahead of a passed-in
-        # `since` parameter.
+        return since, until
+
+    def _resolve_until_date(self, since, until):
+        """Resolve the concrete value of until based on since and now."""
+        _now = now()
+
+        # The value of `until` needs to be concrete, so resolve it.
         if since is not None:
             if until is not None:
                 if until > since + timedelta(days=get_max_gather_period_days()):
@@ -197,21 +199,36 @@ class Collector:
         elif until is None:
             until = _now
 
-        # ensure since = until is valid and will not collect any data with timestamps
-        if since and since > until:
-            logger.warning('Start of the collection interval is later than the end, ignoring request.')
-            raise ValueError
+        return until
 
-        # The ultimate beginning of the interval needs to be compared to 28 days prior to
-        # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
-        # case to know whether to use the bookkeeping settings variables to decide the start of
-        # the interval.
+    def _enforce_max_period(self, since, until):
+        """Enforce maximum gathering period constraint."""
         horizon = until - timedelta(days=get_max_gather_period_days())
         if since is not None and since < horizon:
             since = horizon
             logger.warning(
                 f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
             )
+        return since, horizon
+
+    def _calculate_collection_interval(self, since, until):
+        original_since = since
+        original_until = until
+        logger.warning(f'Original since-until: {original_since} to {original_until}')
+
+        # Adjust dates if they are in the future
+        since, until = self._adjust_future_dates(since, until)
+
+        # Resolve the concrete value of until
+        until = self._resolve_until_date(since, until)
+
+        # Ensure since <= until is valid
+        if since and since > until:
+            logger.warning('Start of the collection interval is later than the end, ignoring request.')
+            raise ValueError
+
+        # Enforce maximum period constraint
+        since, horizon = self._enforce_max_period(since, until)
 
         last_gather = self._last_gathering() or horizon
         if last_gather < horizon:
@@ -268,17 +285,35 @@ class Collector:
             logger.log(self.log_level, "'config' collector data is missing")
             return False
         else:
-            self.collections['config'].gather(self._package_class().max_data_size())
+            self.collections['config'].gather(self._package_class().get_max_data_size())
             return True
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
         for collection in self.collections[Collection.COLLECTION_TYPE_JSON]:
-            collection.gather(self._package_class().max_data_size())
+            collection.gather(self._package_class().get_max_data_size())
 
             if collection.is_empty() or not collection.gathering_successful:
                 continue
 
+            self._add_collection_to_package(collection)
+
+    def _should_enable_collector(self, key, disable_job_host_summary, optional_collectors):
+        """Determine if a collector should be enabled."""
+        if key == 'job_host_summary' and not disable_job_host_summary:
+            return True
+        if key in optional_collectors:
+            return True
+        return False
+
+    def _process_collection_subcollections(self, collection):
+        """Process collection and its sub-collections."""
+        # If collection has sub_collections (it means it collected more files)
+        # ship them in their own package
+        if len(collection.sub_collections):
+            for sub_collection in collection.sub_collections:
+                self._add_collection_to_package(sub_collection)
+        else:
             self._add_collection_to_package(collection)
 
     def _gather_csv_collections(self):
@@ -287,23 +322,14 @@ class Collector:
          1) the temp file needs to be deleted to ensure enough disk space
          2) Collections with slicing function can produce duplicate filename
         """
-
         last_key = None
-
         disable_job_host_summary_str = os.getenv('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
         disable_job_host_summary = disable_job_host_summary_str.lower() == 'true'
-
         optional_collectors = get_optional_collectors()
 
         for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
             if last_key != collection.key:
-                write_enabled = False
-
-                if collection.key == 'job_host_summary' and not disable_job_host_summary:
-                    write_enabled = True
-
-                if collection.key in optional_collectors:
-                    write_enabled = True
+                write_enabled = self._should_enable_collector(collection.key, disable_job_host_summary, optional_collectors)
 
                 if write_enabled:
                     logger.warning(f'Progress info: Now gathering {collection.key}')
@@ -312,18 +338,12 @@ class Collector:
 
                 last_key = collection.key
 
-            collection.gather(self._package_class().max_data_size())
+            collection.gather(self._package_class().get_max_data_size())
 
             if collection.is_empty() or not collection.gathering_successful:
                 continue
 
-            # If collection has sub_collections (it means it collected more files)
-            # ship them in their own package
-            if len(collection.sub_collections):
-                for sub_collection in collection.sub_collections:
-                    self._add_collection_to_package(sub_collection)
-            else:
-                self._add_collection_to_package(collection)
+            self._process_collection_subcollections(collection)
 
     def _add_collection_to_package(self, collection):
         """Adds collection to package and ships it if collection has slicing"""

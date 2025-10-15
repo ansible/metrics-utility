@@ -21,6 +21,45 @@ file_glob = f'./out/*/{uuid}-*.tar.gz'
 file_paths = f'./out/data/2025/06/13/{uuid}-*.tar.gz'
 
 
+def _print_debug_info(text, expected_lines):
+    """Print debug information for CSV comparison."""
+    print('original --------------------------------')
+    for line in text:
+        print(line)
+    print('--------------------------------\n\n')
+
+    print('expected --------------------------------')
+    for line in expected_lines:
+        print(line)
+    print('--------------------------------\n\n')
+
+
+def _validate_csv_header(header, expected_header, csv_filename):
+    """Validate CSV header matches expected."""
+    assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
+
+
+def _validate_csv_row_count(actual_data, expected_rows, csv_filename):
+    """Validate CSV has expected number of rows."""
+    assert len(actual_data) == len(expected_rows), f'\nRow count mismatch in {csv_filename}: expected {len(expected_rows)}, got {len(actual_data)}'
+
+
+def _validate_csv_cells(header, expected_rows, actual_data, skip_columns_names, csv_filename):
+    """Validate individual cells match expected values."""
+    skip_columns = set(skip_columns_names)
+    for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
+        for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
+            col_name = header[idx]
+            if col_name in skip_columns:
+                continue
+            assert exp_cell == act_cell, (
+                f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
+                f'(index {idx}):\n'
+                f'Expected: {exp_cell!r}\n'
+                f'Actual:   {act_cell!r}'
+            )
+
+
 def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_columns_names):
     """Open tarballs under file_paths, find csv_filename, and validate its rows.
 
@@ -43,41 +82,17 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
             assert f is not None, f'Could not extract {csv_filename}'
 
             text = f.read().decode('utf-8').splitlines()
-
-            print('original --------------------------------')
-            # print(text)
-            for line in text:
-                print(line)
-            print('--------------------------------\n\n')
-
-            print('expected --------------------------------')
-            for line in expected_lines:
-                print(line)
-            print('--------------------------------\n\n')
+            _print_debug_info(text, expected_lines)
 
             reader = csv.reader(text)
             rows = list(reader)
 
             header = rows[0]
-            assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
-
             actual_data = rows[1:]
-            assert len(actual_data) == len(expected_rows), (
-                f'\nRow count mismatch in {csv_filename}: expected {len(expected_rows)}, got {len(actual_data)}'
-            )
 
-            skip_columns = set(skip_columns_names)
-            for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
-                for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
-                    col_name = header[idx]
-                    if col_name in skip_columns:
-                        continue
-                    assert exp_cell == act_cell, (
-                        f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
-                        f'(index {idx}):\n'
-                        f'Expected: {exp_cell!r}\n'
-                        f'Actual:   {act_cell!r}'
-                    )
+            _validate_csv_header(header, expected_header, csv_filename)
+            _validate_csv_row_count(actual_data, expected_rows, csv_filename)
+            _validate_csv_cells(header, expected_rows, actual_data, skip_columns_names, csv_filename)
 
             break
 
@@ -227,7 +242,12 @@ def test_job_host_summary_service_command(cleanup_glob):
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'job_host_summary_service.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
+    validate_csv_in_tarballs(
+        file_paths,
+        'job_host_summary_service.csv',
+        jobs_host_summary_service_lines,
+        jobs_host_summary_service_skip_columns,
+    )
 
 
 main_jobevent_service_lines = [
@@ -318,7 +338,12 @@ def test_main_jobevent_service_command(cleanup_glob):
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'main_jobevent_service.csv', main_jobevent_service_lines, main_jobevent_service_skip_columns)
+    validate_csv_in_tarballs(
+        file_paths,
+        'main_jobevent_service.csv',
+        main_jobevent_service_lines,
+        main_jobevent_service_skip_columns,
+    )
 
 
 execution_environments_lines = [
@@ -362,4 +387,9 @@ def test_execution_environments_command(cleanup_glob):
 
     file_paths = f'./out/data/{year}/{month}/{day}/{uuid}-*.tar.gz'
 
-    validate_csv_in_tarballs(file_paths, 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)
+    validate_csv_in_tarballs(
+        file_paths,
+        'execution_environments.csv',
+        execution_environments_lines,
+        execution_environments_skip_columns,
+    )

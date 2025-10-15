@@ -40,7 +40,8 @@ class DedupCCSP:
 
         return new
 
-    def df_to_mapping(self, df):
+    def _build_serial_to_hosts_mapping(self, df):
+        """Build mapping from serials to hosts and track first host per serial."""
         serial_to_hosts = defaultdict(set)
         serial_to_first = {}
 
@@ -55,10 +56,19 @@ class DedupCCSP:
                         if serial not in serial_to_first:
                             serial_to_first[serial] = host
 
+        return serial_to_hosts, serial_to_first
+
+    def _build_host_to_canonical_mapping(self, serial_to_hosts, serial_to_first):
+        """Build mapping from each host to its canonical host."""
         host_to_canonical = {}
         for serial, hosts in serial_to_hosts.items():
             canonical = serial_to_first[serial]
             for host in hosts:
                 host_to_canonical[host] = canonical
 
+        return host_to_canonical
+
+    def df_to_mapping(self, df):
+        serial_to_hosts, serial_to_first = self._build_serial_to_hosts_mapping(df)
+        host_to_canonical = self._build_host_to_canonical_mapping(serial_to_hosts, serial_to_first)
         return host_to_canonical

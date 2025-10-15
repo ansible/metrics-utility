@@ -69,7 +69,10 @@ def test_command_with_extended_canonical_facts(cleanup, request):
     extract_csvs_from_tarballs()
 
     # Mock the current_date method to return consistent date
-    with patch('metrics_utility.automation_controller_billing.report.report_ccsp_v2.ReportCCSPv2.current_date', return_value='Jul 14, 2025'):
+    with patch(
+        'metrics_utility.automation_controller_billing.report.report_ccsp_v2.ReportCCSPv2.current_date',
+        return_value='Jul 14, 2025',
+    ):
         # Running a command python way, so we can work with debugger in the code
         run_build_int(
             env_vars,
@@ -216,11 +219,19 @@ def validate_managed_nodes(file_path):
         1: {
             'Automated by organizations': 1,
             'Canonical Facts': {
-                'ansible_host': ['api-server', 'api-server.company.com', 'api-server.company.com.east'],
+                'ansible_host': [
+                    'api-server',
+                    'api-server.company.com',
+                    'api-server.company.com.east',
+                ],
                 'ansible_machine_id': ['a644029003e46b31d1a09ecec6c77b02'],
                 'ansible_port': [22],
                 'ansible_product_serial': ['USE1845G8K1'],
-                'host_name': ['api-server', 'api-server.company.com', 'api-server.company.com.east'],
+                'host_name': [
+                    'api-server',
+                    'api-server.company.com',
+                    'api-server.company.com.east',
+                ],
             },
             'Facts': {
                 'ansible_connection_variable': ['ssh'],
@@ -228,7 +239,11 @@ def validate_managed_nodes(file_path):
             },
             'First automation': Timestamp('2025-07-08 13:00:00'),
             'Host name': 'api-server',
-            'Host names before deduplication': ['api-server', 'api-server.company.com', 'api-server.company.com.east'],
+            'Host names before deduplication': [
+                'api-server',
+                'api-server.company.com',
+                'api-server.company.com.east',
+            ],
             'Host names before deduplication count': 3,
             'Job runs': 3,
             'Last automation': Timestamp('2025-07-08 13:10:00'),
@@ -319,7 +334,10 @@ def validate_managed_nodes(file_path):
             },
             'First automation': Timestamp('2025-07-10 21:00:00'),
             'Host name': 'aws-vm-01.us-east',
-            'Host names before deduplication': ['aws-vm-01.us-east', 'aws-vm-02.us-west'],
+            'Host names before deduplication': [
+                'aws-vm-01.us-east',
+                'aws-vm-02.us-west',
+            ],
             'Host names before deduplication count': 2,
             'Job runs': 2,
             'Last automation': Timestamp('2025-07-10 21:05:00'),
@@ -602,7 +620,10 @@ def validate_managed_nodes(file_path):
             },
             'First automation': Timestamp('2025-07-09 10:50:58.950000'),
             'Host name': 'web01.internal',
-            'Host names before deduplication': ['web01.internal', 'web01.prod.company.com'],
+            'Host names before deduplication': [
+                'web01.internal',
+                'web01.prod.company.com',
+            ],
             'Host names before deduplication count': 2,
             'Job runs': 3,
             'Last automation': Timestamp('2025-07-09 11:15:20.123000'),
@@ -662,7 +683,10 @@ def validate_managed_nodes(file_path):
             },
             'First automation': Timestamp('2025-07-09 18:00:00'),
             'Host name': 'web03.internal',
-            'Host names before deduplication': ['web03.internal', 'web03.prod.internal'],
+            'Host names before deduplication': [
+                'web03.internal',
+                'web03.prod.internal',
+            ],
             'Host names before deduplication count': 2,
             'Job runs': 2,
             'Last automation': Timestamp('2025-07-09 18:05:00'),
@@ -834,18 +858,30 @@ def validate_inventory_scope(file_path):
         },
         1: {
             'Canonical Facts': {
-                'ansible_host': ['api-server', 'api-server.company.com', 'api-server.company.com.east'],
+                'ansible_host': [
+                    'api-server',
+                    'api-server.company.com',
+                    'api-server.company.com.east',
+                ],
                 'ansible_machine_id': ['a644029003e46b31d1a09ecec6c77b02'],
                 'ansible_port': [22],
                 'ansible_product_serial': ['USE1845G8K1'],
-                'host_name': ['api-server', 'api-server.company.com', 'api-server.company.com.east'],
+                'host_name': [
+                    'api-server',
+                    'api-server.company.com',
+                    'api-server.company.com.east',
+                ],
             },
             'Facts': {
                 'ansible_connection_variable': ['ssh'],
                 'ansible_virtualization_type': ['kvm'],
             },
             'Host name': 'api-server',
-            'Host names before deduplication': ['api-server', 'api-server.company.com', 'api-server.company.com.east'],
+            'Host names before deduplication': [
+                'api-server',
+                'api-server.company.com',
+                'api-server.company.com.east',
+            ],
             'Host names before deduplication count': 3,
             'Inventories': ['Production Inventory'],
             'Last Automation': Timestamp('2025-07-08 13:10:00'),
@@ -875,7 +911,12 @@ def validate_inventory_scope(file_path):
             'Host name': 'app01.cluster',
             'Host names before deduplication': ['app01.cluster'],
             'Host names before deduplication count': 1,
-            'Inventories': ['Cross-Org Inventory', 'Development Inventory', 'Production Inventory', 'Staging Inventory'],
+            'Inventories': [
+                'Cross-Org Inventory',
+                'Development Inventory',
+                'Production Inventory',
+                'Staging Inventory',
+            ],
             'Last Automation': Timestamp('2025-07-09 17:20:15'),
             'Organizations': ['Development', 'Production', 'Staging'],
         },
@@ -930,7 +971,10 @@ def validate_inventory_scope(file_path):
                 'aws_instance_id': ['i-0a1b2c3d4e5f6g7h8', 'i-9z8y7x6w5v4u3t2s'],
             },
             'Host name': 'aws-vm-01.us-east',
-            'Host names before deduplication': ['aws-vm-01.us-east', 'aws-vm-02.us-west'],
+            'Host names before deduplication': [
+                'aws-vm-01.us-east',
+                'aws-vm-02.us-west',
+            ],
             'Host names before deduplication count': 2,
             'Inventories': ['Production Inventory'],
             'Last Automation': Timestamp('2025-07-08 21:05:00'),
@@ -1269,7 +1313,10 @@ def validate_inventory_scope(file_path):
                 'ansible_virtualization_type': ['VMware'],
             },
             'Host name': 'web01.internal',
-            'Host names before deduplication': ['web01.internal', 'web01.prod.company.com'],
+            'Host names before deduplication': [
+                'web01.internal',
+                'web01.prod.company.com',
+            ],
             'Host names before deduplication count': 2,
             'Inventories': ['Cross-Org Inventory', 'Production Inventory'],
             'Last Automation': Timestamp('2025-07-09 11:15:25.988000'),
@@ -1325,7 +1372,10 @@ def validate_inventory_scope(file_path):
                 'ansible_virtualization_type': ['VMware'],
             },
             'Host name': 'web03.internal',
-            'Host names before deduplication': ['web03.internal', 'web03.prod.internal'],
+            'Host names before deduplication': [
+                'web03.internal',
+                'web03.prod.internal',
+            ],
             'Host names before deduplication count': 2,
             'Inventories': ['Production Inventory'],
             'Last Automation': Timestamp('2025-07-09 18:05:00'),
@@ -1390,7 +1440,10 @@ def validate_inventory_scope(file_path):
         25: {
             'Canonical Facts': {
                 'ansible_host': ['webserver.company.com'],
-                'ansible_machine_id': ['1dcd7ec391a45938c8ab4ec198a24dc5', '78a5084255b084eebb58b41f5eb85c06'],
+                'ansible_machine_id': [
+                    '1dcd7ec391a45938c8ab4ec198a24dc5',
+                    '78a5084255b084eebb58b41f5eb85c06',
+                ],
                 'ansible_port': [22],
                 'ansible_product_serial': ['CN7792194B0W01', 'CN7792194B0W02'],
                 'host_name': ['webserver.company.com'],
@@ -1612,7 +1665,13 @@ def validate_ccsp_summary(file_path):
 
     # Check header fields exist
     first_column = raw_data.get('Unnamed: 0', {})
-    header_fields = ['CCSP Company Name', 'CCSP Email', 'CCSP RHN Login', 'Report Period (YYYY-MM)', 'End User Company Name']
+    header_fields = [
+        'CCSP Company Name',
+        'CCSP Email',
+        'CCSP RHN Login',
+        'Report Period (YYYY-MM)',
+        'End User Company Name',
+    ]
     has_all_headers = all(any(field in str(first_column.get(i, '')) for i in range(10)) for field in header_fields)
     actual['structure']['has_header_fields'] = has_all_headers
 
@@ -1974,7 +2033,10 @@ def validate_indirectly_managed_nodes(file_path):
             'Number of task runs': 1,
             'First automation': pandas.Timestamp('2025-07-08 10:00:10'),
             'Last automation': pandas.Timestamp('2025-07-08 10:00:10'),
-            'Canonical Facts': {'ansible_kubernetes_node_id': ['node-12345'], 'ansible_port': [22]},
+            'Canonical Facts': {
+                'ansible_kubernetes_node_id': ['node-12345'],
+                'ansible_port': [22],
+            },
             'Facts': {'platform': ['kubernetes']},
             'Manage Node Types': ['INDIRECT'],
             'Events': [],
@@ -2069,7 +2131,12 @@ def validate_data_collection_status(file_path):
     table1_actual = transform_sheet_with_json_normalization(table1_df.to_dict())
 
     # Parse second table (collection status)
-    table2_df = pandas.read_excel(file_path, sheet_name='Data collection status', skiprows=second_table_start, header=0)
+    table2_df = pandas.read_excel(
+        file_path,
+        sheet_name='Data collection status',
+        skiprows=second_table_start,
+        header=0,
+    )
     # Clean column names (remove newlines)
     table2_df.columns = [col.replace('\n', ' ') for col in table2_df.columns]
     table2_actual = transform_sheet_with_json_normalization(table2_df.to_dict())
@@ -2506,27 +2573,35 @@ def extract_csvs_from_tarballs():
                 extract_tarball_csvs(tarball, input_data_dir)
 
 
+def _prepare_csv_content(csv_content, output_file):
+    """Prepare CSV content for writing, skipping header if appending."""
+    content = csv_content.read().decode('utf-8')
+    # Skip header if appending
+    if output_file.exists() and '\n' in content:
+        lines = content.split('\n')
+        content = '\n'.join(lines[1:])  # Skip header
+    return content
+
+
+def _extract_csv_member(member, tar, output_dir):
+    """Extract a single CSV member from tarball."""
+    csv_content = tar.extractfile(member)
+    if csv_content:
+        base_name = member.name.split('/')[-1]
+        output_file = output_dir / f'input_{base_name}'
+
+        with open(output_file, 'a' if output_file.exists() else 'w') as f:
+            content = _prepare_csv_content(csv_content, output_file)
+            f.write(content)
+
+
 def extract_tarball_csvs(tarball_path, output_dir):
     """Extract CSV files from a single tarball."""
     try:
         with tarfile.open(tarball_path, 'r:gz') as tar:
             for member in tar.getmembers():
                 if member.name.endswith('.csv'):
-                    # Extract to memory first
-                    csv_content = tar.extractfile(member)
-                    if csv_content:
-                        # Determine output filename based on CSV type
-                        base_name = member.name.split('/')[-1]
-                        output_file = output_dir / f'input_{base_name}'
-
-                        # Append or create file
-                        with open(output_file, 'a' if output_file.exists() else 'w') as f:
-                            content = csv_content.read().decode('utf-8')
-                            # Skip header if appending
-                            if output_file.exists() and '\n' in content:
-                                lines = content.split('\n')
-                                content = '\n'.join(lines[1:])  # Skip header
-                            f.write(content)
+                    _extract_csv_member(member, tar, output_dir)
 
         print(f'📦 Extracting from {tarball_path.name}')
 

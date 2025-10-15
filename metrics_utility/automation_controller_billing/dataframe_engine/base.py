@@ -112,7 +112,11 @@ class Base:
             beginning_of_the_month = self.month.replace(day=1)
             end_of_the_month = beginning_of_the_month + relativedelta(months=1) - relativedelta(days=1)
 
-        dates_list = list_dates(start_date=beginning_of_the_month, end_date=end_of_the_month, granularity='daily')
+        dates_list = list_dates(
+            start_date=beginning_of_the_month,
+            end_date=end_of_the_month,
+            granularity='daily',
+        )
         return dates_list
 
     def cast_dataframe(self, df, types):
@@ -139,11 +143,20 @@ class Base:
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(
+                    lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')),
+                    axis=1,
+                )
             elif operations.get(col) == 'combine_json':
-                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(
+                    lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')),
+                    axis=1,
+                )
             elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(
+                    lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')),
+                    axis=1,
+                )
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
             del df[f'{col}_x']
@@ -158,7 +171,12 @@ class Base:
         if rollup is None:
             return new_group
 
-        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+        rollup = pd.merge(
+            rollup.loc[:,],
+            new_group.loc[:,],
+            on=self.unique_index_columns(),
+            how='outer',
+        )
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         return self.cast_dataframe(rollup, self.cast_types())
 
@@ -195,4 +213,8 @@ class Base:
 
     @staticmethod
     def operations():
+        """
+        Optional hook for subclasses to define custom dataframe operations.
+        Base implementation is intentionally empty.
+        """
         pass

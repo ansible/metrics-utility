@@ -57,7 +57,7 @@ class Package:
         self.total_data_size = 0
 
     @classmethod
-    def max_data_size(cls):
+    def get_max_data_size(cls):
         return cls.MAX_DATA_SIZE
 
     def add_collection(self, collection):
@@ -83,9 +83,10 @@ class Package:
         pass
 
     def has_free_space(self, requested_size):
-        return self.total_data_size + requested_size <= self.max_data_size()
+        return self.total_data_size + requested_size <= self.get_max_data_size()
 
-    def is_shipping_configured(self):
+    def _validate_tar_path(self):
+        """Validate that tar path exists and is valid."""
         if not self.tar_path:
             logger.error('Insights for Ansible Automation Platform TAR not found')
             return False
@@ -97,39 +98,57 @@ class Package:
         if 'Error:' in str(self.tar_path):
             return False
 
+        return True
+
+    def _validate_userpass_auth(self):
+        """Validate user/password authentication configuration."""
+        if not self.get_ingress_url():
+            logger.error('AUTOMATION_ANALYTICS_URL is not set')
+            return False
+
+        if not self._get_rh_user():
+            logger.error('REDHAT_USERNAME is not set')
+            return False
+
+        if not self._get_rh_password():
+            logger.error('REDHAT_PASSWORD is not set')
+            return False
+
+        return True
+
+    def _validate_s3_auth(self):
+        """Validate S3 authentication configuration."""
+        if not self.get_s3_configured():
+            logger.error('S3 configuration is not set')
+            return False
+
+        if not self._get_rh_user():
+            logger.error('aws_access_key_id is not set')
+            return False
+
+        if not self._get_rh_password():
+            logger.error('aws_secret_access_key is not set')
+            return False
+
+        if not self._get_rh_region():
+            logger.error('aws_region is not set')
+            return False
+
+        if not self._get_rh_bucket():
+            logger.error('aws_bucket is not set')
+            return False
+
+        return True
+
+    def is_shipping_configured(self):
+        if not self._validate_tar_path():
+            return False
+
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
-            if not self.get_ingress_url():
-                logger.error('AUTOMATION_ANALYTICS_URL is not set')
-                return False
-
-            if not self._get_rh_user():
-                logger.error('REDHAT_USERNAME is not set')
-                return False
-
-            if not self._get_rh_password():
-                logger.error('REDHAT_PASSWORD is not set')
-                return False
+            return self._validate_userpass_auth()
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_S3_USERPASS:
-            if not self.get_s3_configured():
-                logger.error('S3 configuration is not set')
-                return False
-
-            if not self._get_rh_user():
-                logger.error('aws_access_key_id is not set')
-                return False
-
-            if not self._get_rh_password():
-                logger.error('aws_secret_access_key is not set')
-                return False
-
-            if not self._get_rh_region():
-                logger.error('aws_region is not set')
-                return False
-
-            if not self._get_rh_bucket():
-                logger.error('aws_bucket is not set')
-                return False
+            return self._validate_s3_auth()
 
         return True
 

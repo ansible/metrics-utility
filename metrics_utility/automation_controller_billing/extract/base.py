@@ -189,6 +189,38 @@ def _write_member(member_path, file_obj, max_size, total_extracted_size):
     return total_extracted_size
 
 
+def _is_valid_tar_member(member, enabled_set):
+    """Validate if tar member should be extracted."""
+    # Skip directories and links
+    if member.isdir():
+        return False
+    if member.issym() or member.islnk():
+        logger.warning(f'Skipping link: {member.name}')
+        return False
+
+    # Only allow .json or .csv
+    if not (member.name.endswith('.json') or member.name.endswith('.csv')):
+        return False
+
+    # Only files from enabled_set (+ extension)
+    basename = os.path.basename(member.name)
+    if enabled_set:
+        if not any(basename.startswith(item + '.') for item in enabled_set):
+            return False
+
+    return True
+
+
+def _validate_extraction_path(member, extract_path):
+    """Validate that extraction path is safe (no path traversal)."""
+    member_path = os.path.abspath(os.path.join(extract_path, member.name))
+    extract_path_abs = os.path.abspath(extract_path)
+    if not member_path.startswith(extract_path_abs + os.sep):
+        logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
+        return None
+    return member_path
+
+
 def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 1024, enabled_set=None):
     """
     Safely extract a tar archive from 'tar_path' into 'extract_path' with constraints:
@@ -205,28 +237,13 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
     with tarfile.open(tar_path, 'r:*') as tar:
         for member in tar.getmembers():
-            # Skip directories and links
-            if member.isdir():
-                continue
-            if member.issym() or member.islnk():
-                logger.warning(f'Skipping link: {member.name}')
+            # Validate tar member
+            if not _is_valid_tar_member(member, enabled_set):
                 continue
 
-            # Only allow .json or .csv
-            if not (member.name.endswith('.json') or member.name.endswith('.csv')):
-                continue
-
-            # Only files from enabled_set (+ extension)
-            basename = os.path.basename(member.name)
-            if enabled_set:
-                if not any(basename.startswith(item + '.') for item in enabled_set):
-                    continue
-
-            # Build a fully qualified path for this member and ensure it stays within extract_path
-            member_path = os.path.abspath(os.path.join(extract_path, member.name))
-            extract_path_abs = os.path.abspath(extract_path)
-            if not member_path.startswith(extract_path_abs + os.sep):
-                logger.warning(f'Skipping potentially unsafe file (path traversal): {member.name}')
+            # Validate extraction path
+            member_path = _validate_extraction_path(member, extract_path)
+            if member_path is None:
                 continue
 
             # Limit total files
@@ -234,10 +251,9 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
                 logger.warning(f'Reached max file limit of {max_files}.')
                 break
 
-            # Extract file contents manually in chunks to avoid trusting the tar's metadata size
+            # Extract file contents manually in chunks
             file_obj = tar.extractfile(member)
             if file_obj is None:
-                # Could not read the file content for some reason
                 continue
 
             # Make sure the subdirectory structure exists
@@ -246,6 +262,7 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
             # Write out the file, limiting max size
             total_extracted_size = _write_member(member_path, file_obj, max_size, total_extracted_size)
 
+            basename = os.path.basename(member.name)
             extracted_files.append(basename)
 
     file_count = len(extracted_files)

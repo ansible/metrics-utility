@@ -7,8 +7,13 @@ from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-from metrics_utility.automation_controller_billing.dataframe_engine.base import merge_sets
-from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
+from metrics_utility.automation_controller_billing.dataframe_engine.base import (
+    merge_sets,
+)
+from metrics_utility.automation_controller_billing.helpers import (
+    merge_arrays,
+    merge_json_sets,
+)
 from metrics_utility.metric_utils import INDIRECT
 
 
@@ -65,7 +70,10 @@ class Base:
         """Add deduplication aggregation if experimental dedup is enabled."""
         if self.has_dedup_enabled():
             # Use merge_sets since the data already contains sets from initial aggregation
-            agg_dict['host_names_before_dedup'] = ('host_names_before_dedup', merge_sets)
+            agg_dict['host_names_before_dedup'] = (
+                'host_names_before_dedup',
+                merge_sets,
+            )
         return agg_dict
 
     def handle_dedup_columns_for_usage(self, dataframe, columns, convert_cols):
@@ -128,7 +136,10 @@ class Base:
         mapping_dataframe = mapping_dataframe['host_name'].astype(str).to_dict()
 
         def apply_mapping(row):
-            return mapping_dataframe.get(f'{row["host_name"]}__{str(row["install_uuid"])}__{row["job_remote_id"]}', row['host_name'])
+            return mapping_dataframe.get(
+                f'{row["host_name"]}__{str(row["install_uuid"])}__{row["job_remote_id"]}',
+                row['host_name'],
+            )
 
         destination_dataframe['host_name'] = destination_dataframe.apply(apply_mapping, axis=1)
         destination_dataframe['host_composite_id'] = destination_dataframe.apply(concatenate_columns_destination, axis=1)
@@ -202,21 +213,9 @@ class Base:
 
         return current_row + row_counter
 
-    def _build_data_section_infrastructure_summary(self, current_row, ws, dataframe):
-        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
-        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+    def _extract_infrastructure_info(self, indirect_nodes):
+        """Extract infrastructure information from indirect nodes."""
 
-        # Extract infrastructure facts from indirect nodes
-        indirect_nodes = dataframe[dataframe['managed_node_type'] == INDIRECT].copy()
-
-        if indirect_nodes.empty:
-            # If no indirect nodes, show empty message
-            cell = ws.cell(row=current_row, column=1)
-            cell.value = 'No indirect nodes found'
-            cell.font = value_font
-            return current_row + 1
-
-        # Parse facts to extract infra_type, infra_bucket, and device_type
         def extract_infra_info(facts):
             def extract_value(value):
                 if isinstance(value, set):
@@ -246,7 +245,11 @@ class Base:
                     }
                 except Exception:
                     pass
-            return {'infra_type': 'Unknown', 'infra_bucket': 'Unknown', 'device_type': 'Unknown'}
+            return {
+                'infra_type': 'Unknown',
+                'infra_bucket': 'Unknown',
+                'device_type': 'Unknown',
+            }
 
         # Extract infrastructure information
         infra_info = indirect_nodes['facts'].apply(extract_infra_info)
@@ -254,7 +257,10 @@ class Base:
         indirect_nodes['infra_bucket'] = infra_info.apply(lambda x: x['infra_bucket'])
         indirect_nodes['device_type'] = infra_info.apply(lambda x: x['device_type'])
 
-        # Group by infra_type, infra_bucket, and device_type
+        return indirect_nodes
+
+    def _create_infrastructure_summary(self, indirect_nodes):
+        """Create summary dataframe grouped by infrastructure attributes."""
         agg_dict = {
             'indirect_hosts_unique': ('host_name', 'nunique'),
             'indirect_hosts_total': ('host_name', 'count'),
@@ -262,12 +268,21 @@ class Base:
 
         summary_df = indirect_nodes.groupby(['infra_type', 'infra_bucket', 'device_type'], dropna=False).agg(**agg_dict)
         summary_df = summary_df.reset_index()
-
-        # Sort by infrastructure type, then bucket, then device type
         summary_df = summary_df.sort_values(['infra_type', 'infra_bucket', 'device_type'])
 
-        # Add all column headers
-        headers = ['Infrastructure', 'Device Category', 'Device Type', 'Unique Nodes', 'Total Nodes']
+        return summary_df
+
+    def _write_infrastructure_headers(self, ws, current_row):
+        """Write column headers for infrastructure summary."""
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        headers = [
+            'Infrastructure',
+            'Device Category',
+            'Device Type',
+            'Unique Nodes',
+            'Total Nodes',
+        ]
+
         for c_idx, header in enumerate(headers, 1):
             cell = ws.cell(row=current_row, column=c_idx)
             cell.value = header
@@ -275,9 +290,13 @@ class Base:
             cell.alignment = Alignment(horizontal='left')
 
         ws.row_dimensions[current_row].height = 25
-        current_row += 1
+        return current_row + 1
 
-        # Create hierarchical display
+    def _write_infrastructure_rows(self, ws, summary_df, current_row):
+        """Write infrastructure summary data rows."""
+        header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+
         prev_infra_type = None
         prev_infra_bucket = None
 
@@ -288,8 +307,12 @@ class Base:
 
             # Write infrastructure type header when it changes
             if infra_type != prev_infra_type:
-                # Merge cells across three columns for infrastructure type
-                ws.merge_cells(start_row=current_row, start_column=1, end_row=current_row, end_column=3)
+                ws.merge_cells(
+                    start_row=current_row,
+                    start_column=1,
+                    end_row=current_row,
+                    end_column=3,
+                )
                 cell = ws.cell(row=current_row, column=1)
                 cell.value = infra_type
                 cell.font = header_font
@@ -297,7 +320,7 @@ class Base:
                 ws.row_dimensions[current_row].height = 25
                 current_row += 1
                 prev_infra_type = infra_type
-                prev_infra_bucket = None  # Reset bucket tracking
+                prev_infra_bucket = None
 
             # Write infrastructure bucket header when it changes
             if infra_bucket != prev_infra_bucket:
@@ -326,6 +349,44 @@ class Base:
 
         return current_row
 
+    def _build_data_section_infrastructure_summary(self, current_row, ws, dataframe):
+        value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+
+        # Extract infrastructure facts from indirect nodes
+        indirect_nodes = dataframe[dataframe['managed_node_type'] == INDIRECT].copy()
+
+        if indirect_nodes.empty:
+            # If no indirect nodes, show empty message
+            cell = ws.cell(row=current_row, column=1)
+            cell.value = 'No indirect nodes found'
+            cell.font = value_font
+            return current_row + 1
+
+        # Extract and process infrastructure information
+        indirect_nodes = self._extract_infrastructure_info(indirect_nodes)
+        summary_df = self._create_infrastructure_summary(indirect_nodes)
+
+        # Write headers and data
+        current_row = self._write_infrastructure_headers(ws, current_row)
+        current_row = self._write_infrastructure_rows(ws, summary_df, current_row)
+
+        return current_row
+
+    def _prepare_usage_columns(self, managed_node_type, ccsp_report_dataframe, columns, convert_cols):
+        """Prepare columns for usage by node based on managed node type."""
+        # Add facts and canonical facts for managed nodes (direct) when experimental dedup is enabled
+        # or always for indirect nodes
+        if managed_node_type == 'indirect' or (managed_node_type == 'direct' and self.has_dedup_enabled()):
+            columns += ['canonical_facts', 'facts']
+
+        if managed_node_type == 'indirect':
+            columns += ['managed_node_types_set', 'events']
+
+        # Handle deduplication columns if enabled
+        columns, convert_cols = self.handle_dedup_columns_for_usage(ccsp_report_dataframe, columns, convert_cols)
+
+        return columns, convert_cols
+
     def _build_data_section_usage_by_node(self, current_row, ws, dataframe, mode=None, managed_node_type=None):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
@@ -336,7 +397,10 @@ class Base:
             'task_runs': ('task_runs', 'sum'),
             'first_automation': ('first_automation', 'min'),
             'last_automation': ('last_automation', 'max'),
-            'managed_node_types_set': ('managed_node_types_set', lambda x: merge_arrays(x)),
+            'managed_node_types_set': (
+                'managed_node_types_set',
+                lambda x: merge_arrays(x),
+            ),
             'events': ('events', lambda x: merge_arrays(x)),
             'canonical_facts': ('canonical_facts', lambda x: merge_json_sets(x)),
             'facts': ('facts', lambda x: merge_json_sets(x)),
@@ -361,16 +425,8 @@ class Base:
             'last_automation',
         ]
 
-        # Add facts and canonical facts for managed nodes (direct) when experimental dedup is enabled
-        # or always for indirect nodes
-        if managed_node_type == 'indirect' or (managed_node_type == 'direct' and self.has_dedup_enabled()):
-            columns += ['canonical_facts', 'facts']
-
-        if managed_node_type == 'indirect':
-            columns += ['managed_node_types_set', 'events']
-
-        # Handle deduplication columns if enabled
-        columns, convert_cols = self.handle_dedup_columns_for_usage(ccsp_report_dataframe, columns, convert_cols)
+        # Prepare columns based on managed node type
+        columns, convert_cols = self._prepare_usage_columns(managed_node_type, ccsp_report_dataframe, columns, convert_cols)
 
         for col in convert_cols:
             if col in ccsp_report_dataframe.columns:

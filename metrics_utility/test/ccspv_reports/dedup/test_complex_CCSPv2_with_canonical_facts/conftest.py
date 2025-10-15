@@ -90,31 +90,38 @@ def copy_if_content_changed(source_path, dest_path):
         print(f'Test report unchanged: {dest_path}')
 
 
+def _sort_list_values(value_list):
+    """Sort list values, filtering out None values."""
+    sorted_values = [v for v in value_list if v is not None]
+    sorted_values.sort(key=lambda x: str(x))
+    return sorted_values
+
+
+def _sort_dict_fields(obj):
+    """Sort dictionary fields recursively."""
+    sorted_dict = {}
+    for key in sorted(obj.keys()):
+        value = obj[key]
+        if isinstance(value, list):
+            sorted_dict[key] = _sort_list_values(value)
+        else:
+            sorted_dict[key] = sort_json_fields(value)
+    return sorted_dict
+
+
+def _sort_list_elements(obj):
+    """Sort list elements recursively."""
+    sorted_list = [sort_json_fields(item) for item in obj if item is not None]
+    sorted_list.sort(key=lambda x: str(x))
+    return sorted_list
+
+
 def sort_json_fields(obj):
     """Recursively sort JSON fields for consistent testing."""
     if isinstance(obj, dict):
-        sorted_dict = {}
-        for key in sorted(obj.keys()):
-            value = obj[key]
-            if isinstance(value, list):
-                # Sort list values
-                sorted_values = []
-                for v in value:
-                    if v is not None:
-                        sorted_values.append(v)
-                sorted_values.sort(key=lambda x: str(x))
-                sorted_dict[key] = sorted_values
-            else:
-                sorted_dict[key] = sort_json_fields(value)
-        return sorted_dict
+        return _sort_dict_fields(obj)
     elif isinstance(obj, list):
-        # Sort list elements
-        sorted_list = []
-        for item in obj:
-            if item is not None:
-                sorted_list.append(sort_json_fields(item))
-        sorted_list.sort(key=lambda x: str(x))
-        return sorted_list
+        return _sort_list_elements(obj)
     else:
         return obj
 
