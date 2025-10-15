@@ -208,7 +208,7 @@ class EventModulesAnonymizedRollups:
         # Per-module counts
         # receiver of this data can easily calculate success rates
         module_stats = (
-            task_summary.groupby(['module_name', 'collection_source'])
+            task_summary.groupby(['module_name', 'collection_source', 'collection_name'])
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 hosts_total=('host_id', 'nunique'),
