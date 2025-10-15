@@ -328,44 +328,7 @@ def test_events_modules_aggregations_basic():
     assert result['total_hosts_automated'] == 8
 
     # collection stats assertions (current aggregation schema)
-    coll_by_source = {row['collection_source']: row for row in result['collection_source_stats']}
     coll_by_name = {row['collection_name']: row for row in result['collection_name_stats']}
-
-    # Certified collection (ansible.posix, ansible.windows, ansible.netcommon)
-    certified_coll = coll_by_source['certified']
-    assert certified_coll['jobs_total'] == 4
-    assert certified_coll['hosts_total'] == 4
-    assert certified_coll['job_duration_total_seconds'] == 2880.0
-    assert certified_coll['job_waiting_time_total_seconds'] == 1200.0
-    assert certified_coll['avg_job_duration_seconds'] == 720.0
-    assert certified_coll['avg_job_waiting_time_seconds'] == 300.0
-    assert certified_coll['avg_hosts_per_job'] == 1.75
-    assert certified_coll['jobs_containing_collection_source_failed_total'] == 3
-    assert certified_coll['jobs_failed_because_of_collection_source_failure_total'] == 1
-    assert certified_coll['task_clean_success_total'] == 3
-    assert certified_coll['task_success_with_reruns_total'] == 2
-    assert certified_coll['task_failed_total'] == 1
-    assert certified_coll['task_failed_and_ignored_total'] == 0
-    assert certified_coll['task_skipped_total'] == 0
-    assert certified_coll['task_unreachable_total'] == 1
-
-    # Community collection
-    community_coll = coll_by_source['community']
-    assert community_coll['jobs_total'] == 4
-    assert community_coll['hosts_total'] == 6
-    assert community_coll['job_duration_total_seconds'] == 2880.0
-    assert community_coll['job_waiting_time_total_seconds'] == 1200.0
-    assert community_coll['avg_job_duration_seconds'] == 720.0
-    assert community_coll['avg_job_waiting_time_seconds'] == 300.0
-    assert community_coll['avg_hosts_per_job'] == 2.0
-    assert community_coll['jobs_containing_collection_source_failed_total'] == 3
-    assert community_coll['jobs_failed_because_of_collection_source_failure_total'] == 2
-    assert community_coll['task_clean_success_total'] == 3
-    assert community_coll['task_success_with_reruns_total'] == 1
-    assert community_coll['task_failed_total'] == 2
-    assert community_coll['task_failed_and_ignored_total'] == 1
-    assert community_coll['task_skipped_total'] == 1
-    assert community_coll['task_unreachable_total'] == 0
 
     # Verify per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}

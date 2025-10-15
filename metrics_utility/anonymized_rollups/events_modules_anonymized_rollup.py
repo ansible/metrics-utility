@@ -15,19 +15,6 @@ def extract_collection_name(x: str | None) -> str | None:
     return f'{m.group(1)}.{m.group(2)}' if m else None
 
 
-def merge_collection_source(obj1, obj2):
-    merged = {}
-
-    for entry in obj1 + obj2:
-        key = entry['collection_source']
-        merged.setdefault(key, {}).update(entry)
-
-    # Convert dict back to list
-    merged_list = list(merged.values())
-
-    return merged_list
-
-
 def merge_collection_name(obj1, obj2):
     merged = {}
 
@@ -230,21 +217,6 @@ class EventModulesAnonymizedRollups:
             .reset_index()
         )
 
-        collection_source_stats = (
-            task_summary.groupby('collection_source')
-            .agg(
-                hosts_total=('host_id', 'nunique'),
-                jobs_failed_because_of_collection_source_failure_total=('job_id_that_contained_failed_task', 'nunique'),
-                task_clean_success_total=('task_clean_success', 'sum'),
-                task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
-                task_failed_total=('task_failed', 'sum'),
-                task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum'),
-                task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
-            )
-            .reset_index()
-        )
-
         collection_name_stats = (
             task_summary.groupby(['collection_name', 'collection_source'])
             .agg(
@@ -260,35 +232,11 @@ class EventModulesAnonymizedRollups:
             .reset_index()
         )
 
-        # Collapse to one record per (job_id, collection_source)
-        per_job_collection_source = dataframe.groupby(['job_id', 'collection_source'], as_index=False).agg(
-            job_duration_seconds=('job_duration_seconds', 'first'),
-            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_id', 'nunique'),
-            job_containing_collection_source_failed=('job_failed', 'max'),
-        )
-
         per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             host_count=('host_id', 'nunique'),
             job_containing_collection_name_failed=('job_failed', 'max'),
-        )
-
-        job_time_stats_collection_source = (
-            per_job_collection_source.groupby('collection_source')
-            .agg(
-                jobs_total=('job_id', 'nunique'),
-                job_duration_total_seconds=('job_duration_seconds', 'sum'),
-                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-                avg_hosts_per_job=('host_count', 'mean'),
-                jobs_containing_collection_source_failed_total=('job_containing_collection_source_failed', 'sum'),
-            )
-            .assign(
-                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
-                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
-            )
-            .reset_index()
         )
 
         job_time_stats_collection_name = (
@@ -308,13 +256,10 @@ class EventModulesAnonymizedRollups:
         )
 
         # merge collection_stats and job_time_stats into one list based on collection_source
-        collection_source_stats_dict = collection_source_stats.to_dict(orient='records')
         collection_name_stats_dict = collection_name_stats.to_dict(orient='records')
 
-        job_time_stats_collection_source_dict = job_time_stats_collection_source.to_dict(orient='records')
         job_time_stats_collection_name_dict = job_time_stats_collection_name.to_dict(orient='records')
 
-        merged_list_collection_source = merge_collection_source(collection_source_stats_dict, job_time_stats_collection_source_dict)
         merged_list_collection_name = merge_collection_name(collection_name_stats_dict, job_time_stats_collection_name_dict)
 
         # Prepare rollup data (dataframes before conversion)
@@ -330,11 +275,7 @@ class EventModulesAnonymizedRollups:
             # pandas.DataFrame
             'module_stats': module_stats,
             # pandas.DataFrame
-            'collection_source_stats': collection_source_stats,
-            # pandas.DataFrame
             'collection_name_stats': collection_name_stats,
-            # pandas.DataFrame
-            'job_time_stats_per_collection_source': job_time_stats_collection_source,
             # pandas.DataFrame
             'job_time_stats_per_collection_name': job_time_stats_collection_name,
             # int (scalar)
@@ -348,7 +289,6 @@ class EventModulesAnonymizedRollups:
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': module_stats.to_dict(orient='records'),
-            'collection_source_stats': merged_list_collection_source,
             'collection_name_stats': merged_list_collection_name,
             'total_hosts_automated': total_hosts_automated,
         }
