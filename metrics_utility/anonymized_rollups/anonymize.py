@@ -38,3 +38,14 @@ def anonymize(data, salt):
             if collection['collection_source'] == 'Unknown':
                 collection['module_name'] = hash(module['module_name'], salt)
                 collection['collection_name'] = hash(collection['collection_name'], salt)
+
+    # anonymize modules_used_per_playbook_total, playbook names
+    if 'modules_used_per_playbook_total' in data['events_modules']:
+        old_dict = data['events_modules']['modules_used_per_playbook_total']
+        new_dict = {}
+
+        for playbook, modules in old_dict.items():
+            hashed_playbook = hash(playbook, salt)  # replace with your actual hash function
+            new_dict[hashed_playbook] = modules
+
+        data['events_modules']['modules_used_per_playbook_total'] = new_dict
