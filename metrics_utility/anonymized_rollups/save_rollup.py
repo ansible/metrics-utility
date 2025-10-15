@@ -1,5 +1,6 @@
 import json
 import os
+import tarfile
 
 import pandas as pd
 
@@ -24,7 +25,7 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
     for key, value in rollup_data.items():
         print(f'Saving {key} to {rollup_path}')
 
-        filename = key
+        filename = key + '_' + str(year) + '_' + str(month) + '_' + str(day)
 
         if isinstance(value, pd.DataFrame):
             print(f'Key {key} is a DataFrame')
@@ -56,3 +57,11 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
         # the rest
         else:
             print('Key {key} is a unknown type')
+
+        # add to tarball every file except parquet files
+        # tarball name is data_rollups_<year>_<month>_<day>.tar.gz
+        with tarfile.open(os.path.join(rollup_path, f'data_rollups_{year}_{month}_{day}.tar.gz'), 'w:gz') as tar:
+            for file in os.listdir(rollup_path):
+                if file.endswith('.parquet'):
+                    continue
+                tar.add(os.path.join(rollup_path, file), arcname=f'./{file}')
