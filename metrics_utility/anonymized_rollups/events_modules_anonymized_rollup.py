@@ -267,9 +267,9 @@ class EventModulesAnonymizedRollups:
             # list[str]
             'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
             # int (scalar)
-            'modules_used_to_automate_total': modules_used_to_automate_total,
+            'modules_used_to_automate_total': {'modules_used_to_automate_total': modules_used_to_automate_total},
             # float (scalar)
-            'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
+            'avg_number_of_modules_used_in_a_playbooks': {'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks},
             # pandas.Series
             'modules_used_per_playbook_total': modules_used_per_playbook_total,
             # pandas.DataFrame
@@ -279,7 +279,7 @@ class EventModulesAnonymizedRollups:
             # pandas.DataFrame
             'job_time_stats_per_collection_name': job_time_stats_collection_name,
             # int (scalar)
-            'total_hosts_automated': total_hosts_automated,
+            'total_hosts_automated': {'total_hosts_automated': total_hosts_automated},
         }
 
         # Prepare JSON data (converted to dicts/lists)

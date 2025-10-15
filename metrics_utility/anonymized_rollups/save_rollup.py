@@ -23,21 +23,35 @@ def save_rollup(rollup_data: dict, rollup_name: str, base_path, year: int, month
 
     for key, value in rollup_data.items():
         print(f'Saving {key} to {rollup_path}')
+
+        filename = key
+
         if isinstance(value, pd.DataFrame):
             print(f'Key {key} is a DataFrame')
-            value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
+
+            # uncomment for testing purporses
+            # value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
+            # to parquet
+
+            value.to_parquet(os.path.join(rollup_path, f'{filename}.parquet'), index=False)
         elif isinstance(value, pd.Series):
             print(f'Key {key} is a Series')
             # Convert Series to DataFrame to preserve index with proper column names
             df = value.reset_index()
-            df.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
+
+            # uncomment for testing purporses
+            # df.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
+
+            df.to_parquet(os.path.join(rollup_path, f'{filename}.parquet'), index=False)
+
         elif isinstance(value, list):
             print(f'Key {key} is a list')
-            with open(os.path.join(rollup_path, f'{key}.json'), 'w') as f:
+            with open(os.path.join(rollup_path, f'{filename}.json'), 'w') as f:
                 json.dump(value, f)
+
         elif isinstance(value, dict):
             print(f'Key {key} is a dict')
-            with open(os.path.join(rollup_path, f'{key}.json'), 'w') as f:
+            with open(os.path.join(rollup_path, f'{filename}.json'), 'w') as f:
                 json.dump(value, f)
         # the rest
         else:
