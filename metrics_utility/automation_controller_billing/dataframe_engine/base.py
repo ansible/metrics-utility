@@ -144,17 +144,17 @@ class Base:
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
                 df[col] = df.apply(
-                    lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')),
+                    lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')),
                     axis=1,
                 )
             elif operations.get(col) == 'combine_json':
                 df[col] = df.apply(
-                    lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')),
+                    lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')),
                     axis=1,
                 )
             elif operations.get(col) == 'combine_json_values':
                 df[col] = df.apply(
-                    lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')),
+                    lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')),
                     axis=1,
                 )
             else:
@@ -176,6 +176,7 @@ class Base:
             new_group.loc[:,],
             on=self.unique_index_columns(),
             how='outer',
+            validate='1:1',
         )
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         return self.cast_dataframe(rollup, self.cast_types())

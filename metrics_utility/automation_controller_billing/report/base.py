@@ -213,38 +213,46 @@ class Base:
 
         return current_row + row_counter
 
+    def _extract_single_value(self, value):
+        """Extract a single value from various data types."""
+        if isinstance(value, set):
+            return list(value)[0] if value else 'Unknown'
+        elif isinstance(value, list):
+            return value[0] if value else 'Unknown'
+        elif isinstance(value, str):
+            return value
+        else:
+            return 'Unknown'
+
+    def _extract_infra_from_dict(self, facts_dict):
+        """Extract infrastructure information from dictionary."""
+        return {
+            'infra_type': self._extract_single_value(facts_dict.get('infra_type', 'Unknown')),
+            'infra_bucket': self._extract_single_value(facts_dict.get('infra_bucket', 'Unknown')),
+            'device_type': self._extract_single_value(facts_dict.get('device_type', 'Unknown')),
+        }
+
+    def _parse_facts_json(self, facts_str):
+        """Parse JSON string to extract infrastructure info."""
+        import json
+
+        try:
+            facts_dict = json.loads(facts_str)
+            return self._extract_infra_from_dict(facts_dict)
+        except Exception:
+            return None
+
     def _extract_infrastructure_info(self, indirect_nodes):
         """Extract infrastructure information from indirect nodes."""
 
         def extract_infra_info(facts):
-            def extract_value(value):
-                if isinstance(value, set):
-                    return list(value)[0] if value else 'Unknown'
-                elif isinstance(value, list):
-                    return value[0] if value else 'Unknown'
-                elif isinstance(value, str):
-                    return value
-                else:
-                    return 'Unknown'
-
             if isinstance(facts, dict):
-                return {
-                    'infra_type': extract_value(facts.get('infra_type', 'Unknown')),
-                    'infra_bucket': extract_value(facts.get('infra_bucket', 'Unknown')),
-                    'device_type': extract_value(facts.get('device_type', 'Unknown')),
-                }
+                return self._extract_infra_from_dict(facts)
             elif isinstance(facts, str):
-                import json
+                result = self._parse_facts_json(facts)
+                if result:
+                    return result
 
-                try:
-                    facts_dict = json.loads(facts)
-                    return {
-                        'infra_type': extract_value(facts_dict.get('infra_type', 'Unknown')),
-                        'infra_bucket': extract_value(facts_dict.get('infra_bucket', 'Unknown')),
-                        'device_type': extract_value(facts_dict.get('device_type', 'Unknown')),
-                    }
-                except Exception:
-                    pass
             return {
                 'infra_type': 'Unknown',
                 'infra_bucket': 'Unknown',
