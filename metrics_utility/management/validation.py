@@ -101,7 +101,7 @@ def handle_s3_ship_target():
     if missing:
         raise MissingRequiredEnvVar(f'Missing some required env variables for S3 configuration, namely: {", ".join(missing)}.')
 
-    # S3Handler params
+    # S3Handler params - passed to StorageS3 as bucket, endpoint, region, access_key, secret_key (no ship_path)
     return {
         'ship_path': ship_path,
         'bucket_name': bucket_name,

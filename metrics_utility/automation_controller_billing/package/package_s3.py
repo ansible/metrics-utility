@@ -4,7 +4,7 @@ from django.conf import settings
 
 import metrics_utility.base as base
 
-from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
+from metrics_utility.library.storage import StorageS3
 from metrics_utility.logger import logger
 
 
@@ -58,8 +58,15 @@ class PackageS3(base.Package):
         since, _ = self._batch_since_and_until()
         destination_path = self._destination_path(self.collector.billing_provider_params['ship_path'], since, os.path.basename(self.tar_path))
 
-        s3_handler = S3Handler(params=self.collector.billing_provider_params)
-        s3_handler.upload_file(self.tar_path, object_name=destination_path)
+        params = self.collector.billing_provider_params
+        storage = StorageS3(
+            bucket=params.get('bucket_name'),
+            endpoint=params.get('bucket_endpoint'),
+            region=params.get('bucket_region'),
+            access_key=params.get('bucket_access_key'),
+            secret_key=params.get('bucket_secret_key'),
+        )
+        storage.put(destination_path, filename=self.tar_path)
 
         logger.debug(f'tarball saved to: {destination_path}')
 

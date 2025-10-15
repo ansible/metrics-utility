@@ -56,7 +56,7 @@ class Base:
             with open(file_path) as f:
                 return json.loads(f.read())
         except FileNotFoundError:
-            logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
+            logger.warning(f'{self.LOG_PREFIX} missing required file under path {file_path}')
 
     def process_tarballs(self, path, temp_dir, enabled_set=None):
         _safe_extract(path, temp_dir, enabled_set=enabled_set)
@@ -115,16 +115,6 @@ class Base:
 
         return name in self.enabled_set
 
-    def get_path_prefix(self, date):
-        """Return the data/Y/m/d path"""
-        ship_path = self.extra_params['ship_path']
-
-        year = date.strftime('%Y')
-        month = date.strftime('%m')
-        day = date.strftime('%d')
-
-        return f'{ship_path}/data/{year}/{month}/{day}'
-
     def sheet_enabled(self, sheets_required):
         """
         Checks if any sheets_required item is in METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS
@@ -143,17 +133,23 @@ class Base:
         if collections is None:
             return paths
 
+        # these are in *every* tarball, thus not a valid thing to filter by
         if 'data_collection_status' in collections:
             raise MetricsException('data_collection_status is not a valid tarball name filter')
-
         if 'config' in collections:
             raise MetricsException('config is not a valid tarball name filter')
 
         def match(s):
-            # include all files produced by 0.6.0 and lower, and anything with an unexpected name
-            if re.search(r'-\d+.tar.gz$', s):
+            # require at least .tar.gz
+            if not re.search(r'\.tar\.gz$', s):
+                return False
+
+            # include all files produced by 0.6.0 and lower
+            if re.search(r'-\d+\.tar\.gz$', s):
                 return True
-            if re.search(r'-\d+-\w+.tar.gz$', s) is None:
+
+            # include anything with an unexpected name
+            if not re.search(r'-\d+-\w+\.tar\.gz$', s):
                 return True
 
             # should not happen, but make sure we're not ignoring data if it does

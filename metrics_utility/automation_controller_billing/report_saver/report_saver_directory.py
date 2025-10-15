@@ -1,6 +1,10 @@
 import os
 
 
+# Not wrapping StorageDirectory just because .. why, but:
+# FIXME: replace ReportSaver directly with storage
+
+
 class ReportSaverDirectory:
     def __init__(self, extra_params):
         self.extra_params = extra_params

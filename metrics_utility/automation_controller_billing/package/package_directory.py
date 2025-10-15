@@ -1,10 +1,10 @@
 import os
-import shutil
 
 from django.conf import settings
 
 import metrics_utility.base as base
 
+from metrics_utility.library.storage import StorageDirectory
 from metrics_utility.logger import logger
 
 
@@ -58,8 +58,11 @@ class PackageDirectory(base.Package):
         since, _ = self._batch_since_and_until()
         destination_path = self._destination_path(self.collector.billing_provider_params['ship_path'], since, os.path.basename(self.tar_path))
 
-        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-        shutil.copyfile(self.tar_path, destination_path)
+        params = self.collector.billing_provider_params
+        storage = StorageDirectory(
+            base_path=params.get('ship_path'),
+        )
+        storage.put(destination_path, filename=self.tar_path)
 
         logger.debug(f'tarball saved to: {destination_path}')
 
