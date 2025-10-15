@@ -21,16 +21,15 @@ def lock(db=None, key=None, wait=None):
 def tempdir(prefix=None):
     log('library.utils tempdir')
     indent(1)
-    temp_dir = tempfile.mkdtemp(prefix=prefix)
-    try:
+    with tempfile.TemporaryDirectory(prefix=prefix) as temp_dir:
         original_dir = os.getcwd()
         os.chdir(temp_dir)
-        yield temp_dir
-    finally:
-        os.chdir(original_dir)
-        # In a real implementation, we'd clean up the temp directory
-        indent(-1)
-        log('/library.utils tempdir')
+        try:
+            yield temp_dir
+        finally:
+            os.chdir(original_dir)
+            indent(-1)
+            log('/library.utils tempdir')
 
 
 def last_gather(db=None, key=None):

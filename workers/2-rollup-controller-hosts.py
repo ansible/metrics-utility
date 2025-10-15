@@ -24,5 +24,5 @@ with library.tempdir(prefix=worker_key):
             for csv in extractor.extract(local, only='main_host.csv'):
                 dataframe.add_csv(csv)
 
-    s3_storage.put(path=f'rollup-host-{until}', data=dataframe.to_parquet())
+    s3_storage.put(path=f'rollup-host-{until}', filename=dataframe.to_parquet())
     # add a db_storage & dataframe.to_sql to also save rollups to DB

@@ -34,6 +34,6 @@ with library.tempdir(prefix=worker_key):
 
     # save, ship, clean
     with report.to_xlsx() as local:
-        s3_storage.put(path=f'RENEWAL-{until}.xlsx', file=local)
+        s3_storage.put(path=f'RENEWAL-{until}.xlsx', filename=local)
 
 library.save_last_gather(db=metrics_db, key=worker_key, value=until)

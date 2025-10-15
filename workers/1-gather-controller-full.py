@@ -42,8 +42,8 @@ with library.tempdir(prefix=worker_key):
         while not package.done():  # 100M-sized tarballs
             # actually calls collectors gather
             with package.next() as tarball:
-                s3_storage.ship(tarball)
-                # add a crc_storage.ship(tarball) to ship to both
+                s3_storage.put(tarball.name, filename=tarball.file)
+                # add a crc_storage.put(None, filename=tarball) to ship to both
             # tarball auto-cleanup
     # lock auto-release
 # tempdir auto-cleanup

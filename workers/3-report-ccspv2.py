@@ -51,4 +51,4 @@ with library.tempdir(prefix=worker_key):
 
     # save, ship, clean
     with report.to_xlsx() as local:
-        s3_storage.put(path=f'CCSPv2-{until}.xlsx', file=local)
+        s3_storage.put(path=f'CCSPv2-{until}.xlsx', filename=local)

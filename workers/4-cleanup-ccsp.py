@@ -13,4 +13,5 @@ until = library.instants.months_ago(settings.retention.get(worker_key) or 12)
 
 files = s3_storage.glob(glob='CCSP*.xlsx', until=until)
 
-s3_storage.remove(files)
+for file in files:
+    s3_storage.remove(file)
