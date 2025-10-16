@@ -1,23 +1,15 @@
-import pandas as pd
 import io
 import json
 import os
 import tarfile
+
 import pandas as pd
-
-import hashlib
-
-def hash(value, salt):
-    # has the value and salt, hash should be string
-    combined = (salt + ':' + value).encode('utf-8')
-    hashed = hashlib.sha512(combined).hexdigest()
-    return hashed
 
 
 class BaseAnonymizedRollup:
-
     def __init__(self, rollup_name: str):
         self.rollup_name = rollup_name
+        self.collector_names = []
 
     def merge(self, dataframe_all, dataframe_new):
         return pd.concat([dataframe_all, dataframe_new], ignore_index=True)
@@ -43,32 +35,27 @@ class BaseAnonymizedRollup:
 
         # save_csv is for testing purposes only - so we can check content of files easily
 
+        # make sure year is 4 digits, month is 2 digits, day is 2 digits
+        year = str(year).zfill(4)
+        month = str(month).zfill(2)
+        day = str(day).zfill(2)
         rollup_path = os.path.join(base_path, 'rollups', str(year), str(month), str(day), self.rollup_name)
 
         os.makedirs(rollup_path, exist_ok=True)
-
-        print('--------------------------------')
-        print(f'rollup_name: {rollup_name}')
-        print('--------------------------------')
 
         # Collect JSON data in memory for tar archive
         json_files = {}
 
         for key, value in rollup_data.items():
-            print(f'Saving {key} to {rollup_path}')
-
             filename = key + '_' + str(year) + '_' + str(month) + '_' + str(day)
 
             if isinstance(value, pd.DataFrame):
-                print(f'Key {key} is a DataFrame')
-
                 if save_csv:
                     value.to_csv(os.path.join(rollup_path, f'{key}.csv'), index=False)
 
                 # to parquet
                 value.to_parquet(os.path.join(rollup_path, f'{filename}.parquet'), index=False)
             elif isinstance(value, pd.Series):
-                print(f'Key {key} is a Series')
                 # Convert Series to DataFrame to preserve index with proper column names
                 df = value.reset_index()
 
@@ -78,12 +65,10 @@ class BaseAnonymizedRollup:
                 df.to_parquet(os.path.join(rollup_path, f'{filename}.parquet'), index=False)
 
             elif isinstance(value, list):
-                print(f'Key {key} is a list')
                 # Store JSON data in memory for tar
                 json_files[f'{filename}.json'] = value
 
             elif isinstance(value, dict):
-                print(f'Key {key} is a dict')
                 # Store JSON data in memory for tar
                 json_files[f'{filename}.json'] = value
             # the rest

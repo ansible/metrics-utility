@@ -2,7 +2,9 @@ import json
 import re
 
 import pandas as pd
-import metrics_utility.anonymized_rollups.base_anonymized_rollup as BaseAnonymizedRollup
+
+from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+
 
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
 
@@ -72,6 +74,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def __init__(self):
         super().__init__('events_modules')
+
+        self.collector_names = ['main_jobevent_service']
 
     def prepare(self, dataframe):
         # Prepare data
@@ -150,7 +154,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         dataframe corresponds to events joined with jobs
         """
-        dataframe = self.prepare(dataframe)
+
+        # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
+        if dataframe.empty:
+            return {
+                'json': {},
+                'rollup': {'aggregated': dataframe},
+            }
 
         # Modules used to automate
         # distinct name of modules used to automate
@@ -159,8 +169,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         list_of_modules_used_to_automate = dataframe.groupby('module_name', as_index=False).agg(
             {'collection_source': lambda x: x.unique()[0], 'collection_name': lambda x: x.unique()[0]}
         )
-
-        print(list_of_modules_used_to_automate)
 
         # Total number of modules automated
         modules_used_to_automate_total = len(list_of_modules_used_to_automate)
@@ -283,9 +291,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             # int (scalar)
             'total_hosts_automated': {'total_hosts_automated': total_hosts_automated},
         }
-
-        print('list_of_modules_used_to_automate')
-        print(list_of_modules_used_to_automate.to_dict(orient='records'))
 
         # Prepare JSON data (converted to dicts/lists)
         json_data = {

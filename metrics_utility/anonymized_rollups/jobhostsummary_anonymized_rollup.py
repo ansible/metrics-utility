@@ -1,5 +1,6 @@
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 
+
 class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     """
     Collector - job_host_summary_service collector data
@@ -7,6 +8,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def __init__(self):
         super().__init__('job_host_summary')
+        self.collector_names = ['job_host_summary_service']
 
     def base(self, dataframe):
         """
@@ -19,12 +21,20 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         task_columns = ['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']
 
+        # Return empty result if dataframe is empty
+        # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
+        if dataframe.empty:
+            return {
+                'json': [],
+                'rollup': {'aggregated': dataframe},
+            }
+
         dataframe['tasks_executed'] = dataframe[task_columns].sum(axis=1)
 
         aggregated = (
             dataframe.groupby('job_template_name')
             .agg(
-                jobs_total=('job_id', 'nunique'),
+                jobs_total=('job_remote_id', 'nunique'),
                 dark_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
                 ok_total=('ok', 'sum'),

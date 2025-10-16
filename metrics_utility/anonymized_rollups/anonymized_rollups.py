@@ -1,13 +1,24 @@
-from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
-from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
+import glob
+import hashlib
+import tarfile
+
+import pandas as pd
+
+from pandas import DataFrame
+
+from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
-from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
+from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 
-import glob
-import tarfile
-import pandas as pd
-from pandas import DataFrame
+
+def hash(value, salt):
+    # has the value and salt, hash should be string
+    combined = (salt + ':' + value).encode('utf-8')
+    hashed = hashlib.sha512(combined).hexdigest()
+    return hashed
+
 
 def create_anonymized_object(rollup_name: str):
     if rollup_name == 'jobs':
@@ -19,7 +30,8 @@ def create_anonymized_object(rollup_name: str):
     elif rollup_name == 'execution_environments':
         return ExecutionEnvironmentsAnonymizedRollup()
     else:
-        raise ValueError(f"Invalid rollup name: {rollup_name}")
+        raise ValueError(f'Invalid rollup name: {rollup_name}')
+
 
 def anonymize_data(data, salt):
     # anonymize jobs job template name
@@ -28,8 +40,8 @@ def anonymize_data(data, salt):
             job['job_template_name'] = hash(job['job_template_name'], salt)
 
     # anonymize jobhostsummary job template name
-    if 'jobhostsummary' in data:
-        for jobhostsummary in data['jobhostsummary']:
+    if 'job_host_summary' in data:
+        for jobhostsummary in data['job_host_summary']:
             jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
 
     # anonymize events modules module name
@@ -74,26 +86,29 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
     anonymize_data(data, salt)
     return data
 
-def compute_anonymized_rollup_from_raw_data(salt, year, month, day):
 
+def compute_anonymized_rollup_from_raw_data(salt, year, month, day, save_csv: bool = False):
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), './out', year, month, day)
-    jobs_rollup = JobsAnonymizedRollup().base(jobs)
-    JobsAnonymizedRollup().save_rollup(jobs_rollup, './out', year, month, day)
+    jobs_result = JobsAnonymizedRollup().base(jobs)
+    JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], './out', year, month, day, save_csv)
 
     job_host_summary = load_anonymized_rollup_data(JobHostSummaryAnonymizedRollup(), './out', year, month, day)
-    job_host_summary_rollup = JobHostSummaryAnonymizedRollup.base(job_host_summary)
-    JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_rollup, './out', year, month, day)
+    job_host_summary_result = JobHostSummaryAnonymizedRollup().base(job_host_summary)
+    JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], './out', year, month, day, save_csv)
 
-    job_events = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), './out', year, month, day)
-    job_events_rollup = EventModulesAnonymizedRollup.base(job_events)
-    EventModulesAnonymizedRollup().save_rollup(job_events_rollup, './out', year, month, day)
+    events_modules = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), './out', year, month, day)
+    events_modules_result = EventModulesAnonymizedRollup().base(events_modules)
+    EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], './out', year, month, day, save_csv)
 
     execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), './out', year, month, day)
-    execution_environments_rollup = ExecutionEnvironmentsAnonymizedRollup.base(execution_environments) 
-    ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_rollup, './out', year, month, day)
+    execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
+    ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_result['rollup'], './out', year, month, day)
 
-    anonymized_rollup = anonymize_rollups(job_events_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, 'salt')
+    anonymized_rollup = anonymize_rollups(
+        events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], 'salt'
+    )
     return anonymized_rollup
+
 
 # loads data from tarballs located in base_path/data/year/month/day/*{collector_name}*.tar.gz
 # inside tarball is file named {collector_name}.csv
@@ -102,8 +117,12 @@ def compute_anonymized_rollup_from_raw_data(salt, year, month, day):
 def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, base_path: str, year: int, month: int, day: int) -> DataFrame:
     # list all tarballs in base_path/data/year/month/day/*{collector_name}*.tar.gz
 
-    collection_name = rollup_object.rollup_name
-    tarballs = glob.glob(f'{base_path}/data/{year}/{month:02d}/{day:02d}/*{collection_name}*.tar.gz')
+    collection_names = rollup_object.collector_names
+
+    tarballs = []
+    for collection_name in collection_names:
+        tarballs2 = glob.glob(f'{base_path}/data/{year}/{month:02d}/{day:02d}/*{collection_name}*.tar.gz')
+        tarballs.extend(tarballs2)
 
     # load each tarball into a dataframe
     concat_dataframe = pd.DataFrame()
@@ -113,12 +132,8 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, base_path: 
             for member in tar.getmembers():
                 if member.name.endswith(f'{collection_name}.csv'):
                     df = pd.read_csv(tar.extractfile(member))
-                    
+
                     df = rollup_object.prepare(df)
                     concat_dataframe = rollup_object.merge(concat_dataframe, df)
 
     return concat_dataframe
-
-
-
-

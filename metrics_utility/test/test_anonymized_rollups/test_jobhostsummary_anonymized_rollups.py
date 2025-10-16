@@ -16,7 +16,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
-        'job_id': 1001,
+        'job_remote_id': 1001,
         'job_template_name': 'T1',
     },  # 1 failure
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 1001, 'job_template_name': 'T1'},
@@ -28,7 +28,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h4',
-        'job_id': 1001,
+        'job_remote_id': 1001,
         'job_template_name': 'T1',
     },  # 1 skipped
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h5', 'job_id': 1001, 'job_template_name': 'T1'},
@@ -44,7 +44,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
-        'job_id': 1002,
+        'job_remote_id': 1002,
         'job_template_name': 'T1',
     },  # 1 failure
     {
@@ -55,7 +55,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h3',
-        'job_id': 1002,
+        'job_remote_id': 1002,
         'job_template_name': 'T1',
     },  # 1 skipped
     {'dark': 0, 'failures': 0, 'ok': 3, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h4', 'job_id': 1002, 'job_template_name': 'T1'},
@@ -72,7 +72,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
-        'job_id': 2001,
+        'job_remote_id': 2001,
         'job_template_name': 'T2',
     },  # 1 failure
     {'dark': 0, 'failures': 0, 'ok': 5, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 2001, 'job_template_name': 'T2'},
@@ -88,7 +88,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
-        'job_id': 2002,
+        'job_remote_id': 2002,
         'job_template_name': 'T2',
     },  # 2 failures
     {'dark': 0, 'failures': 1, 'ok': 4, 'skipped': 0, 'ignored': 0, 'rescued': 0, 'host_name': 'h3', 'job_id': 2002, 'job_template_name': 'T2'},
