@@ -1,8 +1,7 @@
+import json
 import re
 
 import pandas as pd
-
-from metrics_utility.anonymized_rollups.collections_types import collections_types
 
 
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
@@ -82,6 +81,9 @@ class EventModulesAnonymizedRollups:
     @staticmethod
     def prepare_data(dataframe):
         # Prepare data
+        # Open the JSON file
+        with open('metrics_utility/anonymized_rollups/collections.json', 'r') as f:
+            collections = json.load(f)
 
         # if missing ignore_errors column, insert it, default is False. If values is null, set it to False
         if 'ignore_errors' not in dataframe.columns:
@@ -109,7 +111,7 @@ class EventModulesAnonymizedRollups:
         dataframe = dataframe[dataframe['job_waiting_time_seconds'] >= 0]
 
         # fill collection source from collections_types
-        dataframe['collection_source'] = dataframe['collection_name'].map(collections_types).fillna('Unknown')
+        dataframe['collection_source'] = dataframe['collection_name'].map(collections).fillna('Unknown')
 
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
