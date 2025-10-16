@@ -2,7 +2,7 @@ import json
 import re
 
 import pandas as pd
-
+import metrics_utility.anonymized_rollups.base_anonymized_rollup as BaseAnonymizedRollup
 
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
 
@@ -27,7 +27,7 @@ def merge_collection_name(obj1, obj2):
     return merged_list
 
 
-class EventModulesAnonymizedRollups:
+class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     """
     Event collections rollups operate over main_jobevent_service collector data
 
@@ -70,16 +70,10 @@ class EventModulesAnonymizedRollups:
     When task is ignored, it is not retried.
     """
 
-    @staticmethod
-    def base(dataframe):
-        """
-        Main entry point that prepares data and computes aggregations.
-        """
-        prepared = EventModulesAnonymizedRollups.prepare_data(dataframe)
-        return EventModulesAnonymizedRollups.events_modules_aggregations(prepared)
+    def __init__(self):
+        super().__init__('events_modules')
 
-    @staticmethod
-    def prepare_data(dataframe):
+    def prepare(self, dataframe):
         # Prepare data
         # Open the JSON file
         with open('metrics_utility/anonymized_rollups/collections.json', 'r') as f:
@@ -138,8 +132,7 @@ class EventModulesAnonymizedRollups:
 
         return dataframe
 
-    @staticmethod
-    def events_modules_aggregations(dataframe):
+    def base(self, dataframe):
         """
         *Avg number of modules used in a playbook
         *Failure/Success rate of modules
@@ -157,6 +150,7 @@ class EventModulesAnonymizedRollups:
 
         dataframe corresponds to events joined with jobs
         """
+        dataframe = self.prepare(dataframe)
 
         # Modules used to automate
         # distinct name of modules used to automate

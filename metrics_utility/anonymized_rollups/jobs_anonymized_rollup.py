@@ -1,13 +1,16 @@
 import pandas as pd
 
+from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 
-class JobsAnonymizedRollups:
+
+class JobsAnonymizedRollup(BaseAnonymizedRollup):
     """
     Collector - unified_jobs collector data
     """
+    def __init__(self):
+        super().__init__('jobs')
 
-    @staticmethod
-    def base(dataframe):
+    def base(self, dataframe):
         """
         This function will create first level aggregation of the job dataframe, the result is json
 

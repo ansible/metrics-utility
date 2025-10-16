@@ -1,10 +1,14 @@
-class ExecutionEnvironmentsAnonymizedRollups:
+from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+
+class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
     """
     Collector - execution_environment_service collector data
     """
 
-    @staticmethod
-    def base(dataframe):
+    def __init__(self):
+        super().__init__('execution_environments')
+
+    def base(self, dataframe):
         """
         Number of execution enviornment configured in the controller
         Ratio of Default EE vs Custom EE

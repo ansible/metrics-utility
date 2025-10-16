@@ -10,7 +10,7 @@ import json
 import pandas as pd
 import pytest
 
-from metrics_utility.anonymized_rollups.anonymize import anonymize
+from metrics_utility.anonymized_rollups.anonymized_rollups import anonymize_data
 
 # import base from anonymized rollups
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollups
@@ -84,7 +84,7 @@ def test_save_rollup(cleanup_glob):
         json.dump(unified_json, f, indent=4)
 
     # anonymize the data
-    anonymize(unified_json, 'salt')
+    anonymize_data(unified_json, 'salt')
 
     # save it as anonymized.json
     with open('./out/rollups/2024/1/1/anonymized.json', 'w') as f:

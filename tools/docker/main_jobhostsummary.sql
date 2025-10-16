@@ -571,7 +571,7 @@ $yaml$,
       task_uuid_2 := i_text || '_' || host_name || '_2';
 
       event_data_1 := '{"task_action": "ansible.builtin.yum", "task_uuid": "' || task_uuid_1 || '"}';
-      event_data_2 := '{"task_action": "amazon.aws.s3_bucket", "task_uuid": "' || task_uuid_2 || '"}';
+      event_data_2 := '{"task_action": "a10.acos_axapi", "task_uuid": "' || task_uuid_2 || '"}';
 
       -- event 1
       INSERT INTO public.main_jobevent (

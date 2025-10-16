@@ -1,11 +1,14 @@
-class JobHostSummaryAnonymizedRollup:
+from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+
+class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     """
     Collector - job_host_summary_service collector data
     """
 
-    # TODO - will reuse the jobhostsummary rollup for CCSP
-    @staticmethod
-    def base(dataframe):
+    def __init__(self):
+        super().__init__('job_host_summary')
+
+    def base(self, dataframe):
         """
         Avg tasks by template (column job_template_name)
         Number of tasks executed (sum of all tasks executed in dataframe)
