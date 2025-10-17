@@ -1,5 +1,8 @@
 from contextlib import contextmanager
 
+import os
+import json
+
 from .debug import indent, log
 
 
@@ -100,6 +103,14 @@ class StorageSegment:
             filename: Path to the file to upload
         """
         log(f'library.storage StorageSegment.put name={name} filename={filename}')
+
+        _, ext = os.path.splitext(filename)
+
+        if ext == ".json" or ext == ".jsn":
+            with open(filename) as f:
+                data = json.loads(f.read())
+        else:
+            raise Exception(f"Unsupported upload type {ext} in filename")
         
         try:
             import segment.analytics as analytics
@@ -114,7 +125,7 @@ class StorageSegment:
                 event='Metrics Artifact Upload',
                 properties={
                     'artifact_name': name,
-                    'filename': filename,
+                    'data': data,
                     'upload_timestamp': log.get_timestamp() if hasattr(log, 'get_timestamp') else 'unknown'
                 }
             )
