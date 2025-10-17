@@ -81,3 +81,53 @@ class StorageDirectory:
     def remove(self, files):
         log('library.storage StorageDirectory.remove')
         return True
+
+
+class StorageSegment:
+    def __init__(self, **segment_config):
+        log('library.storage StorageSegment.__init__')
+        self.segment_config = segment_config
+        self.write_key = segment_config.get('write_key')
+        self.endpoint = segment_config.get('endpoint', 'https://api.segment.io/v1/track')
+        self.debug = segment_config.get('debug', False)
+
+    def put(self, name, filename):
+        """
+        Upload an artifact (tarball, parquet file, etc.) to Segment analytics
+        
+        Args:
+            name: Identifier for the uploaded artifact
+            filename: Path to the file to upload
+        """
+        log(f'library.storage StorageSegment.put name={name} filename={filename}')
+        
+        try:
+            import segment.analytics as analytics
+            
+            # Configure Segment client
+            analytics.write_key = self.write_key
+            analytics.debug = self.debug
+            
+            # Send a track event for the uploaded artifact
+            analytics.track(
+                user_id=self.segment_config.get('user_id', 'unknown'),
+                event='Metrics Artifact Upload',
+                properties={
+                    'artifact_name': name,
+                    'filename': filename,
+                    'upload_timestamp': log.get_timestamp() if hasattr(log, 'get_timestamp') else 'unknown'
+                }
+            )
+            
+            # Flush to ensure event is sent
+            analytics.flush()
+            
+            log(f'Successfully uploaded {name} to Segment')
+            return True
+            
+        except ImportError:
+            log('analytics-python package not installed')
+            return False
+        except Exception as e:
+            log(f'Failed to upload to Segment: {e}')
+            return False

@@ -1,5 +1,6 @@
 import os
 import json
+import segment.analytics as analytics
 from datetime import datetime
 
 from django.conf import settings
@@ -52,7 +53,6 @@ class PackageSegment(base.Package):
 
         try:
             # Import Segment analytics library
-            import analytics
             
             # Configure Segment client
             analytics.write_key = self.get_segment_write_key()
