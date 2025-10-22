@@ -96,23 +96,29 @@ class StorageSegment:
         self.endpoint = segment_config.get('endpoint', 'https://api.segment.io/v1/track')
         self.debug = segment_config.get('debug', False)
 
-    def put(self, name, filename):
+    def put(self, name, data=None, filename=None):
         """
         Upload an artifact (tarball, parquet file, etc.) to Segment analytics
         
         Args:
             name: Identifier for the uploaded artifact
-            filename: Path to the file to upload
+            data: data to upload
+            filename: Path to the file to upload (JSON supported)
         """
         log(f'library.storage StorageSegment.put name={name} filename={filename}')
 
-        _, ext = os.path.splitext(filename)
+        def load_file(filename):
+            _, ext = os.path.splitext(filename)
+            if ext == ".json" or ext == ".jsn":
+                with open(filename) as f:
+                    data = json.loads(f.read())
+            else:
+                raise Exception(f"Unsupported upload type {ext} in filename")
 
-        if ext == ".json" or ext == ".jsn":
-            with open(filename) as f:
-                data = json.loads(f.read())
-        else:
-            raise Exception(f"Unsupported upload type {ext} in filename")
+            return data
+
+        if data is None and filename is not None:
+            data = load_file(filename)
         
         try:
             import segment.analytics as analytics

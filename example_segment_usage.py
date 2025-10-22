@@ -38,6 +38,6 @@ env_config = {
 print(env_config)
 
 storage_env = metrics_utility.library.storage.StorageSegment(**env_config)
-storage_env.put('controller-config-snapshot', 'example_data.json')
+storage_env.put('controller-config-snapshot', filename='example_data.json')
 
 print("Sample usage complete - see example_segment_usage.py for implementation")
