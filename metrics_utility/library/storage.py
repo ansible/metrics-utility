@@ -5,6 +5,8 @@ import json
 
 from .debug import indent, log
 
+from datetime import datetime
+
 
 class StorageCRCMutual:
     def __init__(self, settings):
@@ -126,7 +128,7 @@ class StorageSegment:
                 properties={
                     'artifact_name': name,
                     'data': data,
-                    'upload_timestamp': log.get_timestamp() if hasattr(log, 'get_timestamp') else 'unknown'
+                    'upload_timestamp': datetime.now().isoformat(),
                 }
             )
             
