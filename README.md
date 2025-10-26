@@ -257,6 +257,7 @@ For detailed documentation on the `send_to_segment` command, see:
 
 - [Full Documentation](./docs/send_to_segment.md)
 - [Quick Start Guide](./docs/send_to_segment_quickstart.md)
+- [Library API Documentation](./docs/segment_library_api.md) - Use from Python code
 
 ## Documentation
 
