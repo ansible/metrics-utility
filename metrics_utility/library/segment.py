@@ -79,7 +79,7 @@ class SegmentSender:
             SegmentConfigurationError: If write_key is not provided
         """
         if not write_key:
-            raise SegmentConfigurationError("write_key is required")
+            raise SegmentConfigurationError('write_key is required')
 
         self.write_key = write_key
         self.debug = debug
@@ -88,7 +88,7 @@ class SegmentSender:
         self,
         data: Union[List[Dict[str, Any]], Dict[str, Any], str, Path],
         app: str,
-        user_id: str = "system",
+        user_id: str = 'system',
         additional_properties: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
@@ -120,34 +120,34 @@ class SegmentSender:
             {'success': True, 'event_name': 'awx_data_upload', ...}
         """
         if not app:
-            raise SegmentConfigurationError("app parameter is required")
+            raise SegmentConfigurationError('app parameter is required')
 
         # Process data
         try:
             processed_data = self._process_data(data)
         except Exception as e:
-            raise SegmentDataError(f"Failed to process data: {str(e)}")
+            raise SegmentDataError(f'Failed to process data: {str(e)}')
 
         # Configure Segment SDK
         analytics.write_key = self.write_key
         analytics.debug = self.debug
 
         # Prepare event
-        event_name = f"{app}_data_upload"
+        event_name = f'{app}_data_upload'
         timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
         properties = {
-            "data": processed_data["data"],
-            "row_count": processed_data["row_count"],
-            "data_type": processed_data["data_type"],
-            "timestamp": timestamp,
+            'data': processed_data['data'],
+            'row_count': processed_data['row_count'],
+            'data_type': processed_data['data_type'],
+            'timestamp': timestamp,
         }
 
         # Add additional properties if provided
         if additional_properties:
             properties.update(additional_properties)
 
-        context = {"app": {"name": app}}
+        context = {'app': {'name': app}}
 
         # Send to Segment
         try:
@@ -160,16 +160,14 @@ class SegmentSender:
             analytics.flush()
 
             return {
-                "success": True,
-                "event_name": event_name,
-                "row_count": processed_data["row_count"],
-                "message": (
-                    f'Successfully sent {processed_data["row_count"]} items to Segment as event "{event_name}"'
-                ),
+                'success': True,
+                'event_name': event_name,
+                'row_count': processed_data['row_count'],
+                'message': (f'Successfully sent {processed_data["row_count"]} items to Segment as event "{event_name}"'),
             }
 
         except Exception as e:
-            raise SegmentDataError(f"Failed to send data to Segment: {str(e)}")
+            raise SegmentDataError(f'Failed to send data to Segment: {str(e)}')
 
     def _process_data(self, data: Union[List[Dict], Dict, str, Path]) -> Dict[str, Any]:
         """
@@ -188,22 +186,20 @@ class SegmentSender:
         # Handle list of dictionaries
         if isinstance(data, list):
             return {
-                "data": data,
-                "row_count": len(data),
-                "data_type": "list",
+                'data': data,
+                'row_count': len(data),
+                'data_type': 'list',
             }
 
         # Handle single dictionary
         if isinstance(data, dict):
             return {
-                "data": [data],
-                "row_count": 1,
-                "data_type": "dict",
+                'data': [data],
+                'row_count': 1,
+                'data_type': 'dict',
             }
 
-        raise SegmentDataError(
-            f"Unsupported data type: {type(data)}. Expected list, dict, str (file path), or Path object."
-        )
+        raise SegmentDataError(f'Unsupported data type: {type(data)}. Expected list, dict, str (file path), or Path object.')
 
     def _read_file(self, file_path: Path) -> Dict[str, Any]:
         """
@@ -216,16 +212,16 @@ class SegmentSender:
             Dictionary with parsed data, row count, and file type
         """
         if not file_path.exists():
-            raise SegmentDataError(f"File not found: {file_path}")
+            raise SegmentDataError(f'File not found: {file_path}')
 
         if not file_path.is_file():
-            raise SegmentDataError(f"Path is not a file: {file_path}")
+            raise SegmentDataError(f'Path is not a file: {file_path}')
 
         file_extension = file_path.suffix.lower()
 
-        if file_extension == ".csv":
+        if file_extension == '.csv':
             return self._read_csv(file_path)
-        elif file_extension == ".json":
+        elif file_extension == '.json':
             return self._read_json(file_path)
         else:
             # Try CSV first, fall back to text
@@ -237,16 +233,16 @@ class SegmentSender:
     def _read_csv(self, file_path: Path) -> Dict[str, Any]:
         """Read CSV file."""
         data = []
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 data.append(dict(row))
 
-        return {"data": data, "row_count": len(data), "data_type": "csv"}
+        return {'data': data, 'row_count': len(data), 'data_type': 'csv'}
 
     def _read_json(self, file_path: Path) -> Dict[str, Any]:
         """Read JSON file."""
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         if isinstance(data, list):
@@ -256,21 +252,21 @@ class SegmentSender:
             data = [data]
         else:
             row_count = 1
-            data = [{"value": data}]
+            data = [{'value': data}]
 
-        return {"data": data, "row_count": row_count, "data_type": "json"}
+        return {'data': data, 'row_count': row_count, 'data_type': 'json'}
 
     def _read_text(self, file_path: Path) -> Dict[str, Any]:
         """Read plain text file."""
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        lines = content.strip().split("\n")
+        lines = content.strip().split('\n')
 
         return {
-            "data": {"content": content, "lines": lines},
-            "row_count": len(lines),
-            "data_type": "text",
+            'data': {'content': content, 'lines': lines},
+            'row_count': len(lines),
+            'data_type': 'text',
         }
 
 
@@ -278,7 +274,7 @@ def send_data(
     data: Union[List[Dict[str, Any]], Dict[str, Any], str, Path],
     app: str,
     write_key: str,
-    user_id: str = "system",
+    user_id: str = 'system',
     additional_properties: Optional[Dict[str, Any]] = None,
     debug: bool = False,
 ) -> Dict[str, Any]:
@@ -325,7 +321,7 @@ def send_csv_file(
     file_path: Union[str, Path],
     app: str,
     write_key: str,
-    user_id: str = "system",
+    user_id: str = 'system',
     debug: bool = False,
 ) -> Dict[str, Any]:
     """
@@ -361,7 +357,7 @@ def send_json_file(
     file_path: Union[str, Path],
     app: str,
     write_key: str,
-    user_id: str = "system",
+    user_id: str = 'system',
     debug: bool = False,
 ) -> Dict[str, Any]:
     """
@@ -394,11 +390,11 @@ def send_json_file(
 
 
 __all__ = [
-    "SegmentSender",
-    "SegmentError",
-    "SegmentConfigurationError",
-    "SegmentDataError",
-    "send_data",
-    "send_csv_file",
-    "send_json_file",
+    'SegmentSender',
+    'SegmentError',
+    'SegmentConfigurationError',
+    'SegmentDataError',
+    'send_data',
+    'send_csv_file',
+    'send_json_file',
 ]
