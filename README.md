@@ -117,71 +117,78 @@ podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash
 ### Basic Usage
 
 1. Know the environment
-  - In Controller mode:
-    - make sure to connect to a running Controller instance,
-    - get metrics-utility (map a volume, or git clone),
-    - activate the virtual environment (`source /var/lib/awx/venv/awx/bin/activate`),
-    - `pip install .` from the `metrics-utility` dir,
-    - run utility using `python manage.py ...`.
-  - In RPM mode:
-    - install the right RPM
-    - run utility using `metrics-utility ...`.
-  - **In standalone mode**:
-    - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or minio,
-    - run utility using `uv run python manage.py ...`.
+
+- In Controller mode:
+  - make sure to connect to a running Controller instance,
+  - get metrics-utility (map a volume, or git clone),
+  - activate the virtual environment (`source /var/lib/awx/venv/awx/bin/activate`),
+  - `pip install .` from the `metrics-utility` dir,
+  - run utility using `python manage.py ...`.
+- In RPM mode:
+  - install the right RPM
+  - run utility using `metrics-utility ...`.
+- **In standalone mode**:
+  - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or minio,
+  - run utility using `uv run python manage.py ...`.
 
 1. Pick a task (goes right after the previous command)
-  - `gather_automation_controller_billing_data` - collects metrics from controller db, saves daily tarballs with csv/json inside
-  - `build_report` - builds a XLSX report, either from controller db or collected tarballs
+
+- `gather_automation_controller_billing_data` - collects metrics from controller db, saves daily tarballs with csv/json inside
+- `build_report` - builds a XLSX report, either from controller db or collected tarballs
+- `send_to_segment` - sends data from CSV/JSON files to Segment.com for analytics tracking
 
 1. Pick a report type (`export METRICS_UTILITY_REPORT_TYPE=...`)
-  - `CCSPv2` - uses metrics tarballs to produce a usage report
-  - `CCSP` - similar to v2, slightly different aggregation
-  - `RENEWAL_GUIDANCE` - uses controller db to produce a renewal guidance report
+
+- `CCSPv2` - uses metrics tarballs to produce a usage report
+- `CCSP` - similar to v2, slightly different aggregation
+- `RENEWAL_GUIDANCE` - uses controller db to produce a renewal guidance report
 
 1. Pick a time period
-  - `--since=12m`
-  - and `--until=10m` (only with `CCSP` and `CCSPv2`)
-  - or `--month=2024-06` (only with `build_report`)
+
+- `--since=12m`
+- and `--until=10m` (only with `CCSP` and `CCSPv2`)
+- or `--month=2024-06` (only with `build_report`)
 
 1. Use `--help` to see any other params
-  - `build_report` also supports `--ephemeral`, `--force` and `--verbose`
-  - `gather_automation_controller_billing_data` also supports `--dry-run` and `--ship`
+
+- `build_report` also supports `--ephemeral`, `--force` and `--verbose`
+- `gather_automation_controller_billing_data` also supports `--dry-run` and `--ship`
 
 1. Set any other necessary environmental variable - see more in [`docs/old-readme.md`](./docs/old-readme.md).
-  - `METRICS_UTILITY_BILLING_ACCOUNT_ID`
-  - `METRICS_UTILITY_BILLING_PROVIDER`
-  - `METRICS_UTILITY_BUCKET_ACCESS_KEY`
-  - `METRICS_UTILITY_BUCKET_ENDPOINT`
-  - `METRICS_UTILITY_BUCKET_NAME`
-  - `METRICS_UTILITY_BUCKET_REGION`
-  - `METRICS_UTILITY_BUCKET_SECRET_KEY`
-  - `METRICS_UTILITY_CRC_INGRESS_URL`
-  - `METRICS_UTILITY_CRC_SSO_URL`
-  - `METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS`
-  - `METRICS_UTILITY_OPTIONAL_COLLECTORS`
-  - `METRICS_UTILITY_ORGANIZATION_FILTER`
-  - `METRICS_UTILITY_PRICE_PER_NODE`
-  - `METRICS_UTILITY_PROXY_URL`
-  - `METRICS_UTILITY_RED_HAT_ORG_ID`
-  - `METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER`
-  - `METRICS_UTILITY_REPORT_COMPANY_NAME`
-  - `METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER`
-  - `METRICS_UTILITY_REPORT_EMAIL`
-  - `METRICS_UTILITY_REPORT_END_USER_CITY`
-  - `METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME`
-  - `METRICS_UTILITY_REPORT_END_USER_COUNTRY`
-  - `METRICS_UTILITY_REPORT_END_USER_STATE`
-  - `METRICS_UTILITY_REPORT_H1_HEADING`
-  - `METRICS_UTILITY_REPORT_PO_NUMBER`
-  - `METRICS_UTILITY_REPORT_RHN_LOGIN`
-  - `METRICS_UTILITY_REPORT_SKU`
-  - `METRICS_UTILITY_REPORT_SKU_DESCRIPTION`
-  - `METRICS_UTILITY_REPORT_TYPE`
-  - `METRICS_UTILITY_SERVICE_ACCOUNT_ID`
-  - `METRICS_UTILITY_SERVICE_ACCOUNT_SECRET`
-  - `METRICS_UTILITY_SHIP_PATH`
-  - `METRICS_UTILITY_SHIP_TARGET`
+
+- `METRICS_UTILITY_BILLING_ACCOUNT_ID`
+- `METRICS_UTILITY_BILLING_PROVIDER`
+- `METRICS_UTILITY_BUCKET_ACCESS_KEY`
+- `METRICS_UTILITY_BUCKET_ENDPOINT`
+- `METRICS_UTILITY_BUCKET_NAME`
+- `METRICS_UTILITY_BUCKET_REGION`
+- `METRICS_UTILITY_BUCKET_SECRET_KEY`
+- `METRICS_UTILITY_CRC_INGRESS_URL`
+- `METRICS_UTILITY_CRC_SSO_URL`
+- `METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS`
+- `METRICS_UTILITY_OPTIONAL_COLLECTORS`
+- `METRICS_UTILITY_ORGANIZATION_FILTER`
+- `METRICS_UTILITY_PRICE_PER_NODE`
+- `METRICS_UTILITY_PROXY_URL`
+- `METRICS_UTILITY_RED_HAT_ORG_ID`
+- `METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER`
+- `METRICS_UTILITY_REPORT_COMPANY_NAME`
+- `METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER`
+- `METRICS_UTILITY_REPORT_EMAIL`
+- `METRICS_UTILITY_REPORT_END_USER_CITY`
+- `METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME`
+- `METRICS_UTILITY_REPORT_END_USER_COUNTRY`
+- `METRICS_UTILITY_REPORT_END_USER_STATE`
+- `METRICS_UTILITY_REPORT_H1_HEADING`
+- `METRICS_UTILITY_REPORT_PO_NUMBER`
+- `METRICS_UTILITY_REPORT_RHN_LOGIN`
+- `METRICS_UTILITY_REPORT_SKU`
+- `METRICS_UTILITY_REPORT_SKU_DESCRIPTION`
+- `METRICS_UTILITY_REPORT_TYPE`
+- `METRICS_UTILITY_SERVICE_ACCOUNT_ID`
+- `METRICS_UTILITY_SERVICE_ACCOUNT_SECRET`
+- `METRICS_UTILITY_SHIP_PATH`
+- `METRICS_UTILITY_SHIP_TARGET`
 
 #### Example CCSPv2 run
 
@@ -217,7 +224,7 @@ uv run ./manage.py build_report --month=2024-04 --force
 ls metrics_utility/test/test_data/reports/2024/04/
 ```
 
-#### Example RENEWAL\_GUIDANCE run
+#### Example RENEWAL_GUIDANCE run
 
 ```bash
 export METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE"
@@ -226,6 +233,30 @@ export METRICS_UTILITY_SHIP_TARGET="controller_db"
 
 uv run ./manage.py build_report --since=12months --ephemeral=1month --force
 ```
+
+#### Example send_to_segment run
+
+```bash
+# Set your Segment Write Key
+export SEGMENT_WRITE_KEY="your_segment_write_key_here"
+
+# Send a CSV file to Segment
+uv run ./manage.py send_to_segment \
+  --file /path/to/metrics.csv \
+  --app ansible-automation-platform
+
+# Send with custom user ID and verbose logging
+uv run ./manage.py send_to_segment \
+  --file data.csv \
+  --app awx \
+  --user-id admin@example.com \
+  --verbose
+```
+
+For detailed documentation on the `send_to_segment` command, see:
+
+- [Full Documentation](./docs/send_to_segment.md)
+- [Quick Start Guide](./docs/send_to_segment_quickstart.md)
 
 ## Documentation
 
@@ -237,11 +268,11 @@ As the project grows, more guides and references will be added to the `/docs` fo
 
 ## Version mapping
 
-|metrics-utility version|AAP version|
-|-|-|
-|0.4.1|2.4\*|
-|0.5.0|2.5-20250507|
-|0.6.0|2.5.20250924 & 2.6|
+| metrics-utility version | AAP version        |
+| ----------------------- | ------------------ |
+| 0.4.1                   | 2.4\*              |
+| 0.5.0                   | 2.5-20250507       |
+| 0.6.0                   | 2.5.20250924 & 2.6 |
 
 ## Contributing
 
