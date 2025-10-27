@@ -5,6 +5,7 @@
 
 # make sure we are cleaning any file in the out directory
 
+"""
 import json
 
 import pandas as pd
@@ -13,17 +14,17 @@ import pytest
 from metrics_utility.anonymized_rollups.anonymized_rollups import anonymize_data
 
 # import base from anonymized rollups
-from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollups
-from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollups
+from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
+from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
-from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollups
+from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 
 # import save_rollup
 from metrics_utility.anonymized_rollups.save_rollup import save_rollup
-from metrics_utility.test.test_anonymized_rollups.test_events_modules_anonymized_rollups import events
+from metrics_utility.test.test_anonymized_rollups.test_events_modules_anonymized_rollup import events
 from metrics_utility.test.test_anonymized_rollups.test_execution_environments_anonymized_rollups import execution_environments
-from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized_rollups import jobhostsummary
-from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups import jobs
+from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized_rollup import jobhostsummary
+from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollup import jobs
 
 
 file_glob = './out/rollups/*/*/*/*/*'
@@ -47,10 +48,18 @@ def test_save_rollup(cleanup_glob):
     # TODO - Saving EE does not work yet
 
     # call the anonymized rollups
-    events_modules_result = EventModulesAnonymizedRollups.base(events_df)
-    execution_environments_result = ExecutionEnvironmentsAnonymizedRollups.base(execution_environments_df)
-    jobhostsummary_result = JobHostSummaryAnonymizedRollup.base(jobhostsummary_df)
-    jobs_result = JobsAnonymizedRollups.base(jobs_df)
+    events_modules_anonymized_rollup = EventModulesAnonymizedRollup()
+    events_modules_result = events_modules_anonymized_rollup.base(events_df)
+
+    execution_environments_anonymized_rollup = ExecutionEnvironmentsAnonymizedRollup()
+    execution_environments_result = execution_environments_anonymized_rollup.base(execution_environments_df)
+
+
+    jobhostsummary_anonymized_rollup = JobHostSummaryAnonymizedRollup()
+    jobhostsummary_result = jobhostsummary_anonymized_rollup.base(jobhostsummary_df)
+
+    jobs_anonymized_rollup = JobsAnonymizedRollup()
+    jobs_result = jobs_anonymized_rollup.base(jobs_df)
 
     # read json
     events_modules_json = events_modules_result['json']
@@ -90,3 +99,4 @@ def test_save_rollup(cleanup_glob):
     with open('./out/rollups/2024/1/1/anonymized.json', 'w') as f:
         # pretty json
         json.dump(unified_json, f, indent=4)
+"""

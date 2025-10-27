@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollups
+from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 
 
 jobs = [
@@ -14,7 +14,7 @@ jobs = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': '2024-01-01 00:00:00.000000+00',
+        'created': '2024-01-01 00:00:00.000000+00',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -27,7 +27,7 @@ jobs = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': '2024-01-01 00:00:08.000000+00',  # wait 2s
+        'created': '2024-01-01 00:00:08.000000+00',  # wait 2s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
@@ -41,7 +41,7 @@ jobs = [
         'job_template_name': 'T2',
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
-        'job_created': '2024-01-01 00:01:36.000000+00',  # wait 4s
+        'created': '2024-01-01 00:01:36.000000+00',  # wait 4s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -55,7 +55,7 @@ jobs = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-B',
         'ansible_version': 'v2',
-        'job_created': '2024-01-01 00:03:19.000000+00',  # wait 1s
+        'created': '2024-01-01 00:03:19.000000+00',  # wait 1s
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -87,8 +87,8 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # Times are ISO-like strings with explicit UTC offset (+00)
 
     df = pd.DataFrame(jobs)
-
-    result = JobsAnonymizedRollups.base(df)
+    jobs_anonymized_rollup = JobsAnonymizedRollup()
+    result = jobs_anonymized_rollup.base(df)
     result = result['json']
 
     import pprint

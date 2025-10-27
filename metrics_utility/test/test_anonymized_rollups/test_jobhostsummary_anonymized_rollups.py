@@ -98,7 +98,8 @@ jobhostsummary = [
 def test_jobhostsummary_anonymized():
     df = pd.DataFrame(jobhostsummary)
 
-    result = JobHostSummaryAnonymizedRollup.base(df)
+    jobhostsummary_anonymized_rollup = JobHostSummaryAnonymizedRollup()
+    result = jobhostsummary_anonymized_rollup.base(df)
     result = result['json']
 
     print(result)

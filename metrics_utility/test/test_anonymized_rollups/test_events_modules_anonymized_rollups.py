@@ -1,6 +1,6 @@
 import pandas as pd
 
-from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollups
+from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 
 
 events = [
@@ -307,8 +307,9 @@ def test_events_modules_aggregations_basic():
         df[col] = df[col].astype(str)
     # provide default event_data for ignore_errors lookup in prepare_data
     df['event_data'] = [{}] * len(df)
-    prepared = EventModulesAnonymizedRollups.prepare_data(df.copy())
-    result = EventModulesAnonymizedRollups.events_modules_aggregations(prepared)
+    events_modules_anonymized_rollup = EventModulesAnonymizedRollup()
+    prepared = events_modules_anonymized_rollup.prepare(df.copy())
+    result = events_modules_anonymized_rollup.base(prepared)
     result = result['json']
 
     import pprint
