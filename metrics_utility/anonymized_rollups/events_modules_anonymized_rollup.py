@@ -16,11 +16,11 @@ def extract_collection_name(x: str | None) -> str | None:
     return f'{m.group(1)}.{m.group(2)}' if m else None
 
 
-def merge_collection_name(obj1, obj2):
+def merge_by_name(obj1, obj2, name_key):
     merged = {}
 
     for entry in obj1 + obj2:
-        key = entry['collection_name']
+        key = entry[name_key]
         merged.setdefault(key, {}).update(entry)
 
     # Convert dict back to list
@@ -242,6 +242,30 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             .reset_index()
         )
 
+        # Per-job statistics for modules (similar to collection_name)
+        per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False).agg(
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            host_count=('host_id', 'nunique'),
+            job_containing_module_failed=('job_failed', 'max'),
+        )
+
+        job_time_stats_module = (
+            per_job_module.groupby(['module_name', 'collection_source', 'collection_name'])
+            .agg(
+                jobs_total=('job_id', 'nunique'),
+                job_duration_total_seconds=('job_duration_seconds', 'sum'),
+                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
+                avg_hosts_per_job=('host_count', 'mean'),
+                jobs_containing_module_failed_total=('job_containing_module_failed', 'sum'),
+            )
+            .assign(
+                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
+                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
+            )
+            .reset_index()
+        )
+
         per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
@@ -265,30 +289,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             .reset_index()
         )
 
+        # merge module_stats and job_time_stats_module into one list based on module_name
+        module_stats_dict = module_stats.to_dict(orient='records')
+        job_time_stats_module_dict = job_time_stats_module.to_dict(orient='records')
+        merged_list_module = merge_by_name(module_stats_dict, job_time_stats_module_dict, 'module_name')
+
         # merge collection_stats and job_time_stats into one list based on collection_source
         collection_name_stats_dict = collection_name_stats.to_dict(orient='records')
-
         job_time_stats_collection_name_dict = job_time_stats_collection_name.to_dict(orient='records')
-
-        merged_list_collection_name = merge_collection_name(collection_name_stats_dict, job_time_stats_collection_name_dict)
+        merged_list_collection_name = merge_by_name(collection_name_stats_dict, job_time_stats_collection_name_dict, 'collection_name')
 
         # Prepare rollup data (dataframes before conversion)
         rollup_data = {
-            # list[str]
-            'list_of_modules_used_to_automate': list_of_modules_used_to_automate,
-            # int (scalar)
-            'modules_used_to_automate_total': {'modules_used_to_automate_total': modules_used_to_automate_total},
-            # float (scalar)
-            'avg_number_of_modules_used_in_a_playbooks': {'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks},
-            # pandas.Series
-            'modules_used_per_playbook_total': modules_used_per_playbook_total,
-            # pandas.DataFrame
             'module_stats': module_stats,
-            # pandas.DataFrame
-            'collection_name_stats': collection_name_stats,
-            # pandas.DataFrame
-            'job_time_stats_per_collection_name': job_time_stats_collection_name,
-            # int (scalar)
             'total_hosts_automated': {'total_hosts_automated': total_hosts_automated},
         }
 
@@ -298,7 +311,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'modules_used_to_automate_total': modules_used_to_automate_total,
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
-            'module_stats': module_stats.to_dict(orient='records'),
+            'module_stats': merged_list_module,
             'collection_name_stats': merged_list_collection_name,
             'total_hosts_automated': total_hosts_automated,
         }

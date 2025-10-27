@@ -1,11 +1,10 @@
-
 from datetime import datetime, timedelta
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.util import run_gather_int
 
 
-def task_anonymized_rollups(salt, year, month, day, ship_path):
+def task_anonymized_rollups(salt, year, month, day, ship_path, save_csv: bool = False):
     env_vars = {
         'METRICS_UTILITY_SHIP_PATH': ship_path,
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
@@ -23,6 +22,6 @@ def task_anonymized_rollups(salt, year, month, day, ship_path):
     run_gather_int(env_vars, {'ship': True, 'force': True, 'since': since_param, 'until': until_param})
 
     # load data for each collector
-    json_data = compute_anonymized_rollup_from_raw_data('salt', year, month, day, True)
+    json_data = compute_anonymized_rollup_from_raw_data(salt, year, month, day, save_csv)
 
     return json_data

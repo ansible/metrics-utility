@@ -27,12 +27,12 @@ def cleanup_glob():
 
 
 def test_empty_data(cleanup_glob):
-    compute_anonymized_rollup_from_raw_data('salt', 2025, 6, 13, True)
+    compute_anonymized_rollup_from_raw_data('salt', 2025, 6, 13, save_csv=True)
 
 
 def test_from_gather_to_json(cleanup_glob):
     # run gather
-    json_data = task_anonymized_rollups('salt', 2025, 6, 13, './out')
+    json_data = task_anonymized_rollups('salt', 2025, 6, 13, './out', save_csv=True)
 
     print(json_data)
 
