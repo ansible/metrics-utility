@@ -104,18 +104,18 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
     return data
 
 
-def compute_anonymized_rollup_from_raw_data(salt, year, month, day, save_csv: bool = False):
+def compute_anonymized_rollup_from_raw_data(salt, year, month, day):
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), './out', year, month, day)
     jobs_result = JobsAnonymizedRollup().base(jobs)
-    JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], './out', year, month, day, save_csv)
+    JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], './out', year, month, day)
 
     job_host_summary = load_anonymized_rollup_data(JobHostSummaryAnonymizedRollup(), './out', year, month, day)
     job_host_summary_result = JobHostSummaryAnonymizedRollup().base(job_host_summary)
-    JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], './out', year, month, day, save_csv)
+    JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], './out', year, month, day)
 
     events_modules = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), './out', year, month, day)
     events_modules_result = EventModulesAnonymizedRollup().base(events_modules)
-    EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], './out', year, month, day, save_csv)
+    EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], './out', year, month, day)
 
     execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), './out', year, month, day)
     execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
