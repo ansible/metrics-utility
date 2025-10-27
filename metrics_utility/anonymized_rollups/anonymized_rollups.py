@@ -34,46 +34,63 @@ def create_anonymized_object(rollup_name: str):
 
 
 def anonymize_data(data, salt):
+    if not data or not isinstance(data, dict):
+        return
+    
     # anonymize jobs job template name
-    if 'jobs' in data:
+    if 'jobs' in data and data['jobs']:
         for job in data['jobs']:
-            job['job_template_name'] = hash(job['job_template_name'], salt)
+            if job and 'job_template_name' in job and job['job_template_name']:
+                job['job_template_name'] = hash(job['job_template_name'], salt)
 
     # anonymize jobhostsummary job template name
-    if 'job_host_summary' in data:
+    if 'job_host_summary' in data and data['job_host_summary']:
         for jobhostsummary in data['job_host_summary']:
-            jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
+            if jobhostsummary and 'job_template_name' in jobhostsummary and jobhostsummary['job_template_name']:
+                jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
 
     # anonymize events modules module name
-    if 'events_modules' in data:
+    if 'events_modules' in data and isinstance(data['events_modules'], dict):
+        events_modules = data['events_modules']
+        
         # list of modules to automate
-        for module in data['events_modules']['list_of_modules_used_to_automate']:
-            if module['collection_source'] == 'Unknown':
-                module['module_name'] = hash(module['module_name'], salt)
-                module['collection_name'] = hash(module['collection_name'], salt)
+        if 'list_of_modules_used_to_automate' in events_modules and events_modules['list_of_modules_used_to_automate']:
+            for module in events_modules['list_of_modules_used_to_automate']:
+                if module and module.get('collection_source') == 'Unknown':
+                    if 'module_name' in module and module['module_name']:
+                        module['module_name'] = hash(module['module_name'], salt)
+                    if 'collection_name' in module and module['collection_name']:
+                        module['collection_name'] = hash(module['collection_name'], salt)
 
         # module_stats
-        for module in data['events_modules']['module_stats']:
-            if module['collection_source'] == 'Unknown':
-                module['module_name'] = hash(module['module_name'], salt)
-                module['collection_name'] = hash(module['collection_name'], salt)
+        if 'module_stats' in events_modules and events_modules['module_stats']:
+            for module in events_modules['module_stats']:
+                if module and module.get('collection_source') == 'Unknown':
+                    if 'module_name' in module and module['module_name']:
+                        module['module_name'] = hash(module['module_name'], salt)
+                    if 'collection_name' in module and module['collection_name']:
+                        module['collection_name'] = hash(module['collection_name'], salt)
 
         # collection_name_stats
-        for collection in data['events_modules']['collection_name_stats']:
-            if collection['collection_source'] == 'Unknown':
-                collection['module_name'] = hash(module['module_name'], salt)
-                collection['collection_name'] = hash(collection['collection_name'], salt)
+        if 'collection_name_stats' in events_modules and events_modules['collection_name_stats']:
+            for collection in events_modules['collection_name_stats']:
+                if collection and collection.get('collection_source') == 'Unknown':
+                    if 'module_name' in collection and collection['module_name']:
+                        collection['module_name'] = hash(collection['module_name'], salt)
+                    if 'collection_name' in collection and collection['collection_name']:
+                        collection['collection_name'] = hash(collection['collection_name'], salt)
 
-    # anonymize modules_used_per_playbook_total, playbook names
-    if 'modules_used_per_playbook_total' in data['events_modules']:
-        old_dict = data['events_modules']['modules_used_per_playbook_total']
-        new_dict = {}
+        # anonymize modules_used_per_playbook_total, playbook names
+        if 'modules_used_per_playbook_total' in events_modules and events_modules['modules_used_per_playbook_total']:
+            old_dict = events_modules['modules_used_per_playbook_total']
+            new_dict = {}
 
-        for playbook, modules in old_dict.items():
-            hashed_playbook = hash(playbook, salt)  # replace with your actual hash function
-            new_dict[hashed_playbook] = modules
+            for playbook, modules in old_dict.items():
+                if playbook:
+                    hashed_playbook = hash(playbook, salt)
+                    new_dict[hashed_playbook] = modules
 
-        data['events_modules']['modules_used_per_playbook_total'] = new_dict
+            events_modules['modules_used_per_playbook_total'] = new_dict
 
 
 def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, salt):
