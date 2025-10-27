@@ -36,7 +36,7 @@ def create_anonymized_object(rollup_name: str):
 def anonymize_data(data, salt):
     if not data or not isinstance(data, dict):
         return
-    
+
     # anonymize jobs job template name
     if 'jobs' in data and data['jobs']:
         for job in data['jobs']:
@@ -52,7 +52,7 @@ def anonymize_data(data, salt):
     # anonymize events modules module name
     if 'events_modules' in data and isinstance(data['events_modules'], dict):
         events_modules = data['events_modules']
-        
+
         # list of modules to automate
         if 'list_of_modules_used_to_automate' in events_modules and events_modules['list_of_modules_used_to_automate']:
             for module in events_modules['list_of_modules_used_to_automate']:
