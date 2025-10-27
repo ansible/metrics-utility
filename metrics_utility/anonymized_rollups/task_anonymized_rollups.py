@@ -24,8 +24,6 @@ def task_anonymized_rollups(salt, year, month, day, ship_path):
     run_gather_int(env_vars, {'ship': True, 'force': True, 'since': since_param, 'until': until_param})
 
     # load data for each collector
-    rollup = compute_anonymized_rollup_from_raw_data('salt', year, month, day, True)
+    json_data = compute_anonymized_rollup_from_raw_data('salt', year, month, day, True)
 
-    # save as json inside rollups/2025/06/13/anonymized.json
-    with open(f'{ship_path}/rollups/{year}/{month:02d}/{day:02d}/anonymized.json', 'w') as f:
-        json.dump(rollup, f, indent=4)
+    return json_data
