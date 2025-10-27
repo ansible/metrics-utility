@@ -5,37 +5,14 @@ cd "`dirname "$0"`"
 export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="directory"
 
+if ! pg_isready -h localhost; then
+  echo "run-s3-gather-build: DB not ready, run make compose first"
+  exit 1
+fi
+
 TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
-
-SCHEMA=`realpath "tools/docker/latest.sql"`
-ROLES=`realpath "tools/docker/roles.sql"`
-NAME=ccsp2-gather-`basename "$SCHEMA" .sql`
-
-echo "$NAME"
-pg_isready -h localhost ||
-podman run --name "$NAME" --replace \
-    -e POSTGRES_USER="myuser" \
-    -e POSTGRES_PASSWORD="mypassword" \
-    -e POSTGRES_DB="awx" \
-    -v "$ROLES":/docker-entrypoint-initdb.d/init-roles.sql:ro \
-    -v "$SCHEMA":/docker-entrypoint-initdb.d/init-schema.sql:ro \
-    -p 5432:5432 \
-    -d mirror.gcr.io/postgres
-
-tries=5
-until pg_isready -h localhost; do
-  [ "$tries" -lt 1 ] && break
-
-  echo "Waiting for PostgreSQL to be ready...($tries)"
-  sleep "$tries"
-
-  tries=`expr "$tries" - 1`
-done
-
 $TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force "$@"
-
-podman stop "$NAME"
 
 set -x
 ls -lR out/data/`date +%Y`/
