@@ -2,8 +2,6 @@ import csv
 import glob
 import os
 
-from datetime import datetime
-
 import pytest
 
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
@@ -353,13 +351,5 @@ def test_execution_environments_command(cleanup_glob):
 
     # run the gather command
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
-
-    # validate CSV inside generated tarball(s)
-    # file_paths should be found in datetime.now file path YYYY/MM/DD
-    year = datetime.now().strftime('%Y')
-    month = datetime.now().strftime('%m')
-    day = datetime.now().strftime('%d')
-
-    file_paths = f'./out/data/{year}/{month}/{day}/{uuid}-*.tar.gz'
 
     validate_csv_in_tarballs(file_paths, 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)

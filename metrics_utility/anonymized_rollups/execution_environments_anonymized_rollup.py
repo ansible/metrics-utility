@@ -27,6 +27,7 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
             }
 
         total_ee = int(len(dataframe))
+        dataframe['managed'] = dataframe['managed'].map({'t': True, 'f': False})
         default_ee = int(dataframe['managed'].sum())
         custom_ee = total_ee - default_ee
 

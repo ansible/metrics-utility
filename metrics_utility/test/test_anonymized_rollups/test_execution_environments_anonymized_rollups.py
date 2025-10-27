@@ -4,11 +4,11 @@ from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup
 
 
 execution_environments = [
-    {'managed': True},
-    {'managed': False},
-    {'managed': True},
-    {'managed': False},
-    {'managed': False},
+    {'managed': 't'},
+    {'managed': 'f'},
+    {'managed': 't'},
+    {'managed': 'f'},
+    {'managed': 'f'},
 ]
 
 
