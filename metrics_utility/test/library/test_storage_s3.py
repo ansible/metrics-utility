@@ -16,7 +16,7 @@ s3_settings = {
     'region': 'us-east-1',
     'secret_key': 'myusersecretkey',
 }
-s3_object_name = f'temporary object {os.getpid()}'
+s3_object_name = f'temporary object x{os.getpid()}y'
 
 
 def test_put_get_filename():
@@ -60,7 +60,7 @@ def test_exists():
 
 def test_glob():
     storage = StorageS3(**s3_settings)
-    pid = os.getpid()
+    pid = f'x{os.getpid()}y'
     now = datetime.datetime.now(datetime.timezone.utc)
 
     assert storage.glob(s3_object_name) == [s3_object_name]
