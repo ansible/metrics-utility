@@ -77,7 +77,7 @@ def test_get_error():
     with pytest.raises(Exception) as exc:
         with storage.get('not ' + target_filename) as _filename:
             assert False
-        assert exc is not None
+    assert exc is not None
 
 
 def test_exists():

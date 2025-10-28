@@ -49,7 +49,7 @@ def test_get_error():
     with pytest.raises(Exception) as exc:
         with storage.get('not ' + s3_object_name) as _filename:
             assert False
-        assert exc is not None
+    assert exc is not None
 
 
 def test_exists():
