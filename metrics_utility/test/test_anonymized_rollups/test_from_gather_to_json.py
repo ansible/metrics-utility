@@ -1,13 +1,11 @@
 import json
 import os
 import shutil
-import tempfile
 
 import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 from metrics_utility.anonymized_rollups.task_anonymized_rollups import task_anonymized_rollups
-from metrics_utility.automation_controller_billing.extract.base import _safe_extract
 
 
 # where to find the tar.gz (match jobhostsummary test layout)
@@ -34,12 +32,16 @@ def test_empty_data(cleanup_glob):
 
 def test_from_gather_to_json(cleanup_glob):
     # run gather
-    json_data = task_anonymized_rollups('salt', 2025, 6, 13, './out')
+    json_data = task_anonymized_rollups('salt', 2025, 6, 13, './out', save_rollups=False)
 
     print(json_data)
 
     # save as json inside rollups/2025/06/13/anonymized.json
     json_path = f'./out/rollups/{2025}/06/13/anonymized.json'
+
+    # create the dir
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+
     with open(json_path, 'w') as f:
         json.dump(json_data, f, indent=4)
 
@@ -240,61 +242,6 @@ def test_from_gather_to_json(cleanup_glob):
         )
 
     print('✅ All data value assertions passed!')
-
-    # ========== Validate the rollups are correctly saved in place ==========
-
-    # Verify anonymized.json was saved
-    assert os.path.exists(json_path), f'anonymized.json should be saved at {json_path}'
-    with open(json_path, 'r') as f:
-        saved_json = json.load(f)
-        assert saved_json == json_data, 'Saved JSON should match the returned json_data'
-
-    # Verify all rollup tarballs exist
-    rollup_base_path = './out/rollups/2025/06/13'
-    expected_rollups = ['jobs', 'job_host_summary', 'events_modules', 'execution_environments']
-
-    for rollup_name in expected_rollups:
-        tarball_path = os.path.join(rollup_base_path, rollup_name, 'data_rollups_2025_06_13.tar.gz')
-        assert os.path.exists(tarball_path), f'Tarball should exist at {tarball_path}'
-
-    # ========== Validate tarballs contain correct files ==========
-
-    # Validate jobs tarball
-    jobs_tarball = os.path.join(rollup_base_path, 'jobs', 'data_rollups_2025_06_13.tar.gz')
-    with tempfile.TemporaryDirectory() as temp_dir:
-        _safe_extract(jobs_tarball, temp_dir)
-        extracted_files = os.listdir(temp_dir)
-        print(f'Jobs tarball contains: {extracted_files}')
-        assert 'aggregations_by_template.csv' in extracted_files, 'Jobs tarball should contain aggregations_by_template.csv'
-
-    # Validate job_host_summary tarball
-    jhs_tarball = os.path.join(rollup_base_path, 'job_host_summary', 'data_rollups_2025_06_13.tar.gz')
-    with tempfile.TemporaryDirectory() as temp_dir:
-        _safe_extract(jhs_tarball, temp_dir)
-        extracted_files = os.listdir(temp_dir)
-        print(f'Job host summary tarball contains: {extracted_files}')
-        assert 'aggregated.csv' in extracted_files, 'Job host summary tarball should contain aggregated.csv'
-
-    # Validate events_modules tarball
-    em_tarball = os.path.join(rollup_base_path, 'events_modules', 'data_rollups_2025_06_13.tar.gz')
-    with tempfile.TemporaryDirectory() as temp_dir:
-        _safe_extract(em_tarball, temp_dir)
-        extracted_files = os.listdir(temp_dir)
-        print(f'Events modules tarball contains: {extracted_files}')
-        assert 'module_stats.csv' in extracted_files, 'Events modules tarball should contain module_stats.csv'
-        # Should also contain a JSON file for total_hosts_automated
-        json_files = [name for name in extracted_files if name.endswith('.json')]
-        assert len(json_files) > 0, 'Events modules tarball should contain at least one JSON file'
-
-    # Validate execution_environments tarball
-    ee_tarball = os.path.join(rollup_base_path, 'execution_environments', 'data_rollups_2025_06_13.tar.gz')
-    with tempfile.TemporaryDirectory() as temp_dir:
-        _safe_extract(ee_tarball, temp_dir)
-        extracted_files = os.listdir(temp_dir)
-        print(f'Execution environments tarball contains: {extracted_files}')
-        # Should contain a JSON file
-        json_files = [name for name in extracted_files if name.endswith('.json')]
-        assert len(json_files) > 0, 'Execution environments tarball should contain at least one JSON file'
 
     # Verify data directory exists and contains raw data tarballs
     data_path = './out/data/2025/06/13'

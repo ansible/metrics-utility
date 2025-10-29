@@ -104,22 +104,26 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
     return data
 
 
-def compute_anonymized_rollup_from_raw_data(salt, year, month, day, base_path):
+def compute_anonymized_rollup_from_raw_data(salt, year, month, day, base_path, save_rollups: bool = True):
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), base_path, year, month, day)
     jobs_result = JobsAnonymizedRollup().base(jobs)
-    JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], base_path, year, month, day)
+    if save_rollups:
+        JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], base_path, year, month, day)
 
     job_host_summary = load_anonymized_rollup_data(JobHostSummaryAnonymizedRollup(), base_path, year, month, day)
     job_host_summary_result = JobHostSummaryAnonymizedRollup().base(job_host_summary)
-    JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], base_path, year, month, day)
+    if save_rollups:
+        JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], base_path, year, month, day)
 
     events_modules = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), base_path, year, month, day)
     events_modules_result = EventModulesAnonymizedRollup().base(events_modules)
-    EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], base_path, year, month, day)
+    if save_rollups:
+        EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], base_path, year, month, day)
 
     execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), base_path, year, month, day)
     execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
-    ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_result['rollup'], base_path, year, month, day)
+    if save_rollups:
+        ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_result['rollup'], base_path, year, month, day)
 
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], 'salt'
