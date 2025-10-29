@@ -1,12 +1,13 @@
 import json
 import os
 import shutil
-import tarfile
+import tempfile
 
 import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 from metrics_utility.anonymized_rollups.task_anonymized_rollups import task_anonymized_rollups
+from metrics_utility.automation_controller_billing.extract.base import _safe_extract
 
 
 # where to find the tar.gz (match jobhostsummary test layout)
@@ -260,39 +261,39 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate jobs tarball
     jobs_tarball = os.path.join(rollup_base_path, 'jobs', 'data_rollups_2025_06_13.tar.gz')
-    with tarfile.open(jobs_tarball, 'r:gz') as tar:
-        members = tar.getmembers()
-        member_names = [m.name for m in members]
-        print(f'Jobs tarball contains: {member_names}')
-        assert './aggregations_by_template.csv' in member_names, 'Jobs tarball should contain aggregations_by_template.csv'
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _safe_extract(jobs_tarball, temp_dir)
+        extracted_files = os.listdir(temp_dir)
+        print(f'Jobs tarball contains: {extracted_files}')
+        assert 'aggregations_by_template.csv' in extracted_files, 'Jobs tarball should contain aggregations_by_template.csv'
 
     # Validate job_host_summary tarball
     jhs_tarball = os.path.join(rollup_base_path, 'job_host_summary', 'data_rollups_2025_06_13.tar.gz')
-    with tarfile.open(jhs_tarball, 'r:gz') as tar:
-        members = tar.getmembers()
-        member_names = [m.name for m in members]
-        print(f'Job host summary tarball contains: {member_names}')
-        assert './aggregated.csv' in member_names, 'Job host summary tarball should contain aggregated.csv'
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _safe_extract(jhs_tarball, temp_dir)
+        extracted_files = os.listdir(temp_dir)
+        print(f'Job host summary tarball contains: {extracted_files}')
+        assert 'aggregated.csv' in extracted_files, 'Job host summary tarball should contain aggregated.csv'
 
     # Validate events_modules tarball
     em_tarball = os.path.join(rollup_base_path, 'events_modules', 'data_rollups_2025_06_13.tar.gz')
-    with tarfile.open(em_tarball, 'r:gz') as tar:
-        members = tar.getmembers()
-        member_names = [m.name for m in members]
-        print(f'Events modules tarball contains: {member_names}')
-        assert './module_stats.csv' in member_names, 'Events modules tarball should contain module_stats.csv'
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _safe_extract(em_tarball, temp_dir)
+        extracted_files = os.listdir(temp_dir)
+        print(f'Events modules tarball contains: {extracted_files}')
+        assert 'module_stats.csv' in extracted_files, 'Events modules tarball should contain module_stats.csv'
         # Should also contain a JSON file for total_hosts_automated
-        json_files = [name for name in member_names if name.endswith('.json')]
+        json_files = [name for name in extracted_files if name.endswith('.json')]
         assert len(json_files) > 0, 'Events modules tarball should contain at least one JSON file'
 
     # Validate execution_environments tarball
     ee_tarball = os.path.join(rollup_base_path, 'execution_environments', 'data_rollups_2025_06_13.tar.gz')
-    with tarfile.open(ee_tarball, 'r:gz') as tar:
-        members = tar.getmembers()
-        member_names = [m.name for m in members]
-        print(f'Execution environments tarball contains: {member_names}')
+    with tempfile.TemporaryDirectory() as temp_dir:
+        _safe_extract(ee_tarball, temp_dir)
+        extracted_files = os.listdir(temp_dir)
+        print(f'Execution environments tarball contains: {extracted_files}')
         # Should contain a JSON file
-        json_files = [name for name in member_names if name.endswith('.json')]
+        json_files = [name for name in extracted_files if name.endswith('.json')]
         assert len(json_files) > 0, 'Execution environments tarball should contain at least one JSON file'
 
     # Verify data directory exists and contains raw data tarballs
