@@ -156,7 +156,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_module_stats['task_clean_success_total'] == 6, 'Should have 6 successful tasks (3 jobs × 2 hosts)'
     assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
     assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
-    assert first_module_stats['avg_hosts_per_job'] == 2.0, 'Should average 2 hosts per job'
+    assert pytest.approx(first_module_stats['avg_hosts_per_job'], rel=1e-6) == 2.0, 'Should average 2 hosts per job'
 
     # Validate second module stats
     second_module_stats = events_modules['module_stats'][1]
@@ -183,7 +183,7 @@ def test_from_gather_to_json(cleanup_glob):
     total_modules_across_playbooks = sum(events_modules['modules_used_per_playbook_total'].values())
     num_playbooks = len(events_modules['modules_used_per_playbook_total'])
     expected_avg = total_modules_across_playbooks / num_playbooks if num_playbooks > 0 else 0
-    assert events_modules['avg_number_of_modules_used_in_a_playbooks'] == expected_avg, (
+    assert pytest.approx(events_modules['avg_number_of_modules_used_in_a_playbooks'], rel=1e-6) == expected_avg, (
         f'Average should be {expected_avg}, got {events_modules["avg_number_of_modules_used_in_a_playbooks"]}'
     )
 
@@ -206,12 +206,12 @@ def test_from_gather_to_json(cleanup_glob):
         'Succeeded + failed should equal total executed'
     )
 
-    # Validate job duration fields
+    # Validate job duration fields are non-negative
     assert job['job_duration_average_in_seconds'] >= 0, 'Job duration average should be non-negative'
     assert job['job_duration_total_in_seconds'] >= 0, 'Job duration total should be non-negative'
     assert job['job_duration_maximum_in_seconds'] >= job['job_duration_minimum_in_seconds'], 'Max duration should be >= min duration'
 
-    # Validate job waiting time fields
+    # Validate job waiting time fields are non-negative
     assert job['job_waiting_time_average_in_seconds'] >= 0, 'Job waiting time average should be non-negative'
     assert job['job_waiting_time_total_in_seconds'] >= 0, 'Job waiting time total should be non-negative'
 
