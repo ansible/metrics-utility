@@ -8,6 +8,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     Collector - unified_jobs collector data
     """
 
+    def prepare(self, dataframe):
+        # filter out jobs that are not finished
+        dataframe = dataframe[dataframe['finished'].notna()]
+
+        # sometime start time is null, in that case, set it to finished
+        dataframe['started'] = dataframe['started'].fillna(dataframe['finished'])
+        return dataframe
+
     def __init__(self):
         super().__init__('jobs')
         self.collector_names = ['unified_jobs']
