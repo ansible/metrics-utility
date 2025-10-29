@@ -11,9 +11,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         # filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
-
-        # sometime start time is null, in that case, set it to finished
-        dataframe['started'] = dataframe['started'].fillna(dataframe['finished'])
         return dataframe
 
     def __init__(self):
@@ -59,9 +56,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Convert failed column to boolean (handle PostgreSQL 't'/'f' representation)
         if 'failed' in dataframe.columns:
             dataframe['failed'] = dataframe['failed'].replace({'t': True, 'f': False}).fillna(False).astype(bool)
-
-        # create view from dataframe where finished is not null and started is not null
-        dataframe = dataframe[dataframe['finished'].notna() & dataframe['started'].notna()]
 
         # compute job duration in seconds, .dt.total_seconds()
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()

@@ -88,6 +88,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     df = pd.DataFrame(jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
+    df = jobs_anonymized_rollup.prepare(df)
     result = jobs_anonymized_rollup.base(df)
     result = result['json']
 

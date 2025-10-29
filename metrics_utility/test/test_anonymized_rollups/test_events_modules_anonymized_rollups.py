@@ -308,7 +308,7 @@ def test_events_modules_aggregations_basic():
     # provide default event_data for ignore_errors lookup in prepare_data
     df['event_data'] = [{}] * len(df)
     events_modules_anonymized_rollup = EventModulesAnonymizedRollup()
-    prepared = events_modules_anonymized_rollup.prepare(df.copy())
+    prepared = events_modules_anonymized_rollup.prepare(df)
     result = events_modules_anonymized_rollup.base(prepared)
     result = result['json']
 

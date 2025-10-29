@@ -78,9 +78,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         self.collector_names = ['main_jobevent_service']
 
     def prepare(self, dataframe):
-        # sometime start time is null, in that case, set it to finished
-        dataframe['job_started'] = dataframe['job_started'].fillna(dataframe['job_finished'])
-
         # Prepare data
         # Open the JSON file
         with open('metrics_utility/anonymized_rollups/collections.json', 'r') as f:

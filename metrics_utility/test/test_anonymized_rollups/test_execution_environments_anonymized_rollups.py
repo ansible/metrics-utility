@@ -17,6 +17,7 @@ def test_base_counts():
     df = pd.DataFrame(execution_environments)
 
     execution_environments_anonymized_rollup = ExecutionEnvironmentsAnonymizedRollup()
+    df = execution_environments_anonymized_rollup.prepare(df)
     result = execution_environments_anonymized_rollup.base(df)
     result = result['json']
 
