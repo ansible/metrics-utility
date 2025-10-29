@@ -28,7 +28,7 @@ def cleanup_glob():
 
 
 def test_empty_data(cleanup_glob):
-    compute_anonymized_rollup_from_raw_data('salt', 2025, 6, 13)
+    compute_anonymized_rollup_from_raw_data('salt', 2025, 6, 13, './out')
 
 
 def test_from_gather_to_json(cleanup_glob):
