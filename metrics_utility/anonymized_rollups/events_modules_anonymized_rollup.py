@@ -105,9 +105,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_seconds'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
 
-        dataframe = dataframe[dataframe['job_duration_seconds'] >= 0]
-        dataframe = dataframe[dataframe['job_waiting_time_seconds'] >= 0]
-
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections).fillna('Unknown')
 
@@ -215,6 +212,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             task_summary.groupby(['module_name', 'collection_source', 'collection_name'])
             .agg(
                 jobs_total=('job_id', 'nunique'),
+                number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
                 hosts_total=('host_id', 'nunique'),
                 task_clean_success_total=('task_clean_success', 'sum'),
                 task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
@@ -230,6 +228,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         collection_name_stats = (
             task_summary.groupby(['collection_name', 'collection_source'])
             .agg(
+                jobs_total=('job_id', 'nunique'),
+                number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
                 hosts_total=('host_id', 'nunique'),
                 jobs_failed_because_of_collection_name_failure_total=('job_id_that_contained_failed_task', 'nunique'),
                 task_clean_success_total=('task_clean_success', 'sum'),
@@ -253,7 +253,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         job_time_stats_module = (
             per_job_module.groupby(['module_name', 'collection_source', 'collection_name'])
             .agg(
-                jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
                 avg_hosts_per_job=('host_count', 'mean'),
@@ -276,7 +275,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         job_time_stats_collection_name = (
             per_job_collection_name.groupby(['collection_name', 'collection_source'])
             .agg(
-                jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
                 avg_hosts_per_job=('host_count', 'mean'),
