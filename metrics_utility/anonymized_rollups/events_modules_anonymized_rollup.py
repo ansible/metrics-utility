@@ -77,11 +77,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         self.collector_names = ['main_jobevent_service']
 
-    def prepare(self, dataframe):
-        # Prepare data
         # Open the JSON file
         with open('metrics_utility/anonymized_rollups/collections.json', 'r') as f:
-            collections = json.load(f)
+            self.collections = json.load(f)
+
+    def prepare(self, dataframe):
+        # Prepare data
+        collections = self.collections
 
         # if missing ignore_errors column, insert it, default is False. If values is null, set it to False
         if 'ignore_errors' not in dataframe.columns:
@@ -130,6 +132,28 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             & (dataframe['module_name'].str.strip() != '')
             & (dataframe['playbook'].str.strip() != '')
         ]
+
+        # Select only the columns needed for analysis to save memory
+        columns_to_keep = [
+            'job_id',
+            'host_id',
+            'task_uuid',
+            'module_name',
+            'playbook',
+            'collection_name',
+            'collection_source',
+            'job_failed',
+            'job_started',
+            'job_duration_seconds',
+            'job_waiting_time_seconds',
+            'task_success_event',
+            'task_failed_event',
+            'task_failed_and_ignored_event',
+            'task_unreachable_event',
+            'task_skipped_event',
+        ]
+
+        dataframe = dataframe[columns_to_keep]
 
         return dataframe
 
