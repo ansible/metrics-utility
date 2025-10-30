@@ -61,15 +61,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['created']).dt.total_seconds()
 
-        # guard against negative times
-        dataframe = dataframe[dataframe['job_duration_seconds'] >= 0]
-        dataframe = dataframe[dataframe['job_waiting_time_seconds'] >= 0]
-
         aggregations_by_template = (
             dataframe.groupby('job_template_name')
             .agg(
                 number_of_jobs_executed=('id', 'nunique'),
                 number_of_jobs_failed=('failed', 'sum'),
+                number_of_jobs_never_started=('started', lambda x: x.isna().sum()),
                 job_duration_average_in_seconds=('job_duration_seconds', 'mean'),
                 job_duration_maximum_in_seconds=('job_duration_seconds', 'max'),
                 job_duration_minimum_in_seconds=('job_duration_seconds', 'min'),
