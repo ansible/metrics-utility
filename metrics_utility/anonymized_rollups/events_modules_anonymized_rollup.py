@@ -190,6 +190,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 seen_unreachable=('task_unreachable_event', 'max'),
                 seen_skipped=('task_skipped_event', 'max'),
                 seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
+                job_started=('job_started', 'first'),
             )
             .reset_index()
             .assign(
@@ -253,6 +254,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         job_time_stats_module = (
             per_job_module.groupby(['module_name', 'collection_source', 'collection_name'])
             .agg(
+                jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
                 avg_hosts_per_job=('host_count', 'mean'),
@@ -275,6 +277,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         job_time_stats_collection_name = (
             per_job_collection_name.groupby(['collection_name', 'collection_source'])
             .agg(
+                jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
                 avg_hosts_per_job=('host_count', 'mean'),
