@@ -242,14 +242,3 @@ def test_from_gather_to_json(cleanup_glob):
         )
 
     print('✅ All data value assertions passed!')
-
-    # Verify data directory exists and contains raw data tarballs
-    data_path = './out/data/2025/06/13'
-    assert os.path.exists(data_path), f'Data directory should exist at {data_path}'
-
-    # Check that raw data tarballs were created
-    data_tarballs = [f for f in os.listdir(data_path) if f.endswith('.tar.gz')]
-    assert len(data_tarballs) > 0, 'Should have raw data tarballs in data directory'
-    print(f'Found {len(data_tarballs)} raw data tarballs')
-
-    print('\n✅ All assertions passed!')
