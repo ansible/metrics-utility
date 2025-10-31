@@ -81,6 +81,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         with open('metrics_utility/anonymized_rollups/collections.json', 'r') as f:
             self.collections = json.load(f)
 
+    # Prepare is run for each batch of data
+    # then it is merged with other batches into one dataframe
+    # as default, merging is done by concatenating dataframes
     def prepare(self, dataframe):
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
@@ -165,7 +168,51 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         dataframe = dataframe[columns_to_keep]
 
-        return dataframe
+        # Aggregate events per task to reduce rows before merging batches
+        # This groups by (job, host, task, module, collection) and summarizes all events
+        task_summary = dataframe.groupby(
+            ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+        ).agg(
+            seen_success=('task_success_event', 'max'),
+            seen_failed=('task_failed_event', 'max'),
+            seen_unreachable=('task_unreachable_event', 'max'),
+            seen_skipped=('task_skipped_event', 'max'),
+            seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
+            job_started=('job_started', 'first'),
+            job_failed=('job_failed', 'first'),
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            playbook=('playbook', 'first'),
+        )
+
+        return task_summary
+
+    def merge(self, dataframe_all, dataframe_new):
+        """
+        Override base merge to re-aggregate when combining batches.
+        Since the same (job_id, host_id, task_uuid, module_name, collection_source, collection_name)
+        might appear in different batches, we need to aggregate again after concatenation.
+        """
+        # Concatenate the batches
+        combined = pd.concat([dataframe_all, dataframe_new], ignore_index=True)
+
+        # Re-aggregate: group by the same keys and take max of seen_* columns
+        merged = combined.groupby(
+            ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+        ).agg(
+            seen_success=('seen_success', 'max'),
+            seen_failed=('seen_failed', 'max'),
+            seen_unreachable=('seen_unreachable', 'max'),
+            seen_skipped=('seen_skipped', 'max'),
+            seen_failed_and_ignored=('seen_failed_and_ignored', 'max'),
+            job_started=('job_started', 'first'),
+            job_failed=('job_failed', 'first'),
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            playbook=('playbook', 'first'),
+        )
+
+        return merged
 
     def base(self, dataframe):
         """
@@ -225,36 +272,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         total_hosts_automated = dataframe['host_id'].nunique()
 
-        # Collapse events  one row per (job, module, task)
-        # summarize all failed events as number of failed attempts
-        # if one success events is seen, task is successful
-        # problem is that each task_uuid can have multiple ok and success events
-        # when at least one success event is seen, task is successful
-        # failed event can be repeated multiple times, we are counting failed attempts
-        task_summary = (
-            dataframe.groupby(
-                ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
-            )
-            .agg(
-                seen_success=('task_success_event', 'max'),
-                seen_failed=('task_failed_event', 'max'),
-                seen_unreachable=('task_unreachable_event', 'max'),
-                seen_skipped=('task_skipped_event', 'max'),
-                seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
-                job_started=('job_started', 'first'),
-            )
-            .assign(
-                # mutually exclusive categories - only one can be true
-                task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
-                task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
-                task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
-                task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
-                task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
-                task_skipped=lambda x: (
-                    x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
-                ),
-                job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
-            )
+        # Data is already aggregated from prepare() and merge()
+        # We just need to compute the mutually exclusive task status categories
+        task_summary = dataframe.assign(
+            # mutually exclusive categories - only one can be true
+            task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
+            task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
+            task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
+            task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
+            task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
+            task_skipped=lambda x: (
+                x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
+            ),
+            job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
         )
 
         # Per-module counts
