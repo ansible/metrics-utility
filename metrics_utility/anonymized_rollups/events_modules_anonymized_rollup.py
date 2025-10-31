@@ -211,7 +211,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # when at least one success event is seen, task is successful
         # failed event can be repeated multiple times, we are counting failed attempts
         task_summary = (
-            dataframe.groupby(['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'])
+            dataframe.groupby(['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False)
             .agg(
                 seen_success=('task_success_event', 'max'),
                 seen_failed=('task_failed_event', 'max'),
@@ -220,7 +220,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
                 job_started=('job_started', 'first'),
             )
-            .reset_index()
             .assign(
                 # mutually exclusive categories - only one can be true
                 task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
@@ -237,38 +236,30 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Per-module counts
         # receiver of this data can easily calculate success rates
-        module_stats = (
-            task_summary.groupby(['module_name', 'collection_source', 'collection_name'])
-            .agg(
-                jobs_total=('job_id', 'nunique'),
-                number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
-                hosts_total=('host_id', 'nunique'),
-                task_clean_success_total=('task_clean_success', 'sum'),
-                task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
-                task_failed_total=('task_failed', 'sum'),
-                task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum'),
-                task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
-                jobs_failed_because_of_module_failure_total=('job_id_that_contained_failed_task', 'nunique'),
-            )
-            .reset_index()
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False).agg(
+            jobs_total=('job_id', 'nunique'),
+            number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
+            hosts_total=('host_id', 'nunique'),
+            task_clean_success_total=('task_clean_success', 'sum'),
+            task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
+            task_failed_total=('task_failed', 'sum'),
+            task_unreachable_total=('task_unreachable', 'sum'),
+            task_skipped_total=('task_skipped', 'sum'),
+            task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
+            jobs_failed_because_of_module_failure_total=('job_id_that_contained_failed_task', 'nunique'),
         )
 
-        collection_name_stats = (
-            task_summary.groupby(['collection_name', 'collection_source'])
-            .agg(
-                jobs_total=('job_id', 'nunique'),
-                number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
-                hosts_total=('host_id', 'nunique'),
-                jobs_failed_because_of_collection_name_failure_total=('job_id_that_contained_failed_task', 'nunique'),
-                task_clean_success_total=('task_clean_success', 'sum'),
-                task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
-                task_failed_total=('task_failed', 'sum'),
-                task_unreachable_total=('task_unreachable', 'sum'),
-                task_skipped_total=('task_skipped', 'sum'),
-                task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
-            )
-            .reset_index()
+        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False).agg(
+            jobs_total=('job_id', 'nunique'),
+            number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
+            hosts_total=('host_id', 'nunique'),
+            jobs_failed_because_of_collection_name_failure_total=('job_id_that_contained_failed_task', 'nunique'),
+            task_clean_success_total=('task_clean_success', 'sum'),
+            task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
+            task_failed_total=('task_failed', 'sum'),
+            task_unreachable_total=('task_unreachable', 'sum'),
+            task_skipped_total=('task_skipped', 'sum'),
+            task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
         )
 
         # Per-job statistics for modules (similar to collection_name)
@@ -280,7 +271,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         job_time_stats_module = (
-            per_job_module.groupby(['module_name', 'collection_source', 'collection_name'])
+            per_job_module.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False)
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
@@ -292,7 +283,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
                 avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
             )
-            .reset_index()
         )
 
         per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False).agg(
@@ -303,7 +293,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         job_time_stats_collection_name = (
-            per_job_collection_name.groupby(['collection_name', 'collection_source'])
+            per_job_collection_name.groupby(['collection_name', 'collection_source'], as_index=False)
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
@@ -315,7 +305,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
                 avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
             )
-            .reset_index()
         )
 
         # merge module_stats and job_time_stats_module into one list based on module_name
