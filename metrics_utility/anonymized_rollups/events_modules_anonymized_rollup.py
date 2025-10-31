@@ -236,8 +236,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 task_skipped=lambda x: (
                     x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
                 ),
+                job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
             )
-            .assign(job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']))
         )
 
         # Per-module counts
