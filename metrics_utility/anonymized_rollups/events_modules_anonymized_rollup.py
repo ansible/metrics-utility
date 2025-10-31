@@ -82,6 +82,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             self.collections = json.load(f)
 
     def prepare(self, dataframe):
+        # Failure/Success rate of modules
+        success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
+        failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed']
+        unreachable_events_list = ['runner_on_unreachable', 'runner_item_on_unreachable']
+        skipped_events_list = ['runner_on_skipped', 'runner_item_on_skipped']
+
+        # Filter for only the event types that are used in analysis
+        all_relevant_events = success_events_list + failed_events_list + unreachable_events_list + skipped_events_list
+        dataframe = dataframe[dataframe['event'].isin(all_relevant_events)]
+
         # Prepare data
         collections = self.collections
 
@@ -109,12 +119,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # fill collection source from collections_types
         dataframe['collection_source'] = dataframe['collection_name'].map(collections).fillna('Unknown')
-
-        # Failure/Success rate of modules
-        success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
-        failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed']
-        unreachable_events_list = ['runner_on_unreachable', 'runner_item_on_unreachable']
-        skipped_events_list = ['runner_on_skipped', 'runner_item_on_skipped']
 
         # Mark events
         dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
