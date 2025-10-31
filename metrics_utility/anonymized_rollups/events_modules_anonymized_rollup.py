@@ -82,8 +82,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             self.collections = json.load(f)
 
     # Prepare is run for each batch of data
-    # then it is merged with other batches into one dataframe
-    # as default, merging is done by concatenating dataframes
+    # then it is merged with other batches into one dataframes
+    # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
@@ -170,6 +170,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Aggregate events per task to reduce rows before merging batches
         # This groups by (job, host, task, module, collection) and summarizes all events
+        # This can greatly reduce the number of rows, depends of number of retries
         task_summary = dataframe.groupby(
             ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
         ).agg(
@@ -186,33 +187,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         return task_summary
-
-    def merge(self, dataframe_all, dataframe_new):
-        """
-        Override base merge to re-aggregate when combining batches.
-        Since the same (job_id, host_id, task_uuid, module_name, collection_source, collection_name)
-        might appear in different batches, we need to aggregate again after concatenation.
-        """
-        # Concatenate the batches
-        combined = pd.concat([dataframe_all, dataframe_new], ignore_index=True)
-
-        # Re-aggregate: group by the same keys and take max of seen_* columns
-        merged = combined.groupby(
-            ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
-        ).agg(
-            seen_success=('seen_success', 'max'),
-            seen_failed=('seen_failed', 'max'),
-            seen_unreachable=('seen_unreachable', 'max'),
-            seen_skipped=('seen_skipped', 'max'),
-            seen_failed_and_ignored=('seen_failed_and_ignored', 'max'),
-            job_started=('job_started', 'first'),
-            job_failed=('job_failed', 'first'),
-            job_duration_seconds=('job_duration_seconds', 'first'),
-            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            playbook=('playbook', 'first'),
-        )
-
-        return merged
 
     def base(self, dataframe):
         """
@@ -239,6 +213,25 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 'json': {},
                 'rollup': {'aggregated': dataframe},
             }
+
+        # Final aggregation: handle any cross-batch duplicates
+        # because the task running on host can be split between batches
+        # we need to aggregate the data second time to get the correct results
+        # since this will be rare, reduction of rows will be still significant
+        dataframe = dataframe.groupby(
+            ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+        ).agg(
+            seen_success=('seen_success', 'max'),
+            seen_failed=('seen_failed', 'max'),
+            seen_unreachable=('seen_unreachable', 'max'),
+            seen_skipped=('seen_skipped', 'max'),
+            seen_failed_and_ignored=('seen_failed_and_ignored', 'max'),
+            job_started=('job_started', 'first'),
+            job_failed=('job_failed', 'first'),
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            playbook=('playbook', 'first'),
+        )
 
         # Categorize columns to reduce memory footprint
         # This is done after batches are concatenated to ensure consistent categories
