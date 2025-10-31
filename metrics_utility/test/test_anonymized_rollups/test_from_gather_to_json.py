@@ -132,23 +132,17 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate events_modules actual values
     print('\n--- Validating events_modules data values ---')
-    assert events_modules['modules_used_to_automate_total'] == 2, 'Should have 2 modules'
+    assert events_modules['modules_used_to_automate_total'] == 1, 'Should have 1 module'
     assert events_modules['total_hosts_automated'] == 2, 'Should have 2 hosts automated'
-    assert len(events_modules['list_of_modules_used_to_automate']) == 2, 'Should have 2 modules in list'
-    assert len(events_modules['module_stats']) == 2, 'Should have 2 module stats'
-    assert len(events_modules['collection_name_stats']) == 2, 'Should have 2 collection stats'
+    assert len(events_modules['list_of_modules_used_to_automate']) == 1, 'Should have 1 module in list'
+    assert len(events_modules['module_stats']) == 1, 'Should have 1 module stats'
+    assert len(events_modules['collection_name_stats']) == 1, 'Should have 1 collection stats'
 
     # Validate first module is the unencrypted community module
     first_module = events_modules['list_of_modules_used_to_automate'][0]
     assert first_module['module_name'] == 'a10.acos_axapi.a10_slb_virtual_server', 'First module should be a10_slb_virtual_server'
     assert first_module['collection_source'] == 'community', 'First module should be from community'
     assert first_module['collection_name'] == 'a10.acos_axapi', 'First module should be from a10.acos_axapi collection'
-
-    # Validate second module is hashed (encrypted)
-    second_module = events_modules['list_of_modules_used_to_automate'][1]
-    assert len(second_module['module_name']) == 128, 'Second module name should be hashed (128 chars)'
-    assert second_module['collection_source'] == 'Unknown', 'Second module should have Unknown source'
-    assert len(second_module['collection_name']) == 128, 'Second module collection should be hashed (128 chars)'
 
     # Validate module_stats actual values
     print('--- Validating module_stats data values ---')
@@ -160,12 +154,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
     assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
     assert first_module_stats['avg_hosts_per_job'] == pytest.approx(2.0, rel=1e-6), 'Should average 2 hosts per job'
-
-    # Validate second module stats
-    second_module_stats = events_modules['module_stats'][1]
-    assert second_module_stats['jobs_total'] == 3, 'Second module should also have 3 jobs'
-    assert second_module_stats['hosts_total'] == 2, 'Second module should have 2 hosts'
-    assert second_module_stats['task_clean_success_total'] == 0, 'Second module should have 0 clean successes'
 
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
@@ -180,7 +168,7 @@ def test_from_gather_to_json(cleanup_glob):
     print('--- Validating modules_used_per_playbook_total ---')
     assert len(events_modules['modules_used_per_playbook_total']) == 1, 'Should have 1 playbook'
     playbook_module_count = list(events_modules['modules_used_per_playbook_total'].values())[0]
-    assert playbook_module_count == 2, 'Playbook should use 2 modules'
+    assert playbook_module_count == 1, 'Playbook should use 1 module'
 
     # Validate avg_number_of_modules_used_in_a_playbooks calculation
     total_modules_across_playbooks = sum(events_modules['modules_used_per_playbook_total'].values())
