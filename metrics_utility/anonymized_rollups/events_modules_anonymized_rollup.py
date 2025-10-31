@@ -193,11 +193,26 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 'rollup': {'aggregated': dataframe},
             }
 
+        # Categorize columns to reduce memory footprint
+        # This is done after batches are concatenated to ensure consistent categories
+        # Only categorize string columns with low-to-medium cardinality (high repetition)
+        categorical_columns = [
+            'collection_source',  # ~20 unique values (Red Hat, Community, Partner, etc.)
+            'collection_name',  # ~500-1000 unique collections
+            'module_name',  # ~2000-5000 unique modules
+            'playbook',  # ~1000-5000 unique playbooks
+            'task_uuid',  # ~1000-5000 unique task uuids
+        ]
+
+        for col in categorical_columns:
+            if col in dataframe.columns:
+                dataframe[col] = dataframe[col].astype('category')
+
         # Modules used to automate
         # distinct name of modules used to automate
 
         # pick unique module name and associated collection source
-        list_of_modules_used_to_automate = dataframe.groupby('module_name', as_index=False).agg(
+        list_of_modules_used_to_automate = dataframe.groupby('module_name', as_index=False, observed=True).agg(
             {'collection_source': lambda x: x.unique()[0], 'collection_name': lambda x: x.unique()[0]}
         )
 
@@ -205,8 +220,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         modules_used_to_automate_total = len(list_of_modules_used_to_automate)
 
         # Avg number of modules used in a playbook
-        avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook')['module_name'].nunique().mean()
-        modules_used_per_playbook_total = dataframe.groupby('playbook')['module_name'].nunique()
+        avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook', observed=True)['module_name'].nunique().mean()
+        modules_used_per_playbook_total = dataframe.groupby('playbook', observed=True)['module_name'].nunique()
 
         total_hosts_automated = dataframe['host_id'].nunique()
 
@@ -217,7 +232,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # when at least one success event is seen, task is successful
         # failed event can be repeated multiple times, we are counting failed attempts
         task_summary = (
-            dataframe.groupby(['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False)
+            dataframe.groupby(
+                ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+            )
             .agg(
                 seen_success=('task_success_event', 'max'),
                 seen_failed=('task_failed_event', 'max'),
@@ -242,7 +259,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Per-module counts
         # receiver of this data can easily calculate success rates
-        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False).agg(
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
             hosts_total=('host_id', 'nunique'),
@@ -255,7 +272,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             jobs_failed_because_of_module_failure_total=('job_id_that_contained_failed_task', 'nunique'),
         )
 
-        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False).agg(
+        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
             hosts_total=('host_id', 'nunique'),
@@ -269,7 +286,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         # Per-job statistics for modules (similar to collection_name)
-        per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False).agg(
+        per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             host_count=('host_id', 'nunique'),
@@ -277,7 +294,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         job_time_stats_module = (
-            per_job_module.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False)
+            per_job_module.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True)
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
@@ -291,7 +308,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             )
         )
 
-        per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False).agg(
+        per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             host_count=('host_id', 'nunique'),
@@ -299,7 +316,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         job_time_stats_collection_name = (
-            per_job_collection_name.groupby(['collection_name', 'collection_source'], as_index=False)
+            per_job_collection_name.groupby(['collection_name', 'collection_source'], as_index=False, observed=True)
             .agg(
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
