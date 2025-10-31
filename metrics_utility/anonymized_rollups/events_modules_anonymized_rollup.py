@@ -112,7 +112,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
-        dataframe['collection_name'] = dataframe['module_name'].apply(extract_collection_name)
+
+        # Vectorized extraction of collection name (much faster than .apply())
+        # Extract first two parts (namespace.collection) from module name
+        # Requires at least 3 parts: namespace.collection.module
+        dataframe['collection_name'] = dataframe['module_name'].str.extract(
+            r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$', expand=False
+        )
 
         dataframe['job_duration_seconds'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
