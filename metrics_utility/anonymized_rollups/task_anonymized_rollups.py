@@ -18,7 +18,6 @@ def task_anonymized_rollups(salt, year, month, day, ship_path, save_rollups: boo
     since_param = datetime_since.strftime('%Y-%m-%d')
     until_param = datetime_until.strftime('%Y-%m-%d')
 
-    # run_gather_ext(env_vars, ['--ship', '--force', f'--since={since_param}', f'--until={until_param}'])
     run_gather_int(env_vars, {'ship': True, 'force': True, 'since': since_param, 'until': until_param})
 
     # load data for each collector
