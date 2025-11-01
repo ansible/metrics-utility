@@ -10,7 +10,7 @@ dependencies = [
     "boto3==1.35.96",
     "botocore==1.35.96",
     "distro==1.9.0",
-    "django==4.2.21",
+    "django==5.2.7",
     "kubernetes>=33.1.0",
     "openpyxl==3.1.2",
     "pandas>=2.2.3",
