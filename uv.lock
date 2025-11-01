@@ -300,20 +300,20 @@ wheels = [
 
 [[package]]
 name = "django-ansible-base"
-version = "2025.1.3"
+version = "2025.10.20"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "django" },
     { name = "django-crum" },
-    { name = "django-split-settings" },
     { name = "djangorestframework" },
+    { name = "dynaconf" },
     { name = "inflection" },
     { name = "sqlparse" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/29/66/c0295cb0bc873cb80ae64e948b6681e0f742f54c409bb984ad22d3e71d2a/django_ansible_base-2025.1.3.tar.gz", hash = "sha256:1280cfbb1ff82df3813169e23238fa5a557b3b934fded3c6ec39219a77e04103", size = 248935, upload-time = "2025-01-03T21:33:50.94Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/00/3c876b87e5eb4f88c63621bc38048e004834a6e4c80dff40f8ed19730f3e/django_ansible_base-2025.10.20.tar.gz", hash = "sha256:11562985d3c62989afb60065be5fb3b89b35f01ce5844132b2bb82f361f476e2", size = 316742, upload-time = "2025-10-20T14:58:23.639Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/54/81/7490eb82b6142412103c1e1ee9d71ae0e85265dda9284f8bc3fb90e09b82/django_ansible_base-2025.1.3-py3-none-any.whl", hash = "sha256:fa043b2d20cba0854d767bcf87aa026cff3c12e192451a6a156ad470dd798dfd", size = 334589, upload-time = "2025-01-03T21:33:47.425Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/39/43528c3b0378bae3cce99f02d7021acc4a3d665735ddb152f7ba8386c6a8/django_ansible_base-2025.10.20-py3-none-any.whl", hash = "sha256:7c4383aaf9fd798d6c894a6546048158de451232c88f1750bbdd55a6fc23c3ee", size = 417093, upload-time = "2025-10-20T14:58:22.1Z" },
 ]
 
 [[package]]
@@ -326,15 +326,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/34/1d/c56588f67130aeef8828e47535e8551337d2ae02f91f1414da61bc5e49fb/django-crum-0.7.9.tar.gz", hash = "sha256:65e9bc0f070a663fafc4d9e357f45fd4e6f01838b20a9e2fb7670f5706754288", size = 5168, upload-time = "2020-11-10T17:15:35.124Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cd/f9/8fad70a3bd011a6be7c5c6067278f006a25341eb39d901fbda307e26804c/django_crum-0.7.9-py2.py3-none-any.whl", hash = "sha256:037cc8b822975bb1d41cd24269b59a512cc77448fadc3f34ab9a17b229b4b471", size = 4714, upload-time = "2020-11-10T17:15:33.781Z" },
-]
-
-[[package]]
-name = "django-split-settings"
-version = "1.3.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/de/b9/1c13089454afd7a42d492b8aa8a0c7e49eeca58c0f2ad331f361a067c876/django_split_settings-1.3.2.tar.gz", hash = "sha256:d3975aa3601e37f65c59b9977b6bcb1de8bc27496930054078589c7d56998a9d", size = 5751, upload-time = "2024-07-05T14:30:05.997Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/69/d94db8dac55bcfb6b3243578a3096cfda6c42ea5da292c36919768152ec6/django_split_settings-1.3.2-py3-none-any.whl", hash = "sha256:72bd7dd9f12602585681074d1f859643fb4f6b196b584688fab86bdd73a57dff", size = 6435, upload-time = "2024-07-05T14:29:59.756Z" },
 ]
 
 [[package]]
@@ -356,6 +347,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9d/a4/e44218c2b394e31a6dd0d6b095c4e1f32d0be54c2a4b250032d717647bab/durationpy-0.10.tar.gz", hash = "sha256:1fa6893409a6e739c9c72334fc65cca1f355dbdd93405d30f726deb5bde42fba", size = 3335, upload-time = "2025-05-17T13:52:37.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/0d/9feae160378a3553fa9a339b0e9c1a048e147a4127210e286ef18b730f03/durationpy-0.10-py3-none-any.whl", hash = "sha256:3b41e1b601234296b4fb368338fdcd3e13e0b4fb5b67345948f4f2bf9868b286", size = 3922, upload-time = "2025-05-17T13:52:36.463Z" },
+]
+
+[[package]]
+name = "dynaconf"
+version = "3.2.12"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/cd/bd/7a6f84b68268fe1d12e709faec7d293e0c37c9c03bacaf363de41e7e7568/dynaconf-3.2.12.tar.gz", hash = "sha256:29cea583b007d890e6031fa89c0ac489b631c73dbee83bcd5e6f97602c26354e", size = 313801, upload-time = "2025-10-10T19:54:06.164Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/68/51adede38ab2ee9ecfddb8b60a80a42b618a72f1018fcf60974e5d852831/dynaconf-3.2.12-py2.py3-none-any.whl", hash = "sha256:eb2a11865917dff8810c6098cd736b8f4d2f4e39ad914500e2dfbe064b82c499", size = 237788, upload-time = "2025-10-10T19:54:03.731Z" },
 ]
 
 [[package]]
