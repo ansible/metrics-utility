@@ -25,8 +25,27 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     # rescued
 
     def prepare(self, dataframe):
-        # group dataframe by job_remote_id
-        return dataframe
+        # Aggregate by job_template_name and host_name to reduce data volume early
+        # This significantly improves performance when processing large batches
+        if dataframe.empty:
+            return dataframe
+
+        # Group by job_template_name and host_name, sum task columns, count jobs
+        aggregated = (
+            dataframe.groupby(['job_template_name', 'host_name'])
+            .agg(
+                dark_total=('dark', 'sum'),
+                failures_total=('failures', 'sum'),
+                ok_total=('ok', 'sum'),
+                skipped_total=('skipped', 'sum'),
+                ignored_total=('ignored', 'sum'),
+                rescued_total=('rescued', 'sum'),
+                jobs_total=('job_remote_id', 'nunique'),
+            )
+            .reset_index()
+        )
+
+        return aggregated
 
     def base(self, dataframe):
         """
@@ -37,8 +56,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         Success rate and average - this can compute SaaS team from the metrics
         """
 
-        task_columns = ['dark', 'failures', 'ok', 'skipped', 'ignored', 'rescued']
-
         # Return empty result if dataframe is empty
         # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
@@ -47,18 +64,17 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 'rollup': {'aggregated': dataframe},
             }
 
-        dataframe['tasks_executed'] = dataframe[task_columns].sum(axis=1)
-
+        # Re-aggregate in case multiple batches had overlapping template+host combinations
         aggregated = (
-            dataframe.groupby('job_template_name')
+            dataframe.groupby(['job_template_name'])
             .agg(
-                jobs_total=('job_remote_id', 'nunique'),
-                dark_total=('dark', 'sum'),
-                failures_total=('failures', 'sum'),
-                ok_total=('ok', 'sum'),
-                skipped_total=('skipped', 'sum'),
-                ignored_total=('ignored', 'sum'),
-                rescued_total=('rescued', 'sum'),
+                jobs_total=('jobs_total', 'sum'),
+                dark_total=('dark_total', 'sum'),
+                failures_total=('failures_total', 'sum'),
+                ok_total=('ok_total', 'sum'),
+                skipped_total=('skipped_total', 'sum'),
+                ignored_total=('ignored_total', 'sum'),
+                rescued_total=('rescued_total', 'sum'),
                 hosts_total=('host_name', 'nunique'),
             )
             .reset_index()
