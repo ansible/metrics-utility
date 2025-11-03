@@ -9,6 +9,7 @@ from pandas import DataFrame
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 
@@ -128,6 +129,8 @@ def compute_anonymized_rollup_from_raw_data(salt, year, month, day, base_path, s
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], 'salt'
     )
+    # Sanitize the result to replace NaN and infinity values with None (valid JSON)
+    anonymized_rollup = sanitize_json(anonymized_rollup)
     return anonymized_rollup
 
 

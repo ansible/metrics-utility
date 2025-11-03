@@ -5,6 +5,8 @@ import tarfile
 
 import pandas as pd
 
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
+
 
 class BaseAnonymizedRollup:
     def __init__(self, rollup_name: str):
@@ -63,12 +65,14 @@ class BaseAnonymizedRollup:
                 tar_files[f'{key}.csv'] = csv_buffer.getvalue().encode('utf-8')
 
             elif isinstance(value, list):
-                # Store JSON data in memory for tar
-                tar_files[f'{filename}.json'] = json.dumps(value, indent=2).encode('utf-8')
+                # Sanitize and store JSON data in memory for tar
+                sanitized_value = sanitize_json(value)
+                tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
 
             elif isinstance(value, dict):
-                # Store JSON data in memory for tar
-                tar_files[f'{filename}.json'] = json.dumps(value, indent=2).encode('utf-8')
+                # Sanitize and store JSON data in memory for tar
+                sanitized_value = sanitize_json(value)
+                tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
             # the rest
             else:
                 print(f'Key {key} is a unknown type')

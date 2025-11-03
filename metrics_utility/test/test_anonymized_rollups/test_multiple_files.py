@@ -125,6 +125,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     # print the result with pretty json
     import json
 
+    # Note: result is already sanitized by compute_anonymized_rollup_from_raw_data
     json_content = json.dumps(result, indent=4)
     print(json_content)
 
