@@ -10,6 +10,24 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('job_host_summary')
         self.collector_names = ['job_host_summary_service']
 
+    # prepare is called for each batch of data
+    # result of prepare is concatenated with other batches into one dataframe
+    # each dataframe in prepare should reduce the number of rows as much as possible
+    # dataframe has:
+    # job_remote_id
+    # job_template_name
+    # host_name
+    # dark
+    # failures
+    # ok
+    # skipped
+    # ignored
+    # rescued
+
+    def prepare(self, dataframe):
+        # group dataframe by job_remote_id
+        return dataframe
+
     def base(self, dataframe):
         """
         Avg tasks by template (column job_template_name)
