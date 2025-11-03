@@ -8,6 +8,14 @@ The test:
 3. Creates tarball files with CSV data inside
 4. Tests that compute_anonymized_rollup_from_raw_data properly loads and concatenates the data
 5. Validates the final output matches expected aggregated results
+
+Enhanced Assertions:
+- Deep validation of JSON structure including all nested values
+- Verification of timing statistics (average, min, max, median for job durations and waiting times)
+- Detailed module and collection statistics validation
+- Edge case handling (never-started jobs, null values)
+- Comprehensive empty data handling test
+- Prints full JSON output to terminal for inspection
 """
 
 import os
@@ -79,6 +87,18 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
 
     This test splits the test data into multiple tarballs (2-3 parts each)
     and verifies that the concatenation logic works correctly.
+
+    The test validates:
+    1. **Jobs**: Verifies counts, timing statistics (avg/min/max/median), and edge cases like never-started jobs
+    2. **Execution Environments**: Validates total, default, and custom EE counts
+    3. **Job Host Summary**: Checks task result counts (ok, failures, skipped, etc.)
+    4. **Events Modules**: Comprehensive validation including:
+       - Total module and host counts
+       - Module and collection lists
+       - Detailed module statistics (jobs, hosts, tasks, durations)
+       - Collection statistics
+       - Playbook-level module usage
+    5. **Anonymization**: Verifies all sensitive names are properly hashed
     """
     base_path = './out'
     year, month, day = 2025, 6, 13
@@ -127,7 +147,11 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
 
     # Note: result is already sanitized by compute_anonymized_rollup_from_raw_data
     json_content = json.dumps(result, indent=4)
+    print('\n' + '=' * 80)
+    print('=== ANONYMIZED ROLLUP RESULT (from multiple tarballs) ===')
+    print('=' * 80)
     print(json_content)
+    print('=' * 80)
 
     # save the result as json inside rollups/2025/06/13/anonymized.json - based on the year, month, day
     json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized.json'
@@ -160,6 +184,44 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert t1['number_of_jobs_executed'] == 3
     assert t1['number_of_jobs_failed'] == 1
     assert t1['number_of_jobs_succeeded'] == 2
+    assert t1['number_of_jobs_never_started'] == 0
+    # Check timing statistics
+    assert t1['job_duration_total_in_seconds'] == 10.0
+    assert t1['job_duration_average_in_seconds'] == pytest.approx(3.333, rel=1e-2)
+    assert t1['job_duration_minimum_in_seconds'] == 2.0
+    assert t1['job_duration_maximum_in_seconds'] == 5.0
+    assert t1['job_duration_median_in_seconds'] == 3.0
+    assert t1['job_waiting_time_total_in_seconds'] == 3.0
+    assert t1['job_waiting_time_average_in_seconds'] == 1.0
+    assert t1['job_waiting_time_minimum_in_seconds'] == 0.0
+    assert t1['job_waiting_time_maximum_in_seconds'] == 2.0
+    assert t1['job_waiting_time_median_in_seconds'] == 1.0
+
+    # T2 should have 1 job executed
+    t2_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 1 and j['number_of_jobs_never_started'] == 0]
+    assert len(t2_jobs) == 1
+    t2 = t2_jobs[0]
+    assert t2['number_of_jobs_executed'] == 1
+    assert t2['number_of_jobs_failed'] == 0
+    assert t2['number_of_jobs_succeeded'] == 1
+    assert t2['job_duration_total_in_seconds'] == 7.0
+    assert t2['job_duration_average_in_seconds'] == 7.0
+    assert t2['job_duration_median_in_seconds'] == 7.0
+    assert t2['job_waiting_time_total_in_seconds'] == 4.0
+    assert t2['job_waiting_time_average_in_seconds'] == 4.0
+
+    # T3 should have never started job
+    t3_jobs = [j for j in jobs_list if j['number_of_jobs_never_started'] == 1]
+    assert len(t3_jobs) == 1
+    t3 = t3_jobs[0]
+    assert t3['number_of_jobs_executed'] == 1
+    assert t3['number_of_jobs_failed'] == 1
+    assert t3['number_of_jobs_succeeded'] == 0
+    assert t3['job_duration_total_in_seconds'] == 0.0
+    assert t3['job_duration_average_in_seconds'] is None
+    assert t3['job_duration_median_in_seconds'] is None
+    assert t3['job_waiting_time_total_in_seconds'] == 0.0
+    assert t3['job_waiting_time_average_in_seconds'] is None
 
     # ========== Validate Execution Environments ==========
     ee_result = result['execution_environments']
@@ -198,20 +260,81 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert 'module_stats' in events_modules, "Missing 'module_stats'"
     assert 'collection_name_stats' in events_modules, "Missing 'collection_name_stats'"
     assert 'total_hosts_automated' in events_modules, "Missing 'total_hosts_automated'"
+    assert 'avg_number_of_modules_used_in_a_playbooks' in events_modules, "Missing 'avg_number_of_modules_used_in_a_playbooks'"
+    assert 'modules_used_per_playbook_total' in events_modules, "Missing 'modules_used_per_playbook_total'"
 
     # Verify values from concatenated data across 3 tarballs
     assert events_modules['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
     assert events_modules['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert events_modules['avg_number_of_modules_used_in_a_playbooks'] == 3.0, 'Average modules per playbook should be 3.0'
+
+    # Verify list_of_modules_used_to_automate
+    modules_list = events_modules['list_of_modules_used_to_automate']
+    assert isinstance(modules_list, list), 'list_of_modules_used_to_automate should be a list'
+    assert len(modules_list) == 7, 'Should have 7 modules'
+
+    # Check specific known modules are present
+    module_names = [m['module_name'] for m in modules_list if 'module_name' in m]
+    assert 'ansible.netcommon.cli_config' in module_names
+    assert 'ansible.posix.firewalld' in module_names
+    assert 'ansible.windows.win_copy' in module_names
+    assert 'community.aws.ec2' in module_names
+    assert 'community.general.yum' in module_names
+    assert 'community.mongodb.insert' in module_names
 
     # Verify module stats have data from all tarballs
     module_stats = events_modules['module_stats']
     assert isinstance(module_stats, list), 'module_stats should be a list'
     assert len(module_stats) == 7, 'Should have stats for all 7 modules'
 
+    # Verify specific module stats (ansible.windows.win_copy as an example)
+    win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
+    assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
+    win_copy = win_copy_stats[0]
+    assert win_copy['collection_source'] == 'certified'
+    assert win_copy['collection_name'] == 'ansible.windows'
+    assert win_copy['jobs_total'] == 3
+    assert win_copy['hosts_total'] == 3
+    assert win_copy['task_clean_success_total'] == 1
+    assert win_copy['task_success_with_reruns_total'] == 2
+    assert win_copy['task_failed_total'] == 0
+    assert win_copy['job_duration_total_seconds'] == 2100.0
+    assert win_copy['avg_job_duration_seconds'] == 700.0
+
+    # Verify another module (community.general.yum)
+    yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
+    assert len(yum_stats) == 1, 'Should have exactly one entry for community.general.yum'
+    yum = yum_stats[0]
+    assert yum['collection_source'] == 'community'
+    assert yum['jobs_total'] == 3
+    assert yum['number_of_jobs_never_started'] == 1
+    assert yum['task_failed_total'] == 3
+    assert yum['jobs_failed_because_of_module_failure_total'] == 3
+    assert yum['avg_job_duration_seconds'] == 500.0
+
     # Verify collection stats
     collection_stats = events_modules['collection_name_stats']
     assert isinstance(collection_stats, list), 'collection_name_stats should be a list'
     assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
+
+    # Verify specific collection stats (ansible.windows)
+    windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
+    assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
+    windows_coll = windows_collection[0]
+    assert windows_coll['collection_source'] == 'certified'
+    assert windows_coll['jobs_total'] == 3
+    assert windows_coll['hosts_total'] == 3
+    assert windows_coll['task_clean_success_total'] == 1
+    assert windows_coll['task_success_with_reruns_total'] == 2
+    assert windows_coll['avg_job_duration_seconds'] == 700.0
+
+    # Verify modules_used_per_playbook_total is a dict with 5 entries
+    playbook_modules = events_modules['modules_used_per_playbook_total']
+    assert isinstance(playbook_modules, dict), 'modules_used_per_playbook_total should be a dict'
+    assert len(playbook_modules) == 5, 'Should have 5 playbooks'
+    # Check values sum to expected total
+    total_module_usage = sum(playbook_modules.values())
+    assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
     # ========== Validate Anonymization ==========
     # Check that job template names are hashed (128 character hex strings)
@@ -241,8 +364,33 @@ def test_empty_tarballs_handling(cleanup_test_data):
     # Should not crash, but return empty/default results
     result = compute_anonymized_rollup_from_raw_data(salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False)
 
+    # Print the result for debugging
+    import json
+
+    json_content = json.dumps(result, indent=4)
+    print('\n=== Empty Tarball Result ===')
+    print(json_content)
+
     # Validate structure exists even with empty data
     assert 'jobs' in result
     assert 'job_host_summary' in result
     assert 'execution_environments' in result
     assert 'events_modules' in result
+
+    # When there's no data, the system returns empty dicts/lists
+    # Verify empty values for jobs
+    assert isinstance(result['jobs'], dict), 'jobs should be a dict (empty when no data)'
+    assert len(result['jobs']) == 0, 'jobs should be empty with no data'
+
+    # Verify empty values for job_host_summary
+    assert isinstance(result['job_host_summary'], list), 'job_host_summary should be a list'
+    assert len(result['job_host_summary']) == 0, 'job_host_summary should be empty with no data'
+
+    # Verify execution_environments is empty dict
+    assert isinstance(result['execution_environments'], dict), 'execution_environments should be a dict'
+    assert len(result['execution_environments']) == 0, 'execution_environments should be empty with no data'
+
+    # Verify events_modules is empty dict
+    events_modules = result['events_modules']
+    assert isinstance(events_modules, dict), 'events_modules should be a dict'
+    assert len(events_modules) == 0, 'events_modules should be empty with no data'
