@@ -110,16 +110,6 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'job_duration_average_in_seconds' in job
             assert 'job_waiting_time_average_in_seconds' in job
 
-    # Validate job_host_summary structure
-    job_host_summary = json_data['job_host_summary']
-    assert isinstance(job_host_summary, list), 'job_host_summary should be a list'
-    if job_host_summary:
-        for jhs in job_host_summary:
-            assert 'job_template_name' in jhs
-            assert 'jobs_total' in jhs
-            assert 'hosts_total' in jhs
-            assert 'ok_total' in jhs
-
     # Validate anonymization occurred (check for hashed values)
     # Job template names should be hashed (64 character hex strings)
     if jobs:
@@ -206,23 +196,29 @@ def test_from_gather_to_json(cleanup_glob):
     assert job['job_waiting_time_average_in_seconds'] >= 0, 'Job waiting time average should be non-negative'
     assert job['job_waiting_time_total_in_seconds'] >= 0, 'Job waiting time total should be non-negative'
 
-    # Validate job_host_summary actual values
+    # Validate job_host_summary structure
     print('--- Validating job_host_summary data values ---')
-    assert len(job_host_summary) == 1, 'Should have 1 job template in summary'
+    job_host_summary = json_data['job_host_summary']
+    assert isinstance(job_host_summary, list), 'job_host_summary should be a list'
+    assert len(job_host_summary) == 1, 'Should have 1 job_host_summary entry'
+
     jhs = job_host_summary[0]
-    assert jhs['jobs_total'] == 3, 'Should have 3 jobs in summary'
-    assert jhs['hosts_total'] == 2, 'Should have 2 hosts in summary'
-    assert jhs['ok_total'] == 6, 'Should have 6 ok tasks (3 jobs × 2 hosts)'
-    assert jhs['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    assert 'job_template_name' in jhs
+    assert 'dark_total' in jhs
+    assert 'failures_total' in jhs
+    assert 'ok_total' in jhs
+    assert 'skipped_total' in jhs
+    assert 'ignored_total' in jhs
+    assert 'rescued_total' in jhs
+
+    # Validate job_host_summary actual values
+    assert jhs['ok_total'] == 6, 'Should have 6 ok tasks'
     assert jhs['failures_total'] == 0, 'Should have 0 failures'
+    assert jhs['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert jhs['skipped_total'] == 0, 'Should have 0 skipped tasks'
-    assert jhs['ignored_total'] == 0, 'Should have 0 ignored failures'
-    assert jhs['rescued_total'] == 0, 'Should have 0 rescued tasks'
 
     # Validate cross-section data consistency
     print('--- Validating cross-section data consistency ---')
-    assert events_modules['total_hosts_automated'] == jhs['hosts_total'], 'Total hosts automated should match hosts in job_host_summary'
-
     # Validate that module stats hosts match the total automated hosts
     for module_stat in events_modules['module_stats']:
         assert module_stat['hosts_total'] <= events_modules['total_hosts_automated'], (

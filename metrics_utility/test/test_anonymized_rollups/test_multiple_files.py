@@ -122,6 +122,11 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
 
     result = compute_anonymized_rollup_from_raw_data(salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False)
 
+    # print the result with pretty json
+    import json
+
+    print(json.dumps(result, indent=4))
+
     # ========== Validate the results ==========
 
     # Validate structure
@@ -154,15 +159,21 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert isinstance(jhs_list, list)
     assert len(jhs_list) == 2  # T1 and T2
 
-    jhs_by_template = {item['job_template_name']: item for item in jhs_list}
-    assert len(jhs_by_template) == 2
-
     # Verify data was concatenated from both tarballs
-    # T1 should have 2 jobs total (from both tarballs)
-    # T2 should have 2 jobs total (from both tarballs)
-    for template_name, jhs_item in jhs_by_template.items():
-        assert jhs_item['jobs_total'] == 2
-        assert jhs_item['hosts_total'] >= 3  # At least 3 unique hosts
+    # verify number of ok, failures, skipped, ignored, rescued, dark for each template
+    assert jhs_list[0]['ok_total'] == 26
+    assert jhs_list[0]['failures_total'] == 2
+    assert jhs_list[0]['skipped_total'] == 2
+    assert jhs_list[0]['ignored_total'] == 0
+    assert jhs_list[0]['rescued_total'] == 0
+    assert jhs_list[0]['dark_total'] == 0
+
+    assert jhs_list[1]['ok_total'] == 26
+    assert jhs_list[1]['failures_total'] == 4
+    assert jhs_list[1]['skipped_total'] == 0
+    assert jhs_list[1]['ignored_total'] == 0
+    assert jhs_list[1]['rescued_total'] == 0
+    assert jhs_list[1]['dark_total'] == 0
 
     # ========== Validate Events Modules ==========
     events_modules = result['events_modules']

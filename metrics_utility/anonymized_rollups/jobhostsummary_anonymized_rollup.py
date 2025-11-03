@@ -32,7 +32,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Group by job_template_name and host_name, sum task columns, count jobs
         aggregated = (
-            dataframe.groupby(['job_template_name', 'host_name'])
+            dataframe.groupby(['job_template_name'])
             .agg(
                 dark_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
@@ -40,7 +40,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                jobs_total=('job_remote_id', 'nunique'),
             )
             .reset_index()
         )
@@ -68,14 +67,12 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregated = (
             dataframe.groupby(['job_template_name'])
             .agg(
-                jobs_total=('jobs_total', 'sum'),
                 dark_total=('dark_total', 'sum'),
                 failures_total=('failures_total', 'sum'),
                 ok_total=('ok_total', 'sum'),
                 skipped_total=('skipped_total', 'sum'),
                 ignored_total=('ignored_total', 'sum'),
                 rescued_total=('rescued_total', 'sum'),
-                hosts_total=('host_name', 'nunique'),
             )
             .reset_index()
         )
