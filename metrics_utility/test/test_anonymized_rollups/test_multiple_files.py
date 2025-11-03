@@ -28,18 +28,18 @@ from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized
 from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups import jobs
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def cleanup_test_data():
-    """Clean up test directories before and after test."""
+    """Clean up test directories before and after all tests in this module."""
     out_dir = './out'
 
-    # Cleanup before test
+    # Cleanup before tests
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
 
-    yield  # Run the test
+    yield  # Run all tests
 
-    # Cleanup after test (commented out for debugging)
+    # Cleanup after all tests (commented out for debugging)
     # if os.path.exists(out_dir):
     #     shutil.rmtree(out_dir)
 
@@ -125,7 +125,19 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     # print the result with pretty json
     import json
 
-    print(json.dumps(result, indent=4))
+    json_content = json.dumps(result, indent=4)
+    print(json_content)
+
+    # save the result as json inside rollups/2025/06/13/anonymized.json - based on the year, month, day
+    json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized.json'
+
+    # ensure the directory exists
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+
+    with open(json_path, 'w') as f:
+        print(f'Saving result to {json_path}')
+        # write result as json to file
+        f.write(json_content)
 
     # ========== Validate the results ==========
 
