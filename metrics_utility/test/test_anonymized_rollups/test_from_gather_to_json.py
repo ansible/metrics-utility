@@ -199,10 +199,15 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate job_host_summary structure
     print('--- Validating job_host_summary data values ---')
     job_host_summary = json_data['job_host_summary']
-    assert isinstance(job_host_summary, list), 'job_host_summary should be a list'
-    assert len(job_host_summary) == 1, 'Should have 1 job_host_summary entry'
+    assert isinstance(job_host_summary, dict), 'job_host_summary should be a dict'
+    assert 'aggregated' in job_host_summary, 'job_host_summary should have aggregated key'
+    assert 'total_unique_hosts' in job_host_summary, 'job_host_summary should have total_unique_hosts key'
 
-    jhs = job_host_summary[0]
+    assert isinstance(job_host_summary['aggregated'], list), 'aggregated should be a list'
+    assert len(job_host_summary['aggregated']) == 1, 'Should have 1 job_host_summary entry'
+    assert job_host_summary['total_unique_hosts'] == 2, 'Should have 2 unique hosts'
+
+    jhs = job_host_summary['aggregated'][0]
     assert 'job_template_name' in jhs
     assert 'dark_total' in jhs
     assert 'failures_total' in jhs
