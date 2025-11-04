@@ -40,6 +40,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
+                # keep unique hosts as set
+                unique_hosts=('host_name', lambda x: set(x)),
             )
             .reset_index()
         )
@@ -73,9 +75,14 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped_total', 'sum'),
                 ignored_total=('ignored_total', 'sum'),
                 rescued_total=('rescued_total', 'sum'),
+                unique_hosts=('unique_hosts', lambda x: set().union(*x)),
             )
             .reset_index()
         )
+
+        total_unique_hosts = set().union(*aggregated['unique_hosts'])
+        # drop unique_hosts column
+        aggregated = aggregated.drop(columns=['unique_hosts'])
 
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
@@ -84,7 +91,12 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         }
 
         # Prepare JSON data (converted to list of dicts)
-        json_data = aggregated.to_dict(orient='records')
+        # json_data = aggregated.to_dict(orient='records')
+
+        json_data = {
+            'total_unique_hosts': len(total_unique_hosts),
+            'aggregated': aggregated.to_dict(orient='records'),
+        }
 
         return {
             'json': json_data,
