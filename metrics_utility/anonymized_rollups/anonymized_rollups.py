@@ -54,15 +54,6 @@ def anonymize_data(data, salt):
     if 'events_modules' in data and isinstance(data['events_modules'], dict):
         events_modules = data['events_modules']
 
-        # list of modules to automate
-        if 'list_of_modules_used_to_automate' in events_modules and events_modules['list_of_modules_used_to_automate']:
-            for module in events_modules['list_of_modules_used_to_automate']:
-                if module and module.get('collection_source') == 'Unknown':
-                    if 'module_name' in module and module['module_name']:
-                        module['module_name'] = hash(module['module_name'], salt)
-                    if 'collection_name' in module and module['collection_name']:
-                        module['collection_name'] = hash(module['collection_name'], salt)
-
         # module_stats
         if 'module_stats' in events_modules and events_modules['module_stats']:
             for module in events_modules['module_stats']:

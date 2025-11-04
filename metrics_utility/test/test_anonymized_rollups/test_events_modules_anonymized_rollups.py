@@ -334,21 +334,8 @@ def test_events_modules_aggregations_basic():
 
     pprint.pprint(result)
 
-    # Assert list of modules used to automate
+    # Assert total modules used to automate
     assert result['modules_used_to_automate_total'] == 7
-
-    modules_list = result['list_of_modules_used_to_automate']
-    assert len(modules_list) == 7
-
-    assert result['list_of_modules_used_to_automate'] == [
-        {'module_name': 'ansible.netcommon.cli_config', 'collection_source': 'certified', 'collection_name': 'ansible.netcommon'},
-        {'module_name': 'ansible.posix.firewalld', 'collection_source': 'certified', 'collection_name': 'ansible.posix'},
-        {'module_name': 'ansible.windows.win_copy', 'collection_source': 'certified', 'collection_name': 'ansible.windows'},
-        {'module_name': 'community.aws.ec2', 'collection_source': 'community', 'collection_name': 'community.aws'},
-        {'module_name': 'community.general.yum', 'collection_source': 'community', 'collection_name': 'community.general'},
-        {'module_name': 'community.mongodb.insert', 'collection_source': 'community', 'collection_name': 'community.mongodb'},
-        {'module_name': 'custom.user.collection', 'collection_source': 'Unknown', 'collection_name': 'custom.user'},
-    ]
 
     # average number of modules per playbook based on current aggregation
     assert result['avg_number_of_modules_used_in_a_playbooks'] == 3.0

@@ -56,7 +56,6 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate events_modules structure
     events_modules = json_data['events_modules']
     assert isinstance(events_modules, dict), 'events_modules should be a dictionary'
-    assert 'list_of_modules_used_to_automate' in events_modules
     assert 'modules_used_to_automate_total' in events_modules
     assert 'avg_number_of_modules_used_in_a_playbooks' in events_modules
     assert 'modules_used_per_playbook_total' in events_modules
@@ -65,20 +64,12 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'total_hosts_automated' in events_modules
 
     # Validate events_modules data types
-    assert isinstance(events_modules['list_of_modules_used_to_automate'], list)
     assert isinstance(events_modules['modules_used_to_automate_total'], int)
     assert isinstance(events_modules['avg_number_of_modules_used_in_a_playbooks'], (int, float))
     assert isinstance(events_modules['modules_used_per_playbook_total'], dict)
     assert isinstance(events_modules['module_stats'], list)
     assert isinstance(events_modules['collection_name_stats'], list)
     assert isinstance(events_modules['total_hosts_automated'], int)
-
-    # Validate modules have required fields
-    if events_modules['list_of_modules_used_to_automate']:
-        for module in events_modules['list_of_modules_used_to_automate']:
-            assert 'module_name' in module
-            assert 'collection_source' in module
-            assert 'collection_name' in module
 
     # Validate module_stats have required fields
     if events_modules['module_stats']:
@@ -124,15 +115,8 @@ def test_from_gather_to_json(cleanup_glob):
     print('\n--- Validating events_modules data values ---')
     assert events_modules['modules_used_to_automate_total'] == 1, 'Should have 1 module'
     assert events_modules['total_hosts_automated'] == 2, 'Should have 2 hosts automated'
-    assert len(events_modules['list_of_modules_used_to_automate']) == 1, 'Should have 1 module in list'
     assert len(events_modules['module_stats']) == 1, 'Should have 1 module stats'
     assert len(events_modules['collection_name_stats']) == 1, 'Should have 1 collection stats'
-
-    # Validate first module is the unencrypted community module
-    first_module = events_modules['list_of_modules_used_to_automate'][0]
-    assert first_module['module_name'] == 'a10.acos_axapi.a10_slb_virtual_server', 'First module should be a10_slb_virtual_server'
-    assert first_module['collection_source'] == 'community', 'First module should be from community'
-    assert first_module['collection_name'] == 'a10.acos_axapi', 'First module should be from a10.acos_axapi collection'
 
     # Validate module_stats actual values
     print('--- Validating module_stats data values ---')

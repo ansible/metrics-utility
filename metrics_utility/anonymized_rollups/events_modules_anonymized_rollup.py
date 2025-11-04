@@ -371,7 +371,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Prepare JSON data (converted to dicts/lists)
         json_data = {
-            'list_of_modules_used_to_automate': list_of_modules_used_to_automate.to_dict(orient='records'),
             'modules_used_to_automate_total': modules_used_to_automate_total,
             'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),

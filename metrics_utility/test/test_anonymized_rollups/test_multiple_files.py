@@ -262,7 +262,6 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
 
     # Assert required keys are present
     assert 'modules_used_to_automate_total' in events_modules, "Missing 'modules_used_to_automate_total'"
-    assert 'list_of_modules_used_to_automate' in events_modules, "Missing 'list_of_modules_used_to_automate'"
     assert 'module_stats' in events_modules, "Missing 'module_stats'"
     assert 'collection_name_stats' in events_modules, "Missing 'collection_name_stats'"
     assert 'total_hosts_automated' in events_modules, "Missing 'total_hosts_automated'"
@@ -274,13 +273,8 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert events_modules['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
     assert events_modules['avg_number_of_modules_used_in_a_playbooks'] == 3.0, 'Average modules per playbook should be 3.0'
 
-    # Verify list_of_modules_used_to_automate
-    modules_list = events_modules['list_of_modules_used_to_automate']
-    assert isinstance(modules_list, list), 'list_of_modules_used_to_automate should be a list'
-    assert len(modules_list) == 7, 'Should have 7 modules'
-
-    # Check specific known modules are present
-    module_names = [m['module_name'] for m in modules_list if 'module_name' in m]
+    # Check specific known modules are present in module_stats
+    module_names = [m['module_name'] for m in events_modules['module_stats'] if 'module_name' in m]
     assert 'ansible.netcommon.cli_config' in module_names
     assert 'ansible.posix.firewalld' in module_names
     assert 'ansible.windows.win_copy' in module_names
