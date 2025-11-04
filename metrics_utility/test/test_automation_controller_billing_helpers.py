@@ -22,9 +22,7 @@ class TestGetLicenseInfoFromDb:
         mock_cursor.fetchall.return_value = [
             ('LICENSE', '{"license_type": "enterprise", "product_name": "AWX"}'),
             ('SUBSCRIPTION_NAME', '"Red Hat Ansible Automation Platform"'),
-            ('SKU', '"MCT3718"'),
             ('INSTALL_UUID', '"12345-67890"'),
-            ('VERSION', '"4.7.5"'),  # VERSION is also returned by fetchall
         ]
 
         # Execute
@@ -40,9 +38,7 @@ class TestGetLicenseInfoFromDb:
         # Assert settings info (other fields)
         expected_settings = {
             'subscription_name': 'Red Hat Ansible Automation Platform',
-            'sku': 'MCT3718',
             'install_uuid': '12345-67890',
-            'version': '4.7.5',
         }
         assert settings_info == expected_settings
 
@@ -170,20 +166,19 @@ class TestIntegration:
         mock_cursor.fetchall.return_value = [
             ('LICENSE', '{"license_type": "enterprise"}'),
             ('SUBSCRIPTION_NAME', '"Red Hat AAP"'),
-            ('VERSION', '"4.7.5"'),
+            ('ABC', '"1.2.3"'),
         ]
         mock_cursor.fetchone.return_value = ('{"config": "2024-01-01T00:00:00Z", "jobs": "2024-01-02T00:00:00Z"}',)  # Last entries result
 
         # Execute all functions
         license_info, settings_info = get_config_and_settings_from_db()
-        version = settings_info.get('version')
         entries = get_last_entries_from_db()
 
         # Assert all return expected realistic data
         assert license_info == {
             'license_type': 'enterprise',
         }
-        assert version == '4.7.5'  # Updated to expect product version
+        assert settings_info.get('abc') == '1.2.3'
         # datetime_hook parses datetime strings to datetime objects
         expected_entries = {
             'config': datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
