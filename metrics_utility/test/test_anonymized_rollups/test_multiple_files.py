@@ -343,10 +343,10 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
     # ========== Validate Anonymization ==========
-    # Check that job template names in jobs section are hashed (128 character hex strings)
+    # Check that job template names in jobs section are hashed (64 character hex strings)
     for job in jobs_list:
         template_name = job['job_template_name']
-        assert len(template_name) == 128, f'Template name should be hashed: {template_name}'
+        assert len(template_name) == 64, f'Template name should be hashed: {template_name}'
         assert all(c in '0123456789abcdef' for c in template_name), 'Template name should be hex'
 
     # Note: job_host_summary template names are NOT anonymized (remain as original names like T1, T2)

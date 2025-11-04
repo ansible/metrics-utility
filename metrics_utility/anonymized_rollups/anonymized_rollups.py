@@ -17,7 +17,7 @@ from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonym
 def hash(value, salt):
     # has the value and salt, hash should be string
     combined = (salt + ':' + value).encode('utf-8')
-    hashed = hashlib.sha512(combined).hexdigest()
+    hashed = hashlib.sha256(combined).hexdigest()
     return hashed
 
 

@@ -115,7 +115,7 @@ def test_from_gather_to_json(cleanup_glob):
     if jobs:
         for job in jobs:
             job_template_name = job['job_template_name']
-            assert len(job_template_name) == 128, f'Job template name should be hashed (128 chars): {job_template_name}'
+            assert len(job_template_name) == 64, f'Job template name should be hashed (64 chars): {job_template_name}'
             assert all(c in '0123456789abcdef' for c in job_template_name), 'Job template name should be hex string'
 
     # ========== Validate actual data values and relationships ==========
