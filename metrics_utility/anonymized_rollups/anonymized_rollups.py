@@ -46,9 +46,10 @@ def anonymize_data(data, salt):
 
     # anonymize jobhostsummary job template name
     if 'job_host_summary' in data and data['job_host_summary']:
-        for jobhostsummary in data['job_host_summary']:
-            if jobhostsummary and 'job_template_name' in jobhostsummary and jobhostsummary['job_template_name']:
-                jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
+        if 'aggregated' in data['job_host_summary'] and data['job_host_summary']['aggregated']:
+            for jobhostsummary in data['job_host_summary']['aggregated']:
+                if jobhostsummary and 'job_template_name' in jobhostsummary and jobhostsummary['job_template_name']:
+                    jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
 
     # anonymize events modules module name
     if 'events_modules' in data and isinstance(data['events_modules'], dict):
