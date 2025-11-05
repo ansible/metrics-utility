@@ -96,16 +96,22 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     pprint.pprint(result)
 
-    # New version returns list of per-template aggregates in 'json' field
-    assert isinstance(result, list)
+    # Result is a dict with 'by_template' list and 'jobs_total'
+    assert isinstance(result, dict)
+    assert 'by_template' in result
+    assert 'jobs_total' in result
+
+    # Extract the by_template list
+    by_template = result['by_template']
+    assert isinstance(by_template, list)
 
     # There should be 3 templates (T1, T2, and T3 with never-started jobs)
-    assert len(result) == 3
+    assert len(by_template) == 3
 
     # Identify records by job_template_name
-    rec_t1 = next(r for r in result if r['job_template_name'] == 'T1')
-    rec_t2 = next(r for r in result if r['job_template_name'] == 'T2')
-    rec_t3 = next(r for r in result if r['job_template_name'] == 'T3')
+    rec_t1 = next(r for r in by_template if r['job_template_name'] == 'T1')
+    rec_t2 = next(r for r in by_template if r['job_template_name'] == 'T2')
+    rec_t3 = next(r for r in by_template if r['job_template_name'] == 'T3')
 
     # T1 counts
     assert rec_t1['number_of_jobs_executed'] == 3
