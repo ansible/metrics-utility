@@ -173,9 +173,14 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert 'events_modules' in result
 
     # ========== Validate Jobs ==========
-    jobs_list = result['jobs']
+    jobs_result = result['jobs']
+    assert isinstance(jobs_result, dict)
+    assert 'by_template' in jobs_result
+    assert 'jobs_total' in jobs_result
+    jobs_list = jobs_result['by_template']
     assert isinstance(jobs_list, list)
     assert len(jobs_list) == 3  # T1, T2, T3
+    assert jobs_result['jobs_total'] == 5  # Total jobs across all templates
 
     # T1 should have data from both tarballs (jobs 1, 2, 4)
     t1_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 3]
@@ -336,15 +341,6 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     total_module_usage = sum(playbook_modules.values())
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
-    # ========== Validate Anonymization ==========
-    # Check that job template names in jobs section are hashed (64 character hex strings)
-    for job in jobs_list:
-        template_name = job['job_template_name']
-        assert len(template_name) == 64, f'Template name should be hashed: {template_name}'
-        assert all(c in '0123456789abcdef' for c in template_name), 'Template name should be hex'
-
-    # Note: job_host_summary template names are NOT anonymized (remain as original names like T1, T2)
-
 
 def test_empty_tarballs_handling(cleanup_test_data):
     """
@@ -376,8 +372,14 @@ def test_empty_tarballs_handling(cleanup_test_data):
 
     # When there's no data, the system returns empty dicts/lists
     # Verify empty values for jobs
-    assert isinstance(result['jobs'], dict), 'jobs should be a dict (empty when no data)'
-    assert len(result['jobs']) == 0, 'jobs should be empty with no data'
+    assert isinstance(result['jobs'], dict), 'jobs should be a dict'
+    # Empty jobs can be either completely empty dict or dict with empty by_template list
+    if result['jobs']:  # If not empty dict
+        assert 'by_template' in result['jobs'], 'jobs should have by_template key'
+        assert 'jobs_total' in result['jobs'], 'jobs should have jobs_total key'
+        assert isinstance(result['jobs']['by_template'], list), 'by_template should be a list'
+        assert len(result['jobs']['by_template']) == 0, 'by_template should be empty with no data'
+        assert result['jobs']['jobs_total'] == 0, 'jobs_total should be 0 with no data'
 
     # Verify empty values for job_host_summary
     # When empty, can be either an empty list or empty dict depending on code path

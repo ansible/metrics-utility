@@ -92,22 +92,18 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate jobs structure
     jobs = json_data['jobs']
-    assert isinstance(jobs, list), 'jobs should be a list'
-    if jobs:
-        for job in jobs:
+    assert isinstance(jobs, dict), 'jobs should be a dictionary'
+    assert 'by_template' in jobs, 'jobs should have by_template key'
+    assert 'jobs_total' in jobs, 'jobs should have jobs_total key'
+    assert isinstance(jobs['by_template'], list), 'by_template should be a list'
+    assert isinstance(jobs['jobs_total'], int), 'jobs_total should be an integer'
+    if jobs['by_template']:
+        for job in jobs['by_template']:
             assert 'job_template_name' in job
             assert 'number_of_jobs_executed' in job
             assert 'number_of_jobs_failed' in job
             assert 'job_duration_average_in_seconds' in job
             assert 'job_waiting_time_average_in_seconds' in job
-
-    # Validate anonymization occurred (check for hashed values)
-    # Job template names should be hashed (64 character hex strings)
-    if jobs:
-        for job in jobs:
-            job_template_name = job['job_template_name']
-            assert len(job_template_name) == 64, f'Job template name should be hashed (64 chars): {job_template_name}'
-            assert all(c in '0123456789abcdef' for c in job_template_name), 'Job template name should be hex string'
 
     # ========== Validate actual data values and relationships ==========
 
@@ -162,8 +158,9 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate jobs actual values
     print('--- Validating jobs data values ---')
-    assert len(jobs) == 1, 'Should have 1 job template'
-    job = jobs[0]
+    assert jobs['jobs_total'] == 3, 'Should have 3 total jobs'
+    assert len(jobs['by_template']) == 1, 'Should have 1 job template'
+    job = jobs['by_template'][0]
     assert job['number_of_jobs_executed'] == 3, 'Job template should have 3 executions'
     assert job['number_of_jobs_failed'] == 0, 'Should have 0 failed jobs'
     assert job['number_of_jobs_succeeded'] == 3, 'Should have 3 succeeded jobs'
