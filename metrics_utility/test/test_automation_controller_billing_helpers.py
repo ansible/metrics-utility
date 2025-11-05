@@ -70,7 +70,7 @@ class TestGetLastEntriesFromDb:
         # Setup
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
-        test_json = '{"config": "2024-01-01T00:00:00Z", "hosts": "2024-01-03T00:00:00Z", "jobs": "2024-01-02T00:00:00Z"}'
+        test_json = '"{\\"config\\": \\"2024-01-01T00:00:00Z\\", \\"hosts\\": \\"2024-01-03T00:00:00Z\\", \\"jobs\\": \\"2024-01-02T00:00:00Z\\"}"'
         mock_cursor.fetchone.return_value = (test_json,)
         # Execute
         result = get_last_entries_from_db()
@@ -168,7 +168,8 @@ class TestIntegration:
             ('SUBSCRIPTION_NAME', '"Red Hat AAP"'),
             ('ABC', '"1.2.3"'),
         ]
-        mock_cursor.fetchone.return_value = ('{"config": "2024-01-01T00:00:00Z", "jobs": "2024-01-02T00:00:00Z"}',)  # Last entries result
+        test_json = '"{\\"config\\": \\"2024-01-01T00:00:00Z\\", \\"jobs\\": \\"2024-01-02T00:00:00Z\\"}"'  # Last entries result
+        mock_cursor.fetchone.return_value = (test_json,)
 
         # Execute all functions
         license_info, settings_info = get_config_and_settings_from_db()
