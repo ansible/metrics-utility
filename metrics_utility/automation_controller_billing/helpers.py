@@ -29,7 +29,8 @@ def get_last_entries_from_db() -> Dict:
             result = cursor.fetchone()
 
             if result and result[0]:
-                return json.loads(result[0], object_hook=datetime_hook)  # This is the JSON value
+                json_in_json = json.loads(result[0])
+                return json.loads(json_in_json, object_hook=datetime_hook)  # This is the JSON value
     except Exception as e:
         logger.error(f'Error getting AUTOMATION_ANALYTICS_LAST_ENTRIES from database: {e}')
     return {}
