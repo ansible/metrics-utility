@@ -61,6 +61,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['created']).dt.total_seconds()
 
+        jobs_total = dataframe['id'].nunique()
+
         aggregations_by_template = (
             dataframe.groupby('job_template_name')
             .agg(
@@ -89,7 +91,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         }
 
         # Prepare JSON data (converted to list of dicts)
-        json_data = aggregations_by_template.to_dict(orient='records')
+        json_data = {
+            'by_template': aggregations_by_template.to_dict(orient='records'),
+            'jobs_total': jobs_total,
+        }
 
         return {
             'json': json_data,
