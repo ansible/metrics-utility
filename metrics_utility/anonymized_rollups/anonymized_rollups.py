@@ -86,6 +86,26 @@ def anonymize_data(data, salt):
             events_modules['modules_used_per_playbook_total'] = new_dict
 
 
+def flatten_json(json_data):
+    # everything should be only level one key and arrays of objects inside
+    # except key statistics that is object for every primitive value
+    
+    # new json should have all the data from the original json_data, but flattened
+
+    f'''
+    example:
+    {
+        'statistics': {
+            'jobs_total': 100,
+        },
+        'module_stats' : [...module statuses]
+        'collection_name_stats' : [...collection name statuses]
+    }
+
+    '''
+
+    return json_data
+
 def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, salt):
     data = {
         'events_modules': events_modules_rollup,
