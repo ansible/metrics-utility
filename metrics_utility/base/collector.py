@@ -3,14 +3,13 @@ import hashlib
 import inspect
 import logging
 import os
-import pathlib
 import shutil
-import tempfile
 
 from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.library.collectors.util import init_tmp_dir
 from metrics_utility.logger import logger
 
 from .collection import Collection
@@ -54,6 +53,7 @@ class Collector:
 
         self.tmp_dir = None
         self.gather_dir = None
+
         self.gather_since = None
         self.gather_until = None
         self.last_gather = None
@@ -98,10 +98,9 @@ class Collector:
         """
         pass
 
-    def gather(self, dest=None, subset=None, since=None, until=None):
+    def gather(self, subset=None, since=None, until=None):
         """Entry point for gathering
 
-        :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
         :param subset: (list) collector_module's function names if only subset is required (typically tests)
         :param since: (datetime) - low threshold of data changes (max. and default - 28 days ago)
         :param until: (datetime) - high threshold of data changes (defaults to now)
@@ -112,7 +111,7 @@ class Collector:
                 logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
                 return None
 
-            self._gather_initialize(dest, subset, since, until)
+            self._gather_initialize(subset, since, until)
 
             if not self._gather_config():
                 return None
@@ -225,8 +224,11 @@ class Collector:
 
         return available_package
 
-    def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        self._init_tmp_dir(tmp_root_dir)
+    def _gather_initialize(self, collectors_subset, since, until):
+        logger.debug(f'Last analytics run was: {self._last_gathering()}')
+
+        self.gather_dir = init_tmp_dir()
+        self.tmp_dir = self.gather_dir.parent
 
         self.last_gathered_entries = self._load_last_gathered_entries()
 
@@ -365,11 +367,6 @@ class Collector:
         shutil.rmtree(self.tmp_dir, ignore_errors=True)  # clean up individual artifact files
         if self.ship:
             self.delete_tarballs()
-
-    def _init_tmp_dir(self, tmp_root_dir=None):
-        self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
-        self.gather_dir = self.tmp_dir.joinpath('stage')
-        self.gather_dir.mkdir(mode=0o700)
 
     @abstractmethod
     def _load_last_gathered_entries(self):

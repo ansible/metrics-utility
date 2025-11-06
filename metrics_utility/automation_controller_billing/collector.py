@@ -37,10 +37,10 @@ class Collector(base.Collector):
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
     # TODO: extract to superclass ability to push extra params into config.json
-    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
+    # FIXME: subset is only used for tests, mock registered collectors instead?
+    def gather(self, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
-        :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
         :param subset: (list) collector_module's function names if only subset is required (typically tests)
         :param since: (datetime) - low threshold of data changes (max. and default - 28 days ago)
         :param until: (datetime) - high threshold of data changes (defaults to now)
@@ -57,7 +57,7 @@ class Collector(base.Collector):
                 logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
 
-            self._gather_initialize(dest, subset, since, until)
+            self._gather_initialize(subset, since, until)
 
             if not self._gather_config():
                 return None
