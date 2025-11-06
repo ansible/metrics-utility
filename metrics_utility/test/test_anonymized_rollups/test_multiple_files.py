@@ -189,16 +189,16 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert t1['number_of_jobs_succeeded'] == 2
     assert t1['number_of_jobs_never_started'] == 0
     # Check timing statistics
-    assert t1['job_duration_total_in_seconds'] == 10.0
+    assert t1['job_duration_total_in_seconds'] == pytest.approx(10.0)
     assert t1['job_duration_average_in_seconds'] == pytest.approx(3.333, rel=1e-2)
-    assert t1['job_duration_minimum_in_seconds'] == 2.0
-    assert t1['job_duration_maximum_in_seconds'] == 5.0
-    assert t1['job_duration_median_in_seconds'] == 3.0
-    assert t1['job_waiting_time_total_in_seconds'] == 3.0
-    assert t1['job_waiting_time_average_in_seconds'] == 1.0
-    assert t1['job_waiting_time_minimum_in_seconds'] == 0.0
-    assert t1['job_waiting_time_maximum_in_seconds'] == 2.0
-    assert t1['job_waiting_time_median_in_seconds'] == 1.0
+    assert t1['job_duration_minimum_in_seconds'] == pytest.approx(2.0)
+    assert t1['job_duration_maximum_in_seconds'] == pytest.approx(5.0)
+    assert t1['job_duration_median_in_seconds'] == pytest.approx(3.0)
+    assert t1['job_waiting_time_total_in_seconds'] == pytest.approx(3.0)
+    assert t1['job_waiting_time_average_in_seconds'] == pytest.approx(1.0)
+    assert t1['job_waiting_time_minimum_in_seconds'] == pytest.approx(0.0)
+    assert t1['job_waiting_time_maximum_in_seconds'] == pytest.approx(2.0)
+    assert t1['job_waiting_time_median_in_seconds'] == pytest.approx(1.0)
 
     # T2 should have 1 job executed
     t2_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 1 and j['number_of_jobs_never_started'] == 0]
@@ -207,11 +207,11 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert t2['number_of_jobs_executed'] == 1
     assert t2['number_of_jobs_failed'] == 0
     assert t2['number_of_jobs_succeeded'] == 1
-    assert t2['job_duration_total_in_seconds'] == 7.0
-    assert t2['job_duration_average_in_seconds'] == 7.0
-    assert t2['job_duration_median_in_seconds'] == 7.0
-    assert t2['job_waiting_time_total_in_seconds'] == 4.0
-    assert t2['job_waiting_time_average_in_seconds'] == 4.0
+    assert t2['job_duration_total_in_seconds'] == pytest.approx(7.0)
+    assert t2['job_duration_average_in_seconds'] == pytest.approx(7.0)
+    assert t2['job_duration_median_in_seconds'] == pytest.approx(7.0)
+    assert t2['job_waiting_time_total_in_seconds'] == pytest.approx(4.0)
+    assert t2['job_waiting_time_average_in_seconds'] == pytest.approx(4.0)
 
     # T3 should have never started job
     t3_jobs = [j for j in jobs_list if j['number_of_jobs_never_started'] == 1]
@@ -220,10 +220,10 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert t3['number_of_jobs_executed'] == 1
     assert t3['number_of_jobs_failed'] == 1
     assert t3['number_of_jobs_succeeded'] == 0
-    assert t3['job_duration_total_in_seconds'] == 0.0
+    assert t3['job_duration_total_in_seconds'] == pytest.approx(0.0)
     assert t3['job_duration_average_in_seconds'] is None
     assert t3['job_duration_median_in_seconds'] is None
-    assert t3['job_waiting_time_total_in_seconds'] == 0.0
+    assert t3['job_waiting_time_total_in_seconds'] == pytest.approx(0.0)
     assert t3['job_waiting_time_average_in_seconds'] is None
 
     # ========== Validate Execution Environments ==========
@@ -259,7 +259,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     # Verify values from concatenated data across 3 tarballs
     assert result['statistics']['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
     assert result['statistics']['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
-    assert result['statistics']['avg_number_of_modules_used_in_a_playbooks'] == 3.0, 'Average modules per playbook should be 3.0'
+    assert result['statistics']['avg_number_of_modules_used_in_a_playbooks'] == pytest.approx(3.0), 'Average modules per playbook should be 3.0'
 
     # Check specific known modules are present in module_stats
     module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
@@ -286,8 +286,8 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert win_copy['task_clean_success_total'] == 1
     assert win_copy['task_success_with_reruns_total'] == 2
     assert win_copy['task_failed_total'] == 0
-    assert win_copy['job_duration_total_seconds'] == 2100.0
-    assert win_copy['avg_job_duration_seconds'] == 700.0
+    assert win_copy['job_duration_total_seconds'] == pytest.approx(2100.0)
+    assert win_copy['avg_job_duration_seconds'] == pytest.approx(700.0)
 
     # Verify another module (community.general.yum)
     yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
@@ -298,7 +298,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert yum['number_of_jobs_never_started'] == 1
     assert yum['task_failed_total'] == 3
     assert yum['jobs_failed_because_of_module_failure_total'] == 3
-    assert yum['avg_job_duration_seconds'] == 500.0
+    assert yum['avg_job_duration_seconds'] == pytest.approx(500.0)
 
     # Verify collection stats
     collection_stats = result['collection_name_stats']
@@ -314,7 +314,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert windows_coll['hosts_total'] == 3
     assert windows_coll['task_clean_success_total'] == 1
     assert windows_coll['task_success_with_reruns_total'] == 2
-    assert windows_coll['avg_job_duration_seconds'] == 700.0
+    assert windows_coll['avg_job_duration_seconds'] == pytest.approx(700.0)
 
     # Verify modules_used_per_playbook is now an array with 5 entries (flattened structure)
     playbook_modules = result['modules_used_per_playbook']

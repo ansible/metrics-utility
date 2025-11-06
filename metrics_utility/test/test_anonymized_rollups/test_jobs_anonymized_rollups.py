@@ -120,18 +120,18 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_t1['number_of_jobs_never_started'] == 0
 
     # T1 durations (seconds): 3.0, 5.0, 2.0
-    assert pytest.approx(rec_t1['job_duration_average_in_seconds'], rel=1e-6) == 10 / 3
-    assert pytest.approx(rec_t1['job_duration_maximum_in_seconds'], rel=1e-6) == 5.0
-    assert pytest.approx(rec_t1['job_duration_minimum_in_seconds'], rel=1e-6) == 2.0
-    assert pytest.approx(rec_t1['job_duration_median_in_seconds'], rel=1e-6) == 3.0
-    assert pytest.approx(rec_t1['job_duration_total_in_seconds'], rel=1e-6) == 10.0
+    assert rec_t1['job_duration_average_in_seconds'] == pytest.approx(10 / 3, rel=1e-6)
+    assert rec_t1['job_duration_maximum_in_seconds'] == pytest.approx(5.0, rel=1e-6)
+    assert rec_t1['job_duration_minimum_in_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_t1['job_duration_median_in_seconds'] == pytest.approx(3.0, rel=1e-6)
+    assert rec_t1['job_duration_total_in_seconds'] == pytest.approx(10.0, rel=1e-6)
 
     # T1 waiting times (seconds): 0.0, 2.0, 1.0
-    assert pytest.approx(rec_t1['job_waiting_time_average_in_seconds'], rel=1e-6) == 1.0
-    assert pytest.approx(rec_t1['job_waiting_time_maximum_in_seconds'], rel=1e-6) == 2.0
-    assert pytest.approx(rec_t1['job_waiting_time_minimum_in_seconds'], rel=1e-6) == 0.0
-    assert pytest.approx(rec_t1['job_waiting_time_median_in_seconds'], rel=1e-6) == 1.0
-    assert pytest.approx(rec_t1['job_waiting_time_total_in_seconds'], rel=1e-6) == 3.0
+    assert rec_t1['job_waiting_time_average_in_seconds'] == pytest.approx(1.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_maximum_in_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_minimum_in_seconds'] == pytest.approx(0.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_median_in_seconds'] == pytest.approx(1.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_total_in_seconds'] == pytest.approx(3.0, rel=1e-6)
 
     # T2 counts
     assert rec_t2['number_of_jobs_executed'] == 1
@@ -140,18 +140,18 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_t2['number_of_jobs_never_started'] == 0
 
     # T2 duration (seconds): 7.0
-    assert pytest.approx(rec_t2['job_duration_average_in_seconds'], rel=1e-6) == 7.0
-    assert pytest.approx(rec_t2['job_duration_maximum_in_seconds'], rel=1e-6) == 7.0
-    assert pytest.approx(rec_t2['job_duration_minimum_in_seconds'], rel=1e-6) == 7.0
-    assert pytest.approx(rec_t2['job_duration_median_in_seconds'], rel=1e-6) == 7.0
-    assert pytest.approx(rec_t2['job_duration_total_in_seconds'], rel=1e-6) == 7.0
+    assert rec_t2['job_duration_average_in_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_maximum_in_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_minimum_in_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_median_in_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_total_in_seconds'] == pytest.approx(7.0, rel=1e-6)
 
     # T2 waiting (seconds): 4.0
-    assert pytest.approx(rec_t2['job_waiting_time_average_in_seconds'], rel=1e-6) == 4.0
-    assert pytest.approx(rec_t2['job_waiting_time_maximum_in_seconds'], rel=1e-6) == 4.0
-    assert pytest.approx(rec_t2['job_waiting_time_minimum_in_seconds'], rel=1e-6) == 4.0
-    assert pytest.approx(rec_t2['job_waiting_time_median_in_seconds'], rel=1e-6) == 4.0
-    assert pytest.approx(rec_t2['job_waiting_time_total_in_seconds'], rel=1e-6) == 4.0
+    assert rec_t2['job_waiting_time_average_in_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_maximum_in_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_minimum_in_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_median_in_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_total_in_seconds'] == pytest.approx(4.0, rel=1e-6)
 
     # T3 counts (jobs that never started - should have NaN values for durations)
     assert rec_t3['number_of_jobs_executed'] == 1
@@ -164,11 +164,11 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_t3['job_duration_maximum_in_seconds'])
     assert pd.isna(rec_t3['job_duration_minimum_in_seconds'])
     assert pd.isna(rec_t3['job_duration_median_in_seconds'])
-    assert pytest.approx(rec_t3['job_duration_total_in_seconds'], rel=1e-6) == 0.0
+    assert rec_t3['job_duration_total_in_seconds'] == pytest.approx(0.0, rel=1e-6)
 
     # T3 should have NaN for all waiting time metrics and 0 for totals
     assert pd.isna(rec_t3['job_waiting_time_average_in_seconds'])
     assert pd.isna(rec_t3['job_waiting_time_maximum_in_seconds'])
     assert pd.isna(rec_t3['job_waiting_time_minimum_in_seconds'])
     assert pd.isna(rec_t3['job_waiting_time_median_in_seconds'])
-    assert pytest.approx(rec_t3['job_waiting_time_total_in_seconds'], rel=1e-6) == 0.0
+    assert rec_t3['job_waiting_time_total_in_seconds'] == pytest.approx(0.0, rel=1e-6)
