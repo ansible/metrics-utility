@@ -29,10 +29,8 @@ class Collection:
         self.data_type = fnc_collecting.__insights_analytics_type__
 
         self.filename = f'{self.key}.{self.data_type}'
-        # either since/until or full sync(if enabled)
         self.since = None  # set by Collector._create_collections()
         self.until = None  # set by Collector._create_collections()
-        self.full_sync_enabled = self._is_full_sync_enabled(fnc_collecting.__insights_analytics_full_sync_interval_days__)
 
         self.gathering_started_at = None
         self.gathering_finished_at = None
@@ -84,14 +82,8 @@ class Collection:
         # These slicer functions may return a generator. The `since` parameter is
         # allowed to be None, and will fall back to LAST_ENTRIES[key] or to
         # LAST_GATHER (truncated appropriately to match the 28-day limit).
-        #
-        # Or it can force full table sync if interval is given
         if self.fnc_slicing:
-            if self.full_sync_enabled:
-                # FIXME: unused, no slicer accepts full_sync_enabled
-                slices = self.fnc_slicing(self.key, last_gather=last_gather, full_sync_enabled=True)
-            else:
-                slices = self.fnc_slicing(self.key, last_gather=last_gather, since=since, until=until)
+            slices = self.fnc_slicing(self.key, last_gather=last_gather, since=since, until=until)
         else:
             slices = [(self._gather_since(), self._gather_until())]
 
@@ -116,9 +108,6 @@ class Collection:
 
         if self.gathering_successful:
             self._update_last_gathered_key(updates_dict, self.key, self.until)
-
-            if self.full_sync_enabled:
-                self._update_last_gathered_key(updates_dict, f'{self.key}_full', self.gathering_finished_at)
         else:
             # collections are ordered by time slices.
             # in case of error all collections with newer timestamp are ignored
@@ -134,13 +123,6 @@ class Collection:
             updates_dict['keys'][key] = timestamp
         else:
             updates_dict['keys'][key] = max(previous, timestamp)
-
-    def _is_full_sync_enabled(self, interval_days):
-        if not interval_days:
-            return False
-
-        last_full_sync = self.collector.last_gathered_entry_for(f'{self.key}_full')
-        return not last_full_sync or last_full_sync < now() - timedelta(days=interval_days)
 
     def _gather_since(self):
         """Start of gathering based on settings excluding slices"""

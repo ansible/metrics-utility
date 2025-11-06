@@ -94,29 +94,3 @@ def test_slices_by_date_and_size(collector):
     tgz_files = collector.gather(subset=['config', 'csv_one_day_slicing_2'], since=since, until=until)
 
     assert len(tgz_files) == days_to_collect * 2
-
-
-@pytest.mark.parametrize('last_sync_days_ago', [4, 6])
-def test_slices_by_full_sync(mocker, collector, last_sync_days_ago):
-    """
-    In the collector method `csv_full_sync_slicing_1()` there is 5 days interval for full sync
-    if `last_sync_days_ago` is:
-    - 4 days ago, it uses `since` (7 days ago)
-    - 6 days ago, it uses slicing interval (10 days ago) (in `full_sync_slicing()`)
-
-    """
-    last_gathered_entries = {
-        'csv_full_sync_slicing_1': (now() - timedelta(days=7)).replace(hour=0, minute=0, second=0, microsecond=0),
-        'csv_full_sync_slicing_1_full': now() - timedelta(days=last_sync_days_ago),
-    }
-    mocker.patch.object(collector, '_load_last_gathered_entries', return_value=last_gathered_entries)
-
-    tgz_files = collector.gather(
-        subset=['config', 'csv_full_sync_slicing_1'],
-        since=last_gathered_entries['csv_full_sync_slicing_1'],
-    )
-
-    if last_sync_days_ago == 4:
-        assert len(tgz_files) == 7
-    else:
-        assert len(tgz_files) == 10

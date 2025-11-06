@@ -6,7 +6,6 @@ def register(
     config=False,
     fnc_slicing=None,
     shipping_group='default',
-    full_sync_interval_days=None,
 ):
     """
     A decorator used to register a function as a metric collector.
@@ -30,7 +29,6 @@ def register(
         f.__insights_analytics_config__ = config  # True | False (default)
         f.__insights_analytics_fnc_slicing__ = fnc_slicing
         f.__insights_analytics_shipping_group__ = shipping_group
-        f.__insights_analytics_full_sync_interval_days__ = full_sync_interval_days
 
         return f
 

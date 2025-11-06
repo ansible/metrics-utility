@@ -1,6 +1,5 @@
 from base.functional.helpers import (
     TIMESTAMP_CSV_LINE_LENGTH,
-    full_sync_slicing,
     one_day_slicing,
     timestamp_csv,
 )
@@ -19,7 +18,8 @@ def config(since, **kwargs):
     description='CSVs splitted by date',
     fnc_slicing=one_day_slicing,
 )
-def csv_one_day_slicing_1(since, until, **kwargs):
+def csv_one_day_slicing_1(**kwargs):
+    since, until = kwargs.get('since', None), kwargs.get('until', None)
     return timestamp_csv(
         'csv_one_day_slicing_1',
         1,
@@ -36,28 +36,11 @@ def csv_one_day_slicing_1(since, until, **kwargs):
     description='CSVs splitted by size and date',
     fnc_slicing=one_day_slicing,
 )
-def csv_one_day_slicing_2(since, until, **kwargs):
+def csv_one_day_slicing_2(**kwargs):
+    since, until = kwargs.get('since', None), kwargs.get('until', None)
     return timestamp_csv(
         'csv_one_day_slicing_2',
         2,
-        2 * TIMESTAMP_CSV_LINE_LENGTH,
-        since=since,
-        until=until,
-    )
-
-
-@register(
-    'csv_full_sync_slicing_1',
-    '1.0',
-    format='csv',
-    description='CSVs splitted by date',
-    fnc_slicing=full_sync_slicing,
-    full_sync_interval_days=5,
-)
-def csv_full_sync_slicing_1(since, until, **kwargs):
-    return timestamp_csv(
-        'csv_full_sync_slicing_1',
-        1,
         2 * TIMESTAMP_CSV_LINE_LENGTH,
         since=since,
         until=until,
