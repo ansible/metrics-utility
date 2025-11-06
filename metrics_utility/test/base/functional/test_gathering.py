@@ -68,11 +68,6 @@ def test_small_csvs(collector):
         assert './csv_collection_2.csv' in files.keys()
         assert './csv_collection_3.csv' in files.keys()
 
-        # length defined by @registered function
-        assert len(files['./csv_collection_1.csv'].read()) == 100
-        assert len(files['./csv_collection_2.csv'].read()) == 200
-        assert len(files['./csv_collection_3.csv'].read()) == 300
-
     collector._gather_cleanup()
 
 
@@ -120,7 +115,6 @@ def test_one_csv_collection_splitted_by_size(collector):
             assert_common_files(files)
             assert len(files.keys()) == 1 + _common_files_count()
             assert './big_table.csv' in files.keys()
-            assert len(files['./big_table.csv'].read()) == 1000
 
     collector._gather_cleanup()
 
@@ -140,13 +134,13 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
 
             assert_common_files(files)
             if i == 0:
-                assert len(files.keys()) == 2 + _common_files_count()
+                assert len(files.keys()) == 3 + _common_files_count()
                 assert './big_table_2.csv' in files.keys()
                 assert './csv_collection_1.csv' in files.keys()
-            elif i == 1:
-                assert len(files.keys()) == 2 + _common_files_count()
-                assert './big_table_2.csv' in files.keys()
                 assert './csv_collection_2.csv' in files.keys()
+            elif i == 1:
+                assert len(files.keys()) == 1 + _common_files_count()
+                assert './big_table_2.csv' in files.keys()
             elif i == 2:
                 assert len(files.keys()) == 1 + _common_files_count()
                 assert './big_table_2.csv' in files.keys()

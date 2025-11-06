@@ -1,12 +1,13 @@
 import json
 
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from metrics_utility.automation_controller_billing.collectors import get_hour_boundaries, total_workers_vcpu
-from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
+from metrics_utility.exceptions import MissingRequiredEnvVar
+from metrics_utility.library.collectors.total_workers_vcpu import get_hour_boundaries
 from metrics_utility.test.util import temporary_env
 
 
@@ -17,7 +18,7 @@ class TestTotalWorkersVcpu:
         """Test that the function returns None when total_workers_vcpu is not in optional collectors."""
         with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
             mock_get.return_value = []
-            result = total_workers_vcpu(None, None, None)
+            result = total_workers_vcpu()
             assert result is None
 
     def test_raises_missing_required_env_var_when_cluster_name_not_set(self):
@@ -29,7 +30,7 @@ class TestTotalWorkersVcpu:
             mock_get.return_value = ['total_workers_vcpu']
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': None}):
                 with pytest.raises(MissingRequiredEnvVar) as exc_info:
-                    total_workers_vcpu(None, None, None)
+                    total_workers_vcpu()
 
                 assert 'environment variable METRICS_UTILITY_CLUSTER_NAME is not set' in str(exc_info.value)
                 mock_logger.error.assert_called_once_with('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
@@ -38,19 +39,21 @@ class TestTotalWorkersVcpu:
         """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is not set or false (default behavior)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
             # Test when not set (default behavior)
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster'}):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 1
                 assert 'timestamp' in result
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False and all required fields
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                logged_json = json.loads(mock_logger.info.call_args[0][0])
                 assert not logged_json['usage_based_billing_enabled']
                 assert logged_json['total_workers_vcpu'] == 1
                 assert 'cluster_name' in logged_json
@@ -60,19 +63,21 @@ class TestTotalWorkersVcpu:
 
             # Test when explicitly set to false
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'false'}):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 1
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                logged_json = json.loads(mock_logger.info.call_args[0][0])
                 assert not logged_json['usage_based_billing_enabled']
 
     def test_usage_based_billing_enabled_case_insensitive(self):
         """Test that METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is case insensitive."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -89,7 +94,7 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 8
 
@@ -97,11 +102,13 @@ class TestTotalWorkersVcpu:
         """Test that the function uses default Prometheus URL when METRICS_UTILITY_PROMETHEUS_URL is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.get_total_workers_cpu') as mock_get_cpu,
-            patch('metrics_utility.automation_controller_billing.collectors.get_cpu_timeline') as mock_get_timeline,
-            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.get_total_workers_cpu') as mock_get_cpu,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.get_cpu_timeline') as mock_get_timeline,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_collectors_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -123,16 +130,20 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': None,
                 }
             ):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
 
                 # Verify it uses the default URL
-                mock_prom_client_class.assert_called_once_with(url='https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091')
+                mock_prom_client_class.assert_called_once_with(
+                    url='https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091',
+                    ca_cert_path='/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt',
+                    token='fake-token',
+                )
                 expected_message = (
-                    'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set,'
-                    '                     default https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091 will be assigned'
+                    'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set, '
+                    'default https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091 will be assigned'
                 )
                 # Check that the expected message was called (not necessarily the last call)
-                mock_logger.info.assert_any_call(expected_message)
+                mock_collectors_logger.info.assert_any_call(expected_message)
                 # Also verify the total_workers_vcpu value was logged
                 mock_logger.debug.assert_called_with('total_workers_vcpu: 16.0')
 
@@ -145,7 +156,7 @@ class TestTotalWorkersVcpu:
                 assert result['total_workers_vcpu'] == 16
 
                 # Verify that the logged info contains all expected fields
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                logged_json = json.loads(mock_logger.info.call_args[0][0])
                 assert 'cluster_name' in logged_json
                 assert 'collection_timestamp' in logged_json
                 assert 'start_timestamp' in logged_json
@@ -157,11 +168,13 @@ class TestTotalWorkersVcpu:
                 assert logged_json['usage_based_billing_enabled'] is True
                 assert 'max_over_time(sum(machine_cpu_cores)[59m59s:5m]' in logged_json['promql_query']
 
-    def test_prometheus_client_creation_failure_raises_metrics_exception(self):
-        """Test that PrometheusClient creation failure raises MetricsException."""
+    def test_prometheus_client_creation_failure_raises_exception(self):
+        """Test that PrometheusClient creation failure raises an exception."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
             mock_prom_client_class.side_effect = Exception('Failed to create Prometheus client')
@@ -173,16 +186,18 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
+                with pytest.raises(Exception) as exc_info:
+                    total_workers_vcpu()
 
-                assert 'Can not create a prometheus api client ERROR:' in str(exc_info.value)
+                assert 'Failed to create Prometheus client' in str(exc_info.value)
 
-    def test_prometheus_query_failure_raises_metrics_exception(self):
-        """Test that Prometheus query failure raises MetricsException."""
+    def test_prometheus_query_failure_raises_exception(self):
+        """Test that Prometheus query failure raises an exception."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -198,17 +213,19 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
+                with pytest.raises(Exception) as exc_info:
+                    total_workers_vcpu()
 
-                assert 'Unexpected error when retrieving nodes:' in str(exc_info.value)
+                assert 'Prometheus query failed' in str(exc_info.value)
 
-    def test_prometheus_query_returns_none_raises_metrics_exception(self):
-        """Test that the function raises MetricsException when Prometheus query returns None (no data available)."""
+    def test_prometheus_query_returns_none_when_no_data_available(self):
+        """Test that the function returns None when Prometheus query returns None (no data available)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -224,22 +241,23 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                with pytest.raises(MetricsException) as exc_info:
-                    total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
 
-                # Verify the exception message
-                assert 'No data availble yet, the cluster is probably running for less than an hour' in str(exc_info.value)
+                # Verify the function returns None
+                assert result is None
 
                 # Verify the warning message was logged
                 mock_logger.debug.assert_called_with('total_workers_vcpu: None')
-                mock_logger.warning.assert_called_with('No data availble yet, the cluster is probably running for less than an hour')
+                mock_logger.warning.assert_called_with('No data available yet, the cluster is probably running for less than an hour')
 
     def test_successful_prometheus_query_with_vcpu_calculation(self):
         """Test successful Prometheus query with vCPU calculation."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -255,14 +273,18 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
 
                 assert result['cluster_name'] == 'my-cluster'
                 assert result['total_workers_vcpu'] == 24  # Should be converted to int
                 assert 'timestamp' in result
 
                 # Verify PrometheusClient was created with correct parameters
-                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090')
+                mock_prom_client_class.assert_called_once_with(
+                    url='https://prometheus.example.com:9090',
+                    ca_cert_path='/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt',
+                    token='fake-token',
+                )
 
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
@@ -271,8 +293,8 @@ class TestTotalWorkersVcpu:
                 assert '@' in query_call  # Should contain timestamp
 
                 # Verify logging
-                mock_logger_info.info.assert_called_once()
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                mock_logger.info.assert_called_once()
+                logged_json = json.loads(mock_logger.info.call_args[0][0])
                 assert logged_json['cluster_name'] == 'my-cluster'
                 assert logged_json['total_workers_vcpu'] == 24
                 assert logged_json['usage_based_billing_enabled']
@@ -281,7 +303,9 @@ class TestTotalWorkersVcpu:
         """Test that PrometheusClient is initialized correctly."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -297,17 +321,23 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                total_workers_vcpu(None, None, None)
+                total_workers_vcpu()
 
                 # Verify PrometheusClient was created correctly
-                mock_prom_client_class.assert_called_once_with(url='https://prometheus.example.com:9090')
+                mock_prom_client_class.assert_called_once_with(
+                    url='https://prometheus.example.com:9090',
+                    ca_cert_path='/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt',
+                    token='fake-token',
+                )
 
     def test_prometheus_query_uses_correct_promql_with_hour_boundaries(self):
         """Test that the Prometheus query uses correct PromQL with hour boundaries."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.datetime') as mock_datetime,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.datetime') as mock_datetime,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -329,7 +359,7 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                total_workers_vcpu(None, None, None)
+                total_workers_vcpu()
 
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
@@ -345,7 +375,9 @@ class TestTotalWorkersVcpu:
         """Test that vCPU values from Prometheus (floats) are properly converted to integers."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -361,12 +393,12 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
 
                 assert result['total_workers_vcpu'] == 15  # Should be truncated to int
                 assert isinstance(result['total_workers_vcpu'], int)
 
-    @patch('metrics_utility.automation_controller_billing.collectors.datetime')
+    @patch('metrics_utility.library.collectors.total_workers_vcpu.datetime')
     def test_timestamp_in_output_with_hour_boundaries(self, mock_datetime):
         """Test that the function includes proper timestamp based on hour boundaries."""
         # Mock the datetime.now() call
@@ -377,8 +409,10 @@ class TestTotalWorkersVcpu:
 
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -394,7 +428,7 @@ class TestTotalWorkersVcpu:
                     'METRICS_UTILITY_PROMETHEUS_URL': 'https://prometheus.example.com:9090',
                 }
             ):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
 
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
@@ -406,8 +440,8 @@ class TestTotalWorkersVcpu:
                 assert result['timestamp'] == expected_timestamp
 
                 # Check logged JSON
-                mock_logger_info.info.assert_called_once()
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                mock_logger.info.assert_called_once()
+                logged_json = json.loads(mock_logger.info.call_args[0][0])
                 assert logged_json['end_timestamp'] == expected_timestamp
                 assert logged_json['cluster_name'] == 'test-cluster'
                 assert logged_json['total_workers_vcpu'] == 8
@@ -417,17 +451,19 @@ class TestTotalWorkersVcpu:
         """Test that when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is unset, it returns hardcoded value."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='fake-token')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
             with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': None}):
-                result = total_workers_vcpu(None, None, None)
+                result = total_workers_vcpu()
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 1
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
-                logged_json = json.loads(mock_logger_info.info.call_args[0][0])
+                logged_json = json.loads(mock_logger.info.call_args[0][0])
                 assert not logged_json['usage_based_billing_enabled']
 
 

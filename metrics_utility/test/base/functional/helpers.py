@@ -3,16 +3,19 @@ import os
 from django.utils.timezone import now, timedelta
 
 from metrics_utility.library import CsvFileSplitter
+from metrics_utility.library.collectors.util import init_tmp_dir
 
 
 TIMESTAMP_CSV_LINE_LENGTH = 40
 
 
-def trivial_slicing(key, last_gather, since, until, **kwargs):
+def trivial_slicing(key, **kwargs):
+    since, until = kwargs.get('since', None), kwargs.get('until', None)
     return [(since, until)]
 
 
-def one_day_slicing(key, last_gather, since, until, **kwargs):
+def one_day_slicing(key, **kwargs):
+    since, until = kwargs.get('since', None), kwargs.get('until', None)
     since = since.replace(hour=0, minute=0, second=0, microsecond=0)
     until = until.replace(hour=0, minute=0, second=0, microsecond=0)
     start, end = since, None
@@ -22,18 +25,10 @@ def one_day_slicing(key, last_gather, since, until, **kwargs):
         start = end
 
 
-def full_sync_slicing(key, last_gather, full_sync_enabled=False, since=None, **kwargs):
-    """
-    If full_sync_enabled is:
-        - True: Yields 10 time slices in 1-day intervals
-        - False: Yields slices since 'since' in 1-day intervals
-    """
+def full_sync_slicing(key, **kwargs):
+    since = kwargs.get('since', None)
     current_time = now().replace(hour=0, minute=0, second=0, microsecond=0)
-    if full_sync_enabled:
-        start = current_time - timedelta(days=10)
-        start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        start = since.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = since.replace(hour=0, minute=0, second=0, microsecond=0)
 
     while start < current_time:
         end = start + timedelta(days=1)
@@ -41,8 +36,8 @@ def full_sync_slicing(key, last_gather, full_sync_enabled=False, since=None, **k
         start = end
 
 
-def csv_generator(full_path, file_name, files_cnt, max_data_size, header, line):
-    file_path = get_file_path(full_path, file_name)
+def csv_generator(file_name, files_cnt, max_data_size, header, line):
+    file_path = get_file_path(file_name)
     file = CsvFileSplitter(filespec=file_path, max_file_size=max_data_size)
 
     # create required number of files (decrease by headers - it's CSV)
@@ -53,14 +48,14 @@ def csv_generator(full_path, file_name, files_cnt, max_data_size, header, line):
     return file.file_list()
 
 
-def simple_csv(full_path, file_name, files_cnt, max_data_size):
+def simple_csv(file_name, files_cnt, max_data_size=100):
     """CSVs with line length 10 bytes"""
     header = 'Col1,Col2\n'  # 10 chars
     line = '1234,6789\n'  # 10 chars
-    return csv_generator(full_path, file_name, files_cnt, max_data_size, header, line)
+    return csv_generator(file_name, files_cnt, max_data_size, header, line)
 
 
-def timestamp_csv(full_path, file_name, files_cnt, max_data_size, since, until):
+def timestamp_csv(file_name, files_cnt, max_data_size, since, until):
     """CSVs with line length 40 bytes"""
     header = 'since______________,until______________\n'  # 40 chars
     line = [
@@ -69,10 +64,11 @@ def timestamp_csv(full_path, file_name, files_cnt, max_data_size, since, until):
     ]  # 19 chars
     line = f'{",".join(line)}\n'  # +2 = 40 chars
 
-    return csv_generator(full_path, file_name, files_cnt, max_data_size, header, line)
+    return csv_generator(file_name, files_cnt, max_data_size, header, line)
 
 
-def get_file_path(path, table):
+def get_file_path(table):
+    path = init_tmp_dir()
     return os.path.join(path, table + '_table.csv')
 
 

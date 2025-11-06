@@ -5,60 +5,8 @@ from django.db import DatabaseError
 
 from metrics_utility.automation_controller_billing.helpers import (
     datetime_hook,
-    get_config_and_settings_from_db,
     get_last_entries_from_db,
 )
-
-
-class TestGetLicenseInfoFromDb:
-    """Test cases for get_config_and_settings_from_db function"""
-
-    @patch('metrics_utility.automation_controller_billing.helpers.connection')
-    def test_successful_license_retrieval(self, mock_connection):
-        """Test successful license information retrieval"""
-        # Setup
-        mock_cursor = MagicMock()
-        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.fetchall.return_value = [
-            ('LICENSE', '{"license_type": "enterprise", "product_name": "AWX"}'),
-            ('SUBSCRIPTION_NAME', '"Red Hat Ansible Automation Platform"'),
-            ('INSTALL_UUID', '"12345-67890"'),
-        ]
-
-        # Execute
-        license_info, settings_info = get_config_and_settings_from_db()
-
-        # Assert license info (only LICENSE field data)
-        expected_license = {
-            'license_type': 'enterprise',
-            'product_name': 'AWX',
-        }
-        assert license_info == expected_license
-
-        # Assert settings info (other fields)
-        expected_settings = {
-            'subscription_name': 'Red Hat Ansible Automation Platform',
-            'install_uuid': '12345-67890',
-        }
-        assert settings_info == expected_settings
-
-        mock_cursor.execute.assert_called()
-
-    @patch('metrics_utility.automation_controller_billing.helpers.connection')
-    def test_empty_database_result(self, mock_connection):
-        """Test when database returns no license information"""
-        # Setup
-        mock_cursor = MagicMock()
-        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.fetchall.return_value = []
-        mock_cursor.fetchone.return_value = None  # No version found
-
-        # Execute
-        license_info, settings_info = get_config_and_settings_from_db()
-
-        # Assert both should be empty
-        assert license_info == {}
-        assert settings_info == {}
 
 
 class TestGetLastEntriesFromDb:
@@ -155,31 +103,18 @@ class TestIntegration:
 
     @patch('metrics_utility.automation_controller_billing.helpers.connection')
     def test_functions_work_with_real_data(self, mock_connection):
-        """Test that all helper functions work with realistic data"""
+        """Test that helper functions work with realistic data"""
         # Setup realistic database responses
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
 
-        # Setup data for all function calls in sequence:
-        # 1. get_config_and_settings_from_db() - fetchall()
-        # 3. get_last_entries_from_db() - fetchone()
-        mock_cursor.fetchall.return_value = [
-            ('LICENSE', '{"license_type": "enterprise"}'),
-            ('SUBSCRIPTION_NAME', '"Red Hat AAP"'),
-            ('ABC', '"1.2.3"'),
-        ]
+        # Setup data for get_last_entries_from_db() - fetchone()
         test_json = '"{\\"config\\": \\"2024-01-01T00:00:00Z\\", \\"jobs\\": \\"2024-01-02T00:00:00Z\\"}"'  # Last entries result
         mock_cursor.fetchone.return_value = (test_json,)
 
-        # Execute all functions
-        license_info, settings_info = get_config_and_settings_from_db()
+        # Execute function
         entries = get_last_entries_from_db()
 
-        # Assert all return expected realistic data
-        assert license_info == {
-            'license_type': 'enterprise',
-        }
-        assert settings_info.get('abc') == '1.2.3'
         # datetime_hook parses datetime strings to datetime objects
         expected_entries = {
             'config': datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),

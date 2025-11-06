@@ -19,9 +19,8 @@ def config(since, **kwargs):
     description='CSVs splitted by date',
     fnc_slicing=one_day_slicing,
 )
-def csv_one_day_slicing_1(since, full_path, until, **kwargs):
+def csv_one_day_slicing_1(since, until, **kwargs):
     return timestamp_csv(
-        full_path,
         'csv_one_day_slicing_1',
         1,
         2 * TIMESTAMP_CSV_LINE_LENGTH,
@@ -37,9 +36,8 @@ def csv_one_day_slicing_1(since, full_path, until, **kwargs):
     description='CSVs splitted by size and date',
     fnc_slicing=one_day_slicing,
 )
-def csv_one_day_slicing_2(since, full_path, until, **kwargs):
+def csv_one_day_slicing_2(since, until, **kwargs):
     return timestamp_csv(
-        full_path,
         'csv_one_day_slicing_2',
         2,
         2 * TIMESTAMP_CSV_LINE_LENGTH,
@@ -56,9 +54,8 @@ def csv_one_day_slicing_2(since, full_path, until, **kwargs):
     fnc_slicing=full_sync_slicing,
     full_sync_interval_days=5,
 )
-def csv_full_sync_slicing_1(since, full_path, until, **kwargs):
+def csv_full_sync_slicing_1(since, until, **kwargs):
     return timestamp_csv(
-        full_path,
         'csv_full_sync_slicing_1',
         1,
         2 * TIMESTAMP_CSV_LINE_LENGTH,

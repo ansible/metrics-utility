@@ -10,7 +10,7 @@ from metrics_utility.automation_controller_billing.collectors import (
 class TestMainIndirectManagedNodeAuditTable:
     """Test cases for the main_indirectmanagednodeaudit_table function"""
 
-    @patch('metrics_utility.automation_controller_billing.collectors._copy_table')
+    @patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_success(self, mock_get_optional_collectors, mock_copy_table):
         """Test successful execution when table exists"""
@@ -24,15 +24,14 @@ class TestMainIndirectManagedNodeAuditTable:
         until.isoformat.return_value = '2024-01-02T00:00:00'
 
         # Execute
-        result = main_indirectmanagednodeaudit_table(since=since, full_path='/test/path', until=until)
+        result = main_indirectmanagednodeaudit_table(since=since, until=until)
 
         # Assert
         assert result == ['test_file.csv']
         mock_copy_table.assert_called_once()
         call_args = mock_copy_table.call_args
         assert call_args[1]['table'] == 'main_indirectmanagednodeaudit'
-        assert 'COPY' in call_args[1]['query']
-        assert call_args[1]['path'] == '/test/path'
+        assert 'SELECT' in call_args[1]['query']
 
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_not_in_optional_collectors(self, mock_get_optional_collectors):
@@ -41,13 +40,13 @@ class TestMainIndirectManagedNodeAuditTable:
         mock_get_optional_collectors.return_value = {'other_collector'}
 
         # Execute
-        result = main_indirectmanagednodeaudit_table(since=Mock(), full_path='/test/path', until=Mock())
+        result = main_indirectmanagednodeaudit_table(since=Mock(), until=Mock())
 
         # Assert
         assert result is None
 
     @patch('metrics_utility.automation_controller_billing.collectors.logger')
-    @patch('metrics_utility.automation_controller_billing.collectors._copy_table')
+    @patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_programming_error(self, mock_get_optional_collectors, mock_copy_table, mock_logger):
         """Test graceful handling when table doesn't exist (ProgrammingError)"""
@@ -62,7 +61,7 @@ class TestMainIndirectManagedNodeAuditTable:
         until.isoformat.return_value = '2024-01-02T00:00:00'
 
         # Execute
-        result = main_indirectmanagednodeaudit_table(since=since, full_path='/test/path', until=until)
+        result = main_indirectmanagednodeaudit_table(since=since, until=until)
 
         # Assert
         assert result is None
@@ -72,7 +71,7 @@ class TestMainIndirectManagedNodeAuditTable:
         assert 'Falling back to behavior without indirect managed node audit data.' in warning_call[0][0]
         assert warning_call[0][1] is mock_copy_table.side_effect
 
-    @patch('metrics_utility.automation_controller_billing.collectors._copy_table')
+    @patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_query_format(self, mock_get_optional_collectors, mock_copy_table):
         """Test that the SQL query contains expected elements"""
@@ -86,7 +85,7 @@ class TestMainIndirectManagedNodeAuditTable:
         until.isoformat.return_value = '2024-01-02T00:00:00'
 
         # Execute
-        main_indirectmanagednodeaudit_table(since=since, full_path='/test/path', until=until)
+        main_indirectmanagednodeaudit_table(since=since, until=until)
 
         # Assert
         mock_copy_table.assert_called_once()
@@ -105,7 +104,7 @@ class TestMainIndirectManagedNodeAuditTable:
         assert '2024-01-02T00:00:00' in query
 
     @patch('metrics_utility.automation_controller_billing.collectors.logger')
-    @patch('metrics_utility.automation_controller_billing.collectors._copy_table')
+    @patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_logs_specific_error(self, mock_get_optional_collectors, mock_copy_table, mock_logger):
         """Test that the specific error message is logged correctly"""
@@ -120,7 +119,7 @@ class TestMainIndirectManagedNodeAuditTable:
         until.isoformat.return_value = '2024-01-02T00:00:00'
 
         # Execute
-        result = main_indirectmanagednodeaudit_table(since=since, full_path='/test/path', until=until)
+        result = main_indirectmanagednodeaudit_table(since=since, until=until)
 
         # Assert
         assert result is None
