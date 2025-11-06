@@ -24,6 +24,19 @@ should raise an exception when passed invalid values or a bad DB connection, but
 
 Files created by collectors are only cleaned up when called by Package, otherwise rely on having been created inside a per-job tempdir (see helpers), which then gets cleaned up.
 
+Currently supported:
+
+* `config(db, billing_provider_params).gather() -> Dict`
+* `execution_environments(db, [output_dir]).gather() -> [filenames]`
+* `job_host_summary(db, since, until, [output_dir]).gather() -> [filenames]`
+* `job_host_summary_service(db, since, until, [output_dir]).gather() -> [filenames]`
+* `main_host(db, [output_dir]).gather() -> [filenames]`
+* `main_indirectmanagednodeaudit(db, since, until, [output_dir]).gather() -> [filenames]`
+* `main_jobevent(db, since, until, [output_dir]).gather() -> [filenames]`
+* `main_jobevent_service(db, since, until, [output_dir]).gather() -> [filenames]`
+* `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`
+* `unified_jobs(db, since, until, [output_dir]).gather() -> [filenames]`
+
 
 #### Package
 
