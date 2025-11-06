@@ -37,7 +37,7 @@ def test_from_gather_to_json(cleanup_glob):
     print(json_data)
 
     # save as json inside rollups/2025/06/13/anonymized.json
-    json_path = f'./out/rollups/{2025}/06/13/anonymized.json'
+    json_path = './out/rollups/2025/06/13/anonymized.json'
 
     # create the dir
     os.makedirs(os.path.dirname(json_path), exist_ok=True)
