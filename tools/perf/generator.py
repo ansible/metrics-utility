@@ -18,7 +18,7 @@ import pandas as pd
 
 from metrics_utility.automation_controller_billing.extract.base import Base
 from metrics_utility.automation_controller_billing.helpers import parse_json
-from metrics_utility.base import CsvFileSplitter
+from metrics_utility.library import CsvFileSplitter
 
 
 # adds relative time since start; debug with --verbose

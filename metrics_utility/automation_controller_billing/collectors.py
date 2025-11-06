@@ -19,9 +19,10 @@ from metrics_utility.automation_controller_billing.helpers import (
     get_controller_version_from_db,
     get_last_entries_from_db,
 )
-from metrics_utility.base import CsvFileSplitter, register
+from metrics_utility.base import register
 from metrics_utility.base.utils import get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.library import CsvFileSplitter
 from metrics_utility.logger import logger, logger_info_level
 
 from .prometheus_client import PrometheusClient
