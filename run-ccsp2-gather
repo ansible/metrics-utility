@@ -5,6 +5,9 @@ cd "`dirname "$0"`"
 export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="directory"
 
+# FIXME: total_workers_vcpu needs more setup
+export METRICS_UTILITY_OPTIONAL_COLLECTORS="execution_environments,job_host_summary_service,main_host,main_indirectmanagednodeaudit,main_jobevent,main_jobevent_service,unified_jobs"
+
 if ! pg_isready -h localhost; then
   echo "run-s3-gather-build: DB not ready, run make compose first"
   exit 1
