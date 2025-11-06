@@ -86,25 +86,61 @@ def anonymize_data(data, salt):
             events_modules['modules_used_per_playbook_total'] = new_dict
 
 
-def flatten_json(json_data):
-    # everything should be only level one key and arrays of objects inside
-    # except key statistics that is object for every primitive value
-    
-    # new json should have all the data from the original json_data, but flattened
+def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Manually flattens the given nested report into:
+      - statistics: object of primitive totals
+      - modules_used_per_playbook: array of {playbook_id, modules_used}
+      - module_stats: array (copied as-is)
+      - collection_name_stats: array (copied as-is)
+      - jobs_by_template: array (copied as-is)
+      - job_host_summary: array (copied as-is)
+    """
+    events_modules = data.get("events_modules", {})
+    execution_environments = data.get("execution_environments", {})
+    jobs = data.get("jobs", {})
+    job_host_summary_root = data.get("job_host_summary", {})
 
-    f'''
-    example:
-    {
-        'statistics': {
-            'jobs_total': 100,
-        },
-        'module_stats' : [...module statuses]
-        'collection_name_stats' : [...collection name statuses]
+    # 1) statistics (collect only primitive totals)
+    statistics = {
+        # from events_modules
+        "modules_used_to_automate_total": events_modules.get("modules_used_to_automate_total"),
+        "avg_number_of_modules_used_in_a_playbooks": events_modules.get("avg_number_of_modules_used_in_a_playbooks"),
+        "total_hosts_automated": events_modules.get("total_hosts_automated"),
+        # from execution_environments
+        "total_EE": execution_environments.get("total_EE"),
+        "default_EE": execution_environments.get("default_EE"),
+        "custom_EE": execution_environments.get("custom_EE"),
+        # from jobs
+        "jobs_total": jobs.get("jobs_total"),
+        # from job_host_summary
+        "total_unique_hosts": job_host_summary_root.get("total_unique_hosts"),
     }
 
-    '''
+    # 2) modules_used_per_playbook (convert map -> array)
+    mup_map: Dict[str, int] = events_modules.get("modules_used_per_playbook_total", {}) or {}
+    modules_used_per_playbook: List[Dict[str, Any]] = [
+        {"playbook_id": playbook_id, "modules_used": modules_used}
+        for playbook_id, modules_used in mup_map.items()
+    ]
 
-    return json_data
+    # 3) arrays copied as-is from their respective parents
+    module_stats: List[Dict[str, Any]] = events_modules.get("module_stats", []) or []
+    collection_name_stats: List[Dict[str, Any]] = events_modules.get("collection_name_stats", []) or []
+    jobs_by_template: List[Dict[str, Any]] = jobs.get("by_template", []) or []
+    job_host_summary: List[Dict[str, Any]] = job_host_summary_root.get("aggregated", []) or []
+
+    # 4) assemble the flattened object
+    flattened: Dict[str, Any] = {
+        "statistics": statistics,
+        "modules_used_per_playbook": modules_used_per_playbook,
+        "module_stats": module_stats,
+        "collection_name_stats": collection_name_stats,
+        "jobs_by_template": jobs_by_template,
+        "job_host_summary": job_host_summary,
+    }
+
+    return flattened
 
 def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, salt):
     data = {
@@ -114,6 +150,8 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         'job_host_summary': job_host_summary_rollup,
     }
     anonymize_data(data, salt)
+
+    data = flatten_json_report(data)
     return data
 
 
