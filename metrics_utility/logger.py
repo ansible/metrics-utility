@@ -3,12 +3,9 @@ import sys
 import warnings
 
 
-first = sys.argv[0]
-
-if first.endswith('manage.py'):
+if sys.argv[0].endswith('manage.py'):
     warnings.simplefilter(action='ignore', category=FutureWarning)
 
-# FIXME: warning
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -17,5 +14,5 @@ logger_info_level = logging.getLogger(__name__)
 logger_info_level.setLevel(logging.INFO)
 
 
-def debug():
+def logger_debug():
     logger.setLevel(logging.DEBUG)

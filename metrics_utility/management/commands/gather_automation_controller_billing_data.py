@@ -9,7 +9,7 @@ from metrics_utility.exceptions import (
     BadShipTarget,
     NoAnalyticsCollected,
 )
-from metrics_utility.logger import debug, logger
+from metrics_utility.logger import logger, logger_debug
 from metrics_utility.management.validation import (
     date_format_text,
     handle_crc_ship_target,
@@ -91,7 +91,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options.get('verbose'):
-            debug()
+            logger_debug()
         handle_env_validation('gather')
 
         opt_since = options.get('since')

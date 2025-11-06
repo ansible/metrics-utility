@@ -11,7 +11,7 @@ from metrics_utility.automation_controller_billing.extract.factory import Factor
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
-from metrics_utility.logger import debug, logger
+from metrics_utility.logger import logger, logger_debug
 from metrics_utility.management.validation import (
     date_format_text,
     handle_directory_ship_target,
@@ -120,7 +120,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options.get('verbose'):
-            debug()
+            logger_debug()
 
         handle_env_validation('build')
 
