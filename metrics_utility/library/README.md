@@ -160,3 +160,28 @@ A rollup is the process of building a dataframe from raw csv files, and saving t
 Reports are predefined classes which take a set of dataframes, along with additional config, and create a XLSX file with a specific report. ReportCCSP, ReportCCSPv2 and ReportRenewalGuidance are implemented.
 
 The xlsx file can again be passed to storage.
+
+
+### Helpers
+
+#### Datetime helpers (`library.instants`)
+
+The `instants` module provides helper functions for working with datetime values. All functions return `datetime.datetime` objects with timezone set to UTC. These helpers are designed to work with the collector convention where `since` is the first moment of the collected interval (inclusive), while `until` is the first moment outside the interval (exclusive).
+
+Available helpers:
+
+* `now()` - current moment in UTC
+* `this_minute()`, `this_hour`, `this_day`, `this_week`, `this_month` - start of the current time period
+* `last_hour(relative_to=this_hour())`, `last_day`, `last_week`, `last_month` - start of the previous time period (relative to the provided datetime or current time)
+* `minutes_ago(n, relative_to=this_minute())`, `hours_ago`, `days_ago`, `weeks_ago`, `months_ago` - start of the time period n periods ago
+* `iso(dt)` - convert datetime to ISO 8601 string format
+
+Example usage:
+
+```python
+from metrics_utility.library.instants import now, days_ago
+
+# Get data for the last 30 days
+since = days_ago(30)
+until = now()
+```
