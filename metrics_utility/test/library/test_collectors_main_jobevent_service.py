@@ -1,0 +1,204 @@
+import datetime
+
+from unittest.mock import MagicMock, patch
+
+from metrics_utility.library.collectors.main_jobevent_service import main_jobevent_service
+
+
+def test_main_jobevent_service_basic():
+    """Test main_jobevent_service collector basic functionality."""
+    mock_db = MagicMock()
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+
+    assert hasattr(instance, 'gather')
+    assert hasattr(instance, 'kwargs')
+    assert instance.kwargs['db'] == mock_db
+    assert instance.kwargs['since'] == since
+    assert instance.kwargs['until'] == until
+
+
+def test_main_jobevent_service_with_output_dir():
+    """Test main_jobevent_service with custom output_dir."""
+    mock_db = MagicMock()
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    output_dir = '/tmp/test_output'
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until, output_dir=output_dir)
+
+    assert instance.kwargs['output_dir'] == output_dir
+
+
+@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
+    """Test that collector returns None when no jobs are found."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    # No jobs found
+    mock_cursor.fetchall.return_value = []
+
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    result = instance.gather()
+
+    # Should return None when no jobs
+    assert result is None
+
+    # Should not call copy_table
+    mock_copy_table.assert_not_called()
+
+
+@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
+    """Test that collector calls copy_table when jobs are found."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    # Mock jobs
+    job_created1 = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
+    job_created2 = datetime.datetime(2024, 1, 16, 14, 45, tzinfo=datetime.timezone.utc)
+    mock_cursor.fetchall.return_value = [(100, job_created1), (101, job_created2)]
+
+    mock_copy_table.return_value = ['/tmp/main_jobevent_table.csv']
+
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    result = instance.gather()
+
+    # Should call copy_table
+    mock_copy_table.assert_called_once()
+    call_args = mock_copy_table.call_args
+
+    assert call_args[1]['db'] == mock_db
+    assert call_args[1]['table'] == 'main_jobevent'
+    assert 'query' in call_args[1]
+    assert result == ['/tmp/main_jobevent_table.csv']
+
+
+@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+def test_main_jobevent_service_query_structure(mock_copy_table):
+    """Test that the SQL query has expected structure."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    job_created = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
+    mock_cursor.fetchall.return_value = [(100, job_created)]
+    mock_copy_table.return_value = []
+
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    instance.gather()
+
+    call_args = mock_copy_table.call_args
+    query = call_args[1]['query']
+
+    # Should query expected tables
+    assert 'main_jobevent' in query
+    assert 'main_unifiedjob' in query
+
+    # Should have event_data JSON extraction
+    assert 'event_data' in query
+    assert 'task_action' in query
+    assert 'resolved_action' in query
+    assert 'duration' in query
+    assert 'warnings' in query
+    assert 'deprecations' in query
+
+
+@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+def test_main_jobevent_service_builds_values_clause(mock_copy_table):
+    """Test that query builds VALUES clause from job list."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    job_created1 = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=datetime.timezone.utc)
+    job_created2 = datetime.datetime(2024, 1, 16, 14, 45, 30, tzinfo=datetime.timezone.utc)
+    mock_cursor.fetchall.return_value = [(100, job_created1), (200, job_created2)]
+    mock_copy_table.return_value = []
+
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    instance.gather()
+
+    call_args = mock_copy_table.call_args
+    query = call_args[1]['query']
+
+    # Should have VALUES clause with job pairs
+    assert 'VALUES' in query
+    assert '(100,' in query
+    assert '(200,' in query
+    assert '2024-01-15T10:30:45+00:00' in query
+    assert '2024-01-16T14:45:30+00:00' in query
+
+
+@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+def test_main_jobevent_service_initial_query_parameters(mock_copy_table):
+    """Test that initial jobs query uses correct parameters."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    mock_cursor.fetchall.return_value = []
+
+    since = datetime.datetime(2024, 3, 1, 8, 0, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 3, 2, 20, 0, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    instance.gather()
+
+    # Check that execute was called with correct parameters
+    mock_cursor.execute.assert_called_once()
+    call_args = mock_cursor.execute.call_args
+
+    # Should pass since and until as parameters
+    params = call_args[0][1]
+    assert params['since'] == since
+    assert params['until'] == until
+
+
+@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
+    """Test that query handles playbook_on_stats event specially."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+    job_created = datetime.datetime(2024, 1, 15, tzinfo=datetime.timezone.utc)
+    mock_cursor.fetchall.return_value = [(100, job_created)]
+    mock_copy_table.return_value = []
+
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    instance.gather()
+
+    call_args = mock_copy_table.call_args
+    query = call_args[1]['query']
+
+    # Should have CASE statement for playbook_on_stats
+    assert 'playbook_on_stats' in query
+    assert 'CASE' in query
+    assert 'artifact_data' in query

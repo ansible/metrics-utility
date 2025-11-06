@@ -7,8 +7,6 @@ import pytest
 from metrics_utility.library.storage import StorageDirectory
 
 
-# "localhost" (github actions, pytest WITH compose) or "minio" (pytest IN compose)
-endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000')
 base_path = '/tmp/test_storage_directory'
 target_filename = f'temporary object {os.getpid()}'
 joined = os.path.join(base_path, target_filename)
