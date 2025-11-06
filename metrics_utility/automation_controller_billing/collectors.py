@@ -96,7 +96,10 @@ def until_slicing(key, **kwargs):
     # exactly like limit_slicing, but uses the `until` timestamp, or now
     # TODO: just replace limit_slicing?
     until = kwargs.get('until', now())
-    yield (until, until)
+    # Store the snapshot at the last day being collected (until - 1 day)
+    # since 'until' is the exclusive upper bound
+    last_day = until - timedelta(days=1)
+    yield (last_day, last_day)
 
 
 @register('config', '1.1', description=_('General platform configuration.'), config=True)
