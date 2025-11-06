@@ -13,6 +13,7 @@ from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 
+from typing import Dict, Any, List
 
 def hash(value, salt):
     # has the value and salt, hash should be string
