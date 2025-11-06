@@ -57,7 +57,6 @@ VALID_COLLECTORS = {
     'job_host_summary_service',
     'main_jobevent_service',
     'execution_environments',
-    '',
 }
 
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
@@ -242,13 +241,13 @@ def validate_collectors(errors):
             list of collector names. Defaults to 'main_jobevent' if not set.
 
     Notes:
-        - The set of valid optional collectors is defined by the global variable
-          VALID_COLLECTORS.
-        - Error messages include the invalid collector names and the list of
-          valid values.
+        - The set of valid optional collectors is defined by the global variable VALID_COLLECTORS.
+        - Error messages include the invalid collector names and the list ofvalid values.
     """
 
-    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').rstrip(',').split(',')
+    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t')
+    if collectors:
+        collectors = collectors.split(',')
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:
