@@ -2,6 +2,8 @@
 Unit tests for helper functions.
 """
 
+import pytest
+
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
@@ -80,7 +82,7 @@ def test_sanitize_json_with_complex_structure():
 
     # Verify NaN and inf are replaced
     assert result['jobs'][0]['avg_duration'] is None
-    assert result['jobs'][1]['avg_duration'] == 120.5
+    assert result['jobs'][1]['avg_duration'] == pytest.approx(120.5)
     assert result['execution_environments']['ratio'] is None
     assert result['events_modules']['module_stats'][0]['count'] is None
     assert result['events_modules']['module_stats'][1]['count'] == 42
