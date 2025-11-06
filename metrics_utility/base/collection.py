@@ -51,7 +51,7 @@ class Collection:
     def data_size(self):
         pass
 
-    def gather(self, max_data_size):
+    def gather(self):
         self.gathering_started_at = now()
 
         try:
@@ -61,7 +61,6 @@ class Collection:
             result = self.fnc_collecting(
                 since=self.since,
                 until=self.until,
-                max_data_size=max_data_size,
                 full_path=self.collector.gather_dir,
             )
             self._save_gathering(result)

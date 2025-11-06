@@ -305,7 +305,7 @@ class Package:
 
     def _data_collection_status_to_tar(self, tar):
         try:
-            self.data_collection_status.gather(None)
+            self.data_collection_status.gather()
             self.data_collection_status.add_to_tar(tar)
             self.manifest.add_collection(self.data_collection_status)
         except Exception as e:
@@ -313,7 +313,7 @@ class Package:
 
     def _manifest_to_tar(self, tar):
         try:
-            self.manifest.gather(None)
+            self.manifest.gather()
             self.manifest.add_to_tar(tar)
             self.add_collection(self.manifest)
         except Exception as e:

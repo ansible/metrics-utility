@@ -246,13 +246,13 @@ class Collector:
             logger.log(self.log_level, "'config' collector data is missing")
             return False
         else:
-            self.collections['config'].gather(self._package_class().max_data_size())
+            self.collections['config'].gather()
             return True
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
         for collection in self.collections[Collection.COLLECTION_TYPE_JSON]:
-            collection.gather(self._package_class().max_data_size())
+            collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
                 continue
@@ -290,7 +290,7 @@ class Collector:
 
                 last_key = collection.key
 
-            collection.gather(self._package_class().max_data_size())
+            collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
                 continue
