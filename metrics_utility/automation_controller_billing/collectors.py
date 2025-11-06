@@ -48,7 +48,7 @@ data _since_ the last report date - i.e., new data in the last 24 hours)
 """
 
 
-def daily_slicing(key, last_gather, **kwargs):
+def daily_slicing(key, last_gather=None, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
     if since is not None:
         last_entry = since
@@ -75,7 +75,7 @@ def daily_slicing(key, last_gather, **kwargs):
         start = end
 
 
-def limit_slicing(key, last_gather, **kwargs):
+def limit_slicing(key, **kwargs):
     # For tables where we always need to do a table full scan, we want to load batches
 
     # TODO: skip today's collection if it already happened, so we don't load full inventory

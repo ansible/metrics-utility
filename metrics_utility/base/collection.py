@@ -87,9 +87,10 @@ class Collection:
         # Or it can force full table sync if interval is given
         if self.fnc_slicing:
             if self.full_sync_enabled:
-                slices = self.fnc_slicing(self.key, last_gather, full_sync_enabled=True)
+                # FIXME: unused, no slicer accepts full_sync_enabled
+                slices = self.fnc_slicing(self.key, last_gather=last_gather, full_sync_enabled=True)
             else:
-                slices = self.fnc_slicing(self.key, last_gather, since=since, until=until)
+                slices = self.fnc_slicing(self.key, last_gather=last_gather, since=since, until=until)
         else:
             slices = [(self._gather_since(), self._gather_until())]
 
