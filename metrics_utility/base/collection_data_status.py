@@ -17,8 +17,8 @@ class CollectionDataStatus(CollectionCSV):
         format='csv',
         description='Data collection status',
     )
-    def data_collection_status(self, full_path, **kwargs):
-        file_path = os.path.join(full_path, self.filename)
+    def data_collection_status(self, output_dir=None, **kwargs):
+        file_path = os.path.join(output_dir, self.filename)
         with open(file_path, 'w', newline='') as csvfile:
             fieldnames = [
                 'collection_start_timestamp',

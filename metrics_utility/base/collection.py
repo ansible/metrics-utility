@@ -61,7 +61,8 @@ class Collection:
             result = self.fnc_collecting(
                 since=self.since,
                 until=self.until,
-                full_path=self.collector.gather_dir,
+                output_dir=self.collector.gather_dir,
+                billing_provider_params=self.collector.billing_provider_params,  # FIXME: used only by config collector
             )
             self._save_gathering(result)
 
