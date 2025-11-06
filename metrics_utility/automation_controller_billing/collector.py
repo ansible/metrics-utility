@@ -30,9 +30,12 @@ class Collector(base.Collector):
             collector_module = collectors
 
         self.ship_target = ship_target
-        self.billing_provider_params = billing_provider_params
 
-        super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module)
+        super(Collector, self).__init__(
+            collection_type=collection_type,
+            collector_module=collector_module,
+            billing_provider_params=billing_provider_params,
+        )
 
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass

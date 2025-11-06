@@ -42,8 +42,10 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(self, collection_type=DRY_RUN, collector_module=None):
+    def __init__(self, collection_type=DRY_RUN, collector_module=None, billing_provider_params=None):
         self.collector_module = collector_module
+        self.billing_provider_params = billing_provider_params
+
         self.collections = {}
         self.packages = {}
 
