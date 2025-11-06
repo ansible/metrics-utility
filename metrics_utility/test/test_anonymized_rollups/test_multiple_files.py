@@ -166,21 +166,19 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
 
     # ========== Validate the results ==========
 
-    # Validate structure
-    assert 'jobs' in result
+    # Validate flattened structure
+    assert 'statistics' in result
+    assert 'jobs_by_template' in result
     assert 'job_host_summary' in result
-    assert 'execution_environments' in result
-    assert 'events_modules' in result
+    assert 'module_stats' in result
+    assert 'collection_name_stats' in result
+    assert 'modules_used_per_playbook' in result
 
     # ========== Validate Jobs ==========
-    jobs_result = result['jobs']
-    assert isinstance(jobs_result, dict)
-    assert 'by_template' in jobs_result
-    assert 'jobs_total' in jobs_result
-    jobs_list = jobs_result['by_template']
+    jobs_list = result['jobs_by_template']
     assert isinstance(jobs_list, list)
     assert len(jobs_list) == 3  # T1, T2, T3
-    assert jobs_result['jobs_total'] == 5  # Total jobs across all templates
+    assert result['statistics']['jobs_total'] == 5  # Total jobs across all templates
 
     # T1 should have data from both tarballs (jobs 1, 2, 4)
     t1_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 3]
@@ -229,21 +227,15 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert t3['job_waiting_time_average_in_seconds'] is None
 
     # ========== Validate Execution Environments ==========
-    ee_result = result['execution_environments']
-    assert ee_result['total_EE'] == 5
-    assert ee_result['default_EE'] == 2
-    assert ee_result['custom_EE'] == 3
+    assert result['statistics']['total_EE'] == 5
+    assert result['statistics']['default_EE'] == 2
+    assert result['statistics']['custom_EE'] == 3
 
     # ========== Validate Job Host Summary ==========
-    jhs_result = result['job_host_summary']
-    assert isinstance(jhs_result, dict), 'job_host_summary should be a dict'
-    assert 'aggregated' in jhs_result, 'job_host_summary should have aggregated key'
-    assert 'total_unique_hosts' in jhs_result, 'job_host_summary should have total_unique_hosts key'
-
-    jhs_list = jhs_result['aggregated']
-    assert isinstance(jhs_list, list)
+    jhs_list = result['job_host_summary']
+    assert isinstance(jhs_list, list), 'job_host_summary should be a list'
     assert len(jhs_list) == 2  # T1 and T2
-    assert jhs_result['total_unique_hosts'] == 5, 'Should have 5 unique hosts (h1-h5)'
+    assert result['statistics']['total_unique_hosts'] == 5, 'Should have 5 unique hosts (h1-h5)'
 
     # Verify data was concatenated from both tarballs
     # verify number of ok, failures, skipped, ignored, rescued, dark for each template
@@ -262,24 +254,15 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert jhs_list[1]['dark_total'] == 0
 
     # ========== Validate Events Modules ==========
-    events_modules = result['events_modules']
-    assert isinstance(events_modules, dict), 'events_modules should be a dictionary'
-
-    # Assert required keys are present
-    assert 'modules_used_to_automate_total' in events_modules, "Missing 'modules_used_to_automate_total'"
-    assert 'module_stats' in events_modules, "Missing 'module_stats'"
-    assert 'collection_name_stats' in events_modules, "Missing 'collection_name_stats'"
-    assert 'total_hosts_automated' in events_modules, "Missing 'total_hosts_automated'"
-    assert 'avg_number_of_modules_used_in_a_playbooks' in events_modules, "Missing 'avg_number_of_modules_used_in_a_playbooks'"
-    assert 'modules_used_per_playbook_total' in events_modules, "Missing 'modules_used_per_playbook_total'"
+    # In flattened structure, events_modules data is now in statistics and direct arrays
 
     # Verify values from concatenated data across 3 tarballs
-    assert events_modules['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert events_modules['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
-    assert events_modules['avg_number_of_modules_used_in_a_playbooks'] == 3.0, 'Average modules per playbook should be 3.0'
+    assert result['statistics']['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
+    assert result['statistics']['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert result['statistics']['avg_number_of_modules_used_in_a_playbooks'] == 3.0, 'Average modules per playbook should be 3.0'
 
     # Check specific known modules are present in module_stats
-    module_names = [m['module_name'] for m in events_modules['module_stats'] if 'module_name' in m]
+    module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
     assert 'ansible.netcommon.cli_config' in module_names
     assert 'ansible.posix.firewalld' in module_names
     assert 'ansible.windows.win_copy' in module_names
@@ -288,7 +271,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert 'community.mongodb.insert' in module_names
 
     # Verify module stats have data from all tarballs
-    module_stats = events_modules['module_stats']
+    module_stats = result['module_stats']
     assert isinstance(module_stats, list), 'module_stats should be a list'
     assert len(module_stats) == 7, 'Should have stats for all 7 modules'
 
@@ -318,7 +301,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert yum['avg_job_duration_seconds'] == 500.0
 
     # Verify collection stats
-    collection_stats = events_modules['collection_name_stats']
+    collection_stats = result['collection_name_stats']
     assert isinstance(collection_stats, list), 'collection_name_stats should be a list'
     assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
 
@@ -333,12 +316,12 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert windows_coll['task_success_with_reruns_total'] == 2
     assert windows_coll['avg_job_duration_seconds'] == 700.0
 
-    # Verify modules_used_per_playbook_total is a dict with 5 entries
-    playbook_modules = events_modules['modules_used_per_playbook_total']
-    assert isinstance(playbook_modules, dict), 'modules_used_per_playbook_total should be a dict'
+    # Verify modules_used_per_playbook is now an array with 5 entries (flattened structure)
+    playbook_modules = result['modules_used_per_playbook']
+    assert isinstance(playbook_modules, list), 'modules_used_per_playbook should be a list'
     assert len(playbook_modules) == 5, 'Should have 5 playbooks'
     # Check values sum to expected total
-    total_module_usage = sum(playbook_modules.values())
+    total_module_usage = sum(p['modules_used'] for p in playbook_modules)
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
 
@@ -364,41 +347,48 @@ def test_empty_tarballs_handling(cleanup_test_data):
     print('\n=== Empty Tarball Result ===')
     print(json_content)
 
-    # Validate structure exists even with empty data
-    assert 'jobs' in result
+    # Validate flattened structure exists even with empty data
+    assert 'statistics' in result
+    assert 'jobs_by_template' in result
     assert 'job_host_summary' in result
-    assert 'execution_environments' in result
-    assert 'events_modules' in result
+    assert 'module_stats' in result
+    assert 'collection_name_stats' in result
+    assert 'modules_used_per_playbook' in result
 
-    # When there's no data, the system returns empty dicts/lists
-    # Verify empty values for jobs
-    assert isinstance(result['jobs'], dict), 'jobs should be a dict'
-    # Empty jobs can be either completely empty dict or dict with empty by_template list
-    if result['jobs']:  # If not empty dict
-        assert 'by_template' in result['jobs'], 'jobs should have by_template key'
-        assert 'jobs_total' in result['jobs'], 'jobs should have jobs_total key'
-        assert isinstance(result['jobs']['by_template'], list), 'by_template should be a list'
-        assert len(result['jobs']['by_template']) == 0, 'by_template should be empty with no data'
-        assert result['jobs']['jobs_total'] == 0, 'jobs_total should be 0 with no data'
+    # Verify statistics contains all fields (with null values for empty data)
+    statistics = result['statistics']
+    assert isinstance(statistics, dict), 'statistics should be a dict'
+    assert 'modules_used_to_automate_total' in statistics
+    assert 'avg_number_of_modules_used_in_a_playbooks' in statistics
+    assert 'total_hosts_automated' in statistics
+    assert 'total_EE' in statistics
+    assert 'default_EE' in statistics
+    assert 'custom_EE' in statistics
+    assert 'jobs_total' in statistics
+    assert 'total_unique_hosts' in statistics
 
-    # Verify empty values for job_host_summary
-    # When empty, can be either an empty list or empty dict depending on code path
-    assert isinstance(result['job_host_summary'], (dict, list)), 'job_host_summary should be a dict or list'
-    if isinstance(result['job_host_summary'], dict):
-        if result['job_host_summary']:  # If not empty dict
-            assert 'aggregated' in result['job_host_summary'], 'job_host_summary should have aggregated key'
-            assert 'total_unique_hosts' in result['job_host_summary'], 'job_host_summary should have total_unique_hosts key'
-            assert isinstance(result['job_host_summary']['aggregated'], list), 'aggregated should be a list'
-            assert len(result['job_host_summary']['aggregated']) == 0, 'aggregated should be empty with no data'
-            assert result['job_host_summary']['total_unique_hosts'] == 0, 'total_unique_hosts should be 0 with no data'
-    else:  # list
-        assert len(result['job_host_summary']) == 0, 'job_host_summary list should be empty with no data'
+    # All statistics should be None for empty data
+    assert statistics['modules_used_to_automate_total'] is None
+    assert statistics['avg_number_of_modules_used_in_a_playbooks'] is None
+    assert statistics['total_hosts_automated'] is None
+    assert statistics['total_EE'] is None
+    assert statistics['default_EE'] is None
+    assert statistics['custom_EE'] is None
+    assert statistics['jobs_total'] is None
+    assert statistics['total_unique_hosts'] is None
 
-    # Verify execution_environments is empty dict
-    assert isinstance(result['execution_environments'], dict), 'execution_environments should be a dict'
-    assert len(result['execution_environments']) == 0, 'execution_environments should be empty with no data'
+    # Verify all arrays are empty
+    assert isinstance(result['jobs_by_template'], list), 'jobs_by_template should be a list'
+    assert len(result['jobs_by_template']) == 0, 'jobs_by_template should be empty with no data'
 
-    # Verify events_modules is empty dict
-    events_modules = result['events_modules']
-    assert isinstance(events_modules, dict), 'events_modules should be a dict'
-    assert len(events_modules) == 0, 'events_modules should be empty with no data'
+    assert isinstance(result['job_host_summary'], list), 'job_host_summary should be a list'
+    assert len(result['job_host_summary']) == 0, 'job_host_summary should be empty with no data'
+
+    assert isinstance(result['module_stats'], list), 'module_stats should be a list'
+    assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'
+
+    assert isinstance(result['collection_name_stats'], list), 'collection_name_stats should be a list'
+    assert len(result['collection_name_stats']) == 0, 'collection_name_stats should be empty with no data'
+
+    assert isinstance(result['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
+    assert len(result['modules_used_per_playbook']) == 0, 'modules_used_per_playbook should be empty with no data'
