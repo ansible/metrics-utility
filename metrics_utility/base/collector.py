@@ -227,8 +227,6 @@ class Collector:
         return available_package
 
     def _gather_initialize(self, collectors_subset, since, until):
-        logger.debug(f'Last analytics run was: {self._last_gathering()}')
-
         self.gather_dir = init_tmp_dir()
         self.tmp_dir = self.gather_dir.parent
 
