@@ -51,7 +51,8 @@ metrics_utility/test/test_data/data/**/*.json
 /tools/perf/generated/
 
 # AI
-/.claude/*
+/.claude/
+/CLAUDE.local.md
 
 # Temporary collection files
 /tools/collections/collections.json
