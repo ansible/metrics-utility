@@ -1,4 +1,4 @@
-from .util import collector, copy_table
+from ..util import collector, copy_table
 
 
 @collector

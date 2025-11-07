@@ -2,7 +2,7 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.main_jobevent import main_jobevent
+from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent
 
 
 def test_main_jobevent_basic():
@@ -32,7 +32,7 @@ def test_main_jobevent_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.main_jobevent.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent.copy_table')
 def test_main_jobevent_calls_copy_table(mock_copy_table):
     """Test that main_jobevent calls copy_table."""
     mock_db = MagicMock()
@@ -52,7 +52,7 @@ def test_main_jobevent_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/main_jobevent_table.csv']
 
 
-@patch('metrics_utility.library.collectors.main_jobevent.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent.copy_table')
 def test_main_jobevent_query_contains_time_range(mock_copy_table):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
@@ -73,7 +73,7 @@ def test_main_jobevent_query_contains_time_range(mock_copy_table):
     assert 'main_jobhostsummary.modified <' in query
 
 
-@patch('metrics_utility.library.collectors.main_jobevent.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent.copy_table')
 def test_main_jobevent_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
@@ -103,7 +103,7 @@ def test_main_jobevent_query_structure(mock_copy_table):
     assert 'duration' in query
 
 
-@patch('metrics_utility.library.collectors.main_jobevent.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent.copy_table')
 def test_main_jobevent_filters_event_types(mock_copy_table):
     """Test that query filters for specific event types."""
     mock_db = MagicMock()
@@ -125,7 +125,7 @@ def test_main_jobevent_filters_event_types(mock_copy_table):
     assert 'runner_retry' in query
 
 
-@patch('metrics_utility.library.collectors.main_jobevent.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent.copy_table')
 def test_main_jobevent_unicode_escape_handling(mock_copy_table):
     """Test that query handles unicode escapes in event_data."""
     mock_db = MagicMock()

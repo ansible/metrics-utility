@@ -26,6 +26,7 @@ Files created by collectors are only cleaned up when called by Package, otherwis
 
 Currently supported:
 
+Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `config(db, billing_provider_params).gather() -> Dict`
 * `execution_environments(db, [output_dir]).gather() -> [filenames]`
 * `job_host_summary(db, since, until, [output_dir]).gather() -> [filenames]`
@@ -34,8 +35,10 @@ Currently supported:
 * `main_indirectmanagednodeaudit(db, since, until, [output_dir]).gather() -> [filenames]`
 * `main_jobevent(db, since, until, [output_dir]).gather() -> [filenames]`
 * `main_jobevent_service(db, since, until, [output_dir]).gather() -> [filenames]`
-* `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`
 * `unified_jobs(db, since, until, [output_dir]).gather() -> [filenames]`
+
+Other collectors (in `metrics_utility.library.collectors.others`):
+* `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`
 
 
 #### Package

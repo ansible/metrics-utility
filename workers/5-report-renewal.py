@@ -17,7 +17,7 @@ since = library.last_gather(db=metrics_db, key=worker_key) or library.instants.l
 until = library.instants.now()
 
 dataframe = library.dataframes.DataframeHostMetric()
-collector = library.collectors.host_metric(db=controller_db, since=since)
+collector = library.collectors.controller.host_metric(db=controller_db, since=since)
 
 with library.lock(db=metrics_db, key=worker_key):
     dataframe.add(collector.gather())

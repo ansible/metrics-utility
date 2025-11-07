@@ -16,7 +16,7 @@ since = library.instants.last_day()
 until = library.instants.this_day()  # or library.instants.minutes_ago(10)
 
 # collectors return Collection instances, have .gather, .add_to_tar, .key ; disregards slicing
-c = library.collectors
+c = library.collectors.controller
 collectors = [
     c.config(db=controller_db),
     c.job_host_summary(db=controller_db, since=since, until=until),

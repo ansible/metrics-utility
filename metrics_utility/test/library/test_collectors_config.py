@@ -2,7 +2,7 @@ import json
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.config import (
+from metrics_utility.library.collectors.controller.config import (
     _datetime_hook,
     _get_controller_settings,
     _get_controller_version,

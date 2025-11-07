@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.execution_environments import execution_environments
+from metrics_utility.library.collectors.controller.execution_environments import execution_environments
 
 
 def test_execution_environments_basic():
@@ -26,7 +26,7 @@ def test_execution_environments_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.execution_environments.copy_table')
+@patch('metrics_utility.library.collectors.controller.execution_environments.copy_table')
 def test_execution_environments_calls_copy_table(mock_copy_table):
     """Test that execution_environments calls copy_table with correct parameters."""
     mock_db = MagicMock()
@@ -49,7 +49,7 @@ def test_execution_environments_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/main_executionenvironment_table.csv']
 
 
-@patch('metrics_utility.library.collectors.execution_environments.copy_table')
+@patch('metrics_utility.library.collectors.controller.execution_environments.copy_table')
 def test_execution_environments_query_structure(mock_copy_table):
     """Test that the SQL query selects from main_executionenvironment."""
     mock_db = MagicMock()
@@ -71,7 +71,7 @@ def test_execution_environments_query_structure(mock_copy_table):
     assert 'name' in query
 
 
-@patch('metrics_utility.library.collectors.execution_environments.copy_table')
+@patch('metrics_utility.library.collectors.controller.execution_environments.copy_table')
 def test_execution_environments_with_output_dir_passed_to_copy_table(mock_copy_table):
     """Test that output_dir is passed to copy_table."""
     mock_db = MagicMock()

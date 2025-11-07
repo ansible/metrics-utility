@@ -8,7 +8,7 @@ import distro
 
 from django.utils.dateparse import parse_datetime
 
-from .util import collector
+from ..util import collector
 
 
 # controller settings we collect

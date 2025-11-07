@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.main_host import main_host
+from metrics_utility.library.collectors.controller.main_host import main_host
 
 
 def test_main_host_basic():
@@ -24,7 +24,7 @@ def test_main_host_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.main_host.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_calls_copy_table(mock_copy_table):
     """Test that main_host calls copy_table with correct parameters."""
     mock_db = MagicMock()
@@ -43,7 +43,7 @@ def test_main_host_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/main_host_table.csv']
 
 
-@patch('metrics_utility.library.collectors.main_host.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
@@ -67,7 +67,7 @@ def test_main_host_query_structure(mock_copy_table):
     assert 'ansible_host_variable' in query
 
 
-@patch('metrics_utility.library.collectors.main_host.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_filters_enabled_hosts(mock_copy_table):
     """Test that query filters for enabled hosts."""
     mock_db = MagicMock()
@@ -83,7 +83,7 @@ def test_main_host_filters_enabled_hosts(mock_copy_table):
     assert "enabled='t'" in query or 'enabled = true' in query.lower()
 
 
-@patch('metrics_utility.library.collectors.main_host.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_uses_yaml_json_functions(mock_copy_table):
     """Test that query uses metrics_utility helper functions."""
     mock_db = MagicMock()

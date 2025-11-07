@@ -2,7 +2,7 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.main_jobevent_service import main_jobevent_service
+from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 
 
 def test_main_jobevent_service_basic():
@@ -32,7 +32,7 @@ def test_main_jobevent_service_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     """Test that collector returns None when no jobs are found."""
     mock_db = MagicMock()
@@ -56,7 +56,7 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     mock_copy_table.assert_not_called()
 
 
-@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     """Test that collector calls copy_table when jobs are found."""
     mock_db = MagicMock()
@@ -87,7 +87,7 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/main_jobevent_table.csv']
 
 
-@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
@@ -121,7 +121,7 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
     assert 'deprecations' in query
 
 
-@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_builds_values_clause(mock_copy_table):
     """Test that query builds VALUES clause from job list."""
     mock_db = MagicMock()
@@ -151,7 +151,7 @@ def test_main_jobevent_service_builds_values_clause(mock_copy_table):
     assert '2024-01-16T14:45:30+00:00' in query
 
 
-@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_initial_query_parameters(mock_copy_table):
     """Test that initial jobs query uses correct parameters."""
     mock_db = MagicMock()
@@ -177,7 +177,7 @@ def test_main_jobevent_service_initial_query_parameters(mock_copy_table):
     assert params['until'] == until
 
 
-@patch('metrics_utility.library.collectors.main_jobevent_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
     """Test that query handles playbook_on_stats event specially."""
     mock_db = MagicMock()

@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metrics_utility.library.collectors.total_workers_vcpu import (
+from metrics_utility.library.collectors.others.total_workers_vcpu import (
     get_cpu_timeline,
     get_hour_boundaries,
     get_total_workers_cpu,
@@ -138,8 +138,8 @@ def test_get_cpu_timeline_sorting():
     assert timeline[0]['cpu_sum'] == pytest.approx(10.0)
 
 
-@patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.datetime')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.datetime')
 def test_total_workers_vcpu_metering_disabled(mock_datetime, mock_prom_class):
     """Test total_workers_vcpu when metering is disabled."""
     # Mock current time
@@ -161,10 +161,10 @@ def test_total_workers_vcpu_metering_disabled(mock_datetime, mock_prom_class):
     mock_prom_class.assert_not_called()
 
 
-@patch('metrics_utility.library.collectors.total_workers_vcpu.get_total_workers_cpu')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.get_cpu_timeline')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.datetime')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_total_workers_cpu')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_cpu_timeline')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.datetime')
 def test_total_workers_vcpu_metering_enabled(mock_datetime, mock_prom_class, mock_timeline, mock_total_cpu):
     """Test total_workers_vcpu when metering is enabled."""
     # Mock current time
@@ -204,10 +204,10 @@ def test_total_workers_vcpu_metering_enabled(mock_datetime, mock_prom_class, moc
     assert 'timestamp' in result
 
 
-@patch('metrics_utility.library.collectors.total_workers_vcpu.get_total_workers_cpu')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.get_cpu_timeline')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient')
-@patch('metrics_utility.library.collectors.total_workers_vcpu.datetime')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_total_workers_cpu')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_cpu_timeline')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient')
+@patch('metrics_utility.library.collectors.others.total_workers_vcpu.datetime')
 def test_total_workers_vcpu_no_data_available(mock_datetime, mock_prom_class, mock_timeline, mock_total_cpu):
     """Test total_workers_vcpu when Prometheus returns no data."""
     # Mock current time

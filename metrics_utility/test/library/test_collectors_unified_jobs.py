@@ -2,7 +2,7 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.unified_jobs import unified_jobs
+from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
 
 
 def test_unified_jobs_basic():
@@ -32,7 +32,7 @@ def test_unified_jobs_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.unified_jobs.copy_table')
+@patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_calls_copy_table(mock_copy_table):
     """Test that unified_jobs calls copy_table."""
     mock_db = MagicMock()
@@ -52,7 +52,7 @@ def test_unified_jobs_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/unified_jobs_table.csv']
 
 
-@patch('metrics_utility.library.collectors.unified_jobs.copy_table')
+@patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_query_contains_time_range(mock_copy_table):
     """Test that the query includes the time range with OR logic."""
     mock_db = MagicMock()
@@ -75,7 +75,7 @@ def test_unified_jobs_query_contains_time_range(mock_copy_table):
     assert 'main_unifiedjob.finished <' in query
 
 
-@patch('metrics_utility.library.collectors.unified_jobs.copy_table')
+@patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_uses_or_logic(mock_copy_table):
     """Test that query uses OR logic for created/finished timestamps."""
     mock_db = MagicMock()
@@ -93,7 +93,7 @@ def test_unified_jobs_uses_or_logic(mock_copy_table):
     assert ' OR ' in query
 
 
-@patch('metrics_utility.library.collectors.unified_jobs.copy_table')
+@patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
@@ -117,7 +117,7 @@ def test_unified_jobs_query_structure(mock_copy_table):
     assert 'main_executionenvironment' in query
 
 
-@patch('metrics_utility.library.collectors.unified_jobs.copy_table')
+@patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_excludes_sync_jobs(mock_copy_table):
     """Test that query excludes sync launch type."""
     mock_db = MagicMock()
@@ -135,7 +135,7 @@ def test_unified_jobs_excludes_sync_jobs(mock_copy_table):
     assert "launch_type != 'sync'" in query or "launch_type <> 'sync'" in query
 
 
-@patch('metrics_utility.library.collectors.unified_jobs.copy_table')
+@patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_includes_execution_environment(mock_copy_table):
     """Test that query includes execution environment information."""
     mock_db = MagicMock()

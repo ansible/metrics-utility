@@ -2,7 +2,7 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
+from metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
 
 
 def test_main_indirectmanagednodeaudit_basic():
@@ -32,7 +32,7 @@ def test_main_indirectmanagednodeaudit_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
 def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
     """Test that main_indirectmanagednodeaudit calls copy_table."""
     mock_db = MagicMock()
@@ -52,7 +52,7 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/main_indirectmanagednodeaudit_table.csv']
 
 
-@patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
 def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_table):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
@@ -73,7 +73,7 @@ def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_table
     assert 'main_indirectmanagednodeaudit.created <' in query
 
 
-@patch('metrics_utility.library.collectors.main_indirectmanagednodeaudit.copy_table')
+@patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
 def test_main_indirectmanagednodeaudit_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()

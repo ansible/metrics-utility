@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from metrics_utility.library.collectors.prometheus_client import PrometheusClient
+from metrics_utility.library.collectors.others.prometheus_client import PrometheusClient
 
 
 def test_prometheus_client_init_basic():

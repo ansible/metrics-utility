@@ -5,8 +5,8 @@ from typing import Tuple
 
 from metrics_utility.logger import logger
 
+from ..util import collector
 from .prometheus_client import PrometheusClient
-from .util import collector
 
 
 @collector

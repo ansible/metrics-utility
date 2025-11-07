@@ -18,7 +18,7 @@ since = library.instants.last_day()
 until = library.instants.this_day()
 
 # sets up a CollectionJSON instance, etc, does not run yet
-collector = library.collectors.anonymous(db=controller_db, since=since, until=until, custom_params=True)
+collector = library.collectors.controller.anonymous(db=controller_db, since=since, until=until, custom_params=True)
 
 # DB lock, in *our* DB
 with library.lock(db=metrics_db, key=worker_key):

@@ -2,7 +2,7 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.collectors.job_host_summary_service import job_host_summary_service
+from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
 
 
 def test_job_host_summary_service_basic():
@@ -32,7 +32,7 @@ def test_job_host_summary_service_with_output_dir():
     assert instance.kwargs['output_dir'] == output_dir
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_calls_copy_table(mock_copy_table):
     """Test that job_host_summary_service calls copy_table with correct parameters."""
     mock_db = MagicMock()
@@ -53,7 +53,7 @@ def test_job_host_summary_service_calls_copy_table(mock_copy_table):
     assert result == ['/tmp/main_jobhostsummary_table.csv']
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_query_contains_time_range(mock_copy_table):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
@@ -74,7 +74,7 @@ def test_job_host_summary_service_query_contains_time_range(mock_copy_table):
     assert 'mu.finished <' in query
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
@@ -102,7 +102,7 @@ def test_job_host_summary_service_query_structure(mock_copy_table):
     assert 'main_organization' in query
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_filters_by_finished_jobs(mock_copy_table):
     """Test that query filters jobs by finished timestamp."""
     mock_db = MagicMock()
@@ -120,7 +120,7 @@ def test_job_host_summary_service_filters_by_finished_jobs(mock_copy_table):
     assert 'finished IS NOT NULL' in query
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_uses_yaml_json_functions(mock_copy_table):
     """Test that query uses metrics_utility helper functions."""
     mock_db = MagicMock()
@@ -139,7 +139,7 @@ def test_job_host_summary_service_uses_yaml_json_functions(mock_copy_table):
     assert 'metrics_utility_parse_yaml_field' in query
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_orders_by_finished(mock_copy_table):
     """Test that query orders results by job finished time."""
     mock_db = MagicMock()
@@ -158,7 +158,7 @@ def test_job_host_summary_service_orders_by_finished(mock_copy_table):
     assert 'finished' in query
 
 
-@patch('metrics_utility.library.collectors.job_host_summary_service.copy_table')
+@patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_isoformat(mock_copy_table):
     """Test that datetime objects are converted to isoformat in query."""
     mock_db = MagicMock()
