@@ -9,16 +9,16 @@ from metrics_utility.automation_controller_billing.helpers import get_last_entri
 from metrics_utility.base import register
 from metrics_utility.base.utils import get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
-from metrics_utility.library.collectors import config as config_collector
-from metrics_utility.library.collectors import execution_environments as execution_environments_collector
-from metrics_utility.library.collectors import job_host_summary as job_host_summary_collector
-from metrics_utility.library.collectors import job_host_summary_service as job_host_summary_service_collector
-from metrics_utility.library.collectors import main_host as main_host_collector
-from metrics_utility.library.collectors import main_indirectmanagednodeaudit as main_indirectmanagednodeaudit_collector
-from metrics_utility.library.collectors import main_jobevent as main_jobevent_collector
-from metrics_utility.library.collectors import main_jobevent_service as main_jobevent_service_collector
-from metrics_utility.library.collectors import total_workers_vcpu as total_workers_vcpu_collector
-from metrics_utility.library.collectors import unified_jobs as unified_jobs_collector
+from metrics_utility.library.collectors.controller import config as config_collector
+from metrics_utility.library.collectors.controller import execution_environments as execution_environments_collector
+from metrics_utility.library.collectors.controller import job_host_summary as job_host_summary_collector
+from metrics_utility.library.collectors.controller import job_host_summary_service as job_host_summary_service_collector
+from metrics_utility.library.collectors.controller import main_host as main_host_collector
+from metrics_utility.library.collectors.controller import main_indirectmanagednodeaudit as main_indirectmanagednodeaudit_collector
+from metrics_utility.library.collectors.controller import main_jobevent as main_jobevent_collector
+from metrics_utility.library.collectors.controller import main_jobevent_service as main_jobevent_service_collector
+from metrics_utility.library.collectors.controller import unified_jobs as unified_jobs_collector
+from metrics_utility.library.collectors.others import total_workers_vcpu as total_workers_vcpu_collector
 from metrics_utility.logger import logger
 
 

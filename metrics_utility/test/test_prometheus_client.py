@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from metrics_utility.library.collectors.prometheus_client import PrometheusClient
+from metrics_utility.library.collectors.others.prometheus_client import PrometheusClient
 
 
 class TestPrometheusClient:

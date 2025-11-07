@@ -7,7 +7,7 @@ import pytest
 
 from metrics_utility.automation_controller_billing.collectors import total_workers_vcpu
 from metrics_utility.exceptions import MissingRequiredEnvVar
-from metrics_utility.library.collectors.total_workers_vcpu import get_hour_boundaries
+from metrics_utility.library.collectors.others.total_workers_vcpu import get_hour_boundaries
 from metrics_utility.test.util import temporary_env
 
 
@@ -39,7 +39,7 @@ class TestTotalWorkersVcpu:
         """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is not set or false (default behavior)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -75,7 +75,7 @@ class TestTotalWorkersVcpu:
         """Test that METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is case insensitive."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -102,10 +102,10 @@ class TestTotalWorkersVcpu:
         """Test that the function uses default Prometheus URL when METRICS_UTILITY_PROMETHEUS_URL is not set."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.get_total_workers_cpu') as mock_get_cpu,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.get_cpu_timeline') as mock_get_timeline,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_total_workers_cpu') as mock_get_cpu,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_cpu_timeline') as mock_get_timeline,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_collectors_logger,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
@@ -172,7 +172,7 @@ class TestTotalWorkersVcpu:
         """Test that PrometheusClient creation failure raises an exception."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -195,7 +195,7 @@ class TestTotalWorkersVcpu:
         """Test that Prometheus query failure raises an exception."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -222,8 +222,8 @@ class TestTotalWorkersVcpu:
         """Test that the function returns None when Prometheus query returns None (no data available)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -254,8 +254,8 @@ class TestTotalWorkersVcpu:
         """Test successful Prometheus query with vCPU calculation."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -303,7 +303,7 @@ class TestTotalWorkersVcpu:
         """Test that PrometheusClient is initialized correctly."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -334,8 +334,8 @@ class TestTotalWorkersVcpu:
         """Test that the Prometheus query uses correct PromQL with hour boundaries."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.datetime') as mock_datetime,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.datetime') as mock_datetime,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -375,7 +375,7 @@ class TestTotalWorkersVcpu:
         """Test that vCPU values from Prometheus (floats) are properly converted to integers."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -398,7 +398,7 @@ class TestTotalWorkersVcpu:
                 assert result['total_workers_vcpu'] == 15  # Should be truncated to int
                 assert isinstance(result['total_workers_vcpu'], int)
 
-    @patch('metrics_utility.library.collectors.total_workers_vcpu.datetime')
+    @patch('metrics_utility.library.collectors.others.total_workers_vcpu.datetime')
     def test_timestamp_in_output_with_hour_boundaries(self, mock_datetime):
         """Test that the function includes proper timestamp based on hour boundaries."""
         # Mock the datetime.now() call
@@ -409,8 +409,8 @@ class TestTotalWorkersVcpu:
 
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.PrometheusClient') as mock_prom_client_class,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
@@ -451,7 +451,7 @@ class TestTotalWorkersVcpu:
         """Test that when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is unset, it returns hardcoded value."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.library.collectors.total_workers_vcpu.logger') as mock_logger,
+            patch('metrics_utility.library.collectors.others.total_workers_vcpu.logger') as mock_logger,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
             patch('builtins.open', mock_open(read_data='fake-token')),
         ):
