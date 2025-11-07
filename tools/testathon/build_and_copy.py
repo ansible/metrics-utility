@@ -26,18 +26,18 @@ Quick examples:
     SSH_URL=1.2.3.4 \
     SSH_USER=ec2-user \
     METRICS_UTILITY_REPORT_PO_NUMBER=None \
-    ./testathon/build_and_copy.py --force --since=2022-01-01 --until=2026-01-01
+    tools/testathon/build_and_copy.py --force --since=2022-01-01 --until=2026-01-01
 
 - Containerized environment:
     ENVIRONMENT=containerized \
     SSH_URL=1.2.3.4 \
     SSH_USER=ansible \
-    ./testathon/build_and_copy.py --force --month=2025-07
+    tools/testathon/build_and_copy.py --force --month=2025-07
 
 - OpenShift environment (namespace/pod auto-detected):
     ENVIRONMENT=OpenShift \
     OC_LOGIN_COMMAND='oc login --token=... --server=https://api.example:6443' \
-    ./testathon/build_and_copy.py --force --month=2025-07
+    tools/testathon/build_and_copy.py --force --month=2025-07
 
 Report parameters via METRICS_UTILITY_* variables (optional):
 - This script prepares a set of METRICS_UTILITY_* variables (see get_report_environment_variables()).

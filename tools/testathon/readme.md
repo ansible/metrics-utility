@@ -5,7 +5,7 @@ For testathon, how to fill data:
 BEWARE the script will remove data that may already be there (must implement the flag to insert without deletion).
 In your local computer inside root of metrics-utility:
 
-cd testathon
+cd tools/testathon
 
 ## RPM:
 
@@ -27,7 +27,7 @@ You can also run:
 
 uv run build_and_copy.py
 
-This will connect to RPM, runs build_report command and copy output file into the /testathon folder.
+This will connect to RPM, runs build_report command and copy output file into the tools/testathon folder.
 You can provide arguments, for example uv run build_and_copy.py --month=2025-08
 
 And you can set environment variables, all env variables that begins with METRICS_UTILITY will be also set in remote machine when executing build command remotely
