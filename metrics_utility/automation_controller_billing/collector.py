@@ -77,18 +77,6 @@ class Collector(base.Collector):
 
             return self.all_tar_paths()
 
-    def _gather_config(self):
-        if not super()._gather_config():
-            return False
-
-        # Extend the config collection to contain billing specific info:
-        config_collection = self.collections['config']
-        data = json.loads(config_collection.data)
-        data['billing_provider_params'] = self.billing_provider_params
-        config_collection._save_gathering(data)
-
-        return True
-
     @staticmethod
     def db_connection():
         return connection
