@@ -19,7 +19,7 @@ dependencies = [
     "segment-analytics-python>=2.3.4",
     "setuptools==80.9.0",
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE.md"]
@@ -33,7 +33,6 @@ classifiers = [
   "Intended Audience :: Developers",
   "Operating System :: POSIX",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
