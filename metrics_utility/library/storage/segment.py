@@ -150,7 +150,7 @@ class StorageSegment:
         - 32KB for regular messages
         - 512MB for bulk messages (when use_bulk=True)
         """
-        if filename or fileobj or not dict:
+        if filename or fileobj or dict is None:
             msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
             raise Exception(msg)
 
