@@ -29,7 +29,18 @@ authors = [
 keywords = ["ansible", "metrics"]
 classifiers = [
   "Development Status :: 4 - Beta",
-  "Programming Language :: Python"
+  "Intended Audience :: System Administrators",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: System :: Systems Administration",
+  "Topic :: System :: Monitoring",
+  "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
 [project.scripts]
@@ -53,6 +64,14 @@ dev = [
 # Do not uncomment the line below. We need to be able to override the version via a file, and this
 # causes the "version" key in setup.cfg to be ignored.
 # [tool.setuptools_scm]
+
+[tool.setuptools]
+# Exclude directories from the final package
+packages = {find = {exclude = ["tools*", "workers*", "sql*", "out*", "docs*", "mock_awx*"]}}
+
+[tool.setuptools.package-data]
+# Include only necessary package data
+"*" = ["*.json", "*.sql", "*.txt"]
 
 [tool.ruff]
 # Allow longer lines than ruff's default 88.
