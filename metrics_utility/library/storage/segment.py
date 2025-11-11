@@ -1,7 +1,9 @@
 import datetime
 import json
-import logging
 import sys
+import uuid
+
+from metrics_utility.logger import logger
 
 
 try:
@@ -11,8 +13,6 @@ try:
 except ImportError:
     analytics = None
     SEGMENT_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
 
 
 class StorageSegment:
@@ -158,6 +158,9 @@ class StorageSegment:
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
 
+        # Generate a random anonymous ID for this send
+        anonymous_id = str(uuid.uuid4())
+
         # Configure Segment client
         analytics.write_key = self.write_key
         analytics.debug = self.debug
@@ -189,7 +192,7 @@ class StorageSegment:
                     print(msg, file=sys.stderr)
 
                 analytics.track(
-                    user_id=self.user_id,
+                    anonymous_id=anonymous_id,
                     event=event_name,
                     properties={
                         'artifact_name': artifact_name,
@@ -212,7 +215,7 @@ class StorageSegment:
                 print(msg, file=sys.stderr)
 
             analytics.track(
-                user_id=self.user_id,
+                anonymous_id=anonymous_id,
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
