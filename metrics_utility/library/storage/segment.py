@@ -154,6 +154,17 @@ class StorageSegment:
             msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
             raise Exception(msg)
 
+        # Check if segment is available and configured
+        if not SEGMENT_AVAILABLE:
+            if self.debug:
+                logger.debug('Segment not available, skipping analytics upload for: %s', artifact_name)
+            return
+
+        if not self.write_key:
+            if self.debug:
+                logger.debug('Segment write_key not set, skipping analytics upload for: %s', artifact_name)
+            return
+
         # Default event name
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
