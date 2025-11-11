@@ -32,7 +32,8 @@ def test_empty_data(cleanup_glob):
 
 def test_from_gather_to_json(cleanup_glob):
     # run gather
-    json_data = task_anonymized_rollups('salt', 2025, 6, 13, './out', save_rollups=False)
+    db = 
+    json_data = task_anonymized_rollups(db, 'salt', 2025, 6, 13, './out', save_rollups=False)
 
     print(json_data)
 
