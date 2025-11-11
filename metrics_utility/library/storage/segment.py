@@ -1,8 +1,18 @@
 import datetime
 import json
+import logging
 import sys
 
-import segment.analytics as analytics
+
+try:
+    import segment.analytics as analytics
+
+    SEGMENT_AVAILABLE = True
+except ImportError:
+    analytics = None
+    SEGMENT_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 class StorageSegment:
@@ -16,8 +26,11 @@ class StorageSegment:
         self.write_key = settings.get('write_key')
         self.use_bulk = settings.get('use_bulk', False)
 
+        if not SEGMENT_AVAILABLE:
+            logger.info('StorageSegment: segment module not installed. Analytics will be disabled.')
+
         if not self.write_key:
-            raise Exception('StorageSegment: write_key not set')
+            logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
