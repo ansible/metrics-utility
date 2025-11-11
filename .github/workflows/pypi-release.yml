@@ -27,7 +27,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v6
         with:
-          python-version-file: "pyproject.toml"
+          python-version: "3.11"
           
       - name: "Generate date-based version"
         id: version
@@ -35,11 +35,11 @@ jobs:
           # Get current date in YYYYMMDD format
           DATE_VERSION=$(date +%Y%m%d)
           
-          # Extract base version from setup.cfg (e.g., "0.7.0dev" -> "0.7")
+          # Extract base version from setup.cfg (e.g., "0.7.0dev" -> "0.7.0")
           BASE_VERSION=$(grep "version = " setup.cfg | cut -d' ' -f3 | sed 's/dev$//')
           
-          # Create new version (e.g., "0.7.20251111")
-          NEW_VERSION="${BASE_VERSION}${DATE_VERSION}"
+          # Create new version (e.g., "0.7.0.20251111")
+          NEW_VERSION="${BASE_VERSION}.${DATE_VERSION}"
           
           echo "Original version: $(grep 'version = ' setup.cfg | cut -d' ' -f3)"
           echo "New version: $NEW_VERSION"
