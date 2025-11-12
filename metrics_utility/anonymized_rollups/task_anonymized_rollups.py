@@ -25,11 +25,6 @@ def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups:
     job_host_summary_data = job_host_summary_service(db=db, since=datetime_since, until=datetime_until).gather()
     main_jobevent_data = main_jobevent_service(db=db, since=datetime_since, until=datetime_until).gather()
 
-    print(execution_environments_data)
-    print(unified_jobs_data)
-    print(job_host_summary_data)
-    print(main_jobevent_data)
-
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
