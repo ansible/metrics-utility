@@ -3,6 +3,7 @@ import os
 import shutil
 
 import pytest
+from django.db import connection
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 from metrics_utility.anonymized_rollups.task_anonymized_rollups import task_anonymized_rollups
@@ -32,7 +33,8 @@ def test_empty_data(cleanup_glob):
 
 def test_from_gather_to_json(cleanup_glob):
     # run gather
-    db = 
+    # here what the connection should be? The postgres is in docker compose
+    db = connection
     json_data = task_anonymized_rollups(db, 'salt', 2025, 6, 13, './out', save_rollups=False)
 
     print(json_data)
