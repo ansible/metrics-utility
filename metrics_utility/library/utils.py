@@ -7,17 +7,6 @@ from .debug import indent, log
 
 
 @contextmanager
-def lock(db=None, key=None, wait=None):
-    log('library.utils lock')
-    indent(1)
-    try:
-        yield
-    finally:
-        indent(-1)
-        log('/library.utils lock')
-
-
-@contextmanager
 def tempdir(prefix=None):
     log('library.utils tempdir')
     indent(1)
