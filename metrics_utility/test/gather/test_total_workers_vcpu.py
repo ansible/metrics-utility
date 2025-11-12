@@ -140,10 +140,9 @@ class TestTotalWorkersVcpu:
 
                 # Check that the info message was logged with format string
                 info_calls = [call[0] for call in mock_logger.info.call_args_list]
-                assert any(
-                    '%s environment variable METRICS_UTILITY_PROMETHEUS_URL is not set' in str(call)
-                    for call in info_calls
-                ), 'Expected info log with format string for PROMETHEUS_URL not found'
+                assert any('%s environment variable METRICS_UTILITY_PROMETHEUS_URL is not set' in str(call) for call in info_calls), (
+                    'Expected info log with format string for PROMETHEUS_URL not found'
+                )
 
                 # Verify the debug message was logged with format string
                 debug_call_args = mock_logger.debug.call_args[0]
