@@ -35,7 +35,6 @@ classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
-  "Programming Language :: Python :: 3.14",
   "Topic :: System :: Systems Administration",
   "Topic :: System :: Monitoring",
   "Topic :: Software Development :: Libraries :: Python Modules"
@@ -64,8 +63,8 @@ dev = [
 # [tool.setuptools_scm]
 
 [tool.setuptools]
-# Exclude directories from the final package
-packages = {find = {exclude = ["tools*", "workers*", "sql*", "out*", "docs*", "mock_awx*"]}}
+# Include and exclude directories for the final package
+packages = {find = {include = ["metrics_utility*"], exclude = ["tools*", "workers*", "sql*", "out*", "docs*", "mock_awx*"]}}
 
 [tool.setuptools.package-data]
 # Include only necessary package data
