@@ -9,7 +9,7 @@ import pytest
 from django.db import connection
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
-from metrics_utility.anonymized_rollups.task_anonymized_rollups import task_anonymized_rollups
+from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute_anonymized_rollup
 
 
 # where to find the tar.gz (match jobhostsummary test layout)
@@ -50,7 +50,7 @@ def test_from_gather_to_json(cleanup_glob):
     # runher
     # here what the connection should be? The postgres is in docker compose
     db = connection
-    json_data = task_anonymized_rollups(db, 'salt', since, until, './out', save_rollups=False)
+    json_data = compute_anonymized_rollup(db, 'salt', since, until, './out', save_rollups=False)
 
     print(json_data)
 
@@ -236,7 +236,7 @@ def test_half_day_rollup(cleanup_glob):
 
     # Get the data from the database
     db = connection
-    json_data = task_anonymized_rollups(db, 'salt', since, until, './out', save_rollups=False)
+    json_data = compute_anonymized_rollup(db, 'salt', since, until, './out', save_rollups=False)
 
     print('\n========== Half-Day Rollup JSON Data ==========')
     print(json.dumps(json_data, indent=4))

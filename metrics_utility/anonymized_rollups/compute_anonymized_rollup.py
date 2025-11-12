@@ -4,7 +4,7 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonym
 from metrics_utility.library.collectors.controller import execution_environments, job_host_summary_service, main_jobevent_service, unified_jobs
 
 
-def task_anonymized_rollups(db, salt, since, until, ship_path, save_rollups: bool = True):
+def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: bool = True):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = execution_environments(db=db).gather()
     unified_jobs_data = unified_jobs(db=db, since=since, until=until).gather()
