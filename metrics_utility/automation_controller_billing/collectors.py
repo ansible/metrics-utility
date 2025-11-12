@@ -581,9 +581,9 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if not usage_based_billing_enabled:
         info['total_workers_vcpu'] = 1
         # This message must always appear in the log regardless of the log level.
-        logger_info_level.info('%s info: %s', log_prefix, json.dumps(info, indent=2))
+        logger_info_level.info('%s info: %s', log_prefix, json.dumps(info))
         data = {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
-        logger_info_level.info('%s data: %s', log_prefix, json.dumps(data, indent=2))
+        logger_info_level.info('%s data: %s', log_prefix, json.dumps(data))
         return data
 
     url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
@@ -622,10 +622,10 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     info['total_workers_vcpu'] = int(total_workers_vcpu)
 
     # This message must always appear in the log regardless of the log level.
-    logger_info_level.info('%s info: %s', log_prefix, json.dumps(info, indent=2))
+    logger_info_level.info('%s info: %s', log_prefix, json.dumps(info))
 
     data = {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
-    logger_info_level.info('%s data: %s', log_prefix, json.dumps(data, indent=2))
+    logger_info_level.info('%s data: %s', log_prefix, json.dumps(data))
     return data
 
 
