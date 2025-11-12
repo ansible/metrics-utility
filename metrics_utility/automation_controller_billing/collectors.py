@@ -556,8 +556,10 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
         return None
 
     cluster_name = os.getenv('METRICS_UTILITY_CLUSTER_NAME')
+    red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
+    log_prefix = f'[METRICS_UTILITY_VCPU]: cluster_name: {cluster_name}, red_hat_org_id: {red_hat_org_id},'
     if not cluster_name:
-        logger.error('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
+        logger.error('%s, environment variable METRICS_UTILITY_CLUSTER_NAME is not set',log_prefix)
         raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
 
     now = datetime.now(timezone.utc)
@@ -579,15 +581,17 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     if not usage_based_billing_enabled:
         info['total_workers_vcpu'] = 1
         # This message must always appear in the log regardless of the log level.
-        logger_info_level.info(json.dumps(info, indent=2))
-        return {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+        logger_info_level.info('%s info: %s',log_prefix, json.dumps(info, indent=2))
+        data = {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+        logger_info_level.info('%s data: %s',log_prefix, json.dumps(data, indent=2))
+        return data
 
     url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
     if not url:
         prometheus_default_url = 'https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091'
         logger.info(
-            f'environment variable METRICS_UTILITY_PROMETHEUS_URL is not set, \
-                    default {prometheus_default_url} will be assigned'
+            '%s environment variable METRICS_UTILITY_PROMETHEUS_URL is not set, \
+                    default %s will be assigned',log_prefix, prometheus_default_url
         )
         url = prometheus_default_url
 
@@ -605,21 +609,22 @@ def total_workers_vcpu(since, full_path, until, **kwargs):
     info['promql_query'] = promql_query
     info['timeline'] = timeline
 
-    logger.debug(f'total_workers_vcpu: {total_workers_vcpu}')
+    logger.debug('%s total_workers_vcpu: %s',log_prefix, total_workers_vcpu)
 
     # This can happen when the prev_hour_start doesn't have data, it could be when the cluster just started or
     # if for some reasons prometheus loss some data.
     if total_workers_vcpu is None:
-        logger.warning('No data availble yet, the cluster is probably running for less than an hour')
+        logger.warning('%s No data availble yet, the cluster is probably running for less than an hour',log_prefix)
         raise MetricsException('No data availble yet, the cluster is probably running for less than an hour')
 
     info['total_workers_vcpu'] = int(total_workers_vcpu)
 
     # This message must always appear in the log regardless of the log level.
-    logger_info_level.info(json.dumps(info, indent=2))
+    logger_info_level.info('%s info: %s',log_prefix, json.dumps(info, indent=2))
 
-    return {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
-
+    data = {'timestamp': info['end_timestamp'], 'cluster_name': info['cluster_name'], 'total_workers_vcpu': info['total_workers_vcpu']}
+    logger_info_level.info('%s data: %s',log_prefix, json.dumps(data, indent=2))
+    return data
 
 def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float, float]:
     current_hour_start = (current_timestamp // 3600) * 3600
