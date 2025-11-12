@@ -47,7 +47,7 @@ def test_from_gather_to_json(cleanup_glob):
     since = datetime(2025, 6, 13, 0, 0, 0)
     until = datetime(2025, 6, 14, 0, 0, 0)
 
-    # run gather
+    # runher
     # here what the connection should be? The postgres is in docker compose
     db = connection
     json_data = task_anonymized_rollups(db, 'salt', since, until, './out', save_rollups=False)
@@ -225,3 +225,32 @@ def test_from_gather_to_json(cleanup_glob):
         )
 
     print('✅ All data value assertions passed!')
+
+
+def test_half_day_rollup(cleanup_glob):
+    """Test with half-day time range: from midnight to noon"""
+    # since = beginning of the day
+    # until = half of the day (noon)
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 13, 12, 0, 0)
+
+    # Get the data from the database
+    db = connection
+    json_data = task_anonymized_rollups(db, 'salt', since, until, './out', save_rollups=False)
+
+    print('\n========== Half-Day Rollup JSON Data ==========')
+    print(json.dumps(json_data, indent=4))
+    print('================================================\n')
+
+    # Save as json for inspection
+    json_path = (
+        f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d-%H-%M")}.json'
+    )
+
+    # Create the directory
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+
+    with open(json_path, 'w') as f:
+        json.dump(json_data, f, indent=4)
+
+    print(f'JSON saved to: {json_path}')
