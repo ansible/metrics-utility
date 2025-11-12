@@ -254,3 +254,21 @@ def test_half_day_rollup(cleanup_glob):
         json.dump(json_data, f, indent=4)
 
     print(f'JSON saved to: {json_path}')
+
+    # Basic assertions - just validate structure
+    assert 'statistics' in json_data, "Missing 'statistics' in json_data"
+    assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
+    assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
+    assert 'modules_used_per_playbook' in json_data, "Missing 'modules_used_per_playbook' in json_data"
+    assert 'jobs_by_template' in json_data, "Missing 'jobs_by_template' in json_data"
+    assert 'job_host_summary' in json_data, "Missing 'job_host_summary' in json_data"
+
+    # Validate basic types
+    assert isinstance(json_data['statistics'], dict), 'statistics should be a dictionary'
+    assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
+    assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
+    assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
+    assert isinstance(json_data['jobs_by_template'], list), 'jobs_by_template should be a list'
+    assert isinstance(json_data['job_host_summary'], list), 'job_host_summary should be a list'
+
+    print('✅ Basic structure assertions passed!')
