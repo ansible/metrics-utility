@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 #from metrics_utility.test.util import run_gather_int
 
-from metrics_utility.library.collectors import execution_environments, unified_jobs, job_host_summary_service, main_jobevent_service
+from metrics_utility.library.collectors.controller import execution_environments, unified_jobs, job_host_summary_service, main_jobevent_service
 
 def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups: bool = True):
     '''
