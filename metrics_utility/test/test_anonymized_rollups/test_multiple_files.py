@@ -360,8 +360,11 @@ def test_empty_csv_files_handling(cleanup_test_data):
     """
     Test that the system handles case with no CSV files gracefully.
     """
+
     base_path = './out'
-    year, month, day = 2025, 6, 14
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+    year, month, day = since.year, since.month, since.day
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
 
     # Create the directory but don't create any CSV files
@@ -378,7 +381,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     # Should not crash, but return empty/default results
     result = compute_anonymized_rollup_from_raw_data(
-        input_data=input_data, salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False
+        input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
     )
 
     # Print the result for debugging
