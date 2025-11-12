@@ -1,8 +1,18 @@
 import datetime
 import json
 import sys
+import uuid
 
-import segment.analytics as analytics
+from metrics_utility.logger import logger
+
+
+try:
+    import segment.analytics as analytics
+
+    SEGMENT_AVAILABLE = True
+except ImportError:
+    analytics = None
+    SEGMENT_AVAILABLE = False
 
 
 class StorageSegment:
@@ -16,8 +26,11 @@ class StorageSegment:
         self.write_key = settings.get('write_key')
         self.use_bulk = settings.get('use_bulk', False)
 
+        if not SEGMENT_AVAILABLE:
+            logger.info('StorageSegment: segment module not installed. Analytics will be disabled.')
+
         if not self.write_key:
-            raise Exception('StorageSegment: write_key not set')
+            logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
@@ -137,13 +150,27 @@ class StorageSegment:
         - 32KB for regular messages
         - 512MB for bulk messages (when use_bulk=True)
         """
-        if filename or fileobj or not dict:
+        if filename or fileobj or dict is None:
             msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
             raise Exception(msg)
+
+        # Check if segment is available and configured
+        if not SEGMENT_AVAILABLE:
+            if self.debug:
+                logger.debug('Segment not available, skipping analytics upload for: %s', artifact_name)
+            return
+
+        if not self.write_key:
+            if self.debug:
+                logger.debug('Segment write_key not set, skipping analytics upload for: %s', artifact_name)
+            return
 
         # Default event name
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
+
+        # Generate a random anonymous ID for this send
+        anonymous_id = str(uuid.uuid4())
 
         # Configure Segment client
         analytics.write_key = self.write_key
@@ -176,7 +203,7 @@ class StorageSegment:
                     print(msg, file=sys.stderr)
 
                 analytics.track(
-                    user_id=self.user_id,
+                    anonymous_id=anonymous_id,
                     event=event_name,
                     properties={
                         'artifact_name': artifact_name,
@@ -199,7 +226,7 @@ class StorageSegment:
                 print(msg, file=sys.stderr)
 
             analytics.track(
-                user_id=self.user_id,
+                anonymous_id=anonymous_id,
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
