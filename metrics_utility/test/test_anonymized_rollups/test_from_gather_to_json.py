@@ -3,6 +3,7 @@ import os
 import shutil
 
 import pytest
+
 from django.db import connection
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
@@ -28,7 +29,9 @@ def cleanup_glob():
 
 
 def test_empty_data(cleanup_glob):
-    compute_anonymized_rollup_from_raw_data({'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': []}, 'salt', 2025, 6, 13, './out')
+    compute_anonymized_rollup_from_raw_data(
+        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': []}, 'salt', 2025, 6, 13, './out'
+    )
 
 
 def test_from_gather_to_json(cleanup_glob):

@@ -1,6 +1,4 @@
-import glob
 import hashlib
-import tarfile
 
 from typing import Any, Dict, List
 
@@ -211,7 +209,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt, year, month, day, 
 # inside tarball is file named {collector_name}.csv
 # this goes to dataframe, then filter_function is applied to the dataframe
 # all result dataframes are concatenated into one dataframe
-def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list : []) -> DataFrame:
+def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list: []) -> DataFrame:
     # file_list - list of csv files that needs to be read
 
     concat_dataframe = pd.DataFrame()

@@ -56,7 +56,7 @@ def create_csv_file(data_list, csv_path):
     Args:
         data_list: List of dictionaries to convert to CSV
         csv_path: Path where to save the CSV file
-    
+
     Returns:
         The path to the created CSV file, or None if data_list is empty
     """
@@ -70,7 +70,7 @@ def create_csv_file(data_list, csv_path):
     # Convert list of dicts to DataFrame then to CSV
     df = pd.DataFrame(data_list)
     df.to_csv(csv_path, index=False)
-    
+
     return csv_path
 
 
@@ -162,13 +162,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     }
 
     result = compute_anonymized_rollup_from_raw_data(
-        input_data=input_data,
-        salt='test_salt',
-        year=year,
-        month=month,
-        day=day,
-        base_path=base_path,
-        save_rollups=False
+        input_data=input_data, salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False
     )
 
     # print the result with pretty json
@@ -376,13 +370,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     # Should not crash, but return empty/default results
     result = compute_anonymized_rollup_from_raw_data(
-        input_data=input_data,
-        salt='test_salt',
-        year=year,
-        month=month,
-        day=day,
-        base_path=base_path,
-        save_rollups=False
+        input_data=input_data, salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False
     )
 
     # Print the result for debugging
