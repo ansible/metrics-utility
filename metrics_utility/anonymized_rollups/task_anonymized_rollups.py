@@ -18,6 +18,7 @@ def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups:
     datetime_since = datetime(year, month, day)
     datetime_until = datetime_since + timedelta(days=1)
 
+    # This will contain list of files that belongs to particular collector
     execution_environments_data = execution_environments(db=db).gather()
     unified_jobs_data = unified_jobs(db=db, since=datetime_since, until=datetime_until).gather()
     job_host_summary_data = job_host_summary_service(db=db, since=datetime_since, until=datetime_until).gather()
@@ -28,6 +29,13 @@ def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups:
     print(job_host_summary_data)
     print(main_jobevent_data)
 
+    input_data = {
+        'execution_environments': execution_environments_data,
+        'unified_jobs': unified_jobs_data,
+        'job_host_summary': job_host_summary_data,
+        'main_jobevent': main_jobevent_data,
+    }
+
     #since_param = datetime_since.strftime('%Y-%m-%d')
     #until_param = datetime_until.strftime('%Y-%m-%d')
 
@@ -36,7 +44,6 @@ def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups:
     # run gather from collectors in library
 
     # load data for each collector
-    #json_data = compute_anonymized_rollup_from_raw_data(salt, year, month, day, ship_path, save_rollups)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt, year, month, day, ship_path, save_rollups)
 
-    #return json_data
-    return {}
+    return json_data
