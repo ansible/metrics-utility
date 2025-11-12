@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 
@@ -6,15 +5,12 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonym
 from metrics_utility.library.collectors.controller import execution_environments, job_host_summary_service, main_jobevent_service, unified_jobs
 
 
-def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups: bool = True):
-    datetime_since = datetime(year, month, day)
-    datetime_until = datetime_since + timedelta(days=1)
-
+def task_anonymized_rollups(db, salt, since, until, ship_path, save_rollups: bool = True):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = execution_environments(db=db).gather()
-    unified_jobs_data = unified_jobs(db=db, since=datetime_since, until=datetime_until).gather()
-    job_host_summary_data = job_host_summary_service(db=db, since=datetime_since, until=datetime_until).gather()
-    main_jobevent_data = main_jobevent_service(db=db, since=datetime_since, until=datetime_until).gather()
+    unified_jobs_data = unified_jobs(db=db, since=since, until=until).gather()
+    job_host_summary_data = job_host_summary_service(db=db, since=since, until=until).gather()
+    main_jobevent_data = main_jobevent_service(db=db, since=since, until=until).gather()
 
     input_data = {
         'execution_environments': execution_environments_data,
@@ -24,6 +20,6 @@ def task_anonymized_rollups(db, salt, year, month, day, ship_path, save_rollups:
     }
 
     # load data for each collector
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt, year, month, day, ship_path, save_rollups)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, ship_path, save_rollups)
 
     return json_data

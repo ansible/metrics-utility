@@ -21,6 +21,8 @@ Enhanced Assertions:
 import os
 import shutil
 
+from datetime import datetime
+
 import pandas as pd
 import pytest
 
@@ -93,8 +95,14 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
        - Playbook-level module usage
     5. **Anonymization**: Verifies all sensitive names are properly hashed
     """
+
+    # since = begining of the day
+    # until = begining of the next day
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+
     base_path = './out'
-    year, month, day = 2025, 6, 13
+    year, month, day = since.year, since.month, since.day
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
 
     # ========== Split and create CSV files for each collector ==========
@@ -162,7 +170,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     }
 
     result = compute_anonymized_rollup_from_raw_data(
-        input_data=input_data, salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False
+        input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
     )
 
     # print the result with pretty json
@@ -177,7 +185,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     print('=' * 80)
 
     # save the result as json inside rollups/2025/06/13/anonymized.json - based on the year, month, day
-    json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized.json'
+    json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
 
     # ensure the directory exists
     os.makedirs(os.path.dirname(json_path), exist_ok=True)

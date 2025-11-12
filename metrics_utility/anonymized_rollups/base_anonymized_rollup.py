@@ -3,6 +3,8 @@ import json
 import os
 import tarfile
 
+from datetime import datetime
+
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
@@ -26,7 +28,7 @@ class BaseAnonymizedRollup:
     def base(self, dataframe):
         return pd.DataFrame()
 
-    def save_rollup(self, rollup_data: dict, base_path: str, year: int, month: int, day: int) -> None:
+    def save_rollup(self, rollup_data: dict, base_path: str, since: datetime, until: datetime) -> None:
         # rollup data is dictionary
         # the dictionary can have those values:
         # scalar, list, pandas.Series, pandas.DataFrame
@@ -36,6 +38,11 @@ class BaseAnonymizedRollup:
         # file will be stored inside base_path/rollups/rollup_name/year/month/day
 
         # make sure year is 4 digits, month is 2 digits, day is 2 digits
+
+        year = since.year
+        month = since.month
+        day = since.day
+
         year = str(year).zfill(4)
         month = str(month).zfill(2)
         day = str(day).zfill(2)
@@ -47,7 +54,8 @@ class BaseAnonymizedRollup:
         tar_files = {}
 
         for key, value in rollup_data.items():
-            filename = key + '_' + str(year) + '_' + str(month) + '_' + str(day)
+            # filename is key + since + until, month and day are 2 digits
+            filename = key + '_' + since.strftime('%Y-%m-%d') + '_' + until.strftime('%Y-%m-%d')
 
             if isinstance(value, pd.DataFrame):
                 # Save CSV to tarball instead of filesystem

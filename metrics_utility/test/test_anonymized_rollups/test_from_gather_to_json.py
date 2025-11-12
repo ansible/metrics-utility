@@ -2,6 +2,8 @@ import json
 import os
 import shutil
 
+from datetime import datetime
+
 import pytest
 
 from django.db import connection
@@ -29,21 +31,31 @@ def cleanup_glob():
 
 
 def test_empty_data(cleanup_glob):
+    # since = begining of the day
+    # until = begining of the next day
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+
     compute_anonymized_rollup_from_raw_data(
-        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': []}, 'salt', 2025, 6, 13, './out'
+        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': []}, 'salt', since, until, './out'
     )
 
 
 def test_from_gather_to_json(cleanup_glob):
+    # since = begining of the day
+    # until = begining of the next day
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+
     # run gather
     # here what the connection should be? The postgres is in docker compose
     db = connection
-    json_data = task_anonymized_rollups(db, 'salt', 2025, 6, 13, './out', save_rollups=False)
+    json_data = task_anonymized_rollups(db, 'salt', since, until, './out', save_rollups=False)
 
     print(json_data)
 
     # save as json inside rollups/2025/06/13/anonymized.json
-    json_path = f'./out/rollups/{2025}/06/13/anonymized.json'
+    json_path = f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
 
     # create the dir
     os.makedirs(os.path.dirname(json_path), exist_ok=True)

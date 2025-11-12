@@ -176,26 +176,26 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
     return data
 
 
-def compute_anonymized_rollup_from_raw_data(input_data, salt, year, month, day, base_path, save_rollups: bool = True):
+def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base_path, save_rollups: bool = True):
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
     jobs_result = JobsAnonymizedRollup().base(jobs)
     if save_rollups:
-        JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], base_path, year, month, day)
+        JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], base_path, since, until)
 
     job_host_summary = load_anonymized_rollup_data(JobHostSummaryAnonymizedRollup(), input_data['job_host_summary'])
     job_host_summary_result = JobHostSummaryAnonymizedRollup().base(job_host_summary)
     if save_rollups:
-        JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], base_path, year, month, day)
+        JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], base_path, since, until)
 
     events_modules = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), input_data['main_jobevent'])
     events_modules_result = EventModulesAnonymizedRollup().base(events_modules)
     if save_rollups:
-        EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], base_path, year, month, day)
+        EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], base_path, since, until)
 
     execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), input_data['execution_environments'])
     execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
     if save_rollups:
-        ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_result['rollup'], base_path, year, month, day)
+        ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_result['rollup'], base_path, since, until)
 
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], salt
