@@ -90,3 +90,7 @@
 - vcpu collector - use prometheus
 - gather: fix empty config.json when job\_host\_summary disabled
 - dev: future optional collectors
+
+## 0.6.2
+
+- vcpu collector - add extra log info
