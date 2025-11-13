@@ -5,4 +5,3 @@ if __name__ == '__main__':
     from metrics_utility import manage
 
     manage()
-# test

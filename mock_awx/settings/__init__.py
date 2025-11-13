@@ -8,7 +8,7 @@ DATABASES = {
         'USER': 'myuser',
         'PASSWORD': 'mypassword',
         'HOST': os.getenv('METRICS_UTILITY_DB_HOST', 'localhost'),
-        'PORT': os.getenv('METRICS_UTILITY_DB_PORT', '5433'),
+        'PORT': '5432',
     }
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

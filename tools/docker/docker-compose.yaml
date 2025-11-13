@@ -40,7 +40,7 @@ services:
       POSTGRES_USER: "myuser"
       POSTGRES_PASSWORD: "mypassword"
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql
       - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql

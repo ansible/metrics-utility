@@ -92,7 +92,6 @@ jobs:
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
-          METRICS_UTILITY_DB_PORT: "5432"
         run: |
           uv run pytest -s -v --cov=. --cov-report=xml
 
