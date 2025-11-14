@@ -7,7 +7,16 @@ from ..csv_file_splitter import CsvFileSplitter
 
 # FIXME: psycopg.sql
 def date_where(field, since, until):
-    return f'( {field} >= {since.isoformat()} AND {field} < {until.isoformat()} )'
+    if since and until:
+        return f'( "{field}" >= \'{since.isoformat()}\' AND "{field}" < \'{until.isoformat()}\' )'
+
+    if since:
+        return f'( "{field}" >= \'{since.isoformat()}\' )'
+
+    if until:
+        return f'( "{field}" < \'{until.isoformat()}\' )'
+
+    return 'true'
 
 
 def collector(func):

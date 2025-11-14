@@ -94,6 +94,8 @@ def main_host(*, db=None, output_dir=None):
 
 @collector
 def main_host_daily(*, db=None, since=None, until=None, output_dir=None):
+    # prefer running with until=False, to not skip hosts that keep being modified
+
     where = f"""
         enabled='t'
         AND ({date_where('main_host.created', since, until)}
