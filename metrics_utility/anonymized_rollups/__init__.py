@@ -8,7 +8,6 @@ from .anonymized_rollups import (
     load_anonymized_rollup_data,
 )
 from .base_anonymized_rollup import BaseAnonymizedRollup
-from .compute_anonymized_rollup import compute_anonymized_rollup
 from .events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from .execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from .helpers import sanitize_json
@@ -24,7 +23,6 @@ __all__ = [
     'JobsAnonymizedRollup',
     'anonymize_data',
     'anonymize_rollups',
-    'compute_anonymized_rollup',
     'compute_anonymized_rollup_from_raw_data',
     'create_anonymized_object',
     'flatten_json_report',
