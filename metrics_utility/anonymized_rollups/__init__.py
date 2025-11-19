@@ -32,4 +32,3 @@ __all__ = [
     'load_anonymized_rollup_data',
     'sanitize_json',
 ]
-
