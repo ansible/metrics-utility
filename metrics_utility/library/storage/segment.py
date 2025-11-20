@@ -66,14 +66,18 @@ class StorageSegment:
 
             elif isinstance(value, list):
                 active_chunk = {key: []}
-                chunks.append(active_chunk)
 
                 for item in value:
-                    active_chunk[key].append(item)
                     active_chunk_size = self._calculate_size(active_chunk)
-                    if active_chunk_size > max_size:
-                        active_chunk = {key: []}
+                    item_size = self._calculate_size(item)
+                    if active_chunk_size + item_size > max_size:
                         chunks.append(active_chunk)
+                        active_chunk = {key: [item]}
+                    else:
+                        active_chunk[key].append(item)
+
+                if len(active_chunk[key]) > 0:
+                    chunks.append(active_chunk)
 
         return chunks if chunks else [data]
 
