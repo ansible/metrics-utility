@@ -17,8 +17,10 @@ except ImportError:
 
 class StorageSegment:
     # Size limits for Segment messages
-    REGULAR_MESSAGE_LIMIT = 32 * 1024  # 32KB for regular messages
-    BULK_MESSAGE_LIMIT = 512 * 1024 * 1024  # 512MB for bulk messages
+    # 32KB for regular messages, but leave some room for the metadata
+    REGULAR_MESSAGE_LIMIT = 28 * 1024
+    # 512MB for bulk messages, but leave some room for the metadata
+    BULK_MESSAGE_LIMIT = 500 * 1024 * 1024
 
     def __init__(self, **settings):
         self.debug = settings.get('debug', False)
