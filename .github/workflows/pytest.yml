@@ -2,8 +2,9 @@ name: "Pytest tests"
 
 on:
   push:
-    branches: ['devel']
-  pull_request_target:
+    branches: ['aap-2.5-py312']
+  pull_request:
+    branches: ['aap-2.5-py312']
 
 jobs:
   pytest:
@@ -11,22 +12,14 @@ jobs:
     steps:
       - name: "Checkout metrics-utility (${{ github.ref }})"
         uses: actions/checkout@v5
-        if: ${{ ! github.base_ref }}
-
-      - name: "Checkout metrics-utility (${{ github.event.pull_request.head.ref }})"
-        uses: actions/checkout@v5
-        if: ${{ github.base_ref }}
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
 
       - name: "Install uv"
         uses: astral-sh/setup-uv@v6
 
-      - name: "Set up Python"
+      - name: "Set up Python 3.12"
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: "3.12"
 
       - name: "Set up postgresql"
         run: |
