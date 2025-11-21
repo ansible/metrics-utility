@@ -17,9 +17,9 @@ except ImportError:
 
 class StorageSegment:
     # Size limits for Segment messages
-    # 32KB for regular messages, but leave some room for the metadata
-    REGULAR_MESSAGE_LIMIT = 28 * 1024
-    # 512MB for bulk messages, but leave some room for the metadata
+    # 32KB for regular messages, but leave some room for the additional metadata
+    REGULAR_MESSAGE_LIMIT = 24 * 1024
+    # 512MB for bulk messages, but leave some room for the additional metadata
     BULK_MESSAGE_LIMIT = 500 * 1024 * 1024
 
     def __init__(self, **settings):
@@ -128,7 +128,12 @@ class StorageSegment:
         # Determine size limit based on bulk mode
         max_size = self.BULK_MESSAGE_LIMIT if self.use_bulk else self.REGULAR_MESSAGE_LIMIT
 
-        chunks = self._split_into_chunks(dict, max_size)
+        size_of_data = self._calculate_size(dict)
+        if size_of_data >= max_size:
+            chunks = self._split_into_chunks(dict, max_size)
+        else:
+            chunks = [dict]
+
         total_chunks = len(chunks)
 
         if self.debug:
