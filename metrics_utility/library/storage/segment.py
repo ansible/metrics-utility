@@ -131,8 +131,6 @@ class StorageSegment:
         chunks = self._split_into_chunks(dict, max_size)
         total_chunks = len(chunks)
 
-        print(f'Total chunks: {total_chunks}', file=sys.stderr)
-
         if self.debug:
             msg = f'Split data into {total_chunks} chunks'
             print(msg, file=sys.stderr)
