@@ -54,6 +54,10 @@ class StorageSegment:
         """
         chunks = []
 
+        size_of_data = self._calculate_size(data)
+        if size_of_data < max_size:
+            return [data]
+
         if data is not None and not isinstance(data, dict):
             msg = f'Data is not a dictionary, got {type(data).__name__}'
             raise Exception(msg)
@@ -127,12 +131,7 @@ class StorageSegment:
 
         # Determine size limit based on bulk mode
         max_size = self.BULK_MESSAGE_LIMIT if self.use_bulk else self.REGULAR_MESSAGE_LIMIT
-
-        size_of_data = self._calculate_size(dict)
-        if size_of_data >= max_size:
-            chunks = self._split_into_chunks(dict, max_size)
-        else:
-            chunks = [dict]
+        chunks = self._split_into_chunks(dict, max_size)
 
         total_chunks = len(chunks)
 

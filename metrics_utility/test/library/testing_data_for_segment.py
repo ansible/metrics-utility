@@ -1,3 +1,6 @@
+import json
+
+
 segment_data = {
     'statistics': {
         'modules_used_to_automate_total': 7,
@@ -381,3 +384,11 @@ segment_data = {
         },
     ],
 }
+
+# create large data
+segment_data_large = json.dumps(segment_data)
+segment_data_large = json.loads(segment_data_large)
+
+# repeat module names X times
+for i in range(15):
+    segment_data_large['module_stats'].extend(segment_data['module_stats'])
