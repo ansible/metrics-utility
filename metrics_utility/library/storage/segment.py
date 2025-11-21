@@ -1,6 +1,5 @@
 import datetime
 import json
-import random
 import sys
 import uuid
 
@@ -138,111 +137,6 @@ class StorageSegment:
             msg = f'Split data into {total_chunks} chunks'
             print(msg, file=sys.stderr)
 
-        # generate random readable name
-        choice1 = [
-            'amazing',
-            'wonderful',
-            'fantastic',
-            'incredible',
-            'magnificent',
-            'spectacular',
-            'awesome',
-            'terrific',
-            'magnificent',
-            'spectacular',
-            'awesome',
-            'terrific',
-            'brilliant',
-            'remarkable',
-            'extraordinary',
-            'marvelous',
-            'stellar',
-            'exceptional',
-            'impressive',
-            'phenomenal',
-            'outstanding',
-            'radiant',
-            'glorious',
-            'superb',
-        ]
-
-        choice2 = [
-            'quiet',
-            'anonymized',
-            'secret',
-            'hidden',
-            'private',
-            'secure',
-            'confidential',
-            'hidden',
-            'secret',
-            'confidential',
-            'stealthy',
-            'discreet',
-            'low-profile',
-            'shielded',
-            'veiled',
-            'masked',
-            'encrypted',
-            'obscured',
-            'camouflaged',
-            'protected',
-            'secluded',
-            'isolated',
-        ]
-
-        choice3 = [
-            'apple',
-            'banana',
-            'cherry',
-            'date',
-            'elderberry',
-            'fig',
-            'grape',
-            'honeydew',
-            'kiwi',
-            'lemon',
-            'mango',
-            'nectarine',
-            'orange',
-            'papaya',
-            'quince',
-            'raspberry',
-            'strawberry',
-            'tangerine',
-            'watermelon',
-            'blueberry',
-            'blackberry',
-            'pineapple',
-        ]
-
-        choice4 = [
-            'analysis',
-            'report',
-            'summary',
-            'metrics',
-            'data',
-            'information',
-            'insights',
-            'reports',
-            'analytics',
-            'stats',
-            'overview',
-            'breakdown',
-            'dashboard',
-            'evaluation',
-            'assessment',
-            'briefing',
-            'log',
-            'record',
-            'dataset',
-            'profile',
-            'observations',
-            'review',
-        ]
-
-        random_name = f'{random.choice(choice1)}_{random.choice(choice2)}_{random.choice(choice3)}_{random.choice(choice4)}'
-
         # Send each chunk
         for i, chunk in enumerate(chunks, 1):
             chunk_size = self._calculate_size(chunk)
@@ -255,7 +149,6 @@ class StorageSegment:
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
-                    'collection_id': random_name,
                     'data': chunk,
                     'upload_timestamp': (datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
                     'chunk_info': {
