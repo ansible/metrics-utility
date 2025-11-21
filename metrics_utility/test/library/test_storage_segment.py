@@ -47,6 +47,14 @@ class TestStorageSegmentAvailable:
         assert 'module_stats' in chunks[0]
         assert 'collection_name_stats' in chunks[0]
 
+    def test_borderline_data(self):
+        data = {'test_list': ['item1', 'item2']}
+        storage_segment = StorageSegment()
+        chunks = storage_segment._split_into_chunks(data, storage_segment.REGULAR_MESSAGE_LIMIT)
+        assert len(chunks) == 1
+        assert 'test_list' in chunks[0]
+        assert len(chunks[0]['test_list']) == 2
+
     @patch('metrics_utility.library.storage.segment.analytics')
     @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
     def test_put_sends_data_to_segment(self, mock_analytics):
