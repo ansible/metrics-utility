@@ -47,7 +47,7 @@ class TestStorageSegmentAvailable:
         assert 'module_stats' in chunks[0]
         assert 'collection_name_stats' in chunks[0]
 
-    def test_borderline_data(self):
+    def test_simple_list_data(self):
         data = {'test_list': ['item1', 'item2']}
         storage_segment = StorageSegment()
         chunks = storage_segment._split_into_chunks(data, storage_segment.REGULAR_MESSAGE_LIMIT)
@@ -55,7 +55,7 @@ class TestStorageSegmentAvailable:
         assert 'test_list' in chunks[0]
         assert len(chunks[0]['test_list']) == 2
 
-    def test_borderline_large_data(self):
+    def test_simple_list_large_data(self):
         data = {'test_list': []}
         for i in range(3000):
             data['test_list'].append(f'item{i}')
