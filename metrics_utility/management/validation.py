@@ -20,7 +20,9 @@ ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
 # Constants for valid values
 MAX_GATHER_PERIOD_DAYS = 3650  # 10 years maximum
 MAX_GATHER_PERIOD_DAYS_ERROR_MSG = f'Value must be number between 0 to {MAX_GATHER_PERIOD_DAYS}'
+
 VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
+
 VALID_SHEETS = {
     'CCSP': {
         'ccsp_summary',
@@ -48,15 +50,17 @@ VALID_SHEETS = {
         'managed_nodes_by_organizations',
     },
 }
+
 VALID_COLLECTORS = {
+    'execution_environments',
+    'job_host_summary_service',
     'main_host',
-    'main_jobevent',
+    'main_host_daily',
     'main_indirectmanagednodeaudit',
+    'main_jobevent',
+    'main_jobevent_service',
     'total_workers_vcpu',
     'unified_jobs',
-    'job_host_summary_service',
-    'main_jobevent_service',
-    'execution_environments',
 }
 
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
