@@ -132,7 +132,7 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate module_stats actual values
     print('--- Validating module_stats data values ---')
     first_module_stats = json_data['module_stats'][0]
-    assert first_module_stats['module_name'] == 'a10.acos_axapi.a10_slb_virtual_server', 'Module stats should match module'
+    assert first_module_stats['module_name'] == 'amazon.aws.s3_bucket', 'Module stats should match module'
     assert first_module_stats['jobs_total'] == 3, 'Should have 3 jobs using this module'
     assert first_module_stats['hosts_total'] == 2, 'Should have 2 hosts for this module'
     assert first_module_stats['task_clean_success_total'] == 6, 'Should have 6 successful tasks (3 jobs × 2 hosts)'
@@ -143,8 +143,8 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
     first_collection_stats = json_data['collection_name_stats'][0]
-    assert first_collection_stats['collection_name'] == 'a10.acos_axapi', 'Collection name should match'
-    assert first_collection_stats['collection_source'] == 'community', 'Collection should be from community'
+    assert first_collection_stats['collection_name'] == 'amazon.aws', 'Collection name should match'
+    assert first_collection_stats['collection_source'] == 'certified', 'Collection should be from certified'
     assert first_collection_stats['jobs_total'] == 3, 'Collection should have 3 jobs'
     assert first_collection_stats['hosts_total'] == 2, 'Collection should have 2 hosts'
     assert first_collection_stats['task_clean_success_total'] == 6, 'Collection should have 6 successful tasks'
