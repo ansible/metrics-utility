@@ -1,24 +1,25 @@
-import logging
-
-from metrics_utility.anonymized_rollups.anonymized_rollups import (
-    compute_anonymized_rollup_from_raw_data,
-)
+from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 
 # from metrics_utility.test.util import run_gather_int
 from metrics_utility.library.collectors.controller import (
+    execution_environments,
     job_host_summary_service,
     main_jobevent_service,
     unified_jobs,
 )
-
-
-logger = logging.getLogger(__name__)
+from metrics_utility.logger import logger
 
 
 def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: bool = True):
     # This will contain list of files that belongs to particular collector
     # Wrap each collector in try-except to prevent one failure from
     # stopping all collections
+
+    execution_environments_data = []
+    try:
+        execution_environments_data = execution_environments(db=db, since=since, until=until).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather execution_environments data: {e}')
 
     unified_jobs_data = []
     try:
@@ -39,7 +40,7 @@ def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: b
         logger.error(f'Failed to gather main_jobevent data: {e}')
 
     input_data = {
-        # 'execution_environments': execution_environments_data,
+        'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
         'job_host_summary': job_host_summary_data,
         'main_jobevent': main_jobevent_data,

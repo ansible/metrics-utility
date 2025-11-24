@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def execution_environments(*, db=None, output_dir=None):
+def execution_environments(*, db=None, output_dir=None, format='csv'):
     query = """
         SELECT
             id,
@@ -20,4 +20,4 @@ def execution_environments(*, db=None, output_dir=None):
         FROM main_executionenvironment
     """
 
-    return copy_table(db=db, table='main_executionenvironment', query=query, output_dir=output_dir)
+    return copy_table(db=db, table='main_executionenvironment', query=query, output_dir=output_dir, format=format)
