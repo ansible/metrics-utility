@@ -17,7 +17,7 @@ def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: b
 
     execution_environments_data = []
     try:
-        execution_environments_data = execution_environments(db=db, since=since, until=until).gather()
+        execution_environments_data = execution_environments(db=db).gather()
     except Exception as e:
         logger.error(f'Failed to gather execution_environments data: {e}')
 
