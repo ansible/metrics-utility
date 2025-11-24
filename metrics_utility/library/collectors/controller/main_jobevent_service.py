@@ -4,8 +4,6 @@ from ..util import collector, copy_table
 @collector
 def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
-    # FIXME: suspicious replace, why not e.event_data::jsonb->>'foo'
-    event_data = r"replace(e.event_data, '\u', '\u005cu')::jsonb"
 
     jobs_query = """
         SELECT
@@ -44,14 +42,14 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
             e.event,
 
             -- JSON extracted fields
-            ({event_data}->>'task_action')       AS task_action,
-            ({event_data}->>'resolved_action')   AS resolved_action,
-            ({event_data}->>'resolved_role')     AS resolved_role,
-            ({event_data}->>'duration')          AS duration,
-            ({event_data}->>'start')::timestamptz AS start,
-            ({event_data}->>'end')::timestamptz   AS end,
-            ({event_data}->>'task_uuid')        AS task_uuid,
-            COALESCE( ({event_data}->>'ignore_errors')::boolean, false ) AS ignore_errors,
+            (ed.event_data->>'task_action')       AS task_action,
+            (ed.event_data->>'resolved_action')   AS resolved_action,
+            (ed.event_data->>'resolved_role')     AS resolved_role,
+            (ed.event_data->>'duration')          AS duration,
+            (ed.event_data->>'start')::timestamptz AS start,
+            (ed.event_data->>'end')::timestamptz   AS end,
+            (ed.event_data->>'task_uuid')        AS task_uuid,
+            COALESCE( (ed.event_data->>'ignore_errors')::boolean, false ) AS ignore_errors,
             e.failed,
             e.changed,
             e.playbook,
@@ -65,18 +63,21 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
             e.host_name,
 
             -- Warnings and deprecations (json arrays)
-            {event_data}->'res'->'warnings'     AS warnings,
-            {event_data}->'res'->'deprecations' AS deprecations,
+            ed.event_data->'res'->'warnings'     AS warnings,
+            ed.event_data->'res'->'deprecations' AS deprecations,
 
             CASE
                 WHEN e.event = 'playbook_on_stats'
-                THEN {event_data} - 'artifact_data'
+                THEN ed.event_data - 'artifact_data'
             END AS playbook_on_stats,
 
             uj.failed as job_failed,
             uj.started as job_started
 
         FROM main_jobevent e
+        CROSS JOIN LATERAL (
+            SELECT replace(e.event_data, '\\u', '\\u005cu')::jsonb AS event_data
+        ) AS ed
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
         WHERE {where_clause}
     """
