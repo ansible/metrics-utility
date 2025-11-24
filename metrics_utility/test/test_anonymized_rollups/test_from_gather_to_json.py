@@ -8,8 +8,12 @@ import pytest
 
 from django.db import connection
 
-from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
-from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute_anonymized_rollup
+from metrics_utility.anonymized_rollups.anonymized_rollups import (
+    compute_anonymized_rollup_from_raw_data,
+)
+from metrics_utility.anonymized_rollups.compute_anonymized_rollup import (
+    compute_anonymized_rollup,
+)
 
 
 # where to find the tar.gz (match jobhostsummary test layout)
@@ -37,7 +41,16 @@ def test_empty_data(cleanup_glob):
     until = datetime(2025, 6, 14, 0, 0, 0)
 
     compute_anonymized_rollup_from_raw_data(
-        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': []}, 'salt', since, until, './out'
+        {
+            'unified_jobs': [],
+            'job_host_summary': [],
+            'main_jobevent': [],
+            'execution_environments': [],
+        },
+        'salt',
+        since,
+        until,
+        './out',
     )
 
 

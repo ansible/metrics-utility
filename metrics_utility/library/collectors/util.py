@@ -25,9 +25,9 @@ def date_where(column, since, until):
         conditions.append(f"{column} < '{until.isoformat()}'")
 
     if not conditions:
-        return "TRUE"
+        return 'TRUE'
 
-    return " AND ".join(conditions)
+    return ' AND '.join(conditions)
 
 
 def collector(func):
@@ -52,8 +52,8 @@ def collector(func):
 
 # FIXME: cleanup
 def init_tmp_dir():
-    tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix="awx_analytics-"))
-    gather_dir = tmp_dir.joinpath("stage")
+    tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix='awx_analytics-'))
+    gather_dir = tmp_dir.joinpath('stage')
     gather_dir.mkdir(mode=0o700)
     return gather_dir
 
@@ -66,27 +66,27 @@ def copy_table(
     prepend_query=False,
     output_file=None,
     output_dir=None,
-    format="csv",
+    format='csv',
 ):
     """Copy table data to file in specified format (csv or json)."""
-    if format.lower() == "json":
+    if format.lower() == 'json':
         return copy_table_to_json(db, table, query, params, prepend_query, output_dir)
 
     # Original CSV implementation
     file = output_file
     if not output_file:
         path = output_dir or init_tmp_dir()
-        file_path = os.path.join(path, table + "_table.csv")
+        file_path = os.path.join(path, table + '_table.csv')
         file = CsvFileSplitter(filespec=file_path)
 
     with db.cursor() as cursor:
         if prepend_query:
             cursor.execute(_yaml_json_functions())
 
-        copy_query = f"COPY ({query}) TO STDOUT WITH CSV HEADER"
+        copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
 
         # FIXME: remove once 2.4 is no longer supported
-        if hasattr(cursor, "copy_expert") and callable(cursor.copy_expert):
+        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
             _copy_table_aap_2_4_and_below(cursor, copy_query, params, file)
         else:
             _copy_table_aap_2_5_and_above(cursor, copy_query, params, file)
@@ -96,9 +96,7 @@ def copy_table(
     return file.file_list(keep_empty=True)
 
 
-def copy_table_to_json(
-    db, table, query, params=None, prepend_query=False, output_dir=None
-):
+def copy_table_to_json(db, table, query, params=None, prepend_query=False, output_dir=None):
     """Copy table data directly to JSON format.
 
     Always returns a list of file paths for consistency with CSV
@@ -125,28 +123,26 @@ def copy_table_to_json(
             row_dict = dict(zip(columns, row))
             # Convert any non-JSON serializable types to strings
             for key, value in row_dict.items():
-                if hasattr(value, "isoformat"):  # datetime objects
+                if hasattr(value, 'isoformat'):  # datetime objects
                     row_dict[key] = value.isoformat()
-                elif hasattr(value, "__str__") and not isinstance(
-                    value, (str, int, float, bool, type(None))
-                ):
+                elif hasattr(value, '__str__') and not isinstance(value, (str, int, float, bool, type(None))):
                     row_dict[key] = str(value)
             rows.append(row_dict)
 
         # Create structured JSON response
         json_data = {
             table: {
-                "data": rows,
-                "count": len(rows),
-                "format": "json",
-                "table_name": table,
+                'data': rows,
+                'count': len(rows),
+                'format': 'json',
+                'table_name': table,
             }
         }
 
         # Save to file, using temp dir if output_dir not specified
         path = output_dir or init_tmp_dir()
-        json_file_path = os.path.join(path, table + "_table.json")
-        with open(json_file_path, "w", encoding="utf-8") as f:
+        json_file_path = os.path.join(path, table + '_table.json')
+        with open(json_file_path, 'w', encoding='utf-8') as f:
             json.dump(json_data, f, indent=2)
 
         return [json_file_path]
@@ -156,10 +152,10 @@ def _copy_table_aap_2_4_and_below(cursor, query, params, file):
     if params:
         # copy_expert doesn't support params, make do (but no escaping)
         for p in params:
-            if f"%({p})s" in query:
-                query = query.replace(f"%({p})s", f'"{params[p]}"')
-            if f"%({p})d" in query:
-                query = query.replace(f"%({p})d", str(int(params[p])))
+            if f'%({p})s' in query:
+                query = query.replace(f'%({p})s', f'"{params[p]}"')
+            if f'%({p})d' in query:
+                query = query.replace(f'%({p})d', str(int(params[p])))
 
     # Automation Controller 4.4 and below use psycopg2 with
     # .copy_expert() method
