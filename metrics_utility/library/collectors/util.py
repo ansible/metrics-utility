@@ -5,6 +5,20 @@ import tempfile
 from ..csv_file_splitter import CsvFileSplitter
 
 
+# FIXME: psycopg.sql
+def date_where(field, since, until):
+    if since and until:
+        return f'( "{field}" >= \'{since.isoformat()}\' AND "{field}" < \'{until.isoformat()}\' )'
+
+    if since:
+        return f'( "{field}" >= \'{since.isoformat()}\' )'
+
+    if until:
+        return f'( "{field}" < \'{until.isoformat()}\' )'
+
+    return 'true'
+
+
 def collector(func):
     """Decorator that creates a collector class and returns a constructor function."""
 
