@@ -3,9 +3,6 @@ from ..util import collector, copy_table
 
 @collector
 def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
-    # FIXME: suspicious replace, why not main_jobevent.event_data::jsonb->>'foo' (also, perf candidate)
-    event_data = r"replace(main_jobevent.event_data, '\u', '\u005cu')::jsonb"
-
     where = ' AND '.join(
         [
             f"main_jobhostsummary.modified >= '{since.isoformat()}'",
@@ -34,10 +31,10 @@ def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
             main_jobevent.modified,
             main_jobevent.job_created as job_created,
             main_jobevent.event,
-            ({event_data}->>'task_action')::TEXT AS task_action,
-            ({event_data}->>'resolved_action')::TEXT AS resolved_action,
-            ({event_data}->>'resolved_role')::TEXT AS resolved_role,
-            ({event_data}->>'duration')::TEXT AS duration,
+            (ed.event_data->>'task_action')::TEXT AS task_action,
+            (ed.event_data->>'resolved_action')::TEXT AS resolved_action,
+            (ed.event_data->>'resolved_role')::TEXT AS resolved_role,
+            (ed.event_data->>'duration')::TEXT AS duration,
             main_jobevent.failed,
             main_jobevent.changed,
             main_jobevent.playbook,
@@ -48,6 +45,9 @@ def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
             main_jobevent.host_id as host_remote_id,
             main_jobevent.host_name
         FROM main_jobevent
+        CROSS JOIN LATERAL (
+            SELECT replace(main_jobevent.event_data, '\\u', '\\u005cu')::jsonb AS event_data
+        ) AS ed
         JOIN job_scope ON
             job_scope.job_created = main_jobevent.job_created
             AND job_scope.job_id = main_jobevent.job_id
