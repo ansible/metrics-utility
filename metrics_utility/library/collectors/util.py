@@ -5,22 +5,9 @@ import tempfile
 from ..csv_file_splitter import CsvFileSplitter
 
 
-# FIXME: psycopg.sql
-def date_where(field, since, until):
-    if since and until:
-        return f'( "{field}" >= \'{since.isoformat()}\' AND "{field}" < \'{until.isoformat()}\' )'
-
-    if since:
-        return f'( "{field}" >= \'{since.isoformat()}\' )'
-
-    if until:
-        return f'( "{field}" < \'{until.isoformat()}\' )'
-
-    return 'true'
-
-
 def collector(func):
-    """Decorator that creates a collector class and returns a constructor function."""
+    """Decorator that creates a collector class and returns a constructor
+    function."""
 
     class CollectorClass:
         fn = staticmethod(func)
@@ -46,7 +33,16 @@ def init_tmp_dir():
     return gather_dir
 
 
-def copy_table(db, table, query, params=None, prepend_query=False, output_file=None, output_dir=None, format='csv'):
+def copy_table(
+    db,
+    table,
+    query,
+    params=None,
+    prepend_query=False,
+    output_file=None,
+    output_dir=None,
+    format='csv',
+):
     """Copy table data to file in specified format (csv or json)."""
     if format.lower() == 'json':
         return copy_table_to_json(db, table, query, params, prepend_query, output_dir)
@@ -76,7 +72,11 @@ def copy_table(db, table, query, params=None, prepend_query=False, output_file=N
 
 
 def copy_table_to_json(db, table, query, params=None, prepend_query=False, output_dir=None):
-    """Copy table data directly to JSON format."""
+    """Copy table data directly to JSON format.
+
+    Always returns a list of file paths for consistency with CSV
+    implementation.
+    """
     import json
 
     with db.cursor() as cursor:
@@ -105,18 +105,22 @@ def copy_table_to_json(db, table, query, params=None, prepend_query=False, outpu
             rows.append(row_dict)
 
         # Create structured JSON response
-        json_data = {table: {'data': rows, 'count': len(rows), 'format': 'json', 'table_name': table}}
+        json_data = {
+            table: {
+                'data': rows,
+                'count': len(rows),
+                'format': 'json',
+                'table_name': table,
+            }
+        }
 
-        # Optionally save to file if output_dir is specified
-        if output_dir:
-            path = output_dir
-            json_file_path = os.path.join(path, table + '_table.json')
-            with open(json_file_path, 'w', encoding='utf-8') as f:
-                json.dump(json_data, f, indent=2)
-            return [json_file_path]
+        # Save to file, using temp dir if output_dir not specified
+        path = output_dir or init_tmp_dir()
+        json_file_path = os.path.join(path, table + '_table.json')
+        with open(json_file_path, 'w', encoding='utf-8') as f:
+            json.dump(json_data, f, indent=2)
 
-        # Return the JSON data directly
-        return json_data
+        return [json_file_path]
 
 
 def _copy_table_aap_2_4_and_below(cursor, query, params, file):
@@ -128,12 +132,14 @@ def _copy_table_aap_2_4_and_below(cursor, query, params, file):
             if f'%({p})d' in query:
                 query = query.replace(f'%({p})d', str(int(params[p])))
 
-    # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
+    # Automation Controller 4.4 and below use psycopg2 with
+    # .copy_expert() method
     cursor.copy_expert(query, file)
 
 
 def _copy_table_aap_2_5_and_above(cursor, query, params, file):
-    # Automation Controller 4.5 and above use psycopg3 with .copy() method
+    # Automation Controller 4.5 and above use psycopg3 with
+    # .copy() method
     with cursor.copy(query, params) as copy:
         while data := copy.read():
             byte_data = bytes(data)
