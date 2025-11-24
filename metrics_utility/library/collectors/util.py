@@ -32,7 +32,12 @@ def init_tmp_dir():
     return gather_dir
 
 
-def copy_table(db, table, query, params=None, prepend_query=False, output_file=None, output_dir=None):
+def copy_table(db, table, query, params=None, prepend_query=False, output_file=None, output_dir=None, format='csv'):
+    """Copy table data to file in specified format (csv or json)."""
+    if format.lower() == 'json':
+        return copy_table_to_json(db, table, query, params, prepend_query, output_dir)
+
+    # Original CSV implementation
     file = output_file
     if not output_file:
         path = output_dir or init_tmp_dir()
@@ -54,6 +59,50 @@ def copy_table(db, table, query, params=None, prepend_query=False, output_file=N
     if output_file:
         return [output_file.name]
     return file.file_list(keep_empty=True)
+
+
+def copy_table_to_json(db, table, query, params=None, prepend_query=False, output_dir=None):
+    """Copy table data directly to JSON format."""
+    import json
+
+    with db.cursor() as cursor:
+        if prepend_query:
+            cursor.execute(_yaml_json_functions())
+
+        # Execute the query and fetch results
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+
+        # Get column names from cursor description
+        columns = [desc[0] for desc in cursor.description]
+
+        # Fetch all rows and convert to list of dictionaries
+        rows = []
+        for row in cursor.fetchall():
+            row_dict = dict(zip(columns, row))
+            # Convert any non-JSON serializable types to strings
+            for key, value in row_dict.items():
+                if hasattr(value, 'isoformat'):  # datetime objects
+                    row_dict[key] = value.isoformat()
+                elif hasattr(value, '__str__') and not isinstance(value, (str, int, float, bool, type(None))):
+                    row_dict[key] = str(value)
+            rows.append(row_dict)
+
+        # Create structured JSON response
+        json_data = {table: {'data': rows, 'count': len(rows), 'format': 'json', 'table_name': table}}
+
+        # Optionally save to file if output_dir is specified
+        if output_dir:
+            path = output_dir
+            json_file_path = os.path.join(path, table + '_table.json')
+            with open(json_file_path, 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, indent=2)
+            return [json_file_path]
+
+        # Return the JSON data directly
+        return json_data
 
 
 def _copy_table_aap_2_4_and_below(cursor, query, params, file):

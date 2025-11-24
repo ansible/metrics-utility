@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def job_host_summary(*, db=None, since=None, until=None, output_dir=None):
+def job_host_summary(*, db=None, since=None, until=None, output_dir=None, format='csv'):
     where = ' AND '.join(
         [
             f"main_jobhostsummary.modified >= '{since.isoformat()}'",
@@ -78,4 +78,4 @@ def job_host_summary(*, db=None, since=None, until=None, output_dir=None):
         ORDER BY main_jobhostsummary.modified ASC
     """
 
-    return copy_table(db=db, table='main_jobhostsummary', query=query, prepend_query=True, output_dir=output_dir)
+    return copy_table(db=db, table='main_jobhostsummary', query=query, prepend_query=True, output_dir=output_dir, format=format)

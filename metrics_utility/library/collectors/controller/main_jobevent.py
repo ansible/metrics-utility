@@ -2,16 +2,26 @@ from ..util import collector, copy_table
 
 
 @collector
-def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
+def main_jobevent(*, db=None, since=None, until=None, output_dir=None, format='csv'):
     # FIXME: suspicious replace, why not main_jobevent.event_data::jsonb->>'foo' (also, perf candidate)
     event_data = r"replace(main_jobevent.event_data, '\u', '\u005cu')::jsonb"
 
-    where = ' AND '.join(
-        [
-            f"main_jobhostsummary.modified >= '{since.isoformat()}'",
-            f"main_jobhostsummary.modified < '{until.isoformat()}'",
-        ]
-    )
+    # Handle None values for since/until parameters
+    where_conditions = []
+    if since is not None:
+        where_conditions.append(f"main_jobhostsummary.modified >= '{since.isoformat()}'")
+    if until is not None:
+        where_conditions.append(f"main_jobhostsummary.modified < '{until.isoformat()}'")
+
+    # If no date conditions, add a default condition to prevent full table scan
+    if not where_conditions:
+        # Default to last 30 days if no dates provided
+        from datetime import datetime, timedelta
+
+        default_since = datetime.now() - timedelta(days=30)
+        where_conditions.append(f"main_jobhostsummary.modified >= '{default_since.isoformat()}'")
+
+    where = ' AND '.join(where_conditions)
 
     query = f"""
         WITH job_scope AS (
@@ -65,4 +75,4 @@ def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
         )
         """
 
-    return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir)
+    return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir, format=format)

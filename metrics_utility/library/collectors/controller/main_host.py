@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def main_host(*, db=None, output_dir=None):
+def main_host(*, db=None, output_dir=None, format='csv'):
     query = """
         SELECT
             main_host.name as host_name,
@@ -86,4 +86,4 @@ def main_host(*, db=None, output_dir=None):
         ORDER BY main_host.id ASC
     """
 
-    return copy_table(db=db, table='main_host', query=query, prepend_query=True, output_dir=output_dir)
+    return copy_table(db=db, table='main_host', query=query, prepend_query=True, output_dir=output_dir, format=format)
