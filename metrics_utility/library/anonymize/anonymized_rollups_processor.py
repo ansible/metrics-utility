@@ -1,10 +1,5 @@
 # call compute_anonymized_rollup
-
-# For now, implement a simple stub that doesn't require the problematic compute_anonymized_rollup import
-import logging
-
-
-logger = logging.getLogger(__name__)
+from metrics_utility.logger import logger
 
 
 def anonymized_rollups_processor(db, salt, since, until, ship_path, save_rollups: bool = True):
