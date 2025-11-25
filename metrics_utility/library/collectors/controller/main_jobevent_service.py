@@ -1,9 +1,17 @@
+from datetime import timedelta
+
 from ..util import collector, copy_table
 
 
 @collector
 def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
-    # Use the table alias 'e' here (you alias main_jobevent as e in the FROM)
+    """
+    Collects job events for jobs that finished in the given time window.
+
+    Uses two optimizations for partition pruning:
+    1. Hourly timestamp ranges in WHERE clause (literal values for partition pruning)
+    2. Temporary table for job_ids to avoid huge IN clauses
+    """
 
     jobs_query = """
         SELECT
@@ -13,9 +21,8 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
         WHERE uj.finished >= %(since)s
           AND uj.finished < %(until)s
     """
-    jobs = []
 
-    # do raw sql for django.db connection
+    # Fetch all jobs in the time window
     with db.cursor() as cursor:
         cursor.execute(jobs_query, {'since': since, 'until': until})
         jobs = cursor.fetchall()
@@ -24,12 +31,55 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     if not jobs:
         return None
 
-    # Build a literal WHERE clause that preserves (job_id, job_created) pairing
-    # (e.job_id, e.job_created) IN (VALUES (id1, 'ts1'::timestamptz), ...)
-    pairs_sql = ',\n'.join(f"({jid}, '{jcreated.isoformat()}'::timestamptz)" for jid, jcreated in jobs)
-    where_clause = f'(e.job_id, e.job_created) IN (VALUES {pairs_sql})'
+    # Create temporary table for job_ids
+    # - DROP IF EXISTS ensures no bloat from previous runs in same session
+    # - TEMPORARY TABLE is session-scoped, auto-drops when connection closes
+    # - This avoids huge IN clauses with 100K+ job_ids
+    with db.cursor() as cursor:
+        cursor.execute('DROP TABLE IF EXISTS temp_jobevent_service_jobs')
+
+        cursor.execute("""
+            CREATE TEMPORARY TABLE temp_jobevent_service_jobs (
+                job_id INTEGER PRIMARY KEY
+            )
+        """)
+
+        # Insert unique job_ids
+        job_ids_set = set(job_id for job_id, _ in jobs)
+
+        # Use execute_values for efficient bulk insert
+        try:
+            from psycopg2.extras import execute_values
+
+            execute_values(cursor, 'INSERT INTO temp_jobevent_service_jobs (job_id) VALUES %s', [(jid,) for jid in job_ids_set], page_size=1000)
+        except ImportError:
+            # Fallback for psycopg3
+            for job_id in job_ids_set:
+                cursor.execute('INSERT INTO temp_jobevent_service_jobs (job_id) VALUES (%s)', (job_id,))
+
+        # Analyze temp table for query optimizer
+        cursor.execute('ANALYZE temp_jobevent_service_jobs')
+
+    # Extract unique hour boundaries from job_created timestamps
+    # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
+    hour_boundaries = set()
+    for job_id, job_created in jobs:
+        # Truncate to hour boundary (matching partition boundaries)
+        hour_start = job_created.replace(minute=0, second=0, microsecond=0)
+        hour_boundaries.add(hour_start)
+
+    # Build WHERE clause with literal hour ranges for partition pruning
+    # PostgreSQL can see these literal timestamps and prune partitions accordingly
+    or_clauses = []
+    for hour_start in sorted(hour_boundaries):
+        hour_end = hour_start + timedelta(hours=1)
+        or_clauses.append(f"(e.job_created >= '{hour_start.isoformat()}'::timestamptz AND e.job_created < '{hour_end.isoformat()}'::timestamptz)")
+
+    where_clause = ' OR '.join(or_clauses)
 
     # Final event query
+    # - INNER JOIN with temp table filters events immediately (efficient!)
+    # - WHERE clause enables partition pruning via literal hour boundaries
     query = f"""
         SELECT
             e.id,
@@ -75,11 +125,12 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
             uj.started as job_started
 
         FROM main_jobevent e
+        INNER JOIN temp_jobevent_service_jobs t ON t.job_id = e.job_id
         CROSS JOIN LATERAL (
             SELECT replace(e.event_data, '\\u', '\\u005cu')::jsonb AS event_data
         ) AS ed
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
-        WHERE {where_clause}
+        WHERE ({where_clause})
     """
 
     return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir)
