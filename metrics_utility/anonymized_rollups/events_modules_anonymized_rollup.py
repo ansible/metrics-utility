@@ -1,4 +1,5 @@
 import json
+import os
 import re
 
 import pandas as pd
@@ -77,8 +78,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         self.collector_names = ['main_jobevent_service']
 
-        # Open the JSON file
-        with open('metrics_utility/anonymized_rollups/collections.json', 'r') as f:
+        # Open the JSON file using path relative to this module
+        collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
+        with open(collections_path, 'r') as f:
             self.collections = json.load(f)
 
     # Prepare is run for each batch of data
