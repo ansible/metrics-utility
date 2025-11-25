@@ -34,7 +34,7 @@ def test_main_jobevent_service_with_output_dir():
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
-    """Test that collector returns None when no jobs are found."""
+    """Test that collector returns empty CSV with headers when no jobs are found."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -42,6 +42,7 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
 
     # No jobs found
     mock_cursor.fetchall.return_value = []
+    mock_copy_table.return_value = ['/tmp/main_jobevent_table.csv']
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -49,11 +50,16 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     result = instance.gather()
 
-    # Should return None when no jobs
-    assert result is None
+    # Should still call copy_table to generate CSV with headers (even if 0 rows)
+    mock_copy_table.assert_called_once()
 
-    # Should not call copy_table
-    mock_copy_table.assert_not_called()
+    # Verify the query has FALSE conditions (returns 0 rows but maintains schema)
+    call_args = mock_copy_table.call_args
+    query = call_args[1]['query']
+    assert 'FALSE' in query  # Should have FALSE for empty job set
+
+    # Should return CSV file path
+    assert result == ['/tmp/main_jobevent_table.csv']
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')

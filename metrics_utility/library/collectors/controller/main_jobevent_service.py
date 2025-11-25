@@ -27,10 +27,6 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
         cursor.execute(jobs_query, {'since': since, 'until': until})
         jobs = cursor.fetchall()
 
-    # No jobs in the window
-    if not jobs:
-        return None
-
     # Extract unique job_ids
     # We are loading the finished jobs then we are filtering
     # for the job_created, this cannot be done by simple joins because
@@ -80,8 +76,12 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     timestamp_where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
 
     # Build job_id IN clause
-    job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
-    job_id_where_clause = f'e.job_id IN ({job_ids_str})'
+    # Handle edge case: if no jobs, use FALSE to return empty result set with proper schema
+    if job_ids_set:
+        job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
+        job_id_where_clause = f'e.job_id IN ({job_ids_str})'
+    else:
+        job_id_where_clause = 'FALSE'
 
     # Combine both WHERE conditions
     where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause})'
