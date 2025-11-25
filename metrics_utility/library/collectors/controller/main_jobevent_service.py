@@ -68,6 +68,9 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
     hour_boundaries = set()
     for job_id, job_created in jobs:
+        # Skip jobs with NULL created timestamp (defensive programming)
+        if job_created is None:
+            continue
         # Truncate to hour boundary (matching partition boundaries)
         hour_start = job_created.replace(minute=0, second=0, microsecond=0)
         hour_boundaries.add(hour_start)
