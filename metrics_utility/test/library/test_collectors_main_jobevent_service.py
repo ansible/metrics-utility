@@ -122,8 +122,8 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_builds_values_clause(mock_copy_table):
-    """Test that query builds VALUES clause from job list."""
+def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_table):
+    """Test that query uses temp table and builds hourly timestamp ranges."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -143,12 +143,31 @@ def test_main_jobevent_service_builds_values_clause(mock_copy_table):
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
 
-    # Should have VALUES clause with job pairs
-    assert 'VALUES' in query
-    assert '(100,' in query
-    assert '(200,' in query
-    assert '2024-01-15T10:30:45+00:00' in query
-    assert '2024-01-16T14:45:30+00:00' in query
+    # Should use temp table join instead of VALUES clause
+    assert 'temp_jobevent_service_jobs' in query
+    assert 'INNER JOIN temp_jobevent_service_jobs t ON t.job_id = e.job_id' in query
+
+    # Should have hourly timestamp ranges (truncated to hour boundaries)
+    # Job 1 at 10:30:45 -> hour range 10:00:00 to 11:00:00
+    assert '2024-01-15T10:00:00+00:00' in query
+    assert '2024-01-15T11:00:00+00:00' in query
+
+    # Job 2 at 14:45:30 -> hour range 14:00:00 to 15:00:00
+    assert '2024-01-16T14:00:00+00:00' in query
+    assert '2024-01-16T15:00:00+00:00' in query
+
+    # Should have OR clause for multiple hour ranges
+    assert ' OR ' in query
+
+    # Verify temp table was created
+    # cursor.execute should be called multiple times: DROP, CREATE, INSERTs, ANALYZE
+    assert mock_cursor.execute.call_count >= 3
+
+    # Check that temp table operations were called
+    execute_calls = [str(call[0][0]) for call in mock_cursor.execute.call_args_list]
+    assert any('DROP TABLE IF EXISTS temp_jobevent_service_jobs' in call for call in execute_calls)
+    assert any('CREATE TEMPORARY TABLE temp_jobevent_service_jobs' in call for call in execute_calls)
+    assert any('ANALYZE temp_jobevent_service_jobs' in call for call in execute_calls)
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')

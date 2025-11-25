@@ -35,6 +35,10 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     # - DROP IF EXISTS ensures no bloat from previous runs in same session
     # - TEMPORARY TABLE is session-scoped, auto-drops when connection closes
     # - This avoids huge IN clauses with 100K+ job_ids
+
+    # We are loading the finished jobs then we are filtering
+    # for the job_created, this cannot be done by simple joins because
+    # job_created is partitioned and partitions prunning dont work with joins
     with db.cursor() as cursor:
         cursor.execute('DROP TABLE IF EXISTS temp_jobevent_service_jobs')
 
