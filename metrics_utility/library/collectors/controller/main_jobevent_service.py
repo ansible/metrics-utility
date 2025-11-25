@@ -52,12 +52,14 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
         job_ids_set = set(job_id for job_id, _ in jobs)
 
         # Use execute_values for efficient bulk insert
-        try:
+        # Check for psycopg2 vs psycopg3 using the same method as copy_table
+        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
+            # psycopg2 (Automation Controller 4.4 and below)
             from psycopg2.extras import execute_values
 
             execute_values(cursor, 'INSERT INTO temp_jobevent_service_jobs (job_id) VALUES %s', [(jid,) for jid in job_ids_set], page_size=1000)
-        except ImportError:
-            # Fallback for psycopg3
+        else:
+            # psycopg3 (Automation Controller 4.5 and above)
             for job_id in job_ids_set:
                 cursor.execute('INSERT INTO temp_jobevent_service_jobs (job_id) VALUES (%s)', (job_id,))
 
