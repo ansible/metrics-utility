@@ -83,10 +83,32 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         with open(collections_path, 'r') as f:
             self.collections = json.load(f)
 
+    def merge(self, data_all, data_new):
+        """
+        Override merge to handle the new structure with event_count and task_summary.
+        Concatenates task_summary dataframes and sums event_count.
+        """
+        # Handle initial empty case
+        if not data_all:
+            return data_new
+
+        # If data_all is empty dict (first iteration), return data_new
+        if isinstance(data_all, dict) and not data_all:
+            return data_new
+
+        # Concatenate task_summary dataframes and sum event_counts
+        return {
+            'event_count': data_all['event_count'] + data_new['event_count'],
+            'task_summary': pd.concat([data_all['task_summary'], data_new['task_summary']], ignore_index=True),
+        }
+
     # Prepare is run for each batch of data
     # then it is merged with other batches into one dataframes
     # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
+        # Count all events before pruning
+        event_count = len(dataframe)
+
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
         failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed']
@@ -188,9 +210,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             playbook=('playbook', 'first'),
         )
 
-        return task_summary
+        return {
+            'event_count': event_count,
+            'task_summary': task_summary,
+        }
 
-    def base(self, dataframe):
+    def base(self, data):
         """
         *Avg number of modules used in a playbook
         *Failure/Success rate of modules
@@ -206,14 +231,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
 
 
-        dataframe corresponds to events joined with jobs
+        data is a dict with 'event_count' and 'task_summary' dataframe
         """
+
+        # Extract event_count and task_summary dataframe from the data structure
+        event_count = data.get('event_count', 0)
+        dataframe = data.get('task_summary', pd.DataFrame())
 
         # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
             return {
-                'json': {},
-                'rollup': {'aggregated': dataframe},
+                'json': {'event_count': event_count},
+                'rollup': {'aggregated': dataframe, 'event_count': event_count},
             }
 
         # Categorize columns to reduce memory footprint
@@ -369,6 +398,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         rollup_data = {
             'module_stats': module_stats,
             'total_hosts_automated': {'total_hosts_automated': total_hosts_automated},
+            'event_count': event_count,
         }
 
         # Prepare JSON data (converted to dicts/lists)
@@ -379,6 +409,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': merged_list_module,
             'collection_name_stats': merged_list_collection_name,
             'total_hosts_automated': total_hosts_automated,
+            'event_count': event_count,
         }
 
         return {

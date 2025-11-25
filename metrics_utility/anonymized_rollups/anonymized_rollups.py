@@ -4,8 +4,6 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-from pandas import DataFrame
-
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
@@ -111,6 +109,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
         'avg_number_of_modules_used_in_a_playbooks': events_modules.get('avg_number_of_modules_used_in_a_playbooks'),
         'total_hosts_automated': events_modules.get('total_hosts_automated'),
+        'event_count': events_modules.get('event_count'),
         # from execution_environments
         'total_EE': execution_environments.get('total_EE'),
         'default_EE': execution_environments.get('default_EE'),
@@ -209,14 +208,14 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base
 # inside tarball is file named {collector_name}.csv
 # this goes to dataframe, then filter_function is applied to the dataframe
 # all result dataframes are concatenated into one dataframe
-def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list: []) -> DataFrame:
+def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list: []):
     # file_list - list of csv files that needs to be read
 
-    concat_dataframe = pd.DataFrame()
+    concat_data = pd.DataFrame()
 
     for file in file_list:
         df = pd.read_csv(file)
-        df = rollup_object.prepare(df)
-        concat_dataframe = rollup_object.merge(concat_dataframe, df)
+        prepared_data = rollup_object.prepare(df)
+        concat_data = rollup_object.merge(concat_data, prepared_data)
 
-    return concat_dataframe
+    return concat_data
