@@ -99,7 +99,9 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     for range_start, range_end in ranges:
         or_clauses.append(f"(e.job_created >= '{range_start.isoformat()}'::timestamptz AND e.job_created < '{range_end.isoformat()}'::timestamptz)")
 
-    where_clause = ' OR '.join(or_clauses)
+    # Handle edge case: if no ranges, use FALSE to return empty result set
+    # This maintains valid SQL structure while returning 0 rows
+    where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
 
     # Final event query
     # - INNER JOIN with temp table filters events immediately (efficient!)
