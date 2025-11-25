@@ -72,12 +72,32 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
         hour_start = job_created.replace(minute=0, second=0, microsecond=0)
         hour_boundaries.add(hour_start)
 
-    # Build WHERE clause with literal hour ranges for partition pruning
+    # Sort hours for range grouping
+    sorted_hours = sorted(hour_boundaries)
+
+    # Group consecutive hours into ranges to reduce OR clauses
+    # e.g., hours [0,1,2,5,6,10] → ranges [(0,3), (5,7), (10,11)]
+    ranges = []
+    if sorted_hours:
+        range_start = sorted_hours[0]
+        range_end = sorted_hours[0] + timedelta(hours=1)
+
+        for hour in sorted_hours[1:]:
+            if hour == range_end:  # Consecutive hour - extend current range
+                range_end = hour + timedelta(hours=1)
+            else:  # Gap found - save current range and start new one
+                ranges.append((range_start, range_end))
+                range_start = hour
+                range_end = hour + timedelta(hours=1)
+
+        # Don't forget the last range
+        ranges.append((range_start, range_end))
+
+    # Build WHERE clause with consolidated ranges for partition pruning
     # PostgreSQL can see these literal timestamps and prune partitions accordingly
     or_clauses = []
-    for hour_start in sorted(hour_boundaries):
-        hour_end = hour_start + timedelta(hours=1)
-        or_clauses.append(f"(e.job_created >= '{hour_start.isoformat()}'::timestamptz AND e.job_created < '{hour_end.isoformat()}'::timestamptz)")
+    for range_start, range_end in ranges:
+        or_clauses.append(f"(e.job_created >= '{range_start.isoformat()}'::timestamptz AND e.job_created < '{range_end.isoformat()}'::timestamptz)")
 
     where_clause = ' OR '.join(or_clauses)
 
