@@ -127,11 +127,9 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_table):
-    """Test that query uses temp table and builds hourly timestamp ranges."""
+    """Test that query uses job_id IN clause and builds hourly timestamp ranges."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
-    # Configure mock cursor to simulate psycopg3 (no copy_expert method)
-    del mock_cursor.copy_expert
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
     mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
@@ -149,9 +147,9 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
 
-    # Should use temp table join instead of VALUES clause
-    assert 'temp_jobevent_service_jobs' in query
-    assert 'INNER JOIN temp_jobevent_service_jobs t ON t.job_id = e.job_id' in query
+    # Should use direct job_id IN clause (no temp table for read-only replica compatibility)
+    assert 'e.job_id IN (' in query
+    assert '100' in query or '200' in query  # Should contain job IDs
 
     # Should have hourly timestamp ranges (truncated to hour boundaries)
     # Job 1 at 10:30:45 -> hour range 10:00:00 to 11:00:00
@@ -165,15 +163,12 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
     # Should have OR clause for multiple hour ranges
     assert ' OR ' in query
 
-    # Verify temp table was created
-    # cursor.execute should be called multiple times: DROP, CREATE, INSERTs, ANALYZE
-    assert mock_cursor.execute.call_count >= 3
+    # Verify only the initial jobs query was executed (no temp table operations)
+    assert mock_cursor.execute.call_count == 1
 
-    # Check that temp table operations were called
+    # Check that no temp table operations were called
     execute_calls = [str(call[0][0]) for call in mock_cursor.execute.call_args_list]
-    assert any('DROP TABLE IF EXISTS temp_jobevent_service_jobs' in call for call in execute_calls)
-    assert any('CREATE TEMPORARY TABLE temp_jobevent_service_jobs' in call for call in execute_calls)
-    assert any('ANALYZE temp_jobevent_service_jobs' in call for call in execute_calls)
+    assert not any('temp_jobevent_service_jobs' in call for call in execute_calls)
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')

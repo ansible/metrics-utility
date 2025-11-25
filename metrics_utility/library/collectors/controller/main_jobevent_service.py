@@ -10,7 +10,7 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
 
     Uses two optimizations for partition pruning:
     1. Hourly timestamp ranges in WHERE clause (literal values for partition pruning)
-    2. Temporary table for job_ids to avoid huge IN clauses
+    2. Direct job_id filtering in WHERE clause
     """
 
     jobs_query = """
@@ -31,40 +31,11 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     if not jobs:
         return None
 
-    # Create temporary table for job_ids
-    # - DROP IF EXISTS ensures no bloat from previous runs in same session
-    # - TEMPORARY TABLE is session-scoped, auto-drops when connection closes
-    # - This avoids huge IN clauses with 100K+ job_ids
-
+    # Extract unique job_ids
     # We are loading the finished jobs then we are filtering
     # for the job_created, this cannot be done by simple joins because
-    # job_created is partitioned and partitions prunning dont work with joins
-    with db.cursor() as cursor:
-        cursor.execute('DROP TABLE IF EXISTS temp_jobevent_service_jobs')
-
-        cursor.execute("""
-            CREATE TEMPORARY TABLE temp_jobevent_service_jobs (
-                job_id INTEGER PRIMARY KEY
-            )
-        """)
-
-        # Insert unique job_ids
-        job_ids_set = set(job_id for job_id, _ in jobs)
-
-        # Use execute_values for efficient bulk insert
-        # Check for psycopg2 vs psycopg3 using the same method as copy_table
-        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
-            # psycopg2 (Automation Controller 4.4 and below)
-            from psycopg2.extras import execute_values
-
-            execute_values(cursor, 'INSERT INTO temp_jobevent_service_jobs (job_id) VALUES %s', [(jid,) for jid in job_ids_set], page_size=1000)
-        else:
-            # psycopg3 (Automation Controller 4.5 and above)
-            for job_id in job_ids_set:
-                cursor.execute('INSERT INTO temp_jobevent_service_jobs (job_id) VALUES (%s)', (job_id,))
-
-        # Analyze temp table for query optimizer
-        cursor.execute('ANALYZE temp_jobevent_service_jobs')
+    # job_created is partitioned and partitions pruning dont work with joins
+    job_ids_set = set(job_id for job_id, _ in jobs)
 
     # Extract unique hour boundaries from job_created timestamps
     # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
@@ -106,11 +77,17 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
 
     # Handle edge case: if no ranges, use FALSE to return empty result set
     # This maintains valid SQL structure while returning 0 rows
-    where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
+    timestamp_where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
+
+    # Build job_id IN clause
+    job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
+    job_id_where_clause = f'e.job_id IN ({job_ids_str})'
+
+    # Combine both WHERE conditions
+    where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause})'
 
     # Final event query
-    # - INNER JOIN with temp table filters events immediately (efficient!)
-    # - WHERE clause enables partition pruning via literal hour boundaries
+    # - WHERE clause filters by job_id and enables partition pruning via literal hour boundaries
     query = f"""
         SELECT
             e.id,
@@ -156,12 +133,11 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
             uj.started as job_started
 
         FROM main_jobevent e
-        INNER JOIN temp_jobevent_service_jobs t ON t.job_id = e.job_id
         CROSS JOIN LATERAL (
             SELECT replace(e.event_data, '\\u', '\\u005cu')::jsonb AS event_data
         ) AS ed
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
-        WHERE ({where_clause})
+        WHERE {where_clause}
     """
 
     return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir)
