@@ -81,6 +81,10 @@ class BaseAnonymizedRollup:
                 # Sanitize and store JSON data in memory for tar
                 sanitized_value = sanitize_json(value)
                 tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
+            elif isinstance(value, (int, float, str, bool)) or value is None:
+                # Handle scalar values (int, float, str, bool, None) by wrapping in a dict
+                sanitized_value = sanitize_json({key: value})
+                tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
             # the rest
             else:
                 print(f'Key {key} is a unknown type')

@@ -88,11 +88,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         Override merge to handle the new structure with event_count and task_summary.
         Concatenates task_summary dataframes and sums event_count.
         """
-        # Handle initial empty case
-        if not data_all:
+        # Handle initial empty DataFrame case (first iteration from load_anonymized_rollup_data)
+        if isinstance(data_all, pd.DataFrame) and data_all.empty:
             return data_new
 
-        # If data_all is empty dict (first iteration), return data_new
+        # Handle initial empty dict case
         if isinstance(data_all, dict) and not data_all:
             return data_new
 
