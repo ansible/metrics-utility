@@ -108,17 +108,17 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         # from events_modules
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
         'avg_number_of_modules_used_in_a_playbooks': events_modules.get('avg_number_of_modules_used_in_a_playbooks'),
-        'total_hosts_automated': events_modules.get('total_hosts_automated'),
-        'event_count': events_modules.get('event_count'),
+        'hosts_automated_total': events_modules.get('hosts_automated_total'),
+        'event_total': events_modules.get('event_total'),
         # from execution_environments
-        'total_EE': execution_environments.get('total_EE'),
-        'default_EE': execution_environments.get('default_EE'),
-        'custom_EE': execution_environments.get('custom_EE'),
+        'EE_total': execution_environments.get('EE_total'),
+        'EE_default_total': execution_environments.get('EE_default_total'),
+        'EE_custom_total': execution_environments.get('EE_custom_total'),
         # from jobs
         'jobs_total': jobs.get('jobs_total'),
         # from job_host_summary
-        'total_unique_hosts': job_host_summary_root.get('total_unique_hosts'),
-        'jobhostsummary_count': job_host_summary_root.get('jobhostsummary_count'),
+        'unique_hosts_total': job_host_summary_root.get('unique_hosts_total'),
+        'jobhostsummary_total': job_host_summary_root.get('jobhostsummary_total'),
     }
 
     # 2) modules_used_per_playbook (convert map -> array)

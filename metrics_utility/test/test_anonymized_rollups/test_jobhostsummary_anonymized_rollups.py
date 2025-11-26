@@ -205,10 +205,10 @@ def test_jobhostsummary_anonymized():
 
     print(result)
 
-    # result should be a dict with 'aggregated' (list) and 'total_unique_hosts' (int)
+    # result should be a dict with 'aggregated' (list) and 'unique_hosts_total' (int)
     assert 'aggregated' in result, 'result should have aggregated key'
-    assert 'total_unique_hosts' in result, 'result should have total_unique_hosts key'
-    assert result['total_unique_hosts'] == 5, 'Should have 5 unique hosts (h1, h2, h3, h4, h5)'
+    assert 'unique_hosts_total' in result, 'result should have unique_hosts_total key'
+    assert result['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1, h2, h3, h4, h5)'
 
     # convert to mapping for easy assertions
     by_template = {item['job_template_name']: item for item in result['aggregated']}

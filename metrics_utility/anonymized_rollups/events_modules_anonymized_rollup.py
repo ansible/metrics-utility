@@ -85,8 +85,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def merge(self, data_all, data_new):
         """
-        Override merge to handle the new structure with event_count and task_summary.
-        Concatenates task_summary dataframes and sums event_count.
+        Override merge to handle the new structure with event_total and task_summary.
+        Concatenates task_summary dataframes and sums event_total.
         """
         # Handle initial empty DataFrame case (first iteration from load_anonymized_rollup_data)
         if isinstance(data_all, pd.DataFrame) and data_all.empty:
@@ -96,9 +96,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if isinstance(data_all, dict) and not data_all:
             return data_new
 
-        # Concatenate task_summary dataframes and sum event_counts
+        # Concatenate task_summary dataframes and sum event_totals
         return {
-            'event_count': data_all['event_count'] + data_new['event_count'],
+            'event_total': data_all['event_total'] + data_new['event_total'],
             'task_summary': pd.concat([data_all['task_summary'], data_new['task_summary']], ignore_index=True),
         }
 
@@ -107,7 +107,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
         # Count all events before pruning
-        event_count = len(dataframe)
+        event_total = len(dataframe)
 
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
@@ -211,7 +211,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         return {
-            'event_count': event_count,
+            'event_total': event_total,
             'task_summary': task_summary,
         }
 
@@ -231,18 +231,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
 
 
-        data is a dict with 'event_count' and 'task_summary' dataframe
+        data is a dict with 'event_total' and 'task_summary' dataframe
         """
 
-        # Extract event_count and task_summary dataframe from the data structure
-        event_count = data.get('event_count', 0)
+        # Extract event_total and task_summary dataframe from the data structure
+        event_total = data.get('event_total', 0)
         dataframe = data.get('task_summary', pd.DataFrame())
 
         # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
             return {
-                'json': {'event_count': event_count},
-                'rollup': {'aggregated': dataframe, 'event_count': event_count},
+                'json': {'event_total': event_total},
+                'rollup': {'aggregated': dataframe, 'event_total': event_total},
             }
 
         # Categorize columns to reduce memory footprint
@@ -294,7 +294,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook', observed=True)['module_name'].nunique().mean()
         modules_used_per_playbook_total = dataframe.groupby('playbook', observed=True)['module_name'].nunique()
 
-        total_hosts_automated = dataframe['host_id'].nunique()
+        hosts_automated_total = dataframe['host_id'].nunique()
 
         # Data is already aggregated from prepare() and merge()
         # We just need to compute the mutually exclusive task status categories
@@ -397,8 +397,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Prepare rollup data (dataframes before conversion)
         rollup_data = {
             'module_stats': module_stats,
-            'total_hosts_automated': {'total_hosts_automated': total_hosts_automated},
-            'event_count': event_count,
+            'hosts_automated_total': {'hosts_automated_total': hosts_automated_total},
+            'event_total': event_total,
         }
 
         # Prepare JSON data (converted to dicts/lists)
@@ -408,8 +408,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': merged_list_module,
             'collection_name_stats': merged_list_collection_name,
-            'total_hosts_automated': total_hosts_automated,
-            'event_count': event_count,
+            'hosts_automated_total': hosts_automated_total,
+            'event_total': event_total,
         }
 
         return {

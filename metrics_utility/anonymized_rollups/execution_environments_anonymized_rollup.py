@@ -26,16 +26,16 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
                 'rollup': {'aggregated': dataframe},
             }
 
-        total_ee = int(len(dataframe))
+        EE_total = int(len(dataframe))
         dataframe['managed'] = dataframe['managed'].map({'t': True, 'f': False})
-        default_ee = int(dataframe['managed'].sum())
-        custom_ee = total_ee - default_ee
+        EE_default_total = int(dataframe['managed'].sum())
+        EE_custom_total = EE_total - EE_default_total
 
         # Prepare JSON data (same as rollup for scalar values)
         json_data = {
-            'total_EE': total_ee,
-            'default_EE': default_ee,
-            'custom_EE': custom_ee,
+            'EE_total': EE_total,
+            'EE_default_total': EE_default_total,
+            'EE_custom_total': EE_custom_total,
         }
 
         # Prepare rollup data (raw values before conversion)

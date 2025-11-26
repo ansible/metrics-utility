@@ -14,8 +14,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def merge(self, data_all, data_new):
         """
-        Override merge to handle the new structure with jobhostsummary_count and aggregated data.
-        Concatenates aggregated dataframes and sums jobhostsummary_count.
+        Override merge to handle the new structure with jobhostsummary_total and aggregated data.
+        Concatenates aggregated dataframes and sums jobhostsummary_total.
         """
         # Handle initial empty DataFrame case (first iteration from load_anonymized_rollup_data)
         if isinstance(data_all, pd.DataFrame) and data_all.empty:
@@ -25,9 +25,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if isinstance(data_all, dict) and not data_all:
             return data_new
 
-        # Concatenate aggregated dataframes and sum jobhostsummary_counts
+        # Concatenate aggregated dataframes and sum jobhostsummary_totals
         return {
-            'jobhostsummary_count': data_all['jobhostsummary_count'] + data_new['jobhostsummary_count'],
+            'jobhostsummary_total': data_all['jobhostsummary_total'] + data_new['jobhostsummary_total'],
             'aggregated': pd.concat([data_all['aggregated'], data_new['aggregated']], ignore_index=True),
         }
 
@@ -47,13 +47,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def prepare(self, dataframe):
         # Count all records before processing
-        jobhostsummary_count = len(dataframe)
+        jobhostsummary_total = len(dataframe)
 
         # Aggregate by job_template_name and host_name to reduce data volume early
         # This significantly improves performance when processing large batches
         if dataframe.empty:
             return {
-                'jobhostsummary_count': jobhostsummary_count,
+                'jobhostsummary_total': jobhostsummary_total,
                 'aggregated': dataframe,
             }
 
@@ -74,7 +74,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         return {
-            'jobhostsummary_count': jobhostsummary_count,
+            'jobhostsummary_total': jobhostsummary_total,
             'aggregated': aggregated,
         }
 
@@ -86,19 +86,19 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         Success rate and average - this can compute SaaS team from the metrics
 
-        data is a dict with 'jobhostsummary_count' and 'aggregated' dataframe
+        data is a dict with 'jobhostsummary_total' and 'aggregated' dataframe
         """
 
-        # Extract jobhostsummary_count and aggregated dataframe from the data structure
-        jobhostsummary_count = data.get('jobhostsummary_count', 0)
+        # Extract jobhostsummary_total and aggregated dataframe from the data structure
+        jobhostsummary_total = data.get('jobhostsummary_total', 0)
         dataframe = data.get('aggregated', pd.DataFrame())
 
         # Return empty result if dataframe is empty
         # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
             return {
-                'json': {'jobhostsummary_count': jobhostsummary_count},
-                'rollup': {'aggregated': dataframe, 'jobhostsummary_count': jobhostsummary_count},
+                'json': {'jobhostsummary_total': jobhostsummary_total},
+                'rollup': {'aggregated': dataframe, 'jobhostsummary_total': jobhostsummary_total},
             }
 
         # Re-aggregate in case multiple batches had overlapping template+host combinations
@@ -116,7 +116,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             .reset_index()
         )
 
-        total_unique_hosts = set().union(*aggregated['unique_hosts'])
+        unique_hosts_total = set().union(*aggregated['unique_hosts'])
         # drop unique_hosts column
         aggregated = aggregated.drop(columns=['unique_hosts'])
 
@@ -124,16 +124,16 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         rollup_data = {
             # pandas.DataFrame
             'aggregated': aggregated,
-            'jobhostsummary_count': jobhostsummary_count,
+            'jobhostsummary_total': jobhostsummary_total,
         }
 
         # Prepare JSON data (converted to list of dicts)
         # json_data = aggregated.to_dict(orient='records')
 
         json_data = {
-            'total_unique_hosts': len(total_unique_hosts),
+            'unique_hosts_total': len(unique_hosts_total),
             'aggregated': aggregated.to_dict(orient='records'),
-            'jobhostsummary_count': jobhostsummary_count,
+            'jobhostsummary_total': jobhostsummary_total,
         }
 
         return {
