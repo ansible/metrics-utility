@@ -50,7 +50,7 @@ class Base:
         return o.empty()
 
     def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None):
-        return self.klass().dedup(dataframe, hostname_mapping=hostname_mapping, scope_dataframe=scope_dataframe)
+        return self.klass().dedup(dataframe, hostname_mapping=hostname_mapping, scope_dataframe=scope_dataframe, deduplicator=self.extra_params.get('deduplicator'))
 
     def iter_batches(self, names):
         collections = []
