@@ -118,6 +118,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_total': jobs.get('jobs_total'),
         # from job_host_summary
         'total_unique_hosts': job_host_summary_root.get('total_unique_hosts'),
+        'jobhostsummary_count': job_host_summary_root.get('jobhostsummary_count'),
     }
 
     # 2) modules_used_per_playbook (convert map -> array)
