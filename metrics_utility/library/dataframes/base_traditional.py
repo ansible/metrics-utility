@@ -29,7 +29,7 @@ class BaseTraditional(BaseDataframe):
 
         return df.astype(types)
 
-    def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None):
+    def dedup(self, dataframe, hostname_mapping=None, **kwargs):
         if dataframe is None or dataframe.empty:
             return self.empty()
 

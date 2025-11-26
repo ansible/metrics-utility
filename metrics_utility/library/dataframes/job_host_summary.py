@@ -45,13 +45,7 @@ class DataframeJobHostSummary(BaseTraditional):
             billing_data['host_name'] = billing_data['ansible_host_variable']
 
         # Store ansible_host || hostname for tracking deduplication impact
-        # FIXME: no extra_params
-        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
-        if experimental_dedup:
-            billing_data['host_names_before_dedup'] = billing_data['host_name']
-        else:
-            # Always create the column for consistent structure, but keep it empty when dedup is not enabled
-            billing_data['host_names_before_dedup'] = None
+        billing_data['host_names_before_dedup'] = billing_data['host_name']
 
         # Summarize all task counts into 1 col
         def sum_columns(row):
@@ -166,7 +160,7 @@ class DataframeJobHostSummary(BaseTraditional):
             'host_names_before_dedup': 'combine_set',
         }
 
-    def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None):
+    def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None, deduplicator=None):
         """
         Override dedup method to enrich canonical facts and facts from scope_dataframe
         when experimental deduplication is enabled.
@@ -177,12 +171,9 @@ class DataframeJobHostSummary(BaseTraditional):
         if not hostname_mapping:
             return dataframe
 
-        # Enrich direct managed nodes with canonical facts and facts from scope data
-        # when experimental deduplication is enabled
-        # FIXME: no extra_params
-        experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
-
-        if experimental_dedup and scope_dataframe is not None and not scope_dataframe.empty:
+        # Enrich direct managed nodes with canonical facts and facts from scope data when experimental deduplication is enabled
+        # FIXME: dedup logic should NOT depend on deduplicator choice this way, just on is not None
+        if deduplicator == 'ccsp-experimental' and scope_dataframe is not None and not scope_dataframe.empty:
             # Create a mapping from host_name to canonical_facts and facts
             if 'canonical_facts' in scope_dataframe.columns and 'facts' in scope_dataframe.columns:
                 # Filter to only direct managed nodes for enrichment
