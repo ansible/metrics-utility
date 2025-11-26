@@ -21,10 +21,10 @@ class DataframeJobHostSummary(BaseTraditional):
     def prepare(self, tup):
         (jhs, mimna, config) = tup
 
-        if jhs:
+        if jhs is not None:
             billing_data = jhs
             managed_node_type = DIRECT
-        elif mimna:
+        elif mimna is not None:
             billing_data = mimna
             managed_node_type = INDIRECT
 

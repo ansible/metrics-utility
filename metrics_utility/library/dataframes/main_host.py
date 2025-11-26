@@ -16,7 +16,12 @@ class DataframeMainHost(BaseTraditional):
     TARBALL_NAMES = ['main_host.csv', 'main_host_daily.csv', 'config.json']
 
     def prepare(self, tup):
-        (billing_data, config) = tup
+        (mh, mhd, config) = tup
+
+        if mh is not None:
+            billing_data = mh
+        elif mhd is not None:
+            billing_data = mhd
 
         billing_data['organization_name'] = billing_data.organization_name.fillna('No organization name')
         billing_data['install_uuid'] = config['install_uuid']

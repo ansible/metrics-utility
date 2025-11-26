@@ -10,4 +10,6 @@ class DataframeDataCollectionStatus(BaseDataframe):
         df['collection_start_timestamp'] = pd.to_datetime(df['collection_start_timestamp'], format='ISO8601').dt.tz_localize(None)
         df['since'] = pd.to_datetime(df['since'], format='ISO8601').dt.tz_localize(None)
         df['until'] = pd.to_datetime(df['until'], format='ISO8601').dt.tz_localize(None)
-        return super().postprocess(df)
+
+        # not super, no need to reset index
+        return df
