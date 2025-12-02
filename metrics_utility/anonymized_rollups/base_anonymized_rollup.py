@@ -17,7 +17,7 @@ class BaseAnonymizedRollup:
 
     def merge(self, dataframe_all, dataframe_new):
 
-        if not dataframe_all:
+        if dataframe_all is None:
             return dataframe_new
 
         return pd.concat([dataframe_all, dataframe_new], ignore_index=True)

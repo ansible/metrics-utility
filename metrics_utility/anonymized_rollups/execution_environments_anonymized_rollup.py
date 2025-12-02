@@ -19,8 +19,8 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         # default vs custom EE - field Managed in table (true for default).
         # simple count of rows that has managed = true
 
-        # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
-        if dataframe.empty:
+        # Handle None or empty dataframe
+        if dataframe is None or dataframe.empty:
             return {
                 'json': {},
                 'rollup': {'aggregated': dataframe},

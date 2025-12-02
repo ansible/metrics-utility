@@ -88,8 +88,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         Override merge to handle the new structure with event_total and task_summary.
         Concatenates task_summary dataframes and sums event_total.
         """
-        # Handle initial empty dict case
-        if not data_all:
+        # Handle initial None case (first iteration from load_anonymized_rollup_data)
+        if data_all is None:
             return data_new
 
         # Concatenate task_summary dataframes and sum event_totals
@@ -229,6 +229,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         data is a dict with 'event_total' and 'task_summary' dataframe
         """
+
+        # Handle None input (no data files)
+        if data is None:
+            return {
+                'json': {'event_total': 0},
+                'rollup': {'aggregated': pd.DataFrame(), 'event_total': 0},
+            }
 
         # Extract event_total and task_summary dataframe from the data structure
         event_total = data.get('event_total', 0)
