@@ -16,6 +16,10 @@ class BaseAnonymizedRollup:
         self.collector_names = []
 
     def merge(self, dataframe_all, dataframe_new):
+
+        if not dataframe_all:
+            return dataframe_new
+
         return pd.concat([dataframe_all, dataframe_new], ignore_index=True)
 
     def rollup(self, dataframe_all, dataframe_new):

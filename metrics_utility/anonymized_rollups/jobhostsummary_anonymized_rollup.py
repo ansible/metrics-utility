@@ -17,12 +17,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         Override merge to handle the new structure with jobhostsummary_total and aggregated data.
         Concatenates aggregated dataframes and sums jobhostsummary_total.
         """
-        # Handle initial empty DataFrame case (first iteration from load_anonymized_rollup_data)
-        if isinstance(data_all, pd.DataFrame) and data_all.empty:
-            return data_new
-
         # Handle initial empty dict case
-        if isinstance(data_all, dict) and not data_all:
+        if not data_all:
             return data_new
 
         # Concatenate aggregated dataframes and sum jobhostsummary_totals

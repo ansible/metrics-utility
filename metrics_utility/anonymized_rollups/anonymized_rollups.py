@@ -212,7 +212,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base
 def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list: []):
     # file_list - list of csv files that needs to be read
 
-    concat_data = pd.DataFrame()
+    concat_data = None
 
     for file in file_list:
         df = pd.read_csv(file)
