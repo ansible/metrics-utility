@@ -1,4 +1,4 @@
-from . import anonymize, collectors, dataframes, extractors, instants, package, reports, storage
+from . import collectors, dataframes, extractors, instants, package, reports, storage
 from .csv_file_splitter import CsvFileSplitter
 from .lock import lock
 from .utils import last_gather, save_last_gather, tempdir
@@ -6,7 +6,6 @@ from .utils import last_gather, save_last_gather, tempdir
 
 __all__ = [
     'CsvFileSplitter',
-    'anonymize',
     'collectors',
     'dataframes',
     'extractors',
