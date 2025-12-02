@@ -16,6 +16,9 @@ class BaseAnonymizedRollup:
         self.collector_names = []
 
     def merge(self, dataframe_all, dataframe_new):
+        if dataframe_all is None:
+            return dataframe_new
+
         return pd.concat([dataframe_all, dataframe_new], ignore_index=True)
 
     def rollup(self, dataframe_all, dataframe_new):
@@ -80,6 +83,10 @@ class BaseAnonymizedRollup:
             elif isinstance(value, dict):
                 # Sanitize and store JSON data in memory for tar
                 sanitized_value = sanitize_json(value)
+                tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
+            elif isinstance(value, (int, float, str, bool)) or value is None:
+                # Handle scalar values (int, float, str, bool, None) by wrapping in a dict
+                sanitized_value = sanitize_json({key: value})
                 tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
             # the rest
             else:

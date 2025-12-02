@@ -40,8 +40,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe corresponds to jobs
         """
 
-        # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
-        if dataframe.empty:
+        # Handle None or empty dataframe
+        if dataframe is None or dataframe.empty:
             return {
                 'json': {},
                 'rollup': {'aggregated': dataframe},
