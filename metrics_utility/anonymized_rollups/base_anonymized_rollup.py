@@ -16,7 +16,6 @@ class BaseAnonymizedRollup:
         self.collector_names = []
 
     def merge(self, dataframe_all, dataframe_new):
-
         if dataframe_all is None:
             return dataframe_new
 
