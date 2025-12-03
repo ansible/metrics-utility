@@ -3,6 +3,7 @@
 This document summarizes all changes made to migrate from Garage to Ceph RGW.
 
 ## Migration Date
+
 December 2025
 
 ## Files Modified
@@ -19,15 +20,18 @@ December 2025
 ### Scripts
 
 2. **tools/docker/ceph-rgw-setup.sh** (NEW)
+
    - Created setup script for Ceph RGW initialization
    - Uses AWS CLI to create bucket and verify S3 operations
    - Sets up credentials via environment variables
 
 3. **tools/docker/get-ceph-credentials.sh** (NEW)
+
    - Helper script to retrieve Ceph RGW credentials using `radosgw-admin`
    - Displays environment variables for easy export
 
 4. **verify-ceph.sh** (NEW)
+
    - Verification script for Ceph RGW setup
    - Tests container status, S3 API, and upload/download operations
 
@@ -38,14 +42,17 @@ December 2025
 ### Documentation
 
 6. **CEPH_SETUP_COMPLETE.md** (NEW)
+
    - Complete setup guide for Ceph RGW
    - Credentials, quick start, daily usage, troubleshooting
 
 7. **CEPH_MIGRATION.md** (NEW)
+
    - Comprehensive migration guide from Garage to Ceph RGW
    - Configuration changes, compatibility notes, troubleshooting
 
 8. **tools/docker/CEPH_CREDENTIALS.md** (NEW)
+
    - Credentials management guide
    - User creation, access key management, bucket policies
 
@@ -55,6 +62,7 @@ December 2025
 ### Test Files
 
 10. **metrics_utility/test/gather/test_s3_gather.py**
+
     - Updated comment: `http://garage:3902` → `http://ceph-rgw:7480`
 
 11. **metrics_utility/test/library/test_storage_s3.py**
@@ -63,6 +71,7 @@ December 2025
 ### README Files
 
 12. **README.md**
+
     - Updated 3 references from "Garage" to "Ceph RGW"
     - Updated container name references
 
@@ -84,15 +93,18 @@ These files are no longer used but kept for historical reference:
 ## Key Changes
 
 ### Service Name
+
 - **Before:** `garage`
 - **After:** `ceph-rgw`
 
 ### Container Image
+
 - **Before:** `dxflrs/garage:v1.0.0`
 - **After:** `quay.io/ceph/daemon:latest-quincy`
 
 ### Ports
-- **Before:** 
+
+- **Before:**
   - Admin API: 3900
   - RPC: 3901
   - S3 API: 3902 (mapped to 9000)
@@ -102,18 +114,22 @@ These files are no longer used but kept for historical reference:
 ### Endpoints
 
 #### From Containers:
+
 - **Before:** `http://garage:3902`
 - **After:** `http://ceph-rgw:7480`
 
 #### From Host:
+
 - **Before:** `http://localhost:9000`
 - **After:** `http://localhost:9000` (unchanged)
 
 ### Credentials Management
+
 - **Before:** Generated automatically by Garage API (GK-prefixed keys)
 - **After:** Configured via environment variables in docker-compose.yaml
 
 ### Admin Interface
+
 - **Before:** Garage Admin API (HTTP REST)
 - **After:** `radosgw-admin` CLI tool
 
@@ -148,6 +164,7 @@ uv run pytest -s -v metrics_utility/test/gather/test_s3_gather.py
 ## Compatibility Notes
 
 ### What Works the Same
+
 - ✅ All S3 API operations (PUT, GET, DELETE, LIST)
 - ✅ Bucket operations
 - ✅ Authentication using access/secret keys
@@ -156,6 +173,7 @@ uv run pytest -s -v metrics_utility/test/gather/test_s3_gather.py
 - ✅ Test suite
 
 ### What's Different
+
 - 🔄 Container service name
 - 🔄 Internal port number
 - 🔄 Admin interface (API → CLI)
@@ -206,4 +224,3 @@ To rollback to Garage:
 - [Ceph RGW Documentation](https://docs.ceph.com/en/latest/radosgw/)
 - [Ceph RGW S3 API](https://docs.ceph.com/en/latest/radosgw/s3/)
 - [Ceph RGW Admin Guide](https://docs.ceph.com/en/latest/radosgw/admin/)
-
