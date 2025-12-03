@@ -2,7 +2,7 @@ name: "Pytest tests"
 
 on:
   push:
-    branches: ['devel']
+    branches: ["devel"]
   pull_request_target:
 
 jobs:
@@ -44,39 +44,106 @@ jobs:
         run: |
           cat tools/docker/{roles,latest,conf_setting,main_hostmetric,main_instance,main_jobhostsummary}.sql | sudo su - postgres -c psql
 
-      - name: "Set up minio"
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
+      - name: "Set up Garage"
         run: |
           mkdir -p ~/.local/bin
-          curl https://dl.min.io/client/mc/release/linux-amd64/mc -o ~/.local/bin/mc
-          curl https://dl.min.io/server/minio/release/linux-amd64/minio -o ~/.local/bin/minio
-          chmod +x ~/.local/bin/{mc,minio}
+          # Download Garage v1.0.0 for x86_64 Linux
+          curl -L https://garagehq.deuxfleurs.fr/_releases/v1.0.0/x86_64-unknown-linux-musl/garage -o ~/.local/bin/garage
+          chmod +x ~/.local/bin/garage
 
-          mkdir minio-data
-          minio server ./minio-data --console-address ":9001" &
+          # Create Garage configuration
+          mkdir -p ~/.config/garage
+          cat > ~/.config/garage/garage.toml <<EOF
+          metadata_dir = "$HOME/.local/share/garage/meta"
+          data_dir = "$HOME/.local/share/garage/data"
+          db_engine = "sqlite"
+          replication_factor = 1
+          rpc_bind_addr = "[::]:3901"
+          rpc_public_addr = "127.0.0.1:3901"
+          rpc_secret = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 
-      - name: "Wait for minio"
-        timeout-minutes: 1
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
+          [s3_api]
+          s3_region = "us-east-1"
+          api_bind_addr = "[::]:3902"
+          root_domain = ".s3.garage.localhost"
+
+          [admin]
+          api_bind_addr = "[::]:3900"
+          admin_token = "admin-token-secret"
+          EOF
+
+          # Create data directories
+          mkdir -p "$HOME/.local/share/garage/meta"
+          mkdir -p "$HOME/.local/share/garage/data"
+
+          # Start Garage server in background
+          garage -c ~/.config/garage/garage.toml server &
+
+          # Export Garage PID for later cleanup
+          echo "GARAGE_PID=$!" >> $GITHUB_ENV
+
+      - name: "Wait for Garage and configure cluster"
+        timeout-minutes: 2
         run: |
-          until mc alias set local http://localhost:9000 minioaccess miniosecret; do
-            sleep 4
+          # Wait for Garage to be ready
+          until curl -s http://localhost:3900/health > /dev/null 2>&1; do
+            echo "Waiting for Garage to start..."
+            sleep 2
           done
+          echo "Garage is ready!"
 
-      - name: "Create minio user"
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
+          # Get node ID
+          NODE_ID=$(curl -s http://localhost:3900/v1/status | jq -r '.nodes[0].id')
+          echo "Node ID: $NODE_ID"
+
+          # Configure cluster layout
+          curl -s -H "Authorization: Bearer admin-token-secret" \
+            -H "Content-Type: application/json" \
+            -X POST http://localhost:3900/v1/layout \
+            -d "[{\"id\": \"$NODE_ID\", \"zone\": \"dc1\", \"capacity\": 1073741824, \"tags\": []}]"
+
+          sleep 2
+
+          # Apply layout
+          curl -s -H "Authorization: Bearer admin-token-secret" \
+            -H "Content-Type: application/json" \
+            -X POST http://localhost:3900/v1/layout/apply \
+            -d '{"version": 1}'
+
+          sleep 3
+          echo "Cluster layout configured!"
+
+      - name: "Create Garage bucket and credentials"
         run: |
-          mc alias set local http://localhost:9000 minioaccess miniosecret
-          mc mb --ignore-existing local/metricsutilitys3
-          mc admin user add local mynewuser mysecretpassword
-          mc admin policy attach local readwrite --user=mynewuser
-          mc admin accesskey create local mynewuser --access-key myuseraccesskey --secret-key myusersecretkey
+          # Create access key
+          KEY_RESPONSE=$(curl -s -H "Authorization: Bearer admin-token-secret" \
+            -H "Content-Type: application/json" \
+            -X POST http://localhost:3900/v1/key \
+            -d '{"name": "ci-test-key"}')
+
+          KEY_ID=$(echo "$KEY_RESPONSE" | jq -r '.accessKeyId')
+          KEY_SECRET=$(echo "$KEY_RESPONSE" | jq -r '.secretAccessKey')
+
+          echo "Generated credentials:"
+          echo "Key ID: $KEY_ID"
+
+          # Export credentials for pytest step
+          echo "METRICS_UTILITY_BUCKET_ACCESS_KEY=$KEY_ID" >> $GITHUB_ENV
+          echo "METRICS_UTILITY_BUCKET_SECRET_KEY=$KEY_SECRET" >> $GITHUB_ENV
+
+          # Create bucket
+          BUCKET_RESPONSE=$(curl -s -H "Authorization: Bearer admin-token-secret" \
+            -H "Content-Type: application/json" \
+            -X POST http://localhost:3900/v1/bucket \
+            -d '{"globalAlias": "metricsutilitys3"}')
+
+          BUCKET_ID=$(echo "$BUCKET_RESPONSE" | jq -r '.id')
+          echo "Bucket ID: $BUCKET_ID"
+
+          # Grant permissions using Garage CLI
+          garage bucket allow --read --write metricsutilitys3 --key "$KEY_ID"
+
+          echo "Garage setup complete!"
 
       - name: "Patch mock_awx postgres config"
         run: |
@@ -86,14 +153,20 @@ jobs:
 
       - name: "Run pytest"
         env:
-          METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
+          # METRICS_UTILITY_BUCKET_ACCESS_KEY and SECRET_KEY set by previous step
+          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:3902"
           METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-          METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
         run: |
           uv run pytest -s -v --cov=. --cov-report=xml
+
+      - name: "Cleanup Garage"
+        if: always()
+        run: |
+          if [ -n "$GARAGE_PID" ]; then
+            kill $GARAGE_PID || true
+          fi
 
       - name: "Send code coverage report to Sonar Cloud"
         uses: SonarSource/sonarqube-scan-action@v6
