@@ -7,7 +7,7 @@ import pytest
 from metrics_utility.library.storage import StorageS3
 
 
-# "localhost" (github actions, pytest WITH compose) or "minio" (pytest IN compose)
+# "localhost" (github actions, pytest WITH compose) or "garage" (pytest IN compose)
 endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000')
 s3_settings = {
     'access_key': 'myuseraccesskey',

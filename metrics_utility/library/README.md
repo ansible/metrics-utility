@@ -86,7 +86,7 @@ StorageDirectory(
 ```
 
 ```
-# StorageS3 - S3 or minio
+# StorageS3 - S3-compatible storage (AWS S3, Garage, MinIO, etc.)
 #
 # bucket = METRICS_UTILITY_BUCKET_NAME
 # endpoint = METRICS_UTILITY_BUCKET_ENDPOINT
