@@ -7,7 +7,7 @@ export METRICS_UTILITY_SHIP_PATH="$$"
 export METRICS_UTILITY_SHIP_TARGET="s3"
 
 export METRICS_UTILITY_BUCKET_ACCESS_KEY="myuseraccesskey"
-export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:9000"  # Garage S3 API (port mapped from 3902 to 9000)
+export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:9000"  # Ceph RGW S3 API (port mapped from 7480 to 9000)
 export METRICS_UTILITY_BUCKET_NAME="metricsutilitys3"
 export METRICS_UTILITY_BUCKET_REGION="us-east-1"
 export METRICS_UTILITY_BUCKET_SECRET_KEY="myusersecretkey"
@@ -17,7 +17,7 @@ if ! pg_isready -h localhost; then
   exit 1
 fi
 
-# Note: MinIO client (mc) works with any S3-compatible storage, including Garage
+# Note: MinIO client (mc) works with any S3-compatible storage, including Ceph RGW
 
 minio-mc alias set local "$METRICS_UTILITY_BUCKET_ENDPOINT" "$METRICS_UTILITY_BUCKET_ACCESS_KEY" "$METRICS_UTILITY_BUCKET_SECRET_KEY"
 echo

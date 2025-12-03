@@ -37,7 +37,7 @@ For more about the development setup, see the [Developer Setup Guide](./docs/dev
 
 ### Tests (standalone)
 
-Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & Garage (S3-compatible storage) instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one.
+Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & Ceph RGW (S3-compatible storage) instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one.
 
 You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`. You use also `podman`.
 
@@ -45,7 +45,7 @@ For more flexibility, use:
 
 ```
 (host) $ docker compose -f tools/docker/docker-compose.yaml --profile=env up -d  # runs a metrics-utility-env container with python & uv set up
-(host) $ docker exec -it metrics-utility-env /bin/sh # (wait for postgres & garage containers to start before running)
+(host) $ docker exec -it metrics-utility-env /bin/sh # (wait for postgres & ceph-rgw containers to start before running)
 (container) $ uv run pytest -vv metrics_utility/test/ccspv_reports/test_complex_CCSP_with_scope.py # 1 test
 (container) $ uv run pytest -vv metrics_utility/test/ccspv_reports # all ccsp tests
 ```
@@ -127,7 +127,7 @@ podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash
     - install the right RPM
     - run utility using `metrics-utility ...`.
   - **In standalone mode**:
-    - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or Garage (S3-compatible storage),
+    - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or Ceph RGW (S3-compatible storage),
     - run utility using `uv run python manage.py ...`.
 
 1. Pick a task (goes right after the previous command)

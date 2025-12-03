@@ -1,27 +1,29 @@
 services:
-  garage:
-    image: "dxflrs/garage:v1.0.0"
-    container_name: garage
+  ceph-rgw:
+    image: "quay.io/ceph/daemon:latest-quincy"
+    container_name: ceph-rgw
     ports:
-      - "3900:3900" # Admin API
-      - "3901:3901" # RPC
-      - "9000:3902" # S3 API (mapped to 9000 for compatibility)
+      - "9000:7480" # RGW S3 API (mapped to 9000 for compatibility)
     environment:
-      RUST_LOG: "garage=info"
+      CEPH_DAEMON: "demo"
+      RGW_NAME: "rgw0"
+      NETWORK_AUTO_DETECT: "4"
+      DEMO_DAEMONS: "rgw"
+      CEPH_DEMO_UID: "demo-user"
+      CEPH_DEMO_ACCESS_KEY: "myuseraccesskey"
+      CEPH_DEMO_SECRET_KEY: "myusersecretkey"
+      CEPH_DEMO_BUCKET: "metricsutilitys3"
     tmpfs:
-      - /tmp/garage-data:mode=1777
-      - /tmp/garage-meta:mode=1777
-    volumes:
-      - ./garage.toml:/etc/garage.toml:ro
-    command: ["/garage", "-c", "/etc/garage.toml", "server"]
+      - /etc/ceph:mode=0755
+      - /var/lib/ceph:mode=0755
 
-  garage-setup:
-    image: "alpine:latest"
+  ceph-rgw-setup:
+    image: "quay.io/ceph/daemon:latest-quincy"
     depends_on:
-      - garage
+      - ceph-rgw
     volumes:
-      - ./garage-setup.sh:/setup.sh:ro
-    entrypoint: ["/bin/sh", "/setup.sh"]
+      - ./ceph-rgw-setup.sh:/setup.sh:ro
+    entrypoint: ["/bin/bash", "/setup.sh"]
 
   postgres:
     image: "mirror.gcr.io/postgres"
@@ -56,7 +58,7 @@ services:
     image: "mirror.gcr.io/python"
     container_name: metrics-utility
     depends_on:
-      garage-setup:
+      ceph-rgw-setup:
         condition: service_completed_successfully
       postgres-wait:
         condition: service_completed_successfully
@@ -68,7 +70,7 @@ services:
     profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
       METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-      METRICS_UTILITY_BUCKET_ENDPOINT: "http://garage:3902"
+      METRICS_UTILITY_BUCKET_ENDPOINT: "http://ceph-rgw:7480"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
@@ -95,7 +97,7 @@ services:
     image: "mirror.gcr.io/python"
     container_name: metrics-utility-env
     depends_on:
-      garage-setup:
+      ceph-rgw-setup:
         condition: service_completed_successfully
       postgres-wait:
         condition: service_completed_successfully
@@ -105,7 +107,7 @@ services:
     profiles: ["env"] # makes this service non-default, except when --profile=env
     environment:
       METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-      METRICS_UTILITY_BUCKET_ENDPOINT: "http://garage:3902"
+      METRICS_UTILITY_BUCKET_ENDPOINT: "http://ceph-rgw:7480"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"

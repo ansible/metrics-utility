@@ -7,7 +7,7 @@ from metrics_utility.test.util import run_build_ext, run_gather_ext, run_gather_
 
 env_vars = {
     'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'myuseraccesskey',
-    'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000'),  # or http://garage:3902
+    'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000'),  # or http://ceph-rgw:7480
     'METRICS_UTILITY_BUCKET_NAME': 'metricsutilitys3',
     'METRICS_UTILITY_BUCKET_REGION': 'us-east-1',
     'METRICS_UTILITY_BUCKET_SECRET_KEY': 'myusersecretkey',
