@@ -37,7 +37,6 @@ def run(sql_script):
         stdout = process.stdout.decode()
         stderr = process.stderr.decode()
 
-        print(stdout)
         if stderr:
             print(stderr)
 
@@ -358,7 +357,8 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     """
     print(f'Creating job: {name}...')
     run(sql_job)
-    print(f'Created job with ID: {job_id}')
+    print(f'Created job with ID: {job_id} Index: {job_index}')
+    print('--------------------------------')
 
     # Return job_id and created timestamp (needed for events)
     return job_id, created
