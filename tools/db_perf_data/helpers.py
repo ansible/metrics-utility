@@ -281,6 +281,59 @@ def create_hosts(inventory_id=None, host_count=1000):
     return output
 
 
+def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None):
+    """Create a job (via unified_job) and return its auto-generated ID."""
+    # First create the unified job entry and get its ID
+    sql_uj = f"""
+    INSERT INTO main_unifiedjob (
+        created, modified, name, description, polymorphic_ctype_id,
+        launch_type, cancel_flag, status, failed, elapsed,
+        job_args, job_cwd, job_explanation, start_args, result_traceback,
+        celery_task_id, execution_node, emitted_events, controller_node,
+        dependencies_processed, organization_id, installed_collections,
+        ansible_version, task_impact, job_env
+    )
+    VALUES (
+        NOW(), NOW(), '{name}', 'Performance testing job',
+        (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'job'),
+        'manual', FALSE, 'successful', FALSE, 120.5,
+        '', '', '', '', '',
+        '', 'localhost', 0, '',
+        TRUE, {org_id}, '[]'::jsonb,
+        '2.15.0', 1, '{{}}'::jsonb
+    )
+    RETURNING id;
+    """
+    print(f'Creating unified job: {name}...')
+    output = run(sql_uj)
+    job_id = parse_id(output)
+
+    # Then create the job entry using the same ID
+    sql_job = f"""
+    INSERT INTO main_job (
+        unifiedjob_ptr_id, job_type, playbook, forks, "limit", verbosity,
+        extra_vars, job_tags, force_handlers, skip_tags, start_at_task,
+        become_enabled, inventory_id, project_id, allow_simultaneous,
+        artifacts, timeout, scm_revision, use_fact_cache, diff_mode,
+        job_slice_count, job_slice_number, scm_branch, webhook_guid,
+        webhook_service, survey_passwords
+    )
+    VALUES (
+        {job_id}, 'run', 'site.yml', 5, '', 0,
+        '', '', FALSE, '', '',
+        FALSE, {inventory_id}, {project_id}, FALSE,
+        '', 0, '', FALSE, FALSE,
+        1, 0, 'main', '',
+        '', '{{}}'::jsonb
+    )
+    RETURNING unifiedjob_ptr_id;
+    """
+    print(f'Creating job: {name}...')
+    run(sql_job)
+    print(f'Created job with ID: {job_id}')
+    return job_id
+
+
 if __name__ == '__main__':
     delete_all()
 
