@@ -1,6 +1,8 @@
 import subprocess
 import re
 import random
+import uuid
+import json
 
 
 def parse_id(output):
@@ -45,6 +47,7 @@ def run(sql_script):
 def delete_job_events():
     """Delete all job events."""
     sql = """
+    DELETE FROM _unpartitioned_main_jobevent;
     DELETE FROM main_jobevent;
     """
     print('Deleting main_jobevent...')
@@ -372,6 +375,138 @@ def create_job_host_summaries(job_id, host_count):
     """
     run(sql)
     print(f'Created {host_count} job host summaries')
+
+
+# Module definitions for job events - mix of different collection sources
+MODULES = [
+    # Red Hat certified (ansible.builtin)
+    'ansible.builtin.copy',
+    'ansible.builtin.file',
+    'ansible.builtin.template',
+    'ansible.builtin.service',
+    'ansible.builtin.yum',
+    'ansible.builtin.apt',
+    'ansible.builtin.command',
+    'ansible.builtin.shell',
+    'ansible.builtin.debug',
+    'ansible.builtin.set_fact',
+    'ansible.builtin.include_tasks',
+    'ansible.builtin.user',
+    'ansible.builtin.group',
+    'ansible.builtin.lineinfile',
+    'ansible.builtin.stat',
+    # Red Hat certified (other)
+    'ansible.posix.mount',
+    'ansible.posix.sysctl',
+    'redhat.rhel_system_roles.firewall',
+    # Community
+    'community.general.docker_container',
+    'community.general.postgresql_db',
+    'community.general.git_config',
+    'community.mysql.mysql_db',
+    'community.mysql.mysql_user',
+    # Partner/Validated
+    'amazon.aws.ec2_instance',
+    'amazon.aws.s3_bucket',
+    'azure.azcollection.azure_rm_virtualmachine',
+    'google.cloud.gcp_compute_instance',
+]
+
+# Random seed for deterministic generation
+RANDOM_SEED = 42
+
+
+def create_job_events(job_id, host_count, task_count=50, job_index=0):
+    """Create job events for all hosts (batch insert).
+
+    Generates realistic events with:
+    - Same task_uuid across all hosts (task runs on all hosts)
+    - Each task has one module, but different outcomes per host
+    - Mix of success, failed, skipped, unreachable events
+    - Some hosts retry (failed then ok with same task_uuid)
+
+    Structure: task -> host -> outcome
+    Each task runs the same module on all hosts, but each host can have different outcome.
+
+    Host names are generated using the same pattern as create_hosts: host-{i}.example.com
+
+    job_index is used for deterministic random seed (not job_id which changes each run)
+    """
+    # Use deterministic random based on job_index (not job_id which changes)
+    rng = random.Random(RANDOM_SEED + job_index)
+
+    print(f'Creating job events for job {job_id} ({task_count} tasks x {host_count} hosts)...')
+
+    values = []
+    counter = 0
+
+    # Loop over tasks first - each task has same UUID across all hosts
+    for task_idx in range(1, task_count + 1):
+        # Generate deterministic task_uuid based on job_index and task_idx
+        task_uuid = str(uuid.UUID(int=RANDOM_SEED * 1000000 + job_index * 10000 + task_idx))
+        task_name = f'Task {task_idx}'
+
+        # Pick one module for this task (same module runs on all hosts)
+        module = MODULES[rng.randint(0, len(MODULES) - 1)]
+
+        # Build event_data JSON for this task
+        event_data = json.dumps({
+            'task_action': module,
+            'resolved_action': module,
+            'task': task_name,
+            'play': 'Main Play',
+        }).replace("'", "''")  # Escape single quotes for SQL
+
+        # Loop over hosts - each host gets different outcome for this task
+        for host_idx in range(1, host_count + 1):
+            host_name = f'host-{host_idx}.example.com'
+
+            # Decide event outcome with realistic distribution per host
+            # 70% clean success, 10% skipped, 15% failed then retry success, 5% failed/unreachable
+            outcome = rng.random()
+
+            if outcome < 0.70:
+                # Clean success
+                changed = rng.choice([True, False])
+                events_for_host = [('runner_on_ok', False, changed)]
+            elif outcome < 0.80:
+                # Skipped
+                events_for_host = [('runner_on_skipped', False, False)]
+            elif outcome < 0.95:
+                # Failed then retry success (2 events for same task on this host)
+                changed = rng.choice([True, False])
+                events_for_host = [
+                    ('runner_on_failed', True, False),
+                    ('runner_on_ok', False, changed),
+                ]
+            else:
+                # Failed or unreachable (no retry)
+                if rng.random() < 0.7:
+                    events_for_host = [('runner_on_failed', True, False)]
+                else:
+                    events_for_host = [('runner_on_unreachable', True, False)]
+
+            # Create events for this host
+            for event_type, failed, changed in events_for_host:
+                counter += 1
+                values.append(
+                    f"(NOW(), NOW(), '{event_type}', '{event_data}', {str(failed).upper()}, "
+                    f"{str(changed).upper()}, '{host_name}', 'Main Play', '', '{task_name}', "
+                    f"{counter}, NULL, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0)"
+                )
+
+    # Insert into _unpartitioned_main_jobevent (no partition key required)
+    sql = f"""
+    INSERT INTO _unpartitioned_main_jobevent (
+        created, modified, event, event_data, failed,
+        changed, host_name, play, role, task,
+        counter, host_id, job_id, uuid, parent_uuid,
+        end_line, playbook, start_line, stdout, verbosity
+    )
+    VALUES {','.join(values)};
+    """
+    run(sql)
+    print(f'Created {len(values)} job events ({task_count} tasks x {host_count} hosts)')
 
 
 if __name__ == '__main__':
