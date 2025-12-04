@@ -281,6 +281,67 @@ def create_project(name='Perf Test Project', org_id=None):
     return project_id
 
 
+def create_job_templates(project_id, inventory_id, template_count=10):
+    """Create multiple job templates and return list of their IDs."""
+    print(f'Creating {template_count} job templates...')
+    template_ids = []
+    
+    for i in range(template_count):
+        template_name = f'Perf Test Template {i}'
+        
+        # First create the unified job template entry
+        sql_ujt = f"""
+        INSERT INTO main_unifiedjobtemplate (
+            created, modified, name, description, polymorphic_ctype_id,
+            last_job_failed, status
+        )
+        VALUES (
+            NOW(), NOW(), '{template_name}', 'Performance testing job template',
+            (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'jobtemplate'),
+            FALSE, 'never updated'
+        )
+        RETURNING id;
+        """
+        output = run(sql_ujt)
+        template_id = parse_id(output)
+        
+        # Then create the job template entry with all required fields
+        sql_jt = f"""
+        INSERT INTO main_jobtemplate (
+            unifiedjobtemplate_ptr_id, job_type, playbook, forks, "limit", verbosity,
+            extra_vars, job_tags, force_handlers, skip_tags, start_at_task,
+            become_enabled, host_config_key, ask_variables_on_launch, survey_enabled,
+            survey_spec, inventory_id, project_id, ask_limit_on_launch,
+            ask_inventory_on_launch, ask_credential_on_launch, ask_job_type_on_launch,
+            ask_tags_on_launch, allow_simultaneous, ask_skip_tags_on_launch,
+            timeout, use_fact_cache, ask_verbosity_on_launch, ask_diff_mode_on_launch,
+            diff_mode, job_slice_count, ask_scm_branch_on_launch, scm_branch,
+            webhook_key, webhook_service, ask_execution_environment_on_launch,
+            ask_forks_on_launch, ask_instance_groups_on_launch, ask_job_slice_count_on_launch,
+            ask_labels_on_launch, ask_timeout_on_launch, prevent_instance_group_fallback
+        )
+        VALUES (
+            {template_id}, 'run', 'site.yml', 5, '', 0,
+            '', '', FALSE, '', '',
+            FALSE, '', FALSE, FALSE,
+            '{{}}'::jsonb, {inventory_id}, {project_id}, FALSE,
+            FALSE, FALSE, FALSE,
+            FALSE, FALSE, FALSE,
+            0, FALSE, FALSE, FALSE,
+            FALSE, 1, FALSE, '',
+            '', '', FALSE,
+            FALSE, FALSE, FALSE,
+            FALSE, FALSE, FALSE
+        )
+        RETURNING unifiedjobtemplate_ptr_id;
+        """
+        run(sql_jt)
+        template_ids.append(template_id)
+    
+    print(f'Created {template_count} job templates with IDs: {template_ids}')
+    return template_ids
+
+
 def create_hosts(inventory_id=None, host_count=1000):
     """Create multiple hosts for an inventory and return list of auto-generated IDs."""
     print(f'Creating {host_count} hosts for inventory {inventory_id}...')
@@ -300,7 +361,7 @@ def create_hosts(inventory_id=None, host_count=1000):
     return output
 
 
-def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0):
+def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0, job_template_id=None):
     """Create a job (via unified_job) and return its auto-generated ID and timestamps."""
     # Get deterministic timestamps for this job
     created, started, finished = get_job_timestamps(job_index)
@@ -310,6 +371,9 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     started_str = started.strftime('%Y-%m-%d %H:%M:%S+00')
     finished_str = finished.strftime('%Y-%m-%d %H:%M:%S+00')
 
+    # unified_job_template_id can be NULL or reference a job template
+    ujt_value = job_template_id if job_template_id else 'NULL'
+
     # First create the unified job entry and get its ID
     sql_uj = f"""
     INSERT INTO main_unifiedjob (
@@ -318,7 +382,7 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
         job_args, job_cwd, job_explanation, start_args, result_traceback,
         celery_task_id, execution_node, emitted_events, controller_node,
         dependencies_processed, organization_id, installed_collections,
-        ansible_version, task_impact, job_env
+        ansible_version, task_impact, job_env, unified_job_template_id
     )
     VALUES (
         '{created_str}', '{created_str}', '{name}', 'Performance testing job',
@@ -327,11 +391,10 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
         '', '', '', '', '',
         '', 'localhost', 0, '',
         TRUE, {org_id}, '[]'::jsonb,
-        '2.15.0', 1, '{{}}'::jsonb
+        '2.15.0', 1, '{{}}'::jsonb, {ujt_value}
     )
     RETURNING id;
     """
-    print(f'Creating unified job: {name} (created: {created_str})...')
     output = run(sql_uj)
     job_id = parse_id(output)
 
@@ -343,7 +406,7 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
         become_enabled, inventory_id, project_id, allow_simultaneous,
         artifacts, timeout, scm_revision, use_fact_cache, diff_mode,
         job_slice_count, job_slice_number, scm_branch, webhook_guid,
-        webhook_service, survey_passwords
+        webhook_service, survey_passwords, job_template_id
     )
     VALUES (
         {job_id}, 'run', 'site.yml', 5, '', 0,
@@ -351,14 +414,12 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
         FALSE, {inventory_id}, {project_id}, FALSE,
         '', 0, '', FALSE, FALSE,
         1, 0, 'main', '',
-        '', '{{}}'::jsonb
+        '', '{{}}'::jsonb, {ujt_value}
     )
     RETURNING unifiedjob_ptr_id;
     """
-    print(f'Creating job: {name}...')
     run(sql_job)
-    print(f'Created job with ID: {job_id} Index: {job_index}')
-    print('--------------------------------')
+    print(f'Created job {job_index}')
 
     # Return job_id and created timestamp (needed for events)
     return job_id, created
