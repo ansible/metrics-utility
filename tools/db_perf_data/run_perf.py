@@ -35,12 +35,14 @@ from django.db import connection  # noqa: E402
 
 # Output in same directory as script and create /out subdir
 output_dir = Path(__file__).parent / 'out'
+output_dir.mkdir(parents=True, exist_ok=True)
 
 # Performance test data dates (January 2024)
 since = datetime(2024, 1, 1, 0, 0, 0)
 until = datetime(2024, 2, 1, 0, 0, 0)
 
 print('Running anonymized rollup computation...')
+print(f'Output directory: {output_dir}')
 print(f'Output: {output_dir / "anonymized.json"}')
 
 # Configuration
