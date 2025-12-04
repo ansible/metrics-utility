@@ -1,8 +1,8 @@
-import subprocess
-import re
-import random
-import uuid
 import json
+import random
+import subprocess
+import uuid
+
 from datetime import datetime, timedelta
 
 
@@ -45,7 +45,7 @@ def run(sql_script):
         if process.returncode != 0:
             print(f'ERROR: SQL command failed with return code {process.returncode}')
         if 'ERROR:' in stdout or 'ERROR:' in stderr:
-            print(f'ERROR: SQL error detected in output')
+            print('ERROR: SQL error detected in output')
 
         return stdout
 
@@ -387,8 +387,8 @@ def create_job_host_summaries(job_id, host_count):
 
         values.append(
             f"(NOW(), NOW(), '{host_name}', {changed}, {dark}, {failures}, "
-            f"{ok}, {processed}, {skipped}, {str(failed).upper()}, NULL, "
-            f"{job_id}, {ignored}, {rescued})"
+            f'{ok}, {processed}, {skipped}, {str(failed).upper()}, NULL, '
+            f'{job_id}, {ignored}, {rescued})'
         )
 
     sql = f"""
@@ -459,21 +459,22 @@ def create_jobevent_partitions():
     current = start
     while current < end:
         next_hour = current + timedelta(hours=1)
-        partition_name = f"main_jobevent_{current.strftime('%Y%m%d_%H')}"
+        partition_name = f'main_jobevent_{current.strftime("%Y%m%d_%H")}'
 
         statements.append(
-            f"CREATE TABLE IF NOT EXISTS {partition_name} "
-            f"PARTITION OF main_jobevent "
+            f'CREATE TABLE IF NOT EXISTS {partition_name} '
+            f'PARTITION OF main_jobevent '
             f"FOR VALUES FROM ('{current.strftime('%Y-%m-%d %H:%M:%S')}+00') "
             f"TO ('{next_hour.strftime('%Y-%m-%d %H:%M:%S')}+00')"
         )
         current = next_hour
 
     # Execute all statements in one batch
-    sql = ";\n".join(statements) + ";"
+    sql = ';\n'.join(statements) + ';'
     run(sql)
 
     print(f'Created {len(statements)} hourly partitions for January 2024')
+
 
 def get_job_timestamps(job_index):
     """Generate deterministic job timestamps within January 2024.
@@ -536,12 +537,14 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0, job_create
         module = MODULES[rng.randint(0, len(MODULES) - 1)]
 
         # Build event_data JSON for this task
-        event_data = json.dumps({
-            'task_action': module,
-            'resolved_action': module,
-            'task': task_name,
-            'play': 'Main Play',
-        }).replace("'", "''")  # Escape single quotes for SQL
+        event_data = json.dumps(
+            {
+                'task_action': module,
+                'resolved_action': module,
+                'task': task_name,
+                'play': 'Main Play',
+            }
+        ).replace("'", "''")  # Escape single quotes for SQL
 
         # Loop over hosts - each host gets different outcome for this task
         for host_idx in range(1, host_count + 1):
@@ -597,4 +600,3 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0, job_create
 
 if __name__ == '__main__':
     delete_all()
-
