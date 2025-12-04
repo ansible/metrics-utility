@@ -62,7 +62,7 @@ def fill_init_data(host_count=10, task_count=50):
     }
 
 def fill_perf_db_data():
-    job_count = 20
+    job_count = 5
     delete_all()
 
     # Create partitions for January 2024 (required for partitioned main_jobevent)

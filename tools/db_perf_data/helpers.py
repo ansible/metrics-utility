@@ -432,30 +432,33 @@ JOB_DATE_END = datetime(2024, 1, 31, 23, 59, 59)
 
 
 def create_jobevent_partitions():
-    """Create hourly partitions for main_jobevent for January 2024."""
+    """Create hourly partitions for main_jobevent for January 2024 (batch SQL)."""
     print('Creating jobevent partitions for January 2024...')
 
     # Create partitions for each hour in January 2024
     start = datetime(2024, 1, 1, 0, 0, 0)
     end = datetime(2024, 2, 1, 0, 0, 0)
 
+    # Build all CREATE TABLE statements in one batch
+    statements = []
     current = start
-    partition_count = 0
     while current < end:
         next_hour = current + timedelta(hours=1)
         partition_name = f"main_jobevent_{current.strftime('%Y%m%d_%H')}"
 
-        sql = f"""
-        CREATE TABLE IF NOT EXISTS {partition_name}
-        PARTITION OF main_jobevent
-        FOR VALUES FROM ('{current.strftime('%Y-%m-%d %H:%M:%S')}+00')
-        TO ('{next_hour.strftime('%Y-%m-%d %H:%M:%S')}+00');
-        """
-        run(sql)
-        partition_count += 1
+        statements.append(
+            f"CREATE TABLE IF NOT EXISTS {partition_name} "
+            f"PARTITION OF main_jobevent "
+            f"FOR VALUES FROM ('{current.strftime('%Y-%m-%d %H:%M:%S')}+00') "
+            f"TO ('{next_hour.strftime('%Y-%m-%d %H:%M:%S')}+00')"
+        )
         current = next_hour
 
-    print(f'Created {partition_count} hourly partitions for January 2024')
+    # Execute all statements in one batch
+    sql = ";\n".join(statements) + ";"
+    run(sql)
+
+    print(f'Created {len(statements)} hourly partitions for January 2024')
 
 def get_job_timestamps(job_index):
     """Generate deterministic job timestamps within January 2024.
