@@ -1,15 +1,28 @@
 #!/usr/bin/env python3
 """Run anonymized rollup computation on performance test data."""
 
+import os
 import sys
-
 from datetime import datetime
 from pathlib import Path
+import json
 
 
-# Add metrics_utility to path
+# Add metrics_utility to path and activate venv if available
 metrics_utility_path = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(metrics_utility_path))
+
+# Check for virtual environment and use it
+venv_path = metrics_utility_path / '.venv'
+if venv_path.exists():
+    # Activate venv by updating PATH and VIRTUAL_ENV
+    os.environ['VIRTUAL_ENV'] = str(venv_path)
+    os.environ['PATH'] = f"{venv_path / 'bin'}:{os.environ.get('PATH', '')}"
+    # Add venv site-packages to sys.path
+    import site
+    site_packages = list(venv_path.glob('lib/python*/site-packages'))
+    if site_packages:
+        sys.path.insert(0, str(site_packages[0]))
 
 from metrics_utility import prepare  # noqa: E402
 from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute_anonymized_rollup  # noqa: E402
@@ -37,8 +50,11 @@ try:
         since=since,
         until=until,
         ship_path=str(output_dir),
-        save_rollups=False,
+        save_rollups=True,
     )
+    # save to anonymized.json
+    with open(output_dir / 'anonymized.json', 'w') as f:
+        json.dump(json_data, f, indent=4)
     print('✓ Completed successfully!')
 except Exception as e:
     print(f'✗ Failed: {e}')
