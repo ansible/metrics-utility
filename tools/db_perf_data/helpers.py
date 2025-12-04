@@ -27,6 +27,30 @@ def parse_id(output):
     return None
 
 
+def parse_ids(output):
+    """Parse multiple IDs from psql RETURNING output.
+
+    Expected format:
+     id
+    ----
+      1
+      2
+      3
+    (3 rows)
+    """
+    ids = []
+    lines = output.strip().split('\n')
+    for line in lines:
+        line = line.strip()
+        # Skip header lines and row count
+        if line and not line.startswith('id') and not line.startswith('-') and not line.startswith('('):
+            try:
+                ids.append(int(line))
+            except ValueError:
+                continue
+    return ids
+
+
 def run(sql_script):
     """Execute SQL script via docker exec to postgres container."""
     command = ['docker', 'exec', '-i', 'postgres', 'psql', '-U', 'awx']
@@ -285,10 +309,10 @@ def create_job_templates(project_id, inventory_id, template_count=10):
     """Create multiple job templates and return list of their IDs."""
     print(f'Creating {template_count} job templates...')
     template_ids = []
-    
+
     for i in range(template_count):
         template_name = f'Perf Test Template {i}'
-        
+
         # First create the unified job template entry
         sql_ujt = f"""
         INSERT INTO main_unifiedjobtemplate (
@@ -304,7 +328,7 @@ def create_job_templates(project_id, inventory_id, template_count=10):
         """
         output = run(sql_ujt)
         template_id = parse_id(output)
-        
+
         # Then create the job template entry with all required fields
         sql_jt = f"""
         INSERT INTO main_jobtemplate (
@@ -337,7 +361,7 @@ def create_job_templates(project_id, inventory_id, template_count=10):
         """
         run(sql_jt)
         template_ids.append(template_id)
-    
+
     print(f'Created {template_count} job templates with IDs: {template_ids}')
     return template_ids
 
@@ -357,8 +381,9 @@ def create_hosts(inventory_id=None, host_count=1000):
     RETURNING id;
     """
     output = run(sql)
+    host_ids = parse_ids(output)
     print(f'Created {host_count} hosts')
-    return output
+    return host_ids
 
 
 def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0, job_template_id=None):
@@ -560,7 +585,7 @@ def get_job_timestamps(job_index):
     return created, started, finished
 
 
-def create_job_events(job_id, host_count, task_count=50, job_index=0, job_created=None):
+def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=None):
     """Create job events for all hosts (batch insert).
 
     Generates realistic events with:
@@ -576,6 +601,7 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0, job_create
 
     job_index is used for deterministic random seed (not job_id which changes each run)
     job_created is the timestamp from the job (used for partitioning)
+    host_ids is a list of host IDs to use in the events
     """
     # Use deterministic random based on job_index (not job_id which changes)
     rng = random.Random(RANDOM_SEED + job_index)
@@ -583,6 +609,7 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0, job_create
     # Format job_created for SQL
     job_created_str = job_created.strftime('%Y-%m-%d %H:%M:%S+00')
 
+    host_count = len(host_ids)
     print(f'Creating job events for job {job_id} ({task_count} tasks x {host_count} hosts)...')
 
     values = []
@@ -604,11 +631,12 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0, job_create
                 'resolved_action': module,
                 'task': task_name,
                 'play': 'Main Play',
+                'task_uuid': task_uuid,  # Include task_uuid for collector to extract
             }
         ).replace("'", "''")  # Escape single quotes for SQL
 
         # Loop over hosts - each host gets different outcome for this task
-        for host_idx in range(1, host_count + 1):
+        for host_idx, host_id in enumerate(host_ids, 1):
             host_name = f'host-{host_idx}.example.com'
 
             # Decide event outcome with realistic distribution per host
@@ -642,7 +670,7 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0, job_create
                 values.append(
                     f"('{job_created_str}', '{job_created_str}', '{event_type}', '{event_data}', {str(failed).upper()}, "
                     f"{str(changed).upper()}, '{host_name}', 'Main Play', '', '{task_name}', "
-                    f"{counter}, NULL, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0, '{job_created_str}')"
+                    f"{counter}, {host_id}, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0, '{job_created_str}')"
                 )
 
     # Insert into main_jobevent (partitioned table, requires job_created)

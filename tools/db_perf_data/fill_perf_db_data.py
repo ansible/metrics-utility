@@ -1,4 +1,5 @@
 import argparse
+import random
 
 from helpers import (
     create_hosts,
@@ -13,7 +14,6 @@ from helpers import (
     delete_all,
     run,
 )
-import random
 
 
 def print_counts():
@@ -53,7 +53,7 @@ def fill_init_data(host_count=10, task_count=50, template_count=10):
     template_ids = create_job_templates(project_id, inventory_id, template_count)
 
     # Create hosts (depends on inventory)
-    create_hosts(inventory_id=inventory_id, host_count=host_count)
+    host_ids = create_hosts(inventory_id=inventory_id, host_count=host_count)
 
     print('=== Initial data created ===')
     print(f'Organization ID: {org_id}')
@@ -66,6 +66,7 @@ def fill_init_data(host_count=10, task_count=50, template_count=10):
         'inventory_id': inventory_id,
         'project_id': project_id,
         'template_ids': template_ids,
+        'host_ids': host_ids,
         'host_count': host_count,
         'task_count': task_count,
     }
@@ -99,7 +100,7 @@ def fill_job_data(init_data, job_index):
     """Create a job using the init_data IDs. Returns (job_id, job_created)."""
     # Randomly select a job template
     template_id = random.choice(init_data['template_ids'])
-    
+
     job_id, job_created = create_job(
         name=f'Perf Test Job {job_index}',
         inventory_id=init_data['inventory_id'],
@@ -116,7 +117,7 @@ def fill_jobhostsummary(init_data, job_id):
 
 
 def fill_jobevent(init_data, job_id, job_index, job_created):
-    create_job_events(job_id, init_data['host_count'], init_data['task_count'], job_index, job_created)
+    create_job_events(job_id, init_data['host_ids'], init_data['task_count'], job_index, job_created)
 
 
 def fill_job(init_data, job_index):

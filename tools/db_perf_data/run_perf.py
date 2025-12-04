@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Run anonymized rollup computation on performance test data."""
 
+import json
 import os
 import sys
+
 from datetime import datetime
 from pathlib import Path
-import json
 
 
 # Add metrics_utility to path and activate venv if available
@@ -17,9 +18,9 @@ venv_path = metrics_utility_path / '.venv'
 if venv_path.exists():
     # Activate venv by updating PATH and VIRTUAL_ENV
     os.environ['VIRTUAL_ENV'] = str(venv_path)
-    os.environ['PATH'] = f"{venv_path / 'bin'}:{os.environ.get('PATH', '')}"
+    os.environ['PATH'] = f'{venv_path / "bin"}:{os.environ.get("PATH", "")}'
     # Add venv site-packages to sys.path
-    import site
+
     site_packages = list(venv_path.glob('lib/python*/site-packages'))
     if site_packages:
         sys.path.insert(0, str(site_packages[0]))
@@ -42,8 +43,8 @@ since = datetime(2024, 1, 1, 0, 0, 0)
 until = datetime(2024, 2, 1, 0, 0, 0)
 
 print('Running anonymized rollup computation...')
+print(f'Date range: {since} to {until}')
 print(f'Output directory: {output_dir}')
-print(f'Output: {output_dir / "anonymized.json"}')
 
 # Configuration
 save_rollups = True
@@ -59,10 +60,12 @@ try:
         save_rollups=save_rollups,
         save_rollups_packed=save_rollups_packed,
     )
-    # save to anonymized.json
+
+    # save into anonymized.json
     with open(output_dir / 'anonymized.json', 'w') as f:
         json.dump(json_data, f, indent=4)
-    print('✓ Completed successfully!')
+
+    print(f'\nRollup CSV files saved to: {output_dir}/rollups/')
 except Exception as e:
     print(f'✗ Failed: {e}')
     import traceback
