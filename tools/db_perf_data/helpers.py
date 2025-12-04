@@ -31,12 +31,27 @@ def run(sql_script):
     """Execute SQL script via docker exec to postgres container."""
     command = ['docker', 'exec', '-i', 'postgres', 'psql', '-U', 'awx']
 
-    process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
+    try:
+        process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
 
-    print(process.stdout.decode())
-    print(process.stderr.decode())
+        stdout = process.stdout.decode()
+        stderr = process.stderr.decode()
 
-    return process.stdout.decode()
+        print(stdout)
+        if stderr:
+            print(stderr)
+
+        # Check for errors in output
+        if process.returncode != 0:
+            print(f'ERROR: SQL command failed with return code {process.returncode}')
+        if 'ERROR:' in stdout or 'ERROR:' in stderr:
+            print(f'ERROR: SQL error detected in output')
+
+        return stdout
+
+    except Exception as e:
+        print(f'ERROR: Exception while executing SQL: {e}')
+        return ''
 
 
 # =============================================================================
