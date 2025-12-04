@@ -1,3 +1,5 @@
+import argparse
+
 from helpers import (
     create_hosts,
     create_inventory,
@@ -62,14 +64,22 @@ def fill_init_data(host_count=10, task_count=50):
     }
 
 
-def fill_perf_db_data():
-    job_count = 5
+def fill_perf_db_data(host_count=10, job_count=5, task_count=50):
+    """Fill the database with performance test data.
+
+    Args:
+        host_count: Number of hosts to create
+        job_count: Number of jobs to create
+        task_count: Number of tasks per job
+    """
+    print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job ===')
+
     delete_all()
 
     # Create partitions for January 2024 (required for partitioned main_jobevent)
     create_jobevent_partitions()
 
-    init_data = fill_init_data()
+    init_data = fill_init_data(host_count=host_count, task_count=task_count)
 
     for i in range(job_count):
         fill_job(init_data, i)
@@ -104,4 +114,16 @@ def fill_job(init_data, job_index):
     return
 
 
-fill_perf_db_data()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Fill database with performance test data')
+    parser.add_argument('--host-count', type=int, default=10, help='Number of hosts to create (default: 10)')
+    parser.add_argument('--job-count', type=int, default=5, help='Number of jobs to create (default: 5)')
+    parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
+
+    args = parser.parse_args()
+
+    fill_perf_db_data(
+        host_count=args.host_count,
+        job_count=args.job_count,
+        task_count=args.task_count,
+    )
