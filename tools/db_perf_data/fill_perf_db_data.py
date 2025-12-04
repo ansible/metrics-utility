@@ -5,19 +5,23 @@ from helpers import (
     create_project,
     create_hosts,
     create_job,
+    create_job_host_summaries,
     run,
 )
 
 
 def print_counts():
-    """Print the count of hosts and jobs in the database."""
+    """Print the count of hosts, jobs, and job host summaries in the database."""
     print('=== Database counts ===')
     output = run("SELECT COUNT(*) FROM main_host;")
     host_count = int(output.strip().split('\n')[2].strip())
     output = run("SELECT COUNT(*) FROM main_job;")
     job_count = int(output.strip().split('\n')[2].strip())
+    output = run("SELECT COUNT(*) FROM main_jobhostsummary;")
+    jhs_count = int(output.strip().split('\n')[2].strip())
     print(f'Total hosts: {host_count}')
     print(f'Total jobs: {job_count}')
+    print(f'Total job host summaries: {jhs_count}')
 
 
 def fill_init_data(host_count=10):
@@ -48,6 +52,7 @@ def fill_init_data(host_count=10):
         'org_id': org_id,
         'inventory_id': inventory_id,
         'project_id': project_id,
+        'host_count': host_count,
     }
 
 def fill_perf_db_data():
@@ -72,7 +77,7 @@ def fill_job_data(init_data, job_index):
     return job_id
 
 def fill_jobhostsummary(init_data, job_id):
-    return
+    create_job_host_summaries(job_id, init_data['host_count'])
 
 def fill_jobevent(init_data, job_id):
     return
