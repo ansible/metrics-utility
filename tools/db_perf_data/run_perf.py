@@ -33,8 +33,8 @@ prepare()
 from django.db import connection  # noqa: E402
 
 
-# Output in same directory as script
-output_dir = Path(__file__).parent
+# Output in same directory as script and create /out subdir
+output_dir = Path(__file__).parent / 'out'
 
 # Performance test data dates (January 2024)
 since = datetime(2024, 1, 1, 0, 0, 0)
@@ -43,6 +43,10 @@ until = datetime(2024, 2, 1, 0, 0, 0)
 print('Running anonymized rollup computation...')
 print(f'Output: {output_dir / "anonymized.json"}')
 
+# Configuration
+save_rollups = True
+save_rollups_packed = False  # False = CSV files only, True = tarball
+
 try:
     json_data = compute_anonymized_rollup(
         db=connection,
@@ -50,7 +54,8 @@ try:
         since=since,
         until=until,
         ship_path=str(output_dir),
-        save_rollups=True,
+        save_rollups=save_rollups,
+        save_rollups_packed=save_rollups_packed,
     )
     # save to anonymized.json
     with open(output_dir / 'anonymized.json', 'w') as f:

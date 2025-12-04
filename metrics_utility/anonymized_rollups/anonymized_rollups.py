@@ -195,9 +195,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base
     execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), input_data['execution_environments'])
     execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
     if save_rollups:
-        ExecutionEnvironmentsAnonymizedRollup().save_rollup(
-            execution_environments_result['rollup'], base_path, since, until, packed=save_rollups_packed
-        )
+        ExecutionEnvironmentsAnonymizedRollup().save_rollup(execution_environments_result['rollup'], base_path, since, until, packed=save_rollups_packed)
 
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], salt
