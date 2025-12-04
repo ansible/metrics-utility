@@ -1,5 +1,4 @@
 from helpers import (
-    run,
     delete_all,
     create_organization,
     create_inventory,
@@ -8,7 +7,7 @@ from helpers import (
 )
 
 
-def fill_init_data(host_count=1000):
+def fill_init_data(host_count=10):
     """Create initial data: organization, inventory, project, and hosts.
 
     Returns dict with auto-generated IDs for created entities.
