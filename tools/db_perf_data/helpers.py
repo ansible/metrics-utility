@@ -3,6 +3,7 @@ import re
 import random
 import uuid
 import json
+from datetime import datetime, timedelta
 
 
 def parse_id(output):
@@ -285,22 +286,30 @@ def create_hosts(inventory_id=None, host_count=1000):
     return output
 
 
-def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None):
-    """Create a job (via unified_job) and return its auto-generated ID."""
+def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0):
+    """Create a job (via unified_job) and return its auto-generated ID and timestamps."""
+    # Get deterministic timestamps for this job
+    created, started, finished = get_job_timestamps(job_index)
+    elapsed = (finished - started).total_seconds()
+
+    created_str = created.strftime('%Y-%m-%d %H:%M:%S+00')
+    started_str = started.strftime('%Y-%m-%d %H:%M:%S+00')
+    finished_str = finished.strftime('%Y-%m-%d %H:%M:%S+00')
+
     # First create the unified job entry and get its ID
     sql_uj = f"""
     INSERT INTO main_unifiedjob (
         created, modified, name, description, polymorphic_ctype_id,
-        launch_type, cancel_flag, status, failed, elapsed,
+        launch_type, cancel_flag, status, failed, started, finished, elapsed,
         job_args, job_cwd, job_explanation, start_args, result_traceback,
         celery_task_id, execution_node, emitted_events, controller_node,
         dependencies_processed, organization_id, installed_collections,
         ansible_version, task_impact, job_env
     )
     VALUES (
-        NOW(), NOW(), '{name}', 'Performance testing job',
+        '{created_str}', '{created_str}', '{name}', 'Performance testing job',
         (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'job'),
-        'manual', FALSE, 'successful', FALSE, 120.5,
+        'manual', FALSE, 'successful', FALSE, '{started_str}', '{finished_str}', {elapsed},
         '', '', '', '', '',
         '', 'localhost', 0, '',
         TRUE, {org_id}, '[]'::jsonb,
@@ -308,7 +317,7 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     )
     RETURNING id;
     """
-    print(f'Creating unified job: {name}...')
+    print(f'Creating unified job: {name} (created: {created_str})...')
     output = run(sql_uj)
     job_id = parse_id(output)
 
@@ -335,7 +344,9 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     print(f'Creating job: {name}...')
     run(sql_job)
     print(f'Created job with ID: {job_id}')
-    return job_id
+
+    # Return job_id and created timestamp (needed for events)
+    return job_id, created
 
 
 def create_job_host_summaries(job_id, host_count):
@@ -415,8 +426,61 @@ MODULES = [
 # Random seed for deterministic generation
 RANDOM_SEED = 42
 
+# Job date range: January 2024
+JOB_DATE_START = datetime(2024, 1, 1, 0, 0, 0)
+JOB_DATE_END = datetime(2024, 1, 31, 23, 59, 59)
 
-def create_job_events(job_id, host_count, task_count=50, job_index=0):
+
+def create_jobevent_partitions():
+    """Create hourly partitions for main_jobevent for January 2024."""
+    print('Creating jobevent partitions for January 2024...')
+
+    # Create partitions for each hour in January 2024
+    start = datetime(2024, 1, 1, 0, 0, 0)
+    end = datetime(2024, 2, 1, 0, 0, 0)
+
+    current = start
+    partition_count = 0
+    while current < end:
+        next_hour = current + timedelta(hours=1)
+        partition_name = f"main_jobevent_{current.strftime('%Y%m%d_%H')}"
+
+        sql = f"""
+        CREATE TABLE IF NOT EXISTS {partition_name}
+        PARTITION OF main_jobevent
+        FOR VALUES FROM ('{current.strftime('%Y-%m-%d %H:%M:%S')}+00')
+        TO ('{next_hour.strftime('%Y-%m-%d %H:%M:%S')}+00');
+        """
+        run(sql)
+        partition_count += 1
+        current = next_hour
+
+    print(f'Created {partition_count} hourly partitions for January 2024')
+
+def get_job_timestamps(job_index):
+    """Generate deterministic job timestamps within January 2024.
+
+    Returns (created, started, finished) timestamps.
+    """
+    rng = random.Random(RANDOM_SEED + job_index)
+
+    # Job created: random time within January 2024
+    total_seconds = int((JOB_DATE_END - JOB_DATE_START).total_seconds())
+    created_offset = rng.randint(0, total_seconds - 7200)  # Leave room for job duration
+    created = JOB_DATE_START + timedelta(seconds=created_offset)
+
+    # Job started: 1-60 minutes after created (queue wait time)
+    wait_seconds = rng.randint(60, 3600)
+    started = created + timedelta(seconds=wait_seconds)
+
+    # Job finished: 1-60 minutes after started (job duration)
+    duration_seconds = rng.randint(60, 3600)
+    finished = started + timedelta(seconds=duration_seconds)
+
+    return created, started, finished
+
+
+def create_job_events(job_id, host_count, task_count=50, job_index=0, job_created=None):
     """Create job events for all hosts (batch insert).
 
     Generates realistic events with:
@@ -431,9 +495,13 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0):
     Host names are generated using the same pattern as create_hosts: host-{i}.example.com
 
     job_index is used for deterministic random seed (not job_id which changes each run)
+    job_created is the timestamp from the job (used for partitioning)
     """
     # Use deterministic random based on job_index (not job_id which changes)
     rng = random.Random(RANDOM_SEED + job_index)
+
+    # Format job_created for SQL
+    job_created_str = job_created.strftime('%Y-%m-%d %H:%M:%S+00')
 
     print(f'Creating job events for job {job_id} ({task_count} tasks x {host_count} hosts)...')
 
@@ -490,18 +558,18 @@ def create_job_events(job_id, host_count, task_count=50, job_index=0):
             for event_type, failed, changed in events_for_host:
                 counter += 1
                 values.append(
-                    f"(NOW(), NOW(), '{event_type}', '{event_data}', {str(failed).upper()}, "
+                    f"('{job_created_str}', '{job_created_str}', '{event_type}', '{event_data}', {str(failed).upper()}, "
                     f"{str(changed).upper()}, '{host_name}', 'Main Play', '', '{task_name}', "
-                    f"{counter}, NULL, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0)"
+                    f"{counter}, NULL, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0, '{job_created_str}')"
                 )
 
-    # Insert into _unpartitioned_main_jobevent (no partition key required)
+    # Insert into main_jobevent (partitioned table, requires job_created)
     sql = f"""
-    INSERT INTO _unpartitioned_main_jobevent (
+    INSERT INTO main_jobevent (
         created, modified, event, event_data, failed,
         changed, host_name, play, role, task,
         counter, host_id, job_id, uuid, parent_uuid,
-        end_line, playbook, start_line, stdout, verbosity
+        end_line, playbook, start_line, stdout, verbosity, job_created
     )
     VALUES {','.join(values)};
     """
