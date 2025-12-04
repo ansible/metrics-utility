@@ -1,5 +1,6 @@
 import subprocess
 import re
+import random
 
 
 def parse_id(output):
@@ -332,6 +333,45 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     run(sql_job)
     print(f'Created job with ID: {job_id}')
     return job_id
+
+
+def create_job_host_summaries(job_id, host_count):
+    """Create job host summaries for all hosts (batch insert).
+
+    Host names are generated using the same pattern as create_hosts: host-{i}.example.com
+    """
+    print(f'Creating {host_count} job host summaries for job {job_id}...')
+
+    values = []
+    for i in range(1, host_count + 1):
+        host_name = f'host-{i}.example.com'
+        # Generate random task counts
+        ok = random.randint(5, 50)
+        changed = random.randint(0, 10)
+        failures = random.randint(0, 3)
+        dark = random.randint(0, 2)  # unreachable
+        skipped = random.randint(0, 15)
+        ignored = random.randint(0, 5)
+        rescued = random.randint(0, 2)
+        processed = 1
+        failed = failures > 0 or dark > 0
+
+        values.append(
+            f"(NOW(), NOW(), '{host_name}', {changed}, {dark}, {failures}, "
+            f"{ok}, {processed}, {skipped}, {str(failed).upper()}, NULL, "
+            f"{job_id}, {ignored}, {rescued})"
+        )
+
+    sql = f"""
+    INSERT INTO main_jobhostsummary (
+        created, modified, host_name, changed, dark, failures,
+        ok, processed, skipped, failed, host_id,
+        job_id, ignored, rescued
+    )
+    VALUES {','.join(values)};
+    """
+    run(sql)
+    print(f'Created {host_count} job host summaries')
 
 
 if __name__ == '__main__':
