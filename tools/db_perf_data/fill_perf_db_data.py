@@ -6,12 +6,14 @@ from helpers import (
     create_job,
     create_job_events,
     create_job_host_summaries,
+    create_job_templates,
     create_jobevent_partitions,
     create_organization,
     create_project,
     delete_all,
     run,
 )
+import random
 
 
 def print_counts():
@@ -31,8 +33,8 @@ def print_counts():
     print(f'Total job events: {event_count}')
 
 
-def fill_init_data(host_count=10, task_count=50):
-    """Create initial data: organization, inventory, project, and hosts.
+def fill_init_data(host_count=10, task_count=50, template_count=10):
+    """Create initial data: organization, inventory, project, job templates, and hosts.
 
     Returns dict with auto-generated IDs for created entities.
     """
@@ -47,6 +49,9 @@ def fill_init_data(host_count=10, task_count=50):
     # Create project (depends on organization)
     project_id = create_project(name='Perf Test Project', org_id=org_id)
 
+    # Create job templates (depends on project and inventory)
+    template_ids = create_job_templates(project_id, inventory_id, template_count)
+
     # Create hosts (depends on inventory)
     create_hosts(inventory_id=inventory_id, host_count=host_count)
 
@@ -54,32 +59,35 @@ def fill_init_data(host_count=10, task_count=50):
     print(f'Organization ID: {org_id}')
     print(f'Inventory ID: {inventory_id}')
     print(f'Project ID: {project_id}')
+    print(f'Job Template IDs: {template_ids}')
 
     return {
         'org_id': org_id,
         'inventory_id': inventory_id,
         'project_id': project_id,
+        'template_ids': template_ids,
         'host_count': host_count,
         'task_count': task_count,
     }
 
 
-def fill_perf_db_data(host_count=10, job_count=5, task_count=50):
+def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10):
     """Fill the database with performance test data.
 
     Args:
         host_count: Number of hosts to create
         job_count: Number of jobs to create
         task_count: Number of tasks per job
+        template_count: Number of job templates to create
     """
-    print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job ===')
+    print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job, {template_count} templates ===')
 
     delete_all()
 
     # Create partitions for January 2024 (required for partitioned main_jobevent)
     create_jobevent_partitions()
 
-    init_data = fill_init_data(host_count=host_count, task_count=task_count)
+    init_data = fill_init_data(host_count=host_count, task_count=task_count, template_count=template_count)
 
     for i in range(job_count):
         fill_job(init_data, i)
@@ -89,12 +97,16 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50):
 
 def fill_job_data(init_data, job_index):
     """Create a job using the init_data IDs. Returns (job_id, job_created)."""
+    # Randomly select a job template
+    template_id = random.choice(init_data['template_ids'])
+    
     job_id, job_created = create_job(
         name=f'Perf Test Job {job_index}',
         inventory_id=init_data['inventory_id'],
         project_id=init_data['project_id'],
         org_id=init_data['org_id'],
         job_index=job_index,
+        job_template_id=template_id,
     )
     return job_id, job_created
 
@@ -116,9 +128,10 @@ def fill_job(init_data, job_index):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Fill database with performance test data')
-    parser.add_argument('--host-count', type=int, default=10, help='Number of hosts to create (default: 10)')
-    parser.add_argument('--job-count', type=int, default=5, help='Number of jobs to create (default: 5)')
+    parser.add_argument('--host-count', type=int, default=30, help='Number of hosts to create (default: 10)')
+    parser.add_argument('--job-count', type=int, default=20, help='Number of jobs to create (default: 5)')
     parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
+    parser.add_argument('--template-count', type=int, default=10, help='Number of job templates to create (default: 10)')
 
     args = parser.parse_args()
 
@@ -126,4 +139,5 @@ if __name__ == '__main__':
         host_count=args.host_count,
         job_count=args.job_count,
         task_count=args.task_count,
+        template_count=args.template_count,
     )
