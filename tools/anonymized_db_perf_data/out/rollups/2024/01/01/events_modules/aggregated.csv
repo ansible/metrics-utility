@@ -1,1 +1,0 @@
-job_id,host_id,task_uuid,module_name,collection_source,collection_name,seen_success,seen_failed,seen_unreachable,seen_skipped,seen_failed_and_ignored,job_started,job_failed,job_duration_seconds,job_waiting_time_seconds,playbook
