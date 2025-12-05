@@ -50,7 +50,7 @@ def fill_init_data(host_count=10, task_count=50, template_count=10):
     project_id = create_project(name='Perf Test Project', org_id=org_id)
 
     # Create job templates (depends on project and inventory)
-    template_ids = create_job_templates(project_id, inventory_id, template_count)
+    templates = create_job_templates(project_id, inventory_id, template_count)
 
     # Create hosts (depends on inventory)
     host_ids = create_hosts(inventory_id=inventory_id, host_count=host_count)
@@ -59,13 +59,13 @@ def fill_init_data(host_count=10, task_count=50, template_count=10):
     print(f'Organization ID: {org_id}')
     print(f'Inventory ID: {inventory_id}')
     print(f'Project ID: {project_id}')
-    print(f'Job Template IDs: {template_ids}')
+    print(f'Job Template IDs: {list(templates.keys())}')
 
     return {
         'org_id': org_id,
         'inventory_id': inventory_id,
         'project_id': project_id,
-        'template_ids': template_ids,
+        'templates': templates,  # {template_id: template_name}
         'host_ids': host_ids,
         'host_count': host_count,
         'task_count': task_count,
@@ -99,10 +99,12 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
 def fill_job_data(init_data, job_index):
     """Create a job using the init_data IDs. Returns (job_id, job_created)."""
     # Randomly select a job template
-    template_id = random.choice(init_data['template_ids'])
+    templates = init_data['templates']
+    template_id = random.choice(list(templates.keys()))
+    template_name = templates[template_id]
 
     job_id, job_created = create_job(
-        name=f'Perf Test Job {job_index}',
+        name=template_name,  # Use template name as job name (AWX behavior)
         inventory_id=init_data['inventory_id'],
         project_id=init_data['project_id'],
         org_id=init_data['org_id'],
