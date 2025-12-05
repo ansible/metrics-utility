@@ -44,6 +44,30 @@ prepare()
 from django.db import connection  # noqa: E402
 
 
+def print_counts():
+    """Print the count of hosts, jobs, job host summaries, and job events in the database."""
+    print('\n=== Database counts ===')
+    cursor = connection.cursor()
+
+    cursor.execute('SELECT COUNT(*) FROM main_host;')
+    host_count = cursor.fetchone()[0]
+
+    cursor.execute('SELECT COUNT(*) FROM main_job;')
+    job_count = cursor.fetchone()[0]
+
+    cursor.execute('SELECT COUNT(*) FROM main_jobhostsummary;')
+    jhs_count = cursor.fetchone()[0]
+
+    cursor.execute('SELECT COUNT(*) FROM main_jobevent;')
+    event_count = cursor.fetchone()[0]
+
+    print(f'Total hosts: {host_count}')
+    print(f'Total jobs: {job_count}')
+    print(f'Total job host summaries: {jhs_count}')
+    print(f'Total job events: {event_count}')
+    print()
+
+
 def main():
     """Main function to run performance tests on existing data."""
     parser = argparse.ArgumentParser(description='Run anonymized rollup computation performance tests on existing database data')
@@ -83,6 +107,10 @@ def main():
     print(f'Date range: {since} to {until}')
     print(f'Output directory: {output_dir}')
 
+    print_counts()
+
+    time_start = datetime.now()
+
     # Configuration
     save_rollups = True
     save_rollups_packed = False  # False = CSV files only, True = tarball
@@ -112,6 +140,10 @@ def main():
 
         traceback.print_exc()
         sys.exit(1)
+
+    time_end = datetime.now()
+    total_minutes = (time_end - time_start).total_seconds() / 60
+    print(f'Total minutes = {total_minutes:.2f}')
 
 
 if __name__ == '__main__':
