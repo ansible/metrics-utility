@@ -1,0 +1,1 @@
+id,polymorphic_ctype_id,model,organization_id,organization_name,execution_environment_image,inventory_id,inventory_name,created,name,unified_job_template_id,launch_type,schedule_id,execution_node,controller_node,cancel_flag,status,failed,started,finished,elapsed,job_explanation,instance_group_id,installed_collections,ansible_version,forks,job_template_name

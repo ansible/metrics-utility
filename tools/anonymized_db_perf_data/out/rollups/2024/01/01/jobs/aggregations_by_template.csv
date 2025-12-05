@@ -1,0 +1,11 @@
+job_template_name,number_of_jobs_executed,number_of_jobs_failed,number_of_jobs_never_started,job_duration_average_in_seconds,job_duration_maximum_in_seconds,job_duration_minimum_in_seconds,job_duration_total_in_seconds,job_duration_median_in_seconds,job_waiting_time_average_in_seconds,job_waiting_time_maximum_in_seconds,job_waiting_time_minimum_in_seconds,job_waiting_time_total_in_seconds,job_waiting_time_median_in_seconds,number_of_jobs_succeeded
+Perf Test Template 0 94cc73cf,9,0,0,2507.8888888888887,3464.0,1491.0,22571.0,2279.0,1101.5555555555557,2415.0,107.0,9914.0,560.0,9
+Perf Test Template 1 94cc73cf,8,0,0,2058.75,3400.0,212.0,16470.0,2528.5,2147.375,3234.0,807.0,17179.0,2354.5,8
+Perf Test Template 2 94cc73cf,5,0,0,1798.0,2818.0,857.0,8990.0,1289.0,2008.8,3529.0,453.0,10044.0,1348.0,5
+Perf Test Template 3 94cc73cf,5,0,0,1876.2,2911.0,326.0,9381.0,1923.0,1714.0,2455.0,768.0,8570.0,1942.0,5
+Perf Test Template 4 94cc73cf,7,0,0,1756.2857142857142,2641.0,525.0,12294.0,2279.0,1967.0,3564.0,571.0,13769.0,1673.0,7
+Perf Test Template 5 94cc73cf,10,0,0,1923.8,3491.0,600.0,19238.0,1999.5,2246.5,3554.0,836.0,22465.0,2097.5,10
+Perf Test Template 6 94cc73cf,7,0,0,1686.142857142857,3021.0,223.0,11803.0,1941.0,1927.0,2932.0,863.0,13489.0,2142.0,7
+Perf Test Template 7 94cc73cf,10,0,0,2495.3,3385.0,1752.0,24953.0,2417.0,2120.4,3263.0,128.0,21204.0,2451.0,10
+Perf Test Template 8 94cc73cf,4,0,0,2283.75,3569.0,879.0,9135.0,2343.5,1843.75,3516.0,283.0,7375.0,1788.0,4
+Perf Test Template 9 94cc73cf,7,0,0,2152.285714285714,3361.0,439.0,15066.0,2440.0,1558.0,2982.0,316.0,10906.0,1394.0,7
