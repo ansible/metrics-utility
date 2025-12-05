@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Run anonymized rollup computation on performance test data."""
+"""Run anonymized rollup computation on performance test data.
+
+This script computes anonymized rollups from existing data in the database.
+Use fill_perf_db_data.py to generate test data first if needed.
+Use clean_all_data.py to clean the database before generating new data.
+"""
 
 import argparse
 import json
@@ -37,44 +42,43 @@ from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute
 # Initialize Django and database connection
 prepare()
 from django.db import connection  # noqa: E402
-from fill_perf_db_data import fill_perf_db_data  # noqa: E402
 
 
 def main():
-    """Main function to generate data and run rollup computation."""
-    parser = argparse.ArgumentParser(description='Generate performance test data and compute anonymized rollups')
-    parser.add_argument('--reuse-data', action='store_true', help='Skip data generation and reuse existing data')
-    parser.add_argument('--host-count', type=int, default=100, help='Number of hosts to create (default: 100)')
-    parser.add_argument('--job-count', type=int, default=10, help='Number of jobs to create (default: 10)')
-    parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
-    parser.add_argument('--template-count', type=int, default=10, help='Number of job templates to create (default: 10)')
+    """Main function to run performance tests on existing data."""
+    parser = argparse.ArgumentParser(description='Run anonymized rollup computation performance tests on existing database data')
+    parser.add_argument(
+        '--since',
+        type=str,
+        default='2024-01-01',
+        help='Start date for rollup computation (YYYY-MM-DD, default: 2024-01-01)',
+    )
+    parser.add_argument(
+        '--until',
+        type=str,
+        default='2024-02-01',
+        help='End date for rollup computation (YYYY-MM-DD, default: 2024-02-01)',
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        help='Output directory for results (default: ./out)',
+    )
     args = parser.parse_args()
 
     # Output in same directory as script and create /out subdir
-    output_dir = Path(__file__).parent / 'out'
+    if args.output_dir:
+        output_dir = Path(args.output_dir)
+    else:
+        output_dir = Path(__file__).parent / 'out'
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Performance test data dates (January 2024)
-    since = datetime(2024, 1, 1, 0, 0, 0)
-    until = datetime(2024, 2, 1, 0, 0, 0)
-
-    # Generate performance test data if not reusing
-    if not args.reuse_data:
-        print('=' * 60)
-        print('STEP 1: Generating performance test data')
-        print('=' * 60)
-        fill_perf_db_data(
-            host_count=args.host_count,
-            job_count=args.job_count,
-            task_count=args.task_count,
-            template_count=args.template_count,
-        )
-        print('\n✓ Data generation completed!\n')
-    else:
-        print('Reusing existing data (--reuse-data flag set)\n')
+    # Parse dates
+    since = datetime.strptime(args.since, '%Y-%m-%d')
+    until = datetime.strptime(args.until, '%Y-%m-%d')
 
     print('=' * 60)
-    print('STEP 2: Computing anonymized rollups')
+    print('Running anonymized rollup performance test')
     print('=' * 60)
     print(f'Date range: {since} to {until}')
     print(f'Output directory: {output_dir}')
