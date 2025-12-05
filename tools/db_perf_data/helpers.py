@@ -306,9 +306,9 @@ def create_project(name='Perf Test Project', org_id=None):
 
 
 def create_job_templates(project_id, inventory_id, template_count=10):
-    """Create multiple job templates and return list of their IDs."""
+    """Create multiple job templates and return dict mapping IDs to names."""
     print(f'Creating {template_count} job templates...')
-    template_ids = []
+    templates = {}  # {template_id: template_name}
 
     for i in range(template_count):
         template_name = f'Perf Test Template {i}'
@@ -360,10 +360,10 @@ def create_job_templates(project_id, inventory_id, template_count=10):
         RETURNING unifiedjobtemplate_ptr_id;
         """
         run(sql_jt)
-        template_ids.append(template_id)
+        templates[template_id] = template_name
 
-    print(f'Created {template_count} job templates with IDs: {template_ids}')
-    return template_ids
+    print(f'Created {template_count} job templates with IDs: {list(templates.keys())}')
+    return templates
 
 
 def create_hosts(inventory_id=None, host_count=1000):
