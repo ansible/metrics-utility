@@ -3,6 +3,7 @@
 
 import argparse
 import random
+import uuid
 
 from helpers import (
     create_hosts,
@@ -35,32 +36,43 @@ def print_counts():
     print(f'Total job events: {event_count}')
 
 
-def fill_init_data(host_count=10, task_count=50, template_count=10):
+def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffix=None):
     """Create initial data: organization, inventory, project, job templates, and hosts.
+
+    Args:
+        host_count: Number of hosts to create
+        task_count: Number of tasks per job
+        template_count: Number of job templates to create
+        unique_suffix: Optional unique suffix for entity names. If None, generates a random one.
 
     Returns dict with auto-generated IDs for created entities.
     """
+    # Generate unique suffix if not provided (first 8 chars of UUID)
+    if unique_suffix is None:
+        unique_suffix = str(uuid.uuid4())[:8]
+
     print('=== Creating initial performance test data ===')
+    print(f'Unique suffix: {unique_suffix}')
 
     # Create organization first (parent of inventory and project)
-    org_id = create_organization(name='Perf Test Organization')
+    org_id = create_organization(name=f'Perf Test Organization {unique_suffix}')
 
     # Create inventory (depends on organization)
-    inventory_id = create_inventory(name='Perf Test Inventory', org_id=org_id)
+    inventory_id = create_inventory(name=f'Perf Test Inventory {unique_suffix}', org_id=org_id)
 
     # Create project (depends on organization)
-    project_id = create_project(name='Perf Test Project', org_id=org_id)
+    project_id = create_project(name=f'Perf Test Project {unique_suffix}', org_id=org_id)
 
     # Create job templates (depends on project and inventory)
-    templates = create_job_templates(project_id, inventory_id, template_count)
+    templates = create_job_templates(project_id, inventory_id, template_count, unique_suffix)
 
     # Create hosts (depends on inventory)
-    host_ids = create_hosts(inventory_id=inventory_id, host_count=host_count)
+    host_ids = create_hosts(inventory_id=inventory_id, host_count=host_count, unique_suffix=unique_suffix)
 
     print('=== Initial data created ===')
-    print(f'Organization ID: {org_id}')
-    print(f'Inventory ID: {inventory_id}')
-    print(f'Project ID: {project_id}')
+    print(f'Organization: Perf Test Organization {unique_suffix} (ID: {org_id})')
+    print(f'Inventory: Perf Test Inventory {unique_suffix} (ID: {inventory_id})')
+    print(f'Project: Perf Test Project {unique_suffix} (ID: {project_id})')
     print(f'Job Template IDs: {list(templates.keys())}')
 
     return {
@@ -71,6 +83,7 @@ def fill_init_data(host_count=10, task_count=50, template_count=10):
         'host_ids': host_ids,
         'host_count': host_count,
         'task_count': task_count,
+        'unique_suffix': unique_suffix,
     }
 
 
@@ -117,11 +130,11 @@ def fill_job_data(init_data, job_index):
 
 
 def fill_jobhostsummary(init_data, job_id):
-    create_job_host_summaries(job_id, init_data['host_count'])
+    create_job_host_summaries(job_id, init_data['host_count'], unique_suffix=init_data.get('unique_suffix'))
 
 
 def fill_jobevent(init_data, job_id, job_index, job_created):
-    create_job_events(job_id, init_data['host_ids'], init_data['task_count'], job_index, job_created)
+    create_job_events(job_id, init_data['host_ids'], init_data['task_count'], job_index, job_created, unique_suffix=init_data.get('unique_suffix'))
 
 
 def fill_job(init_data, job_index):

@@ -302,13 +302,21 @@ def create_project(name='Perf Test Project', org_id=None):
     return project_id
 
 
-def create_job_templates(project_id, inventory_id, template_count=10):
-    """Create multiple job templates and return dict mapping IDs to names."""
+def create_job_templates(project_id, inventory_id, template_count=10, unique_suffix=None):
+    """Create multiple job templates and return dict mapping IDs to names.
+
+    Args:
+        project_id: Project ID to link templates to
+        inventory_id: Inventory ID to link templates to
+        template_count: Number of templates to create
+        unique_suffix: Optional unique suffix for template names
+    """
     print(f'Creating {template_count} job templates...')
     templates = {}  # {template_id: template_name}
+    suffix = f' {unique_suffix}' if unique_suffix else ''
 
     for i in range(template_count):
-        template_name = f'Perf Test Template {i}'
+        template_name = f'Perf Test Template {i}{suffix}'
 
         # First create the unified job template entry
         sql_ujt = f"""
@@ -363,14 +371,22 @@ def create_job_templates(project_id, inventory_id, template_count=10):
     return templates
 
 
-def create_hosts(inventory_id=None, host_count=1000):
-    """Create multiple hosts for an inventory and return list of auto-generated IDs."""
+def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
+    """Create multiple hosts for an inventory and return list of auto-generated IDs.
+
+    Args:
+        inventory_id: Inventory ID to link hosts to
+        host_count: Number of hosts to create
+        unique_suffix: Optional unique suffix for host names
+    """
     print(f'Creating {host_count} hosts for inventory {inventory_id}...')
+    suffix = f'-{unique_suffix}' if unique_suffix else ''
 
     # Generate bulk insert SQL for hosts (let DB auto-generate IDs)
     values = []
     for i in range(1, host_count + 1):
-        values.append(f"(NOW(), NOW(), 'host-{i}.example.com', 'Performance test host {i}', {inventory_id}, '', TRUE, '', '{{}}'::jsonb)")
+        host_name = f'host-{i}{suffix}.example.com'
+        values.append(f"(NOW(), NOW(), '{host_name}', 'Performance test host {i}', {inventory_id}, '', TRUE, '', '{{}}'::jsonb)")
 
     sql = f"""
     INSERT INTO main_host (created, modified, name, description, inventory_id, variables, enabled, instance_id, ansible_facts)
@@ -447,16 +463,22 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     return job_id, created
 
 
-def create_job_host_summaries(job_id, host_count):
+def create_job_host_summaries(job_id, host_count, unique_suffix=None):
     """Create job host summaries for all hosts (batch insert).
 
-    Host names are generated using the same pattern as create_hosts: host-{i}.example.com
+    Host names are generated using the same pattern as create_hosts: host-{i}-{suffix}.example.com
+
+    Args:
+        job_id: Job ID to link summaries to
+        host_count: Number of host summaries to create
+        unique_suffix: Optional unique suffix for host names (must match create_hosts suffix)
     """
     print(f'Creating {host_count} job host summaries for job {job_id}...')
+    suffix = f'-{unique_suffix}' if unique_suffix else ''
 
     values = []
     for i in range(1, host_count + 1):
-        host_name = f'host-{i}.example.com'
+        host_name = f'host-{i}{suffix}.example.com'
         # Generate random task counts
         ok = random.randint(5, 50)
         changed = random.randint(0, 10)
@@ -548,7 +570,7 @@ def get_job_timestamps(job_index):
     return created, started, finished
 
 
-def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=None):
+def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=None, unique_suffix=None):
     """Create job events for all hosts (batch insert).
 
     Generates realistic events with:
@@ -560,11 +582,15 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     Structure: task -> host -> outcome
     Each task runs the same module on all hosts, but each host can have different outcome.
 
-    Host names are generated using the same pattern as create_hosts: host-{i}.example.com
+    Host names are generated using the same pattern as create_hosts: host-{i}-{suffix}.example.com
 
-    job_index is used for deterministic random seed (not job_id which changes each run)
-    job_created is the timestamp from the job (used for partitioning)
-    host_ids is a list of host IDs to use in the events
+    Args:
+        job_id: Job ID to link events to
+        host_ids: List of host IDs to use in the events
+        task_count: Number of tasks per job
+        job_index: Used for deterministic random seed (not job_id which changes each run)
+        job_created: Timestamp from the job (used for partitioning)
+        unique_suffix: Optional unique suffix for host names (must match create_hosts suffix)
     """
     # Use deterministic random based on job_index (not job_id which changes)
     rng = random.Random(RANDOM_SEED + job_index)
@@ -574,6 +600,7 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
 
     host_count = len(host_ids)
     print(f'Creating job events for job {job_id} ({task_count} tasks x {host_count} hosts)...')
+    suffix = f'-{unique_suffix}' if unique_suffix else ''
 
     values = []
     counter = 0
@@ -600,7 +627,7 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
 
         # Loop over hosts - each host gets different outcome for this task
         for host_idx, host_id in enumerate(host_ids, 1):
-            host_name = f'host-{host_idx}.example.com'
+            host_name = f'host-{host_idx}{suffix}.example.com'
 
             # Decide event outcome with realistic distribution per host
             # 70% clean success, 10% skipped, 15% failed then retry success, 5% failed/unreachable
