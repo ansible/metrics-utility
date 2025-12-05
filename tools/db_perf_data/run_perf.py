@@ -15,6 +15,14 @@ from datetime import datetime
 from pathlib import Path
 
 
+try:
+    import psutil
+
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+
+
 # Add current directory to path for imports
 current_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(current_dir))
@@ -111,6 +119,11 @@ def main():
 
     time_start = datetime.now()
 
+    # Get memory usage before computation
+    if PSUTIL_AVAILABLE:
+        process = psutil.Process()
+        memory_before = process.memory_info().rss / (1024 * 1024)  # Convert to MB
+
     # Configuration
     save_rollups = True
     save_rollups_packed = False  # False = CSV files only, True = tarball
@@ -126,6 +139,11 @@ def main():
             save_rollups_packed=save_rollups_packed,
         )
 
+        # Get memory usage after computation
+        if PSUTIL_AVAILABLE:
+            memory_after = process.memory_info().rss / (1024 * 1024)  # Convert to MB
+            memory_consumed = memory_after - memory_before
+
         # save into anonymized.json
         with open(output_dir / 'anonymized.json', 'w') as f:
             json.dump(json_data, f, indent=4)
@@ -134,6 +152,15 @@ def main():
         print('\nOutput files:')
         print(f'  - JSON: {output_dir}/anonymized.json')
         print(f'  - CSVs: {output_dir}/rollups/')
+
+        # Print memory statistics
+        if PSUTIL_AVAILABLE:
+            print('\n=== Memory Usage ===')
+            print(f'Memory before: {memory_before:.2f} MB')
+            print(f'Memory after: {memory_after:.2f} MB')
+            print(f'Memory consumed: {memory_consumed:.2f} MB')
+        else:
+            print('\n(Install psutil for memory tracking: pip install psutil)')
     except Exception as e:
         print(f'✗ Failed: {e}')
         import traceback
