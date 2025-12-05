@@ -1,6 +1,5 @@
 import json
 import random
-import subprocess
 import uuid
 
 from datetime import datetime, timedelta
@@ -8,75 +7,71 @@ from datetime import datetime, timedelta
 from modules import MODULES
 
 
-def parse_id(output):
-    """Parse the ID from psql RETURNING output.
+# Database connection will be imported from Django after prepare() is called
+_db_connection = None
 
-    Expected format:
-     id
-    ----
-      1
-    (1 row)
+
+def get_db_connection():
+    """Get the Django database connection."""
+    global _db_connection
+    if _db_connection is None:
+        from django.db import connection
+
+        _db_connection = connection
+    return _db_connection
+
+
+def parse_id(result):
+    """Parse the ID from a database result.
+
+    Args:
+        result: List of tuples from cursor.fetchall()
+
+    Returns:
+        First ID value or None
     """
-    lines = output.strip().split('\n')
-    for line in lines:
-        line = line.strip()
-        # Skip header lines and row count
-        if line and not line.startswith('id') and not line.startswith('-') and not line.startswith('('):
-            try:
-                return int(line)
-            except ValueError:
-                continue
+    if result and len(result) > 0 and len(result[0]) > 0:
+        return result[0][0]
     return None
 
 
-def parse_ids(output):
-    """Parse multiple IDs from psql RETURNING output.
+def parse_ids(result):
+    """Parse multiple IDs from a database result.
 
-    Expected format:
-     id
-    ----
-      1
-      2
-      3
-    (3 rows)
+    Args:
+        result: List of tuples from cursor.fetchall()
+
+    Returns:
+        List of ID values
     """
-    ids = []
-    lines = output.strip().split('\n')
-    for line in lines:
-        line = line.strip()
-        # Skip header lines and row count
-        if line and not line.startswith('id') and not line.startswith('-') and not line.startswith('('):
-            try:
-                ids.append(int(line))
-            except ValueError:
-                continue
-    return ids
+    return [row[0] for row in result if row]
 
 
 def run(sql_script):
-    """Execute SQL script via docker exec to postgres container."""
-    command = ['docker', 'exec', '-i', 'postgres', 'psql', '-U', 'awx']
+    """Execute SQL script using Django database connection.
 
+    Returns the fetchall() result for SELECT queries or None for other queries.
+    """
+    conn = get_db_connection()
     try:
-        process = subprocess.run(command, input=sql_script.encode(), capture_output=True)
+        with conn.cursor() as cursor:
+            # Execute the SQL (may contain multiple statements)
+            cursor.execute(sql_script)
 
-        stdout = process.stdout.decode()
-        stderr = process.stderr.decode()
-
-        if stderr:
-            print(stderr)
-
-        # Check for errors in output
-        if process.returncode != 0:
-            print(f'ERROR: SQL command failed with return code {process.returncode}')
-        if 'ERROR:' in stdout or 'ERROR:' in stderr:
-            print('ERROR: SQL error detected in output')
-
-        return stdout
+            # Try to fetch results if this was a SELECT/RETURNING query
+            try:
+                result = cursor.fetchall()
+                return result
+            except Exception:
+                # No results to fetch (DELETE, INSERT without RETURNING, etc.)
+                return None
 
     except Exception as e:
         print(f'ERROR: Exception while executing SQL: {e}')
-        return ''
+        import traceback
+
+        traceback.print_exc()
+        return None
 
 
 # =============================================================================

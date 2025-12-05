@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Fill the database with performance test data."""
+
 import argparse
 import random
 
@@ -11,7 +14,6 @@ from helpers import (
     create_jobevent_partitions,
     create_organization,
     create_project,
-    delete_all,
     run,
 )
 
@@ -19,14 +21,14 @@ from helpers import (
 def print_counts():
     """Print the count of hosts, jobs, job host summaries, and job events in the database."""
     print('=== Database counts ===')
-    output = run('SELECT COUNT(*) FROM main_host;')
-    host_count = int(output.strip().split('\n')[2].strip())
-    output = run('SELECT COUNT(*) FROM main_job;')
-    job_count = int(output.strip().split('\n')[2].strip())
-    output = run('SELECT COUNT(*) FROM main_jobhostsummary;')
-    jhs_count = int(output.strip().split('\n')[2].strip())
-    output = run('SELECT COUNT(*) FROM main_jobevent;')
-    event_count = int(output.strip().split('\n')[2].strip())
+    result = run('SELECT COUNT(*) FROM main_host;')
+    host_count = result[0][0] if result else 0
+    result = run('SELECT COUNT(*) FROM main_job;')
+    job_count = result[0][0] if result else 0
+    result = run('SELECT COUNT(*) FROM main_jobhostsummary;')
+    jhs_count = result[0][0] if result else 0
+    result = run('SELECT COUNT(*) FROM main_jobevent;')
+    event_count = result[0][0] if result else 0
     print(f'Total hosts: {host_count}')
     print(f'Total jobs: {job_count}')
     print(f'Total job host summaries: {jhs_count}')
@@ -75,6 +77,8 @@ def fill_init_data(host_count=10, task_count=50, template_count=10):
 def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10):
     """Fill the database with performance test data.
 
+    Note: This function does NOT clean existing data. Use clean_all_data.py to clean before filling.
+
     Args:
         host_count: Number of hosts to create
         job_count: Number of jobs to create
@@ -82,8 +86,6 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
         template_count: Number of job templates to create
     """
     print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job, {template_count} templates ===')
-
-    delete_all()
 
     # Create partitions for January 2024 (required for partitioned main_jobevent)
     create_jobevent_partitions()
@@ -130,6 +132,35 @@ def fill_job(init_data, job_index):
 
 
 if __name__ == '__main__':
+    import os
+    import sys
+
+    from pathlib import Path
+
+    # Add current directory to path for imports
+    current_dir = Path(__file__).resolve().parent
+    sys.path.insert(0, str(current_dir))
+
+    # Add metrics_utility to path and activate venv if available
+    metrics_utility_path = current_dir.parent.parent
+    sys.path.insert(0, str(metrics_utility_path))
+
+    # Check for virtual environment and use it
+    venv_path = metrics_utility_path / '.venv'
+    if venv_path.exists():
+        # Activate venv by updating PATH and VIRTUAL_ENV
+        os.environ['VIRTUAL_ENV'] = str(venv_path)
+        os.environ['PATH'] = f'{venv_path / "bin"}:{os.environ.get("PATH", "")}'
+        # Add venv site-packages to sys.path
+        site_packages = list(venv_path.glob('lib/python*/site-packages'))
+        if site_packages:
+            sys.path.insert(0, str(site_packages[0]))
+
+    from metrics_utility import prepare  # noqa: E402
+
+    # Initialize Django and database connection
+    prepare()
+
     parser = argparse.ArgumentParser(description='Fill database with performance test data')
     parser.add_argument('--host-count', type=int, default=30, help='Number of hosts to create (default: 10)')
     parser.add_argument('--job-count', type=int, default=20, help='Number of jobs to create (default: 5)')
