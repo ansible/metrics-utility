@@ -5,6 +5,8 @@ import uuid
 
 from datetime import datetime, timedelta
 
+from modules import MODULES
+
 
 def parse_id(output):
     """Parse the ID from psql RETURNING output.
@@ -490,40 +492,6 @@ def create_job_host_summaries(job_id, host_count):
 
 
 # Module definitions for job events - mix of different collection sources
-MODULES = [
-    # Red Hat certified (ansible.builtin)
-    'ansible.builtin.copy',
-    'ansible.builtin.file',
-    'ansible.builtin.template',
-    'ansible.builtin.service',
-    'ansible.builtin.yum',
-    'ansible.builtin.apt',
-    'ansible.builtin.command',
-    'ansible.builtin.shell',
-    'ansible.builtin.debug',
-    'ansible.builtin.set_fact',
-    'ansible.builtin.include_tasks',
-    'ansible.builtin.user',
-    'ansible.builtin.group',
-    'ansible.builtin.lineinfile',
-    'ansible.builtin.stat',
-    # Red Hat certified (other)
-    'ansible.posix.mount',
-    'ansible.posix.sysctl',
-    'redhat.rhel_system_roles.firewall',
-    # Community
-    'community.general.docker_container',
-    'community.general.postgresql_db',
-    'community.general.git_config',
-    'community.mysql.mysql_db',
-    'community.mysql.mysql_user',
-    # Partner/Validated
-    'amazon.aws.ec2_instance',
-    'amazon.aws.s3_bucket',
-    'azure.azcollection.azure_rm_virtualmachine',
-    'google.cloud.gcp_compute_instance',
-]
-
 # Random seed for deterministic generation
 RANDOM_SEED = 42
 
