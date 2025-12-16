@@ -463,7 +463,7 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     return job_id, created
 
 
-def create_job_host_summaries(job_id, host_count, unique_suffix=None):
+def create_job_host_summaries(job_id, host_count, job_created, unique_suffix=None):
     """Create job host summaries for all hosts (batch insert).
 
     Host names are generated using the same pattern as create_hosts: host-{i}-{suffix}.example.com
@@ -471,6 +471,7 @@ def create_job_host_summaries(job_id, host_count, unique_suffix=None):
     Args:
         job_id: Job ID to link summaries to
         host_count: Number of host summaries to create
+        job_created: Job creation timestamp to use for created/modified dates
         unique_suffix: Optional unique suffix for host names (must match create_hosts suffix)
     """
     print(f'Creating {host_count} job host summaries for job {job_id}...')
@@ -491,7 +492,7 @@ def create_job_host_summaries(job_id, host_count, unique_suffix=None):
         failed = failures > 0 or dark > 0
 
         values.append(
-            f"(NOW(), NOW(), '{host_name}', {changed}, {dark}, {failures}, "
+            f"('{job_created}', '{job_created}', '{host_name}', {changed}, {dark}, {failures}, "
             f'{ok}, {processed}, {skipped}, {str(failed).upper()}, NULL, '
             f'{job_id}, {ignored}, {rescued})'
         )

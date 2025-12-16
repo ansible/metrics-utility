@@ -129,8 +129,8 @@ def fill_job_data(init_data, job_index):
     return job_id, job_created
 
 
-def fill_jobhostsummary(init_data, job_id):
-    create_job_host_summaries(job_id, init_data['host_count'], unique_suffix=init_data.get('unique_suffix'))
+def fill_jobhostsummary(init_data, job_id, job_created):
+    create_job_host_summaries(job_id, init_data['host_count'], job_created, unique_suffix=init_data.get('unique_suffix'))
 
 
 def fill_jobevent(init_data, job_id, job_index, job_created):
@@ -139,7 +139,7 @@ def fill_jobevent(init_data, job_id, job_index, job_created):
 
 def fill_job(init_data, job_index):
     job_id, job_created = fill_job_data(init_data, job_index)
-    fill_jobhostsummary(init_data, job_id)
+    fill_jobhostsummary(init_data, job_id, job_created)
     fill_jobevent(init_data, job_id, job_index, job_created)
     return
 
