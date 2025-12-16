@@ -1,28 +1,123 @@
-# AAP metrics-utility
+# metrics-utility
 
-A standalone CLI utility for collecting and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances. This tool allows users to:
+metrics-utility deals with collecting, analyzing and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances.
 
-- Collect and analyze Controller usage data
-- Generate reports (`CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`)
-- Support multiple storage adapters for data persistence (local dir, S3)
+It provides two interfaces - a [CLI](#cli) and a python [library](#python-library).
+
+Also see below for [dev setup](#developer-setup), and other [docs](#documentation).
+
+
+### CLI
+
+A `metrics-utility` CLI tool for collecting and reporting metrics from Controller, allowing users to:
+
+- Collect Controller usage data from the database, settings, and prometheus
+- Analyze the data and generate `.xlsx` reports
+- Support multiple storage adapters for data persistence (local directory, S3)
 - Push metrics data to `console.redhat.com`
 
-## Quick Start
+It can run either standalone (against a specified postgres instance),
+or inside the Controller's python virtual environment. The controller mode allows the `config` collector to collect more settings and takes DB connection details from there.
 
-The project can run in 2 modes - real controller, and standalone.
+It provides two subcommands:
+  - `gather_automation_controller_billing_data`
+    - collects data from controller, saves daily tarballs with csv/json inside
+    - saves tarballs in specified storage
+    - optionally sends to console
+  - `build_report`
+    - builds a XLSX report
+      - 3 report types - `CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`
+      - the ccsp* reports use the collected tarballs as the source
+      - the renewal* report reads from controller db
 
-The controller mode is for running inside Controller containers and is more fully documented in [`docs/old-readme.md`](./docs/old-readme.md).
+Example invocation:
 
-The standalone mode is currently used only for development & testing. It does not need a running awx instance (only a running postgres with imported data), and mocks some values otherwise obtained from awx (see [`mock_awx/settings/__init__.py`](./mock_awx/settings/__init__.py)).
+```bash
+pip install metrics-utility
 
-### Prerequisites (standalone)
+# common
+export METRICS_UTILITY_SHIP_PATH="./out"
+export METRICS_UTILITY_SHIP_TARGET="directory"
 
-- **Python 3.11 or later**
-- **[uv](https://github.com/astral-sh/uv) package manager** (Install with `pip install uv` if not already installed)
-- **Dependencies managed via `pyproject.toml`** (Ensure `uv.lock` is used for consistency)
-- **MacOS** `brew install postgresql`, if you need the database or minio
+# gather data
+metrics-utility gather_automation_controller_billing_data --ship --until=10m
+ls out/data/`date +%Y/%m/%d`/ # data/<year>/<month>/<day>/<uuid>-<since>-<until>-<index>-<collection>.tar.gz
 
-### Installation (standalone)
+# build report
+export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
+
+metrics-utility build_report --month=`date +%Y-%m` # year-month
+ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xlsx
+```
+
+See [docs/cli.md](./docs/cli.md) and [docs/old-readme.md](./docs/old-readme.md) for details on the usage,  
+See [docs/environment.md](./docs/environment.md) for a full list of environment variables,  
+See [docs/awx.md](./docs/awx.md) for more on running against an awx dev env.
+
+
+### Python library
+
+The `metrics_utility.library` library provides a lower-level python API exposing the same functionality using these abstractions:
+
+* collectors - functions that collect specific data, from database to a CSV, or from elsewhere into a python dict
+* packagers - packages multiple related .csv & .json into .tar.gz daily tarballs
+* extractors - extracts these tarballs, loading specific data into dicts or Pandas dataframe
+* rollups - group and aggregate dataframes, compute stats and optionally save them
+* reports - builds a xlsx report from a set of dataframes
+* storage - unified storage backend for filesystem, s3, segment, crc and db
+* instants - associated datetime-related helpers
+* tempdir & db locking helpers
+
+The library uses no env variables, and doesn't rely on Controller environment.
+The CLI is expected to use the library where possible, but is not limited to it.
+
+Example use:
+
+```python
+from metrics_utility.library.collectors.controller import config, main_jobevent
+from metrics_utility.library.instants import last_day, this_day
+from metrics_utility.library import lock, storage
+
+db = ... # django.db.connection / psycopg 3
+
+dir_storage = storage.StorageDirectory(base_path='./out')
+
+with lock(db=db, key='my-unique-key'):
+    # dict, will be converted to json
+    config_dict = config(db=db).gather()
+
+    # list of .csv filenames; since is included, until is excluded
+    job_csvs = main_jobevent(db=db, since=last_day(), until=this_day()).gather()
+
+# save in storage
+dir_storage.put('config.json', dict=config_dict)
+for index, file in enumerate(job_csvs):
+    dir_storage.put(f'main_jobevent.{index}.csv', filename=file)
+    os.remove(file)
+```
+
+See [library README](./metrics_utility/library/README.md) for details.  
+See [workers/](./workers/) for more library usage examples.
+
+
+## Developer setup
+
+### Prerequisites
+
+- Python 3.12 or later
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Docker compose OR a local postgres & minio & mc
+- optional: `make`
+
+Dependencies are managed via `pyproject.toml` (& `uv.lock`).
+There is also `setup.cfg` with dependencies but those are only used for the controller mode.
+
+The Docker compose environment is used to provide a quick postgres & minio instances on ports 5432 and 9000/9001, but they can be replaced with local setup. See [docker-compose.yaml](./tools/docker/docker-compose.yaml) for details of the `mc` setup (substitute the `minio` hostname for localhost), and [tools/docker/\*.sql](./tools/docker/) for users & data to import in postgres (start with `roles.sql` and `latest.sql`). (Or don't, and use docker.)
+
+`uv` is also not required as long as you can manage your own python venv and install dependencies from `pyproject.toml`.
+
+
+### Installation
 
 ```bash
 # Clone the repository
@@ -33,216 +128,60 @@ cd metrics-utility
 uv sync
 ```
 
-For more about the development setup, see the [Developer Setup Guide](./docs/developer_setup.md).
 
-### Tests (standalone)
-
-Run tests using `uv run pytest -s -v`. Some tests depend on a running postgres & minio instance - run `docker compose -f tools/docker/docker-compose.yaml up` to get one.
-
-You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`. You use also `podman`.
-
-For more flexibility, use:
-
-```
-(host) $ docker compose -f tools/docker/docker-compose.yaml --profile=env up -d  # runs a metrics-utility-env container with python & uv set up
-(host) $ docker exec -it metrics-utility-env /bin/sh # (wait for postgres & minio containers to start before running)
-(container) $ uv run pytest -vv metrics_utility/test/ccspv_reports/test_complex_CCSP_with_scope.py # 1 test
-(container) $ uv run pytest -vv metrics_utility/test/ccspv_reports # all ccsp tests
-```
-
-#### Using Docker (in CI mode to be able to run all tests)
+### Run
 
 ```bash
-# Ensure SQL data is loaded (only needed once after starting containers)
-docker compose -f tools/docker/docker-compose.yaml exec postgres bash -c \
-  'cat /docker-entrypoint-initdb.d/init-*.sql | psql -U awx -d postgres'
-
-# Run all gather tests
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/'
-
-# Run a specific gather test
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
-
-# Run all tests (not just gather)
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v'
+cd metrics-utility
+make compose
 ```
-
-#### Using Podman (in CI mode to be able to run all tests)
 
 ```bash
-# Ensure SQL data is loaded (only needed once after starting containers)
-podman compose -f tools/docker/docker-compose.yaml exec postgres bash -c \
-  'cat /docker-entrypoint-initdb.d/init-*.sql | psql -U awx -d postgres'
-
-# Run all gather tests
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/'
-
-# Run a specific gather test
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
-
-# Run all tests (not just gather)
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v'
+cd metrics-utility
+uv run ./manage.py --help
+uv run ./manage.py gather_automation_controller_billing_data --help
+uv run ./manage.py build_report --help
 ```
 
-### Basic Usage
+`make clean` resets the docker environment,
+`make lint` & `make fix` run the linters & formatters,
+`make psql` runs psql in the postgres container.
 
-1. Know the environment
-  - In Controller mode:
-    - make sure to connect to a running Controller instance,
-    - get metrics-utility (map a volume, or git clone),
-    - activate the virtual environment (`source /var/lib/awx/venv/awx/bin/activate`),
-    - `pip install .` from the `metrics-utility` dir,
-    - run utility using `python manage.py ...`.
-  - In RPM mode:
-    - install the right RPM
-    - run utility using `metrics-utility ...`.
-  - **In standalone mode**:
-    - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or minio,
-    - run utility using `uv run python manage.py ...`.
 
-1. Pick a task (goes right after the previous command)
-  - `gather_automation_controller_billing_data` - collects metrics from controller db, saves daily tarballs with csv/json inside
-  - `build_report` - builds a XLSX report, either from controller db or collected tarballs
+### Tests
 
-1. Pick a report type (`export METRICS_UTILITY_REPORT_TYPE=...`)
-  - `CCSPv2` - uses metrics tarballs to produce a usage report
-  - `CCSP` - similar to v2, slightly different aggregation
-  - `RENEWAL_GUIDANCE` - uses controller db to produce a renewal guidance report
+Some tests depend on a running postgres & minio instance - run `make compose` to get one.
 
-1. Pick a time period
-  - `--since=12m`
-  - and `--until=10m` (only with `CCSP` and `CCSPv2`)
-  - or `--month=2024-06` (only with `build_report`)
+`make test` runs the full test suite,
+`make coverage` produces a coverage report.
 
-1. Use `--help` to see any other params
-  - `build_report` also supports `--ephemeral`, `--force` and `--verbose`
-  - `gather_automation_controller_billing_data` also supports `--dry-run` and `--ship`
+Use `uv run pytest -s -v` for running tests with verbose output, also accepts test filenames.
 
-1. Set any other necessary environmental variable - see more in [`docs/old-readme.md`](./docs/old-readme.md).
-  - `METRICS_UTILITY_BILLING_ACCOUNT_ID`
-  - `METRICS_UTILITY_BILLING_PROVIDER`
-  - `METRICS_UTILITY_BUCKET_ACCESS_KEY`
-  - `METRICS_UTILITY_BUCKET_ENDPOINT`
-  - `METRICS_UTILITY_BUCKET_NAME`
-  - `METRICS_UTILITY_BUCKET_REGION`
-  - `METRICS_UTILITY_BUCKET_SECRET_KEY`
-  - `METRICS_UTILITY_CRC_INGRESS_URL`
-  - `METRICS_UTILITY_CRC_SSO_URL`
-  - `METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS`
-  - `METRICS_UTILITY_OPTIONAL_COLLECTORS`
-  - `METRICS_UTILITY_ORGANIZATION_FILTER`
-  - `METRICS_UTILITY_PRICE_PER_NODE`
-  - `METRICS_UTILITY_PROXY_URL`
-  - `METRICS_UTILITY_RED_HAT_ORG_ID`
-  - `METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER`
-  - `METRICS_UTILITY_REPORT_COMPANY_NAME`
-  - `METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER`
-  - `METRICS_UTILITY_REPORT_EMAIL`
-  - `METRICS_UTILITY_REPORT_END_USER_CITY`
-  - `METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME`
-  - `METRICS_UTILITY_REPORT_END_USER_COUNTRY`
-  - `METRICS_UTILITY_REPORT_END_USER_STATE`
-  - `METRICS_UTILITY_REPORT_H1_HEADING`
-  - `METRICS_UTILITY_REPORT_PO_NUMBER`
-  - `METRICS_UTILITY_REPORT_RHN_LOGIN`
-  - `METRICS_UTILITY_REPORT_SKU`
-  - `METRICS_UTILITY_REPORT_SKU_DESCRIPTION`
-  - `METRICS_UTILITY_REPORT_TYPE`
-  - `METRICS_UTILITY_SERVICE_ACCOUNT_ID`
-  - `METRICS_UTILITY_SERVICE_ACCOUNT_SECRET`
-  - `METRICS_UTILITY_SHIP_PATH`
-  - `METRICS_UTILITY_SHIP_TARGET`
+See [docs/tests-compose.md](./docs/tests-compose.md) to run the tests inside the docker compose environment.
 
-#### Example CCSPv2 run
-
-```bash
-# You can use also an env-file but then you must export it with `export UV_ENV_FILE=<your_env_file>`
-export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
-export METRICS_UTILITY_SHIP_PATH="./test/test_data/"
-export METRICS_UTILITY_SHIP_TARGET="directory"
-
-export METRICS_UTILITY_PRICE_PER_NODE=11.55 # in USD
-export METRICS_UTILITY_REPORT_COMPANY_NAME="Partner A"
-export METRICS_UTILITY_REPORT_EMAIL="email@email.com"
-export METRICS_UTILITY_REPORT_END_USER_CITY="Springfield"
-export METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME="Customer A"
-export METRICS_UTILITY_REPORT_END_USER_COUNTRY="US"
-export METRICS_UTILITY_REPORT_END_USER_STATE="TX"
-export METRICS_UTILITY_REPORT_H1_HEADING="CCSP NA Direct Reporting Template"
-export METRICS_UTILITY_REPORT_PO_NUMBER="123"
-export METRICS_UTILITY_REPORT_RHN_LOGIN="test_login"
-export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
-export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
-
-# collect data
-uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force
-
-# collected tarballs somewhere here (by date and instance uuid)
-ls metrics_utility/test/test_data/data/2024/04/*
-
-# build report, overwrite existing if necessary
-uv run ./manage.py build_report --month=2024-04 --force
-
-# resulting XLSX
-ls metrics_utility/test/test_data/reports/2024/04/
-```
-
-#### Example RENEWAL\_GUIDANCE run
-
-```bash
-export METRICS_UTILITY_REPORT_TYPE="RENEWAL_GUIDANCE"
-export METRICS_UTILITY_SHIP_PATH="./out"
-export METRICS_UTILITY_SHIP_TARGET="controller_db"
-
-uv run ./manage.py build_report --since=12months --ephemeral=1month --force
-```
 
 ## Documentation
 
-Documentation is available in the [`/docs` directory](./docs).
+More documentation is available in [docs/](./docs/), and elsewhere:
 
-Please note that this is the upstream documentation for the metrics-utility project. Additional internal downstream documentation, accessible only to the Ansible organization, is maintained separately in the [Ansible Handbook](https://github.com/ansible/handbook/tree/main/The%20Ansible%20Engineering%20Handbook/docs/AAP/Services/Metrics).
+* [CHANGELOG.md](./CHANGELOG.md) - Changes between tagged releases
+* [LICENSE.md](./LICENSE.md) - Apache-2.0 license
+* [README.md](./README.md) - this
 
-As the project grows, more guides and references will be added to the `/docs` folder.
+* [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
+* [tools/collections/](./tools/collections/) - scripts for pulling list of collections from galaxy & automation hub
+* [tools/perf/](./tools/perf/) - perf test data generator and scripts for build report
+* [tools/testathon/](./tools/testathon/) - data generator for testing
 
-## Version mapping
+* [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Contributor's guide
+* [docs/awx.md](./docs/awx.md) - running against awx dev env
+* [docs/cli.md](./docs/cli.md) - CLI docs
+* [docs/developer\_setup.md](./docs/developer_setup.md) - Developer setup
+* [docs/environment.md](./docs/environment.md) - Environment variables
+* [docs/insights-analytics-collector.md](./docs/insights-analytics-collector.md) - old insights analytics collector base docs
+* [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
+* [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
 
-|metrics-utility version|AAP version|
-|-|-|
-|0.4.1|2.4\*|
-|0.5.0|2.5-20250507|
-|0.6.0|2.5.20250924 & 2.6|
+* [library/](./metrics_utility/library/) - library documentation
 
-## Contributing
-
-Please follow our [Contributor's Guide](./docs/contributing/CONTRIBUTING.md) for details on submitting changes and documentation standards.
+Please follow our [Contributor's Guide](./docs/CONTRIBUTING.md) for details on submitting changes and documentation standards.
