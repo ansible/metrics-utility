@@ -179,9 +179,9 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/cli.md](./docs/cli.md) - CLI docs
 * [docs/developer\_setup.md](./docs/developer_setup.md) - Developer setup
 * [docs/environment.md](./docs/environment.md) - Environment variables
-* [docs/insights-analytics-collector.md](./docs/insights-analytics-collector.md) - old insights analytics collector base docs
 * [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
+* [docs/vcpu.md](./docs/vcpu.md) - docs for the total workers vcpu collector
 
 * [library/](./metrics_utility/library/) - library documentation
 
