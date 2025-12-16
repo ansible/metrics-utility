@@ -3,7 +3,7 @@
 This document helps new contributors set up their local development environment for the `metrics-utility` repository. It covers installing required tools, configuring `uv`, and enabling a pre-commit hook that uses `ruff` for linting and formatting.
 
 
-## 1. Overview
+## Overview
 
 - `uv`: a Python virtual environment manager that simplifies dependency management.
 - `ruff`: a fast Python linter and formatter. Ensures code adheres to style and best practices.
@@ -11,14 +11,14 @@ This document helps new contributors set up their local development environment 
 The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check and format your code whenever you run `git commit`. This helps maintain consistent code quality.
 
 
-## 2. Prerequisites
+## Prerequisites
 
 - Python 3.12+ installed on your system.
 - Git installed for version control.
 - `pip` or other package managers (e.g., `pipx`) for installing Python tools.
 
 
-## 3. Initial setup
+## Initial setup
 
 1. Clone the repository:
    ```bash
@@ -57,7 +57,7 @@ The pre-commit hook leverages `ruff` (managed by `uv`) to automatically check an
    If any command fails, run `uv sync` again or check your `uv` installation.
 
 
-## 4. Running commands (optional approaches)
+## Running commands (optional approaches)
 
 Depending on your workflow, you can run commands in various ways:
 
@@ -79,13 +79,13 @@ Depending on your workflow, you can run commands in various ways:
 Use whichever approach suits your workflow.
 
 
-## 5. Configuring pre-commit hooks
+## Configuring pre-commit hooks
 
 1. Install pre-commit hooks:
    ```bash
-   pre-commit install
+   uvx pre-commit install
    ```
-   This registers the hooks defined in `.pre-commit-config.yaml` so that every `git commit` triggers a lint/format check using `ruff`.
+   This registers the hooks defined in [.pre-commit-config.yaml](../.pre-commit-config.yaml) so that every `git commit` triggers a lint/format check using `ruff`.
 
 2. Test the hook:
    1. Create a test file with a simple linting error:
@@ -102,7 +102,7 @@ Use whichever approach suits your workflow.
    3. The hook should **block** the commit, showing an error about the unused import or formatting issues.
 
 
-## 6. Fixing linting issues
+## Fixing linting issues
 
 Depending on the project's configuration:
 
@@ -127,7 +127,7 @@ git commit -m "Fix linting issues"
 This time, the commit should succeed if all issues are resolved.
 
 
-## 7. Troubleshooting
+## Troubleshooting
 
 1. `uv sync` errors
    - Ensure Python 3.11+ is installed.
@@ -146,7 +146,7 @@ This time, the commit should succeed if all issues are resolved.
    - If you see developers bypassing hooks with `--no-verify`, note that the checks won't run. For consistent code quality, discourage skipping hooks.
 
 
-## 8. Additional resources
+## Additional resources
 
 - [ruff documentation](https://beta.ruff.rs/docs/)
 - [pre-commit documentation](https://pre-commit.com/)

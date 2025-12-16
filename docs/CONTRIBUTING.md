@@ -1,11 +1,12 @@
 # Contributor's guide
 
-## 1. Introduction
+## Introduction
 
 Welcome to the `metrics-utility` project. We appreciate your contributions, whether fixing bugs, improving documentation, or adding new features. This guide will help you get started with our contribution process.
 
 
-## 2. Contribution workflow
+
+## Contribution workflow
 
 ### Forking strategy
 
@@ -37,7 +38,7 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
    git add .
    git commit -m "Short, clear description of change"
    ```
-   - If you are an internal contributor, ensure commits are **signed** (Verified tag) - [github docs](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits)
+   - If you are an internal contributor, ensure commits are **signed** (Verified tag) - [github docs](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits), and that your git-configured `user.email` matches the signature address.
    - Following [Conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) is recommended but not enforced. Commits get squashed on merge.
 
 5. **Push** your branch to your fork:
@@ -48,7 +49,7 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
 6. Open a **pull request** against the `devel` branch of the main repository.
 
 
-## 3. What a PR must meet to be merged
+## What a PR must meet to be merged
 
 To ensure consistency and maintainability, a PR should meet the following criteria:
 
@@ -63,27 +64,13 @@ To ensure consistency and maintainability, a PR should meet the following criter
 For **external contributors**, a core member will review and merge your PR since direct access is restricted.
 
 
-## 4. Setting up your development environment
+## Setting up your development environment
 
-To contribute effectively, you'll need a few essential tools:
-
-- `uv` - dependency and environment manager.
-- `ruff` - linter and formatter for maintaining code consistency.
-- `pre-commit` - ensures quality checks before committing code.
-  - [Configuring pre-commit hooks (`developer_setup.md`)](./developer_setup.md#5-configuring-pre-commit-hooks)
-- `make` - runs dev tasks like `make lint` or `make test`
-- `docker compose` - runs the database
-
-For detailed setup instructions, refer to [`docs/developer_setup.md`](./developer_setup.md).
-
-> **Note:** if you modify dependencies (e.g., update `pyproject.toml`), run:
-> ```bash
-> uv sync
-> ```
-> This ensures your environment matches the updated dependencies.
+See the [README](../README.md#developer-setup) for prerequisities and the developer setup.  
+See [docs/developer\_setup.md](./developer_setup.md) for more.
 
 
-## 5. Submitting a pull request
+## Submitting a pull request
 
 ### Before you submit
 
@@ -93,7 +80,7 @@ For detailed setup instructions, refer to [`docs/developer_setup.md`](./develope
 > **Note for internal contributors:** if your PR references internal AAP issues, keep in mind that external contributors may not have access to these references. Ensure that public-facing information is clear.
 
 
-## 6. Code style & quality
+## Code style & quality
 
 - Linting & formatting: `ruff` (automated via pre-commit hooks).
   - run `make lint` or `make fix` manually
@@ -104,7 +91,7 @@ For detailed setup instructions, refer to [`docs/developer_setup.md`](./develope
   - bad: `fix stuff`
 
 
-## 7. Documentation Contribution
+## Documentation Contribution
 
 It is recommended to follow widely adopted conventions for open-source documentation, the following structure is preferred:
 
@@ -128,13 +115,13 @@ If you are adding documentation, please try to follow this structure.
 > - When in doubt, check with maintainers before adding documentation that might contain internal details.
 
 
-## 8. Getting your PR merged
+## Getting your PR merged
 
 - **Internal contributors**: request to join the to join the `aap-metrics-write` team for merge permissions.
 - **External contributors**: since you don't have write access, a maintainer will review and merge your PR.
 
 
-## 9. Reporting issues
+## Reporting issues
 
 - If you encounter a bug or have a feature request, **open an issue** in the GitHub repository.
 - For further clarification, contact the repository maintainers via GitHub issues.

@@ -106,8 +106,8 @@ See [workers/](./workers/) for more library usage examples.
 
 - Python 3.12 or later
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
-- Docker compose OR a local postgres & minio & mc
-- optional: `make`
+- Docker compose
+- `make`
 
 Dependencies are managed via `pyproject.toml` (& `uv.lock`).
 There is also `setup.cfg` with dependencies but those are only used for the controller mode.
@@ -164,8 +164,8 @@ See [docs/tests-compose.md](./docs/tests-compose.md) to run the tests inside the
 
 More documentation is available in [docs/](./docs/), and elsewhere:
 
-* [CHANGELOG.md](./CHANGELOG.md) - Changes between tagged releases
-* [LICENSE.md](./LICENSE.md) - Apache-2.0 license
+* [CHANGELOG.md](./CHANGELOG.md) - changes between tagged releases
+* [LICENSE.md](./LICENSE.md) - the Apache-2.0 license
 * [README.md](./README.md) - this README
 
 * [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
