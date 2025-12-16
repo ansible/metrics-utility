@@ -483,7 +483,7 @@ requires-dist = [
     { name = "django", specifier = "~=5.2" },
     { name = "kubernetes", specifier = ">=33.1" },
     { name = "openpyxl", specifier = "~=3.1" },
-    { name = "pandas", specifier = "~=2.2" },
+    { name = "pandas", specifier = ">=2.2.3,<3" },
     { name = "psycopg", specifier = "~=3.3" },
     { name = "requests", specifier = "~=2.32" },
     { name = "segment-analytics-python", specifier = "~=2.3" },
