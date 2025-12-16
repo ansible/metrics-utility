@@ -169,13 +169,6 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [CHANGELOG.md](./CHANGELOG.md) - changes between tagged releases
 * [LICENSE.md](./LICENSE.md) - the Apache-2.0 license
 * [README.md](./README.md) - this README
-
-* [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
-* [tools/collections/](./tools/collections/) - scripts for pulling list of collections from galaxy & automation hub
-* [tools/docker/](./tools/docker/) - docker compose environment & mock awx data
-* [tools/perf/](./tools/perf/) - perf test data generator and scripts for build report
-* [tools/testathon/](./tools/testathon/) - data generator for testing
-
 * [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Contributor's guide
 * [docs/awx.md](./docs/awx.md) - running against awx dev env
 * [docs/cli.md](./docs/cli.md) - CLI docs
@@ -183,7 +176,11 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
 * [docs/vcpu.md](./docs/vcpu.md) - docs for the total workers vcpu collector
-
 * [metrics\_utility/library/](./metrics_utility/library/) - library documentation
+* [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
+* [tools/collections/](./tools/collections/) - scripts for pulling list of collections from galaxy & automation hub
+* [tools/docker/](./tools/docker/) - docker compose environment & mock awx data
+* [tools/perf/](./tools/perf/) - perf test data generator and scripts for build report
+* [tools/testathon/](./tools/testathon/) - data generator for testing
 
 Please follow our [Contributor's Guide](./docs/CONTRIBUTING.md) for details on submitting changes and documentation standards.
