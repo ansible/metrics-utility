@@ -31,7 +31,7 @@ class BaseAnonymizedRollup:
     def base(self, dataframe):
         return pd.DataFrame()
 
-    def save_rollup(self, rollup_data: dict, base_path: str, since: datetime, until: datetime) -> None:
+    def save_rollup(self, rollup_data: dict, base_path: str, since: datetime, until: datetime, packed: bool = True) -> None:
         # rollup data is dictionary
         # the dictionary can have those values:
         # scalar, list, pandas.Series, pandas.DataFrame
@@ -92,14 +92,22 @@ class BaseAnonymizedRollup:
             else:
                 print(f'Key {key} is a unknown type')
 
-        # Create tarball only if there are files to add
+        # Create tarball or save files directly based on packed parameter
         if tar_files:
-            tar_path = os.path.join(rollup_path, f'data_rollups_{year}_{month}_{day}.tar.gz')
-            with tarfile.open(tar_path, 'w:gz') as tar:
-                for filename, data in tar_files.items():
-                    # Create TarInfo object
-                    tarinfo = tarfile.TarInfo(name=f'./{filename}')
-                    tarinfo.size = len(data)
+            if packed:
+                # Create tarball
+                tar_path = os.path.join(rollup_path, f'data_rollups_{year}_{month}_{day}.tar.gz')
+                with tarfile.open(tar_path, 'w:gz') as tar:
+                    for filename, data in tar_files.items():
+                        # Create TarInfo object
+                        tarinfo = tarfile.TarInfo(name=f'./{filename}')
+                        tarinfo.size = len(data)
 
-                    # Add to tar from memory
-                    tar.addfile(tarinfo, io.BytesIO(data))
+                        # Add to tar from memory
+                        tar.addfile(tarinfo, io.BytesIO(data))
+            else:
+                # Save files directly to filesystem (no tarball)
+                for filename, data in tar_files.items():
+                    file_path = os.path.join(rollup_path, filename)
+                    with open(file_path, 'wb') as f:
+                        f.write(data)

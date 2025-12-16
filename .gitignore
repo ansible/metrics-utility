@@ -49,6 +49,7 @@ metrics_utility/test/test_data/data/**/*.json
 
 # Perf test data
 /tools/perf/generated/
+/tools/anonymized_db_perf_data/out/
 
 # AI
 /.claude/*
