@@ -1,3 +1,5 @@
+# Anonymized data perf test
+
 3 main files:
 `clean_all_data.py` Cleans the database
 `fill_perf_db_data.py` Inserts data into database

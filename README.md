@@ -21,11 +21,11 @@ or inside the Controller's python virtual environment. The controller mode allow
 
 It provides two subcommands:
   - `gather_automation_controller_billing_data`
-    - collects data from controller, saves daily tarballs with csv/json inside
+    - collects data from controller, saves daily tarballs with `.csv` / `.json` inside
     - saves tarballs in specified storage
     - optionally sends to console
   - `build_report`
-    - builds a XLSX report
+    - builds a `.xlsx` report
       - 3 report types - `CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`
       - the ccsp* reports use the collected tarballs as the source
       - the renewal* report reads from controller db
@@ -59,8 +59,8 @@ See [docs/awx.md](./docs/awx.md) for more on running against an awx dev env.
 
 The `metrics_utility.library` library provides a lower-level python API exposing the same functionality using these abstractions:
 
-* collectors - functions that collect specific data, from database to a CSV, or from elsewhere into a python dict
-* packagers - packages multiple related .csv & .json into .tar.gz daily tarballs
+* collectors - functions that collect specific data, from database to a `.csv`, or from elsewhere into a python dict
+* packagers - packages multiple related `.csv` & `.json` into `.tar.gz` daily tarballs
 * extractors - extracts these tarballs, loading specific data into dicts or Pandas dataframe
 * rollups - group and aggregate dataframes, compute stats and optionally save them
 * reports - builds a xlsx report from a set of dataframes
@@ -166,10 +166,11 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 
 * [CHANGELOG.md](./CHANGELOG.md) - Changes between tagged releases
 * [LICENSE.md](./LICENSE.md) - Apache-2.0 license
-* [README.md](./README.md) - this
+* [README.md](./README.md) - this README
 
 * [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
 * [tools/collections/](./tools/collections/) - scripts for pulling list of collections from galaxy & automation hub
+* [tools/docker/](./tools/docker/) - docker compose environment & mock awx data
 * [tools/perf/](./tools/perf/) - perf test data generator and scripts for build report
 * [tools/testathon/](./tools/testathon/) - data generator for testing
 
