@@ -107,7 +107,7 @@ See [workers/](./workers/) for more library usage examples.
 - Python 3.12 or later
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Docker compose
-- `make`
+- `make`, `git`
 
 Dependencies are managed via `pyproject.toml` (& `uv.lock`).
 There is also `setup.cfg` with dependencies but those are only used for the controller mode.
@@ -115,6 +115,8 @@ There is also `setup.cfg` with dependencies but those are only used for the cont
 The Docker compose environment is used to provide a quick postgres & minio instances on ports 5432 and 9000/9001, but they can be replaced with local setup. See [docker-compose.yaml](./tools/docker/docker-compose.yaml) for details of the `mc` setup (substitute the `minio` hostname for localhost), and [tools/docker/\*.sql](./tools/docker/) for users & data to import in postgres (start with `roles.sql` and `latest.sql`). (Or don't, and use docker.)
 
 `uv` is also not required as long as you can manage your own python venv and install dependencies from `pyproject.toml`.
+
+Optionally, `uvx pre-commit install` to run ruff checks from a pre-commit hook, defined in [.pre-commit-config.yaml](../.pre-commit-config.yaml). Or you can run `make lint` / `make fix` manually.
 
 
 ### Installation
@@ -177,7 +179,6 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Contributor's guide
 * [docs/awx.md](./docs/awx.md) - running against awx dev env
 * [docs/cli.md](./docs/cli.md) - CLI docs
-* [docs/developer\_setup.md](./docs/developer_setup.md) - Developer setup
 * [docs/environment.md](./docs/environment.md) - Environment variables
 * [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose

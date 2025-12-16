@@ -105,8 +105,7 @@ For **external contributors**, since you don't have write access, a maintainer w
 
 ## Setting up your development environment
 
-See the [README](../README.md#developer-setup) for prerequisities and the developer setup.  
-See [docs/developer\_setup.md](./developer_setup.md) for more.
+See the [README](../README.md#developer-setup) for prerequisities and the developer setup.
 
 
 ## Documentation Contribution
