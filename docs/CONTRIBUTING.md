@@ -4,11 +4,10 @@
 
 Welcome to the `metrics-utility` project. We appreciate your contributions, whether fixing bugs, improving documentation, or adding new features. This guide will help you get started with our contribution process.
 
+This contributor's guide assumes you can run `git` & Python from the command line, have a GitHub account, and have locally configured git with a name, email, and any github authentication method. Please make sure this is the case first.
 
 
 ## Contribution workflow
-
-### Forking strategy
 
 We use a **forking workflow** to ensure stability in the main repository. Follow these steps to contribute:
 
@@ -20,7 +19,21 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
    cd metrics-utility
    ```
 
-3. Create a feature **branch** in your fork:
+3. Add the `upstream` remote to allow updating the devel branch.
+   ```bash
+   git remote add upstream https://github.com/ansible/metrics-utility.git
+   git fetch --all
+
+   git branch -u upstream/devel devel
+   ```
+
+4. Make sure your `devel` branch is up to date.
+   ```bash
+   git checkout devel
+   git pull --ff-only
+   ```
+
+5. Create a feature **branch** off devel:
    ```bash
    git checkout -b <branch-name>
    ```
@@ -33,7 +46,7 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
    - Otherwise, choose a meaningful name that reflects the change
    - The [Conventional branch naming](https://conventional-branch.github.io/#summary) guide provides additional examples.
 
-4. Make changes and **commit** them:
+6. Make changes and **commit** them:
    ```bash
    git add .
    git commit -m "Short, clear description of change"
@@ -41,27 +54,53 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
    - If you are an internal contributor, ensure commits are **signed** (Verified tag) - [github docs](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits), and that your git-configured `user.email` matches the signature address.
    - Following [Conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) is recommended but not enforced. Commits get squashed on merge.
 
-5. **Push** your branch to your fork:
+7. Make sure linters pass and fix them if not:
+   ```bash
+   make lint
+   ```
+   OR
+   ```bash
+   make fix
+   ```
+
+8. Make sure *tests* pass:
+   ```bash
+   make compose
+   ```
+   AND
+   ```bash
+   make test
+   ```
+   The compose environment is providing a postgres database for testing, and a minio for S3 target tests. If existing tests fail, fix the code. If new tests fail, fix the tests.
+
+9. **Push** your branch to your fork:
    ```bash
    git push -u origin <branch-name>
    ```
 
-6. Open a **pull request** against the `devel` branch of the main repository.
+10. Open a **pull request** against the `devel` branch of the main repository.
+   (by clicking the link in the push output or going to GitHub manually)
+
+11. Respond to reviewers' comments, fix any failing checks, evaluate and fix (or describe why not) any issues from reviewer bots. Follow the PR until merged.
 
 
 ## What a PR must meet to be merged
 
 To ensure consistency and maintainability, a PR should meet the following criteria:
 
-- Follow the pull request template (`.github/pull_request_template.md`).
-- Code should be properly formatted and linted using `pre-commit` and `ruff`.
+- PR has a descriptive title & description
+  - for example by following the pull request template (`.github/pull_request_template.md`)
+- Code should be properly formatted and linted - either by `pre-commit` or using `make lint` and `make fix`
+    - The make commands run `uv run ruff ...`
     - Review the essential linter settings in [`pyproject.toml`](../pyproject.toml) to ensure compliance.
 - All conversations on the PR must be resolved before merging.
 - PR must receive an approval from a maintainer.
-- Internal contributors must sign commits (Verified tag).
-- PR must pass all required checks, including static analysis and pre-commit hooks.
+- Commits by internal contributors must be signed.
+- PR must pass required checks, including linters and tests.
 
-For **external contributors**, a core member will review and merge your PR since direct access is restricted.
+For **internal contributors**, if your PR references internal AAP issues, keep in mind that external contributors may not have access to these references. Ensure that public-facing information is clear. Request to join the to join the `aap-metrics-write` GitHub team for merge permissions.
+
+For **external contributors**, since you don't have write access, a maintainer will review and merge your PR.
 
 
 ## Setting up your development environment
@@ -70,30 +109,9 @@ See the [README](../README.md#developer-setup) for prerequisities and the develo
 See [docs/developer\_setup.md](./developer_setup.md) for more.
 
 
-## Submitting a pull request
-
-### Before you submit
-
-- Ensure your changes adhere to repository code quality standards, which include linting and formatting settings defined in [`pyproject.toml`](../pyproject.toml).
-- Ensure pre-commit hooks are installed and running (they will check formatting automatically when you commit)
-
-> **Note for internal contributors:** if your PR references internal AAP issues, keep in mind that external contributors may not have access to these references. Ensure that public-facing information is clear.
-
-
-## Code style & quality
-
-- Linting & formatting: `ruff` (automated via pre-commit hooks).
-  - run `make lint` or `make fix` manually
-- pre-commit hooks: ensure compliance with formatting and static analysis.
-  - pre-commit configuration is defined in [`.pre-commit-config.yaml`](../.pre-commit-config.yaml).
-- Commit style:
-  - good: `Fix issue with data collection on S3 storage`
-  - bad: `fix stuff`
-
-
 ## Documentation Contribution
 
-It is recommended to follow widely adopted conventions for open-source documentation, the following structure is preferred:
+It is recommended to follow the following structure for documentation:
 
 ```
 metrics-utility/
@@ -104,9 +122,7 @@ metrics-utility/
     └── baz.md
 ```
 
-All documentation should be valid github-flavored markdown.
-
-If you are adding documentation, please try to follow this structure.
+All documentation should be valid GitHub-flavored markdown.
 
 > **Note: downstream documentation**
 >
@@ -115,13 +131,6 @@ If you are adding documentation, please try to follow this structure.
 > - When in doubt, check with maintainers before adding documentation that might contain internal details.
 
 
-## Getting your PR merged
-
-- **Internal contributors**: request to join the to join the `aap-metrics-write` team for merge permissions.
-- **External contributors**: since you don't have write access, a maintainer will review and merge your PR.
-
-
 ## Reporting issues
 
-- If you encounter a bug or have a feature request, **open an issue** in the GitHub repository.
-- For further clarification, contact the repository maintainers via GitHub issues.
+If you encounter a bug or have a feature request, open an issue in the GitHub repository.
