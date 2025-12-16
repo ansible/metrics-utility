@@ -1,5 +1,6 @@
+# Running the CLI
 
-The standalone mode is currently used only for development & testing. It does not need a running awx instance (only a running postgres with imported data), and mocks some values otherwise obtained from awx (see [`mock_awx/settings/__init__.py`](./mock_awx/settings/__init__.py)).
+The standalone mode is currently used only for development & testing. It does not need a running awx instance (only a running postgres with imported data), and mocks some values otherwise obtained from awx (see [`mock_awx/settings/__init__.py`](../mock_awx/settings/__init__.py)).
 
 
 ### Basic Usage
@@ -11,11 +12,13 @@ The standalone mode is currently used only for development & testing. It does no
     - activate the virtual environment (`source /var/lib/awx/venv/awx/bin/activate`),
     - `pip install .` from the `metrics-utility` dir,
     - run utility using `python manage.py ...`.
+    - see [`docs/awx.md`](./awx.md) for more
   - In RPM mode:
     - install the right RPM
     - run utility using `metrics-utility ...`.
   - **In standalone mode**:
     - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or minio,
+    - or set `METRICS_UTILITY_DB_*` env vars correctly,
     - run utility using `uv run python manage.py ...`.
 
 1. Pick a task (goes right after the previous command)
@@ -36,40 +39,10 @@ The standalone mode is currently used only for development & testing. It does no
   - `build_report` also supports `--ephemeral`, `--force` and `--verbose`
   - `gather_automation_controller_billing_data` also supports `--dry-run` and `--ship`
 
-1. Set any other necessary environmental variable - see more in [`docs/old-readme.md`](./docs/old-readme.md).
-  - `METRICS_UTILITY_BILLING_ACCOUNT_ID`
-  - `METRICS_UTILITY_BILLING_PROVIDER`
-  - `METRICS_UTILITY_BUCKET_ACCESS_KEY`
-  - `METRICS_UTILITY_BUCKET_ENDPOINT`
-  - `METRICS_UTILITY_BUCKET_NAME`
-  - `METRICS_UTILITY_BUCKET_REGION`
-  - `METRICS_UTILITY_BUCKET_SECRET_KEY`
-  - `METRICS_UTILITY_CRC_INGRESS_URL`
-  - `METRICS_UTILITY_CRC_SSO_URL`
-  - `METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS`
-  - `METRICS_UTILITY_OPTIONAL_COLLECTORS`
-  - `METRICS_UTILITY_ORGANIZATION_FILTER`
-  - `METRICS_UTILITY_PRICE_PER_NODE`
-  - `METRICS_UTILITY_PROXY_URL`
-  - `METRICS_UTILITY_RED_HAT_ORG_ID`
-  - `METRICS_UTILITY_REPORT_COMPANY_BUSINESS_LEADER`
-  - `METRICS_UTILITY_REPORT_COMPANY_NAME`
-  - `METRICS_UTILITY_REPORT_COMPANY_PROCUREMENT_LEADER`
-  - `METRICS_UTILITY_REPORT_EMAIL`
-  - `METRICS_UTILITY_REPORT_END_USER_CITY`
-  - `METRICS_UTILITY_REPORT_END_USER_COMPANY_NAME`
-  - `METRICS_UTILITY_REPORT_END_USER_COUNTRY`
-  - `METRICS_UTILITY_REPORT_END_USER_STATE`
-  - `METRICS_UTILITY_REPORT_H1_HEADING`
-  - `METRICS_UTILITY_REPORT_PO_NUMBER`
-  - `METRICS_UTILITY_REPORT_RHN_LOGIN`
-  - `METRICS_UTILITY_REPORT_SKU`
-  - `METRICS_UTILITY_REPORT_SKU_DESCRIPTION`
-  - `METRICS_UTILITY_REPORT_TYPE`
-  - `METRICS_UTILITY_SERVICE_ACCOUNT_ID`
-  - `METRICS_UTILITY_SERVICE_ACCOUNT_SECRET`
-  - `METRICS_UTILITY_SHIP_PATH`
-  - `METRICS_UTILITY_SHIP_TARGET`
+1. Set any other necessary environmental variable
+  - see [`docs/environment.md`](./environment.md) for a full list of the environment variables
+  - see [`docs/old-readme.md`](./old-readme.md) for more usage examples
+
 
 #### Example CCSPv2 run
 
@@ -104,6 +77,7 @@ uv run ./manage.py build_report --month=2024-04 --force
 # resulting XLSX
 ls metrics_utility/test/test_data/reports/2024/04/
 ```
+
 
 #### Example RENEWAL\_GUIDANCE run
 

@@ -40,6 +40,8 @@ docker exec -it tools_awx_1 /bin/bash
 
 ### metrics-utility from pip
 
+May fail with dependency conflicts. If so, the from source variant should still work.
+
 ```bash
 docker exec -it tools_awx_1 pip install metrics-utility
 ```

@@ -184,6 +184,6 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
 * [docs/vcpu.md](./docs/vcpu.md) - docs for the total workers vcpu collector
 
-* [library/](./metrics_utility/library/) - library documentation
+* [metrics\_utility/library/](./metrics_utility/library/) - library documentation
 
 Please follow our [Contributor's Guide](./docs/CONTRIBUTING.md) for details on submitting changes and documentation standards.

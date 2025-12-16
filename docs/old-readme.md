@@ -223,7 +223,3 @@ You can inspect the data sent with --dry-run attribute and provide your own inte
 # This will collect whole day of 2023-12-21
 metrics-utility gather_automation_controller_billing_data --dry-run --since=2023-12-21 --until=2023-12-22
 ```
-
-## Developer Setup
-
-For developers contributing to this project, refer to the [Developer Setup Guide](./developer_setup.md) for detailed instructions on setting up your local development environment, installing dependencies, and configuring pre-commit hooks.
