@@ -216,7 +216,7 @@ def count_partitions_in_plan(plan, count=0):
     return count
 
 
-def test_collector(collector_func, collector_name, since, until, explain_analyze=False):
+def run_collector_test(collector_func, collector_name, since, until, explain_analyze=False):
     """
     Test a single collector and measure execution time.
 
@@ -439,7 +439,7 @@ def main():
         print(f'{"#" * 70}')
 
         for collector in collectors:
-            result = test_collector(
+            result = run_collector_test(
                 collector['func'], collector['name'], time_range['since'], time_range['until'], explain_analyze=collector['explain']
             )
             result['time_range'] = time_range['name']
