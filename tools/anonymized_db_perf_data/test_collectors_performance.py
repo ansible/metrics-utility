@@ -12,23 +12,28 @@ NOTE: Run this with venv activated:
 
 import sys
 import time
+
 from datetime import datetime, timedelta
 from pathlib import Path
+
 
 # Add project root to path so we can import metrics_utility
 project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Initialize Django (requires venv to be activated)
-from metrics_utility import prepare
+from metrics_utility import prepare  # noqa: E402
+
+
 prepare()
 
-from django.db import connection
-from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
-from metrics_utility.library.collectors.controller.job_host_summary import job_host_summary
-from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
-from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent
-from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
+from django.db import connection  # noqa: E402
+
+from metrics_utility.library.collectors.controller.job_host_summary import job_host_summary  # noqa: E402
+from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service  # noqa: E402
+from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent  # noqa: E402
+from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service  # noqa: E402
+from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs  # noqa: E402
 
 
 def count_csv_rows(file_paths):
@@ -46,10 +51,12 @@ def count_csv_rows(file_paths):
 
 def explain_main_jobevent_old(db, since, until):
     """Run EXPLAIN ANALYZE on the OLD main_jobevent collector query."""
-    where = ' AND '.join([
-        f"main_jobhostsummary.modified >= '{since.isoformat()}'",
-        f"main_jobhostsummary.modified < '{until.isoformat()}'",
-    ])
+    where = ' AND '.join(
+        [
+            f"main_jobhostsummary.modified >= '{since.isoformat()}'",
+            f"main_jobhostsummary.modified < '{until.isoformat()}'",
+        ]
+    )
 
     query = f"""
         EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
@@ -94,8 +101,8 @@ def explain_main_jobevent_old(db, since, until):
     partitions_scanned = count_partitions_in_plan(plan)
 
     return {
-        'planning_time': f"{planning_time:.3f}ms",
-        'execution_time': f"{execution_time:.3f}ms",
+        'planning_time': f'{planning_time:.3f}ms',
+        'execution_time': f'{execution_time:.3f}ms',
         'partitions_scanned': partitions_scanned,
         'full_plan': result[0],
     }
@@ -183,8 +190,8 @@ def explain_main_jobevent_service(db, since, until):
     partitions_scanned = count_partitions_in_plan(plan)
 
     return {
-        'planning_time': f"{planning_time:.3f}ms",
-        'execution_time': f"{execution_time:.3f}ms",
+        'planning_time': f'{planning_time:.3f}ms',
+        'execution_time': f'{execution_time:.3f}ms',
         'partitions_scanned': partitions_scanned,
         'hour_ranges': len(ranges),
         'full_plan': result[0],
@@ -195,7 +202,6 @@ def count_partitions_in_plan(plan, count=0):
     """Recursively count partition scans in the query plan."""
     if isinstance(plan, dict):
         # Check for partition-specific nodes
-        node_type = plan.get('Node Type', '')
         relation_name = plan.get('Relation Name', '')
 
         # Count if this is a partition scan
@@ -224,49 +230,58 @@ def test_collector(collector_func, collector_name, since, until, explain_analyze
     Returns:
         dict with test results
     """
-    print(f"\n{'=' * 70}")
-    print(f"Testing: {collector_name}")
-    print(f"{'=' * 70}")
-    print(f"Time range: {since} to {until}")
-    print(f"Duration: {until - since}")
+    print(f'\n{"=" * 70}')
+    print(f'Testing: {collector_name}')
+    print(f'{"=" * 70}')
+    print(f'Time range: {since} to {until}')
+    print(f'Duration: {until - since}')
 
     # Check expected data counts
     with connection.cursor() as cursor:
         # Count jobs
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM main_unifiedjob
             WHERE (created >= %s AND created < %s)
                OR (finished >= %s AND finished < %s)
-        """, (since, until, since, until))
+        """,
+            (since, until, since, until),
+        )
         job_count = cursor.fetchone()[0]
 
         # Count job host summaries
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM main_jobhostsummary
             WHERE modified >= %s AND modified < %s
-        """, (since, until))
+        """,
+            (since, until),
+        )
         jhs_count = cursor.fetchone()[0]
 
         # Count job events
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*)
             FROM main_jobevent je
             JOIN main_jobhostsummary jhs ON jhs.job_id = je.job_id
             WHERE jhs.modified >= %s AND jhs.modified < %s
-        """, (since, until))
+        """,
+            (since, until),
+        )
         event_count = cursor.fetchone()[0]
 
-    print(f"Expected data in range:")
-    print(f"  - Jobs: {job_count:,}")
-    print(f"  - Job Host Summaries: {jhs_count:,}")
-    print(f"  - Job Events: {event_count:,}")
+    print('Expected data in range:')
+    print(f'  - Jobs: {job_count:,}')
+    print(f'  - Job Host Summaries: {jhs_count:,}')
+    print(f'  - Job Events: {event_count:,}')
 
     explain_results = None
     # Run EXPLAIN ANALYZE if requested (for events collectors)
     if explain_analyze and 'event' in collector_name.lower():
-        print(f"\n--- EXPLAIN ANALYZE for {collector_name} ---")
+        print(f'\n--- EXPLAIN ANALYZE for {collector_name} ---')
         try:
             # Build the actual query that the collector would run
             if 'main_jobevent_service (NEW)' in collector_name:
@@ -277,21 +292,22 @@ def test_collector(collector_func, collector_name, since, until, explain_analyze
                 explain_results = explain_main_jobevent_old(connection, since, until)
 
             if explain_results:
-                print(f"✓ EXPLAIN ANALYZE completed")
-                print(f"  Query planning time: {explain_results.get('planning_time', 'N/A')}")
-                print(f"  Query execution time: {explain_results.get('execution_time', 'N/A')}")
+                print('✓ EXPLAIN ANALYZE completed')
+                print(f'  Query planning time: {explain_results.get("planning_time", "N/A")}')
+                print(f'  Query execution time: {explain_results.get("execution_time", "N/A")}')
 
                 # Check for partition pruning
                 if 'partitions_scanned' in explain_results:
-                    print(f"  Partitions scanned: {explain_results['partitions_scanned']}")
+                    print(f'  Partitions scanned: {explain_results["partitions_scanned"]}')
 
         except Exception as e:
-            print(f"Could not run EXPLAIN ANALYZE: {e}")
+            print(f'Could not run EXPLAIN ANALYZE: {e}')
             import traceback
+
             traceback.print_exc()
 
     # Time the collector
-    print(f"\nRunning collector...")
+    print('\nRunning collector...')
     start_time = time.time()
 
     try:
@@ -306,21 +322,21 @@ def test_collector(collector_func, collector_name, since, until, explain_analyze
         # Count rows in generated CSV files
         row_count = count_csv_rows(result) if result else 0
 
-        print(f"✓ Collector completed successfully")
-        print(f"  Execution time: {elapsed:.3f} seconds")
-        print(f"  CSV files generated: {len(result) if result else 0}")
-        print(f"  Total rows in CSV: {row_count:,}")
+        print('✓ Collector completed successfully')
+        print(f'  Execution time: {elapsed:.3f} seconds')
+        print(f'  CSV files generated: {len(result) if result else 0}')
+        print(f'  Total rows in CSV: {row_count:,}')
 
         # Show file details
         if result and len(result) > 0:
-            print(f"\n  Generated files:")
+            print('\n  Generated files:')
             for i, file_path in enumerate(result):
                 try:
                     with open(file_path, 'r') as f:
                         file_rows = sum(1 for line in f) - 1
-                    print(f"    {i+1}. {Path(file_path).name} ({file_rows:,} rows)")
+                    print(f'    {i + 1}. {Path(file_path).name} ({file_rows:,} rows)')
                 except Exception as e:
-                    print(f"    {i+1}. {Path(file_path).name} (could not read: {e})")
+                    print(f'    {i + 1}. {Path(file_path).name} (could not read: {e})')
 
         return {
             'success': True,
@@ -336,10 +352,11 @@ def test_collector(collector_func, collector_name, since, until, explain_analyze
 
     except Exception as e:
         elapsed = time.time() - start_time
-        print(f"✗ Collector failed: {e}")
-        print(f"  Time until failure: {elapsed:.3f} seconds")
+        print(f'✗ Collector failed: {e}')
+        print(f'  Time until failure: {elapsed:.3f} seconds')
 
         import traceback
+
         traceback.print_exc()
 
         return {
@@ -364,19 +381,19 @@ def find_data_range():
 
 def main():
     """Main entry point."""
-    print("\n" + "=" * 70)
-    print("COMPREHENSIVE COLLECTOR PERFORMANCE TEST")
-    print("=" * 70)
-    print("\nTesting collectors:")
-    print("  1. unified_jobs (jobs collector)")
-    print("  2. job_host_summary (OLD jobhostsummary collector)")
-    print("  3. job_host_summary_service (NEW jobhostsummary collector)")
-    print("  4. main_jobevent (OLD events collector)")
-    print("  5. main_jobevent_service (NEW events collector)")
+    print('\n' + '=' * 70)
+    print('COMPREHENSIVE COLLECTOR PERFORMANCE TEST')
+    print('=' * 70)
+    print('\nTesting collectors:')
+    print('  1. unified_jobs (jobs collector)')
+    print('  2. job_host_summary (OLD jobhostsummary collector)')
+    print('  3. job_host_summary_service (NEW jobhostsummary collector)')
+    print('  4. main_jobevent (OLD events collector)')
+    print('  5. main_jobevent_service (NEW events collector)')
 
     # Find actual data range
     min_date, max_date = find_data_range()
-    print(f"\nData available from {min_date} to {max_date}")
+    print(f'\nData available from {min_date} to {max_date}')
 
     # Define test time ranges
     # Use January 2024 as base since that's where test data is
@@ -417,47 +434,43 @@ def main():
 
     # Test each time range
     for time_range in time_ranges:
-        print(f"\n\n{'#' * 70}")
-        print(f"# TIME RANGE: {time_range['name']}")
-        print(f"{'#' * 70}")
+        print(f'\n\n{"#" * 70}')
+        print(f'# TIME RANGE: {time_range["name"]}')
+        print(f'{"#" * 70}')
 
         for collector in collectors:
             result = test_collector(
-                collector['func'],
-                collector['name'],
-                time_range['since'],
-                time_range['until'],
-                explain_analyze=collector['explain']
+                collector['func'], collector['name'], time_range['since'], time_range['until'], explain_analyze=collector['explain']
             )
             result['time_range'] = time_range['name']
             all_results.append(result)
 
     # Print summary
-    print(f"\n\n{'=' * 70}")
-    print("PERFORMANCE SUMMARY")
-    print(f"{'=' * 70}")
+    print(f'\n\n{"=" * 70}')
+    print('PERFORMANCE SUMMARY')
+    print(f'{"=" * 70}')
 
     # Group by time range
     for time_range in time_ranges:
-        print(f"\n{time_range['name']}:")
-        print(f"{'  Collector':<45} {'Time (s)':<12} {'Rows':<12} {'Status'}")
-        print("  " + "-" * 66)
+        print(f'\n{time_range["name"]}:')
+        print(f'{"  Collector":<45} {"Time (s)":<12} {"Rows":<12} {"Status"}')
+        print('  ' + '-' * 66)
 
         range_results = [r for r in all_results if r.get('time_range') == time_range['name']]
         for result in range_results:
             if result['success']:
-                status = "✓ PASS"
-                rows = f"{result['row_count']:,}"
+                status = '✓ PASS'
+                rows = f'{result["row_count"]:,}'
             else:
-                status = "✗ FAIL"
-                rows = "N/A"
+                status = '✗ FAIL'
+                rows = 'N/A'
 
-            print(f"  {result['collector']:<45} {result['elapsed']:<12.3f} {rows:<12} {status}")
+            print(f'  {result["collector"]:<45} {result["elapsed"]:<12.3f} {rows:<12} {status}')
 
     # Compare old vs new collectors
-    print(f"\n\n{'=' * 70}")
-    print("OLD vs NEW COLLECTOR COMPARISON")
-    print(f"{'=' * 70}")
+    print(f'\n\n{"=" * 70}')
+    print('OLD vs NEW COLLECTOR COMPARISON')
+    print(f'{"=" * 70}')
 
     comparisons = [
         ('job_host_summary (OLD)', 'job_host_summary_service (NEW)', 'Job Host Summary'),
@@ -465,14 +478,10 @@ def main():
     ]
 
     for old_name, new_name, category in comparisons:
-        print(f"\n{category}:")
+        print(f'\n{category}:')
         for time_range in time_ranges:
-            old_result = next((r for r in all_results
-                             if r.get('collector') == old_name
-                             and r.get('time_range') == time_range['name']), None)
-            new_result = next((r for r in all_results
-                             if r.get('collector') == new_name
-                             and r.get('time_range') == time_range['name']), None)
+            old_result = next((r for r in all_results if r.get('collector') == old_name and r.get('time_range') == time_range['name']), None)
+            new_result = next((r for r in all_results if r.get('collector') == new_name and r.get('time_range') == time_range['name']), None)
 
             if old_result and new_result and old_result['success'] and new_result['success']:
                 old_time = old_result['elapsed']
@@ -481,42 +490,33 @@ def main():
                 diff = old_time - new_time
 
                 if speedup > 1:
-                    comparison = f"NEW is {speedup:.2f}x faster (saved {diff:.3f}s)"
+                    comparison = f'NEW is {speedup:.2f}x faster (saved {diff:.3f}s)'
                 elif speedup < 1:
-                    comparison = f"OLD is {1/speedup:.2f}x faster (NEW slower by {-diff:.3f}s)"
+                    comparison = f'OLD is {1 / speedup:.2f}x faster (NEW slower by {-diff:.3f}s)'
                 else:
-                    comparison = "Same performance"
+                    comparison = 'Same performance'
 
-                print(f"  {time_range['name']:<20} OLD: {old_time:.3f}s  NEW: {new_time:.3f}s  → {comparison}")
+                print(f'  {time_range["name"]:<20} OLD: {old_time:.3f}s  NEW: {new_time:.3f}s  → {comparison}')
 
     # Identify bottlenecks
-    print(f"\n\n{'=' * 70}")
-    print("BOTTLENECK ANALYSIS")
-    print(f"{'=' * 70}")
+    print(f'\n\n{"=" * 70}')
+    print('BOTTLENECK ANALYSIS')
+    print(f'{"=" * 70}')
 
     for time_range in time_ranges:
-        range_results = [r for r in all_results
-                        if r.get('time_range') == time_range['name']
-                        and r.get('success')]
+        range_results = [r for r in all_results if r.get('time_range') == time_range['name'] and r.get('success')]
         if range_results:
             slowest = max(range_results, key=lambda r: r['elapsed'])
             fastest = min(range_results, key=lambda r: r['elapsed'])
 
-            print(f"\n{time_range['name']}:")
-            print(f"  Slowest: {slowest['collector']} ({slowest['elapsed']:.3f}s)")
-            print(f"  Fastest: {fastest['collector']} ({fastest['elapsed']:.3f}s)")
+            print(f'\n{time_range["name"]}:')
+            print(f'  Slowest: {slowest["collector"]} ({slowest["elapsed"]:.3f}s)')
+            print(f'  Fastest: {fastest["collector"]} ({fastest["elapsed"]:.3f}s)')
             if slowest['elapsed'] > 0:
-                print(f"  Speed difference: {slowest['elapsed'] / fastest['elapsed']:.2f}x")
+                print(f'  Speed difference: {slowest["elapsed"] / fastest["elapsed"]:.2f}x')
 
     # Save results to markdown file
-    print(f"\n{'=' * 70}")
-    print("SAVING RESULTS TO MARKDOWN")
-    print(f"{'=' * 70}")
-
-    output_file = project_root / 'tools' / 'anonymized_db_perf_data' / 'performance_test_results.md'
-    save_results_to_markdown(all_results, time_ranges, collectors, comparisons, output_file)
-    print(f"✓ Results saved to: {output_file}")
-    print("\n")
+    print(f'\n{"=" * 70}')
 
 
 if __name__ == '__main__':
