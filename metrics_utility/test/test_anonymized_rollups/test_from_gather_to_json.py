@@ -78,22 +78,22 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
     assert 'modules_used_to_automate_total' in statistics
     assert 'avg_number_of_modules_used_in_a_playbooks' in statistics
-    assert 'total_hosts_automated' in statistics
-    assert 'total_EE' in statistics
-    assert 'default_EE' in statistics
-    assert 'custom_EE' in statistics
+    assert 'hosts_automated_total' in statistics
+    assert 'EE_total' in statistics
+    assert 'EE_default_total' in statistics
+    assert 'EE_custom_total' in statistics
     assert 'jobs_total' in statistics
-    assert 'total_unique_hosts' in statistics
+    assert 'unique_hosts_total' in statistics
 
     # Validate statistics data types
     assert isinstance(statistics['modules_used_to_automate_total'], int)
     assert isinstance(statistics['avg_number_of_modules_used_in_a_playbooks'], (int, float))
-    assert isinstance(statistics['total_hosts_automated'], int)
-    assert isinstance(statistics['total_EE'], int)
-    assert isinstance(statistics['default_EE'], int)
-    assert isinstance(statistics['custom_EE'], int)
+    assert isinstance(statistics['hosts_automated_total'], int)
+    assert isinstance(statistics['EE_total'], int)
+    assert isinstance(statistics['EE_default_total'], int)
+    assert isinstance(statistics['EE_custom_total'], int)
     assert isinstance(statistics['jobs_total'], int)
-    assert isinstance(statistics['total_unique_hosts'], int)
+    assert isinstance(statistics['unique_hosts_total'], int)
 
     # Validate arrays structure
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
@@ -125,7 +125,7 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate statistics actual values
     print('\n--- Validating statistics data values ---')
     assert statistics['modules_used_to_automate_total'] == 1, 'Should have 1 module'
-    assert statistics['total_hosts_automated'] == 2, 'Should have 2 hosts automated'
+    assert statistics['hosts_automated_total'] == 2, 'Should have 2 hosts automated'
     assert len(json_data['module_stats']) == 1, 'Should have 1 module stats'
     assert len(json_data['collection_name_stats']) == 1, 'Should have 1 collection stats'
 
@@ -167,11 +167,11 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate execution_environments actual values
     print('--- Validating execution_environments data values ---')
-    assert statistics['total_EE'] == 2, 'Should have 2 total execution environments'
-    assert statistics['default_EE'] == 1, 'Should have 1 default execution environment'
-    assert statistics['custom_EE'] == 1, 'Should have 1 custom execution environment'
+    assert statistics['EE_total'] == 2, 'Should have 2 total execution environments'
+    assert statistics['EE_default_total'] == 1, 'Should have 1 default execution environment'
+    assert statistics['EE_custom_total'] == 1, 'Should have 1 custom execution environment'
     # Validate that total = default + custom
-    assert statistics['total_EE'] == statistics['default_EE'] + statistics['custom_EE'], 'Total EE should equal default + custom'
+    assert statistics['EE_total'] == statistics['EE_default_total'] + statistics['EE_custom_total'], 'Total EE should equal default + custom'
 
     # Validate jobs actual values
     print('--- Validating jobs data values ---')
@@ -199,7 +199,7 @@ def test_from_gather_to_json(cleanup_glob):
     job_host_summary = json_data['job_host_summary']
     assert isinstance(job_host_summary, list), 'job_host_summary should be a list'
     assert len(job_host_summary) == 1, 'Should have 1 job_host_summary entry'
-    assert statistics['total_unique_hosts'] == 2, 'Should have 2 unique hosts'
+    assert statistics['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
 
     jhs = job_host_summary[0]
     assert 'job_template_name' in jhs
@@ -220,7 +220,7 @@ def test_from_gather_to_json(cleanup_glob):
     print('--- Validating cross-section data consistency ---')
     # Validate that module stats hosts match the total automated hosts
     for module_stat in json_data['module_stats']:
-        assert module_stat['hosts_total'] <= statistics['total_hosts_automated'], (
+        assert module_stat['hosts_total'] <= statistics['hosts_automated_total'], (
             f'Module {module_stat["module_name"][:50]} hosts should not exceed total automated hosts'
         )
 

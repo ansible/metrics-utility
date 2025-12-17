@@ -350,7 +350,7 @@ def test_events_modules_aggregations_basic():
         'maintenance.yml': 1,
     }
 
-    assert result['total_hosts_automated'] == 9
+    assert result['hosts_automated_total'] == 9
 
     # collection stats assertions (current aggregation schema)
     coll_by_name = {row['collection_name']: row for row in result['collection_name_stats']}

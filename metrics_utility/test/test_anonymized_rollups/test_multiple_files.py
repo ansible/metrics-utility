@@ -258,15 +258,15 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t3['job_waiting_time_average_in_seconds'] is None
 
     # ========== Validate Execution Environments ==========
-    assert result['statistics']['total_EE'] == 5
-    assert result['statistics']['default_EE'] == 2
-    assert result['statistics']['custom_EE'] == 3
+    assert result['statistics']['EE_total'] == 5
+    assert result['statistics']['EE_default_total'] == 2
+    assert result['statistics']['EE_custom_total'] == 3
 
     # ========== Validate Job Host Summary ==========
     jhs_list = result['job_host_summary']
     assert isinstance(jhs_list, list), 'job_host_summary should be a list'
     assert len(jhs_list) == 2  # T1 and T2
-    assert result['statistics']['total_unique_hosts'] == 5, 'Should have 5 unique hosts (h1-h5)'
+    assert result['statistics']['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1-h5)'
 
     # Verify data was concatenated from both tarballs
     # verify number of ok, failures, skipped, ignored, rescued, dark for each template
@@ -289,7 +289,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
     # Verify values from concatenated data across 3 tarballs
     assert result['statistics']['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert result['statistics']['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert result['statistics']['hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
     assert result['statistics']['avg_number_of_modules_used_in_a_playbooks'] == pytest.approx(3.0), 'Average modules per playbook should be 3.0'
 
     # Check specific known modules are present in module_stats
@@ -404,22 +404,22 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     assert 'modules_used_to_automate_total' in statistics
     assert 'avg_number_of_modules_used_in_a_playbooks' in statistics
-    assert 'total_hosts_automated' in statistics
-    assert 'total_EE' in statistics
-    assert 'default_EE' in statistics
-    assert 'custom_EE' in statistics
+    assert 'hosts_automated_total' in statistics
+    assert 'EE_total' in statistics
+    assert 'EE_default_total' in statistics
+    assert 'EE_custom_total' in statistics
     assert 'jobs_total' in statistics
-    assert 'total_unique_hosts' in statistics
+    assert 'unique_hosts_total' in statistics
 
     # All statistics should be None for empty data
     assert statistics['modules_used_to_automate_total'] is None
     assert statistics['avg_number_of_modules_used_in_a_playbooks'] is None
-    assert statistics['total_hosts_automated'] is None
-    assert statistics['total_EE'] is None
-    assert statistics['default_EE'] is None
-    assert statistics['custom_EE'] is None
+    assert statistics['hosts_automated_total'] is None
+    assert statistics['EE_total'] is None
+    assert statistics['EE_default_total'] is None
+    assert statistics['EE_custom_total'] is None
     assert statistics['jobs_total'] is None
-    assert statistics['total_unique_hosts'] is None
+    assert statistics['unique_hosts_total'] is None
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_template'], list), 'jobs_by_template should be a list'

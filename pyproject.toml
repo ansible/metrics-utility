@@ -14,7 +14,7 @@ dependencies = [
     "kubernetes>=33.1.0",
     "openpyxl==3.1.2",
     "pandas>=2.2.3",
-    "psycopg==3.2.10",
+    "psycopg==3.3.0",
     "requests==2.32.5",
     "segment-analytics-python>=2.3.4",
     "setuptools==80.9.0",
