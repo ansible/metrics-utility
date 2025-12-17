@@ -71,7 +71,7 @@ def create_csv_file(data_list, csv_path):
 
     # Convert list of dicts to DataFrame then to CSV
     df = pd.DataFrame(data_list)
-    df.to_csv(csv_path, index=False)
+    df.to_csv(csv_path, index=False, encoding='utf-8')
 
     return csv_path
 

@@ -2430,7 +2430,7 @@ def validate_input_csv_data_integrity():
 
         # Basic CSV validation
         try:
-            df = pandas.read_csv(file_path)
+            df = pandas.read_csv(file_path, encoding='utf-8')
             assert len(df) > 0, f'File {file_name} is empty'
         except Exception as e:
             pytest.fail(f'Failed to read {file_name}: {e}')
@@ -2444,7 +2444,7 @@ def validate_json_fields_comprehensive():
     # Validate main_host canonical_facts JSON
     main_host_path = input_data_dir / 'input_main_host.csv'
     if main_host_path.exists():
-        df = pandas.read_csv(main_host_path)
+        df = pandas.read_csv(main_host_path, encoding='utf-8')
         for _, row in df.iterrows():
             try:
                 canonical_facts = json.loads(row['canonical_facts'])
@@ -2466,7 +2466,7 @@ def validate_canonical_facts_combinations():
 
     main_host_path = input_data_dir / 'input_main_host.csv'
     if main_host_path.exists():
-        df = pandas.read_csv(main_host_path)
+        df = pandas.read_csv(main_host_path, encoding='utf-8')
 
         # Validate canonical facts combinations by platform
         for _, row in df.iterrows():
