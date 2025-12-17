@@ -218,7 +218,7 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list: 
 
     for file in file_list:
         df = pd.read_csv(file, encoding='utf-8')
-        df = rollup_object.prepare(df)
-        concat_dataframe = rollup_object.merge(concat_dataframe, df)
+        prepared_data = rollup_object.prepare(df)
+        concat_data = rollup_object.merge(concat_data, prepared_data)
 
     return concat_data
