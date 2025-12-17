@@ -98,7 +98,7 @@ class Base:
         """
 
         if os.path.exists(os.path.join(temp_dir, f'{file_name}.csv')):
-            return pd.read_csv(os.path.join(temp_dir, f'{file_name}.csv'))
+            return pd.read_csv(os.path.join(temp_dir, f'{file_name}.csv'), encoding='utf-8')
         else:
             return pd.DataFrame([{}])
 
