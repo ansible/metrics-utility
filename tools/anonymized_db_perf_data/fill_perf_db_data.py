@@ -112,13 +112,13 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
 
 
 def fill_job_data(init_data, job_index):
-    """Create a job using the init_data IDs. Returns (job_id, job_created)."""
+    """Create a job using the init_data IDs. Returns (job_id, job_created, job_finished)."""
     # Randomly select a job template
     templates = init_data['templates']
     template_id = random.choice(list(templates.keys()))
     template_name = templates[template_id]
 
-    job_id, job_created = create_job(
+    job_id, job_created, job_finished = create_job(
         name=template_name,  # Use template name as job name (AWX behavior)
         inventory_id=init_data['inventory_id'],
         project_id=init_data['project_id'],
@@ -126,11 +126,11 @@ def fill_job_data(init_data, job_index):
         job_index=job_index,
         job_template_id=template_id,
     )
-    return job_id, job_created
+    return job_id, job_created, job_finished
 
 
-def fill_jobhostsummary(init_data, job_id, job_created):
-    create_job_host_summaries(job_id, init_data['host_count'], job_created, unique_suffix=init_data.get('unique_suffix'))
+def fill_jobhostsummary(init_data, job_id, job_created, job_finished):
+    create_job_host_summaries(job_id, init_data['host_count'], job_created, job_finished, unique_suffix=init_data.get('unique_suffix'))
 
 
 def fill_jobevent(init_data, job_id, job_index, job_created):
@@ -138,8 +138,8 @@ def fill_jobevent(init_data, job_id, job_index, job_created):
 
 
 def fill_job(init_data, job_index):
-    job_id, job_created = fill_job_data(init_data, job_index)
-    fill_jobhostsummary(init_data, job_id, job_created)
+    job_id, job_created, job_finished = fill_job_data(init_data, job_index)
+    fill_jobhostsummary(init_data, job_id, job_created, job_finished)
     fill_jobevent(init_data, job_id, job_index, job_created)
     return
 

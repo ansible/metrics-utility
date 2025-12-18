@@ -459,11 +459,11 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
     run(sql_job)
     print(f'Created job {job_index}')
 
-    # Return job_id and created timestamp (needed for events)
-    return job_id, created
+    # Return job_id, created timestamp (needed for events), and finished timestamp (needed for job host summaries)
+    return job_id, created, finished
 
 
-def create_job_host_summaries(job_id, host_count, job_created, unique_suffix=None):
+def create_job_host_summaries(job_id, host_count, job_created, job_finished, unique_suffix=None):
     """Create job host summaries for all hosts (batch insert).
 
     Host names are generated using the same pattern as create_hosts: host-{i}-{suffix}.example.com
@@ -471,7 +471,8 @@ def create_job_host_summaries(job_id, host_count, job_created, unique_suffix=Non
     Args:
         job_id: Job ID to link summaries to
         host_count: Number of host summaries to create
-        job_created: Job creation timestamp to use for created/modified dates
+        job_created: Job creation timestamp to use for created date
+        job_finished: Job finished timestamp to use for modified date (aligns with real AWX behavior)
         unique_suffix: Optional unique suffix for host names (must match create_hosts suffix)
     """
     print(f'Creating {host_count} job host summaries for job {job_id}...')
@@ -492,7 +493,7 @@ def create_job_host_summaries(job_id, host_count, job_created, unique_suffix=Non
         failed = failures > 0 or dark > 0
 
         values.append(
-            f"('{job_created}', '{job_created}', '{host_name}', {changed}, {dark}, {failures}, "
+            f"('{job_created}', '{job_finished}', '{host_name}', {changed}, {dark}, {failures}, "
             f'{ok}, {processed}, {skipped}, {str(failed).upper()}, NULL, '
             f'{job_id}, {ignored}, {rescued})'
         )
