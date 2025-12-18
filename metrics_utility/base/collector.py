@@ -7,9 +7,9 @@ import tempfile
 
 from abc import abstractmethod
 
-from django.db import connection
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.db import get_connection
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
@@ -87,17 +87,6 @@ class Collector:
 
         return self.collections.get('config') is not None
 
-    @staticmethod
-    @abstractmethod
-    def db_connection():
-        """
-        DB connection for advisory lock. Can be
-        - django.db.connection or
-        - sqlalchemy.engine.base.Engine.raw_connection()
-        - etc.
-        """
-        pass
-
     def gather(self, dest=None, subset=None, since=None, until=None):
         """Entry point for gathering
 
@@ -107,7 +96,7 @@ class Collector:
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        with lock('gather_analytics_lock', wait=False, db=connection) as acquired:
+        with lock('gather_analytics_lock', wait=False, db=get_connection()) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
                 return None

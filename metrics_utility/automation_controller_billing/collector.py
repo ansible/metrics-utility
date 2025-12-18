@@ -3,12 +3,12 @@ import os
 
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import connection
 
 import metrics_utility.base as base
 
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+from metrics_utility.db import get_connection
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
@@ -43,7 +43,7 @@ class Collector(base.Collector):
         if suffix:
             key = f'gather_automation_controller_billing_{suffix}_lock'
 
-        with lock(key, wait=False, db=connection) as acquired:
+        with lock(key, wait=False, db=get_connection()) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
@@ -79,7 +79,7 @@ class Collector(base.Collector):
 
     @staticmethod
     def db_connection():
-        return connection
+        return get_connection()
 
     @classmethod
     def registered_collectors(cls, module=None):
@@ -104,7 +104,7 @@ class Collector(base.Collector):
         if self.ship and not disabled:
             # We need to wait on analytics lock, to update the last collected timestamp settings
             # so we don't clash with analytics job collection.
-            with lock('gather_analytics_lock', wait=True, db=connection):
+            with lock('gather_analytics_lock', wait=True, db=get_connection()):
                 # We need to load fresh settings again as we're obtaning the lock, since
                 # Analytics job could have changed this on the background and we'd be resetting
                 # the Analytics values here.

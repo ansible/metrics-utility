@@ -5,6 +5,7 @@ from argparse import RawDescriptionHelpFormatter
 from django.core.management.base import BaseCommand
 
 from metrics_utility.automation_controller_billing.collector import Collector
+from metrics_utility.db import configure_db
 from metrics_utility.exceptions import (
     BadShipTarget,
     NoAnalyticsCollected,
@@ -34,6 +35,7 @@ class Command(BaseCommand):
         'dry-run': ('Gather billing metrics without shipping.'),
         'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
         'verbose': ('Print debug information to console.'),
+        'db': ('Custom database configuration as JSON string. Example: \'{"NAME":"awx","USER":"user","PASSWORD":"pass"}\''),
     }
 
     def create_parser(self, prog_name, subcommand, **kwargs):
@@ -88,8 +90,12 @@ class Command(BaseCommand):
         parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
         parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
+        parser.add_argument('--db', dest='db', action='store', help=self.help_texts.get('db'))
 
     def handle(self, *args, **options):
+        # Configure database connection first
+        configure_db(options.get('db'))
+
         if options.get('verbose'):
             debug()
         handle_env_validation('gather')

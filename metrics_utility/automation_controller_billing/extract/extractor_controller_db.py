@@ -2,7 +2,7 @@ import datetime
 
 import pandas as pd
 
-from django.db import connection
+from metrics_utility.db import get_connection
 
 
 class ExtractorControllerDB:
@@ -12,7 +12,7 @@ class ExtractorControllerDB:
         self.extra_params = extra_params
 
     def iter_batches(self):
-        with connection.cursor() as cursor:
+        with get_connection().cursor() as cursor:
             cursor.execute(self.pg_functions())
 
             since = self.extra_params['opt_since']

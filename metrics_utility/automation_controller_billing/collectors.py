@@ -9,7 +9,6 @@ from typing import Tuple
 
 import distro
 
-from django.db import connection
 from django.db.utils import ProgrammingError
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
@@ -21,6 +20,7 @@ from metrics_utility.automation_controller_billing.helpers import (
 )
 from metrics_utility.base import register
 from metrics_utility.base.utils import get_max_gather_period_days, get_optional_collectors
+from metrics_utility.db import get_connection
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.library import CsvFileSplitter
 from metrics_utility.library.collectors.util import date_where
@@ -161,7 +161,7 @@ def _copy_table(table, query, path, prepend_query=None):
     file_path = os.path.join(path, table + '_table.csv')
     file = CsvFileSplitter(filespec=file_path)
 
-    with connection.cursor() as cursor:
+    with get_connection().cursor() as cursor:
         if prepend_query:
             cursor.execute(prepend_query)
 
@@ -877,8 +877,7 @@ def main_jobevent_service_table(since, full_path, until, **kwargs):
     """
     jobs = []
 
-    # do raw sql for django.db connection
-    with connection.cursor() as cursor:
+    with get_connection().cursor() as cursor:
         cursor.execute(jobs_query, {'since': since, 'until': until})
         jobs = cursor.fetchall()
 

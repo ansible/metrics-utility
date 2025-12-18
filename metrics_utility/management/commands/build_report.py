@@ -10,6 +10,7 @@ from metrics_utility.automation_controller_billing.dedup.factory import Factory 
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
+from metrics_utility.db import configure_db
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
@@ -59,6 +60,7 @@ class Command(BaseCommand):
         ),
         'force': ('With this option, the existing reports will be overwritten if running this command again.'),
         'verbose': ('Print debug information to console.'),
+        'db': ('Custom database configuration as JSON string. Example: \'{"NAME":"awx","USER":"user","PASSWORD":"pass"}\''),
     }
 
     def create_parser(self, prog_name, subcommand, **kwargs):
@@ -117,8 +119,12 @@ class Command(BaseCommand):
         parser.add_argument('--ephemeral', dest='ephemeral', action='store', help=self.help_texts.get('ephemeral'))
         parser.add_argument('--force', dest='force', action='store_true', help=self.help_texts.get('force'))
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
+        parser.add_argument('--db', dest='db', action='store', help=self.help_texts.get('db'))
 
     def handle(self, *args, **options):
+        # Configure database connection first
+        configure_db(options.get('db'))
+
         if options.get('verbose'):
             debug()
 

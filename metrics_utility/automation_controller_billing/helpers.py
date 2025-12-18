@@ -5,9 +5,9 @@ from typing import Any, Dict, Tuple
 
 import pandas as pd
 
-from django.db import connection
 from django.utils.dateparse import parse_datetime
 
+from metrics_utility.db import get_connection
 from metrics_utility.logger import logger
 
 
@@ -19,7 +19,7 @@ def get_last_entries_from_db() -> Dict:
         Optional[str]: JSON string from database, or None if not found or error occurs
     """
     try:
-        with connection.cursor() as cursor:
+        with get_connection().cursor() as cursor:
             cursor.execute("""
                 SELECT value
                 FROM conf_setting
@@ -41,7 +41,7 @@ def get_config_and_settings_from_db() -> Tuple[Dict[str, Any], Dict[str, Any]]:
     license_info = {}
     settings_info = {}
     try:
-        with connection.cursor() as cursor:
+        with get_connection().cursor() as cursor:
             cursor.execute("""
                 SELECT key, value
                 FROM conf_setting
@@ -77,7 +77,7 @@ def _fetch_one(db, sql):
 def get_controller_version_from_db() -> str:
     """Get AWX/Controller version from the main_instance DB table."""
     return _fetch_one(
-        connection,
+        get_connection(),
         """
         SELECT version
         FROM main_instance
