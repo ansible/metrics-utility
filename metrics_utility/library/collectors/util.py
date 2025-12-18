@@ -2,21 +2,39 @@ import os
 import pathlib
 import tempfile
 
+from psycopg import sql
+
 from ..csv_file_splitter import CsvFileSplitter
 
 
-# FIXME: psycopg.sql
 def date_where(field, since, until):
+    """
+    Build a WHERE clause for date filtering using psycopg.sql for safe query building.
+
+    Args:
+        field: Field name (will be properly escaped as an identifier)
+        since: Optional datetime - include records >= since
+        until: Optional datetime - include records < until
+
+    Returns:
+        A tuple of (sql.SQL object, dict of params)
+    """
     if since and until:
-        return f'( "{field}" >= \'{since.isoformat()}\' AND "{field}" < \'{until.isoformat()}\' )'
+        query = sql.SQL('( {field} >= %(since)s AND {field} < %(until)s )').format(field=sql.Identifier(field))
+        params = {'since': since, 'until': until}
+        return query, params
 
     if since:
-        return f'( "{field}" >= \'{since.isoformat()}\' )'
+        query = sql.SQL('( {field} >= %(since)s )').format(field=sql.Identifier(field))
+        params = {'since': since}
+        return query, params
 
     if until:
-        return f'( "{field}" < \'{until.isoformat()}\' )'
+        query = sql.SQL('( {field} < %(until)s )').format(field=sql.Identifier(field))
+        params = {'until': until}
+        return query, params
 
-    return 'true'
+    return sql.SQL('true'), {}
 
 
 def collector(func):

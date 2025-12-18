@@ -7,6 +7,7 @@ from importlib.metadata import PackageNotFoundError, version
 import distro
 
 from django.utils.dateparse import parse_datetime
+from psycopg import sql
 
 from ..util import collector
 
@@ -99,9 +100,10 @@ def _get_install_type():
 def _get_controller_settings(db, keys):
     settings = {}
     with db.cursor() as cursor:
-        # FIXME: psycopg.sql ?
-        in_sql = "'" + "', '".join(keys) + "'"
-        cursor.execute(f'SELECT key, value FROM conf_setting WHERE key IN ({in_sql})')
+        # Build safe SQL query with parameter placeholders
+        placeholders = sql.SQL(', ').join(sql.Placeholder() * len(keys))
+        query = sql.SQL('SELECT key, value FROM conf_setting WHERE key IN ({})').format(placeholders)
+        cursor.execute(query, keys)
         for key, value in cursor.fetchall():
             if value:
                 settings[key] = json.loads(value, object_hook=_datetime_hook)

@@ -66,12 +66,17 @@ def test_job_host_summary_service_query_contains_time_range(mock_copy_table):
 
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
+    params = call_args[1]['params']
 
-    # Query should contain time boundaries (uses mu.finished)
-    assert '2024-03-01' in query
-    assert '2024-03-15' in query
+    # Query should contain parameterized placeholders (uses mu.finished)
+    assert '%(since)s' in query
+    assert '%(until)s' in query
     assert 'mu.finished >=' in query
     assert 'mu.finished <' in query
+
+    # Actual datetime values should be in params
+    assert params['since'] == since
+    assert params['until'] == until
 
 
 @patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
@@ -160,7 +165,7 @@ def test_job_host_summary_service_orders_by_finished(mock_copy_table):
 
 @patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
 def test_job_host_summary_service_isoformat(mock_copy_table):
-    """Test that datetime objects are converted to isoformat in query."""
+    """Test that datetime objects are passed as params, not embedded in query."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 7, 20, 8, 15, 30, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 7, 21, 16, 45, 0, tzinfo=datetime.timezone.utc)
@@ -170,8 +175,8 @@ def test_job_host_summary_service_isoformat(mock_copy_table):
     instance.gather()
 
     call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    params = call_args[1]['params']
 
-    # Should contain isoformat timestamps
-    assert '2024-07-20T08:15:30+00:00' in query
-    assert '2024-07-21T16:45:00+00:00' in query
+    # Datetime objects should be passed as params (not embedded in query as strings)
+    assert params['since'] == since
+    assert params['until'] == until

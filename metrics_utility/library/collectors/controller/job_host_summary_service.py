@@ -1,16 +1,18 @@
+from psycopg import sql
+
 from ..util import collector, copy_table
 
 
 @collector
 def job_host_summary_service(*, db=None, since=None, until=None, output_dir=None):
-    where = ' AND '.join(
-        [
-            f"mu.finished >= '{since.isoformat()}'",
-            f"mu.finished < '{until.isoformat()}'",
-        ]
-    )
+    # Build WHERE clause using parameterized query
+    where_parts = [
+        sql.SQL('mu.finished >= %(since)s'),
+        sql.SQL('mu.finished < %(until)s'),
+    ]
+    where_clause = sql.SQL(' AND ').join(where_parts)
 
-    query = f"""
+    query_template = sql.SQL("""
         WITH
             -- First: restrict to jobs that FINISHED in the window (uses index on main_unifiedjob.finished if present)
             filtered_jobs AS (
@@ -78,6 +80,17 @@ def job_host_summary_service(*, db=None, since=None, until=None, output_dir=None
         LEFT JOIN main_organization mo ON mo.id = mu.organization_id
         LEFT JOIN hosts_variables hv ON hv.host_id = mjs.host_id
         ORDER BY mu.finished ASC
-    """
+    """).format(where=where_clause)
 
-    return copy_table(db=db, table='main_jobhostsummary', query=query, prepend_query=True, output_dir=output_dir)
+    # Convert to string and pass params (no context needed, uses default encoding)
+    query = query_template.as_string()
+    params = {'since': since, 'until': until}
+
+    return copy_table(
+        db=db,
+        table='main_jobhostsummary',
+        query=query,
+        params=params,
+        prepend_query=True,
+        output_dir=output_dir,
+    )

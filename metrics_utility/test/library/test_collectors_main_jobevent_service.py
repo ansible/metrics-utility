@@ -148,10 +148,13 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
 
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
+    params = call_args[1].get('params', [])
 
     # Should use direct job_id IN clause (no temp table for read-only replica compatibility)
     assert 'e.job_id IN (' in query
-    assert '100' in query or '200' in query  # Should contain job IDs
+
+    # Job IDs should be in params (parameterized query)
+    assert 100 in params and 200 in params
 
     # Should have hourly timestamp ranges (truncated to hour boundaries)
     # Job 1 at 10:30:45 -> hour range 10:00:00 to 11:00:00

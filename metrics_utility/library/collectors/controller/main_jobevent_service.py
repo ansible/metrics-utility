@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from psycopg import sql
+
 from ..util import collector, copy_table
 
 
@@ -31,7 +33,7 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     # We are loading the finished jobs then we are filtering
     # for the job_created, this cannot be done by simple joins because
     # job_created is partitioned and partitions pruning dont work with joins
-    job_ids_set = set(job_id for job_id, _ in jobs)
+    job_ids_list = [job_id for job_id, _ in jobs]
 
     # Extract unique hour boundaries from job_created timestamps
     # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
@@ -67,28 +69,43 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
 
     # Build WHERE clause with consolidated ranges for partition pruning
     # PostgreSQL can see these literal timestamps and prune partitions accordingly
+    # NOTE: We use literal timestamps here (not params) for partition pruning optimization
     or_clauses = []
     for range_start, range_end in ranges:
-        or_clauses.append(f"(e.job_created >= '{range_start.isoformat()}'::timestamptz AND e.job_created < '{range_end.isoformat()}'::timestamptz)")
+        or_clauses.append(
+            sql.SQL('(e.job_created >= {start}::timestamptz AND e.job_created < {end}::timestamptz)').format(
+                start=sql.Literal(range_start.isoformat()),
+                end=sql.Literal(range_end.isoformat()),
+            )
+        )
 
     # Handle edge case: if no ranges, use FALSE to return empty result set
     # This maintains valid SQL structure while returning 0 rows
-    timestamp_where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
-
-    # Build job_id IN clause
-    # Handle edge case: if no jobs, use FALSE to return empty result set with proper schema
-    if job_ids_set:
-        job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
-        job_id_where_clause = f'e.job_id IN ({job_ids_str})'
+    if or_clauses:
+        timestamp_where_clause = sql.SQL(' OR ').join(or_clauses)
     else:
-        job_id_where_clause = 'FALSE'
+        timestamp_where_clause = sql.SQL('FALSE')
+
+    # Build job_id IN clause using params
+    # Handle edge case: if no jobs, use FALSE to return empty result set with proper schema
+    if job_ids_list:
+        # Build parameterized IN clause
+        job_id_placeholders = sql.SQL(', ').join(sql.Placeholder() * len(job_ids_list))
+        job_id_where_clause = sql.SQL('e.job_id IN ({})').format(job_id_placeholders)
+        job_params = job_ids_list
+    else:
+        job_id_where_clause = sql.SQL('FALSE')
+        job_params = []
 
     # Combine both WHERE conditions
-    where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause})'
+    where_clause = sql.SQL('({timestamp}) AND ({job_ids})').format(
+        timestamp=timestamp_where_clause,
+        job_ids=job_id_where_clause,
+    )
 
     # Final event query
     # - WHERE clause filters by job_id and enables partition pruning via literal hour boundaries
-    query = f"""
+    query_template = sql.SQL("""
         SELECT
             e.id,
             e.created,
@@ -137,7 +154,10 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
             SELECT replace(e.event_data, '\\u', '\\u005cu')::jsonb AS event_data
         ) AS ed
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
-        WHERE {where_clause}
-    """
+        WHERE {where}
+    """).format(where=where_clause)
 
-    return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir)
+    # Convert to string for copy_table (no context needed, uses default encoding)
+    query = query_template.as_string()
+
+    return copy_table(db=db, table='main_jobevent', query=query, params=job_params, output_dir=output_dir)
