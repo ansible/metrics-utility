@@ -13,6 +13,7 @@ from django.db import connection
 from django.db.utils import ProgrammingError
 from django.utils.timezone import now, timedelta
 from django.utils.translation import gettext_lazy as _
+from psycopg.errors import UndefinedTable
 
 from metrics_utility.automation_controller_billing.helpers import (
     get_config_and_settings_from_db,
@@ -27,14 +28,6 @@ from metrics_utility.library.collectors.util import date_where
 from metrics_utility.logger import logger, logger_info_level
 
 from .prometheus_client import PrometheusClient
-
-
-try:
-    from psycopg.errors import UndefinedTable
-except ImportError:
-
-    class UndefinedTable(Exception):
-        pass
 
 
 """
@@ -165,25 +158,13 @@ def _copy_table(table, query, path, prepend_query=None):
         if prepend_query:
             cursor.execute(prepend_query)
 
-        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
-            _copy_table_aap_2_4_and_below(cursor, query, file)
-        else:
-            _copy_table_aap_2_5_and_above(cursor, query, file)
+        # Use psycopg (v3) cursor.copy() method
+        with cursor.copy(query) as copy:
+            while data := copy.read():
+                byte_data = bytes(data)
+                file.write(byte_data.decode())
 
     return file.file_list(keep_empty=True)
-
-
-def _copy_table_aap_2_4_and_below(cursor, query, file):
-    # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
-    cursor.copy_expert(query, file)
-
-
-def _copy_table_aap_2_5_and_above(cursor, query, file):
-    # Automation Controller 4.5 and above use psycopg3 with .copy() method
-    with cursor.copy(query) as copy:
-        while data := copy.read():
-            byte_data = bytes(data)
-            file.write(byte_data.decode())
 
 
 def yaml_and_json_parsing_functions():

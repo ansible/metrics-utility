@@ -2,8 +2,8 @@
 
 ## 0.7.0dev
 
-- Removed direct AWX dependencies from collectors module
-- Replaced AWX license functions with direct database queries
+- Drop psycopg2 support - no longer compatible with awx older than 22.4.0
+- Removed direct AWX imports from config collector, replaced with db queries
 - added `metrics_utility.library`
 - TODO
 

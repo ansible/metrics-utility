@@ -59,36 +59,15 @@ def copy_table(db, table, query, params=None, prepend_query=False, output_file=N
 
         copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
 
-        # FIXME: remove once 2.4 is no longer supported
-        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
-            _copy_table_aap_2_4_and_below(cursor, copy_query, params, file)
-        else:
-            _copy_table_aap_2_5_and_above(cursor, copy_query, params, file)
+        # Use psycopg (v3) cursor.copy() method
+        with cursor.copy(copy_query, params) as copy:
+            while data := copy.read():
+                byte_data = bytes(data)
+                file.write(byte_data.decode())
 
     if output_file:
         return [output_file.name]
     return file.file_list(keep_empty=True)
-
-
-def _copy_table_aap_2_4_and_below(cursor, query, params, file):
-    if params:
-        # copy_expert doesn't support params, make do (but no escaping)
-        for p in params:
-            if f'%({p})s' in query:
-                query = query.replace(f'%({p})s', f'"{params[p]}"')
-            if f'%({p})d' in query:
-                query = query.replace(f'%({p})d', str(int(params[p])))
-
-    # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
-    cursor.copy_expert(query, file)
-
-
-def _copy_table_aap_2_5_and_above(cursor, query, params, file):
-    # Automation Controller 4.5 and above use psycopg3 with .copy() method
-    with cursor.copy(query, params) as copy:
-        while data := copy.read():
-            byte_data = bytes(data)
-            file.write(byte_data.decode())
 
 
 def _yaml_json_functions():
