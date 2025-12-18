@@ -92,19 +92,37 @@ def test_remove():
 def test_get_data_json():
     storage = StorageS3(**s3_settings)
 
-    # Get JSON data directly
-    data = storage.get_data(s3_object_name)
-    assert isinstance(data, dict)
-    assert data == {'foo': 5, 'bar': 'baz'}
+    # Upload test data with .json extension for auto-detection
+    json_object_name = f'temporary-object-x{os.getpid()}y.json'
+    obj = {'foo': 5, 'bar': 'baz'}
+    storage.put(json_object_name, dict=obj)
+
+    try:
+        # Get JSON data directly with auto-detection
+        data = storage.get_data(json_object_name)
+        assert isinstance(data, dict)
+        assert data == {'foo': 5, 'bar': 'baz'}
+    finally:
+        if storage.exists(json_object_name):
+            storage.remove(json_object_name)
 
 
 def test_get_data_json_explicit_format():
     storage = StorageS3(**s3_settings)
 
-    # Explicitly specify format
-    data = storage.get_data(s3_object_name, format='json')
-    assert isinstance(data, dict)
-    assert data == {'foo': 5, 'bar': 'baz'}
+    # Upload test data with unknown extension to test format parameter
+    test_object_name = f'temporary-object-x{os.getpid()}y.unknown'
+    obj = {'foo': 5, 'bar': 'baz'}
+    storage.put(test_object_name, dict=obj)
+
+    try:
+        # Specify format parameter
+        data = storage.get_data(test_object_name, format='json')
+        assert isinstance(data, dict)
+        assert data == {'foo': 5, 'bar': 'baz'}
+    finally:
+        if storage.exists(test_object_name):
+            storage.remove(test_object_name)
 
 
 def test_get_data_unsupported_format():
