@@ -168,8 +168,8 @@ class StorageSegment:
 
     def get(self, remote):
         """StorageSegment is write-only and does not support get()."""
-        raise NotImplementedError("StorageSegment is write-only and does not support get()")
+        raise NotImplementedError('StorageSegment is write-only and does not support get()')
 
     def get_data(self, remote, format='auto'):
         """StorageSegment is write-only and does not support get_data()."""
-        raise NotImplementedError("StorageSegment is write-only and does not support get_data()")
+        raise NotImplementedError('StorageSegment is write-only and does not support get_data()')

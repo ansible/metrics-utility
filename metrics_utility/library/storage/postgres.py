@@ -46,7 +46,7 @@ class StoragePostgres:
         """
         data = self.get_data(key)
         if data is None:
-            raise KeyError(f"Key not found in storage: {key}")
+            raise KeyError(f'Key not found in storage: {key}')
 
         # Use the util function to create a temporary JSON file
         with dict_to_json_file(data) as filename:

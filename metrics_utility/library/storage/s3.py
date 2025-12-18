@@ -6,8 +6,8 @@ from contextlib import contextmanager
 
 import boto3
 
-from .util import date_filter, dict_to_json_file
 from .helpers import load_csv, load_json, load_parquet
+from .util import date_filter, dict_to_json_file
 
 
 class StorageS3:
@@ -87,10 +87,7 @@ class StorageS3:
             elif remote_lower.endswith('.parquet'):
                 format = 'parquet'
             else:
-                raise ValueError(
-                    f"Cannot auto-detect format for '{remote}'. "
-                    f"Please specify format explicitly: 'json', 'csv', or 'parquet'"
-                )
+                raise ValueError(f"Cannot auto-detect format for '{remote}'. Please specify format explicitly: 'json', 'csv', or 'parquet'")
 
         # Load the data using the appropriate helper
         with self.get(remote) as filename:
@@ -101,10 +98,7 @@ class StorageS3:
             elif format == 'parquet':
                 return load_parquet(filename)
             else:
-                raise ValueError(
-                    f"Unsupported format: '{format}'. "
-                    f"Supported formats: 'auto', 'json', 'csv', 'parquet'"
-                )
+                raise ValueError(f"Unsupported format: '{format}'. Supported formats: 'auto', 'json', 'csv', 'parquet'")
 
     def put(self, remote, *, filename=None, fileobj=None, dict=None):
         if filename:

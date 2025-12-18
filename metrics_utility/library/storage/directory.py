@@ -4,8 +4,8 @@ import shutil
 
 from contextlib import contextmanager
 
-from .util import date_filter, dict_to_json_file
 from .helpers import load_csv, load_json, load_parquet
+from .util import date_filter, dict_to_json_file
 
 
 class StorageDirectory:
@@ -58,7 +58,7 @@ class StorageDirectory:
             FileNotFoundError: If the file doesn't exist
         """
         if not self.exists(remote):
-            raise FileNotFoundError(f"File not found in storage: {remote}")
+            raise FileNotFoundError(f'File not found in storage: {remote}')
 
         # Auto-detect format from file extension
         if format == 'auto':
@@ -70,10 +70,7 @@ class StorageDirectory:
             elif remote_lower.endswith('.parquet'):
                 format = 'parquet'
             else:
-                raise ValueError(
-                    f"Cannot auto-detect format for '{remote}'. "
-                    f"Please specify format explicitly: 'json', 'csv', or 'parquet'"
-                )
+                raise ValueError(f"Cannot auto-detect format for '{remote}'. Please specify format explicitly: 'json', 'csv', or 'parquet'")
 
         # Load the data using the appropriate helper
         with self.get(remote) as filename:
@@ -84,10 +81,7 @@ class StorageDirectory:
             elif format == 'parquet':
                 return load_parquet(filename)
             else:
-                raise ValueError(
-                    f"Unsupported format: '{format}'. "
-                    f"Supported formats: 'auto', 'json', 'csv', 'parquet'"
-                )
+                raise ValueError(f"Unsupported format: '{format}'. Supported formats: 'auto', 'json', 'csv', 'parquet'")
 
     def put(self, remote, *, filename=None, fileobj=None, dict=None):
         full_path = self._path(remote)

@@ -388,6 +388,7 @@ def test_get_as_context_manager():
         assert os.path.exists(filename)
         with open(filename, 'r') as f:
             import json
+
             data = json.load(f)
             assert data == {'foo': 'bar', 'count': 42}
 
