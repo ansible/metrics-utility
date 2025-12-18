@@ -87,3 +87,38 @@ def test_remove():
     storage = StorageS3(**s3_settings)
     storage.remove(s3_object_name)
     assert storage.exists(s3_object_name) is False
+
+
+def test_get_data_json():
+    storage = StorageS3(**s3_settings)
+
+    # Get JSON data directly
+    data = storage.get_data(s3_object_name)
+    assert isinstance(data, dict)
+    assert data == {'foo': 5, 'bar': 'baz'}
+
+
+def test_get_data_json_explicit_format():
+    storage = StorageS3(**s3_settings)
+
+    # Explicitly specify format
+    data = storage.get_data(s3_object_name, format='json')
+    assert isinstance(data, dict)
+    assert data == {'foo': 5, 'bar': 'baz'}
+
+
+def test_get_data_unsupported_format():
+    import pytest
+
+    storage = StorageS3(**s3_settings)
+
+    # Create a file with unsupported extension
+    unsupported_file = f'test-unsupported-{os.getpid()}.txt'
+    storage.put(unsupported_file, filename='/dev/null')
+
+    try:
+        with pytest.raises(ValueError, match='Cannot auto-detect format'):
+            storage.get_data(unsupported_file)
+    finally:
+        if storage.exists(unsupported_file):
+            storage.remove(unsupported_file)

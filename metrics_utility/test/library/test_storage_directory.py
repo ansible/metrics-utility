@@ -113,3 +113,48 @@ def test_remove():
     storage = StorageDirectory(base_path=base_path)
     storage.remove(target_filename)
     assert storage.exists(target_filename) is False
+
+
+def test_get_data_json():
+    storage = StorageDirectory(base_path=base_path)
+
+    # Recreate the file since test_remove() removed it
+    obj = {'foo': 5, 'bar': 'baz'}
+    storage.put(target_filename, dict=obj)
+
+    # Get JSON data directly (need to specify format since filename has no extension)
+    data = storage.get_data(target_filename, format='json')
+    assert isinstance(data, dict)
+    assert data == {'foo': 5, 'bar': 'baz'}
+
+
+def test_get_data_json_explicit_format():
+    storage = StorageDirectory(base_path=base_path)
+
+    # File should still exist from previous test
+    # Explicitly specify format
+    data = storage.get_data(target_filename, format='json')
+    assert isinstance(data, dict)
+    assert data == {'foo': 5, 'bar': 'baz'}
+
+
+def test_get_data_not_found():
+    storage = StorageDirectory(base_path=base_path)
+
+    with pytest.raises(FileNotFoundError, match='File not found in storage'):
+        storage.get_data('nonexistent.json')
+
+
+def test_get_data_unsupported_format():
+    storage = StorageDirectory(base_path=base_path)
+
+    # Create a file with unsupported extension
+    unsupported_file = f'test-unsupported-{os.getpid()}.txt'
+    storage.put(unsupported_file, filename='/dev/null')
+
+    try:
+        with pytest.raises(ValueError, match='Cannot auto-detect format'):
+            storage.get_data(unsupported_file)
+    finally:
+        if storage.exists(unsupported_file):
+            storage.remove(unsupported_file)

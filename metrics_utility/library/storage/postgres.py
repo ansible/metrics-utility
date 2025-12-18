@@ -2,9 +2,12 @@ import datetime
 import fnmatch
 import json
 
+from contextlib import contextmanager
+
 from psycopg import sql
 
 from .helpers import load_csv, load_json
+from .util import dict_to_json_file
 
 
 class StoragePostgres:
@@ -27,9 +30,31 @@ class StoragePostgres:
         if not self.table:
             raise Exception('StoragePostgres: table is required')
 
+    @contextmanager
     def get(self, key):
         """
-        Get value from the database by key.
+        Get value from the database as a temporary JSON file.
+
+        Args:
+            key: The key to look up
+
+        Yields:
+            Path to a temporary JSON file containing the data
+
+        Raises:
+            KeyError: If the key doesn't exist in the database
+        """
+        data = self.get_data(key)
+        if data is None:
+            raise KeyError(f"Key not found in storage: {key}")
+
+        # Use the util function to create a temporary JSON file
+        with dict_to_json_file(data) as filename:
+            yield filename
+
+    def get_data(self, key):
+        """
+        Get value from the database by key and return it parsed.
 
         Args:
             key: The key to look up

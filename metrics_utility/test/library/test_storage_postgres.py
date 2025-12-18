@@ -55,7 +55,7 @@ def test_storage_postgres_init_defaults():
 
 
 def test_get_dict_value():
-    """Test get method returns dict value from database."""
+    """Test get_data method returns dict value from database."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__.return_value = mock_cursor
@@ -64,7 +64,7 @@ def test_get_dict_value():
     mock_cursor.fetchone.return_value = ({'foo': 'bar', 'count': 42},)
 
     storage = StoragePostgres(db=mock_db, table='test_table')
-    result = storage.get('test_key')
+    result = storage.get_data('test_key')
 
     assert result == {'foo': 'bar', 'count': 42}
     mock_cursor.execute.assert_called_once()
@@ -73,7 +73,7 @@ def test_get_dict_value():
 
 
 def test_get_list_value():
-    """Test get method returns list value from database."""
+    """Test get_data method returns list value from database."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__.return_value = mock_cursor
@@ -82,13 +82,13 @@ def test_get_list_value():
     mock_cursor.fetchone.return_value = ([{'name': 'Alice'}, {'name': 'Bob'}],)
 
     storage = StoragePostgres(db=mock_db, table='test_table')
-    result = storage.get('test_key')
+    result = storage.get_data('test_key')
 
     assert result == [{'name': 'Alice'}, {'name': 'Bob'}]
 
 
 def test_get_not_found():
-    """Test get method returns None when key doesn't exist."""
+    """Test get_data method returns None when key doesn't exist."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__.return_value = mock_cursor
@@ -96,7 +96,7 @@ def test_get_not_found():
     mock_cursor.fetchone.return_value = None
 
     storage = StoragePostgres(db=mock_db, table='test_table')
-    result = storage.get('nonexistent_key')
+    result = storage.get_data('nonexistent_key')
 
     assert result is None
 
@@ -368,3 +368,43 @@ def test_create_storage_table_without_timestamp():
     assert 'CREATE TABLE' in call
 
     mock_db.commit.assert_called_once()
+
+
+def test_get_as_context_manager():
+    """Test get() context manager creates temp JSON file."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__.return_value = mock_cursor
+
+    # Simulate JSONB column returning a dict
+    mock_cursor.fetchone.return_value = ({'foo': 'bar', 'count': 42},)
+
+    storage = StoragePostgres(db=mock_db, table='test_table')
+
+    with storage.get('test_key') as filename:
+        # Verify it's a file path
+        assert isinstance(filename, str)
+        # Verify the file exists and contains the data as JSON
+        assert os.path.exists(filename)
+        with open(filename, 'r') as f:
+            import json
+            data = json.load(f)
+            assert data == {'foo': 'bar', 'count': 42}
+
+    # After exiting context, temp file should be cleaned up
+    assert not os.path.exists(filename)
+
+
+def test_get_as_context_manager_key_not_found():
+    """Test get() context manager raises KeyError when key doesn't exist."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__.return_value = mock_cursor
+
+    mock_cursor.fetchone.return_value = None
+
+    storage = StoragePostgres(db=mock_db, table='test_table')
+
+    with pytest.raises(KeyError, match='Key not found'):
+        with storage.get('nonexistent_key') as _filename:
+            pass

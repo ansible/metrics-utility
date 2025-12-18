@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import boto3
 
 from .util import date_filter, dict_to_json_file
+from .helpers import load_csv, load_json, load_parquet
 
 
 class StorageS3:
@@ -57,6 +58,53 @@ class StorageS3:
             local_filename = os.path.join(directory, remote.split('/')[-1])
             self.client.download_file(Bucket=self.bucket, Key=remote, Filename=local_filename)
             yield local_filename
+
+    def get_data(self, remote, format='auto'):
+        """
+        Retrieve data from S3 and return it parsed.
+
+        Args:
+            remote: Path to the object in S3
+            format: Format of the data - 'auto' (detect from extension),
+                   'json', 'csv', or 'parquet'
+
+        Returns:
+            For JSON: dict or list
+            For CSV: list of dicts
+            For Parquet: pandas DataFrame
+
+        Raises:
+            ValueError: If format is unsupported or cannot be auto-detected
+            Exception: If the S3 object doesn't exist or download fails
+        """
+        # Auto-detect format from file extension
+        if format == 'auto':
+            remote_lower = remote.lower()
+            if remote_lower.endswith('.json'):
+                format = 'json'
+            elif remote_lower.endswith('.csv'):
+                format = 'csv'
+            elif remote_lower.endswith('.parquet'):
+                format = 'parquet'
+            else:
+                raise ValueError(
+                    f"Cannot auto-detect format for '{remote}'. "
+                    f"Please specify format explicitly: 'json', 'csv', or 'parquet'"
+                )
+
+        # Load the data using the appropriate helper
+        with self.get(remote) as filename:
+            if format == 'json':
+                return load_json(filename)
+            elif format == 'csv':
+                return load_csv(filename)
+            elif format == 'parquet':
+                return load_parquet(filename)
+            else:
+                raise ValueError(
+                    f"Unsupported format: '{format}'. "
+                    f"Supported formats: 'auto', 'json', 'csv', 'parquet'"
+                )
 
     def put(self, remote, *, filename=None, fileobj=None, dict=None):
         if filename:

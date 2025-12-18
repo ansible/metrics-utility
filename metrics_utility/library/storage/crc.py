@@ -49,6 +49,14 @@ class Base:
         if response.status_code >= 300:
             raise Exception(f'{self.__class__.__name__}: Upload failed with status {response.status_code}: {response.text}')
 
+    def get(self, remote):
+        """CRC storage is write-only and does not support get()."""
+        raise NotImplementedError(f"{self.__class__.__name__} is write-only and does not support get()")
+
+    def get_data(self, remote, format='auto'):
+        """CRC storage is write-only and does not support get_data()."""
+        raise NotImplementedError(f"{self.__class__.__name__} is write-only and does not support get_data()")
+
 
 class StorageCRC(Base):
     def __init__(self, **settings):
