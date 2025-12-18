@@ -9,8 +9,8 @@ from metrics_utility import library
 worker_key = 'gather-controller-crc'
 
 # assume exceptions are logged & saved in task results by what's running the worker
-controller_db = ConnectionHandler(settings.controller_db)
-metrics_db = ConnectionHandler(settings.metrics_db)
+controller_db = ConnectionHandler({'default': settings.controller_db})['default']
+metrics_db = ConnectionHandler({'default': settings.metrics_db})['default']
 crc_storage = library.storage.StorageCRCMutual(settings.crc_storage)
 
 # wrappers around datetime, timedelta, timezone - always a datetime with timezone

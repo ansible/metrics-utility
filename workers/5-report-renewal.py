@@ -8,8 +8,8 @@ from metrics_utility import library
 
 worker_key = 'report-renewal'
 
-controller_db = ConnectionHandler(settings.controller_db)
-metrics_db = ConnectionHandler(settings.metrics_db)
+controller_db = ConnectionHandler({'default': settings.controller_db})['default']
+metrics_db = ConnectionHandler({'default': settings.metrics_db})['default']
 s3_storage = library.storage.StorageS3(settings.s3_storage)
 
 # our db, no lock needed
