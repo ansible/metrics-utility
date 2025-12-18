@@ -2,6 +2,11 @@ import os
 
 from dataclasses import dataclass, field
 
+from metrics_utility import prepare
+
+
+prepare()
+
 
 @dataclass
 class Settings:

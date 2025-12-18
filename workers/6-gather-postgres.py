@@ -12,14 +12,19 @@ worker_key = 'gather-postgres'
 controller_db = ConnectionHandler({'default': settings.controller_db})['default']
 metrics_db = ConnectionHandler({'default': settings.metrics_db})['default']
 
+# Create storage table if it doesn't exist
+storage_config = {
+    'db': metrics_db,
+    'table': 'metrics_data',
+    'key_field': 'key',
+    'value_field': 'value',
+    'timestamp_field': 'updated_at',
+}
+
+library.storage.postgres.create_storage_table(**storage_config)
+
 # Setup PostgreSQL storage using metrics_db
-postgres_storage = library.storage.StoragePostgres(
-    db=metrics_db,
-    table='metrics_data',
-    key_field='key',
-    value_field='value',
-    timestamp_field='updated_at',
-)
+postgres_storage = library.storage.StoragePostgres(**storage_config)
 
 # Time range for collectors
 since = library.instants.last_day()
