@@ -99,7 +99,7 @@ StorageS3(
     endpoint='http://localhost:9000', # or 'https://s3.us-east.example.com'
     region='us-east-1', # optional
     access_key='...',
-    secret_ley='...',
+    secret_key='...',
 )
 ```
 
