@@ -124,8 +124,8 @@ def main_host_daily(*, db=None, since=None, until=None, output_dir=None):
     all_params = {**params_created, **params_modified}
 
     # Update the SQL queries to use renamed params
-    created_where_str = created_where.as_string(db).replace('%(since)s', '%(created_since)s').replace('%(until)s', '%(created_until)s')
-    modified_where_str = modified_where.as_string(db).replace('%(since)s', '%(modified_since)s').replace('%(until)s', '%(modified_until)s')
+    created_where_str = created_where.as_string().replace('%(since)s', '%(created_since)s').replace('%(until)s', '%(created_until)s')
+    modified_where_str = modified_where.as_string().replace('%(since)s', '%(modified_since)s').replace('%(until)s', '%(modified_until)s')
 
     where = sql.SQL("""
         enabled='t'
