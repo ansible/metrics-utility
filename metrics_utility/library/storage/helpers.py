@@ -32,12 +32,11 @@ def load_json(source):
     Returns:
         Parsed JSON data (list or dict)
     """
-    if isinstance(source, str):
+    if hasattr(source, 'read'):
+        return json.load(source)
+    else:
         with open(source, 'r', encoding='utf-8') as f:
             return json.load(f)
-    else:
-        # source is a file-like object
-        return json.load(source)
 
 
 def load_parquet(source):
