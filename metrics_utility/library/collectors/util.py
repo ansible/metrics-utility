@@ -7,12 +7,13 @@ from psycopg import sql
 from ..csv_file_splitter import CsvFileSplitter
 
 
+def _sql_identifier(name):
+    return sql.Identifier(*name.split('.'))
+
+
 def date_where(field, since, until):
     """
-    Build a WHERE clause for date filtering using psycopg.sql for safe query building.
-
-    Args:
-        field: Field name (will be properly escaped as an identifier)
+        field: field name (dots allowed)
         since: Optional datetime - include records >= since
         until: Optional datetime - include records < until
 
@@ -20,17 +21,17 @@ def date_where(field, since, until):
         A tuple of (sql.SQL object, dict of params)
     """
     if since and until:
-        query = sql.SQL('( {field} >= %(since)s AND {field} < %(until)s )').format(field=sql.Identifier(field))
+        query = sql.SQL('( {field} >= %(since)s AND {field} < %(until)s )').format(field=_sql_identifier(field))
         params = {'since': since, 'until': until}
         return query, params
 
     if since:
-        query = sql.SQL('( {field} >= %(since)s )').format(field=sql.Identifier(field))
+        query = sql.SQL('( {field} >= %(since)s )').format(field=_sql_identifier(field))
         params = {'since': since}
         return query, params
 
     if until:
-        query = sql.SQL('( {field} < %(until)s )').format(field=sql.Identifier(field))
+        query = sql.SQL('( {field} < %(until)s )').format(field=_sql_identifier(field))
         params = {'until': until}
         return query, params
 

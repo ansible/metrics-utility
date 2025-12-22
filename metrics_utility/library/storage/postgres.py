@@ -10,6 +10,10 @@ from .helpers import load_csv, load_json
 from .util import dict_to_json_file
 
 
+def _sql_identifier(name):
+    return sql.Identifier(*name.split('.'))
+
+
 class StoragePostgres:
     """
     StoragePostgres(db=connection, table='daily', [key_field='key', value_field='value', timestamp_field=None])
@@ -64,9 +68,9 @@ class StoragePostgres:
         """
         with self.db.cursor() as cursor:
             query = sql.SQL('SELECT {value_field} FROM {table} WHERE {key_field} = %s').format(
-                value_field=sql.Identifier(self.value_field),
-                table=sql.Identifier(self.table),
-                key_field=sql.Identifier(self.key_field),
+                value_field=_sql_identifier(self.value_field),
+                table=_sql_identifier(self.table),
+                key_field=_sql_identifier(self.key_field),
             )
             cursor.execute(query, (key,))
 
@@ -141,10 +145,10 @@ class StoragePostgres:
                        DO UPDATE SET {value_field} = EXCLUDED.{value_field},
                                      {timestamp_field} = EXCLUDED.{timestamp_field}"""
                 ).format(
-                    table=sql.Identifier(self.table),
-                    key_field=sql.Identifier(self.key_field),
-                    value_field=sql.Identifier(self.value_field),
-                    timestamp_field=sql.Identifier(self.timestamp_field),
+                    table=_sql_identifier(self.table),
+                    key_field=_sql_identifier(self.key_field),
+                    value_field=_sql_identifier(self.value_field),
+                    timestamp_field=_sql_identifier(self.timestamp_field),
                 )
                 cursor.execute(query, (key, json_value, datetime.datetime.now(datetime.timezone.utc)))
             else:
@@ -155,9 +159,9 @@ class StoragePostgres:
                        ON CONFLICT ({key_field})
                        DO UPDATE SET {value_field} = EXCLUDED.{value_field}"""
                 ).format(
-                    table=sql.Identifier(self.table),
-                    key_field=sql.Identifier(self.key_field),
-                    value_field=sql.Identifier(self.value_field),
+                    table=_sql_identifier(self.table),
+                    key_field=_sql_identifier(self.key_field),
+                    value_field=_sql_identifier(self.value_field),
                 )
                 cursor.execute(query, (key, json_value))
 
@@ -180,14 +184,14 @@ class StoragePostgres:
             # Build the base query
             if self.timestamp_field and (since or until):
                 query = sql.SQL('SELECT {key_field}, {timestamp_field} FROM {table}').format(
-                    key_field=sql.Identifier(self.key_field),
-                    timestamp_field=sql.Identifier(self.timestamp_field),
-                    table=sql.Identifier(self.table),
+                    key_field=_sql_identifier(self.key_field),
+                    timestamp_field=_sql_identifier(self.timestamp_field),
+                    table=_sql_identifier(self.table),
                 )
             else:
                 query = sql.SQL('SELECT {key_field} FROM {table}').format(
-                    key_field=sql.Identifier(self.key_field),
-                    table=sql.Identifier(self.table),
+                    key_field=_sql_identifier(self.key_field),
+                    table=_sql_identifier(self.table),
                 )
             cursor.execute(query)
 
@@ -226,8 +230,8 @@ class StoragePostgres:
         """
         with self.db.cursor() as cursor:
             query = sql.SQL('SELECT 1 FROM {table} WHERE {key_field} = %s').format(
-                table=sql.Identifier(self.table),
-                key_field=sql.Identifier(self.key_field),
+                table=_sql_identifier(self.table),
+                key_field=_sql_identifier(self.key_field),
             )
             cursor.execute(query, (key,))
 
@@ -242,8 +246,8 @@ class StoragePostgres:
         """
         with self.db.cursor() as cursor:
             query = sql.SQL('DELETE FROM {table} WHERE {key_field} = %s').format(
-                table=sql.Identifier(self.table),
-                key_field=sql.Identifier(self.key_field),
+                table=_sql_identifier(self.table),
+                key_field=_sql_identifier(self.key_field),
             )
             cursor.execute(query, (key,))
 
@@ -281,10 +285,10 @@ def create_storage_table(
                     {timestamp_field} TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )"""
             ).format(
-                table=sql.Identifier(table),
-                key_field=sql.Identifier(key_field),
-                value_field=sql.Identifier(value_field),
-                timestamp_field=sql.Identifier(timestamp_field),
+                table=_sql_identifier(table),
+                key_field=_sql_identifier(key_field),
+                value_field=_sql_identifier(value_field),
+                timestamp_field=_sql_identifier(timestamp_field),
             )
         else:
             query = sql.SQL(
@@ -293,9 +297,9 @@ def create_storage_table(
                     {value_field} JSONB NOT NULL
                 )"""
             ).format(
-                table=sql.Identifier(table),
-                key_field=sql.Identifier(key_field),
-                value_field=sql.Identifier(value_field),
+                table=_sql_identifier(table),
+                key_field=_sql_identifier(key_field),
+                value_field=_sql_identifier(value_field),
             )
         cursor.execute(query)
 
@@ -303,9 +307,9 @@ def create_storage_table(
         if timestamp_field:
             index_name = f'{table}_{timestamp_field}_idx'
             query = sql.SQL('CREATE INDEX IF NOT EXISTS {index_name} ON {table} ({timestamp_field})').format(
-                index_name=sql.Identifier(index_name),
-                table=sql.Identifier(table),
-                timestamp_field=sql.Identifier(timestamp_field),
+                index_name=_sql_identifier(index_name),
+                table=_sql_identifier(table),
+                timestamp_field=_sql_identifier(timestamp_field),
             )
             cursor.execute(query)
 
