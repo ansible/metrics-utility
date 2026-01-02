@@ -386,7 +386,17 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
     values = []
     for i in range(1, host_count + 1):
         host_name = f'host-{i}{suffix}.example.com'
-        values.append(f"(NOW(), NOW(), '{host_name}', 'Performance test host {i}', {inventory_id}, '', TRUE, '', '{{}}'::jsonb)")
+
+        # Build variables JSON with ansible_host and ansible_connection
+        variables = json.dumps({
+            'ansible_host': host_name,
+            'ansible_connection': 'ssh'
+        }).replace("'", "''")  # Escape single quotes for SQL
+
+        values.append(
+            f"(NOW(), NOW(), '{host_name}', 'Performance test host {i}', {inventory_id}, "
+            f"'{variables}', TRUE, '', '{{}}'::jsonb)"
+        )
 
     sql = f"""
     INSERT INTO main_host (created, modified, name, description, inventory_id, variables, enabled, instance_id, ansible_facts)
@@ -580,6 +590,7 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     - Each task has one module, but different outcomes per host
     - Mix of success, failed, skipped, unreachable events
     - Some hosts retry (failed then ok with same task_uuid)
+    - Dictionary data in event_data (duration, timestamps, etc.)
 
     Structure: task -> host -> outcome
     Each task runs the same module on all hosts, but each host can have different outcome.
@@ -607,6 +618,9 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     values = []
     counter = 0
 
+    # Task start time for calculating durations
+    task_start_time = job_created
+
     # Loop over tasks first - each task has same UUID across all hosts
     for task_idx in range(1, task_count + 1):
         # Generate deterministic task_uuid based on job_index and task_idx
@@ -616,14 +630,24 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
         # Pick one module for this task (same module runs on all hosts)
         module = MODULES[rng.randint(0, len(MODULES) - 1)]
 
-        # Build event_data JSON for this task
+        # Simple duration calculation
+        task_duration = 1.5
+        start = task_start_time
+        end = start + timedelta(seconds=task_duration)
+        task_start_time = end  # Next task starts when this one ends
+
+        # Build event_data JSON with required dictionary fields
         event_data = json.dumps(
             {
                 'task_action': module,
                 'resolved_action': module,
                 'task': task_name,
                 'play': 'Main Play',
-                'task_uuid': task_uuid,  # Include task_uuid for collector to extract
+                'task_uuid': task_uuid,
+                'duration': task_duration,
+                'start': start.isoformat(),
+                'end': end.isoformat(),
+                'ignore_errors': False,
             }
         ).replace("'", "''")  # Escape single quotes for SQL
 
