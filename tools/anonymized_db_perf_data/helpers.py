@@ -388,15 +388,9 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
         host_name = f'host-{i}{suffix}.example.com'
 
         # Build variables JSON with ansible_host and ansible_connection
-        variables = json.dumps({
-            'ansible_host': host_name,
-            'ansible_connection': 'ssh'
-        }).replace("'", "''")  # Escape single quotes for SQL
+        variables = json.dumps({'ansible_host': host_name, 'ansible_connection': 'ssh'}).replace("'", "''")  # Escape single quotes for SQL
 
-        values.append(
-            f"(NOW(), NOW(), '{host_name}', 'Performance test host {i}', {inventory_id}, "
-            f"'{variables}', TRUE, '', '{{}}'::jsonb)"
-        )
+        values.append(f"(NOW(), NOW(), '{host_name}', 'Performance test host {i}', {inventory_id}, '{variables}', TRUE, '', '{{}}'::jsonb)")
 
     sql = f"""
     INSERT INTO main_host (created, modified, name, description, inventory_id, variables, enabled, instance_id, ansible_facts)
