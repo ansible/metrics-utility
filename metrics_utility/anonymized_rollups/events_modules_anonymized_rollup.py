@@ -295,7 +295,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_failed=('job_failed', 'first'),
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_ids=('host_ids', lambda x: set().union(*[s for s in x.dropna() if isinstance(s, set)]) if any(isinstance(s, set) for s in x.dropna()) else set()),
+            host_ids=('host_ids', lambda x: set().union(*[s for s in x.dropna() if isinstance(s, set)])),
         )
 
         # Modules used to automate
@@ -322,7 +322,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
-            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
+            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
             task_clean_success_total=('task_clean_success', 'sum'),
             task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
             task_failed_total=('task_failed', 'sum'),
@@ -335,7 +335,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
-            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
+            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
             jobs_failed_because_of_collection_name_failure_total=('job_id_that_contained_failed_task', 'nunique'),
             task_clean_success_total=('task_clean_success', 'sum'),
             task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
@@ -349,7 +349,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
+            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
             job_containing_module_failed=('job_failed', 'max'),
         )
 
@@ -371,7 +371,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
+            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
             job_containing_collection_name_failed=('job_failed', 'max'),
         )
 
