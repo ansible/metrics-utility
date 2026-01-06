@@ -248,21 +248,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 'rollup': {'aggregated': dataframe, 'event_total': event_total},
             }
 
-        # Categorize columns to reduce memory footprint
-        # This is done after batches are concatenated to ensure consistent categories
-        # Only categorize string columns with low-to-medium cardinality (high repetition)
-        categorical_columns = [
-            'collection_source',  # ~20 unique values (Red Hat, Community, Partner, etc.)
-            'collection_name',  # ~500-1000 unique collections
-            'module_name',  # ~2000-5000 unique modules
-            'playbook',  # ~1000-5000 unique playbooks
-            'task_uuid',  # ~1000-5000 unique task uuids
-        ]
-
-        for col in categorical_columns:
-            if col in dataframe.columns:
-                dataframe[col] = dataframe[col].astype('category')
-
         # Final aggregation: handle any cross-batch duplicates
         # because the task running on host can be split between batches
         # we need to aggregate the data second time to get the correct results
