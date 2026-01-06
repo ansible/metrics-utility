@@ -83,8 +83,24 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
     else:
         job_id_where_clause = 'FALSE'
 
-    # Combine both WHERE conditions
-    where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause})'
+    # Filter for only the event types that are used in analysis
+    relevant_events = [
+        'runner_on_ok',
+        'runner_on_async_ok',
+        'runner_item_on_ok',
+        'runner_on_failed',
+        'runner_on_async_failed',
+        'runner_item_on_failed',
+        'runner_on_unreachable',
+        'runner_item_on_unreachable',
+        'runner_on_skipped',
+        'runner_item_on_skipped',
+    ]
+    event_types_str = ','.join(f"'{event}'" for event in relevant_events)
+    event_type_where_clause = f'e.event IN ({event_types_str})'
+
+    # Combine all WHERE conditions
+    where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause}) AND ({event_type_where_clause})'
 
     # Final event query
     # - WHERE clause filters by job_id and enables partition pruning via literal hour boundaries
