@@ -96,7 +96,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'event_total': data_all['event_total'] + data_new['event_total'],
             'task_summary': pd.concat([data_all['task_summary'], data_new['task_summary']], ignore_index=True),
-            'hosts': data_all['hosts'] | data_new['hosts'],
         }
 
     # Prepare is run for each batch of data
@@ -105,7 +104,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         # Count all events before pruning
         event_total = len(dataframe)
-        hosts = set(dataframe['host_id'].unique())
 
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
@@ -231,12 +229,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             task_unreachable=('task_unreachable', 'sum'),
             task_skipped=('task_skipped', 'sum'),
             job_id_that_contained_failed_task=('job_id_that_contained_failed_task', 'first'),
+            # Preserve columns needed in base() function
+            job_started=('job_started', 'first'),
+            job_failed=('job_failed', 'first'),
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            playbook=('playbook', 'first'),
+            host_ids=('host_id', lambda x: set(x)),
         )
 
         return {
             'event_total': event_total,
             'task_summary': task_summary,
-            'hosts': hosts,
         }
 
     def base(self, data):
@@ -303,26 +307,15 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         modules_used_per_playbook_total = dataframe.groupby('playbook', observed=True)['module_name'].nunique()
 
         # Data is already aggregated from prepare() and merge()
-        # We just need to compute the mutually exclusive task status categories
-        task_summary = dataframe.assign(
-            # mutually exclusive categories - only one can be true
-            task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
-            task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
-            task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
-            task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
-            task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
-            task_skipped=lambda x: (
-                x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
-            ),
-            job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
-        )
+        # Task status categories are already computed in prepare(), so we can use dataframe directly
+        task_summary = dataframe
 
         # Per-module counts
         # receiver of this data can easily calculate success rates
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
-            hosts_total=('host_id', 'nunique'),
+            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
             task_clean_success_total=('task_clean_success', 'sum'),
             task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
             task_failed_total=('task_failed', 'sum'),
@@ -335,7 +328,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             number_of_jobs_never_started=('job_started', lambda x: x.isna().sum()),
-            hosts_total=('host_id', 'nunique'),
+            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
             jobs_failed_because_of_collection_name_failure_total=('job_id_that_contained_failed_task', 'nunique'),
             task_clean_success_total=('task_clean_success', 'sum'),
             task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
@@ -349,7 +342,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_id', 'nunique'),
+            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
             job_containing_module_failed=('job_failed', 'max'),
         )
 
@@ -371,7 +364,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_id', 'nunique'),
+            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)])) if any(isinstance(s, set) for s in x.dropna()) else 0),
             job_containing_collection_name_failed=('job_failed', 'max'),
         )
 
@@ -399,6 +392,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         collection_name_stats_dict = collection_name_stats.to_dict(orient='records')
         job_time_stats_collection_name_dict = job_time_stats_collection_name.to_dict(orient='records')
         merged_list_collection_name = merge_by_name(collection_name_stats_dict, job_time_stats_collection_name_dict, 'collection_name')
+
+        # Get hosts_automated_total from the dataframe by unioning all host_ids sets
+        if not dataframe.empty and 'host_ids' in dataframe.columns:
+            host_sets = [s for s in dataframe['host_ids'].dropna() if isinstance(s, set)]
+            all_hosts = set().union(*host_sets) if host_sets else set()
+            hosts_automated_total = len(all_hosts)
+        else:
+            hosts_automated_total = 0
 
         # Prepare rollup data (dataframes before conversion)
         rollup_data = {
