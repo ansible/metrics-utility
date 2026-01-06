@@ -289,6 +289,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             task_unreachable=('task_unreachable', 'sum'),
             task_skipped=('task_skipped', 'sum'),
             job_id_that_contained_failed_task=('job_id_that_contained_failed_task', 'first'),
+            # Preserve columns needed for later aggregations
+            playbook=('playbook', 'first'),
+            job_started=('job_started', 'first'),
+            job_failed=('job_failed', 'first'),
+            job_duration_seconds=('job_duration_seconds', 'first'),
+            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+            host_ids=('host_ids', lambda x: set().union(*[s for s in x.dropna() if isinstance(s, set)]) if any(isinstance(s, set) for s in x.dropna()) else set()),
         )
 
         # Modules used to automate
