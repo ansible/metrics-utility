@@ -190,30 +190,34 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # This groups by (job, host, task, module, collection) and summarizes all events
         # This can reduce the number of rows, depends of number of retries
-        task_summary = dataframe.groupby(
-            ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
-        ).agg(
-            seen_success=('task_success_event', 'max'),
-            seen_failed=('task_failed_event', 'max'),
-            seen_unreachable=('task_unreachable_event', 'max'),
-            seen_skipped=('task_skipped_event', 'max'),
-            seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
-            job_started=('job_started', 'first'),
-            job_failed=('job_failed', 'first'),
-            job_duration_seconds=('job_duration_seconds', 'first'),
-            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            playbook=('playbook', 'first'),
-        ).assign(
-            # mutually exclusive categories - only one can be true
-            task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
-            task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
-            task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
-            task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
-            task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
-            task_skipped=lambda x: (
-                x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
-            ),
-            job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
+        task_summary = (
+            dataframe.groupby(
+                ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+            )
+            .agg(
+                seen_success=('task_success_event', 'max'),
+                seen_failed=('task_failed_event', 'max'),
+                seen_unreachable=('task_unreachable_event', 'max'),
+                seen_skipped=('task_skipped_event', 'max'),
+                seen_failed_and_ignored=('task_failed_and_ignored_event', 'max'),
+                job_started=('job_started', 'first'),
+                job_failed=('job_failed', 'first'),
+                job_duration_seconds=('job_duration_seconds', 'first'),
+                job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
+                playbook=('playbook', 'first'),
+            )
+            .assign(
+                # mutually exclusive categories - only one can be true
+                task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
+                task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
+                task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
+                task_failed_and_ignored=lambda x: x['seen_failed_and_ignored'] & ~x['seen_success'],
+                task_unreachable=lambda x: x['seen_unreachable'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_failed_and_ignored'],
+                task_skipped=lambda x: (
+                    x['seen_skipped'] & ~x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_failed_and_ignored']
+                ),
+                job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
+            )
         )
 
         # aggregate task_summary by job_id, task_uuid, module_name, collection_source, collection_name
@@ -221,7 +225,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # note that prepare is called in batches and one job and task can be split between batches
         # This will cause acceptable precision loss, because we will end up with two entries for the same job and task
         # duplicated entries will be summed in base function
-        task_summary = task_summary.groupby(['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
+        task_summary = task_summary.groupby(
+            ['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+        ).agg(
             task_clean_success=('task_clean_success', 'sum'),
             task_success_with_reruns=('task_success_with_reruns', 'sum'),
             task_failed=('task_failed', 'sum'),
@@ -281,7 +287,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             }
 
         # Final aggregation: handle any cross-batch duplicates, sum them, loss of precision is acceptable
-        dataframe = dataframe.groupby(['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
+        dataframe = dataframe.groupby(
+            ['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
+        ).agg(
             task_clean_success=('task_clean_success', 'sum'),
             task_success_with_reruns=('task_success_with_reruns', 'sum'),
             task_failed=('task_failed', 'sum'),
