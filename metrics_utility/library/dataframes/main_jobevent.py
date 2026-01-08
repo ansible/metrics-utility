@@ -1,5 +1,7 @@
 import re
 
+import pandas as pd
+
 from metrics_utility.library.dataframes.base_traditional import BaseTraditional
 
 
@@ -54,8 +56,7 @@ class DataframeMainJobevent(BaseTraditional):
         # Duration is null in older versions of Controller
         group['duration'] = group.duration.fillna(0)
 
-        # Tweak types to match the table
-        return self.cast_dataframe(group)
+        return group.astype({'duration': 'float64', 'task_runs': 'int64'})
 
     # Merge pre-aggregated
     def regroup(self, dataframe):
@@ -63,6 +64,21 @@ class DataframeMainJobevent(BaseTraditional):
             task_runs=('task_runs', 'sum'),
             duration=('duration', 'sum'),
         )
+
+    def merge(self, rollup, new_group):
+        if rollup is None:
+            return new_group
+
+        df = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+
+        # Apply aggregations directly (both use sum)
+        df['task_runs'] = df[['task_runs_x', 'task_runs_y']].sum(axis=1)
+        df['duration'] = df[['duration_x', 'duration_y']].sum(axis=1)
+
+        # Drop the _x and _y columns
+        df = df.drop(columns=['task_runs_x', 'task_runs_y', 'duration_x', 'duration_y'])
+
+        return df.astype({'duration': 'float64', 'task_runs': 'int64'})
 
     @staticmethod
     def extract_collection_name(x):
@@ -98,7 +114,3 @@ class DataframeMainJobevent(BaseTraditional):
     @staticmethod
     def cast_types():
         return {'duration': 'float64', 'task_runs': 'int64'}
-
-    @staticmethod
-    def operations():
-        return {}

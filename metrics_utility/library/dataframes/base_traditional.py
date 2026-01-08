@@ -11,24 +11,6 @@ from metrics_utility.library.dataframes.base_dataframe import BaseDataframe
 # a dataframe class with logic for merges based on lists of indexes and merge operations
 # used by DataframeMainJobevent, DataframeMainHost and DataframeJobHostSummary
 class BaseTraditional(BaseDataframe):
-    def cast_dataframe(self, df):
-        types = self.cast_types()
-        levels = []
-        if len(self.unique_index_columns()) == 1:
-            # Special behavior if the index is not composite, but only 1 column
-            # Casting index field to object
-            df.index = df.index.astype(object)
-        else:
-            # Composite index branch
-            # Casting index field to object
-            for index, _level in enumerate(df.index.levels):
-                casted_level = df.index.levels[index].astype(object)
-                levels.append(casted_level)
-
-            df.index = df.index.set_levels(levels)
-
-        return df.astype(types)
-
     def dedup(self, dataframe, hostname_mapping=None, **kwargs):
         if dataframe is None or dataframe.empty:
             return self.empty()
@@ -45,40 +27,12 @@ class BaseTraditional(BaseDataframe):
         df_grouped = self.regroup(df)
 
         # cast types to match the table
-        df_grouped = self.cast_dataframe(df_grouped)
-        return df_grouped.reset_index()
+        df_grouped = df_grouped.astype(self.cast_types())
 
-    def summarize_merged_dataframes(self, df, columns, operations={}):
-        for col in columns:
-            if operations.get(col) == 'min':
-                df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
-            elif operations.get(col) == 'max':
-                df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
-            elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            elif operations.get(col) == 'combine_json':
-                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
-            else:
-                df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
-            del df[f'{col}_x']
-            del df[f'{col}_y']
-        return df
+        return df_grouped.reset_index()
 
     def empty(self):
         return pd.DataFrame(columns=self.unique_index_columns() + self.data_columns())
-
-    # Multipart collection, merge the dataframes and sum counts
-    # used by BaseDataframe.add_rollup
-    def merge(self, rollup, new_group):
-        if rollup is None:
-            return new_group
-
-        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
-        rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
-        rollup = self.cast_dataframe(rollup)
-        return rollup
 
     @staticmethod
     def cast_types():
@@ -86,10 +40,6 @@ class BaseTraditional(BaseDataframe):
 
     @staticmethod
     def data_columns():
-        pass
-
-    @staticmethod
-    def operations():
         pass
 
     @staticmethod

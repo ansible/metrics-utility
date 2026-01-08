@@ -2,6 +2,8 @@ import pandas as pd
 
 from metrics_utility.library.dataframes.base_traditional import (
     BaseTraditional,
+    combine_json_values,
+    combine_set,
     merge_arrays,
     merge_json_sets,
     merge_setdicts,
@@ -97,7 +99,17 @@ class DataframeJobHostSummary(BaseTraditional):
             facts=('facts', merge_json_sets),
             host_names_before_dedup=('host_names_before_dedup', set),
         )
-        return self.cast_dataframe(group)
+
+        return group.astype(
+            {
+                'task_runs': int,
+                'host_runs': int,
+                'managed_node_type': int,
+                'first_automation': 'datetime64[ns]',
+                'last_automation': 'datetime64[ns]',
+                'job_created': 'datetime64[ns]',
+            }
+        )
 
     # Merge pre-aggregated
     def regroup(self, dataframe):
@@ -113,6 +125,68 @@ class DataframeJobHostSummary(BaseTraditional):
             canonical_facts=('canonical_facts', merge_setdicts),
             facts=('facts', merge_setdicts),
             host_names_before_dedup=('host_names_before_dedup', merge_sets),
+        )
+
+    def merge(self, rollup, new_group):
+        if rollup is None:
+            return new_group
+
+        df = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+
+        # Apply aggregations directly
+        df['host_runs'] = df[['host_runs_x', 'host_runs_y']].sum(axis=1)
+        df['task_runs'] = df[['task_runs_x', 'task_runs_y']].sum(axis=1)
+        df['first_automation'] = df[['first_automation_x', 'first_automation_y']].min(axis=1)
+        df['last_automation'] = df[['last_automation_x', 'last_automation_y']].max(axis=1)
+        df['job_created'] = df[['job_created_x', 'job_created_y']].max(axis=1)
+        df['managed_node_type'] = df[['managed_node_type_x', 'managed_node_type_y']].min(axis=1)
+        df['managed_node_types_set'] = df.apply(
+            lambda row: combine_set(row.get('managed_node_types_set_x'), row.get('managed_node_types_set_y')), axis=1
+        )
+        df['events'] = df.apply(lambda row: combine_set(row.get('events_x'), row.get('events_y')), axis=1)
+        df['canonical_facts'] = df.apply(lambda row: combine_json_values(row.get('canonical_facts_x'), row.get('canonical_facts_y')), axis=1)
+        df['facts'] = df.apply(lambda row: combine_json_values(row.get('facts_x'), row.get('facts_y')), axis=1)
+        df['host_names_before_dedup'] = df.apply(
+            lambda row: combine_set(row.get('host_names_before_dedup_x'), row.get('host_names_before_dedup_y')), axis=1
+        )
+
+        # Drop the _x and _y columns
+        df = df.drop(
+            columns=[
+                'host_runs_x',
+                'host_runs_y',
+                'task_runs_x',
+                'task_runs_y',
+                'first_automation_x',
+                'first_automation_y',
+                'last_automation_x',
+                'last_automation_y',
+                'job_created_x',
+                'job_created_y',
+                'managed_node_type_x',
+                'managed_node_type_y',
+                'managed_node_types_set_x',
+                'managed_node_types_set_y',
+                'events_x',
+                'events_y',
+                'canonical_facts_x',
+                'canonical_facts_y',
+                'facts_x',
+                'facts_y',
+                'host_names_before_dedup_x',
+                'host_names_before_dedup_y',
+            ]
+        )
+
+        return df.astype(
+            {
+                'task_runs': int,
+                'host_runs': int,
+                'managed_node_type': int,
+                'first_automation': 'datetime64[ns]',
+                'last_automation': 'datetime64[ns]',
+                'job_created': 'datetime64[ns]',
+            }
         )
 
     @staticmethod
@@ -144,20 +218,6 @@ class DataframeJobHostSummary(BaseTraditional):
             'first_automation': 'datetime64[ns]',
             'last_automation': 'datetime64[ns]',
             'job_created': 'datetime64[ns]',
-        }
-
-    @staticmethod
-    def operations():
-        return {
-            'first_automation': 'min',
-            'last_automation': 'max',
-            'job_created': 'max',
-            'managed_node_type': 'min',
-            'managed_node_types_set': 'combine_set',
-            'events': 'combine_set',
-            'canonical_facts': 'combine_json_values',
-            'facts': 'combine_json_values',
-            'host_names_before_dedup': 'combine_set',
         }
 
     def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None, deduplicator=None):

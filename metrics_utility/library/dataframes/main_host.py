@@ -1,6 +1,14 @@
 import pandas as pd
 
-from metrics_utility.library.dataframes.base_traditional import BaseTraditional, merge_json_sets, merge_setdicts, merge_sets, parse_json
+from metrics_utility.library.dataframes.base_traditional import (
+    BaseTraditional,
+    combine_json_values,
+    combine_set,
+    merge_json_sets,
+    merge_setdicts,
+    merge_sets,
+    parse_json,
+)
 
 
 def compute_serial(row):
@@ -52,7 +60,8 @@ class DataframeMainHost(BaseTraditional):
             serials=('serial', set),
             host_names_before_dedup=('host_names_before_dedup', set),
         )
-        return self.cast_dataframe(group)
+
+        return group.astype({'last_automation': 'datetime64[ns]'})
 
     # Merge pre-aggregated
     def regroup(self, dataframe):
@@ -66,6 +75,45 @@ class DataframeMainHost(BaseTraditional):
             host_names_before_dedup=('host_names_before_dedup', merge_sets),
         )
 
+    def merge(self, rollup, new_group):
+        if rollup is None:
+            return new_group
+
+        df = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+
+        # Apply aggregations directly
+        df['last_automation'] = df[['last_automation_x', 'last_automation_y']].max(axis=1)
+        df['organizations'] = df.apply(lambda row: combine_set(row.get('organizations_x'), row.get('organizations_y')), axis=1)
+        df['inventories'] = df.apply(lambda row: combine_set(row.get('inventories_x'), row.get('inventories_y')), axis=1)
+        df['canonical_facts'] = df.apply(lambda row: combine_json_values(row.get('canonical_facts_x'), row.get('canonical_facts_y')), axis=1)
+        df['facts'] = df.apply(lambda row: combine_json_values(row.get('facts_x'), row.get('facts_y')), axis=1)
+        df['serials'] = df.apply(lambda row: combine_set(row.get('serials_x'), row.get('serials_y')), axis=1)
+        df['host_names_before_dedup'] = df.apply(
+            lambda row: combine_set(row.get('host_names_before_dedup_x'), row.get('host_names_before_dedup_y')), axis=1
+        )
+
+        # Drop the _x and _y columns
+        df = df.drop(
+            columns=[
+                'last_automation_x',
+                'last_automation_y',
+                'organizations_x',
+                'organizations_y',
+                'inventories_x',
+                'inventories_y',
+                'canonical_facts_x',
+                'canonical_facts_y',
+                'facts_x',
+                'facts_y',
+                'serials_x',
+                'serials_y',
+                'host_names_before_dedup_x',
+                'host_names_before_dedup_y',
+            ]
+        )
+
+        return df.astype({'last_automation': 'datetime64[ns]'})
+
     @staticmethod
     def unique_index_columns():
         return ['host_name', 'install_uuid']
@@ -77,15 +125,3 @@ class DataframeMainHost(BaseTraditional):
     @staticmethod
     def cast_types():
         return {'last_automation': 'datetime64[ns]'}
-
-    @staticmethod
-    def operations():
-        return {
-            'last_automation': 'max',
-            'organizations': 'combine_set',
-            'inventories': 'combine_set',
-            'canonical_facts': 'combine_json_values',
-            'facts': 'combine_json_values',
-            'serials': 'combine_set',
-            'host_names_before_dedup': 'combine_set',
-        }
