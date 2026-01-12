@@ -120,10 +120,10 @@ class TestTotalWorkersVcpu:
             mock_prom_client_class.return_value = mock_prom_client
 
             # Mock helper functions
-            mock_get_cpu.return_value = (16.0, 'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ 1234567890)')
+            mock_get_cpu.return_value = (16.0, 'max_over_time(sum(machine_cpu_cores)[59m59s999ms:5m] @ 1234567890)')
             mock_get_timeline.return_value = [
-                {'timestamp': '2023-01-01T10:00:00+00:00', 'cpu_sum': 16.0},
-                {'timestamp': '2023-01-01T10:05:00+00:00', 'cpu_sum': 16.0},
+                {'timestamp': '2023-01-01T10:00:00.000Z', 'cpu_sum': 16.0},
+                {'timestamp': '2023-01-01T10:05:00.000Z', 'cpu_sum': 16.0},
             ]
 
             with temporary_env(
@@ -172,7 +172,7 @@ class TestTotalWorkersVcpu:
                 assert 'timeline' in logged_json
                 assert 'total_workers_vcpu' in logged_json
                 assert logged_json['usage_based_billing_enabled'] is True
-                assert 'max_over_time(sum(machine_cpu_cores)[59m59s:5m]' in logged_json['promql_query']
+                assert 'max_over_time(sum(machine_cpu_cores)[59m59s999ms:5m]' in logged_json['promql_query']
 
     def test_prometheus_client_creation_failure_raises_metrics_exception(self):
         """Test that PrometheusClient creation failure raises MetricsException."""
@@ -289,7 +289,7 @@ class TestTotalWorkersVcpu:
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
                 query_call = mock_prom_client.get_current_value.call_args[0][0]
-                assert 'max_over_time(sum(machine_cpu_cores)[59m59s:5m]' in query_call
+                assert 'max_over_time(sum(machine_cpu_cores)[59m59s999ms:5m]' in query_call
                 assert '@' in query_call  # Should contain timestamp
 
                 # Verify logging - logger now logs twice: once for info, once for data
@@ -362,7 +362,7 @@ class TestTotalWorkersVcpu:
                 # Verify the query was called with correct PromQL
                 mock_prom_client.get_current_value.assert_called_once()
                 query_call = mock_prom_client.get_current_value.call_args[0][0]
-                expected_query = f'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ {expected_prev_hour_start})'
+                expected_query = f'max_over_time(sum(machine_cpu_cores)[59m59s999ms:5m] @ {expected_prev_hour_start})'
                 assert query_call == expected_query
 
     def test_vcpu_value_converted_to_int(self):
@@ -423,11 +423,13 @@ class TestTotalWorkersVcpu:
                 # Calculate expected timestamp
                 current_ts = mock_now.timestamp()
                 _, prev_hour_end = get_hour_boundaries(current_ts)
-                expected_timestamp = datetime.fromtimestamp(prev_hour_end).isoformat()
+                expected_timestamp = datetime.fromtimestamp(prev_hour_end, timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
                 # Check result timestamp
                 assert 'timestamp' in result
                 assert result['timestamp'] == expected_timestamp
+                assert result['timestamp'].endswith('Z'), "Timestamp should have Z suffix"
+                assert result['timestamp'].endswith('.999Z'), "Timestamp should end with .999Z for hour boundary"
 
                 # Check logged JSON - logger now logs twice: once for info, once for data
                 assert mock_logger_info.info.call_count == 2
@@ -435,6 +437,8 @@ class TestTotalWorkersVcpu:
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert logged_json['end_timestamp'] == expected_timestamp
+                assert logged_json['end_timestamp'].endswith('Z'), "end_timestamp should have Z suffix"
+                assert logged_json['end_timestamp'].endswith('.999Z'), "end_timestamp should end with .999Z"
                 assert logged_json['cluster_name'] == 'test-cluster'
                 assert logged_json['total_workers_vcpu'] == 8
                 assert logged_json['usage_based_billing_enabled']
@@ -472,12 +476,12 @@ class TestGetHourBoundaries:
 
         prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-        # Previous hour should be 14:00:00 to 14:59:59
+        # Previous hour should be 14:00:00 to 14:59:59.999
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
-        expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
+        expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
 
         assert prev_hour_start == expected_prev_hour_start
-        assert prev_hour_end == expected_prev_hour_end
+        assert prev_hour_end == pytest.approx(expected_prev_hour_end)
 
     def test_get_hour_boundaries_at_hour_boundary(self):
         """Test get_hour_boundaries when current time is exactly at hour boundary."""
@@ -487,12 +491,12 @@ class TestGetHourBoundaries:
 
         prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-        # Previous hour should be 14:00:00 to 14:59:59
+        # Previous hour should be 14:00:00 to 14:59:59.999
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
-        expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, tzinfo=timezone.utc).timestamp()
+        expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
 
         assert prev_hour_start == expected_prev_hour_start
-        assert prev_hour_end == expected_prev_hour_end
+        assert prev_hour_end == pytest.approx(expected_prev_hour_end)
 
     def test_get_hour_boundaries_different_times(self):
         """Test get_hour_boundaries with different times throughout the day."""
@@ -510,7 +514,7 @@ class TestGetHourBoundaries:
             prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
             expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
-            expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, tzinfo=timezone.utc).timestamp()
+            expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
 
             assert prev_hour_start == expected_prev_hour_start
-            assert prev_hour_end == expected_prev_hour_end
+            assert prev_hour_end == pytest.approx(expected_prev_hour_end)
