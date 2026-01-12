@@ -1,4 +1,3 @@
-import contextlib
 import json
 import os
 
@@ -10,16 +9,8 @@ import metrics_utility.base as base
 
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
-
-
-# work around https://github.com/ansible/awx/pull/15676
-try:
-    # 2.4, early 2.5
-    from awx.main.utils.pglock import advisory_lock
-except ImportError:
-    # later 2.5, 2.6
-    from ansible_base.lib.utils.db import advisory_lock
 
 
 class Collector(base.Collector):
@@ -52,7 +43,7 @@ class Collector(base.Collector):
         if suffix:
             key = f'gather_automation_controller_billing_{suffix}_lock'
 
-        with self._pg_advisory_lock(key, wait=False) as acquired:
+        with lock(key, wait=False, db=connection) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
@@ -96,12 +87,6 @@ class Collector(base.Collector):
 
         return base.Collector.registered_collectors(collectors)
 
-    @contextlib.contextmanager
-    def _pg_advisory_lock(self, key, wait=False):
-        """Use awx specific implementation to pass tests with sqlite3"""
-        with advisory_lock(key, wait=wait) as lock:
-            yield lock
-
     def _load_last_gathered_entries(self):
         # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
         # We can safely do this, by making sure we use the same lock as Analytics, before we persist
@@ -119,7 +104,7 @@ class Collector(base.Collector):
         if self.ship and not disabled:
             # We need to wait on analytics lock, to update the last collected timestamp settings
             # so we don't clash with analytics job collection.
-            with self._pg_advisory_lock('gather_analytics_lock', wait=True):
+            with lock('gather_analytics_lock', wait=True, db=connection):
                 # We need to load fresh settings again as we're obtaning the lock, since
                 # Analytics job could have changed this on the background and we'd be resetting
                 # the Analytics values here.

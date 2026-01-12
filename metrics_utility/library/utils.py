@@ -1,35 +1,30 @@
+import datetime
 import os
 import tempfile
 
 from contextlib import contextmanager
 
-from .debug import indent, log
+from .debug import log
 
 
 @contextmanager
-def lock(db=None, key=None, wait=None):
-    log('library.utils lock')
-    indent(1)
-    try:
-        yield
-    finally:
-        indent(-1)
-        log('/library.utils lock')
+def tempdir(prefix=None, cleanup=True):
+    # Generate timestamp using the codebase convention: '%Y-%m-%d-%H%M%S%z'
+    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d-%H%M%S%z')
 
+    # Combine prefix with timestamp
+    if prefix:
+        dir_prefix = f'{prefix}-{timestamp}-'
+    else:
+        dir_prefix = f'{timestamp}-'
 
-@contextmanager
-def tempdir(prefix=None):
-    log('library.utils tempdir')
-    indent(1)
-    with tempfile.TemporaryDirectory(prefix=prefix) as temp_dir:
+    with tempfile.TemporaryDirectory(prefix=dir_prefix, delete=cleanup) as temp_dir:
         original_dir = os.getcwd()
         os.chdir(temp_dir)
         try:
             yield temp_dir
         finally:
             os.chdir(original_dir)
-            indent(-1)
-            log('/library.utils tempdir')
 
 
 def last_gather(db=None, key=None):

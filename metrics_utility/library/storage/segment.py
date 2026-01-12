@@ -17,8 +17,10 @@ except ImportError:
 
 class StorageSegment:
     # Size limits for Segment messages
-    REGULAR_MESSAGE_LIMIT = 32 * 1024  # 32KB for regular messages
-    BULK_MESSAGE_LIMIT = 512 * 1024 * 1024  # 512MB for bulk messages
+    # 32KB for regular messages, but leave some room for the additional metadata
+    REGULAR_MESSAGE_LIMIT = 24 * 1024
+    # 512MB for bulk messages, but leave some room for the additional metadata
+    BULK_MESSAGE_LIMIT = 500 * 1024 * 1024
 
     def __init__(self, **settings):
         self.debug = settings.get('debug', False)
@@ -41,7 +43,10 @@ class StorageSegment:
         Split data into chunks based on max_size.
 
         Args:
-            data: Dictionary or list of data to split
+            data: Dictionary to split, dictionary contains key : value pairs
+            Those key value pairs are either dicts or list
+            only lists are split into chunks, dicts are not split, thus dicts can not
+            be larger than max_size
             max_size: Maximum size in bytes for each chunk
 
         Returns:
@@ -49,88 +54,35 @@ class StorageSegment:
         """
         chunks = []
 
-        # If data is a list, split the list items
-        if isinstance(data, list):
-            current_chunk = []
-            current_size = 0
+        size_of_data = self._calculate_size(data)
+        if size_of_data < max_size:
+            return [data]
 
-            for item in data:
-                item_size = self._calculate_size(item)
+        if data is not None and not isinstance(data, dict):
+            msg = f'Data is not a dictionary, got {type(data).__name__}'
+            raise Exception(msg)
 
-                # If single item exceeds max_size, handle specially
-                if item_size > max_size:
-                    # Save current chunk if it has items
-                    if current_chunk:
-                        chunks.append(current_chunk)
-                        current_chunk = []
-                        current_size = 0
+        for key, value in data.items():
+            if isinstance(value, dict):
+                # always add to chunks, each key in main dict is a separate chunk
+                chunks.append({key: value})
 
-                    # If it's a dict, try to split its keys
-                    if isinstance(item, dict):
-                        sub_chunks = self._split_dict_into_chunks(item, max_size)
-                        chunks.extend(sub_chunks)
+            elif isinstance(value, list):
+                active_chunk = {key: []}
+
+                for item in value:
+                    active_chunk_size = self._calculate_size(active_chunk)
+                    item_size = self._calculate_size(item)
+                    if active_chunk_size + item_size > max_size:
+                        chunks.append(active_chunk)
+                        active_chunk = {key: [item]}
                     else:
-                        # Item is too large and can't be split
-                        msg = f'Warning: Single item exceeds max size ({item_size} > {max_size}), sending anyway'
-                        print(msg, file=sys.stderr)
-                        chunks.append([item])
-                elif current_size + item_size > max_size:
-                    # Current chunk is full, start a new one
-                    chunks.append(current_chunk)
-                    current_chunk = [item]
-                    current_size = item_size
-                else:
-                    # Add item to current chunk
-                    current_chunk.append(item)
-                    current_size += item_size
+                        active_chunk[key].append(item)
 
-            # Add remaining items
-            if current_chunk:
-                chunks.append(current_chunk)
-
-        # If data is a dict, split by keys
-        elif isinstance(data, dict):
-            chunks = self._split_dict_into_chunks(data, max_size)
-
-        else:
-            # Single value, return as is
-            chunks.append(data)
+                if len(active_chunk[key]) > 0:
+                    chunks.append(active_chunk)
 
         return chunks if chunks else [data]
-
-    def _split_dict_into_chunks(self, data_dict, max_size):
-        """Split a dictionary into chunks by grouping keys."""
-        chunks = []
-        current_chunk = {}
-        current_size = 0
-
-        for key, value in data_dict.items():
-            item = {key: value}
-            item_size = self._calculate_size(item)
-
-            if item_size > max_size:
-                # Single key-value pair is too large
-                if current_chunk:
-                    chunks.append(current_chunk)
-                    current_chunk = {}
-                    current_size = 0
-                msg = f"Warning: Single key-value pair '{key}' exceeds max size ({item_size} > {max_size}), sending anyway"
-                print(msg, file=sys.stderr)
-                chunks.append(item)
-            elif current_size + item_size > max_size:
-                # Current chunk is full
-                chunks.append(current_chunk)
-                current_chunk = {key: value}
-                current_size = item_size
-            else:
-                # Add to current chunk
-                current_chunk[key] = value
-                current_size += item_size
-
-        if current_chunk:
-            chunks.append(current_chunk)
-
-        return chunks
 
     def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None):
         """
@@ -150,6 +102,7 @@ class StorageSegment:
         - 32KB for regular messages
         - 512MB for bulk messages (when use_bulk=True)
         """
+        chunks = []
         if filename or fileobj or dict is None:
             msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
             raise Exception(msg)
@@ -178,51 +131,19 @@ class StorageSegment:
 
         # Determine size limit based on bulk mode
         max_size = self.BULK_MESSAGE_LIMIT if self.use_bulk else self.REGULAR_MESSAGE_LIMIT
+        chunks = self._split_into_chunks(dict, max_size)
 
-        # Calculate data size
-        data_size = self._calculate_size(dict)
+        total_chunks = len(chunks)
 
-        # Split into chunks if necessary
-        if data_size > max_size:
+        if self.debug:
+            msg = f'Split data into {total_chunks} chunks'
+            print(msg, file=sys.stderr)
+
+        # Send each chunk
+        for i, chunk in enumerate(chunks, 1):
+            chunk_size = self._calculate_size(chunk)
             if self.debug:
-                msg = f'Data size ({data_size} bytes) exceeds limit ({max_size} bytes), splitting into chunks'
-                print(msg, file=sys.stderr)
-
-            chunks = self._split_into_chunks(dict, max_size)
-            total_chunks = len(chunks)
-
-            if self.debug:
-                msg = f'Split data into {total_chunks} chunks'
-                print(msg, file=sys.stderr)
-
-            # Send each chunk
-            for i, chunk in enumerate(chunks, 1):
-                chunk_size = self._calculate_size(chunk)
-                if self.debug:
-                    msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes)'
-                    print(msg, file=sys.stderr)
-
-                analytics.track(
-                    anonymous_id=anonymous_id,
-                    event=event_name,
-                    properties={
-                        'artifact_name': artifact_name,
-                        'data': chunk,
-                        'upload_timestamp': (datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
-                        'chunk_info': {
-                            'chunk_number': i,
-                            'total_chunks': total_chunks,
-                            'chunk_size': chunk_size,
-                        },
-                    },
-                )
-
-            # Flush to ensure all events are sent
-            analytics.flush()
-        else:
-            # Data fits in a single message
-            if self.debug:
-                msg = f'Sending data in single message (size: {data_size} bytes)'
+                msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes)'
                 print(msg, file=sys.stderr)
 
             analytics.track(
@@ -230,11 +151,17 @@ class StorageSegment:
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
-                    'data': dict,
+                    'data': chunk,
                     'upload_timestamp': (datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
-                    'data_size': data_size,
+                    'chunk_info': {
+                        'chunk_number': i,
+                        'total_chunks': total_chunks,
+                        'chunk_size': chunk_size,
+                    },
                 },
             )
 
-            # Flush to ensure event is sent
-            analytics.flush()
+        # Flush to ensure all events are sent
+        analytics.flush()
+
+        return chunks

@@ -22,6 +22,6 @@ def test_base_counts():
     result = result['json']
 
     # Expected values
-    assert result['total_EE'] == 5
-    assert result['default_EE'] == 2  # two True
-    assert result['custom_EE'] == 3  # total - default
+    assert result['EE_total'] == 5
+    assert result['EE_default_total'] == 2  # two True
+    assert result['EE_custom_total'] == 3  # total - default

@@ -1,5 +1,3 @@
-import contextlib
-import hashlib
 import inspect
 import logging
 import os
@@ -9,8 +7,10 @@ import tempfile
 
 from abc import abstractmethod
 
+from django.db import connection
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
 from .collection import Collection
@@ -107,7 +107,7 @@ class Collector:
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        with self._pg_advisory_lock('gather_analytics_lock', wait=False) as acquired:
+        with lock('gather_analytics_lock', wait=False, db=connection) as acquired:
             if not acquired:
                 logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
                 return None
@@ -307,30 +307,6 @@ class Collector:
         package.add_collection(collection)
         if collection.ship_immediately():
             self._process_package(package)
-
-    @contextlib.contextmanager
-    def _pg_advisory_lock(self, key, wait=False):
-        """Postgres db lock"""
-        connection = self.db_connection()
-
-        if connection is None:
-            yield True
-        else:
-            # Build 64-bit integer out of the resource id
-            resource_key = int(hashlib.sha512(key.encode()).hexdigest(), 16) % 2**63
-
-            cursor = connection.cursor()
-
-            try:
-                if wait:
-                    cursor.execute('SELECT pg_advisory_lock(%s);', (resource_key,))
-                else:
-                    cursor.execute('SELECT pg_try_advisory_lock(%s);', (resource_key,))
-                acquired = cursor.fetchall()[0][0]
-                yield acquired
-            finally:
-                cursor.execute('SELECT pg_advisory_unlock(%s);', (resource_key,))
-                cursor.close()
 
     def _process_packages(self):
         for group, packages in self.packages.items():

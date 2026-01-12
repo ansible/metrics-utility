@@ -5,6 +5,20 @@ import tempfile
 from ..csv_file_splitter import CsvFileSplitter
 
 
+# FIXME: psycopg.sql
+def date_where(field, since, until):
+    if since and until:
+        return f'( "{field}" >= \'{since.isoformat()}\' AND "{field}" < \'{until.isoformat()}\' )'
+
+    if since:
+        return f'( "{field}" >= \'{since.isoformat()}\' )'
+
+    if until:
+        return f'( "{field}" < \'{until.isoformat()}\' )'
+
+    return 'true'
+
+
 def collector(func):
     """Decorator that creates a collector class and returns a constructor function."""
 
@@ -32,7 +46,7 @@ def init_tmp_dir():
     return gather_dir
 
 
-def copy_table(db, table, query, params=None, prepend_query=False, output_file=None, output_dir=None):
+def copy_table(db, table, query, params=None, prepend_query=False, output_file=None, output_dir='.'):
     file = output_file
     if not output_file:
         path = output_dir or init_tmp_dir()

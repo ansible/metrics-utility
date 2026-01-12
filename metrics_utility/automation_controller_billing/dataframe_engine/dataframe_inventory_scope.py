@@ -23,9 +23,11 @@ class DataframeInventoryScope(Base):
             # Generate the monthly dataset for report
             ###############################
 
-            for data in self.extractor.iter_batches(date=date, collections=['main_host'], optional=['config']):
+            for data in self.extractor.iter_batches(date=date, collections=['main_host', 'main_host_daily'], optional=['config']):
                 # If the dataframe is empty, skip additional processing
                 billing_data = data['main_host']
+                if billing_data.empty:
+                    billing_data = data['main_host_daily']
                 if billing_data.empty:
                     continue
 

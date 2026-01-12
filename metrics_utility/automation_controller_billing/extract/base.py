@@ -9,6 +9,16 @@ from metrics_utility.exceptions import MetricsException
 from metrics_utility.logger import logger
 
 
+_main_host_sheets = [
+    'inventory_scope',
+    'jobs',
+    'managed_nodes',
+    'managed_nodes_by_organizations',
+    'usage_by_collections',
+    'usage_by_modules',
+    'usage_by_roles',
+]
+
 # csv name => [ sheet_names ]
 CSV_SHEETS = {
     'job_host_summary': [
@@ -19,15 +29,8 @@ CSV_SHEETS = {
         'managed_nodes_by_organizations',
         'usage_by_organizations',
     ],
-    'main_host': [
-        'inventory_scope',
-        'jobs',
-        'managed_nodes',
-        'managed_nodes_by_organizations',
-        'usage_by_collections',
-        'usage_by_modules',
-        'usage_by_roles',
-    ],
+    'main_host': _main_host_sheets,
+    'main_host_daily': _main_host_sheets,
     'main_indirectmanagednodeaudit': [
         'indirectly_managed_nodes',
         'managed_nodes',
@@ -69,6 +72,7 @@ class Base:
             'main_indirectmanagednodeaudit': empty_dataframe,
             'job_host_summary': empty_dataframe,
             'main_host': empty_dataframe,
+            'main_host_daily': empty_dataframe,
             'main_jobevent': empty_dataframe,
         }
 
@@ -90,6 +94,9 @@ class Base:
         if self.csv_enabled('main_host'):
             needed_data['main_host'] = self.build_data_batch(temp_dir, 'main_host')
 
+        if self.csv_enabled('main_host_daily'):
+            needed_data['main_host_daily'] = self.build_data_batch(temp_dir, 'main_host_daily')
+
         return needed_data
 
     def build_data_batch(self, temp_dir, file_name):
@@ -98,7 +105,7 @@ class Base:
         """
 
         if os.path.exists(os.path.join(temp_dir, f'{file_name}.csv')):
-            return pd.read_csv(os.path.join(temp_dir, f'{file_name}.csv'))
+            return pd.read_csv(os.path.join(temp_dir, f'{file_name}.csv'), encoding='utf-8')
         else:
             return pd.DataFrame([{}])
 

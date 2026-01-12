@@ -1,11 +1,11 @@
 """
-This test verifies that data split into multiple tarballs is correctly concatenated.
-It tests the logic for loading and merging dataframes from multiple tarball files.
+This test verifies that data split into multiple CSV files is correctly concatenated.
+It tests the logic for loading and merging dataframes from multiple CSV files.
 
 The test:
 1. Takes data from other test files (jobs, events, execution_environments, jobhostsummary)
-2. Splits each dataset into 2-3 separate tarballs
-3. Creates tarball files with CSV data inside
+2. Splits each dataset into 2-3 separate CSV files
+3. Creates CSV files with the split data
 4. Tests that compute_anonymized_rollup_from_raw_data properly loads and concatenates the data
 5. Validates the final output matches expected aggregated results
 
@@ -20,9 +20,8 @@ Enhanced Assertions:
 
 import os
 import shutil
-import tarfile
 
-from io import BytesIO
+from datetime import datetime
 
 import pandas as pd
 import pytest
@@ -52,40 +51,36 @@ def cleanup_test_data():
     #     shutil.rmtree(out_dir)
 
 
-def create_tarball_with_csv(data_list, csv_filename, tarball_path):
+def create_csv_file(data_list, csv_path):
     """
-    Create a tarball containing a single CSV file.
+    Create a CSV file from a list of dictionaries.
 
     Args:
         data_list: List of dictionaries to convert to CSV
-        csv_filename: Name of the CSV file inside the tarball
-        tarball_path: Path where to save the tarball
+        csv_path: Path where to save the CSV file
+
+    Returns:
+        The path to the created CSV file, or None if data_list is empty
     """
     # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(tarball_path), exist_ok=True)
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
 
-    # Skip creating tarballs for empty data
+    # Skip creating CSV for empty data
     if not data_list:
-        return
+        return None
 
     # Convert list of dicts to DataFrame then to CSV
     df = pd.DataFrame(data_list)
-    csv_buffer = BytesIO()
-    df.to_csv(csv_buffer, index=False)
-    csv_buffer.seek(0)
+    df.to_csv(csv_path, index=False, encoding='utf-8')
 
-    # Create tarball with the CSV file inside
-    with tarfile.open(tarball_path, 'w:gz') as tar:
-        tarinfo = tarfile.TarInfo(name=csv_filename)
-        tarinfo.size = len(csv_buffer.getvalue())
-        tar.addfile(tarinfo, csv_buffer)
+    return csv_path
 
 
-def test_multiple_tarballs_concatenation(cleanup_test_data):
+def test_multiple_csv_files_concatenation(cleanup_test_data):
     """
-    Test that multiple tarballs are properly concatenated and aggregated.
+    Test that multiple CSV files are properly concatenated and aggregated.
 
-    This test splits the test data into multiple tarballs (2-3 parts each)
+    This test splits the test data into multiple CSV files (2-3 parts each)
     and verifies that the concatenation logic works correctly.
 
     The test validates:
@@ -100,47 +95,83 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
        - Playbook-level module usage
     5. **Anonymization**: Verifies all sensitive names are properly hashed
     """
+
+    # since = begining of the day
+    # until = begining of the next day
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+
     base_path = './out'
-    year, month, day = 2025, 6, 13
+    year, month, day = since.year, since.month, since.day
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
 
-    # ========== Split and create tarball files for each collector ==========
+    # ========== Split and create CSV files for each collector ==========
 
-    # 1. Jobs data - split into 2 tarballs
+    # 1. Jobs data - split into 2 CSV files
     jobs_part1 = jobs[:3]  # First 3 jobs
     jobs_part2 = jobs[3:]  # Remaining jobs
 
-    create_tarball_with_csv(jobs_part1, 'unified_jobs.csv', f'{data_dir}/tarball1_unified_jobs.tar.gz')
-    create_tarball_with_csv(jobs_part2, 'unified_jobs.csv', f'{data_dir}/tarball2_unified_jobs.tar.gz')
+    jobs_csv_files = []
+    csv1 = create_csv_file(jobs_part1, f'{data_dir}/part1_unified_jobs.csv')
+    if csv1:
+        jobs_csv_files.append(csv1)
+    csv2 = create_csv_file(jobs_part2, f'{data_dir}/part2_unified_jobs.csv')
+    if csv2:
+        jobs_csv_files.append(csv2)
 
-    # 2. Events data - split into 3 tarballs
-    # Note: collector name is 'main_jobevent_service'
+    # 2. Events data - split into 3 CSV files
     events_part1 = events[:100]  # First 100 events
     events_part2 = events[100:200]  # Middle events
     events_part3 = events[200:]  # Remaining events
 
-    create_tarball_with_csv(events_part1, 'main_jobevent_service.csv', f'{data_dir}/tarball1_main_jobevent_service.tar.gz')
-    create_tarball_with_csv(events_part2, 'main_jobevent_service.csv', f'{data_dir}/tarball2_main_jobevent_service.tar.gz')
-    create_tarball_with_csv(events_part3, 'main_jobevent_service.csv', f'{data_dir}/tarball3_main_jobevent_service.tar.gz')
+    events_csv_files = []
+    csv1 = create_csv_file(events_part1, f'{data_dir}/part1_main_jobevent.csv')
+    if csv1:
+        events_csv_files.append(csv1)
+    csv2 = create_csv_file(events_part2, f'{data_dir}/part2_main_jobevent.csv')
+    if csv2:
+        events_csv_files.append(csv2)
+    csv3 = create_csv_file(events_part3, f'{data_dir}/part3_main_jobevent.csv')
+    if csv3:
+        events_csv_files.append(csv3)
 
-    # 3. Execution environments - split into 2 tarballs
+    # 3. Execution environments - split into 2 CSV files
     ee_part1 = execution_environments[:2]
     ee_part2 = execution_environments[2:]
 
-    create_tarball_with_csv(ee_part1, 'execution_environments.csv', f'{data_dir}/tarball1_execution_environments.tar.gz')
-    create_tarball_with_csv(ee_part2, 'execution_environments.csv', f'{data_dir}/tarball2_execution_environments.tar.gz')
+    ee_csv_files = []
+    csv1 = create_csv_file(ee_part1, f'{data_dir}/part1_execution_environments.csv')
+    if csv1:
+        ee_csv_files.append(csv1)
+    csv2 = create_csv_file(ee_part2, f'{data_dir}/part2_execution_environments.csv')
+    if csv2:
+        ee_csv_files.append(csv2)
 
-    # 4. Job host summary - split into 2 tarballs
-    # Note: collector name is 'job_host_summary_service'
+    # 4. Job host summary - split into 2 CSV files
     jhs_part1 = jobhostsummary[:8]  # First 8 entries
     jhs_part2 = jobhostsummary[8:]  # Remaining entries
 
-    create_tarball_with_csv(jhs_part1, 'job_host_summary_service.csv', f'{data_dir}/tarball1_job_host_summary_service.tar.gz')
-    create_tarball_with_csv(jhs_part2, 'job_host_summary_service.csv', f'{data_dir}/tarball2_job_host_summary_service.tar.gz')
+    jhs_csv_files = []
+    csv1 = create_csv_file(jhs_part1, f'{data_dir}/part1_job_host_summary.csv')
+    if csv1:
+        jhs_csv_files.append(csv1)
+    csv2 = create_csv_file(jhs_part2, f'{data_dir}/part2_job_host_summary.csv')
+    if csv2:
+        jhs_csv_files.append(csv2)
 
     # ========== Run the anonymized rollup computation ==========
 
-    result = compute_anonymized_rollup_from_raw_data(salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False)
+    # Create input_data dict with lists of CSV file paths
+    input_data = {
+        'unified_jobs': jobs_csv_files,
+        'job_host_summary': jhs_csv_files,
+        'main_jobevent': events_csv_files,
+        'execution_environments': ee_csv_files,
+    }
+
+    result = compute_anonymized_rollup_from_raw_data(
+        input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
+    )
 
     # print the result with pretty json
     import json
@@ -148,13 +179,13 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     # Note: result is already sanitized by compute_anonymized_rollup_from_raw_data
     json_content = json.dumps(result, indent=4)
     print('\n' + '=' * 80)
-    print('=== ANONYMIZED ROLLUP RESULT (from multiple tarballs) ===')
+    print('=== ANONYMIZED ROLLUP RESULT (from multiple CSV files) ===')
     print('=' * 80)
     print(json_content)
     print('=' * 80)
 
     # save the result as json inside rollups/2025/06/13/anonymized.json - based on the year, month, day
-    json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized.json'
+    json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
 
     # ensure the directory exists
     os.makedirs(os.path.dirname(json_path), exist_ok=True)
@@ -227,15 +258,15 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert t3['job_waiting_time_average_in_seconds'] is None
 
     # ========== Validate Execution Environments ==========
-    assert result['statistics']['total_EE'] == 5
-    assert result['statistics']['default_EE'] == 2
-    assert result['statistics']['custom_EE'] == 3
+    assert result['statistics']['EE_total'] == 5
+    assert result['statistics']['EE_default_total'] == 2
+    assert result['statistics']['EE_custom_total'] == 3
 
     # ========== Validate Job Host Summary ==========
     jhs_list = result['job_host_summary']
     assert isinstance(jhs_list, list), 'job_host_summary should be a list'
     assert len(jhs_list) == 2  # T1 and T2
-    assert result['statistics']['total_unique_hosts'] == 5, 'Should have 5 unique hosts (h1-h5)'
+    assert result['statistics']['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1-h5)'
 
     # Verify data was concatenated from both tarballs
     # verify number of ok, failures, skipped, ignored, rescued, dark for each template
@@ -258,7 +289,7 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
 
     # Verify values from concatenated data across 3 tarballs
     assert result['statistics']['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert result['statistics']['total_hosts_automated'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert result['statistics']['hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
     assert result['statistics']['avg_number_of_modules_used_in_a_playbooks'] == pytest.approx(3.0), 'Average modules per playbook should be 3.0'
 
     # Check specific known modules are present in module_stats
@@ -325,26 +356,39 @@ def test_multiple_tarballs_concatenation(cleanup_test_data):
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
 
-def test_empty_tarballs_handling(cleanup_test_data):
+def test_empty_csv_files_handling(cleanup_test_data):
     """
-    Test that the system handles case with no tarball files gracefully.
+    Test that the system handles case with no CSV files gracefully.
     """
+
     base_path = './out'
-    year, month, day = 2025, 6, 14
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+    year, month, day = since.year, since.month, since.day
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
 
-    # Create the directory but don't create any tarball files
+    # Create the directory but don't create any CSV files
     # This simulates a scenario where no data was collected
     os.makedirs(data_dir, exist_ok=True)
 
+    # Create input_data dict with empty lists
+    input_data = {
+        'unified_jobs': [],
+        'job_host_summary': [],
+        'main_jobevent': [],
+        'execution_environments': [],
+    }
+
     # Should not crash, but return empty/default results
-    result = compute_anonymized_rollup_from_raw_data(salt='test_salt', year=year, month=month, day=day, base_path=base_path, save_rollups=False)
+    result = compute_anonymized_rollup_from_raw_data(
+        input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
+    )
 
     # Print the result for debugging
     import json
 
     json_content = json.dumps(result, indent=4)
-    print('\n=== Empty Tarball Result ===')
+    print('\n=== Empty CSV Files Result ===')
     print(json_content)
 
     # Validate flattened structure exists even with empty data
@@ -360,22 +404,22 @@ def test_empty_tarballs_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     assert 'modules_used_to_automate_total' in statistics
     assert 'avg_number_of_modules_used_in_a_playbooks' in statistics
-    assert 'total_hosts_automated' in statistics
-    assert 'total_EE' in statistics
-    assert 'default_EE' in statistics
-    assert 'custom_EE' in statistics
+    assert 'hosts_automated_total' in statistics
+    assert 'EE_total' in statistics
+    assert 'EE_default_total' in statistics
+    assert 'EE_custom_total' in statistics
     assert 'jobs_total' in statistics
-    assert 'total_unique_hosts' in statistics
+    assert 'unique_hosts_total' in statistics
 
     # All statistics should be None for empty data
     assert statistics['modules_used_to_automate_total'] is None
     assert statistics['avg_number_of_modules_used_in_a_playbooks'] is None
-    assert statistics['total_hosts_automated'] is None
-    assert statistics['total_EE'] is None
-    assert statistics['default_EE'] is None
-    assert statistics['custom_EE'] is None
+    assert statistics['hosts_automated_total'] is None
+    assert statistics['EE_total'] is None
+    assert statistics['EE_default_total'] is None
+    assert statistics['EE_custom_total'] is None
     assert statistics['jobs_total'] is None
-    assert statistics['total_unique_hosts'] is None
+    assert statistics['unique_hosts_total'] is None
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_template'], list), 'jobs_by_template should be a list'
