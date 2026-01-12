@@ -428,8 +428,8 @@ class TestTotalWorkersVcpu:
                 # Check result timestamp
                 assert 'timestamp' in result
                 assert result['timestamp'] == expected_timestamp
-                assert result['timestamp'].endswith('Z'), "Timestamp should have Z suffix"
-                assert result['timestamp'].endswith('.999Z'), "Timestamp should end with .999Z for hour boundary"
+                assert result['timestamp'].endswith('Z'), 'Timestamp should have Z suffix'
+                assert result['timestamp'].endswith('.999Z'), 'Timestamp should end with .999Z for hour boundary'
 
                 # Check logged JSON - logger now logs twice: once for info, once for data
                 assert mock_logger_info.info.call_count == 2
@@ -437,8 +437,8 @@ class TestTotalWorkersVcpu:
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert logged_json['end_timestamp'] == expected_timestamp
-                assert logged_json['end_timestamp'].endswith('Z'), "end_timestamp should have Z suffix"
-                assert logged_json['end_timestamp'].endswith('.999Z'), "end_timestamp should end with .999Z"
+                assert logged_json['end_timestamp'].endswith('Z'), 'end_timestamp should have Z suffix'
+                assert logged_json['end_timestamp'].endswith('.999Z'), 'end_timestamp should end with .999Z'
                 assert logged_json['cluster_name'] == 'test-cluster'
                 assert logged_json['total_workers_vcpu'] == 8
                 assert logged_json['usage_based_billing_enabled']

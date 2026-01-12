@@ -685,9 +685,12 @@ def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_
                 if 'values' in series:
                     for timestamp_val, cpu_val in series['values']:
                         result.append(
-                            {'timestamp': datetime.fromtimestamp(float(timestamp_val),
-                                                                 timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
-                             'cpu_sum': float(cpu_val)}
+                            {
+                                'timestamp': datetime.fromtimestamp(float(timestamp_val), timezone.utc)
+                                .isoformat(timespec='milliseconds')
+                                .replace('+00:00', 'Z'),
+                                'cpu_sum': float(cpu_val),
+                            }
                         )
 
         # Sort by timestamp
