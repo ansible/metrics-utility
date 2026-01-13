@@ -17,9 +17,9 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
 
     info = {
         'cluster_name': cluster_name,
-        'collection_timestamp': datetime.fromtimestamp(current_ts).isoformat(),
-        'start_timestamp': datetime.fromtimestamp(prev_hour_start).isoformat(),
-        'end_timestamp': datetime.fromtimestamp(prev_hour_end).isoformat(),
+        'collection_timestamp': datetime.fromtimestamp(current_ts, timezone.utc).isoformat(),
+        'start_timestamp': datetime.fromtimestamp(prev_hour_start, timezone.utc).isoformat(),
+        'end_timestamp': datetime.fromtimestamp(prev_hour_end, timezone.utc).isoformat(),
         'usage_based_billing_enabled': metering_enabled,
         # total_workers_vcpu
         # promql_query

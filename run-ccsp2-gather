@@ -5,16 +5,15 @@ cd "`dirname "$0"`"
 export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="directory"
 
-# FIXME: total_workers_vcpu needs more setup
+# total_workers_vcpu excluded - see ./run-vcpu
 export METRICS_UTILITY_OPTIONAL_COLLECTORS="execution_environments,job_host_summary_service,main_host,main_indirectmanagednodeaudit,main_jobevent,main_jobevent_service,unified_jobs"
 
 if ! pg_isready -h localhost; then
-  echo "run-s3-gather-build: DB not ready, run make compose first"
+  echo "run-ccsp2-gather: DB not ready, run make compose first"
   exit 1
 fi
 
-TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
-$TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+env time -format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force "$@"
 
 set -x

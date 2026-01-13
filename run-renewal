@@ -7,12 +7,11 @@ export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="controller_db"
 
 if ! pg_isready -h localhost; then
-  echo "run-s3-gather-build: DB not ready, run make compose first"
+  echo "run-renewal: DB not ready, run make compose first"
   exit 1
 fi
 
-TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
-$TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+env time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
 uv run ./manage.py build_report --since=12months --ephemeral=1month --force "$@"
 
 set -x

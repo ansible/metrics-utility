@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+cd "`dirname "$0"`"
+
+export METRICS_UTILITY_CLUSTER_NAME="aap-dev"
+export METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR="true"
+export METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES="true"
+export METRICS_UTILITY_OPTIONAL_COLLECTORS="total_workers_vcpu"
+export METRICS_UTILITY_PROMETHEUS_URL="http://localhost:12345" # FIXME
+export METRICS_UTILITY_SHIP_PATH="./out/vcpu"
+export METRICS_UTILITY_SHIP_TARGET="directory"
+export METRICS_UTILITY_USAGE_BASED_METERING_ENABLED="true"
+
+if ! pg_isready -h localhost; then
+  echo "run-vcpu: DB not ready, run make compose first"
+  exit 1
+fi
+
+env time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+uv run ./manage.py gather_automation_controller_billing_data --ship --verbose
+
+set -x
+ls -lR out/vcpu/data/`date +%Y`/

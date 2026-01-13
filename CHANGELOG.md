@@ -8,6 +8,16 @@
 - TODO
 
 
+## 0.6.3
+
+- vcpu collector - add timezone info to timestamps where missing
+
+
+## 0.6.2
+
+- vcpu collector - add extra log info
+
+
 ## 0.6.1
 
 - vcpu collector - use prometheus

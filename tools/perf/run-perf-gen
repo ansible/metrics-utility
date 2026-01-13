@@ -2,9 +2,8 @@
 set -e
 cd "`dirname "$0"`"
 
-TIME=`command -v gtime >/dev/null && echo 'gtime' || echo '/usr/bin/time'`
 measure() {
-  "$TIME" --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' -o /dev/stdout "$@"
+  env time --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' -o /dev/stdout "$@"
 }
 
 log() {
