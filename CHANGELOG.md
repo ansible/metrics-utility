@@ -4,15 +4,18 @@
 
 - `host_metric` command
 
+
 ## 0.0.2
 
 - `gather_automation_controller_billing_data` command
+
 
 ## 0.0.3
 
 - `gather_automation_controller_billing_data` command extension
   Adding ability to run without "since specified", collecting any
   gap automatically.
+
 
 ## 0.0.4
 
@@ -22,19 +25,23 @@
   will be stored in a provided directory in daily partitions
 - adding `build_report` command that can build .xlsx reports locally
 
+
 ## 0.0.5
 
 - adding proxy support for `gather_automation_controller_billing_data` command
 - adding crc service account support for `gather_automation_controller_billing_data` command
 
+
 ## 0.1.0
 
 - change local storage schema from year={year}/month={month}/day={day} to /{year}/{month}/{day}
+
 
 ## 0.2.0
 
 - Take `ansible_host` and `ansible_connection` from host variables, use `ansible_host` instead
   of `host_name` if it's present for the CCSP(and other) reports
+
 
 ## 0.3.0
 
@@ -42,6 +49,7 @@
 - Both CCSP and CCSPv2 reports are getting extra sheets with additional usage stats
 - Fix tar.extractall call on older python version missing a filter arg
 - Fix return codes
+
 
 ## 0.4.0
 
@@ -53,9 +61,11 @@
 - allow arbitrary date range selection for the CCSPv2 report
 - introducing S3 adapter for CCSP types of reports
 
+
 ## 0.4.1
 
 - relax boto3 requirement so it builds with any version available
+
 
 ## 0.5.0
 
@@ -72,6 +82,7 @@
 - dev: standalone mode with just postgres; python 3.13
 - dev: merge in insights-analytics-generator base lib
 
+
 ## 0.6.0
 
 - more validation for parameters / environment variables validation
@@ -85,12 +96,19 @@
 - dev: perf tests split up to make testing branches easier
 - dev: remove pytz
 
+
 ## 0.6.1
 
 - vcpu collector - use prometheus
 - gather: fix empty config.json when job\_host\_summary disabled
 - dev: future optional collectors
 
+
 ## 0.6.2
 
 - vcpu collector - add extra log info
+
+
+## 0.6.3
+
+- vcpu collector - add timezone info to timestamps where missing
