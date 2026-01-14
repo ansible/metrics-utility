@@ -115,6 +115,11 @@ def main():
     print(f'Date range: {since} to {until}')
     print(f'Output directory: {output_dir}')
 
+    # Disable parallel workers to avoid shared memory issues with large datasets
+    cursor = connection.cursor()
+    cursor.execute('SET max_parallel_workers_per_gather = 0;')
+    print('Note: Disabled parallel workers to avoid shared memory issues\n')
+
     print_counts()
 
     time_start = datetime.now()
@@ -171,6 +176,28 @@ def main():
     time_end = datetime.now()
     total_minutes = (time_end - time_start).total_seconds() / 60
     print(f'Total minutes = {total_minutes:.2f}')
+
+    # Write performance log
+    log_file = output_dir / 'full_service_performance.log'
+    with open(log_file, 'w') as f:
+        f.write('ANONYMIZED ROLLUP PERFORMANCE TEST - FULL SERVICE\n')
+        f.write('=' * 60 + '\n')
+        f.write(f'Date: {time_start}\n')
+        f.write(f'Date range: {since} to {until}\n\n')
+
+        f.write(f'Start time: {time_start}\n')
+        f.write(f'End time: {time_end}\n')
+        f.write(f'Total time: {total_minutes:.2f} minutes\n\n')
+
+        if PSUTIL_AVAILABLE:
+            f.write('Memory Usage:\n')
+            f.write(f'  Before: {memory_before:.2f} MB\n')
+            f.write(f'  After: {memory_after:.2f} MB\n')
+            f.write(f'  Consumed: {memory_consumed:.2f} MB\n')
+        else:
+            f.write('Memory tracking not available (psutil not installed)\n')
+
+    print(f'\nPerformance log: {log_file}')
 
 
 if __name__ == '__main__':
