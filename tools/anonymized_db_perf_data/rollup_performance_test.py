@@ -171,6 +171,15 @@ def main():
     if metrics:
         all_metrics.append(metrics)
 
+    # Get database counts
+    cursor = connection.cursor()
+    cursor.execute('SELECT COUNT(*) FROM main_host;')
+    host_count = cursor.fetchone()[0]
+    cursor.execute('SELECT COUNT(*) FROM main_job;')
+    job_count = cursor.fetchone()[0]
+    cursor.execute('SELECT COUNT(*) FROM main_jobevent;')
+    event_count = cursor.fetchone()[0]
+
     # Print summary
     print('\n' + '=' * 60)
     print('SUMMARY')
@@ -204,9 +213,38 @@ def main():
         f.write('-' * 60 + '\n')
         f.write(f'{"TOTAL":<30} {total_time:<12}\n')
 
+    # Write markdown report
+    test_date = datetime.now().strftime('%Y-%m-%d')
+    md_file = output_dir / f'perf_test_individual_tasks_{test_date}.md'
+    with open(md_file, 'w') as f:
+        f.write('# Performance Test Results - Individual Tasks\n\n')
+        f.write(f'**Test Date:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+
+        f.write('## Dataset Information\n\n')
+        f.write(f'- **Test Period:** {since.strftime("%Y-%m-%d")} to {until.strftime("%Y-%m-%d")}\n')
+        f.write(f'- **Total Jobs:** {job_count:,}\n')
+        f.write(f'- **Total Hosts:** {host_count:,}\n')
+        f.write(f'- **Total Events:** {event_count:,}\n\n')
+
+        f.write('## Performance Results\n\n')
+        f.write('### Individual Task Performance\n\n')
+        f.write('| Task | Duration | Memory Used |\n')
+        f.write('|------|----------|-------------|\n')
+        for m in all_metrics:
+            mem_str = f'{m["memory_mb"]:.2f} MB' if 'memory_mb' in m else 'N/A'
+            f.write(f'| {m["name"]} | {m["elapsed_seconds"]:.2f}s | {mem_str} |\n')
+
+        f.write('\n### Summary\n\n')
+        total_mem = sum(m.get('memory_mb', 0) for m in all_metrics)
+        f.write(f'- **Total Duration:** {total_time:.2f}s ({total_time / 60:.2f} minutes)\n')
+        if PSUTIL_AVAILABLE:
+            f.write(f'- **Total Memory Used:** {total_mem:.2f} MB\n')
+        f.write(f'- **Memory Tracking:** {"Enabled" if PSUTIL_AVAILABLE else "Disabled (psutil not installed)"}\n')
+
     print('\n✓ Performance test completed!')
     print(f'Results saved to: {output_dir}')
     print(f'Performance log: {log_file}')
+    print(f'Markdown report: {md_file}')
 
 
 if __name__ == '__main__':

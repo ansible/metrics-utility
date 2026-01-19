@@ -30,6 +30,7 @@ import subprocess
 import sys
 import time
 
+from datetime import datetime
 from pathlib import Path
 
 
@@ -88,7 +89,7 @@ def run_dataset(config, index, total):
 
     # Step 1: Clean database
     if not run_command('source .venv/bin/activate && python tools/anonymized_db_perf_data/clean_all_data.py --force', 'Cleaning database'):
-        return False
+        return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 2: Generate test data
     cmd = (
@@ -99,7 +100,7 @@ def run_dataset(config, index, total):
         f'--task-count={config["task_count"]}'
     )
     if not run_command(cmd, f'Generating {name} dataset'):
-        return False
+        return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 3: Run individual task tests
     test_cmd = (
@@ -108,23 +109,23 @@ def run_dataset(config, index, total):
         f'--since={config["test_since"]} --until={config["test_until"]}'
     )
     if not run_command(test_cmd, 'Running individual task tests'):
-        return False
+        return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 4: Run full service test
     perf_cmd = (
         f'source .venv/bin/activate && python tools/anonymized_db_perf_data/run_perf.py --since={config["test_since"]} --until={config["test_until"]}'
     )
     if not run_command(perf_cmd, 'Running full service test'):
-        return False
+        return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 5: Save results to dataset-specific directory
     output_dir = Path(__file__).parent / f'out_{name}'
     if not run_command(f'cp -r tools/anonymized_db_perf_data/out {output_dir}', f'Saving results to out_{name}'):
-        return False
+        return {'success': False, 'elapsed': time.time() - start_time}
 
     elapsed = time.time() - start_time
     print(f'\n✓ {name.upper()} dataset tests completed in {elapsed / 60:.1f} minutes')
-    return True
+    return {'success': True, 'elapsed': elapsed}
 
 
 def main():
@@ -159,14 +160,15 @@ def main():
     print('=' * 60)
 
     start_time = time.time()
+    test_start_datetime = datetime.now()
     results = []
 
     # Run tests for each dataset
     for i, dataset in enumerate(datasets_to_test, 1):
-        success = run_dataset(dataset, i, len(datasets_to_test))
-        results.append((dataset['name'], success))
+        result = run_dataset(dataset, i, len(datasets_to_test))
+        results.append({'name': dataset['name'], 'config': dataset, 'success': result['success'], 'elapsed': result['elapsed']})
 
-        if not success:
+        if not result['success']:
             print(f'\n✗ {dataset["name"].upper()} dataset tests failed!')
             print('Continuing with remaining datasets...\n')
 
@@ -176,23 +178,69 @@ def main():
     print('TEST SUMMARY')
     print('=' * 60)
 
-    for name, success in results:
-        status = '✓ PASS' if success else '✗ FAIL'
-        print(f'{name.upper():<10} {status}')
+    for result in results:
+        status = '✓ PASS' if result['success'] else '✗ FAIL'
+        print(f'{result["name"].upper():<10} {status}')
 
     print(f'\nTotal time: {total_time / 60:.1f} minutes')
 
-    successful = sum(1 for _, success in results if success)
+    successful = sum(1 for r in results if r['success'])
     print(f'Results: {successful}/{len(datasets_to_test)} datasets tested successfully')
+
+    # Generate consolidated markdown report
+    test_date = test_start_datetime.strftime('%Y-%m-%d')
+    md_file = Path(__file__).parent / f'perf_test_summary_{test_date}.md'
+    with open(md_file, 'w') as f:
+        f.write('# Performance Test Summary - All Dataset Sizes\n\n')
+        f.write(f'**Test Date:** {test_start_datetime.strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+
+        f.write('## Test Overview\n\n')
+        f.write(f'- **Total Datasets Tested:** {len(datasets_to_test)}\n')
+        f.write(f'- **Successful:** {successful}\n')
+        f.write(f'- **Failed:** {len(datasets_to_test) - successful}\n')
+        f.write(f'- **Total Time:** {total_time / 60:.2f} minutes\n\n')
+
+        f.write('## Dataset Results\n\n')
+        f.write('| Dataset | Target Events | Jobs | Hosts | Tasks | Test Period | Duration | Status |\n')
+        f.write('|---------|---------------|------|-------|-------|-------------|----------|--------|\n')
+
+        for result in results:
+            cfg = result['config']
+            status_emoji = '✓' if result['success'] else '✗'
+            duration_min = result['elapsed'] / 60
+            f.write(
+                f'| {cfg["name"].capitalize()} | {cfg["target_events"]} | '
+                f'{cfg["job_count"]} | {cfg["host_count"]} | {cfg["task_count"]} | '
+                f'{cfg["test_since"]} to {cfg["test_until"]} | '
+                f'{duration_min:.2f} min | {status_emoji} |\n'
+            )
+
+        f.write('\n## Detailed Results\n\n')
+        f.write('For detailed performance metrics, see the individual test reports:\n\n')
+        for result in results:
+            if result['success']:
+                name = result['name']
+                f.write(f'### {name.capitalize()} Dataset\n\n')
+                f.write(f'- **Individual Tasks:** `out_{name}/perf_test_individual_tasks_{test_date}.md`\n')
+                f.write(f'- **Full Service:** `out_{name}/perf_test_full_service_{test_date}.md`\n')
+                f.write(f'- **Output Directory:** `out_{name}/`\n\n')
+
+        if successful < len(datasets_to_test):
+            f.write('\n## Failed Tests\n\n')
+            for result in results:
+                if not result['success']:
+                    f.write(f'- **{result["name"].capitalize()}:** Test failed after {result["elapsed"] / 60:.2f} minutes\n')
 
     if successful == len(datasets_to_test):
         print('\n✓ All tests completed successfully!')
         print('\nResults saved to:')
-        for ds in datasets_to_test:
-            print(f'  - out_{ds["name"]}/')
+        for r in results:
+            print(f'  - out_{r["name"]}/')
+        print(f'\nConsolidated report: {md_file}')
         return 0
     else:
         print('\n✗ Some tests failed. Check output above for details.')
+        print(f'\nConsolidated report: {md_file}')
         return 1
 
 
