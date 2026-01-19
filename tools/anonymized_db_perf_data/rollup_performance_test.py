@@ -92,9 +92,16 @@ def run_task(name, func):
 
 def main():
     """Run all performance tests."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Run anonymized rollup performance tests on individual tasks')
+    parser.add_argument('--since', type=str, default='2024-01-01', help='Start date (YYYY-MM-DD, default: 2024-01-01)')
+    parser.add_argument('--until', type=str, default='2024-02-01', help='End date (YYYY-MM-DD, default: 2024-02-01)')
+    args = parser.parse_args()
+
     # Configuration
-    since = datetime(2024, 1, 1)
-    until = datetime(2024, 2, 1)
+    since = datetime.strptime(args.since, '%Y-%m-%d')
+    until = datetime.strptime(args.until, '%Y-%m-%d')
     output_dir = Path(__file__).parent / 'out'
     output_dir.mkdir(exist_ok=True)
 

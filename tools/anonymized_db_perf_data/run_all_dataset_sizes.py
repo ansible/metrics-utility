@@ -41,6 +41,8 @@ DATASETS = [
         'host_count': 100,
         'task_count': 50,
         'target_events': '~100K',
+        'test_since': '2024-01-01',
+        'test_until': '2024-02-01',
     },
     {
         'name': 'medium',
@@ -48,13 +50,17 @@ DATASETS = [
         'host_count': 1000,
         'task_count': 50,
         'target_events': '~1M',
+        'test_since': '2024-01-01',
+        'test_until': '2024-02-01',
     },
     {
         'name': 'large',
-        'job_count': 200,
+        'job_count': 6900,
         'host_count': 869,
         'task_count': 50,
-        'target_events': '~10M',
+        'target_events': '~300M total (~10M/day)',
+        'test_since': '2024-01-15',
+        'test_until': '2024-01-16',
     },
 ]
 
@@ -96,13 +102,19 @@ def run_dataset(config, index, total):
         return False
 
     # Step 3: Run individual task tests
-    if not run_command(
-        'source .venv/bin/activate && python tools/anonymized_db_perf_data/rollup_performance_test.py', 'Running individual task tests'
-    ):
+    test_cmd = (
+        f'source .venv/bin/activate && '
+        f'python tools/anonymized_db_perf_data/rollup_performance_test.py '
+        f'--since={config["test_since"]} --until={config["test_until"]}'
+    )
+    if not run_command(test_cmd, 'Running individual task tests'):
         return False
 
     # Step 4: Run full service test
-    if not run_command('source .venv/bin/activate && python tools/anonymized_db_perf_data/run_perf.py', 'Running full service test'):
+    perf_cmd = (
+        f'source .venv/bin/activate && python tools/anonymized_db_perf_data/run_perf.py --since={config["test_since"]} --until={config["test_until"]}'
+    )
+    if not run_command(perf_cmd, 'Running full service test'):
         return False
 
     # Step 5: Save results to dataset-specific directory
