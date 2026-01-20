@@ -115,6 +115,11 @@ def main():
     print(f'Date range: {since} to {until}')
     print(f'Output directory: {output_dir}')
 
+    # Disable parallel workers to avoid shared memory issues with large datasets
+    cursor = connection.cursor()
+    cursor.execute('SET max_parallel_workers_per_gather = 0;')
+    print('Note: Disabled parallel workers to avoid shared memory issues\n')
+
     print_counts()
 
     time_start = datetime.now()
@@ -171,6 +176,74 @@ def main():
     time_end = datetime.now()
     total_minutes = (time_end - time_start).total_seconds() / 60
     print(f'Total minutes = {total_minutes:.2f}')
+
+    # Get database counts for the report
+    cursor = connection.cursor()
+    cursor.execute('SELECT COUNT(*) FROM main_host;')
+    host_count = cursor.fetchone()[0]
+    cursor.execute('SELECT COUNT(*) FROM main_job;')
+    job_count = cursor.fetchone()[0]
+    cursor.execute('SELECT COUNT(*) FROM main_jobevent;')
+    event_count = cursor.fetchone()[0]
+
+    # Write performance log
+    log_file = output_dir / 'full_service_performance.log'
+    with open(log_file, 'w') as f:
+        f.write('ANONYMIZED ROLLUP PERFORMANCE TEST - FULL SERVICE\n')
+        f.write('=' * 60 + '\n')
+        f.write(f'Date: {time_start}\n')
+        f.write(f'Date range: {since} to {until}\n\n')
+
+        f.write(f'Start time: {time_start}\n')
+        f.write(f'End time: {time_end}\n')
+        f.write(f'Total time: {total_minutes:.2f} minutes\n\n')
+
+        if PSUTIL_AVAILABLE:
+            f.write('Memory Usage:\n')
+            f.write(f'  Before: {memory_before:.2f} MB\n')
+            f.write(f'  After: {memory_after:.2f} MB\n')
+            f.write(f'  Consumed: {memory_consumed:.2f} MB\n')
+        else:
+            f.write('Memory tracking not available (psutil not installed)\n')
+
+    # Write markdown report
+    test_date = time_start.strftime('%Y-%m-%d')
+    md_file = output_dir / f'perf_test_full_service_{test_date}.md'
+    with open(md_file, 'w') as f:
+        f.write('# Performance Test Results - Full Service\n\n')
+        f.write(f'**Test Date:** {time_start.strftime("%Y-%m-%d %H:%M:%S")}\n\n')
+
+        f.write('## Dataset Information\n\n')
+        f.write(f'- **Test Period:** {since.strftime("%Y-%m-%d")} to {until.strftime("%Y-%m-%d")}\n')
+        f.write(f'- **Total Jobs:** {job_count:,}\n')
+        f.write(f'- **Total Hosts:** {host_count:,}\n')
+        f.write(f'- **Total Events:** {event_count:,}\n\n')
+
+        f.write('## Test Configuration\n\n')
+        f.write('- **Test Type:** Full service (all collectors + rollup computation)\n')
+        f.write('- **Save Rollups:** Yes (CSV format)\n')
+        f.write('- **Parallel Workers:** Disabled (to avoid shared memory issues)\n\n')
+
+        f.write('## Performance Results\n\n')
+        f.write(f'- **Start Time:** {time_start.strftime("%Y-%m-%d %H:%M:%S")}\n')
+        f.write(f'- **End Time:** {time_end.strftime("%Y-%m-%d %H:%M:%S")}\n')
+        f.write(f'- **Total Duration:** {total_minutes:.2f} minutes ({total_minutes * 60:.2f} seconds)\n\n')
+
+        if PSUTIL_AVAILABLE:
+            f.write('### Memory Usage\n\n')
+            f.write(f'- **Before:** {memory_before:.2f} MB\n')
+            f.write(f'- **After:** {memory_after:.2f} MB\n')
+            f.write(f'- **Consumed:** {memory_consumed:.2f} MB\n\n')
+        else:
+            f.write('### Memory Usage\n\n')
+            f.write('Memory tracking not available (install psutil for memory metrics)\n\n')
+
+        f.write('## Output Files\n\n')
+        f.write(f'- **JSON:** `{output_dir}/anonymized.json`\n')
+        f.write(f'- **CSVs:** `{output_dir}/rollups/`\n')
+
+    print(f'\nPerformance log: {log_file}')
+    print(f'Markdown report: {md_file}')
 
 
 if __name__ == '__main__':
