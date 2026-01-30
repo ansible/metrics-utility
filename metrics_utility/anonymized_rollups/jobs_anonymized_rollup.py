@@ -64,6 +64,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type = (
             dataframe.groupby('model')
             .agg(
+                ansible_version=('ansible_version', 'first'),
                 jobs_total=('id', 'nunique'),
                 jobs_failed_total=('failed', 'sum'),
                 jobs_never_started_total=('started', lambda x: x.isna().sum()),

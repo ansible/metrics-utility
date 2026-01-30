@@ -5,7 +5,7 @@ from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonym
 
 
 jobs = [
-    # controller A, version v1, template T1
+    # controller A, ansible 2.9.0, template T1
     {
         'id': 1,
         'started': '2024-01-01 00:00:00.000000+00',
@@ -13,7 +13,7 @@ jobs = [
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
-        'ansible_version': 'v1',
+        'ansible_version': '2.9.0',
         'created': '2024-01-01 00:00:00.000000+00',
         'model': 'job',
         'launch_type': 'manual',
@@ -28,7 +28,7 @@ jobs = [
         'failed': 1,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
-        'ansible_version': 'v1',
+        'ansible_version': '2.10.0',
         'created': '2024-01-01 00:00:08.000000+00',  # wait 2s
         'model': 'job',
         'launch_type': 'scheduled',
@@ -36,7 +36,7 @@ jobs = [
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
     },  # duration 5s (failed), wait 2s
-    # controller A, version v1, template T2
+    # controller A, ansible 2.11.0, template T2
     {
         'id': 3,
         'started': '2024-01-01 00:01:40.000000+00',
@@ -44,7 +44,7 @@ jobs = [
         'failed': 0,
         'job_template_name': 'T2',
         'controller_node': 'ctrl-A',
-        'ansible_version': 'v1',
+        'ansible_version': '2.11.0',
         'created': '2024-01-01 00:01:36.000000+00',  # wait 4s
         'model': 'workflowjob',
         'launch_type': 'workflow',
@@ -52,7 +52,7 @@ jobs = [
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
     },  # duration 7s, wait 4s
-    # controller B, version v2, template T1
+    # controller B, ansible 2.12.0, template T1
     {
         'id': 4,
         'started': '2024-01-01 00:03:20.000000+00',
@@ -60,7 +60,7 @@ jobs = [
         'failed': 0,
         'job_template_name': 'T1',
         'controller_node': 'ctrl-B',
-        'ansible_version': 'v2',
+        'ansible_version': '2.12.0',
         'created': '2024-01-01 00:03:19.000000+00',  # wait 1s
         'model': 'job',
         'launch_type': 'callback',
@@ -76,7 +76,7 @@ jobs = [
         'failed': 0,
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
-        'ansible_version': 'v3',
+        'ansible_version': '2.13.0',
         'model': 'adhoccommand',
         'launch_type': 'manual',
     },
@@ -87,7 +87,7 @@ jobs = [
         'failed': 1,
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
-        'ansible_version': 'v3',
+        'ansible_version': '2.14.0',
         'model': 'adhoccommand',
         'launch_type': 'scheduled',
     },
@@ -130,6 +130,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_job['jobs_succeeded_total'] == 2
     assert rec_job['jobs_never_started_total'] == 0
     assert rec_job['templates_total'] == 1  # All from template T1
+    assert rec_job['ansible_version'] == '2.9.0'  # First job in group (id 1)
 
     # 'job' type durations (seconds): 3.0, 5.0, 2.0
     assert rec_job['job_duration_maximum_seconds'] == pytest.approx(5.0, rel=1e-6)
@@ -147,6 +148,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_workflowjob['jobs_succeeded_total'] == 1
     assert rec_workflowjob['jobs_never_started_total'] == 0
     assert rec_workflowjob['templates_total'] == 1  # From template T2
+    assert rec_workflowjob['ansible_version'] == '2.11.0'  # Only job in group (id 3)
 
     # 'workflowjob' type duration (seconds): 7.0
     assert rec_workflowjob['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)
@@ -164,6 +166,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_adhoccommand['jobs_succeeded_total'] == 0
     assert rec_adhoccommand['jobs_never_started_total'] == 1
     assert rec_adhoccommand['templates_total'] == 1  # From template T3
+    assert rec_adhoccommand['ansible_version'] == '2.14.0'  # Only job in group (id 6, id 5 filtered out)
 
     # 'adhoccommand' type should have NaN for all duration metrics and 0 for totals
     assert pd.isna(rec_adhoccommand['job_duration_maximum_seconds'])
@@ -174,3 +177,89 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_adhoccommand['job_waiting_time_maximum_seconds'])
     assert pd.isna(rec_adhoccommand['job_waiting_time_minimum_seconds'])
     assert rec_adhoccommand['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
+
+
+def test_jobs_anonymized_rollups_ansible_version():
+    """Test that ansible_version is correctly aggregated using 'first' for each job_type."""
+    df = pd.DataFrame(jobs)
+    jobs_anonymized_rollup = JobsAnonymizedRollup()
+    df = jobs_anonymized_rollup.prepare(df)
+    result = jobs_anonymized_rollup.base(df)
+    result = result['json']
+
+    by_job_type = result['by_job_type']
+    
+    # Verify ansible_version is present in all records
+    for record in by_job_type:
+        assert 'ansible_version' in record
+        assert record['ansible_version'] is not None
+    
+    # Identify records by job_type
+    rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
+    rec_workflowjob = next(r for r in by_job_type if r['job_type'] == 'workflowjob')
+    rec_adhoccommand = next(r for r in by_job_type if r['job_type'] == 'adhoccommand')
+    
+    # Verify ansible_version uses 'first' value for each job_type
+    # 'job' type: jobs 1, 2, 4 - first is job 1 with '2.9.0'
+    assert rec_job['ansible_version'] == '2.9.0'
+    
+    # 'workflowjob' type: job 3 - '2.11.0'
+    assert rec_workflowjob['ansible_version'] == '2.11.0'
+    
+    # 'adhoccommand' type: job 6 (job 5 filtered out) - '2.14.0'
+    assert rec_adhoccommand['ansible_version'] == '2.14.0'
+
+
+def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
+    """Test ansible_version aggregation when multiple versions exist for same job_type."""
+    test_jobs = [
+        {
+            'id': 1,
+            'started': '2024-01-01 00:00:00.000000+00',
+            'finished': '2024-01-01 00:00:03.000000+00',
+            'failed': 0,
+            'job_template_name': 'T1',
+            'controller_node': 'ctrl-A',
+            'ansible_version': '2.9.0',
+            'created': '2024-01-01 00:00:00.000000+00',
+            'model': 'job',
+            'launch_type': 'manual',
+        },
+        {
+            'id': 2,
+            'started': '2024-01-01 00:00:10.000000+00',
+            'finished': '2024-01-01 00:00:15.000000+00',
+            'failed': 0,
+            'job_template_name': 'T2',
+            'controller_node': 'ctrl-B',
+            'ansible_version': '2.10.0',
+            'created': '2024-01-01 00:00:08.000000+00',
+            'model': 'job',
+            'launch_type': 'scheduled',
+        },
+        {
+            'id': 3,
+            'started': '2024-01-01 00:01:00.000000+00',
+            'finished': '2024-01-01 00:01:05.000000+00',
+            'failed': 0,
+            'job_template_name': 'T3',
+            'controller_node': 'ctrl-C',
+            'ansible_version': '2.11.0',
+            'created': '2024-01-01 00:00:58.000000+00',
+            'model': 'job',
+            'launch_type': 'callback',
+        },
+    ]
+    
+    df = pd.DataFrame(test_jobs)
+    jobs_anonymized_rollup = JobsAnonymizedRollup()
+    df = jobs_anonymized_rollup.prepare(df)
+    result = jobs_anonymized_rollup.base(df)
+    result = result['json']
+    
+    by_job_type = result['by_job_type']
+    rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
+    
+    # Should use 'first' value (first job in group: id 1 with '2.9.0')
+    assert rec_job['ansible_version'] == '2.9.0'
+    assert rec_job['jobs_total'] == 3  # All three jobs are included
