@@ -40,12 +40,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     # skipped
     # ignored
     # rescued
+    # model (job_type)
 
     def prepare(self, dataframe):
         # Count all records before processing
         jobhostsummary_total = len(dataframe)
 
-        # Sum all task columns without grouping to reduce data volume early
+        # Group by job_type (model) and sum task columns to reduce data volume early
         # This significantly improves performance when processing large batches
         if dataframe.empty:
             return {
@@ -53,17 +54,26 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 'aggregated': dataframe,
             }
 
-        # Sum all task columns across all records (no grouping)
-        aggregated = pd.DataFrame([{
-            'dark_total': dataframe['dark'].sum(),
-            'failures_total': dataframe['failures'].sum(),
-            'ok_total': dataframe['ok'].sum(),
-            'skipped_total': dataframe['skipped'].sum(),
-            'ignored_total': dataframe['ignored'].sum(),
-            'rescued_total': dataframe['rescued'].sum(),
-            # keep unique hosts as set
-            'unique_hosts': set(dataframe['host_name']),
-        }])
+        # Check if model column exists (for backward compatibility)
+        if 'model' not in dataframe.columns:
+            # If model is missing, create a default 'unknown' value
+            dataframe['model'] = 'unknown'
+
+        # Group by job_type (model) and sum task columns
+        aggregated = (
+            dataframe.groupby('model')
+            .agg(
+                dark_total=('dark', 'sum'),
+                failures_total=('failures', 'sum'),
+                ok_total=('ok', 'sum'),
+                skipped_total=('skipped', 'sum'),
+                ignored_total=('ignored', 'sum'),
+                rescued_total=('rescued', 'sum'),
+                unique_hosts=('host_name', lambda x: set(x)),
+            )
+            .reset_index()
+            .rename(columns={'model': 'job_type'})
+        )
 
         return {
             'jobhostsummary_total': jobhostsummary_total,
@@ -72,8 +82,10 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def base(self, data):
         """
-        Number of tasks executed (sum of all tasks executed in dataframe)
-        Success ratio of tasks executed (ratio between ok and failed tasks (and others))
+        Aggregations grouped by job_type (model):
+        - Number of tasks executed (sum of all tasks executed per job_type)
+        - Success ratio of tasks executed (ratio between ok and failed tasks (and others))
+        - Unique hosts per job_type
 
         Success rate and average - this can compute SaaS team from the metrics
 
@@ -84,15 +96,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if data is None:
             return {
                 'json': {
-                    'jobhostsummary_total': 0,
-                    'aggregated': {
-                        'dark_total': 0,
-                        'failures_total': 0,
-                        'ok_total': 0,
-                        'skipped_total': 0,
-                        'ignored_total': 0,
-                        'rescued_total': 0,
-                    },
+                    'by_job_type': [],
                 },
                 'rollup': {'aggregated': pd.DataFrame(), 'jobhostsummary_total': 0},
             }
@@ -102,56 +106,52 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         dataframe = data.get('aggregated', pd.DataFrame())
 
         # Return empty result if dataframe is empty
-        # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
             return {
                 'json': {
-                    'jobhostsummary_total': jobhostsummary_total,
-                    'aggregated': {
-                        'dark_total': 0,
-                        'failures_total': 0,
-                        'ok_total': 0,
-                        'skipped_total': 0,
-                        'ignored_total': 0,
-                        'rescued_total': 0,
-                    },
+                    'by_job_type': [],
                 },
                 'rollup': {'aggregated': dataframe, 'jobhostsummary_total': jobhostsummary_total},
             }
 
-        # Union all unique_hosts sets from all batches
-        unique_hosts_total = set()
-        for hosts_set in dataframe['unique_hosts']:
-            if isinstance(hosts_set, set):
-                unique_hosts_total.update(hosts_set)
-            elif hosts_set is not None:
-                # Handle case where it might be stored differently
-                unique_hosts_total.update(hosts_set)
+        # Group by job_type and aggregate across all batches
+        # Union unique_hosts sets for each job_type
+        def union_hosts(series):
+            """Union all sets in the series"""
+            result = set()
+            for hosts_set in series:
+                if isinstance(hosts_set, set):
+                    result.update(hosts_set)
+                elif hosts_set is not None:
+                    result.update(hosts_set)
+            return result
 
-        # Sum all totals across all batches (no grouping by template)
-        aggregated = pd.DataFrame([{
-            'dark_total': dataframe['dark_total'].sum(),
-            'failures_total': dataframe['failures_total'].sum(),
-            'ok_total': dataframe['ok_total'].sum(),
-            'skipped_total': dataframe['skipped_total'].sum(),
-            'ignored_total': dataframe['ignored_total'].sum(),
-            'rescued_total': dataframe['rescued_total'].sum(),
-        }])
+        aggregations_by_job_type = (
+            dataframe.groupby('job_type')
+            .agg(
+                dark_total=('dark_total', 'sum'),
+                failures_total=('failures_total', 'sum'),
+                ok_total=('ok_total', 'sum'),
+                skipped_total=('skipped_total', 'sum'),
+                ignored_total=('ignored_total', 'sum'),
+                rescued_total=('rescued_total', 'sum'),
+                unique_hosts=('unique_hosts', union_hosts),
+            )
+            .reset_index()
+            .assign(unique_hosts_total=lambda x: x['unique_hosts'].apply(len))
+            .drop(columns=['unique_hosts'])
+        )
 
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
             # pandas.DataFrame
-            'aggregated': aggregated,
+            'aggregations_by_job_type': aggregations_by_job_type,
             'jobhostsummary_total': jobhostsummary_total,
         }
 
-        # Prepare JSON data (single dict, not a list)
-        # Get the first (and only) row as a dict
-        aggregated_dict = aggregated.iloc[0].to_dict()
+        # Prepare JSON data (converted to list of dicts)
         json_data = {
-            'unique_hosts_total': len(unique_hosts_total),
-            'aggregated': aggregated_dict,
-            'jobhostsummary_total': jobhostsummary_total,
+            'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
         }
 
         return {
