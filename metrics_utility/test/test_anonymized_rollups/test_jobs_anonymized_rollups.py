@@ -16,6 +16,7 @@ jobs = [
         'ansible_version': 'v1',
         'created': '2024-01-01 00:00:00.000000+00',
         'model': 'job',
+        'launch_type': 'manual',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -30,6 +31,7 @@ jobs = [
         'ansible_version': 'v1',
         'created': '2024-01-01 00:00:08.000000+00',  # wait 2s
         'model': 'job',
+        'launch_type': 'scheduled',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
@@ -45,6 +47,7 @@ jobs = [
         'ansible_version': 'v1',
         'created': '2024-01-01 00:01:36.000000+00',  # wait 4s
         'model': 'workflowjob',
+        'launch_type': 'workflow',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -60,6 +63,7 @@ jobs = [
         'ansible_version': 'v2',
         'created': '2024-01-01 00:03:19.000000+00',  # wait 1s
         'model': 'job',
+        'launch_type': 'callback',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -74,6 +78,7 @@ jobs = [
         'controller_node': 'ctrl-C',
         'ansible_version': 'v3',
         'model': 'adhoccommand',
+        'launch_type': 'manual',
     },
     {
         'id': 6,
@@ -84,6 +89,7 @@ jobs = [
         'controller_node': 'ctrl-C',
         'ansible_version': 'v3',
         'model': 'adhoccommand',
+        'launch_type': 'scheduled',
     },
 ]
 
