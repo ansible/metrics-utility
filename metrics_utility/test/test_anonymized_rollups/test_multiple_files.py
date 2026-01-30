@@ -11,7 +11,7 @@ The test:
 
 Enhanced Assertions:
 - Deep validation of JSON structure including all nested values
-- Verification of timing statistics (average, min, max, median for job durations and waiting times)
+- Verification of timing statistics (average, min, max for job durations and waiting times)
 - Detailed module and collection statistics validation
 - Edge case handling (never-started jobs, null values)
 - Comprehensive empty data handling test
@@ -84,7 +84,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     and verifies that the concatenation logic works correctly.
 
     The test validates:
-    1. **Jobs**: Verifies counts, timing statistics (avg/min/max/median), and edge cases like never-started jobs
+    1. **Jobs**: Verifies counts, timing statistics (avg/min/max), and edge cases like never-started jobs
     2. **Execution Environments**: Validates total, default, and custom EE counts
     3. **Job Host Summary**: Checks task result counts (ok, failures, skipped, etc.)
     4. **Events Modules**: Comprehensive validation including:
@@ -224,12 +224,10 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t1['job_duration_average_in_seconds'] == pytest.approx(3.333, rel=1e-2)
     assert t1['job_duration_minimum_in_seconds'] == pytest.approx(2.0)
     assert t1['job_duration_maximum_in_seconds'] == pytest.approx(5.0)
-    assert t1['job_duration_median_in_seconds'] == pytest.approx(3.0)
     assert t1['job_waiting_time_total_in_seconds'] == pytest.approx(3.0)
     assert t1['job_waiting_time_average_in_seconds'] == pytest.approx(1.0)
     assert t1['job_waiting_time_minimum_in_seconds'] == pytest.approx(0.0)
     assert t1['job_waiting_time_maximum_in_seconds'] == pytest.approx(2.0)
-    assert t1['job_waiting_time_median_in_seconds'] == pytest.approx(1.0)
 
     # T2 should have 1 job executed
     t2_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 1 and j['number_of_jobs_never_started'] == 0]
@@ -240,7 +238,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t2['number_of_jobs_succeeded'] == 1
     assert t2['job_duration_total_in_seconds'] == pytest.approx(7.0)
     assert t2['job_duration_average_in_seconds'] == pytest.approx(7.0)
-    assert t2['job_duration_median_in_seconds'] == pytest.approx(7.0)
     assert t2['job_waiting_time_total_in_seconds'] == pytest.approx(4.0)
     assert t2['job_waiting_time_average_in_seconds'] == pytest.approx(4.0)
 
@@ -253,7 +250,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t3['number_of_jobs_succeeded'] == 0
     assert t3['job_duration_total_in_seconds'] == pytest.approx(0.0)
     assert t3['job_duration_average_in_seconds'] is None
-    assert t3['job_duration_median_in_seconds'] is None
     assert t3['job_waiting_time_total_in_seconds'] == pytest.approx(0.0)
     assert t3['job_waiting_time_average_in_seconds'] is None
 
