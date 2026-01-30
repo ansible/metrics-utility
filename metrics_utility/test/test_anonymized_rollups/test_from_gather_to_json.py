@@ -65,13 +65,13 @@ def test_from_gather_to_json(cleanup_glob):
 
     # ========== Validate the json_data that are containing what they should ==========
 
-    # Validate top-level flattened structure
-    assert 'statistics' in json_data, "Missing 'statistics' in json_data"
-    assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
-    assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
-    assert 'modules_used_per_playbook' in json_data, "Missing 'modules_used_per_playbook' in json_data"
-    assert 'jobs_by_template' in json_data, "Missing 'jobs_by_template' in json_data"
-    assert 'job_host_summary' in json_data, "Missing 'job_host_summary' in json_data"
+        # Validate top-level flattened structure
+        assert 'statistics' in json_data, "Missing 'statistics' in json_data"
+        assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
+        assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
+        assert 'modules_used_per_playbook' in json_data, "Missing 'modules_used_per_playbook' in json_data"
+        assert 'jobs_by_template' in json_data, "Missing 'jobs_by_template' in json_data"
+        # job_host_summary is now merged into jobs_by_template
 
     # Validate statistics structure (contains all the scalar totals)
     statistics = json_data['statistics']
@@ -98,7 +98,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
     assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
     assert isinstance(json_data['jobs_by_template'], list), 'jobs_by_template should be a list'
-    assert isinstance(json_data['job_host_summary'], list), 'job_host_summary should be a list (grouped by job_type)'
 
     # Validate module_stats have required fields
     if json_data['module_stats']:
@@ -109,7 +108,7 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'jobs_total' in module_stat
             assert 'hosts_total' in module_stat
 
-    # Validate jobs_by_template have required fields (now grouped by job_type, not template)
+    # Validate jobs_by_template have required fields (now grouped by job_type, merged with job_host_summary)
     if json_data['jobs_by_template']:
         for job in json_data['jobs_by_template']:
             assert 'job_type' in job
@@ -117,6 +116,14 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'jobs_failed_total' in job
             assert 'jobs_succeeded_total' in job
             assert 'templates_total' in job
+            # Host summary fields (merged from job_host_summary)
+            assert 'dark_total' in job
+            assert 'failures_total' in job
+            assert 'ok_total' in job
+            assert 'skipped_total' in job
+            assert 'ignored_total' in job
+            assert 'rescued_total' in job
+            assert 'unique_hosts_total' in job
 
     # ========== Validate actual data values and relationships ==========
 
@@ -184,30 +191,20 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate job waiting time fields are non-negative
     assert job['job_waiting_time_total_seconds'] >= 0, 'Job waiting time total should be non-negative'
 
-    # Validate job_host_summary structure (now grouped by job_type, a list)
-    print('--- Validating job_host_summary data values ---')
-    job_host_summary = json_data['job_host_summary']
-    assert isinstance(job_host_summary, list), 'job_host_summary should be a list (grouped by job_type)'
-    assert len(job_host_summary) == 1, 'Should have 1 job_type group'
+    # Validate job_host_summary data merged into jobs_by_template
+    print('--- Validating job_host_summary data values (merged into jobs_by_template) ---')
     assert statistics['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
 
-    jhs = job_host_summary[0]
-    assert 'job_type' in jhs, 'Should have job_type field'
-    assert jhs['job_type'] == 'job', 'Should have job_type job'
-    assert 'dark_total' in jhs
-    assert 'failures_total' in jhs
-    assert 'ok_total' in jhs
-    assert 'skipped_total' in jhs
-    assert 'ignored_total' in jhs
-    assert 'rescued_total' in jhs
-    assert 'unique_hosts_total' in jhs
+    # Find the job entry with job_type='job'
+    job_entry = next((j for j in json_data['jobs_by_template'] if j.get('job_type') == 'job'), None)
+    assert job_entry is not None, 'Should have job_type job in jobs_by_template'
 
-    # Validate job_host_summary actual values (totals for job_type='job')
-    assert jhs['ok_total'] == 6, 'Should have 6 ok tasks'
-    assert jhs['failures_total'] == 0, 'Should have 0 failures'
-    assert jhs['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
-    assert jhs['skipped_total'] == 0, 'Should have 0 skipped tasks'
-    assert jhs['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
+    # Validate job_host_summary fields are merged into jobs_by_template
+    assert job_entry['ok_total'] == 6, 'Should have 6 ok tasks'
+    assert job_entry['failures_total'] == 0, 'Should have 0 failures'
+    assert job_entry['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
+    assert job_entry['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
 
     # Validate cross-section data consistency
     print('--- Validating cross-section data consistency ---')
@@ -254,7 +251,7 @@ def test_half_day_rollup(cleanup_glob):
     assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
     assert 'modules_used_per_playbook' in json_data, "Missing 'modules_used_per_playbook' in json_data"
     assert 'jobs_by_template' in json_data, "Missing 'jobs_by_template' in json_data"
-    assert 'job_host_summary' in json_data, "Missing 'job_host_summary' in json_data"
+    # job_host_summary is now merged into jobs_by_template
 
     # Validate basic types
     assert isinstance(json_data['statistics'], dict), 'statistics should be a dictionary'
@@ -262,6 +259,6 @@ def test_half_day_rollup(cleanup_glob):
     assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert isinstance(json_data['jobs_by_template'], list), 'jobs_by_template should be a list'
-    assert isinstance(json_data['job_host_summary'], list), 'job_host_summary should be a list (grouped by job_type)'
+    # job_host_summary is now merged into jobs_by_template
 
     print('✅ Basic structure assertions passed!')

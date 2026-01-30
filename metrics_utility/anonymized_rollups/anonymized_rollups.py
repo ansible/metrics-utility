@@ -39,8 +39,7 @@ def anonymize_data(data, salt):
 
     Args:
         data: Flattened data structure with keys:
-            - jobs_by_template: array of job stats (grouped by job_type)
-            - job_host_summary: array of host summary stats (grouped by job_type)
+            - jobs_by_template: array of job stats (grouped by job_type, merged with job_host_summary data)
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
             - modules_used_per_playbook: array of {playbook_id, modules_used}
@@ -55,9 +54,6 @@ def anonymize_data(data, salt):
         for job in data['jobs_by_template']:
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
-
-    # anonymize job_host_summary - now grouped by job_type (array), no longer has job_template_name
-    # No anonymization needed for job_host_summary as it's grouped by job_type
 
     # anonymize module_stats - anonymize module name and collection name for 'Unknown' sources
     if 'module_stats' in data and data['module_stats']:
@@ -89,8 +85,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - modules_used_per_playbook: array of {playbook_id, modules_used}
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
-      - jobs_by_template: array (grouped by job_type, copied from by_job_type)
-      - job_host_summary: array (grouped by job_type, copied from by_job_type)
+      - jobs_by_template: array (grouped by job_type, merged with job_host_summary data)
     """
     events_modules = data.get('events_modules', {})
     execution_environments = data.get('execution_environments', {})
@@ -132,19 +127,55 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # 3) arrays copied as-is from their respective parents
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
-    # jobs_by_template now contains data grouped by job_type (not template)
-    jobs_by_template: List[Dict[str, Any]] = jobs_by_job_type
-    # job_host_summary is now grouped by job_type (list of objects)
-    job_host_summary: List[Dict[str, Any]] = job_host_summary_by_job_type
+    
+    # 4) Merge job_host_summary into jobs_by_template by job_type
+    # Create a lookup dict for job_host_summary by job_type
+    jhs_lookup: Dict[str, Dict[str, Any]] = {
+        jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type
+    }
+    
+    # Default values for host summary fields when no match is found
+    default_host_summary_fields = {
+        'dark_total': 0,
+        'failures_total': 0,
+        'ok_total': 0,
+        'skipped_total': 0,
+        'ignored_total': 0,
+        'rescued_total': 0,
+        'unique_hosts_total': 0,
+    }
+    
+    # Merge job_host_summary data into jobs_by_template
+    jobs_by_template: List[Dict[str, Any]] = []
+    for job in jobs_by_job_type:
+        job_type = job.get('job_type')
+        merged_job = job.copy()
+        
+        # Add host summary fields from matching job_host_summary entry, or use defaults
+        if job_type in jhs_lookup:
+            jhs_data = jhs_lookup[job_type]
+            merged_job.update({
+                'dark_total': jhs_data.get('dark_total', 0),
+                'failures_total': jhs_data.get('failures_total', 0),
+                'ok_total': jhs_data.get('ok_total', 0),
+                'skipped_total': jhs_data.get('skipped_total', 0),
+                'ignored_total': jhs_data.get('ignored_total', 0),
+                'rescued_total': jhs_data.get('rescued_total', 0),
+                'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+            })
+        else:
+            # No match found, use default values
+            merged_job.update(default_host_summary_fields)
+        
+        jobs_by_template.append(merged_job)
 
-    # 4) assemble the flattened object
+    # 5) assemble the flattened object
     flattened: Dict[str, Any] = {
         'statistics': statistics,
         'modules_used_per_playbook': modules_used_per_playbook,
         'module_stats': module_stats,
         'collection_name_stats': collection_name_stats,
         'jobs_by_template': jobs_by_template,
-        'job_host_summary': job_host_summary,
     }
 
     return flattened
