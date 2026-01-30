@@ -212,45 +212,45 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['jobs_total'] == 5  # Total jobs across all templates
 
     # T1 should have data from both tarballs (jobs 1, 2, 4)
-    t1_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 3]
+    t1_jobs = [j for j in jobs_list if j['jobs_executed_total'] == 3]
     assert len(t1_jobs) == 1
     t1 = t1_jobs[0]
-    assert t1['number_of_jobs_executed'] == 3
-    assert t1['number_of_jobs_failed'] == 1
-    assert t1['number_of_jobs_succeeded'] == 2
-    assert t1['number_of_jobs_never_started'] == 0
+    assert t1['jobs_executed_total'] == 3
+    assert t1['jobs_failed_total'] == 1
+    assert t1['jobs_succeeded_total'] == 2
+    assert t1['jobs_never_started_total'] == 0
     # Check timing statistics
-    assert t1['job_duration_total_in_seconds'] == pytest.approx(10.0)
-    assert t1['job_duration_minimum_in_seconds'] == pytest.approx(2.0)
-    assert t1['job_duration_maximum_in_seconds'] == pytest.approx(5.0)
-    assert t1['job_waiting_time_total_in_seconds'] == pytest.approx(3.0)
-    assert t1['job_waiting_time_minimum_in_seconds'] == pytest.approx(0.0)
-    assert t1['job_waiting_time_maximum_in_seconds'] == pytest.approx(2.0)
+    assert t1['job_duration_total_seconds'] == pytest.approx(10.0)
+    assert t1['job_duration_minimum_seconds'] == pytest.approx(2.0)
+    assert t1['job_duration_maximum_seconds'] == pytest.approx(5.0)
+    assert t1['job_waiting_time_total_seconds'] == pytest.approx(3.0)
+    assert t1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
+    assert t1['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
 
     # T2 should have 1 job executed
-    t2_jobs = [j for j in jobs_list if j['number_of_jobs_executed'] == 1 and j['number_of_jobs_never_started'] == 0]
+    t2_jobs = [j for j in jobs_list if j['jobs_executed_total'] == 1 and j['jobs_never_started_total'] == 0]
     assert len(t2_jobs) == 1
     t2 = t2_jobs[0]
-    assert t2['number_of_jobs_executed'] == 1
-    assert t2['number_of_jobs_failed'] == 0
-    assert t2['number_of_jobs_succeeded'] == 1
-    assert t2['job_duration_total_in_seconds'] == pytest.approx(7.0)
-    assert t2['job_waiting_time_total_in_seconds'] == pytest.approx(4.0)
+    assert t2['jobs_executed_total'] == 1
+    assert t2['jobs_failed_total'] == 0
+    assert t2['jobs_succeeded_total'] == 1
+    assert t2['job_duration_total_seconds'] == pytest.approx(7.0)
+    assert t2['job_waiting_time_total_seconds'] == pytest.approx(4.0)
 
     # T3 should have never started job
-    t3_jobs = [j for j in jobs_list if j['number_of_jobs_never_started'] == 1]
+    t3_jobs = [j for j in jobs_list if j['jobs_never_started_total'] == 1]
     assert len(t3_jobs) == 1
     t3 = t3_jobs[0]
-    assert t3['number_of_jobs_executed'] == 1
-    assert t3['number_of_jobs_failed'] == 1
-    assert t3['number_of_jobs_succeeded'] == 0
-    assert t3['job_duration_total_in_seconds'] == pytest.approx(0.0)
-    assert t3['job_waiting_time_total_in_seconds'] == pytest.approx(0.0)
+    assert t3['jobs_executed_total'] == 1
+    assert t3['jobs_failed_total'] == 1
+    assert t3['jobs_succeeded_total'] == 0
+    assert t3['job_duration_total_seconds'] == pytest.approx(0.0)
+    assert t3['job_waiting_time_total_seconds'] == pytest.approx(0.0)
 
     # ========== Validate Execution Environments ==========
-    assert result['statistics']['EE_total'] == 5
-    assert result['statistics']['EE_default_total'] == 2
-    assert result['statistics']['EE_custom_total'] == 3
+    assert result['statistics']['execution_environments_total'] == 5
+    assert result['statistics']['execution_environments_default_total'] == 2
+    assert result['statistics']['execution_environments_custom_total'] == 3
 
     # ========== Validate Job Host Summary ==========
     jhs_list = result['job_host_summary']
@@ -314,7 +314,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     yum = yum_stats[0]
     assert yum['collection_source'] == 'community'
     assert yum['jobs_total'] == 3
-    assert yum['number_of_jobs_never_started'] == 1
+    assert yum['jobs_never_started_total'] == 1
     assert yum['task_failed_total'] == 3
     assert yum['jobs_failed_because_of_module_failure_total'] == 3
 
@@ -390,18 +390,18 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     assert 'modules_used_to_automate_total' in statistics
     assert 'hosts_automated_total' in statistics
-    assert 'EE_total' in statistics
-    assert 'EE_default_total' in statistics
-    assert 'EE_custom_total' in statistics
+    assert 'execution_environments_total' in statistics
+    assert 'execution_environments_default_total' in statistics
+    assert 'execution_environments_custom_total' in statistics
     assert 'jobs_total' in statistics
     assert 'unique_hosts_total' in statistics
 
     # All statistics should be None for empty data
     assert statistics['modules_used_to_automate_total'] is None
     assert statistics['hosts_automated_total'] is None
-    assert statistics['EE_total'] is None
-    assert statistics['EE_default_total'] is None
-    assert statistics['EE_custom_total'] is None
+    assert statistics['execution_environments_total'] is None
+    assert statistics['execution_environments_default_total'] is None
+    assert statistics['execution_environments_custom_total'] is None
     assert statistics['jobs_total'] is None
     assert statistics['unique_hosts_total'] is None
 

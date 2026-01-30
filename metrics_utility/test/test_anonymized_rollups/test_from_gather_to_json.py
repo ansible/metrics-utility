@@ -78,18 +78,18 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
     assert 'modules_used_to_automate_total' in statistics
     assert 'hosts_automated_total' in statistics
-    assert 'EE_total' in statistics
-    assert 'EE_default_total' in statistics
-    assert 'EE_custom_total' in statistics
+    assert 'execution_environments_total' in statistics
+    assert 'execution_environments_default_total' in statistics
+    assert 'execution_environments_custom_total' in statistics
     assert 'jobs_total' in statistics
     assert 'unique_hosts_total' in statistics
 
     # Validate statistics data types
     assert isinstance(statistics['modules_used_to_automate_total'], int)
     assert isinstance(statistics['hosts_automated_total'], int)
-    assert isinstance(statistics['EE_total'], int)
-    assert isinstance(statistics['EE_default_total'], int)
-    assert isinstance(statistics['EE_custom_total'], int)
+    assert isinstance(statistics['execution_environments_total'], int)
+    assert isinstance(statistics['execution_environments_default_total'], int)
+    assert isinstance(statistics['execution_environments_custom_total'], int)
     assert isinstance(statistics['jobs_total'], int)
     assert isinstance(statistics['unique_hosts_total'], int)
 
@@ -113,8 +113,8 @@ def test_from_gather_to_json(cleanup_glob):
     if json_data['jobs_by_template']:
         for job in json_data['jobs_by_template']:
             assert 'job_template_name' in job
-            assert 'number_of_jobs_executed' in job
-            assert 'number_of_jobs_failed' in job
+            assert 'jobs_executed_total' in job
+            assert 'jobs_failed_total' in job
 
     # ========== Validate actual data values and relationships ==========
 
@@ -155,30 +155,30 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate execution_environments actual values
     print('--- Validating execution_environments data values ---')
-    assert statistics['EE_total'] == 2, 'Should have 2 total execution environments'
-    assert statistics['EE_default_total'] == 1, 'Should have 1 default execution environment'
-    assert statistics['EE_custom_total'] == 1, 'Should have 1 custom execution environment'
+    assert statistics['execution_environments_total'] == 2, 'Should have 2 total execution environments'
+    assert statistics['execution_environments_default_total'] == 1, 'Should have 1 default execution environment'
+    assert statistics['execution_environments_custom_total'] == 1, 'Should have 1 custom execution environment'
     # Validate that total = default + custom
-    assert statistics['EE_total'] == statistics['EE_default_total'] + statistics['EE_custom_total'], 'Total EE should equal default + custom'
+    assert statistics['execution_environments_total'] == statistics['execution_environments_default_total'] + statistics['execution_environments_custom_total'], 'Total EE should equal default + custom'
 
     # Validate jobs actual values
     print('--- Validating jobs data values ---')
     assert statistics['jobs_total'] == 3, 'Should have 3 total jobs'
     assert len(json_data['jobs_by_template']) == 1, 'Should have 1 job template'
     job = json_data['jobs_by_template'][0]
-    assert job['number_of_jobs_executed'] == 3, 'Job template should have 3 executions'
-    assert job['number_of_jobs_failed'] == 0, 'Should have 0 failed jobs'
-    assert job['number_of_jobs_succeeded'] == 3, 'Should have 3 succeeded jobs'
-    assert job['number_of_jobs_succeeded'] + job['number_of_jobs_failed'] == job['number_of_jobs_executed'], (
+    assert job['jobs_executed_total'] == 3, 'Job template should have 3 executions'
+    assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
+    assert job['jobs_succeeded_total'] == 3, 'Should have 3 succeeded jobs'
+    assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_executed_total'], (
         'Succeeded + failed should equal total executed'
     )
 
     # Validate job duration fields are non-negative
-    assert job['job_duration_total_in_seconds'] >= 0, 'Job duration total should be non-negative'
-    assert job['job_duration_maximum_in_seconds'] >= job['job_duration_minimum_in_seconds'], 'Max duration should be >= min duration'
+    assert job['job_duration_total_seconds'] >= 0, 'Job duration total should be non-negative'
+    assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
 
     # Validate job waiting time fields are non-negative
-    assert job['job_waiting_time_total_in_seconds'] >= 0, 'Job waiting time total should be non-negative'
+    assert job['job_waiting_time_total_seconds'] >= 0, 'Job waiting time total should be non-negative'
 
     # Validate job_host_summary structure (now a direct array, not nested)
     print('--- Validating job_host_summary data values ---')

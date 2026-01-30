@@ -65,18 +65,18 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_template = (
             dataframe.groupby('job_template_name')
             .agg(
-                number_of_jobs_executed=('id', 'nunique'),
-                number_of_jobs_failed=('failed', 'sum'),
-                number_of_jobs_never_started=('started', lambda x: x.isna().sum()),
-                job_duration_maximum_in_seconds=('job_duration_seconds', 'max'),
-                job_duration_minimum_in_seconds=('job_duration_seconds', 'min'),
-                job_duration_total_in_seconds=('job_duration_seconds', 'sum'),
-                job_waiting_time_maximum_in_seconds=('job_waiting_time_seconds', 'max'),
-                job_waiting_time_minimum_in_seconds=('job_waiting_time_seconds', 'min'),
-                job_waiting_time_total_in_seconds=('job_waiting_time_seconds', 'sum'),
+                jobs_executed_total=('id', 'nunique'),
+                jobs_failed_total=('failed', 'sum'),
+                jobs_never_started_total=('started', lambda x: x.isna().sum()),
+                job_duration_maximum_seconds=('job_duration_seconds', 'max'),
+                job_duration_minimum_seconds=('job_duration_seconds', 'min'),
+                job_duration_total_seconds=('job_duration_seconds', 'sum'),
+                job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
+                job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
+                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
             )
             .reset_index()
-            .assign(number_of_jobs_succeeded=lambda x: x['number_of_jobs_executed'] - x['number_of_jobs_failed'])
+            .assign(jobs_succeeded_total=lambda x: x['jobs_executed_total'] - x['jobs_failed_total'])
         )
 
         # Prepare rollup data (dataframe before conversion)

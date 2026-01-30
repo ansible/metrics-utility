@@ -114,49 +114,49 @@ def test_jobs_anonymized_rollups_base_aggregation():
     rec_t3 = next(r for r in by_template if r['job_template_name'] == 'T3')
 
     # T1 counts
-    assert rec_t1['number_of_jobs_executed'] == 3
-    assert rec_t1['number_of_jobs_failed'] == 1
-    assert rec_t1['number_of_jobs_succeeded'] == 2
-    assert rec_t1['number_of_jobs_never_started'] == 0
+    assert rec_t1['jobs_executed_total'] == 3
+    assert rec_t1['jobs_failed_total'] == 1
+    assert rec_t1['jobs_succeeded_total'] == 2
+    assert rec_t1['jobs_never_started_total'] == 0
 
     # T1 durations (seconds): 3.0, 5.0, 2.0
-    assert rec_t1['job_duration_maximum_in_seconds'] == pytest.approx(5.0, rel=1e-6)
-    assert rec_t1['job_duration_minimum_in_seconds'] == pytest.approx(2.0, rel=1e-6)
-    assert rec_t1['job_duration_total_in_seconds'] == pytest.approx(10.0, rel=1e-6)
+    assert rec_t1['job_duration_maximum_seconds'] == pytest.approx(5.0, rel=1e-6)
+    assert rec_t1['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_t1['job_duration_total_seconds'] == pytest.approx(10.0, rel=1e-6)
 
     # T1 waiting times (seconds): 0.0, 2.0, 1.0
-    assert rec_t1['job_waiting_time_maximum_in_seconds'] == pytest.approx(2.0, rel=1e-6)
-    assert rec_t1['job_waiting_time_minimum_in_seconds'] == pytest.approx(0.0, rel=1e-6)
-    assert rec_t1['job_waiting_time_total_in_seconds'] == pytest.approx(3.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_maximum_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0, rel=1e-6)
+    assert rec_t1['job_waiting_time_total_seconds'] == pytest.approx(3.0, rel=1e-6)
 
     # T2 counts
-    assert rec_t2['number_of_jobs_executed'] == 1
-    assert rec_t2['number_of_jobs_failed'] == 0
-    assert rec_t2['number_of_jobs_succeeded'] == 1
-    assert rec_t2['number_of_jobs_never_started'] == 0
+    assert rec_t2['jobs_executed_total'] == 1
+    assert rec_t2['jobs_failed_total'] == 0
+    assert rec_t2['jobs_succeeded_total'] == 1
+    assert rec_t2['jobs_never_started_total'] == 0
 
     # T2 duration (seconds): 7.0
-    assert rec_t2['job_duration_maximum_in_seconds'] == pytest.approx(7.0, rel=1e-6)
-    assert rec_t2['job_duration_minimum_in_seconds'] == pytest.approx(7.0, rel=1e-6)
-    assert rec_t2['job_duration_total_in_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_minimum_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_t2['job_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
 
     # T2 waiting (seconds): 4.0
-    assert rec_t2['job_waiting_time_maximum_in_seconds'] == pytest.approx(4.0, rel=1e-6)
-    assert rec_t2['job_waiting_time_minimum_in_seconds'] == pytest.approx(4.0, rel=1e-6)
-    assert rec_t2['job_waiting_time_total_in_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_maximum_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_minimum_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_t2['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
 
     # T3 counts (jobs that never started - should have NaN values for durations)
-    assert rec_t3['number_of_jobs_executed'] == 1
-    assert rec_t3['number_of_jobs_failed'] == 1
-    assert rec_t3['number_of_jobs_succeeded'] == 0
-    assert rec_t3['number_of_jobs_never_started'] == 1
+    assert rec_t3['jobs_executed_total'] == 1
+    assert rec_t3['jobs_failed_total'] == 1
+    assert rec_t3['jobs_succeeded_total'] == 0
+    assert rec_t3['jobs_never_started_total'] == 1
 
     # T3 should have NaN for all duration metrics and 0 for totals
-    assert pd.isna(rec_t3['job_duration_maximum_in_seconds'])
-    assert pd.isna(rec_t3['job_duration_minimum_in_seconds'])
-    assert rec_t3['job_duration_total_in_seconds'] == pytest.approx(0.0, rel=1e-6)
+    assert pd.isna(rec_t3['job_duration_maximum_seconds'])
+    assert pd.isna(rec_t3['job_duration_minimum_seconds'])
+    assert rec_t3['job_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
     # T3 should have NaN for all waiting time metrics and 0 for totals
-    assert pd.isna(rec_t3['job_waiting_time_maximum_in_seconds'])
-    assert pd.isna(rec_t3['job_waiting_time_minimum_in_seconds'])
-    assert rec_t3['job_waiting_time_total_in_seconds'] == pytest.approx(0.0, rel=1e-6)
+    assert pd.isna(rec_t3['job_waiting_time_maximum_seconds'])
+    assert pd.isna(rec_t3['job_waiting_time_minimum_seconds'])
+    assert rec_t3['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)

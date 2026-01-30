@@ -364,7 +364,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['task_skipped_total'] == 0
     assert copy_stats['task_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
-    assert copy_stats['number_of_jobs_never_started'] == 0
+    assert copy_stats['jobs_never_started_total'] == 0
     assert copy_stats['hosts_total'] == 3
     assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
 
@@ -378,7 +378,7 @@ def test_events_modules_aggregations_basic():
     assert template_stats['task_skipped_total'] == 0
     assert template_stats['task_unreachable_total'] == 1
     assert template_stats['jobs_total'] == 2
-    assert template_stats['number_of_jobs_never_started'] == 0
+    assert template_stats['jobs_never_started_total'] == 0
     assert template_stats['hosts_total'] == 2
     assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
 
@@ -392,7 +392,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['task_skipped_total'] == 0
     assert firewalld_stats['task_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
-    assert firewalld_stats['number_of_jobs_never_started'] == 0
+    assert firewalld_stats['jobs_never_started_total'] == 0
     assert firewalld_stats['hosts_total'] == 2
     assert firewalld_stats['jobs_failed_because_of_module_failure_total'] == 1
 
@@ -406,7 +406,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['task_skipped_total'] == 1
     assert ec2_stats['task_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
-    assert ec2_stats['number_of_jobs_never_started'] == 0
+    assert ec2_stats['jobs_never_started_total'] == 0
     assert ec2_stats['hosts_total'] == 4
     assert ec2_stats['jobs_failed_because_of_module_failure_total'] == 0
 
@@ -420,7 +420,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['task_skipped_total'] == 0
     assert yum_stats['task_unreachable_total'] == 0
     assert yum_stats['jobs_total'] == 3
-    assert yum_stats['number_of_jobs_never_started'] == 1
+    assert yum_stats['jobs_never_started_total'] == 1
     assert yum_stats['hosts_total'] == 2
     assert yum_stats['jobs_failed_because_of_module_failure_total'] == 3
 
@@ -434,7 +434,7 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_skipped_total'] == 0
     assert mongo_stats['task_unreachable_total'] == 0
     assert mongo_stats['jobs_total'] == 2
-    assert mongo_stats['number_of_jobs_never_started'] == 0
+    assert mongo_stats['jobs_never_started_total'] == 0
     assert mongo_stats['hosts_total'] == 2
     assert mongo_stats['jobs_failed_because_of_module_failure_total'] == 0
 
@@ -448,7 +448,7 @@ def test_events_modules_aggregations_basic():
     assert custom_stats['task_skipped_total'] == 0
     assert custom_stats['task_unreachable_total'] == 0
     assert custom_stats['jobs_total'] == 1
-    assert custom_stats['number_of_jobs_never_started'] == 0
+    assert custom_stats['jobs_never_started_total'] == 0
     assert custom_stats['hosts_total'] == 1
     assert custom_stats['jobs_failed_because_of_module_failure_total'] == 0
 
@@ -458,7 +458,7 @@ def test_events_modules_aggregations_basic():
     netcommon_coll = coll_by_name['ansible.netcommon']
     assert netcommon_coll['collection_source'] == 'certified'
     assert netcommon_coll['jobs_total'] == 2
-    assert netcommon_coll['number_of_jobs_never_started'] == 0
+    assert netcommon_coll['jobs_never_started_total'] == 0
     assert netcommon_coll['hosts_total'] == 2
     assert netcommon_coll['job_duration_total_seconds'] == pytest.approx(1320.0)
     assert netcommon_coll['job_waiting_time_total_seconds'] == pytest.approx(360.0)
@@ -475,7 +475,7 @@ def test_events_modules_aggregations_basic():
     posix_coll = coll_by_name['ansible.posix']
     assert posix_coll['collection_source'] == 'certified'
     assert posix_coll['jobs_total'] == 2
-    assert posix_coll['number_of_jobs_never_started'] == 0
+    assert posix_coll['jobs_never_started_total'] == 0
     assert posix_coll['hosts_total'] == 2
     assert posix_coll['job_duration_total_seconds'] == pytest.approx(1380.0)
     assert posix_coll['job_waiting_time_total_seconds'] == pytest.approx(900.0)
@@ -492,7 +492,7 @@ def test_events_modules_aggregations_basic():
     windows_coll = coll_by_name['ansible.windows']
     assert windows_coll['collection_source'] == 'certified'
     assert windows_coll['jobs_total'] == 3
-    assert windows_coll['number_of_jobs_never_started'] == 0
+    assert windows_coll['jobs_never_started_total'] == 0
     assert windows_coll['hosts_total'] == 3
     assert windows_coll['job_duration_total_seconds'] == pytest.approx(2100.0)
     assert windows_coll['job_waiting_time_total_seconds'] == pytest.approx(900.0)
@@ -509,7 +509,7 @@ def test_events_modules_aggregations_basic():
     aws_coll = coll_by_name['community.aws']
     assert aws_coll['collection_source'] == 'community'
     assert aws_coll['jobs_total'] == 2
-    assert aws_coll['number_of_jobs_never_started'] == 0
+    assert aws_coll['jobs_never_started_total'] == 0
     assert aws_coll['hosts_total'] == 4
     assert aws_coll['job_duration_total_seconds'] == pytest.approx(1380.0)
     assert aws_coll['job_waiting_time_total_seconds'] == pytest.approx(900.0)
@@ -526,7 +526,7 @@ def test_events_modules_aggregations_basic():
     general_coll = coll_by_name['community.general']
     assert general_coll['collection_source'] == 'community'
     assert general_coll['jobs_total'] == 3
-    assert general_coll['number_of_jobs_never_started'] == 1
+    assert general_coll['jobs_never_started_total'] == 1
     assert general_coll['hosts_total'] == 2
     assert general_coll['job_duration_total_seconds'] == pytest.approx(1500.0)
     assert general_coll['job_waiting_time_total_seconds'] == pytest.approx(300.0)
@@ -543,7 +543,7 @@ def test_events_modules_aggregations_basic():
     mongodb_coll = coll_by_name['community.mongodb']
     assert mongodb_coll['collection_source'] == 'community'
     assert mongodb_coll['jobs_total'] == 2
-    assert mongodb_coll['number_of_jobs_never_started'] == 0
+    assert mongodb_coll['jobs_never_started_total'] == 0
     assert mongodb_coll['hosts_total'] == 2
     assert mongodb_coll['job_duration_total_seconds'] == pytest.approx(1500.0)
     assert mongodb_coll['job_waiting_time_total_seconds'] == pytest.approx(300.0)
@@ -560,7 +560,7 @@ def test_events_modules_aggregations_basic():
     custom_coll = coll_by_name['custom.user']
     assert custom_coll['collection_source'] == 'Unknown'
     assert custom_coll['jobs_total'] == 1
-    assert custom_coll['number_of_jobs_never_started'] == 0
+    assert custom_coll['jobs_never_started_total'] == 0
     assert custom_coll['hosts_total'] == 1
     assert custom_coll['job_duration_total_seconds'] == pytest.approx(540.0)
     assert custom_coll['job_waiting_time_total_seconds'] == pytest.approx(60.0)
