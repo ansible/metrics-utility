@@ -21,15 +21,16 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         """
         This function will create first level aggregation of the job dataframe, the result is json
 
-        Number of jobs executed
-        Number of jobs failed
-        Number of jobs that succeeded
+        Aggregations grouped by job_type (model):
+        - Number of jobs executed
+        - Number of jobs failed
+        - Number of jobs that succeeded
+        - Number of distinct templates
 
-        Job duration maximum seconds - by template
-        Job duration minimum seconds - by template
-        Job total seconds by template
+        Job duration maximum seconds - by job_type
+        Job duration minimum seconds - by job_type
+        Job total seconds by job_type
         The same as above but for waiting times
-        Number of jobs by template
 
         Active number of customer by Controller Version - this will be skipped for now
         Active number of Customers - this will be skipped for now
@@ -60,12 +61,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['created']).dt.total_seconds()
 
-        jobs_total = dataframe['id'].nunique()
-
-        aggregations_by_template = (
-            dataframe.groupby('job_template_name')
+        aggregations_by_job_type = (
+            dataframe.groupby('model')
             .agg(
-                jobs_executed_total=('id', 'nunique'),
+                jobs_total=('id', 'nunique'),
                 jobs_failed_total=('failed', 'sum'),
                 jobs_never_started_total=('started', lambda x: x.isna().sum()),
                 job_duration_maximum_seconds=('job_duration_seconds', 'max'),
@@ -74,22 +73,22 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
                 job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-                job_type=('model', 'first'),
+                templates_total=('job_template_name', 'nunique'),
             )
             .reset_index()
-            .assign(jobs_succeeded_total=lambda x: x['jobs_executed_total'] - x['jobs_failed_total'])
+            .rename(columns={'model': 'job_type'})
+            .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
             # pandas.DataFrame
-            'aggregations_by_template': aggregations_by_template,
+            'aggregations_by_job_type': aggregations_by_job_type,
         }
 
         # Prepare JSON data (converted to list of dicts)
         json_data = {
-            'by_template': aggregations_by_template.to_dict(orient='records'),
-            'jobs_total': jobs_total,
+            'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
         }
 
         return {
