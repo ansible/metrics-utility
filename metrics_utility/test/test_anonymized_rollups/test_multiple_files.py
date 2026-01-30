@@ -259,21 +259,39 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['execution_environments_custom_total'] == 3
 
     # ========== Validate Job Host Summary ==========
-    jhs = result['job_host_summary']
-    assert isinstance(jhs, dict), 'job_host_summary should be a dict, not a list'
-    assert result['statistics']['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1-h5)'
+    jhs_list = result['job_host_summary']
+    assert isinstance(jhs_list, list), 'job_host_summary should be a list (grouped by job_type)'
+    # unique_hosts_total is now summed across all job_type groups
+    # job type has 5 unique hosts (h1-h5), workflowjob type has 3 unique hosts (h1-h3)
+    # Total = 5 + 3 = 8 (some hosts appear in both types)
+    assert result['statistics']['unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
 
-    # Verify data was concatenated from both tarballs - should be a single object with totals
-    # Should not have job_template_name field
-    assert 'job_template_name' not in jhs, 'Should not have job_template_name field'
+    # Should have 2 job_type groups: 'job' and 'workflowjob'
+    assert len(jhs_list) == 2, 'Should have 2 job_type groups'
     
-    # Verify totals across all templates (T1 + T2)
-    assert jhs['ok_total'] == 52, 'Should have 52 ok tasks total (26 from T1 + 26 from T2)'
-    assert jhs['failures_total'] == 6, 'Should have 6 failures total (2 from T1 + 4 from T2)'
-    assert jhs['skipped_total'] == 2, 'Should have 2 skipped total (2 from T1 + 0 from T2)'
-    assert jhs['ignored_total'] == 0
-    assert jhs['rescued_total'] == 0
-    assert jhs['dark_total'] == 0
+    # Find the 'job' type group
+    job_type_jhs = next((j for j in jhs_list if j['job_type'] == 'job'), None)
+    assert job_type_jhs is not None, 'Should have job_type job'
+    assert job_type_jhs['unique_hosts_total'] == 5, 'Should have 5 unique hosts for job type'
+    assert job_type_jhs['ok_total'] == 26, 'Should have 26 ok tasks for job type'
+    assert job_type_jhs['failures_total'] == 2, 'Should have 2 failures for job type'
+    assert job_type_jhs['skipped_total'] == 2, 'Should have 2 skipped for job type'
+    
+    # Find the 'workflowjob' type group
+    workflowjob_type_jhs = next((j for j in jhs_list if j['job_type'] == 'workflowjob'), None)
+    assert workflowjob_type_jhs is not None, 'Should have job_type workflowjob'
+    assert workflowjob_type_jhs['unique_hosts_total'] == 3, 'Should have 3 unique hosts for workflowjob type'
+    assert workflowjob_type_jhs['ok_total'] == 26, 'Should have 26 ok tasks for workflowjob type'
+    assert workflowjob_type_jhs['failures_total'] == 4, 'Should have 4 failures for workflowjob type'
+    assert workflowjob_type_jhs['skipped_total'] == 0, 'Should have 0 skipped for workflowjob type'
+    
+    # Verify totals across all job types
+    total_ok = sum(j['ok_total'] for j in jhs_list)
+    total_failures = sum(j['failures_total'] for j in jhs_list)
+    total_skipped = sum(j['skipped_total'] for j in jhs_list)
+    assert total_ok == 52, 'Should have 52 ok tasks total (26 from job + 26 from workflowjob)'
+    assert total_failures == 6, 'Should have 6 failures total (2 from job + 4 from workflowjob)'
+    assert total_skipped == 2, 'Should have 2 skipped total (2 from job + 0 from workflowjob)'
 
     # ========== Validate Events Modules ==========
     # In flattened structure, events_modules data is now in statistics and direct arrays
@@ -410,10 +428,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(result['jobs_by_template'], list), 'jobs_by_template should be a list'
     assert len(result['jobs_by_template']) == 0, 'jobs_by_template should be empty with no data'
 
-    assert isinstance(result['job_host_summary'], dict), 'job_host_summary should be a dict, not a list'
-    # With no data, job_host_summary should be a dict with zero totals
-    assert result['job_host_summary'].get('ok_total', 0) == 0, 'job_host_summary should have zero ok_total with no data'
-    assert result['job_host_summary'].get('failures_total', 0) == 0, 'job_host_summary should have zero failures_total with no data'
+    assert isinstance(result['job_host_summary'], list), 'job_host_summary should be a list (grouped by job_type)'
+    # With no data, job_host_summary should be an empty list
+    assert len(result['job_host_summary']) == 0, 'job_host_summary should be empty with no data'
 
     assert isinstance(result['module_stats'], list), 'module_stats should be a list'
     assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'
