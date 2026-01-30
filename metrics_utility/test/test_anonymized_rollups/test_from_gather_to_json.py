@@ -116,8 +116,8 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'jobs_executed_total' in job
             assert 'jobs_failed_total' in job
             assert 'job_type' in job
-            # For DB tests, job_type may be null
-            assert job['job_type'] is None or isinstance(job['job_type'], str)
+            # job_type should be 'job' from django_content_type.model
+            assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
 
     # ========== Validate actual data values and relationships ==========
 
@@ -175,8 +175,8 @@ def test_from_gather_to_json(cleanup_glob):
     assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_executed_total'], (
         'Succeeded + failed should equal total executed'
     )
-    # For DB tests, job_type may be null
-    assert job['job_type'] is None or isinstance(job['job_type'], str), 'job_type should be None or a string'
+    # job_type should be 'job' from django_content_type.model
+    assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
 
     # Validate job duration fields are non-negative
     assert job['job_duration_total_seconds'] >= 0, 'Job duration total should be non-negative'
