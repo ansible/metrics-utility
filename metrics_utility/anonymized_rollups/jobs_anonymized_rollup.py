@@ -74,6 +74,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
                 job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
+                job_type=('model', 'first'),
             )
             .reset_index()
             .assign(jobs_succeeded_total=lambda x: x['jobs_executed_total'] - x['jobs_failed_total'])

@@ -15,6 +15,7 @@ jobs = [
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
         'created': '2024-01-01 00:00:00.000000+00',
+        'model': 'job',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -28,6 +29,7 @@ jobs = [
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
         'created': '2024-01-01 00:00:08.000000+00',  # wait 2s
+        'model': 'job',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
@@ -42,6 +44,7 @@ jobs = [
         'controller_node': 'ctrl-A',
         'ansible_version': 'v1',
         'created': '2024-01-01 00:01:36.000000+00',  # wait 4s
+        'model': 'workflowjob',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -56,6 +59,7 @@ jobs = [
         'controller_node': 'ctrl-B',
         'ansible_version': 'v2',
         'created': '2024-01-01 00:03:19.000000+00',  # wait 1s
+        'model': 'job',
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
@@ -69,6 +73,7 @@ jobs = [
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
         'ansible_version': 'v3',
+        'model': 'adhoccommand',
     },
     {
         'id': 6,
@@ -78,6 +83,7 @@ jobs = [
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
         'ansible_version': 'v3',
+        'model': 'adhoccommand',
     },
 ]
 
@@ -129,6 +135,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_t1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0, rel=1e-6)
     assert rec_t1['job_waiting_time_total_seconds'] == pytest.approx(3.0, rel=1e-6)
 
+    # T1 job_type (all jobs in T1 have model='job')
+    assert rec_t1['job_type'] == 'job'
+
     # T2 counts
     assert rec_t2['jobs_executed_total'] == 1
     assert rec_t2['jobs_failed_total'] == 0
@@ -145,6 +154,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_t2['job_waiting_time_minimum_seconds'] == pytest.approx(4.0, rel=1e-6)
     assert rec_t2['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
 
+    # T2 job_type
+    assert rec_t2['job_type'] == 'workflowjob'
+
     # T3 counts (jobs that never started - should have NaN values for durations)
     assert rec_t3['jobs_executed_total'] == 1
     assert rec_t3['jobs_failed_total'] == 1
@@ -160,3 +172,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_t3['job_waiting_time_maximum_seconds'])
     assert pd.isna(rec_t3['job_waiting_time_minimum_seconds'])
     assert rec_t3['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
+
+    # T3 job_type (all jobs in T3 have model='adhoccommand')
+    assert rec_t3['job_type'] == 'adhoccommand'

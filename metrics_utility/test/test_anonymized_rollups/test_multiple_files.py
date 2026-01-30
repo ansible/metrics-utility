@@ -226,6 +226,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t1['job_waiting_time_total_seconds'] == pytest.approx(3.0)
     assert t1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
     assert t1['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
+    # Check job_type field
+    assert t1['job_type'] == 'job'
 
     # T2 should have 1 job executed
     t2_jobs = [j for j in jobs_list if j['jobs_executed_total'] == 1 and j['jobs_never_started_total'] == 0]
@@ -236,6 +238,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t2['jobs_succeeded_total'] == 1
     assert t2['job_duration_total_seconds'] == pytest.approx(7.0)
     assert t2['job_waiting_time_total_seconds'] == pytest.approx(4.0)
+    # Check job_type field
+    assert t2['job_type'] == 'workflowjob'
 
     # T3 should have never started job
     t3_jobs = [j for j in jobs_list if j['jobs_never_started_total'] == 1]
@@ -246,6 +250,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert t3['jobs_succeeded_total'] == 0
     assert t3['job_duration_total_seconds'] == pytest.approx(0.0)
     assert t3['job_waiting_time_total_seconds'] == pytest.approx(0.0)
+    # Check job_type field
+    assert t3['job_type'] == 'adhoccommand'
 
     # ========== Validate Execution Environments ==========
     assert result['statistics']['execution_environments_total'] == 5
