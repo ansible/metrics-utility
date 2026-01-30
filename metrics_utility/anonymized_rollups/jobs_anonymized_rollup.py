@@ -25,8 +25,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         Number of jobs failed
         Number of jobs that succeeded
 
-        Job duration average in seconds - by template
-        Job duration maximum seconds- by template
+        Job duration maximum seconds - by template
         Job duration minimum seconds - by template
         Job total seconds by template
         The same as above but for waiting times
@@ -69,11 +68,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 number_of_jobs_executed=('id', 'nunique'),
                 number_of_jobs_failed=('failed', 'sum'),
                 number_of_jobs_never_started=('started', lambda x: x.isna().sum()),
-                job_duration_average_in_seconds=('job_duration_seconds', 'mean'),
                 job_duration_maximum_in_seconds=('job_duration_seconds', 'max'),
                 job_duration_minimum_in_seconds=('job_duration_seconds', 'min'),
                 job_duration_total_in_seconds=('job_duration_seconds', 'sum'),
-                job_waiting_time_average_in_seconds=('job_waiting_time_seconds', 'mean'),
                 job_waiting_time_maximum_in_seconds=('job_waiting_time_seconds', 'max'),
                 job_waiting_time_minimum_in_seconds=('job_waiting_time_seconds', 'min'),
                 job_waiting_time_total_in_seconds=('job_waiting_time_seconds', 'sum'),

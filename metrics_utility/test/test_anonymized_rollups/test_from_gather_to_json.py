@@ -77,7 +77,6 @@ def test_from_gather_to_json(cleanup_glob):
     statistics = json_data['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
     assert 'modules_used_to_automate_total' in statistics
-    assert 'avg_number_of_modules_used_in_a_playbooks' in statistics
     assert 'hosts_automated_total' in statistics
     assert 'EE_total' in statistics
     assert 'EE_default_total' in statistics
@@ -87,7 +86,6 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate statistics data types
     assert isinstance(statistics['modules_used_to_automate_total'], int)
-    assert isinstance(statistics['avg_number_of_modules_used_in_a_playbooks'], (int, float))
     assert isinstance(statistics['hosts_automated_total'], int)
     assert isinstance(statistics['EE_total'], int)
     assert isinstance(statistics['EE_default_total'], int)
@@ -117,8 +115,6 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'job_template_name' in job
             assert 'number_of_jobs_executed' in job
             assert 'number_of_jobs_failed' in job
-            assert 'job_duration_average_in_seconds' in job
-            assert 'job_waiting_time_average_in_seconds' in job
 
     # ========== Validate actual data values and relationships ==========
 
@@ -138,7 +134,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_module_stats['task_clean_success_total'] == 6, 'Should have 6 successful tasks (3 jobs × 2 hosts)'
     assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
     assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
-    assert first_module_stats['avg_hosts_per_job'] == pytest.approx(2.0, rel=1e-6), 'Should average 2 hosts per job'
 
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
@@ -157,13 +152,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'modules_used' in playbook_entry, 'Playbook entry should have modules_used'
     assert playbook_entry['modules_used'] == 1, 'Playbook should use 1 module'
 
-    # Validate avg_number_of_modules_used_in_a_playbooks calculation
-    total_modules_across_playbooks = sum(p['modules_used'] for p in json_data['modules_used_per_playbook'])
-    num_playbooks = len(json_data['modules_used_per_playbook'])
-    expected_avg = total_modules_across_playbooks / num_playbooks if num_playbooks > 0 else 0
-    assert statistics['avg_number_of_modules_used_in_a_playbooks'] == pytest.approx(expected_avg, rel=1e-6), (
-        f'Average should be {expected_avg}, got {statistics["avg_number_of_modules_used_in_a_playbooks"]}'
-    )
 
     # Validate execution_environments actual values
     print('--- Validating execution_environments data values ---')
@@ -186,12 +174,10 @@ def test_from_gather_to_json(cleanup_glob):
     )
 
     # Validate job duration fields are non-negative
-    assert job['job_duration_average_in_seconds'] >= 0, 'Job duration average should be non-negative'
     assert job['job_duration_total_in_seconds'] >= 0, 'Job duration total should be non-negative'
     assert job['job_duration_maximum_in_seconds'] >= job['job_duration_minimum_in_seconds'], 'Max duration should be >= min duration'
 
     # Validate job waiting time fields are non-negative
-    assert job['job_waiting_time_average_in_seconds'] >= 0, 'Job waiting time average should be non-negative'
     assert job['job_waiting_time_total_in_seconds'] >= 0, 'Job waiting time total should be non-negative'
 
     # Validate job_host_summary structure (now a direct array, not nested)

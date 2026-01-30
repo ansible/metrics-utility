@@ -251,15 +251,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def base(self, data):
         """
-        *Avg number of modules used in a playbook
         *Failure/Success rate of modules
         *Modules Used to Automate
         *Total number of modules automated
         *Total hosts automated
 
         *Breakdown of total jobs executed by collection source (e.g., Red Hat, Partner A, Community).
-        * Average job duration for collection sources (total job duration / number of jobs).
-        * Average number of hosts automated per job for each collection source.
+        * Total job duration for collection sources (averages can be computed from totals and counts).
+        * Number of hosts automated per job for each collection source (totals only).
         * Number of jobs per collection source that have failed.
         * Success/failure rate of jobs per collection source (number of jobs that have failed / number of jobs).
         * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
@@ -317,8 +316,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Total number of modules automated
         modules_used_to_automate_total = len(list_of_modules_used_to_automate)
 
-        # Avg number of modules used in a playbook
-        avg_number_of_modules_used_in_a_playbooks = dataframe.groupby('playbook', observed=True)['module_name'].nunique().mean()
+        # Modules used per playbook (totals only, averages can be computed from totals)
         modules_used_per_playbook_total = dataframe.groupby('playbook', observed=True)['module_name'].nunique()
 
         # Data is already aggregated from prepare() and merge()
@@ -367,12 +365,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-                avg_hosts_per_job=('host_count', 'mean'),
                 jobs_containing_module_failed_total=('job_containing_module_failed', 'sum'),
-            )
-            .assign(
-                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
-                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
             )
         )
 
@@ -389,12 +382,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 jobs_total=('job_id', 'nunique'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-                avg_hosts_per_job=('host_count', 'mean'),
                 jobs_containing_collection_name_failed_total=('job_containing_collection_name_failed', 'sum'),
-            )
-            .assign(
-                avg_job_duration_seconds=lambda x: x['job_duration_total_seconds'] / x['jobs_total'],
-                avg_job_waiting_time_seconds=lambda x: x['job_waiting_time_total_seconds'] / x['jobs_total'],
             )
         )
 
@@ -426,7 +414,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Prepare JSON data (converted to dicts/lists)
         json_data = {
             'modules_used_to_automate_total': modules_used_to_automate_total,
-            'avg_number_of_modules_used_in_a_playbooks': avg_number_of_modules_used_in_a_playbooks,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': merged_list_module,
             'collection_name_stats': merged_list_collection_name,

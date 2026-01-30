@@ -107,7 +107,6 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     statistics = {
         # from events_modules
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
-        'avg_number_of_modules_used_in_a_playbooks': events_modules.get('avg_number_of_modules_used_in_a_playbooks'),
         'hosts_automated_total': events_modules.get('hosts_automated_total'),
         'event_total': events_modules.get('event_total'),
         # from execution_environments
