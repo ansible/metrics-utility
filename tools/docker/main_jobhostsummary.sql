@@ -1,5 +1,8 @@
 DO $$
 DECLARE
+  --
+  job_content_type_id INTEGER;
+  --
   i_text text;
   task_uuid_1 text;
   task_uuid_2 text;
@@ -37,6 +40,15 @@ DECLARE
   unified_job_id    INTEGER;
   --
 BEGIN
+  --
+  -- Insert django_content_type entry for 'job' model
+  --
+  INSERT INTO public.django_content_type (app_label, model)
+  VALUES ('main', 'job')
+  RETURNING id INTO job_content_type_id;
+  
+  RAISE NOTICE 'Inserted django_content_type for job model with id = %', job_content_type_id;
+  --
   --
   -- ORGANIZATION
   --
@@ -394,7 +406,8 @@ $yaml$,
       installed_collections,
       ansible_version,
       task_impact,
-      job_env
+      job_env,
+      polymorphic_ctype_id
     )
     VALUES (
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created
@@ -423,7 +436,8 @@ $yaml$,
       '{}'::jsonb,                            -- installed_collections
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
-      '{}'::jsonb                             -- job_env
+      '{}'::jsonb,                            -- job_env
+      job_content_type_id                     -- polymorphic_ctype_id
     )
     RETURNING id
     INTO unified_job_id;
