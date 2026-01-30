@@ -259,26 +259,21 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['execution_environments_custom_total'] == 3
 
     # ========== Validate Job Host Summary ==========
-    jhs_list = result['job_host_summary']
-    assert isinstance(jhs_list, list), 'job_host_summary should be a list'
-    assert len(jhs_list) == 2  # T1 and T2
+    jhs = result['job_host_summary']
+    assert isinstance(jhs, dict), 'job_host_summary should be a dict, not a list'
     assert result['statistics']['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1-h5)'
 
-    # Verify data was concatenated from both tarballs
-    # verify number of ok, failures, skipped, ignored, rescued, dark for each template
-    assert jhs_list[0]['ok_total'] == 26
-    assert jhs_list[0]['failures_total'] == 2
-    assert jhs_list[0]['skipped_total'] == 2
-    assert jhs_list[0]['ignored_total'] == 0
-    assert jhs_list[0]['rescued_total'] == 0
-    assert jhs_list[0]['dark_total'] == 0
-
-    assert jhs_list[1]['ok_total'] == 26
-    assert jhs_list[1]['failures_total'] == 4
-    assert jhs_list[1]['skipped_total'] == 0
-    assert jhs_list[1]['ignored_total'] == 0
-    assert jhs_list[1]['rescued_total'] == 0
-    assert jhs_list[1]['dark_total'] == 0
+    # Verify data was concatenated from both tarballs - should be a single object with totals
+    # Should not have job_template_name field
+    assert 'job_template_name' not in jhs, 'Should not have job_template_name field'
+    
+    # Verify totals across all templates (T1 + T2)
+    assert jhs['ok_total'] == 52, 'Should have 52 ok tasks total (26 from T1 + 26 from T2)'
+    assert jhs['failures_total'] == 6, 'Should have 6 failures total (2 from T1 + 4 from T2)'
+    assert jhs['skipped_total'] == 2, 'Should have 2 skipped total (2 from T1 + 0 from T2)'
+    assert jhs['ignored_total'] == 0
+    assert jhs['rescued_total'] == 0
+    assert jhs['dark_total'] == 0
 
     # ========== Validate Events Modules ==========
     # In flattened structure, events_modules data is now in statistics and direct arrays
@@ -415,8 +410,10 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(result['jobs_by_template'], list), 'jobs_by_template should be a list'
     assert len(result['jobs_by_template']) == 0, 'jobs_by_template should be empty with no data'
 
-    assert isinstance(result['job_host_summary'], list), 'job_host_summary should be a list'
-    assert len(result['job_host_summary']) == 0, 'job_host_summary should be empty with no data'
+    assert isinstance(result['job_host_summary'], dict), 'job_host_summary should be a dict, not a list'
+    # With no data, job_host_summary should be a dict with zero totals
+    assert result['job_host_summary'].get('ok_total', 0) == 0, 'job_host_summary should have zero ok_total with no data'
+    assert result['job_host_summary'].get('failures_total', 0) == 0, 'job_host_summary should have zero failures_total with no data'
 
     assert isinstance(result['module_stats'], list), 'module_stats should be a list'
     assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'

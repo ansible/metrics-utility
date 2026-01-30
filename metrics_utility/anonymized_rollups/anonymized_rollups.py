@@ -55,11 +55,11 @@ def anonymize_data(data, salt):
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
-    # anonymize job_host_summary job template name
+    # anonymize job_host_summary job template name (now a single object, not a list)
     if 'job_host_summary' in data and data['job_host_summary']:
-        for jobhostsummary in data['job_host_summary']:
-            if jobhostsummary and 'job_template_name' in jobhostsummary and jobhostsummary['job_template_name']:
-                jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
+        jobhostsummary = data['job_host_summary']
+        if jobhostsummary and 'job_template_name' in jobhostsummary and jobhostsummary['job_template_name']:
+            jobhostsummary['job_template_name'] = hash(jobhostsummary['job_template_name'], salt)
 
     # anonymize module_stats - anonymize module name and collection name for 'Unknown' sources
     if 'module_stats' in data and data['module_stats']:
@@ -92,7 +92,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
       - jobs_by_template: array (copied as-is)
-      - job_host_summary: array (copied as-is)
+      - job_host_summary: object (copied as-is)
     """
     events_modules = data.get('events_modules', {})
     execution_environments = data.get('execution_environments', {})
@@ -130,7 +130,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
     jobs_by_template: List[Dict[str, Any]] = jobs.get('by_template', []) or []
-    job_host_summary: List[Dict[str, Any]] = job_host_summary_root.get('aggregated', []) or []
+    # job_host_summary is now a single object, not a list
+    job_host_summary: Dict[str, Any] = job_host_summary_root.get('aggregated', {}) or {}
 
     # 4) assemble the flattened object
     flattened: Dict[str, Any] = {

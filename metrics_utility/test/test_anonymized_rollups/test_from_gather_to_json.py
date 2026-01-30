@@ -98,7 +98,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
     assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
     assert isinstance(json_data['jobs_by_template'], list), 'jobs_by_template should be a list'
-    assert isinstance(json_data['job_host_summary'], list), 'job_host_summary should be a list'
+    assert isinstance(json_data['job_host_summary'], dict), 'job_host_summary should be a dict, not a list'
 
     # Validate module_stats have required fields
     if json_data['module_stats']:
@@ -185,15 +185,15 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate job waiting time fields are non-negative
     assert job['job_waiting_time_total_seconds'] >= 0, 'Job waiting time total should be non-negative'
 
-    # Validate job_host_summary structure (now a direct array, not nested)
+    # Validate job_host_summary structure (now a direct object, not a list)
     print('--- Validating job_host_summary data values ---')
     job_host_summary = json_data['job_host_summary']
-    assert isinstance(job_host_summary, list), 'job_host_summary should be a list'
-    assert len(job_host_summary) == 1, 'Should have 1 job_host_summary entry'
+    assert isinstance(job_host_summary, dict), 'job_host_summary should be a dict, not a list'
     assert statistics['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
 
-    jhs = job_host_summary[0]
-    assert 'job_template_name' in jhs
+    jhs = job_host_summary
+    # Should not have job_template_name field (no longer grouped by template)
+    assert 'job_template_name' not in jhs, 'Should not have job_template_name field'
     assert 'dark_total' in jhs
     assert 'failures_total' in jhs
     assert 'ok_total' in jhs
@@ -201,7 +201,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'ignored_total' in jhs
     assert 'rescued_total' in jhs
 
-    # Validate job_host_summary actual values
+    # Validate job_host_summary actual values (totals across all templates)
     assert jhs['ok_total'] == 6, 'Should have 6 ok tasks'
     assert jhs['failures_total'] == 0, 'Should have 0 failures'
     assert jhs['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
@@ -260,6 +260,6 @@ def test_half_day_rollup(cleanup_glob):
     assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert isinstance(json_data['jobs_by_template'], list), 'jobs_by_template should be a list'
-    assert isinstance(json_data['job_host_summary'], list), 'job_host_summary should be a list'
+    assert isinstance(json_data['job_host_summary'], dict), 'job_host_summary should be a dict, not a list'
 
     print('✅ Basic structure assertions passed!')

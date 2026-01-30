@@ -205,30 +205,23 @@ def test_jobhostsummary_anonymized():
 
     print(result)
 
-    # result should be a dict with 'aggregated' (list) and 'unique_hosts_total' (int)
+    # result should be a dict with 'aggregated' (dict) and 'unique_hosts_total' (int)
     assert 'aggregated' in result, 'result should have aggregated key'
     assert 'unique_hosts_total' in result, 'result should have unique_hosts_total key'
     assert result['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1, h2, h3, h4, h5)'
 
-    # convert to mapping for easy assertions
-    by_template = {item['job_template_name']: item for item in result['aggregated']}
-
-    assert set(by_template.keys()) == {'T1', 'T2'}
-
-    assert by_template['T1']['dark_total'] == 0
-    assert by_template['T2']['dark_total'] == 0
-
-    assert by_template['T1']['failures_total'] == 2
-    assert by_template['T2']['failures_total'] == 4
-
-    assert by_template['T1']['ok_total'] == 26
-    assert by_template['T2']['ok_total'] == 26
-
-    assert by_template['T1']['skipped_total'] == 2
-    assert by_template['T2']['skipped_total'] == 0
-
-    assert by_template['T1']['ignored_total'] == 0
-    assert by_template['T2']['ignored_total'] == 0
-
-    assert by_template['T1']['rescued_total'] == 0
-    assert by_template['T2']['rescued_total'] == 0
+    # aggregated should be a single dict (not a list)
+    assert isinstance(result['aggregated'], dict), 'aggregated should be a dict, not a list'
+    
+    totals = result['aggregated']
+    
+    # Should not have job_template_name field
+    assert 'job_template_name' not in totals, 'Should not have job_template_name field'
+    
+    # Verify totals across all templates
+    assert totals['dark_total'] == 0
+    assert totals['failures_total'] == 6  # T1: 2 failures, T2: 4 failures
+    assert totals['ok_total'] == 52  # T1: 26 ok, T2: 26 ok
+    assert totals['skipped_total'] == 2  # T1: 2 skipped, T2: 0 skipped
+    assert totals['ignored_total'] == 0
+    assert totals['rescued_total'] == 0
