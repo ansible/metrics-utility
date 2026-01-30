@@ -109,15 +109,14 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'jobs_total' in module_stat
             assert 'hosts_total' in module_stat
 
-    # Validate jobs_by_template have required fields
+    # Validate jobs_by_template have required fields (now grouped by job_type, not template)
     if json_data['jobs_by_template']:
         for job in json_data['jobs_by_template']:
-            assert 'job_template_name' in job
-            assert 'jobs_executed_total' in job
-            assert 'jobs_failed_total' in job
             assert 'job_type' in job
-            # job_type should be 'job' from django_content_type.model
-            assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
+            assert 'jobs_total' in job
+            assert 'jobs_failed_total' in job
+            assert 'jobs_succeeded_total' in job
+            assert 'templates_total' in job
 
     # ========== Validate actual data values and relationships ==========
 
@@ -167,13 +166,13 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate jobs actual values
     print('--- Validating jobs data values ---')
     assert statistics['jobs_total'] == 3, 'Should have 3 total jobs'
-    assert len(json_data['jobs_by_template']) == 1, 'Should have 1 job template'
+    assert len(json_data['jobs_by_template']) == 1, 'Should have 1 job_type group'
     job = json_data['jobs_by_template'][0]
-    assert job['jobs_executed_total'] == 3, 'Job template should have 3 executions'
+    assert job['jobs_total'] == 3, 'Job type should have 3 jobs'
     assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
     assert job['jobs_succeeded_total'] == 3, 'Should have 3 succeeded jobs'
-    assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_executed_total'], (
-        'Succeeded + failed should equal total executed'
+    assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_total'], (
+        'Succeeded + failed should equal total'
     )
     # job_type should be 'job' from django_content_type.model
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"

@@ -208,50 +208,50 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_template']
     assert isinstance(jobs_list, list)
-    assert len(jobs_list) == 3  # T1, T2, T3
-    assert result['statistics']['jobs_total'] == 5  # Total jobs across all templates
+    assert len(jobs_list) == 3  # job, workflowjob, adhoccommand
+    assert result['statistics']['jobs_total'] == 5  # Total jobs across all job types
 
-    # T1 should have data from both tarballs (jobs 1, 2, 4)
-    t1_jobs = [j for j in jobs_list if j['jobs_executed_total'] == 3]
-    assert len(t1_jobs) == 1
-    t1 = t1_jobs[0]
-    assert t1['jobs_executed_total'] == 3
-    assert t1['jobs_failed_total'] == 1
-    assert t1['jobs_succeeded_total'] == 2
-    assert t1['jobs_never_started_total'] == 0
+    # 'job' type should have data from both tarballs (jobs 1, 2, 4)
+    job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job' and j['jobs_total'] == 3]
+    assert len(job_type_jobs) == 1
+    job_type = job_type_jobs[0]
+    assert job_type['jobs_total'] == 3
+    assert job_type['jobs_failed_total'] == 1
+    assert job_type['jobs_succeeded_total'] == 2
+    assert job_type['jobs_never_started_total'] == 0
     # Check timing statistics
-    assert t1['job_duration_total_seconds'] == pytest.approx(10.0)
-    assert t1['job_duration_minimum_seconds'] == pytest.approx(2.0)
-    assert t1['job_duration_maximum_seconds'] == pytest.approx(5.0)
-    assert t1['job_waiting_time_total_seconds'] == pytest.approx(3.0)
-    assert t1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
-    assert t1['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
+    assert job_type['job_duration_total_seconds'] == pytest.approx(10.0)
+    assert job_type['job_duration_minimum_seconds'] == pytest.approx(2.0)
+    assert job_type['job_duration_maximum_seconds'] == pytest.approx(5.0)
+    assert job_type['job_waiting_time_total_seconds'] == pytest.approx(3.0)
+    assert job_type['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
+    assert job_type['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
     # Check job_type field
-    assert t1['job_type'] == 'job'
+    assert job_type['job_type'] == 'job'
 
-    # T2 should have 1 job executed
-    t2_jobs = [j for j in jobs_list if j['jobs_executed_total'] == 1 and j['jobs_never_started_total'] == 0]
-    assert len(t2_jobs) == 1
-    t2 = t2_jobs[0]
-    assert t2['jobs_executed_total'] == 1
-    assert t2['jobs_failed_total'] == 0
-    assert t2['jobs_succeeded_total'] == 1
-    assert t2['job_duration_total_seconds'] == pytest.approx(7.0)
-    assert t2['job_waiting_time_total_seconds'] == pytest.approx(4.0)
+    # 'workflowjob' type should have 1 job executed
+    workflowjob_type_jobs = [j for j in jobs_list if j['job_type'] == 'workflowjob' and j['jobs_never_started_total'] == 0]
+    assert len(workflowjob_type_jobs) == 1
+    workflowjob_type = workflowjob_type_jobs[0]
+    assert workflowjob_type['jobs_total'] == 1
+    assert workflowjob_type['jobs_failed_total'] == 0
+    assert workflowjob_type['jobs_succeeded_total'] == 1
+    assert workflowjob_type['job_duration_total_seconds'] == pytest.approx(7.0)
+    assert workflowjob_type['job_waiting_time_total_seconds'] == pytest.approx(4.0)
     # Check job_type field
-    assert t2['job_type'] == 'workflowjob'
+    assert workflowjob_type['job_type'] == 'workflowjob'
 
-    # T3 should have never started job
-    t3_jobs = [j for j in jobs_list if j['jobs_never_started_total'] == 1]
-    assert len(t3_jobs) == 1
-    t3 = t3_jobs[0]
-    assert t3['jobs_executed_total'] == 1
-    assert t3['jobs_failed_total'] == 1
-    assert t3['jobs_succeeded_total'] == 0
-    assert t3['job_duration_total_seconds'] == pytest.approx(0.0)
-    assert t3['job_waiting_time_total_seconds'] == pytest.approx(0.0)
+    # 'adhoccommand' type should have never started job
+    adhoccommand_type_jobs = [j for j in jobs_list if j['job_type'] == 'adhoccommand' and j['jobs_never_started_total'] == 1]
+    assert len(adhoccommand_type_jobs) == 1
+    adhoccommand_type = adhoccommand_type_jobs[0]
+    assert adhoccommand_type['jobs_total'] == 1
+    assert adhoccommand_type['jobs_failed_total'] == 1
+    assert adhoccommand_type['jobs_succeeded_total'] == 0
+    assert adhoccommand_type['job_duration_total_seconds'] == pytest.approx(0.0)
+    assert adhoccommand_type['job_waiting_time_total_seconds'] == pytest.approx(0.0)
     # Check job_type field
-    assert t3['job_type'] == 'adhoccommand'
+    assert adhoccommand_type['job_type'] == 'adhoccommand'
 
     # ========== Validate Execution Environments ==========
     assert result['statistics']['execution_environments_total'] == 5

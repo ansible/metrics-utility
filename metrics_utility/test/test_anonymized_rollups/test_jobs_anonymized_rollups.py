@@ -102,76 +102,69 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     pprint.pprint(result)
 
-    # Result is a dict with 'by_template' list and 'jobs_total'
+    # Result is a dict with 'by_job_type' list
     assert isinstance(result, dict)
-    assert 'by_template' in result
-    assert 'jobs_total' in result
+    assert 'by_job_type' in result
 
-    # Extract the by_template list
-    by_template = result['by_template']
-    assert isinstance(by_template, list)
+    # Extract the by_job_type list
+    by_job_type = result['by_job_type']
+    assert isinstance(by_job_type, list)
 
-    # There should be 3 templates (T1, T2, and T3 with never-started jobs)
-    assert len(by_template) == 3
+    # There should be 3 job types: 'job', 'workflowjob', 'adhoccommand'
+    assert len(by_job_type) == 3
 
-    # Identify records by job_template_name
-    rec_t1 = next(r for r in by_template if r['job_template_name'] == 'T1')
-    rec_t2 = next(r for r in by_template if r['job_template_name'] == 'T2')
-    rec_t3 = next(r for r in by_template if r['job_template_name'] == 'T3')
+    # Identify records by job_type
+    rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
+    rec_workflowjob = next(r for r in by_job_type if r['job_type'] == 'workflowjob')
+    rec_adhoccommand = next(r for r in by_job_type if r['job_type'] == 'adhoccommand')
 
-    # T1 counts
-    assert rec_t1['jobs_executed_total'] == 3
-    assert rec_t1['jobs_failed_total'] == 1
-    assert rec_t1['jobs_succeeded_total'] == 2
-    assert rec_t1['jobs_never_started_total'] == 0
+    # 'job' type counts (ids 1, 2, 4 - 3 jobs total)
+    assert rec_job['jobs_total'] == 3
+    assert rec_job['jobs_failed_total'] == 1
+    assert rec_job['jobs_succeeded_total'] == 2
+    assert rec_job['jobs_never_started_total'] == 0
+    assert rec_job['templates_total'] == 1  # All from template T1
 
-    # T1 durations (seconds): 3.0, 5.0, 2.0
-    assert rec_t1['job_duration_maximum_seconds'] == pytest.approx(5.0, rel=1e-6)
-    assert rec_t1['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)
-    assert rec_t1['job_duration_total_seconds'] == pytest.approx(10.0, rel=1e-6)
+    # 'job' type durations (seconds): 3.0, 5.0, 2.0
+    assert rec_job['job_duration_maximum_seconds'] == pytest.approx(5.0, rel=1e-6)
+    assert rec_job['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_job['job_duration_total_seconds'] == pytest.approx(10.0, rel=1e-6)
 
-    # T1 waiting times (seconds): 0.0, 2.0, 1.0
-    assert rec_t1['job_waiting_time_maximum_seconds'] == pytest.approx(2.0, rel=1e-6)
-    assert rec_t1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0, rel=1e-6)
-    assert rec_t1['job_waiting_time_total_seconds'] == pytest.approx(3.0, rel=1e-6)
+    # 'job' type waiting times (seconds): 0.0, 2.0, 1.0
+    assert rec_job['job_waiting_time_maximum_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_job['job_waiting_time_minimum_seconds'] == pytest.approx(0.0, rel=1e-6)
+    assert rec_job['job_waiting_time_total_seconds'] == pytest.approx(3.0, rel=1e-6)
 
-    # T1 job_type (all jobs in T1 have model='job')
-    assert rec_t1['job_type'] == 'job'
+    # 'workflowjob' type counts (id 3 - 1 job)
+    assert rec_workflowjob['jobs_total'] == 1
+    assert rec_workflowjob['jobs_failed_total'] == 0
+    assert rec_workflowjob['jobs_succeeded_total'] == 1
+    assert rec_workflowjob['jobs_never_started_total'] == 0
+    assert rec_workflowjob['templates_total'] == 1  # From template T2
 
-    # T2 counts
-    assert rec_t2['jobs_executed_total'] == 1
-    assert rec_t2['jobs_failed_total'] == 0
-    assert rec_t2['jobs_succeeded_total'] == 1
-    assert rec_t2['jobs_never_started_total'] == 0
+    # 'workflowjob' type duration (seconds): 7.0
+    assert rec_workflowjob['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_workflowjob['job_duration_minimum_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_workflowjob['job_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
 
-    # T2 duration (seconds): 7.0
-    assert rec_t2['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)
-    assert rec_t2['job_duration_minimum_seconds'] == pytest.approx(7.0, rel=1e-6)
-    assert rec_t2['job_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
+    # 'workflowjob' type waiting (seconds): 4.0
+    assert rec_workflowjob['job_waiting_time_maximum_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_workflowjob['job_waiting_time_minimum_seconds'] == pytest.approx(4.0, rel=1e-6)
+    assert rec_workflowjob['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
 
-    # T2 waiting (seconds): 4.0
-    assert rec_t2['job_waiting_time_maximum_seconds'] == pytest.approx(4.0, rel=1e-6)
-    assert rec_t2['job_waiting_time_minimum_seconds'] == pytest.approx(4.0, rel=1e-6)
-    assert rec_t2['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
+    # 'adhoccommand' type counts (id 6 - 1 job that never started)
+    assert rec_adhoccommand['jobs_total'] == 1
+    assert rec_adhoccommand['jobs_failed_total'] == 1
+    assert rec_adhoccommand['jobs_succeeded_total'] == 0
+    assert rec_adhoccommand['jobs_never_started_total'] == 1
+    assert rec_adhoccommand['templates_total'] == 1  # From template T3
 
-    # T2 job_type
-    assert rec_t2['job_type'] == 'workflowjob'
+    # 'adhoccommand' type should have NaN for all duration metrics and 0 for totals
+    assert pd.isna(rec_adhoccommand['job_duration_maximum_seconds'])
+    assert pd.isna(rec_adhoccommand['job_duration_minimum_seconds'])
+    assert rec_adhoccommand['job_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
-    # T3 counts (jobs that never started - should have NaN values for durations)
-    assert rec_t3['jobs_executed_total'] == 1
-    assert rec_t3['jobs_failed_total'] == 1
-    assert rec_t3['jobs_succeeded_total'] == 0
-    assert rec_t3['jobs_never_started_total'] == 1
-
-    # T3 should have NaN for all duration metrics and 0 for totals
-    assert pd.isna(rec_t3['job_duration_maximum_seconds'])
-    assert pd.isna(rec_t3['job_duration_minimum_seconds'])
-    assert rec_t3['job_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
-
-    # T3 should have NaN for all waiting time metrics and 0 for totals
-    assert pd.isna(rec_t3['job_waiting_time_maximum_seconds'])
-    assert pd.isna(rec_t3['job_waiting_time_minimum_seconds'])
-    assert rec_t3['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
-
-    # T3 job_type (all jobs in T3 have model='adhoccommand')
-    assert rec_t3['job_type'] == 'adhoccommand'
+    # 'adhoccommand' type should have NaN for all waiting time metrics and 0 for totals
+    assert pd.isna(rec_adhoccommand['job_waiting_time_maximum_seconds'])
+    assert pd.isna(rec_adhoccommand['job_waiting_time_minimum_seconds'])
+    assert rec_adhoccommand['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)

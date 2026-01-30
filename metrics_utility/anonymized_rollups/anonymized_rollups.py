@@ -39,7 +39,7 @@ def anonymize_data(data, salt):
 
     Args:
         data: Flattened data structure with keys:
-            - jobs_by_template: array of job template stats
+            - jobs_by_template: array of job stats (grouped by job_type)
             - job_host_summary: array of host summary stats
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
@@ -49,7 +49,8 @@ def anonymize_data(data, salt):
     if not data or not isinstance(data, dict):
         return
 
-    # anonymize jobs_by_template job template name
+    # anonymize jobs_by_template job template name (if present)
+    # Note: jobs_by_template is now grouped by job_type, but may still have job_template_name for templates_total
     if 'jobs_by_template' in data and data['jobs_by_template']:
         for job in data['jobs_by_template']:
             if job and 'job_template_name' in job and job['job_template_name']:
@@ -91,7 +92,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - modules_used_per_playbook: array of {playbook_id, modules_used}
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
-      - jobs_by_template: array (copied as-is)
+      - jobs_by_template: array (grouped by job_type, copied from by_job_type)
       - job_host_summary: object (copied as-is)
     """
     events_modules = data.get('events_modules', {})
@@ -104,6 +105,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         job_host_summary_root = {}
 
     # 1) statistics (collect only primitive totals)
+    # Calculate jobs_total by summing jobs_total from all job_type groups
+    jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
+    jobs_total = sum(job.get('jobs_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+
     statistics = {
         # from events_modules
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
@@ -113,8 +118,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'execution_environments_total': execution_environments.get('execution_environments_total'),
         'execution_environments_default_total': execution_environments.get('execution_environments_default_total'),
         'execution_environments_custom_total': execution_environments.get('execution_environments_custom_total'),
-        # from jobs
-        'jobs_total': jobs.get('jobs_total'),
+        # from jobs (sum of all job_type groups)
+        'jobs_total': jobs_total,
         # from job_host_summary
         'unique_hosts_total': job_host_summary_root.get('unique_hosts_total'),
         'jobhostsummary_total': job_host_summary_root.get('jobhostsummary_total'),
@@ -129,7 +134,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # 3) arrays copied as-is from their respective parents
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
-    jobs_by_template: List[Dict[str, Any]] = jobs.get('by_template', []) or []
+    # jobs_by_template now contains data grouped by job_type (not template)
+    jobs_by_template: List[Dict[str, Any]] = jobs_by_job_type
     # job_host_summary is now a single object, not a list
     job_host_summary: Dict[str, Any] = job_host_summary_root.get('aggregated', {}) or {}
 
