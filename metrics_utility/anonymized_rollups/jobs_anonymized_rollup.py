@@ -74,7 +74,19 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
                 templates_total=('job_template_name', 'nunique'),
-            )
+                launch_type_manual_total=('launch_type', lambda x: (x == 'manual').sum()),
+                launch_type_relaunch_total=('launch_type', lambda x: (x == 'relaunch').sum()),
+                launch_type_callback_total=('launch_type', lambda x: (x == 'callback').sum()),
+                launch_type_scheduled_total=('launch_type', lambda x: (x == 'scheduled').sum()),
+                launch_type_dependency_total=('launch_type', lambda x: (x == 'dependency').sum()),
+                launch_type_workflow_total=('launch_type', lambda x: (x == 'workflow').sum()),
+                launch_type_webhook_total=('launch_type', lambda x: (x == 'webhook').sum()),
+                launch_type_sync_total=('launch_type', lambda x: (x == 'sync').sum()),
+                launch_type_scm_total=('launch_type', lambda x: (x == 'scm').sum()),
+                launch_type_api_total=('launch_type', lambda x: (x == 'api').sum()),
+                launch_type_system_total=('launch_type', lambda x: (x == 'system').sum()),
+                launch_type_unknown_total=('launch_type', lambda x: (x == 'unknown').sum()),
+          )
             .reset_index()
             .rename(columns={'model': 'job_type'})
             .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
