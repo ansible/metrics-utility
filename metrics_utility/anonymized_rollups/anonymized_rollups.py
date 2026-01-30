@@ -39,7 +39,7 @@ def anonymize_data(data, salt):
 
     Args:
         data: Flattened data structure with keys:
-            - jobs_by_template: array of job stats (grouped by job_type, merged with job_host_summary data)
+            - jobs_by_job_type: array of job stats (grouped by job_type, merged with job_host_summary data)
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
             - modules_used_per_playbook: array of {playbook_id, modules_used}
@@ -48,10 +48,10 @@ def anonymize_data(data, salt):
     if not data or not isinstance(data, dict):
         return
 
-    # anonymize jobs_by_template job template name (if present)
-    # Note: jobs_by_template is now grouped by job_type, but may still have job_template_name for templates_total
-    if 'jobs_by_template' in data and data['jobs_by_template']:
-        for job in data['jobs_by_template']:
+    # anonymize jobs_by_job_type job template name (if present)
+    # Note: jobs_by_job_type is now grouped by job_type, but may still have job_template_name for templates_total
+    if 'jobs_by_job_type' in data and data['jobs_by_job_type']:
+        for job in data['jobs_by_job_type']:
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
@@ -85,7 +85,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - modules_used_per_playbook: array of {playbook_id, modules_used}
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
-      - jobs_by_template: array (grouped by job_type, merged with job_host_summary data)
+      - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
     """
     events_modules = data.get('events_modules', {})
     execution_environments = data.get('execution_environments', {})
@@ -128,7 +128,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
     
-    # 4) Merge job_host_summary into jobs_by_template by job_type
+    # 4) Merge job_host_summary into jobs_by_job_type by job_type
     # Create a lookup dict for job_host_summary by job_type
     jhs_lookup: Dict[str, Dict[str, Any]] = {
         jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type
@@ -145,8 +145,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'unique_hosts_total': 0,
     }
     
-    # Merge job_host_summary data into jobs_by_template
-    jobs_by_template: List[Dict[str, Any]] = []
+    # Merge job_host_summary data into jobs_by_job_type
+    jobs_by_job_type_merged: List[Dict[str, Any]] = []
     for job in jobs_by_job_type:
         job_type = job.get('job_type')
         merged_job = job.copy()
@@ -167,7 +167,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             # No match found, use default values
             merged_job.update(default_host_summary_fields)
         
-        jobs_by_template.append(merged_job)
+        jobs_by_job_type_merged.append(merged_job)
 
     # 5) assemble the flattened object
     flattened: Dict[str, Any] = {
@@ -175,7 +175,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'modules_used_per_playbook': modules_used_per_playbook,
         'module_stats': module_stats,
         'collection_name_stats': collection_name_stats,
-        'jobs_by_template': jobs_by_template,
+        'jobs_by_job_type': jobs_by_job_type_merged,
     }
 
     return flattened

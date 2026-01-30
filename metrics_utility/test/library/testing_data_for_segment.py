@@ -310,7 +310,7 @@ segment_data = {
             'avg_job_waiting_time_seconds': 60.0,
         },
     ],
-    'jobs_by_template': [
+    'jobs_by_job_type': [
         {
             'job_template_name': '2cb203a95a183267195e77ade5e3a5694298ca9ab8903f5336cb2d4bd15acb47',
             'number_of_jobs_executed': 3,

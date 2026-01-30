@@ -199,14 +199,14 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
         # Validate flattened structure
         assert 'statistics' in result
-        assert 'jobs_by_template' in result
-        # job_host_summary is now merged into jobs_by_template
+        assert 'jobs_by_job_type' in result
+        # job_host_summary is now merged into jobs_by_job_type
         assert 'module_stats' in result
         assert 'collection_name_stats' in result
         assert 'modules_used_per_playbook' in result
 
     # ========== Validate Jobs ==========
-    jobs_list = result['jobs_by_template']
+    jobs_list = result['jobs_by_job_type']
     assert isinstance(jobs_list, list)
     assert len(jobs_list) == 3  # job, workflowjob, adhoccommand
     assert result['statistics']['jobs_total'] == 5  # Total jobs across all job types
@@ -258,13 +258,13 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['execution_environments_default_total'] == 2
     assert result['statistics']['execution_environments_custom_total'] == 3
 
-    # ========== Validate Job Host Summary (merged into jobs_by_template) ==========
+    # ========== Validate Job Host Summary (merged into jobs_by_job_type) ==========
     # unique_hosts_total is now summed across all job_type groups
     # job type has 5 unique hosts (h1-h5), workflowjob type has 3 unique hosts (h1-h3)
     # Total = 5 + 3 = 8 (some hosts appear in both types)
     assert result['statistics']['unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
 
-    # Find the 'job' type group in jobs_by_template
+    # Find the 'job' type group in jobs_by_job_type
     job_type_entry = next((j for j in jobs_list if j['job_type'] == 'job'), None)
     assert job_type_entry is not None, 'Should have job_type job'
     # Validate merged host summary fields
@@ -276,7 +276,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert job_type_entry['ignored_total'] == 0, 'Should have 0 ignored for job type'
     assert job_type_entry['rescued_total'] == 0, 'Should have 0 rescued for job type'
     
-    # Find the 'workflowjob' type group in jobs_by_template
+    # Find the 'workflowjob' type group in jobs_by_job_type
     workflowjob_type_entry = next((j for j in jobs_list if j['job_type'] == 'workflowjob'), None)
     assert workflowjob_type_entry is not None, 'Should have job_type workflowjob'
     # Validate merged host summary fields
@@ -409,8 +409,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     # Validate flattened structure exists even with empty data
     assert 'statistics' in result
-    assert 'jobs_by_template' in result
-    # job_host_summary is now merged into jobs_by_template
+    assert 'jobs_by_job_type' in result
+    # job_host_summary is now merged into jobs_by_job_type
     assert 'module_stats' in result
     assert 'collection_name_stats' in result
     assert 'modules_used_per_playbook' in result
@@ -436,9 +436,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['unique_hosts_total'] is None
 
     # Verify all arrays are empty
-    assert isinstance(result['jobs_by_template'], list), 'jobs_by_template should be a list'
-    assert len(result['jobs_by_template']) == 0, 'jobs_by_template should be empty with no data'
-    # job_host_summary is now merged into jobs_by_template
+    assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
+    assert len(result['jobs_by_job_type']) == 0, 'jobs_by_job_type should be empty with no data'
+    # job_host_summary is now merged into jobs_by_job_type
 
     assert isinstance(result['module_stats'], list), 'module_stats should be a list'
     assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'

@@ -32,7 +32,7 @@ class TestStorageSegmentAvailable:
         assert 'module_stats' in chunks[4]
         assert 'module_stats' in chunks[5]
         assert 'collection_name_stats' in chunks[6]
-        assert 'jobs_by_template' in chunks[7]
+        assert 'jobs_by_job_type' in chunks[7]
         assert 'job_host_summary' in chunks[8]
 
         assert len(chunks[2]['module_stats']) == 37
