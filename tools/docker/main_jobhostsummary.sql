@@ -416,7 +416,12 @@ $yaml$,
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- modified
       ''::text,                               -- description
       'default_unified_job_' || random_suffix, -- name
-      'manual',                               -- launch_type
+      CASE (i % 4)
+        WHEN 1 THEN 'manual'
+        WHEN 2 THEN 'scheduled'
+        WHEN 3 THEN 'workflow'
+        WHEN 0 THEN 'callback'
+      END,                                    -- launch_type (cycles through: manual, scheduled, workflow, callback)
       false,                                  -- cancel_flag
       'pending',                              -- status
       false,                                  -- failed
