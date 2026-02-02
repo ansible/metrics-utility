@@ -93,7 +93,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         organizations_total = dataframe['organization_name'].nunique()
-        ansible_version=dataframe['ansible_version'].first()
+        ansible_version = dataframe['ansible_version'].iloc[0] if len(dataframe) > 0 else None
 
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {

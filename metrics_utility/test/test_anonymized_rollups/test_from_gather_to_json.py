@@ -82,6 +82,8 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'execution_environments_default_total' in statistics
     assert 'execution_environments_custom_total' in statistics
     assert 'jobs_total' in statistics
+    assert 'organizations_total' in statistics
+    assert 'ansible_version' in statistics
     assert 'unique_hosts_total' in statistics
 
     # Validate statistics data types

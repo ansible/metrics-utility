@@ -424,6 +424,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'execution_environments_default_total' in statistics
     assert 'execution_environments_custom_total' in statistics
     assert 'jobs_total' in statistics
+    assert 'organizations_total' in statistics
+    assert 'ansible_version' in statistics
     assert 'unique_hosts_total' in statistics
 
     # All statistics should be None for empty data
@@ -433,6 +435,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['execution_environments_default_total'] is None
     assert statistics['execution_environments_custom_total'] is None
     assert statistics['jobs_total'] is None
+    assert statistics['organizations_total'] is None
+    assert statistics['ansible_version'] is None
     assert statistics['unique_hosts_total'] is None
 
     # Verify all arrays are empty

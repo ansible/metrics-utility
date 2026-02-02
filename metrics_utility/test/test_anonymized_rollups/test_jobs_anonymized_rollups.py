@@ -14,6 +14,7 @@ jobs = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': '2.9.0',
+        'organization_name': 'Org1',
         'created': '2024-01-01 00:00:00.000000+00',
         'model': 'job',
         'launch_type': 'manual',
@@ -29,6 +30,7 @@ jobs = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-A',
         'ansible_version': '2.10.0',
+        'organization_name': 'Org1',
         'created': '2024-01-01 00:00:08.000000+00',  # wait 2s
         'model': 'job',
         'launch_type': 'scheduled',
@@ -45,6 +47,7 @@ jobs = [
         'job_template_name': 'T2',
         'controller_node': 'ctrl-A',
         'ansible_version': '2.11.0',
+        'organization_name': 'Org2',
         'created': '2024-01-01 00:01:36.000000+00',  # wait 4s
         'model': 'workflowjob',
         'launch_type': 'workflow',
@@ -61,6 +64,7 @@ jobs = [
         'job_template_name': 'T1',
         'controller_node': 'ctrl-B',
         'ansible_version': '2.12.0',
+        'organization_name': 'Org1',
         'created': '2024-01-01 00:03:19.000000+00',  # wait 1s
         'model': 'job',
         'launch_type': 'callback',
@@ -77,6 +81,7 @@ jobs = [
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
         'ansible_version': '2.13.0',
+        'organization_name': 'Org3',
         'model': 'adhoccommand',
         'launch_type': 'manual',
     },
@@ -88,6 +93,7 @@ jobs = [
         'job_template_name': 'T3',
         'controller_node': 'ctrl-C',
         'ansible_version': '2.14.0',
+        'organization_name': 'Org3',
         'model': 'adhoccommand',
         'launch_type': 'scheduled',
     },
@@ -108,9 +114,15 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     pprint.pprint(result)
 
-    # Result is a dict with 'by_job_type' list
+    # Result is a dict with 'by_job_type' list and top-level fields
     assert isinstance(result, dict)
     assert 'by_job_type' in result
+    assert 'organizations_total' in result
+    assert 'ansible_version' in result
+
+    # Check top-level fields
+    assert result['organizations_total'] == 3  # Org1, Org2, and Org3 (job 5 filtered out, but job 6 with Org3 remains)
+    assert result['ansible_version'] == '2.9.0'  # First ansible_version in dataframe
 
     # Extract the by_job_type list
     by_job_type = result['by_job_type']
@@ -130,7 +142,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_job['jobs_succeeded_total'] == 2
     assert rec_job['jobs_never_started_total'] == 0
     assert rec_job['templates_total'] == 1  # All from template T1
-    assert rec_job['ansible_version'] == '2.9.0'  # First job in group (id 1)
 
     # 'job' type durations (seconds): 3.0, 5.0, 2.0
     assert rec_job['job_duration_maximum_seconds'] == pytest.approx(5.0, rel=1e-6)
@@ -148,7 +159,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_workflowjob['jobs_succeeded_total'] == 1
     assert rec_workflowjob['jobs_never_started_total'] == 0
     assert rec_workflowjob['templates_total'] == 1  # From template T2
-    assert rec_workflowjob['ansible_version'] == '2.11.0'  # Only job in group (id 3)
 
     # 'workflowjob' type duration (seconds): 7.0
     assert rec_workflowjob['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)
@@ -166,7 +176,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_adhoccommand['jobs_succeeded_total'] == 0
     assert rec_adhoccommand['jobs_never_started_total'] == 1
     assert rec_adhoccommand['templates_total'] == 1  # From template T3
-    assert rec_adhoccommand['ansible_version'] == '2.14.0'  # Only job in group (id 6, id 5 filtered out)
 
     # 'adhoccommand' type should have NaN for all duration metrics and 0 for totals
     assert pd.isna(rec_adhoccommand['job_duration_maximum_seconds'])
@@ -180,38 +189,28 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
 
 def test_jobs_anonymized_rollups_ansible_version():
-    """Test that ansible_version is correctly aggregated using 'first' for each job_type."""
+    """Test that ansible_version and organizations_total are correctly aggregated at top level."""
     df = pd.DataFrame(jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
     df = jobs_anonymized_rollup.prepare(df)
     result = jobs_anonymized_rollup.base(df)
     result = result['json']
 
-    by_job_type = result['by_job_type']
+    # Verify top-level fields are present
+    assert 'ansible_version' in result
+    assert 'organizations_total' in result
+    assert result['ansible_version'] is not None
+    assert result['organizations_total'] is not None
     
-    # Verify ansible_version is present in all records
-    for record in by_job_type:
-        assert 'ansible_version' in record
-        assert record['ansible_version'] is not None
+    # Verify ansible_version uses 'first' value from dataframe (first job: id 1 with '2.9.0')
+    assert result['ansible_version'] == '2.9.0'
     
-    # Identify records by job_type
-    rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
-    rec_workflowjob = next(r for r in by_job_type if r['job_type'] == 'workflowjob')
-    rec_adhoccommand = next(r for r in by_job_type if r['job_type'] == 'adhoccommand')
-    
-    # Verify ansible_version uses 'first' value for each job_type
-    # 'job' type: jobs 1, 2, 4 - first is job 1 with '2.9.0'
-    assert rec_job['ansible_version'] == '2.9.0'
-    
-    # 'workflowjob' type: job 3 - '2.11.0'
-    assert rec_workflowjob['ansible_version'] == '2.11.0'
-    
-    # 'adhoccommand' type: job 6 (job 5 filtered out) - '2.14.0'
-    assert rec_adhoccommand['ansible_version'] == '2.14.0'
+    # Verify organizations_total counts unique organizations (Org1, Org2, and Org3 - job 5 filtered out, but job 6 with Org3 remains)
+    assert result['organizations_total'] == 3
 
 
 def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
-    """Test ansible_version aggregation when multiple versions exist for same job_type."""
+    """Test ansible_version aggregation when multiple versions exist."""
     test_jobs = [
         {
             'id': 1,
@@ -221,6 +220,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'job_template_name': 'T1',
             'controller_node': 'ctrl-A',
             'ansible_version': '2.9.0',
+            'organization_name': 'Org1',
             'created': '2024-01-01 00:00:00.000000+00',
             'model': 'job',
             'launch_type': 'manual',
@@ -233,6 +233,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'job_template_name': 'T2',
             'controller_node': 'ctrl-B',
             'ansible_version': '2.10.0',
+            'organization_name': 'Org2',
             'created': '2024-01-01 00:00:08.000000+00',
             'model': 'job',
             'launch_type': 'scheduled',
@@ -245,6 +246,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'job_template_name': 'T3',
             'controller_node': 'ctrl-C',
             'ansible_version': '2.11.0',
+            'organization_name': 'Org3',
             'created': '2024-01-01 00:00:58.000000+00',
             'model': 'job',
             'launch_type': 'callback',
@@ -260,6 +262,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
     by_job_type = result['by_job_type']
     rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
     
-    # Should use 'first' value (first job in group: id 1 with '2.9.0')
-    assert rec_job['ansible_version'] == '2.9.0'
+    # Should use 'first' value from dataframe (first job: id 1 with '2.9.0')
+    assert result['ansible_version'] == '2.9.0'
+    assert result['organizations_total'] == 3  # Org1, Org2, Org3
     assert rec_job['jobs_total'] == 3  # All three jobs are included
