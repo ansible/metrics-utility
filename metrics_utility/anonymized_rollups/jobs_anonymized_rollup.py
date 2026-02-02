@@ -64,7 +64,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type = (
             dataframe.groupby('model')
             .agg(
-                ansible_version=('ansible_version', 'first'),
                 jobs_total=('id', 'nunique'),
                 jobs_failed_total=('failed', 'sum'),
                 jobs_never_started_total=('started', lambda x: x.isna().sum()),
@@ -93,15 +92,22 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
+        organizations_total = dataframe['organization_name'].nunique()
+        ansible_version=dataframe['ansible_version'].first()
+
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
             # pandas.DataFrame
             'aggregations_by_job_type': aggregations_by_job_type,
+            'organizations_total': organizations_total,
+            'ansible_version': ansible_version,
         }
 
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
+            'organizations_total': organizations_total,
+            'ansible_version': ansible_version,
         }
 
         return {

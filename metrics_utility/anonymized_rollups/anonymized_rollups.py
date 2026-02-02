@@ -113,6 +113,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'execution_environments_custom_total': execution_environments.get('execution_environments_custom_total'),
         # from jobs (sum of all job_type groups)
         'jobs_total': jobs_total,
+        # from jobs (top-level fields)
+        'organizations_total': jobs.get('organizations_total'),
+        'ansible_version': jobs.get('ansible_version'),
         # from job_host_summary (sum of all job_type groups)
         'unique_hosts_total': unique_hosts_total,
         'jobhostsummary_total': jobhostsummary_total,
