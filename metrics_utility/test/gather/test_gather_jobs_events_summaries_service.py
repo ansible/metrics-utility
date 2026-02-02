@@ -104,19 +104,19 @@ jobs_lines = [
     (
         '1,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,5,'
         'default_unified_job_template_2025-06-13'
     ),
     (
         '2,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,scheduled,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,10,'
         'default_unified_job_template_2025-06-13'
     ),
     (
         '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,workflow,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,0,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,20,'
         'default_unified_job_template_2025-06-13'
     ),
 ]

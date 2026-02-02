@@ -93,10 +93,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_root = data.get('job_host_summary', {})
 
     # 1) statistics (collect only primitive totals)
-    # Calculate jobs_total by summing jobs_total from all job_type groups
+    # Get jobs_total directly from jobs data, or calculate by summing jobs_total from all job_type groups as fallback
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
-    jobs_total = sum(job.get('jobs_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-
+    jobs_total = jobs.get('jobs_total')  # Use direct value from jobs data
+    
     # Calculate unique_hosts_total by summing unique_hosts_total from all job_type groups
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
@@ -111,11 +111,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'execution_environments_total': execution_environments.get('execution_environments_total'),
         'execution_environments_default_total': execution_environments.get('execution_environments_default_total'),
         'execution_environments_custom_total': execution_environments.get('execution_environments_custom_total'),
-        # from jobs (sum of all job_type groups)
-        'jobs_total': jobs_total,
         # from jobs (top-level fields)
+        'jobs_total': jobs_total,
         'organizations_total': jobs.get('organizations_total'),
         'ansible_version': jobs.get('ansible_version'),
+        'forks_total': jobs.get('forks_total'),
         # from job_host_summary (sum of all job_type groups)
         'unique_hosts_total': unique_hosts_total,
         'jobhostsummary_total': jobhostsummary_total,

@@ -84,6 +84,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'jobs_total' in statistics
     assert 'organizations_total' in statistics
     assert 'ansible_version' in statistics
+    assert 'forks_total' in statistics
     assert 'unique_hosts_total' in statistics
 
     # Validate statistics data types
@@ -93,6 +94,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['execution_environments_default_total'], int)
     assert isinstance(statistics['execution_environments_custom_total'], int)
     assert isinstance(statistics['jobs_total'], int)
+    assert isinstance(statistics['forks_total'], int)
     assert isinstance(statistics['unique_hosts_total'], int)
 
     # Validate arrays structure
@@ -175,6 +177,8 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate jobs actual values
     print('--- Validating jobs data values ---')
     assert statistics['jobs_total'] == 3, 'Should have 3 total jobs'
+    # forks_total should be sum of all forks: 5 + 10 + 20 = 35 (from test data with 3 jobs)
+    assert statistics['forks_total'] == 35, 'Should have 35 total forks (5 + 10 + 20)'
     assert len(json_data['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
     job = json_data['jobs_by_job_type'][0]
     assert job['jobs_total'] == 3, 'Job type should have 3 jobs'

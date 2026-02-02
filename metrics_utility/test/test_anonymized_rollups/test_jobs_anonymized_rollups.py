@@ -21,6 +21,7 @@ jobs = [
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
+        'forks': 5,
     },  # duration 3s, wait 0s
     {
         'id': 2,
@@ -37,6 +38,7 @@ jobs = [
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
+        'forks': 10,
     },  # duration 5s (failed), wait 2s
     # controller A, ansible 2.11.0, template T2
     {
@@ -54,6 +56,7 @@ jobs = [
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
+        'forks': 20,
     },  # duration 7s, wait 4s
     # controller B, ansible 2.12.0, template T1
     {
@@ -71,6 +74,7 @@ jobs = [
         'number_of_jobs_executed': 1,
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
+        'forks': 15,
     },  # duration 2s, wait 1s
     # invalid rows (should be filtered out)
     {
@@ -84,6 +88,7 @@ jobs = [
         'organization_name': 'Org3',
         'model': 'adhoccommand',
         'launch_type': 'manual',
+        'forks': 0,
     },
     {
         'id': 6,
@@ -96,6 +101,7 @@ jobs = [
         'organization_name': 'Org3',
         'model': 'adhoccommand',
         'launch_type': 'scheduled',
+        'forks': 0,
     },
 ]
 
@@ -224,6 +230,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'created': '2024-01-01 00:00:00.000000+00',
             'model': 'job',
             'launch_type': 'manual',
+            'forks': 5,
         },
         {
             'id': 2,
@@ -237,6 +244,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'created': '2024-01-01 00:00:08.000000+00',
             'model': 'job',
             'launch_type': 'scheduled',
+            'forks': 10,
         },
         {
             'id': 3,
@@ -250,6 +258,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'created': '2024-01-01 00:00:58.000000+00',
             'model': 'job',
             'launch_type': 'callback',
+            'forks': 15,
         },
     ]
     

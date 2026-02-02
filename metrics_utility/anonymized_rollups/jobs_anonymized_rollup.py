@@ -94,6 +94,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         organizations_total = dataframe['organization_name'].nunique()
         ansible_version = dataframe['ansible_version'].iloc[0] if len(dataframe) > 0 else None
+        forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
+        jobs_total = int(dataframe['id'].nunique())  # Convert numpy int64 to Python int for JSON serialization
 
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
@@ -101,6 +103,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'aggregations_by_job_type': aggregations_by_job_type,
             'organizations_total': organizations_total,
             'ansible_version': ansible_version,
+            'forks_total': forks_total,
+            'jobs_total': jobs_total,
         }
 
         # Prepare JSON data (converted to list of dicts)
@@ -108,6 +112,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
             'organizations_total': organizations_total,
             'ansible_version': ansible_version,
+            'forks_total': forks_total,
+            'jobs_total': jobs_total,
         }
 
         return {
