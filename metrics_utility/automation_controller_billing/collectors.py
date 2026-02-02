@@ -732,7 +732,8 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                                  main_unifiedjob.installed_collections,
                                  main_unifiedjob.ansible_version,
                                  main_job.forks,
-                                 main_unifiedjobtemplate.name as job_template_name
+                                 main_unifiedjobtemplate.name as job_template_name,
+                                 main_project.scm_type
                                  FROM main_unifiedjob
                                  LEFT JOIN main_unifiedjobtemplate ON main_unifiedjobtemplate.id = main_unifiedjob.unified_job_template_id
                                  LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
@@ -740,9 +741,9 @@ def unified_jobs_table(since, full_path, until, **kwargs):
                                  LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
                                  LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
                                  LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
-                                 WHERE ((main_unifiedjob.created >= '{0}' AND main_unifiedjob.created < '{1}')
-                                       OR (main_unifiedjob.finished >= '{0}' AND main_unifiedjob.finished < '{1}'))
-                                       AND main_unifiedjob.launch_type != 'sync'
+                                 LEFT JOIN main_project ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
+                                 WHERE main_unifiedjob.finished >= '{0}'
+                                       AND main_unifiedjob.finished < '{1}'
                                  ORDER BY main_unifiedjob.id ASC) TO STDOUT WITH CSV HEADER
                         """.format(since.isoformat(), until.isoformat())
 
@@ -972,3 +973,24 @@ def execution_environments_table(since, full_path, until, **kwargs):
     """
 
     return _copy_table(table='main_executionenvironment', query=f'COPY ({sql}) TO STDOUT WITH CSV HEADER', path=full_path)
+
+
+@register('credentials_service', '1.0', format='csv', description=_('Credentials used by jobs'), fnc_slicing=daily_slicing)
+def credentials_service_table(since, full_path, until, **kwargs):
+    if 'credentials_service' not in get_optional_collectors():
+        return None
+
+    credentials_query = """COPY (SELECT main_credentialtype.name as credential_type,
+                                 main_unifiedjob_credentials.unifiedjob_id as job_id,
+                                 django_content_type.model
+                                 FROM main_unifiedjob_credentials
+                                 JOIN main_unifiedjob ON main_unifiedjob.id = main_unifiedjob_credentials.unifiedjob_id
+                                 JOIN main_credential ON main_credential.id = main_unifiedjob_credentials.credential_id
+                                 JOIN main_credentialtype ON main_credentialtype.id = main_credential.credential_type_id
+                                 LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
+                                 WHERE main_unifiedjob.finished >= '{0}'
+                                       AND main_unifiedjob.finished < '{1}'
+                                 ORDER BY main_unifiedjob.id ASC, main_credentialtype.name ASC) TO STDOUT WITH CSV HEADER
+                        """.format(since.isoformat(), until.isoformat())
+
+    return _copy_table(table='credentials', query=credentials_query, path=full_path)

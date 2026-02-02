@@ -383,4 +383,4 @@ def test_credentials_service_command(cleanup_glob):
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'credentials.csv', credentials_service_lines, credentials_service_skip_columns)
+    validate_csv_in_tarballs(file_paths, 'credentials_service.csv', credentials_service_lines, credentials_service_skip_columns)
