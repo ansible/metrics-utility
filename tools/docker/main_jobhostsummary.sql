@@ -39,6 +39,16 @@ DECLARE
   unified_jobs      INTEGER[] := ARRAY[]::INTEGER[];
   unified_job_id    INTEGER;
   --
+  -- credentials
+  machine_credential_type_id INTEGER;
+  cloud_credential_type_id INTEGER;
+  vault_credential_type_id INTEGER;
+  network_credential_type_id INTEGER;
+  machine_credential_id INTEGER;
+  cloud_credential_id INTEGER;
+  vault_credential_id INTEGER;
+  network_credential_id INTEGER;
+  --
 BEGIN
   --
   -- Insert django_content_type entry for 'job' model
@@ -725,5 +735,263 @@ $yaml$,
     'Node Backend Environment',
     'missing'
 );
+  --
+  -- Credential Types
+  --
+  -- Insert Machine credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Machine credential type for SSH connections',
+      'Machine',
+      'ssh',
+      TRUE,
+      '{"fields": [{"id": "username", "label": "Username", "type": "string"}, {"id": "password", "label": "Password", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'credential_type'
+    )
+    RETURNING id INTO machine_credential_type_id;
+  
+  -- Insert Cloud credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Cloud credential type for AWS',
+      'Amazon Web Services',
+      'cloud',
+      TRUE,
+      '{"fields": [{"id": "username", "label": "Access Key", "type": "string"}, {"id": "password", "label": "Secret Key", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'aws'
+    )
+    RETURNING id INTO cloud_credential_type_id;
+  
+  -- Insert Vault credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Vault credential type for Ansible Vault',
+      'Vault',
+      'vault',
+      TRUE,
+      '{"fields": [{"id": "vault_password", "label": "Vault Password", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'credential_type'
+    )
+    RETURNING id INTO vault_credential_type_id;
+  
+  -- Insert Network credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Network credential type for network devices',
+      'Network',
+      'net',
+      TRUE,
+      '{"fields": [{"id": "username", "label": "Username", "type": "string"}, {"id": "password", "label": "Password", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'credential_type'
+    )
+    RETURNING id INTO network_credential_type_id;
+  
+  RAISE NOTICE 'Inserted credential types: Machine=%, Cloud=%, Vault=%, Network=%',
+               machine_credential_type_id,
+               cloud_credential_type_id,
+               vault_credential_type_id,
+               network_credential_type_id;
+  --
+  -- Credentials
+  --
+  -- Machine credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Default machine credential for SSH',
+      'default_machine_credential_' || random_suffix,
+      default_organization_id,
+      machine_credential_type_id,
+      FALSE,
+      '{"username": "ansible", "password": "encrypted_password"}'::jsonb
+    )
+    RETURNING id INTO machine_credential_id;
+  
+  -- Cloud credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'AWS cloud credential',
+      'default_cloud_credential_' || random_suffix,
+      default_organization_id,
+      cloud_credential_type_id,
+      FALSE,
+      '{"username": "AKIAIOSFODNN7EXAMPLE", "password": "encrypted_secret"}'::jsonb
+    )
+    RETURNING id INTO cloud_credential_id;
+  
+  -- Vault credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Ansible Vault credential',
+      'default_vault_credential_' || random_suffix,
+      default_organization_id,
+      vault_credential_type_id,
+      FALSE,
+      '{"vault_password": "encrypted_vault_password"}'::jsonb
+    )
+    RETURNING id INTO vault_credential_id;
+  
+  -- Network credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Network device credential',
+      'default_network_credential_' || random_suffix,
+      default_organization_id,
+      network_credential_type_id,
+      FALSE,
+      '{"username": "admin", "password": "encrypted_network_password"}'::jsonb
+    )
+    RETURNING id INTO network_credential_id;
+  
+  RAISE NOTICE 'Inserted credentials: Machine=%, Cloud=%, Vault=%, Network=%',
+               machine_credential_id,
+               cloud_credential_id,
+               vault_credential_id,
+               network_credential_id;
+  --
+  -- Link credentials to unified jobs
+  -- Assign different combinations of credentials to different jobs
+  --
+  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
+    unified_job_id := unified_jobs[i];
+    
+    -- Every job gets machine credential
+    INSERT INTO public.main_unifiedjob_credentials (
+      unifiedjob_id,
+      credential_id
+    ) VALUES (
+      unified_job_id,
+      machine_credential_id
+    );
+    
+    -- Job 1: Machine + Cloud
+    IF i = 1 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        cloud_credential_id
+      );
+    END IF;
+    
+    -- Job 2: Machine + Vault
+    IF i = 2 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        vault_credential_id
+      );
+    END IF;
+    
+    -- Job 3: Machine + Cloud + Network
+    IF i = 3 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        cloud_credential_id
+      );
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        network_credential_id
+      );
+    END IF;
+  END LOOP;
+  
+  RAISE NOTICE 'Linked credentials to unified jobs';
 END
 $$;

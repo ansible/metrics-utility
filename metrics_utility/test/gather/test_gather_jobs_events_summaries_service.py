@@ -99,25 +99,25 @@ jobs_lines = [
         'name,unified_job_template_id,launch_type,schedule_id,execution_node,'
         'controller_node,cancel_flag,status,failed,started,finished,elapsed,'
         'job_explanation,instance_group_id,installed_collections,ansible_version,forks,'
-        'job_template_name'
+        'job_template_name,scm_type'
     ),
     (
         '1,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
         'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,5,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,git'
     ),
     (
         '2,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,scheduled,,auto,'
         'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,10,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,git'
     ),
     (
         '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,workflow,,auto,'
         'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,20,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,git'
     ),
 ]
 
@@ -353,3 +353,34 @@ def test_execution_environments_command(cleanup_glob):
     run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
 
     validate_csv_in_tarballs(file_paths, 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)
+
+
+credentials_service_lines = [
+    'credential_type,job_id,model',
+    'Amazon Web Services,1,job',
+    'Machine,1,job',
+    'Machine,2,job',
+    'Vault,2,job',
+    'Amazon Web Services,3,job',
+    'Machine,3,job',
+    'Network,3,job',
+]
+
+credentials_service_skip_columns = [
+    'job_id',
+]
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_credentials_service_command(cleanup_glob):
+    """Build and validate credentials.csv contents in the generated tarball."""
+    # prepare env
+    test_env = env_vars.copy()
+    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
+    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'credentials_service'
+
+    # run the gather command
+    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+
+    # validate CSV inside generated tarball(s)
+    validate_csv_in_tarballs(file_paths, 'credentials.csv', credentials_service_lines, credentials_service_skip_columns)

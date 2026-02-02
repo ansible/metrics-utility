@@ -3,23 +3,6 @@ from ..util import collector, copy_table
 
 @collector
 def unified_jobs(*, db=None, since=None, until=None, output_dir=None):
-    where = ' OR '.join(
-        [
-            ' AND '.join(
-                [
-                    f"main_unifiedjob.created >= '{since.isoformat()}'",
-                    f"main_unifiedjob.created < '{until.isoformat()}'",
-                ]
-            ),
-            ' AND '.join(
-                [
-                    f"main_unifiedjob.finished >= '{since.isoformat()}'",
-                    f"main_unifiedjob.finished < '{until.isoformat()}'",
-                ]
-            ),
-        ]
-    )
-
     query = f"""
         SELECT
             main_unifiedjob.id,
@@ -59,7 +42,8 @@ def unified_jobs(*, db=None, since=None, until=None, output_dir=None):
         LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
         LEFT JOIN main_project ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
         WHERE
-            ({where})
+            main_unifiedjob.finished >= '{since.isoformat()}'
+            AND main_unifiedjob.finished < '{until.isoformat()}'
             AND main_unifiedjob.launch_type != 'sync'
         ORDER BY main_unifiedjob.id ASC
     """
