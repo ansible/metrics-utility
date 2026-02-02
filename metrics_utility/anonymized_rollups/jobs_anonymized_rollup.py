@@ -86,6 +86,16 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 launch_type_api_total=('launch_type', lambda x: (x == 'api').sum()),
                 launch_type_system_total=('launch_type', lambda x: (x == 'system').sum()),
                 launch_type_unknown_total=('launch_type', lambda x: (x == 'unknown').sum()),
+                # inventory name
+                inventories_total=('inventory_name', 'nunique'),
+                # jobs using projects by scm types
+                jobs_using_scm_type_git_total=('scm_type', lambda x: (x == 'git').sum()),
+                jobs_using_scm_type_hg_total=('scm_type', lambda x: (x == 'hg').sum()),
+                jobs_using_scm_type_svn_total=('scm_type', lambda x: (x == 'svn').sum()),
+                jobs_using_scm_type_insights_total=('scm_type', lambda x: (x == 'insights').sum()),
+                jobs_using_scm_type_archive_total=('scm_type', lambda x: (x == 'archive').sum()),
+                jobs_using_scm_type_manual_total=('scm_type', lambda x: ((x == '') | (x.isna())).sum()),
+                jobs_using_scm_type_unknown_total=('scm_type', lambda x: (~x.isin(['git', 'hg', 'svn', 'insights', 'archive', '']) & x.notna()).sum()),
           )
             .reset_index()
             .rename(columns={'model': 'job_type'})
@@ -96,7 +106,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         ansible_version = dataframe['ansible_version'].iloc[0] if len(dataframe) > 0 else None
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
         jobs_total = int(dataframe['id'].nunique())  # Convert numpy int64 to Python int for JSON serialization
-
+        
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
             # pandas.DataFrame

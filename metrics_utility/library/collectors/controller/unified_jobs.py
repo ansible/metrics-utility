@@ -48,7 +48,8 @@ def unified_jobs(*, db=None, since=None, until=None, output_dir=None):
             main_unifiedjob.installed_collections,
             main_unifiedjob.ansible_version,
             main_job.forks,
-            main_unifiedjobtemplate.name as job_template_name
+            main_unifiedjobtemplate.name as job_template_name,
+            main_project.scm_type
         FROM main_unifiedjob
         LEFT JOIN main_unifiedjobtemplate ON main_unifiedjobtemplate.id = main_unifiedjob.unified_job_template_id
         LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
@@ -56,6 +57,7 @@ def unified_jobs(*, db=None, since=None, until=None, output_dir=None):
         LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
         LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
         LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
+        LEFT JOIN main_project ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
         WHERE
             ({where})
             AND main_unifiedjob.launch_type != 'sync'

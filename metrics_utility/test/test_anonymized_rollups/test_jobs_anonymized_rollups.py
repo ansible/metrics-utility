@@ -22,6 +22,8 @@ jobs = [
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
         'forks': 5,
+        'inventory_name': 'inventory1',
+        'scm_type': 'git',
     },  # duration 3s, wait 0s
     {
         'id': 2,
@@ -39,6 +41,8 @@ jobs = [
         'number_of_jobs_failed': 1,
         'number_of_jobs_succeeded': 0,
         'forks': 10,
+        'inventory_name': 'inventory1',
+        'scm_type': 'svn',
     },  # duration 5s (failed), wait 2s
     # controller A, ansible 2.11.0, template T2
     {
@@ -57,6 +61,8 @@ jobs = [
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
         'forks': 20,
+        'inventory_name': 'inventory2',
+        'scm_type': 'git',
     },  # duration 7s, wait 4s
     # controller B, ansible 2.12.0, template T1
     {
@@ -75,6 +81,8 @@ jobs = [
         'number_of_jobs_failed': 0,
         'number_of_jobs_succeeded': 1,
         'forks': 15,
+        'inventory_name': 'inventory1',
+        'scm_type': 'git',
     },  # duration 2s, wait 1s
     # invalid rows (should be filtered out)
     {
@@ -89,6 +97,8 @@ jobs = [
         'model': 'adhoccommand',
         'launch_type': 'manual',
         'forks': 0,
+        'inventory_name': 'inventory3',
+        'scm_type': 'manual',
     },
     {
         'id': 6,
@@ -102,6 +112,8 @@ jobs = [
         'model': 'adhoccommand',
         'launch_type': 'scheduled',
         'forks': 0,
+        'inventory_name': 'inventory3',
+        'scm_type': 'unknown',
     },
 ]
 
@@ -231,6 +243,8 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'model': 'job',
             'launch_type': 'manual',
             'forks': 5,
+            'inventory_name': 'inventory1',
+            'scm_type': 'git',
         },
         {
             'id': 2,
@@ -245,6 +259,8 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'model': 'job',
             'launch_type': 'scheduled',
             'forks': 10,
+            'inventory_name': 'inventory2',
+            'scm_type': 'svn',
         },
         {
             'id': 3,
@@ -259,6 +275,8 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'model': 'job',
             'launch_type': 'callback',
             'forks': 15,
+            'inventory_name': 'inventory3',
+            'scm_type': 'git',
         },
     ]
     
