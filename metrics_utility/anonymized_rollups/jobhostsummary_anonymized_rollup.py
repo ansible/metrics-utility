@@ -97,6 +97,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'json': {
                     'by_job_type': [],
+                    'jobhostsummary_total': 0,
                 },
                 'rollup': {'aggregated': pd.DataFrame(), 'jobhostsummary_total': 0},
             }
@@ -110,6 +111,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'json': {
                     'by_job_type': [],
+                    'jobhostsummary_total': jobhostsummary_total,
                 },
                 'rollup': {'aggregated': dataframe, 'jobhostsummary_total': jobhostsummary_total},
             }
@@ -152,6 +154,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
+            'jobhostsummary_total': jobhostsummary_total,
         }
 
         return {
