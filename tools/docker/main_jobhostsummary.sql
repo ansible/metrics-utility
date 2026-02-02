@@ -267,21 +267,21 @@ $yaml$,
       scm_track_submodules
   ) VALUES (
       default_unified_job_template_id,
-      'LOCAL_PATH',
-      'SCM_TYPE',
-      'SCM_URL',
-      'SCM_BRANCH',
-      TRUE,
-      FALSE,
-      TRUE,
-      0,
-      0,
-      'SCM_REVISION',
-      '{}'::jsonb,
-      '{}'::jsonb,
-      'SCM_REFSPEC',
-      TRUE,
-      FALSE
+      'LOCAL_PATH',                    
+      'git',                      -- scm_type: git for testing
+      'SCM_URL',                       
+      'SCM_BRANCH',                   
+      TRUE,                           
+      FALSE,                           
+      TRUE,                            
+      0,                               
+      0,                               
+      'SCM_REVISION',                  
+      '{}'::jsonb,                   
+      '{}'::jsonb,   
+      'SCM_REFSPEC',                   
+      TRUE,                            
+      FALSE                            
   );
   --
   -- Job Template
