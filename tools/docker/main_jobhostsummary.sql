@@ -486,7 +486,11 @@ $yaml$,
       unified_job_id,                  -- unifiedjob_ptr_id
       'manual',                        -- job_type
       '',                              -- playbook
-      0,                               -- forks
+      CASE (i % 3)
+        WHEN 1 THEN 5
+        WHEN 2 THEN 10
+        WHEN 0 THEN 20
+      END,                             -- forks (varied: 5, 10, or 20)
       '',                              -- limit
       0,                               -- verbosity
       '{}'::text,                      -- extra_vars
