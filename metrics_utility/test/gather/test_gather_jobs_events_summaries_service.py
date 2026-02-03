@@ -217,49 +217,49 @@ jobs_host_summary_service_lines = [
         'ansible_connection_variable,changed,dark,failures,ok,processed,skipped,'
         'failed,ignored,rescued,job_created,job_remote_id,job_template_remote_id,'
         'job_template_name,inventory_remote_id,inventory_name,organization_remote_id,'
-        'organization_name,project_remote_id,project_name'
+        'organization_name,project_remote_id,project_name,model'
     ),
     (
         '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
         '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
         '2025-06-13 10:00:00+00,1,1,default_unified_job_template_2025-06-13,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,job'
     ),
     (
         '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
         '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
         '2025-06-13 10:00:00+00,1,1,default_unified_job_template_2025-06-13,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,job'
     ),
     (
         '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
         '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
         '2025-06-13 10:00:00+00,2,1,default_unified_job_template_2025-06-13,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,job'
     ),
     (
         '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
         '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
         '2025-06-13 10:00:00+00,2,1,default_unified_job_template_2025-06-13,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,job'
     ),
     (
         '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
         '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
         '2025-06-13 10:00:00+00,3,1,default_unified_job_template_2025-06-13,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,job'
     ),
     (
         '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
         '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
         '2025-06-13 10:00:00+00,3,1,default_unified_job_template_2025-06-13,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13'
+        'default_unified_job_template_2025-06-13,job'
     ),
 ]
 
