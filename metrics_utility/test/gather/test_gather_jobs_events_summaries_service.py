@@ -1,9 +1,16 @@
 import csv
 import glob
 import os
+import tempfile
+from datetime import datetime, timezone
 
 import pytest
 
+from django.db import connection
+
+from metrics_utility.library.collectors.controller.credentials_service import credentials_service
+from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
+from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
 from metrics_utility.test.util import run_gather_ext
 
@@ -83,6 +90,53 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
         pytest.fail(f'{csv_filename} not found in any tarballs.')
 
 
+def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
+    """Validate CSV file directly.
+
+    expected_lines: list of strings where first is header, rest rows
+    skip_columns_names: iterable of column names to skip comparison
+    """
+    expected_header = expected_lines[0].split(',')
+    expected_rows = [line.split(',') for line in expected_lines[1:]]
+
+    with open(csv_file_path, 'r') as f:
+        text = f.read().splitlines()
+
+    print('original --------------------------------')
+    for line in text:
+        print(line)
+    print('--------------------------------\n\n')
+
+    print('expected --------------------------------')
+    for line in expected_lines:
+        print(line)
+    print('--------------------------------\n\n')
+
+    reader = csv.reader(text)
+    rows = list(reader)
+
+    header = rows[0]
+    assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
+
+    actual_data = rows[1:]
+    assert len(actual_data) == len(expected_rows), (
+        f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
+    )
+
+    skip_columns = set(skip_columns_names)
+    for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
+        for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
+            col_name = header[idx]
+            if col_name in skip_columns:
+                continue
+            assert exp_cell == act_cell, (
+                f'\nData mismatch on row {i + 1}, column {col_name!r} '
+                f'(index {idx}):\n'
+                f'Expected: {exp_cell!r}\n'
+                f'Actual:   {act_cell!r}'
+            )
+
+
 @pytest.fixture
 def cleanup_glob():
     for file in glob.glob(file_glob):
@@ -135,17 +189,26 @@ json_lines_skip_ids_columns = [
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_unified_jobs_command(cleanup_glob):
-    """Build and validate unified_jobs_table.csv contents in the generated tarball."""
-    # prepare env
-    test_env = env_vars.copy()
-    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'unified_jobs'
+    """Build and validate unified_jobs output from new library collector."""
+    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
+    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
-    # run the gather command
-    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+    # Run the new collector directly
+    with tempfile.TemporaryDirectory() as tmpdir:
+        collector_instance = unified_jobs(db=connection, since=since, until=until, output_dir=tmpdir)
+        csv_files = collector_instance.gather()
 
-    # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'unified_jobs.csv', jobs_lines, json_lines_skip_ids_columns)
+        # Find the unified_jobs CSV file (generated as unified_jobs_table.csv)
+        csv_file = None
+        for f in csv_files:
+            if 'unified_jobs_table.csv' in f or f.endswith('unified_jobs_table.csv'):
+                csv_file = f
+                break
+
+        assert csv_file is not None, f'unified_jobs CSV not found in {csv_files}'
+
+        # Validate CSV content
+        validate_csv_file(csv_file, jobs_lines, json_lines_skip_ids_columns)
 
 
 jobs_host_summary_service_lines = [
@@ -214,18 +277,26 @@ jobs_host_summary_service_skip_columns = [
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_service_command(cleanup_glob):
-    """Build and validate jobs_host_summary_service.csv contents in the generated tarball."""
-    # prepare env
+    """Build and validate job_host_summary_service output from new library collector."""
+    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
+    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
-    test_env = env_vars.copy()
-    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'job_host_summary_service'
+    # Run the new collector directly
+    with tempfile.TemporaryDirectory() as tmpdir:
+        collector_instance = job_host_summary_service(db=connection, since=since, until=until, output_dir=tmpdir)
+        csv_files = collector_instance.gather()
 
-    # run the gather command
-    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+        # Find the job_host_summary_service CSV file (generated as main_jobhostsummary_table.csv)
+        csv_file = None
+        for f in csv_files:
+            if 'main_jobhostsummary_table.csv' in f or f.endswith('main_jobhostsummary_table.csv'):
+                csv_file = f
+                break
 
-    # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'job_host_summary_service.csv', jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
+        assert csv_file is not None, f'job_host_summary_service CSV not found in {csv_files}'
+
+        # Validate CSV content
+        validate_csv_file(csv_file, jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
 
 
 main_jobevent_service_lines = [
@@ -373,14 +444,23 @@ credentials_service_skip_columns = [
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_credentials_service_command(cleanup_glob):
-    """Build and validate credentials.csv contents in the generated tarball."""
-    # prepare env
-    test_env = env_vars.copy()
-    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'credentials_service'
+    """Build and validate credentials_service output from new library collector."""
+    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
+    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
-    # run the gather command
-    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+    # Run the new collector directly
+    with tempfile.TemporaryDirectory() as tmpdir:
+        collector_instance = credentials_service(db=connection, since=since, until=until, output_dir=tmpdir)
+        csv_files = collector_instance.gather()
 
-    # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'credentials_service.csv', credentials_service_lines, credentials_service_skip_columns)
+        # Find the credentials_service CSV file (generated as credentials_table.csv)
+        csv_file = None
+        for f in csv_files:
+            if 'credentials_table.csv' in f or f.endswith('credentials_table.csv'):
+                csv_file = f
+                break
+
+        assert csv_file is not None, f'credentials_service CSV not found in {csv_files}'
+
+        # Validate CSV content
+        validate_csv_file(csv_file, credentials_service_lines, credentials_service_skip_columns)
