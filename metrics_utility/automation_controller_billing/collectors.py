@@ -1,3 +1,6 @@
+# This file is obsolete and will be removed soon
+# Do not add or modify new collectors here
+# use library/collectors folder instead
 import json
 import os
 import os.path
@@ -700,6 +703,9 @@ def get_cpu_timeline(prom: PrometheusClient, previous_hour_start, previous_hour_
     except Exception as e:
         raise MetricsException(f'Error querying CPU timeline: {e}')
 
+# This file is obsolete and will be removed soon
+# Do not add or modify new collectors here
+# use library/collectors folder instead
 
 @register('unified_jobs', '1.4', format='csv', description=_('Data on jobs run'), fnc_slicing=daily_slicing)
 def unified_jobs_table(since, full_path, until, **kwargs):
@@ -748,6 +754,9 @@ def unified_jobs_table(since, full_path, until, **kwargs):
 
     return _copy_table(table='unified_jobs', query=unified_job_query, path=full_path)
 
+# This file is obsolete and will be removed soon
+# Do not add or modify new collectors here
+# use library/collectors folder instead
 
 @register('job_host_summary_service', '1.4', format='csv', description=_('Data for billing'), fnc_slicing=daily_slicing)
 def job_host_summary_service_table(since, full_path, until, **kwargs):
@@ -863,6 +872,9 @@ def job_host_summary_service_table(since, full_path, until, **kwargs):
 
     return _copy_table(table='main_jobhostsummary', query=f'COPY ({query}) TO STDOUT WITH CSV HEADER', path=full_path, prepend_query=prepend_query)
 
+# This file is obsolete and will be removed soon
+# Do not add or modify new collectors here
+# use library/collectors folder instead
 
 @register('main_jobevent_service', '1.4', format='csv', description=_('Content usage'), fnc_slicing=daily_slicing)
 def main_jobevent_service_table(since, full_path, until, **kwargs):
