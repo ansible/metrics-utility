@@ -33,8 +33,11 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
     expected_lines: list of strings where first is header, rest rows
     skip_columns_names: iterable of column names to skip comparison
     """
-    expected_header = expected_lines[0].split(',')
-    expected_rows = [line.split(',') for line in expected_lines[1:]]
+    # Use csv.reader for expected lines to properly handle quoted fields with commas
+    expected_reader = csv.reader(expected_lines)
+    expected_rows = list(expected_reader)
+    expected_header = expected_rows[0]
+    expected_data = expected_rows[1:]
 
     found = False
     for file_path in glob.glob(file_paths):
@@ -68,12 +71,12 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
             assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
 
             actual_data = rows[1:]
-            assert len(actual_data) == len(expected_rows), (
-                f'\nRow count mismatch in {csv_filename}: expected {len(expected_rows)}, got {len(actual_data)}'
+            assert len(actual_data) == len(expected_data), (
+                f'\nRow count mismatch in {csv_filename}: expected {len(expected_data)}, got {len(actual_data)}'
             )
 
             skip_columns = set(skip_columns_names)
-            for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
+            for i, (expected_row, actual_row) in enumerate(zip(expected_data, actual_data), start=1):
                 for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
                     col_name = header[idx]
                     if col_name in skip_columns:
@@ -97,8 +100,11 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
     expected_lines: list of strings where first is header, rest rows
     skip_columns_names: iterable of column names to skip comparison
     """
-    expected_header = expected_lines[0].split(',')
-    expected_rows = [line.split(',') for line in expected_lines[1:]]
+    # Use csv.reader for expected lines to properly handle quoted fields with commas
+    expected_reader = csv.reader(expected_lines)
+    expected_rows = list(expected_reader)
+    expected_header = expected_rows[0]
+    expected_data = expected_rows[1:]
 
     with open(csv_file_path, 'r') as f:
         text = f.read().splitlines()
@@ -120,10 +126,10 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
     assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
 
     actual_data = rows[1:]
-    assert len(actual_data) == len(expected_rows), f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
+    assert len(actual_data) == len(expected_data), f'\nRow count mismatch: expected {len(expected_data)}, got {len(actual_data)}'
 
     skip_columns = set(skip_columns_names)
-    for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
+    for i, (expected_row, actual_row) in enumerate(zip(expected_data, actual_data), start=1):
         for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
             col_name = header[idx]
             if col_name in skip_columns:
@@ -154,19 +160,19 @@ jobs_lines = [
     (
         '1,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,5,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,"{""a10.acos_axapi"": {""version"": ""1.0.0""}, ""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
         '2,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,scheduled,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,10,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,"{""a10.acos_axapi"": {""version"": ""1.0.0""}, ""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
         '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,workflow,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,{},2.9.10,20,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,"{""a10.acos_axapi"": {""version"": ""1.0.0""}, ""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,20,'
         'default_unified_job_template_2025-06-13,git'
     ),
 ]
