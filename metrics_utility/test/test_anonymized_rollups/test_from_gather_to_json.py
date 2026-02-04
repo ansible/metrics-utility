@@ -87,6 +87,8 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'forks_total' in statistics
     assert 'unique_hosts_total' in statistics
     assert 'jobhostsummary_total' in statistics
+    # Credentials fields may be present if credentials data exists
+    # (credential_type_*_total fields are added dynamically based on credential types in the data)
 
     # Validate statistics data types
     assert isinstance(statistics['modules_used_to_automate_total'], int)
@@ -225,6 +227,42 @@ def test_from_gather_to_json(cleanup_glob):
             f'Module {module_stat["module_name"][:50]} hosts should not exceed total automated hosts'
         )
 
+    # ========== Validate Credentials ==========
+    print('--- Validating credentials data values ---')
+    # Based on main_jobhostsummary.sql:
+    # - Job 1: Machine + Amazon Web Services
+    # - Job 2: Machine + Vault
+    # - Job 3: Machine + Amazon Web Services + Network
+    # Expected counts:
+    # - Machine: 3 (all jobs)
+    # - Amazon Web Services: 2 (jobs 1 and 3)
+    # - Vault: 1 (job 2)
+    # - Network: 1 (job 3)
+    
+    assert 'credential_type_machine_total' in statistics, 'Should have credential_type_machine_total in statistics'
+    assert statistics['credential_type_machine_total'] == 3, 'Should have 3 Machine credentials (all jobs)'
+    
+    assert 'credential_type_amazon_web_services_total' in statistics, 'Should have credential_type_amazon_web_services_total in statistics'
+    assert statistics['credential_type_amazon_web_services_total'] == 2, 'Should have 2 Amazon Web Services credentials (jobs 1 and 3)'
+    
+    assert 'credential_type_vault_total' in statistics, 'Should have credential_type_vault_total in statistics'
+    assert statistics['credential_type_vault_total'] == 1, 'Should have 1 Vault credential (job 2)'
+    
+    assert 'credential_type_network_total' in statistics, 'Should have credential_type_network_total in statistics'
+    assert statistics['credential_type_network_total'] == 1, 'Should have 1 Network credential (job 3)'
+
+    # Verify credentials are also added to each job in jobs_by_job_type
+    if json_data['jobs_by_job_type']:
+        for job in json_data['jobs_by_job_type']:
+            assert 'credential_type_machine_total' in job, 'Each job should have credential_type_machine_total'
+            assert job['credential_type_machine_total'] == 3, 'Each job should have credential_type_machine_total = 3'
+            assert 'credential_type_amazon_web_services_total' in job, 'Each job should have credential_type_amazon_web_services_total'
+            assert job['credential_type_amazon_web_services_total'] == 2, 'Each job should have credential_type_amazon_web_services_total = 2'
+            assert 'credential_type_vault_total' in job, 'Each job should have credential_type_vault_total'
+            assert job['credential_type_vault_total'] == 1, 'Each job should have credential_type_vault_total = 1'
+            assert 'credential_type_network_total' in job, 'Each job should have credential_type_network_total'
+            assert job['credential_type_network_total'] == 1, 'Each job should have credential_type_network_total = 1'
+
     print('✅ All data value assertions passed!')
 
 
@@ -271,5 +309,21 @@ def test_half_day_rollup(cleanup_glob):
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert isinstance(json_data['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
     # job_host_summary is now merged into jobs_by_job_type
+
+    # Validate credentials structure (if present)
+    # Based on main_jobhostsummary.sql, we expect 4 credential types
+    expected_credential_fields = [
+        'credential_type_machine_total',
+        'credential_type_amazon_web_services_total',
+        'credential_type_vault_total',
+        'credential_type_network_total',
+    ]
+    for field in expected_credential_fields:
+        assert field in json_data['statistics'], f'Should have {field} in statistics'
+        assert isinstance(json_data['statistics'][field], int), f'{field} should be an integer'
+        # Verify credentials are in jobs_by_job_type
+        if json_data['jobs_by_job_type']:
+            for job in json_data['jobs_by_job_type']:
+                assert field in job, f'Each job should have {field}'
 
     print('✅ Basic structure assertions passed!')

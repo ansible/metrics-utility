@@ -34,6 +34,21 @@ from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized
 # Import test data from other test files
 from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups import jobs
 
+# Credentials test data matching credentials_service collector output format
+# Columns: credential_type, job_id, model
+# Matches job IDs from jobs test data (1-6)
+credentials = [
+    {'credential_type': 'Machine', 'job_id': 1, 'model': 'job'},
+    {'credential_type': 'Machine', 'job_id': 2, 'model': 'job'},
+    {'credential_type': 'Vault', 'job_id': 1, 'model': 'job'},
+    {'credential_type': 'Source Control', 'job_id': 3, 'model': 'workflowjob'},
+    {'credential_type': 'Source Control', 'job_id': 3, 'model': 'workflowjob'},
+    {'credential_type': 'Network', 'job_id': 4, 'model': 'job'},
+    {'credential_type': 'Amazon Web Services', 'job_id': 4, 'model': 'job'},
+    {'credential_type': 'Amazon Web Services', 'job_id': 5, 'model': 'adhoccommand'},
+    {'credential_type': 'Container Registry', 'job_id': 6, 'model': 'adhoccommand'},
+]
+
 
 @pytest.fixture(scope='module')
 def cleanup_test_data():
@@ -159,6 +174,18 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     if csv2:
         jhs_csv_files.append(csv2)
 
+    # 5. Credentials - split into 2 CSV files
+    cred_part1 = credentials[:5]  # First 5 entries
+    cred_part2 = credentials[5:]  # Remaining entries
+
+    cred_csv_files = []
+    csv1 = create_csv_file(cred_part1, f'{data_dir}/part1_credentials.csv')
+    if csv1:
+        cred_csv_files.append(csv1)
+    csv2 = create_csv_file(cred_part2, f'{data_dir}/part2_credentials.csv')
+    if csv2:
+        cred_csv_files.append(csv2)
+
     # ========== Run the anonymized rollup computation ==========
 
     # Create input_data dict with lists of CSV file paths
@@ -167,7 +194,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         'job_host_summary': jhs_csv_files,
         'main_jobevent': events_csv_files,
         'execution_environments': ee_csv_files,
-        'credentials': [],
+        'credentials': cred_csv_files,
     }
 
     result = compute_anonymized_rollup_from_raw_data(
@@ -374,6 +401,39 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     total_module_usage = sum(p['modules_used'] for p in playbook_modules)
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
+    # ========== Validate Credentials ==========
+    print('--- Validating credentials data values ---')
+    # Credentials are added to statistics and to each job in jobs_by_job_type
+    # Expected counts from credentials test data:
+    # Machine: 2, Vault: 1, Source Control: 2, Network: 1, Amazon Web Services: 2, Container Registry: 1
+    assert 'credential_type_machine_total' in result['statistics'], 'Should have credential_type_machine_total in statistics'
+    assert result['statistics']['credential_type_machine_total'] == 2, 'Should have 2 Machine credentials'
+    assert 'credential_type_vault_total' in result['statistics'], 'Should have credential_type_vault_total in statistics'
+    assert result['statistics']['credential_type_vault_total'] == 1, 'Should have 1 Vault credential'
+    assert 'credential_type_source_control_total' in result['statistics'], 'Should have credential_type_source_control_total in statistics'
+    assert result['statistics']['credential_type_source_control_total'] == 2, 'Should have 2 Source Control credentials'
+    assert 'credential_type_network_total' in result['statistics'], 'Should have credential_type_network_total in statistics'
+    assert result['statistics']['credential_type_network_total'] == 1, 'Should have 1 Network credential'
+    assert 'credential_type_amazon_web_services_total' in result['statistics'], 'Should have credential_type_amazon_web_services_total in statistics'
+    assert result['statistics']['credential_type_amazon_web_services_total'] == 2, 'Should have 2 Amazon Web Services credentials'
+    assert 'credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
+    assert result['statistics']['credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
+
+    # Verify credentials are also added to each job in jobs_by_job_type
+    for job in jobs_list:
+        assert 'credential_type_machine_total' in job, 'Each job should have credential_type_machine_total'
+        assert job['credential_type_machine_total'] == 2, 'Each job should have credential_type_machine_total = 2'
+        assert 'credential_type_vault_total' in job, 'Each job should have credential_type_vault_total'
+        assert job['credential_type_vault_total'] == 1, 'Each job should have credential_type_vault_total = 1'
+        assert 'credential_type_source_control_total' in job, 'Each job should have credential_type_source_control_total'
+        assert job['credential_type_source_control_total'] == 2, 'Each job should have credential_type_source_control_total = 2'
+        assert 'credential_type_network_total' in job, 'Each job should have credential_type_network_total'
+        assert job['credential_type_network_total'] == 1, 'Each job should have credential_type_network_total = 1'
+        assert 'credential_type_amazon_web_services_total' in job, 'Each job should have credential_type_amazon_web_services_total'
+        assert job['credential_type_amazon_web_services_total'] == 2, 'Each job should have credential_type_amazon_web_services_total = 2'
+        assert 'credential_type_container_registry_total' in job, 'Each job should have credential_type_container_registry_total'
+        assert job['credential_type_container_registry_total'] == 1, 'Each job should have credential_type_container_registry_total = 1'
+
 
 def test_empty_csv_files_handling(cleanup_test_data):
     """
@@ -461,3 +521,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     assert isinstance(result['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert len(result['modules_used_per_playbook']) == 0, 'modules_used_per_playbook should be empty with no data'
+
+    # Verify credentials fields are not present in statistics when there's no data
+    # (credentials_data would be empty dict, so no credential_type_* fields should exist)
+    credential_fields = [k for k in statistics.keys() if k.startswith('credential_type_')]
+    assert len(credential_fields) == 0, 'Should have no credential fields in statistics when there is no credentials data'
