@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
@@ -28,6 +29,8 @@ def create_anonymized_object(rollup_name: str):
         return EventModulesAnonymizedRollup()
     elif rollup_name == 'execution_environments':
         return ExecutionEnvironmentsAnonymizedRollup()
+    elif rollup_name == 'credentials':
+        return CredentialsAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 

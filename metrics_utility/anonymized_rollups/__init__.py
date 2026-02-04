@@ -9,6 +9,7 @@ from .anonymized_rollups import (
 )
 from .base_anonymized_rollup import BaseAnonymizedRollup
 from .compute_anonymized_rollup import compute_anonymized_rollup
+from .credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from .events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from .execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from .helpers import sanitize_json
@@ -18,6 +19,7 @@ from .jobs_anonymized_rollup import JobsAnonymizedRollup
 
 __all__ = [
     'BaseAnonymizedRollup',
+    'CredentialsAnonymizedRollup',
     'EventModulesAnonymizedRollup',
     'ExecutionEnvironmentsAnonymizedRollup',
     'JobHostSummaryAnonymizedRollup',
