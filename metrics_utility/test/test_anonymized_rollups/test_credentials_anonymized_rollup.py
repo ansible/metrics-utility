@@ -46,14 +46,16 @@ def test_credentials_anonymized_rollup_prepare():
 def test_credentials_anonymized_rollup_base():
     """Test base() method sums counts across batches and converts to JSON format."""
     # Simulate data from prepare() - already aggregated by credential_type
-    prepared_data = pd.DataFrame([
-        {'credential_type': 'Machine', 'count': 2},
-        {'credential_type': 'Vault', 'count': 1},
-        {'credential_type': 'Source Control', 'count': 2},
-        {'credential_type': 'Network', 'count': 1},
-        {'credential_type': 'Amazon Web Services', 'count': 3},
-        {'credential_type': 'Container Registry', 'count': 1},
-    ])
+    prepared_data = pd.DataFrame(
+        [
+            {'credential_type': 'Machine', 'count': 2},
+            {'credential_type': 'Vault', 'count': 1},
+            {'credential_type': 'Source Control', 'count': 2},
+            {'credential_type': 'Network', 'count': 1},
+            {'credential_type': 'Amazon Web Services', 'count': 3},
+            {'credential_type': 'Container Registry', 'count': 1},
+        ]
+    )
 
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.base(prepared_data)
@@ -116,15 +118,19 @@ def test_credentials_anonymized_rollup_prepare_and_base():
 def test_credentials_anonymized_rollup_multiple_batches():
     """Test that base() correctly sums counts from multiple batches."""
     # Simulate multiple batches from prepare()
-    batch1 = pd.DataFrame([
-        {'credential_type': 'Machine', 'count': 2},
-        {'credential_type': 'Vault', 'count': 1},
-    ])
+    batch1 = pd.DataFrame(
+        [
+            {'credential_type': 'Machine', 'count': 2},
+            {'credential_type': 'Vault', 'count': 1},
+        ]
+    )
 
-    batch2 = pd.DataFrame([
-        {'credential_type': 'Machine', 'count': 3},  # Same type, different batch
-        {'credential_type': 'Network', 'count': 1},
-    ])
+    batch2 = pd.DataFrame(
+        [
+            {'credential_type': 'Machine', 'count': 3},  # Same type, different batch
+            {'credential_type': 'Network', 'count': 1},
+        ]
+    )
 
     # Concatenate batches (as would happen in real processing)
     combined = pd.concat([batch1, batch2], ignore_index=True)
@@ -201,14 +207,16 @@ def test_credentials_anonymized_rollup_base_missing_columns():
 def test_credentials_anonymized_rollup_field_name_conversion():
     """Test that credential type names are correctly converted to field names."""
     # Test various name formats
-    test_data = pd.DataFrame([
-        {'credential_type': 'Machine', 'count': 1},
-        {'credential_type': 'Source Control', 'count': 1},  # Space
-        {'credential_type': 'Amazon Web Services', 'count': 1},  # Multiple spaces
-        {'credential_type': 'Container-Registry', 'count': 1},  # Hyphen
-        {'credential_type': 'My-Custom Type', 'count': 1},  # Hyphen and space
-        {'credential_type': 'UPPERCASE', 'count': 1},  # Uppercase
-    ])
+    test_data = pd.DataFrame(
+        [
+            {'credential_type': 'Machine', 'count': 1},
+            {'credential_type': 'Source Control', 'count': 1},  # Space
+            {'credential_type': 'Amazon Web Services', 'count': 1},  # Multiple spaces
+            {'credential_type': 'Container-Registry', 'count': 1},  # Hyphen
+            {'credential_type': 'My-Custom Type', 'count': 1},  # Hyphen and space
+            {'credential_type': 'UPPERCASE', 'count': 1},  # Uppercase
+        ]
+    )
 
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.base(test_data)

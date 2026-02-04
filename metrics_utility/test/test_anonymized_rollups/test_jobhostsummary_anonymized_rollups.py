@@ -226,18 +226,18 @@ def test_jobhostsummary_anonymized():
     assert isinstance(result['by_job_type'], list), 'by_job_type should be a list'
     assert 'jobhostsummary_total' in result, 'result should have jobhostsummary_total key'
     assert isinstance(result['jobhostsummary_total'], int), 'jobhostsummary_total should be an integer'
-    
+
     # Verify jobhostsummary_total count: 16 rows total (5+5 for job type, 3+3 for workflowjob type)
     assert result['jobhostsummary_total'] == 16, f'Should have 16 total job host summary records, got {result["jobhostsummary_total"]}'
-    
+
     # Should have 2 job_type groups: 'job' and 'workflowjob'
     assert len(result['by_job_type']) == 2, 'Should have 2 job_type groups'
-    
+
     # Find the 'job' type group
     job_type_data = next((j for j in result['by_job_type'] if j['job_type'] == 'job'), None)
     assert job_type_data is not None, 'Should have job_type job'
     assert job_type_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1, h2, h3, h4, h5)'
-    
+
     # Verify totals for 'job' type (T1: 10 hosts × 3 tasks = 30 tasks, but we have 26 ok + 2 failures + 2 skipped = 30)
     assert job_type_data['dark_total'] == 0
     assert job_type_data['failures_total'] == 2  # T1: 2 failures
@@ -245,12 +245,12 @@ def test_jobhostsummary_anonymized():
     assert job_type_data['skipped_total'] == 2  # T1: 2 skipped
     assert job_type_data['ignored_total'] == 0
     assert job_type_data['rescued_total'] == 0
-    
+
     # Find the 'workflowjob' type group
     workflowjob_type_data = next((j for j in result['by_job_type'] if j['job_type'] == 'workflowjob'), None)
     assert workflowjob_type_data is not None, 'Should have job_type workflowjob'
     assert workflowjob_type_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts (h1, h2, h3)'
-    
+
     # Verify totals for 'workflowjob' type (T2: 6 hosts × 5 tasks = 30 tasks, but we have 26 ok + 4 failures = 30)
     assert workflowjob_type_data['dark_total'] == 0
     assert workflowjob_type_data['failures_total'] == 4  # T2: 4 failures

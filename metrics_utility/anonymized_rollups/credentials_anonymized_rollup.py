@@ -35,17 +35,14 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
             return pd.DataFrame(columns=['credential_type', 'count'])
 
         # Count occurrences of each credential type in this batch
-        aggregated = (
-            dataframe.groupby('credential_type', as_index=False)
-            .agg(count=('credential_type', 'count'))
-        )
+        aggregated = dataframe.groupby('credential_type', as_index=False).agg(count=('credential_type', 'count'))
 
         return aggregated
 
     def base(self, data):
         """
         Sum credential type counts across all batches.
-        
+
         data is a dataframe with columns:
         - credential_type: name of the credential type
         - count: count of occurrences
@@ -73,10 +70,7 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
             }
 
         # Group by credential_type and sum the counts
-        aggregated = (
-            data.groupby('credential_type', as_index=False)
-            .agg({'count': 'sum'})
-        )
+        aggregated = data.groupby('credential_type', as_index=False).agg({'count': 'sum'})
 
         # Convert to dictionary with credential_type_ prefix and _total suffix
         result_dict = {}

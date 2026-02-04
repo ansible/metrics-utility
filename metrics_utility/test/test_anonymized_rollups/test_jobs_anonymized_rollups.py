@@ -219,10 +219,10 @@ def test_jobs_anonymized_rollups_ansible_version():
     assert 'organizations_total' in result
     assert result['ansible_version'] is not None
     assert result['organizations_total'] is not None
-    
+
     # Verify ansible_version uses 'first' value from dataframe (first job: id 1 with '2.9.0')
     assert result['ansible_version'] == '2.9.0'
-    
+
     # Verify organizations_total counts unique organizations (Org1, Org2, and Org3 - job 5 filtered out, but job 6 with Org3 remains)
     assert result['organizations_total'] == 3
 
@@ -279,16 +279,16 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'scm_type': 'git',
         },
     ]
-    
+
     df = pd.DataFrame(test_jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
     df = jobs_anonymized_rollup.prepare(df)
     result = jobs_anonymized_rollup.base(df)
     result = result['json']
-    
+
     by_job_type = result['by_job_type']
     rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
-    
+
     # Should use 'first' value from dataframe (first job: id 1 with '2.9.0')
     assert result['ansible_version'] == '2.9.0'
     assert result['organizations_total'] == 3  # Org1, Org2, Org3

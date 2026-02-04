@@ -2,6 +2,7 @@ import csv
 import glob
 import os
 import tempfile
+
 from datetime import datetime, timezone
 
 import pytest
@@ -119,9 +120,7 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
     assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
 
     actual_data = rows[1:]
-    assert len(actual_data) == len(expected_rows), (
-        f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
-    )
+    assert len(actual_data) == len(expected_rows), f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
 
     skip_columns = set(skip_columns_names)
     for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
@@ -130,10 +129,7 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
             if col_name in skip_columns:
                 continue
             assert exp_cell == act_cell, (
-                f'\nData mismatch on row {i + 1}, column {col_name!r} '
-                f'(index {idx}):\n'
-                f'Expected: {exp_cell!r}\n'
-                f'Actual:   {act_cell!r}'
+                f'\nData mismatch on row {i + 1}, column {col_name!r} (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
             )
 
 

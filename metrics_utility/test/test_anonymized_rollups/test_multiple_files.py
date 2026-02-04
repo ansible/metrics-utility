@@ -34,6 +34,7 @@ from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized
 # Import test data from other test files
 from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups import jobs
 
+
 # Credentials test data matching credentials_service collector output format
 # Columns: credential_type, job_id, model
 # Matches job IDs from jobs test data (1-6)
@@ -223,7 +224,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         # write result as json to file
         f.write(json_content)
 
-    # ========== Validate the results ==========
+        # ========== Validate the results ==========
 
         # Validate flattened structure
         assert 'statistics' in result
@@ -292,7 +293,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Total = 5 + 3 = 8 (some hosts appear in both types)
     assert result['statistics']['unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
     # jobhostsummary_total should be 16 (10 for job type + 6 for workflowjob type)
-    assert result['statistics']['jobhostsummary_total'] == 16, f'Should have 16 total job host summary records, got {result["statistics"]["jobhostsummary_total"]}'
+    assert result['statistics']['jobhostsummary_total'] == 16, (
+        f'Should have 16 total job host summary records, got {result["statistics"]["jobhostsummary_total"]}'
+    )
 
     # Find the 'job' type group in jobs_by_job_type
     job_type_entry = next((j for j in jobs_list if j['job_type'] == 'job'), None)
@@ -305,7 +308,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert job_type_entry['dark_total'] == 0, 'Should have 0 dark for job type'
     assert job_type_entry['ignored_total'] == 0, 'Should have 0 ignored for job type'
     assert job_type_entry['rescued_total'] == 0, 'Should have 0 rescued for job type'
-    
+
     # Find the 'workflowjob' type group in jobs_by_job_type
     workflowjob_type_entry = next((j for j in jobs_list if j['job_type'] == 'workflowjob'), None)
     assert workflowjob_type_entry is not None, 'Should have job_type workflowjob'
@@ -317,7 +320,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert workflowjob_type_entry['dark_total'] == 0, 'Should have 0 dark for workflowjob type'
     assert workflowjob_type_entry['ignored_total'] == 0, 'Should have 0 ignored for workflowjob type'
     assert workflowjob_type_entry['rescued_total'] == 0, 'Should have 0 rescued for workflowjob type'
-    
+
     # 'adhoccommand' type should have default values (0) for host summary fields since no match
     adhoccommand_type_entry = next((j for j in jobs_list if j['job_type'] == 'adhoccommand'), None)
     assert adhoccommand_type_entry is not None, 'Should have job_type adhoccommand'
@@ -325,7 +328,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert adhoccommand_type_entry['ok_total'] == 0, 'Should have 0 ok tasks (no job_host_summary match)'
     assert adhoccommand_type_entry['failures_total'] == 0, 'Should have 0 failures (no job_host_summary match)'
     assert adhoccommand_type_entry['skipped_total'] == 0, 'Should have 0 skipped (no job_host_summary match)'
-    
+
     # Verify totals across all job types
     total_ok = sum(j.get('ok_total', 0) for j in jobs_list)
     total_failures = sum(j.get('failures_total', 0) for j in jobs_list)

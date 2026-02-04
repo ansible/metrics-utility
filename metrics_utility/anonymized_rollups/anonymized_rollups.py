@@ -103,7 +103,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Get jobs_total directly from jobs data, or calculate by summing jobs_total from all job_type groups as fallback
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
     jobs_total = jobs.get('jobs_total')  # Use direct value from jobs data
-    
+
     # Calculate unique_hosts_total by summing unique_hosts_total from all job_type groups
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
@@ -139,13 +139,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # 3) arrays copied as-is from their respective parents
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
-    
+
     # 4) Merge job_host_summary and credentials into jobs_by_job_type
     # Create a lookup dict for job_host_summary by job_type
-    jhs_lookup: Dict[str, Dict[str, Any]] = {
-        jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type
-    }
-    
+    jhs_lookup: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
+
     # Default values for host summary fields when no match is found
     default_host_summary_fields = {
         'dark_total': 0,
@@ -156,29 +154,31 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rescued_total': 0,
         'unique_hosts_total': 0,
     }
-    
+
     # Merge job_host_summary data into jobs_by_job_type
     jobs_by_job_type_merged: List[Dict[str, Any]] = []
     for job in jobs_by_job_type:
         job_type = job.get('job_type')
         merged_job = job.copy()
-        
+
         # Add host summary fields from matching job_host_summary entry, or use defaults
         if job_type in jhs_lookup:
             jhs_data = jhs_lookup[job_type]
-            merged_job.update({
-                'dark_total': jhs_data.get('dark_total', 0),
-                'failures_total': jhs_data.get('failures_total', 0),
-                'ok_total': jhs_data.get('ok_total', 0),
-                'skipped_total': jhs_data.get('skipped_total', 0),
-                'ignored_total': jhs_data.get('ignored_total', 0),
-                'rescued_total': jhs_data.get('rescued_total', 0),
-                'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
-            })
+            merged_job.update(
+                {
+                    'dark_total': jhs_data.get('dark_total', 0),
+                    'failures_total': jhs_data.get('failures_total', 0),
+                    'ok_total': jhs_data.get('ok_total', 0),
+                    'skipped_total': jhs_data.get('skipped_total', 0),
+                    'ignored_total': jhs_data.get('ignored_total', 0),
+                    'rescued_total': jhs_data.get('rescued_total', 0),
+                    'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+                }
+            )
         else:
             # No match found, use default values
             merged_job.update(default_host_summary_fields)
-        
+
         jobs_by_job_type_merged.append(merged_job)
 
     # 5) assemble the flattened object
@@ -254,7 +254,12 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base
         CredentialsAnonymizedRollup().save_rollup(credentials_result['rollup'], base_path, since, until, packed=save_rollups_packed)
 
     anonymized_rollup = anonymize_rollups(
-        events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], credentials_result['json'], salt
+        events_modules_result['json'],
+        execution_environments_result['json'],
+        jobs_result['json'],
+        job_host_summary_result['json'],
+        credentials_result['json'],
+        salt,
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
     anonymized_rollup = sanitize_json(anonymized_rollup)

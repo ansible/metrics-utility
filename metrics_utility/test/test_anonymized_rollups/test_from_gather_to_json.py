@@ -37,7 +37,11 @@ def test_empty_data(cleanup_glob):
     until = datetime(2025, 6, 14, 0, 0, 0)
 
     compute_anonymized_rollup_from_raw_data(
-        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': [], 'credentials': []}, 'salt', since, until, './out'
+        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': [], 'credentials': []},
+        'salt',
+        since,
+        until,
+        './out',
     )
 
 
@@ -63,7 +67,7 @@ def test_from_gather_to_json(cleanup_glob):
     with open(json_path, 'w') as f:
         json.dump(json_data, f, indent=4)
 
-    # ========== Validate the json_data that are containing what they should ==========
+        # ========== Validate the json_data that are containing what they should ==========
 
         # Validate top-level flattened structure
         assert 'statistics' in json_data, "Missing 'statistics' in json_data"
@@ -169,14 +173,16 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'modules_used' in playbook_entry, 'Playbook entry should have modules_used'
     assert playbook_entry['modules_used'] == 1, 'Playbook should use 1 module'
 
-
     # Validate execution_environments actual values
     print('--- Validating execution_environments data values ---')
     assert statistics['execution_environments_total'] == 2, 'Should have 2 total execution environments'
     assert statistics['execution_environments_default_total'] == 1, 'Should have 1 default execution environment'
     assert statistics['execution_environments_custom_total'] == 1, 'Should have 1 custom execution environment'
     # Validate that total = default + custom
-    assert statistics['execution_environments_total'] == statistics['execution_environments_default_total'] + statistics['execution_environments_custom_total'], 'Total EE should equal default + custom'
+    assert (
+        statistics['execution_environments_total']
+        == statistics['execution_environments_default_total'] + statistics['execution_environments_custom_total']
+    ), 'Total EE should equal default + custom'
 
     # Validate jobs actual values
     print('--- Validating jobs data values ---')
@@ -188,9 +194,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert job['jobs_total'] == 3, 'Job type should have 3 jobs'
     assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
     assert job['jobs_succeeded_total'] == 3, 'Should have 3 succeeded jobs'
-    assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_total'], (
-        'Succeeded + failed should equal total'
-    )
+    assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_total'], 'Succeeded + failed should equal total'
     # job_type should be 'job' from django_content_type.model
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
 
@@ -206,7 +210,9 @@ def test_from_gather_to_json(cleanup_glob):
     assert statistics['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
     # jobhostsummary_total should be the count of all job host summary records
     # With 3 jobs and 2 hosts, we should have 3 * 2 = 6 job host summary records
-    assert statistics['jobhostsummary_total'] == 6, f'Should have 6 total job host summary records (3 jobs × 2 hosts), got {statistics["jobhostsummary_total"]}'
+    assert statistics['jobhostsummary_total'] == 6, (
+        f'Should have 6 total job host summary records (3 jobs × 2 hosts), got {statistics["jobhostsummary_total"]}'
+    )
 
     # Find the job entry with job_type='job'
     job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
@@ -238,16 +244,16 @@ def test_from_gather_to_json(cleanup_glob):
     # - Amazon Web Services: 2 (jobs 1 and 3)
     # - Vault: 1 (job 2)
     # - Network: 1 (job 3)
-    
+
     assert 'credential_type_machine_total' in statistics, 'Should have credential_type_machine_total in statistics'
     assert statistics['credential_type_machine_total'] == 3, 'Should have 3 Machine credentials (all jobs)'
-    
+
     assert 'credential_type_amazon_web_services_total' in statistics, 'Should have credential_type_amazon_web_services_total in statistics'
     assert statistics['credential_type_amazon_web_services_total'] == 2, 'Should have 2 Amazon Web Services credentials (jobs 1 and 3)'
-    
+
     assert 'credential_type_vault_total' in statistics, 'Should have credential_type_vault_total in statistics'
     assert statistics['credential_type_vault_total'] == 1, 'Should have 1 Vault credential (job 2)'
-    
+
     assert 'credential_type_network_total' in statistics, 'Should have credential_type_network_total in statistics'
     assert statistics['credential_type_network_total'] == 1, 'Should have 1 Network credential (job 3)'
 
