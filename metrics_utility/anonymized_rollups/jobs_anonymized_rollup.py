@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
@@ -11,13 +13,116 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         # filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
-        return dataframe
+        
+        # Extract installed collections statistics from this batch
+        collections_df = self._extract_collections_from_batch(dataframe)
+        
+        # Return both the filtered dataframe and collections statistics
+        return {
+            'jobs': dataframe,
+            'collections': collections_df,
+        }
+    
+    def _extract_collections_from_batch(self, dataframe):
+        """
+        Extract collection-version pairs from installed_collections JSON field.
+        Returns a DataFrame with columns: collection_name, collection_version, job_count
+        where job_count is the number of jobs in this batch that had this collection-version.
+        """
+        if dataframe is None or dataframe.empty or 'installed_collections' not in dataframe.columns:
+            return pd.DataFrame(columns=['collection_name', 'collection_version', 'job_count'])
+        
+        collection_rows = []
+        
+        for idx, row in dataframe.iterrows():
+            installed_collections = row.get('installed_collections')
+            
+            # Skip if installed_collections is None, empty, or not a valid JSON
+            if pd.isna(installed_collections) or installed_collections == '':
+                continue
+            
+            # Parse JSON if it's a string, otherwise use as-is
+            try:
+                if isinstance(installed_collections, str):
+                    collections_dict = json.loads(installed_collections)
+                else:
+                    collections_dict = installed_collections
+                
+                # Handle case where it's already a dict (from pandas JSON parsing)
+                if not isinstance(collections_dict, dict):
+                    continue
+                
+                # Extract collection name and version
+                for collection_name, collection_info in collections_dict.items():
+                    if isinstance(collection_info, dict) and 'version' in collection_info:
+                        collection_version = collection_info['version']
+                        collection_rows.append({
+                            'collection_name': collection_name,
+                            'collection_version': collection_version,
+                            'job_count': 1,  # Each job contributes 1 to the count
+                        })
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                # Skip invalid JSON
+                continue
+        
+        if not collection_rows:
+            return pd.DataFrame(columns=['collection_name', 'collection_version', 'job_count'])
+        
+        # Create DataFrame and aggregate by collection_name and collection_version
+        collections_df = pd.DataFrame(collection_rows)
+        collections_agg = (
+            collections_df.groupby(['collection_name', 'collection_version'])
+            .agg(job_count=('job_count', 'sum'))
+            .reset_index()
+        )
+        
+        return collections_agg
+    
+    def _process_collections(self, collections_df):
+        """
+        Process collections dataframe and return as list of dicts for JSON output.
+        Collections are already aggregated (summed) from all batches.
+        """
+        if collections_df is None or collections_df.empty:
+            return []
+        
+        # Convert to list of dicts, ensuring job_count is an int for JSON serialization
+        collections_list = collections_df.copy()
+        collections_list['job_count'] = collections_list['job_count'].astype(int)
+        return collections_list.to_dict(orient='records')
+    
+    def merge(self, data_all, data_new):
+        """
+        Override merge to handle both jobs dataframe and collections dataframe.
+        """
+        # Handle initial None case
+        if data_all is None:
+            return data_new
+        
+        # Merge jobs dataframes
+        merged_jobs = pd.concat([data_all['jobs'], data_new['jobs']], ignore_index=True)
+        
+        # Merge collections dataframes and sum job counts
+        merged_collections = pd.concat([data_all['collections'], data_new['collections']], ignore_index=True)
+        if not merged_collections.empty:
+            merged_collections = (
+                merged_collections.groupby(['collection_name', 'collection_version'])
+                .agg(job_count=('job_count', 'sum'))
+                .reset_index()
+            )
+        else:
+            merged_collections = pd.DataFrame(columns=['collection_name', 'collection_version', 'job_count'])
+        
+        return {
+            'jobs': merged_jobs,
+            'collections': merged_collections,
+        }
 
     def __init__(self):
         super().__init__('jobs')
         self.collector_names = ['unified_jobs']
 
-    def base(self, dataframe):
+    def base(self, data):
         """
         This function will create first level aggregation of the job dataframe, the result is json
 
@@ -37,14 +142,31 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         Active number of Customers (anonymized? - the same as above?) - this will be skipped for now
         Number of templates executed by company - this will be skipped for now
 
-        dataframe corresponds to jobs
+        Also includes installed collections statistics:
+        - Collection name and version with job counts
+
+        data is a dict with 'jobs' (DataFrame) and 'collections' (DataFrame)
         """
+
+        # Extract jobs dataframe and collections dataframe
+        if isinstance(data, dict):
+            dataframe = data.get('jobs', pd.DataFrame())
+            collections_df = data.get('collections', pd.DataFrame())
+        else:
+            # Backward compatibility: if data is a DataFrame directly, use it
+            dataframe = data
+            collections_df = pd.DataFrame(columns=['collection_name', 'collection_version', 'job_count'])
 
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
+            # Still process collections if available
+            collections_stats = self._process_collections(collections_df)
             return {
-                'json': {},
-                'rollup': {'aggregated': dataframe},
+                'json': {'installed_collections': collections_stats},
+                'rollup': {
+                    'aggregated': pd.DataFrame(),
+                    'installed_collections': collections_df,
+                },
             }
 
         # Coerce datetime-like columns to pandas datetimes (timezone-aware if possible)
@@ -110,6 +232,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
         jobs_total = int(dataframe['id'].nunique())  # Convert numpy int64 to Python int for JSON serialization
 
+        # Process collections statistics
+        collections_stats = self._process_collections(collections_df)
+
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
             # pandas.DataFrame
@@ -118,6 +243,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'ansible_version': ansible_version,
             'forks_total': forks_total,
             'jobs_total': jobs_total,
+            'installed_collections': collections_df,  # DataFrame with collection statistics
         }
 
         # Prepare JSON data (converted to list of dicts)
@@ -127,6 +253,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'ansible_version': ansible_version,
             'forks_total': forks_total,
             'jobs_total': jobs_total,
+            'installed_collections': collections_stats,  # List of dicts with collection statistics
         }
 
         return {
