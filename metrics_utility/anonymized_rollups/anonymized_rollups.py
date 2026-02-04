@@ -42,7 +42,7 @@ def anonymize_data(data, salt):
 
     Args:
         data: Flattened data structure with keys:
-            - jobs_by_job_type: array of job stats (grouped by job_type, merged with job_host_summary data)
+            - jobs_by_job_type: array of job stats (grouped by job_type, merged with job_host_summary and credentials data)
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
             - modules_used_per_playbook: array of {playbook_id, modules_used}
@@ -88,12 +88,13 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - modules_used_per_playbook: array of {playbook_id, modules_used}
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
-      - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
+      - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary and credentials data)
     """
     events_modules = data.get('events_modules', {})
     execution_environments = data.get('execution_environments', {})
     jobs = data.get('jobs', {})
     job_host_summary_root = data.get('job_host_summary', {})
+    credentials_root = data.get('credentials', {})
 
     # 1) statistics (collect only primitive totals)
     # Get jobs_total directly from jobs data, or calculate by summing jobs_total from all job_type groups as fallback
@@ -134,10 +135,16 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
     
-    # 4) Merge job_host_summary into jobs_by_job_type by job_type
+    # 4) Merge job_host_summary and credentials into jobs_by_job_type by job_type
     # Create a lookup dict for job_host_summary by job_type
     jhs_lookup: Dict[str, Dict[str, Any]] = {
         jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type
+    }
+    
+    # Create a lookup dict for credentials by job_type
+    credentials_by_job_type: List[Dict[str, Any]] = credentials_root.get('by_job_type', []) or []
+    credentials_lookup: Dict[str, Dict[str, Any]] = {
+        cred.get('job_type'): cred for cred in credentials_by_job_type
     }
     
     # Default values for host summary fields when no match is found
@@ -151,7 +158,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'unique_hosts_total': 0,
     }
     
-    # Merge job_host_summary data into jobs_by_job_type
+    # Merge job_host_summary and credentials data into jobs_by_job_type
     jobs_by_job_type_merged: List[Dict[str, Any]] = []
     for job in jobs_by_job_type:
         job_type = job.get('job_type')
@@ -173,6 +180,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             # No match found, use default values
             merged_job.update(default_host_summary_fields)
         
+        # Add credentials fields from matching credentials entry
+        if job_type in credentials_lookup:
+            cred_data = credentials_lookup[job_type]
+            merged_job.update(cred_data)
+        
         jobs_by_job_type_merged.append(merged_job)
 
     # 5) assemble the flattened object
@@ -187,7 +199,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     return flattened
 
 
-def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, salt):
+def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, salt):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
 
@@ -196,6 +208,7 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         execution_environments_rollup: Execution environment statistics
         jobs_rollup: Jobs statistics
         job_host_summary_rollup: Job host summary statistics
+        credentials_rollup: Credentials statistics
         salt: Salt string for hashing sensitive data
 
     Returns:
@@ -206,6 +219,7 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         'execution_environments': execution_environments_rollup,
         'jobs': jobs_rollup,
         'job_host_summary': job_host_summary_rollup,
+        'credentials': credentials_rollup,
     }
 
     # First flatten the nested structure
@@ -240,8 +254,13 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base
             execution_environments_result['rollup'], base_path, since, until, packed=save_rollups_packed
         )
 
+    credentials = load_anonymized_rollup_data(CredentialsAnonymizedRollup(), input_data['credentials'])
+    credentials_result = CredentialsAnonymizedRollup().base(credentials)
+    if save_rollups:
+        CredentialsAnonymizedRollup().save_rollup(credentials_result['rollup'], base_path, since, until, packed=save_rollups_packed)
+
     anonymized_rollup = anonymize_rollups(
-        events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], salt
+        events_modules_result['json'], execution_environments_result['json'], jobs_result['json'], job_host_summary_result['json'], credentials_result['json'], salt
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
     anonymized_rollup = sanitize_json(anonymized_rollup)
