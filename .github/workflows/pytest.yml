@@ -3,7 +3,7 @@ name: "Pytest tests"
 on:
   push:
     branches: ['devel']
-  pull_request_target:
+  pull_request:
 
 jobs:
   pytest:
@@ -95,27 +95,7 @@ jobs:
         run: |
           uv run pytest -s -v --cov=. --cov-report=xml
 
-      - name: "Send code coverage report to Sonar Cloud"
-        uses: SonarSource/sonarqube-scan-action@v6
-        if: ${{ github.base_ref }}
-        env:
-          SONAR_HOST_URL: https://sonarcloud.io
-          SONAR_ORGANIZATION: ansible
-          SONAR_PROJECT_KEY: ansible_metrics-utility
-          SONAR_TOKEN: ${{ secrets.CICD_ORG_SONAR_TOKEN_CICD_BOT }}
-        with:
-          projectBaseDir: .
-          args: >
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.organization=ansible
-            -Dsonar.projectKey=ansible_metrics-utility
-            "-Dsonar.pullrequest.base=${{ github.base_ref }}"
-            "-Dsonar.pullrequest.branch=${{ github.head_ref }}"
-            "-Dsonar.pullrequest.key=${{ github.event.pull_request.number }}"
-            -Dsonar.pullrequest.provider=github
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-
-      - name: "Send code coverage report to Sonar Cloud"
+      - name: "Send code coverage report to Sonar Cloud (on push)"
         uses: SonarSource/sonarqube-scan-action@v6
         if: ${{ ! github.base_ref }}
         env:
