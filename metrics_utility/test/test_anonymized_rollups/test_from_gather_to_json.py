@@ -37,7 +37,7 @@ def test_empty_data(cleanup_glob):
     until = datetime(2025, 6, 14, 0, 0, 0)
 
     compute_anonymized_rollup_from_raw_data(
-        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': []}, 'salt', since, until, './out'
+        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': [], 'credentials': []}, 'salt', since, until, './out'
     )
 
 

@@ -167,6 +167,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         'job_host_summary': jhs_csv_files,
         'main_jobevent': events_csv_files,
         'execution_environments': ee_csv_files,
+        'credentials': [],
     }
 
     result = compute_anonymized_rollup_from_raw_data(
@@ -395,6 +396,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
         'job_host_summary': [],
         'main_jobevent': [],
         'execution_environments': [],
+        'credentials': [],
     }
 
     # Should not crash, but return empty/default results

@@ -96,6 +96,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
 
+    # Credentials are now a simple dict with credential_type_*_total fields (not grouped by job_type)
+    # credentials_root is already the dict of credential counts (from the 'json' field)
+    credentials_data: Dict[str, Any] = credentials_root if isinstance(credentials_root, dict) else {}
+
     # 1) statistics (collect only primitive totals)
     # Get jobs_total directly from jobs data, or calculate by summing jobs_total from all job_type groups as fallback
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
@@ -123,6 +127,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         # from job_host_summary (sum of all job_type groups)
         'unique_hosts_total': unique_hosts_total,
         'jobhostsummary_total': jobhostsummary_total,
+        # from credentials (global credential type counts)
+        **credentials_data,
     }
 
     # 2) modules_used_per_playbook (convert map -> array)
@@ -135,16 +141,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
     
-    # 4) Merge job_host_summary and credentials into jobs_by_job_type by job_type
+    # 4) Merge job_host_summary and credentials into jobs_by_job_type
     # Create a lookup dict for job_host_summary by job_type
     jhs_lookup: Dict[str, Dict[str, Any]] = {
         jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type
-    }
-    
-    # Create a lookup dict for credentials by job_type
-    credentials_by_job_type: List[Dict[str, Any]] = credentials_root.get('by_job_type', []) or []
-    credentials_lookup: Dict[str, Dict[str, Any]] = {
-        cred.get('job_type'): cred for cred in credentials_by_job_type
     }
     
     # Default values for host summary fields when no match is found
@@ -180,10 +180,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             # No match found, use default values
             merged_job.update(default_host_summary_fields)
         
-        # Add credentials fields from matching credentials entry
-        if job_type in credentials_lookup:
-            cred_data = credentials_lookup[job_type]
-            merged_job.update(cred_data)
+        # Add credentials fields to all job types (credentials are global, not per job_type)
+        merged_job.update(credentials_data)
         
         jobs_by_job_type_merged.append(merged_job)
 
