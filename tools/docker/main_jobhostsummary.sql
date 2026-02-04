@@ -448,7 +448,7 @@ $yaml$,
       0,                                      -- emitted_events
       'controller1',                          -- controller_node
       false,                                  -- dependencies_processed
-      '{}'::jsonb,                            -- installed_collections
+      '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb,  -- installed_collections (matches modules in event data: ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
       '{}'::jsonb,                            -- job_env
