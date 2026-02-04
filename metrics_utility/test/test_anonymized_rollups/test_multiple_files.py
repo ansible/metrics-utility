@@ -403,7 +403,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
     # ========== Validate Credentials ==========
     print('--- Validating credentials data values ---')
-    # Credentials are added to statistics and to each job in jobs_by_job_type
+    # Credentials are added to statistics
     # Expected counts from credentials test data:
     # Machine: 2, Vault: 1, Source Control: 2, Network: 1, Amazon Web Services: 2, Container Registry: 1
     assert 'credential_type_machine_total' in result['statistics'], 'Should have credential_type_machine_total in statistics'
@@ -418,21 +418,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['credential_type_amazon_web_services_total'] == 2, 'Should have 2 Amazon Web Services credentials'
     assert 'credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
     assert result['statistics']['credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
-
-    # Verify credentials are also added to each job in jobs_by_job_type
-    for job in jobs_list:
-        assert 'credential_type_machine_total' in job, 'Each job should have credential_type_machine_total'
-        assert job['credential_type_machine_total'] == 2, 'Each job should have credential_type_machine_total = 2'
-        assert 'credential_type_vault_total' in job, 'Each job should have credential_type_vault_total'
-        assert job['credential_type_vault_total'] == 1, 'Each job should have credential_type_vault_total = 1'
-        assert 'credential_type_source_control_total' in job, 'Each job should have credential_type_source_control_total'
-        assert job['credential_type_source_control_total'] == 2, 'Each job should have credential_type_source_control_total = 2'
-        assert 'credential_type_network_total' in job, 'Each job should have credential_type_network_total'
-        assert job['credential_type_network_total'] == 1, 'Each job should have credential_type_network_total = 1'
-        assert 'credential_type_amazon_web_services_total' in job, 'Each job should have credential_type_amazon_web_services_total'
-        assert job['credential_type_amazon_web_services_total'] == 2, 'Each job should have credential_type_amazon_web_services_total = 2'
-        assert 'credential_type_container_registry_total' in job, 'Each job should have credential_type_container_registry_total'
-        assert job['credential_type_container_registry_total'] == 1, 'Each job should have credential_type_container_registry_total = 1'
 
 
 def test_empty_csv_files_handling(cleanup_test_data):

@@ -84,11 +84,11 @@ def anonymize_data(data, salt):
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
-      - statistics: object of primitive totals
+      - statistics: object of primitive totals (includes credentials)
       - modules_used_per_playbook: array of {playbook_id, modules_used}
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
-      - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary and credentials data)
+      - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
     """
     events_modules = data.get('events_modules', {})
     execution_environments = data.get('execution_environments', {})
@@ -96,7 +96,6 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
 
-    # Credentials are now a simple dict with credential_type_*_total fields (not grouped by job_type)
     # credentials_root is already the dict of credential counts (from the 'json' field)
     credentials_data: Dict[str, Any] = credentials_root if isinstance(credentials_root, dict) else {}
 
@@ -158,7 +157,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'unique_hosts_total': 0,
     }
     
-    # Merge job_host_summary and credentials data into jobs_by_job_type
+    # Merge job_host_summary data into jobs_by_job_type
     jobs_by_job_type_merged: List[Dict[str, Any]] = []
     for job in jobs_by_job_type:
         job_type = job.get('job_type')
@@ -179,9 +178,6 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         else:
             # No match found, use default values
             merged_job.update(default_host_summary_fields)
-        
-        # Add credentials fields to all job types (credentials are global, not per job_type)
-        merged_job.update(credentials_data)
         
         jobs_by_job_type_merged.append(merged_job)
 

@@ -251,18 +251,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'credential_type_network_total' in statistics, 'Should have credential_type_network_total in statistics'
     assert statistics['credential_type_network_total'] == 1, 'Should have 1 Network credential (job 3)'
 
-    # Verify credentials are also added to each job in jobs_by_job_type
-    if json_data['jobs_by_job_type']:
-        for job in json_data['jobs_by_job_type']:
-            assert 'credential_type_machine_total' in job, 'Each job should have credential_type_machine_total'
-            assert job['credential_type_machine_total'] == 3, 'Each job should have credential_type_machine_total = 3'
-            assert 'credential_type_amazon_web_services_total' in job, 'Each job should have credential_type_amazon_web_services_total'
-            assert job['credential_type_amazon_web_services_total'] == 2, 'Each job should have credential_type_amazon_web_services_total = 2'
-            assert 'credential_type_vault_total' in job, 'Each job should have credential_type_vault_total'
-            assert job['credential_type_vault_total'] == 1, 'Each job should have credential_type_vault_total = 1'
-            assert 'credential_type_network_total' in job, 'Each job should have credential_type_network_total'
-            assert job['credential_type_network_total'] == 1, 'Each job should have credential_type_network_total = 1'
-
     print('✅ All data value assertions passed!')
 
 
@@ -321,9 +309,5 @@ def test_half_day_rollup(cleanup_glob):
     for field in expected_credential_fields:
         assert field in json_data['statistics'], f'Should have {field} in statistics'
         assert isinstance(json_data['statistics'][field], int), f'{field} should be an integer'
-        # Verify credentials are in jobs_by_job_type
-        if json_data['jobs_by_job_type']:
-            for job in json_data['jobs_by_job_type']:
-                assert field in job, f'Each job should have {field}'
 
     print('✅ Basic structure assertions passed!')
