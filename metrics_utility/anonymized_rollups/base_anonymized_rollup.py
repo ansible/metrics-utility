@@ -15,19 +15,22 @@ class BaseAnonymizedRollup:
         self.rollup_name = rollup_name
         self.collector_names = []
 
+    # Merges two data (it dont have to be dataframes if overriden)
+    # this is used in batch processing
+    # where we need to merge partial rollup with current batch aggregation 
     def merge(self, dataframe_all, dataframe_new):
         if dataframe_all is None:
             return dataframe_new
 
         return pd.concat([dataframe_all, dataframe_new], ignore_index=True)
 
-    def rollup(self, dataframe_all, dataframe_new):
-        # not implemented in base class, return empty dataframe
-        return pd.DataFrame()
-
+    # takes raw data and computes aggregation
+    # this works in batches, for example we are collecting every hour
+    # this hourly data arrive into prepare, then it gets merged with partial rollup (initaly empty)
     def prepare(self, dataframe):
         return dataframe
 
+    # Base receive the full daily rollup and computes some final statistics for the day
     def base(self, dataframe):
         return pd.DataFrame()
 
