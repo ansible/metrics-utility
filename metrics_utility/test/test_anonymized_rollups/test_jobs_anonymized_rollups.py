@@ -1,3 +1,5 @@
+import json
+
 import pandas as pd
 import pytest
 
@@ -24,6 +26,10 @@ jobs = [
         'forks': 5,
         'inventory_name': 'inventory1',
         'scm_type': 'git',
+        'installed_collections': json.dumps({
+            'ansible.builtin': {'version': '2.9.10'},
+            'community.general': {'version': '1.0.0'},
+        }),
     },  # duration 3s, wait 0s
     {
         'id': 2,
@@ -43,6 +49,11 @@ jobs = [
         'forks': 10,
         'inventory_name': 'inventory1',
         'scm_type': 'svn',
+        'installed_collections': json.dumps({
+            'ansible.builtin': {'version': '2.9.10'},  # Same version as job 1
+            'community.general': {'version': '2.0.0'},  # Different version - same collection
+            'ansible.windows': {'version': '1.0.0'},
+        }),
     },  # duration 5s (failed), wait 2s
     # controller A, ansible 2.11.0, template T2
     {
@@ -63,6 +74,11 @@ jobs = [
         'forks': 20,
         'inventory_name': 'inventory2',
         'scm_type': 'git',
+        'installed_collections': json.dumps({
+            'ansible.builtin': {'version': '2.9.10'},  # Same version as jobs 1 and 2
+            'community.general': {'version': '2.0.0'},  # Same version as job 2
+            'community.aws': {'version': '1.5.0'},
+        }),
     },  # duration 7s, wait 4s
     # controller B, ansible 2.12.0, template T1
     {
@@ -83,6 +99,10 @@ jobs = [
         'forks': 15,
         'inventory_name': 'inventory1',
         'scm_type': 'git',
+        'installed_collections': json.dumps({
+            'ansible.builtin': {'version': '2.9.10'},  # Same version as other jobs
+            'community.general': {'version': '1.0.0'},  # Same version as job 1
+        }),
     },  # duration 2s, wait 1s
     # invalid rows (should be filtered out)
     {
@@ -99,6 +119,9 @@ jobs = [
         'forks': 0,
         'inventory_name': 'inventory3',
         'scm_type': 'manual',
+        'installed_collections': json.dumps({
+            'ansible.builtin': {'version': '2.9.10'},
+        }),
     },
     {
         'id': 6,
@@ -114,6 +137,10 @@ jobs = [
         'forks': 0,
         'inventory_name': 'inventory3',
         'scm_type': 'unknown',
+        'installed_collections': json.dumps({
+            'ansible.builtin': {'version': '2.9.10'},
+            'community.general': {'version': '3.0.0'},  # Another version of community.general
+        }),
     },
 ]
 
@@ -124,8 +151,8 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
     df = pd.DataFrame(jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
-    df = jobs_anonymized_rollup.prepare(df)
-    result = jobs_anonymized_rollup.base(df)
+    prepared_data = jobs_anonymized_rollup.prepare(df)
+    result = jobs_anonymized_rollup.base(prepared_data)
     result = result['json']
 
     import pprint
@@ -210,8 +237,8 @@ def test_jobs_anonymized_rollups_ansible_version():
     """Test that ansible_version and organizations_total are correctly aggregated at top level."""
     df = pd.DataFrame(jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
-    df = jobs_anonymized_rollup.prepare(df)
-    result = jobs_anonymized_rollup.base(df)
+    prepared_data = jobs_anonymized_rollup.prepare(df)
+    result = jobs_anonymized_rollup.base(prepared_data)
     result = result['json']
 
     # Verify top-level fields are present
@@ -282,8 +309,8 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
 
     df = pd.DataFrame(test_jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
-    df = jobs_anonymized_rollup.prepare(df)
-    result = jobs_anonymized_rollup.base(df)
+    prepared_data = jobs_anonymized_rollup.prepare(df)
+    result = jobs_anonymized_rollup.base(prepared_data)
     result = result['json']
 
     by_job_type = result['by_job_type']
@@ -293,3 +320,76 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
     assert result['ansible_version'] == '2.9.0'
     assert result['organizations_total'] == 3  # Org1, Org2, Org3
     assert rec_job['jobs_total'] == 3  # All three jobs are included
+
+
+def test_jobs_anonymized_rollups_installed_collections():
+    """Test that installed collections are correctly extracted and counted."""
+    df = pd.DataFrame(jobs)
+    jobs_anonymized_rollup = JobsAnonymizedRollup()
+    prepared_data = jobs_anonymized_rollup.prepare(df)
+    result = jobs_anonymized_rollup.base(prepared_data)
+    result = result['json']
+
+    # Verify installed_collections field exists
+    assert 'installed_collections' in result
+    installed_collections = result['installed_collections']
+    assert isinstance(installed_collections, list)
+
+    # Expected collections from jobs 1-4 and 6 (job 5 is filtered out because finished is None):
+    # Job 1: ansible.builtin 2.9.10, community.general 1.0.0
+    # Job 2: ansible.builtin 2.9.10, community.general 2.0.0, ansible.windows 1.0.0
+    # Job 3: ansible.builtin 2.9.10, community.general 2.0.0, community.aws 1.5.0
+    # Job 4: ansible.builtin 2.9.10, community.general 1.0.0
+    # Job 6: ansible.builtin 2.9.10, community.general 3.0.0
+
+    # Expected counts:
+    # ansible.builtin 2.9.10: 5 jobs (1, 2, 3, 4, 6)
+    # community.general 1.0.0: 2 jobs (1, 4)
+    # community.general 2.0.0: 2 jobs (2, 3)
+    # community.general 3.0.0: 1 job (6)
+    # ansible.windows 1.0.0: 1 job (2)
+    # community.aws 1.5.0: 1 job (3)
+
+    # Convert to dict for easier lookup
+    collections_dict = {
+        (c['collection_name'], c['collection_version']): c['job_count']
+        for c in installed_collections
+    }
+
+    # Verify ansible.builtin 2.9.10 appears in 5 jobs
+    assert collections_dict.get(('ansible.builtin', '2.9.10')) == 5, (
+        f"Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(('ansible.builtin', '2.9.10'))}"
+    )
+
+    # Verify community.general appears with different versions
+    assert collections_dict.get(('community.general', '1.0.0')) == 2, (
+        f"Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(('community.general', '1.0.0'))}"
+    )
+    assert collections_dict.get(('community.general', '2.0.0')) == 2, (
+        f"Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(('community.general', '2.0.0'))}"
+    )
+    assert collections_dict.get(('community.general', '3.0.0')) == 1, (
+        f"Expected community.general 3.0.0 in 1 job, got {collections_dict.get(('community.general', '3.0.0'))}"
+    )
+
+    # Verify other collections
+    assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
+        f"Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(('ansible.windows', '1.0.0'))}"
+    )
+    assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
+        f"Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(('community.aws', '1.5.0'))}"
+    )
+
+    # Verify total number of unique collection-version pairs
+    # Should have 6 unique pairs: ansible.builtin 2.9.10, community.general (3 versions), ansible.windows 1.0.0, community.aws 1.5.0
+    assert len(installed_collections) == 6, (
+        f"Expected 6 unique collection-version pairs, got {len(installed_collections)}"
+    )
+
+    # Verify all entries have required fields
+    for collection in installed_collections:
+        assert 'collection_name' in collection
+        assert 'collection_version' in collection
+        assert 'job_count' in collection
+        assert isinstance(collection['job_count'], int)
+        assert collection['job_count'] > 0

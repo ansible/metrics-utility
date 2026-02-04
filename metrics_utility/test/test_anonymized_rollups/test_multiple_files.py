@@ -233,6 +233,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         assert 'module_stats' in result
         assert 'collection_name_stats' in result
         assert 'modules_used_per_playbook' in result
+        assert 'collections_versions' in result
 
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_job_type']
@@ -422,6 +423,69 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert 'credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
     assert result['statistics']['credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
 
+    # ========== Validate Collections Versions ==========
+    print('--- Validating collections_versions data values ---')
+    collections_versions = result['collections_versions']
+    assert isinstance(collections_versions, list), 'collections_versions should be a list'
+
+    # Expected collections from jobs (jobs 1-4 and 6, job 5 is filtered out):
+    # Job 1: ansible.builtin 2.9.10, community.general 1.0.0
+    # Job 2: ansible.builtin 2.9.10, community.general 2.0.0, ansible.windows 1.0.0
+    # Job 3: ansible.builtin 2.9.10, community.general 2.0.0, community.aws 1.5.0
+    # Job 4: ansible.builtin 2.9.10, community.general 1.0.0
+    # Job 6: ansible.builtin 2.9.10, community.general 3.0.0
+
+    # Expected counts:
+    # ansible.builtin 2.9.10: 5 jobs (1, 2, 3, 4, 6)
+    # community.general 1.0.0: 2 jobs (1, 4)
+    # community.general 2.0.0: 2 jobs (2, 3)
+    # community.general 3.0.0: 1 job (6)
+    # ansible.windows 1.0.0: 1 job (2)
+    # community.aws 1.5.0: 1 job (3)
+
+    # Convert to dict for easier lookup
+    collections_dict = {
+        (c['name'], c['version']): c['job_count']
+        for c in collections_versions
+    }
+
+    # Verify ansible.builtin 2.9.10 appears in 5 jobs
+    assert collections_dict.get(('ansible.builtin', '2.9.10')) == 5, (
+        f"Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(('ansible.builtin', '2.9.10'))}"
+    )
+
+    # Verify community.general appears with different versions (testing same collection with different versions)
+    assert collections_dict.get(('community.general', '1.0.0')) == 2, (
+        f"Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(('community.general', '1.0.0'))}"
+    )
+    assert collections_dict.get(('community.general', '2.0.0')) == 2, (
+        f"Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(('community.general', '2.0.0'))}"
+    )
+    assert collections_dict.get(('community.general', '3.0.0')) == 1, (
+        f"Expected community.general 3.0.0 in 1 job, got {collections_dict.get(('community.general', '3.0.0'))}"
+    )
+
+    # Verify other collections
+    assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
+        f"Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(('ansible.windows', '1.0.0'))}"
+    )
+    assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
+        f"Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(('community.aws', '1.5.0'))}"
+    )
+
+    # Verify total number of unique collection-version pairs
+    assert len(collections_versions) == 6, (
+        f"Expected 6 unique collection-version pairs, got {len(collections_versions)}"
+    )
+
+    # Verify all entries have required fields (name, version, job_count)
+    for collection in collections_versions:
+        assert 'name' in collection, 'Each collection should have name field'
+        assert 'version' in collection, 'Each collection should have version field'
+        assert 'job_count' in collection, 'Each collection should have job_count field'
+        assert isinstance(collection['job_count'], int), 'job_count should be an integer'
+        assert collection['job_count'] > 0, 'job_count should be greater than 0'
+
 
 def test_empty_csv_files_handling(cleanup_test_data):
     """
@@ -466,6 +530,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'module_stats' in result
     assert 'collection_name_stats' in result
     assert 'modules_used_per_playbook' in result
+    assert 'collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
     statistics = result['statistics']
@@ -509,6 +574,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     assert isinstance(result['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert len(result['modules_used_per_playbook']) == 0, 'modules_used_per_playbook should be empty with no data'
+
+    assert isinstance(result['collections_versions'], list), 'collections_versions should be a list'
+    assert len(result['collections_versions']) == 0, 'collections_versions should be empty with no data'
 
     # Verify credentials fields are not present in statistics when there's no data
     # (credentials_data would be empty dict, so no credential_type_* fields should exist)
