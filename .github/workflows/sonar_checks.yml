@@ -43,6 +43,13 @@ jobs:
           echo $(head -n1 pr-artifact/pr_number.txt | awk '{print $2}')
           echo "PR_NUMBER=$(head -n1 pr-artifact/pr_number.txt | awk '{print $2}')" >> $GITHUB_ENV
 
+      - name: Validate PR Number
+        run: |
+          if ! echo "${{ env.PR_NUMBER }}" | grep -qE '^[0-9]+$'; then
+            echo "Invalid PR number (must be a single integer): ${{ env.PR_NUMBER }}"
+            exit 1
+          fi
+
       - name: Get Additional PR Information
         uses: octokit/request-action@v2.x
         id: pr_info
@@ -60,9 +67,10 @@ jobs:
 
       - name: Checkout Code for PR
         run: |
-          gh pr checkout ${{ env.PR_NUMBER }}
+          gh pr checkout "$PR_NUMBER"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v6
@@ -74,9 +82,6 @@ jobs:
         with:
           projectBaseDir: .
           args: >
-            -Dsonar.host.url=https://sonarcloud.io
-            -Dsonar.organization=ansible
-            -Dsonar.projectKey=ansible_metrics-utility
             -Dsonar.python.coverage.reportPaths=coverage-artifact/coverage.xml
             -Dsonar.scm.revision=${{ github.event.workflow_run.head_sha }}
             -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
