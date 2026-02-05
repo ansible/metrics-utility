@@ -362,6 +362,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         job_time_stats_module = per_job_module.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             job_duration_total_seconds=('job_duration_seconds', 'sum'),
+            jobs_successful_duration_total_seconds=(
+                'job_duration_seconds',
+                lambda x: x[~per_job_module.loc[x.index, 'job_containing_module_failed']].sum(),
+            ),
+            jobs_failed_duration_total_seconds=(
+                'job_duration_seconds',
+                lambda x: x[per_job_module.loc[x.index, 'job_containing_module_failed']].sum(),
+            ),
             job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
             jobs_containing_module_failed_total=('job_containing_module_failed', 'sum'),
         )
@@ -376,6 +384,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         job_time_stats_collection_name = per_job_collection_name.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(
             jobs_total=('job_id', 'nunique'),
             job_duration_total_seconds=('job_duration_seconds', 'sum'),
+            jobs_successful_duration_total_seconds=(
+                'job_duration_seconds',
+                lambda x: x[~per_job_collection_name.loc[x.index, 'job_containing_collection_name_failed']].sum(),
+            ),
+            jobs_failed_duration_total_seconds=(
+                'job_duration_seconds',
+                lambda x: x[per_job_collection_name.loc[x.index, 'job_containing_collection_name_failed']].sum(),
+            ),
             job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
             jobs_containing_collection_name_failed_total=('job_containing_collection_name_failed', 'sum'),
         )
