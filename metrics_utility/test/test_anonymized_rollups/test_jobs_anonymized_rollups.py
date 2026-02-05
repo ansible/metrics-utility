@@ -232,6 +232,94 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_adhoccommand['job_waiting_time_minimum_seconds'])
     assert rec_adhoccommand['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
+    # ========== Validate by_launch_type aggregations ==========
+    # Result should have 'by_launch_type' list
+    assert 'by_launch_type' in result
+
+    # Extract the by_launch_type list
+    by_launch_type = result['by_launch_type']
+    assert isinstance(by_launch_type, list)
+
+    # Expected launch types from test data (jobs 1-4 and 6, job 5 is filtered out):
+    # Job 1: manual
+    # Job 2: scheduled
+    # Job 3: workflow
+    # Job 4: callback
+    # Job 6: scheduled
+    # So we should have: manual, scheduled, workflow, callback (4 launch types)
+    assert len(by_launch_type) == 4
+
+    # Identify records by launch_type
+    rec_manual = next((r for r in by_launch_type if r['launch_type'] == 'manual'), None)
+    rec_scheduled = next((r for r in by_launch_type if r['launch_type'] == 'scheduled'), None)
+    rec_workflow = next((r for r in by_launch_type if r['launch_type'] == 'workflow'), None)
+    rec_callback = next((r for r in by_launch_type if r['launch_type'] == 'callback'), None)
+
+    assert rec_manual is not None, 'Should have manual launch_type'
+    assert rec_scheduled is not None, 'Should have scheduled launch_type'
+    assert rec_workflow is not None, 'Should have workflow launch_type'
+    assert rec_callback is not None, 'Should have callback launch_type'
+
+    # 'manual' launch_type (job 1)
+    assert rec_manual['jobs_total'] == 1
+    assert rec_manual['jobs_failed_total'] == 0
+    assert rec_manual['jobs_succeeded_total'] == 1
+    assert rec_manual['jobs_never_started_total'] == 0
+    assert rec_manual['job_type_total'] == 1  # Only 'job' type
+    assert rec_manual['templates_total'] == 1  # Template T1
+    assert rec_manual['job_duration_total_seconds'] == pytest.approx(3.0, rel=1e-6)
+    assert rec_manual['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
+
+    # 'scheduled' launch_type (jobs 2 and 6)
+    assert rec_scheduled['jobs_total'] == 2
+    assert rec_scheduled['jobs_failed_total'] == 2  # Job 2 failed, job 6 failed (both have failed=1)
+    assert rec_scheduled['jobs_succeeded_total'] == 0
+    assert rec_scheduled['jobs_never_started_total'] == 1  # Job 6 never started
+    assert rec_scheduled['job_type_total'] == 2  # 'job' (job 2) and 'adhoccommand' (job 6)
+    assert rec_scheduled['templates_total'] == 2  # Template T1 (job 2) and T3 (job 6)
+    # Job 2: duration 5s, wait 2s; Job 6: never started (0s)
+    assert rec_scheduled['job_duration_total_seconds'] == pytest.approx(5.0, rel=1e-6)
+    assert rec_scheduled['job_waiting_time_total_seconds'] == pytest.approx(2.0, rel=1e-6)
+
+    # 'workflow' launch_type (job 3)
+    assert rec_workflow['jobs_total'] == 1
+    assert rec_workflow['jobs_failed_total'] == 0
+    assert rec_workflow['jobs_succeeded_total'] == 1
+    assert rec_workflow['jobs_never_started_total'] == 0
+    assert rec_workflow['job_type_total'] == 1  # Only 'workflowjob' type
+    assert rec_workflow['templates_total'] == 1  # Template T2
+    assert rec_workflow['job_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_workflow['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
+
+    # 'callback' launch_type (job 4)
+    assert rec_callback['jobs_total'] == 1
+    assert rec_callback['jobs_failed_total'] == 0
+    assert rec_callback['jobs_succeeded_total'] == 1
+    assert rec_callback['jobs_never_started_total'] == 0
+    assert rec_callback['job_type_total'] == 1  # Only 'job' type
+    assert rec_callback['templates_total'] == 1  # Template T1
+    assert rec_callback['job_duration_total_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_callback['job_waiting_time_total_seconds'] == pytest.approx(1.0, rel=1e-6)
+
+    # Verify that launch_type_*_total fields are NOT present (since we're grouping by launch_type)
+    assert 'launch_type_manual_total' not in rec_manual
+    assert 'launch_type_scheduled_total' not in rec_scheduled
+    assert 'launch_type_workflow_total' not in rec_workflow
+    assert 'launch_type_callback_total' not in rec_callback
+
+    # Verify that job_type_total is present (instead of launch_type counts)
+    assert 'job_type_total' in rec_manual
+    assert 'job_type_total' in rec_scheduled
+    assert 'job_type_total' in rec_workflow
+    assert 'job_type_total' in rec_callback
+
+    # Verify totals match between by_job_type and by_launch_type
+    total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in by_job_type)
+    total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in by_launch_type)
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == 5, (
+        f'Total jobs should match: by_job_type={total_jobs_by_job_type}, by_launch_type={total_jobs_by_launch_type}'
+    )
+
 
 def test_jobs_anonymized_rollups_ansible_version():
     """Test that ansible_version and organizations_total are correctly aggregated at top level."""

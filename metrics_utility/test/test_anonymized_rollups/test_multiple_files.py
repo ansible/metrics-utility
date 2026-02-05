@@ -221,6 +221,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         # Validate flattened structure
         assert 'statistics' in result
         assert 'jobs_by_job_type' in result
+        assert 'jobs_by_launch_type' in result
         # job_host_summary is now merged into jobs_by_job_type
         assert 'module_stats' in result
         assert 'collection_name_stats' in result
@@ -485,6 +486,89 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         assert isinstance(collection['job_count'], int), 'job_count should be an integer'
         assert collection['job_count'] > 0, 'job_count should be greater than 0'
 
+    # ========== Validate Jobs by Launch Type ==========
+    jobs_by_launch_type_list = result['jobs_by_launch_type']
+    assert isinstance(jobs_by_launch_type_list, list), 'jobs_by_launch_type should be a list'
+    
+    # Expected launch types from test data (jobs 1-4 and 6, job 5 is filtered out):
+    # Job 1: manual
+    # Job 2: scheduled
+    # Job 3: workflow
+    # Job 4: callback
+    # Job 6: scheduled
+    # So we should have: manual, scheduled, workflow, callback (4 launch types)
+    assert len(jobs_by_launch_type_list) == 4, f'Should have 4 launch types, got {len(jobs_by_launch_type_list)}'
+
+    # Find launch type entries
+    manual_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'manual'), None)
+    scheduled_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'scheduled'), None)
+    workflow_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'workflow'), None)
+    callback_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'callback'), None)
+
+    assert manual_entry is not None, 'Should have manual launch_type'
+    assert scheduled_entry is not None, 'Should have scheduled launch_type'
+    assert workflow_entry is not None, 'Should have workflow launch_type'
+    assert callback_entry is not None, 'Should have callback launch_type'
+
+    # Validate 'manual' launch_type (job 1)
+    assert manual_entry['jobs_total'] == 1, 'manual should have 1 job'
+    assert manual_entry['jobs_failed_total'] == 0, 'manual should have 0 failed jobs'
+    assert manual_entry['jobs_succeeded_total'] == 1, 'manual should have 1 succeeded job'
+    assert manual_entry['job_type_total'] == 1, 'manual should have 1 job type (job)'
+    assert manual_entry['job_duration_total_seconds'] == pytest.approx(3.0), 'manual should have 3s total duration'
+    # Should have default host summary fields (all zeros) since job_host_summary is grouped by job_type
+    assert manual_entry['unique_hosts_total'] == 0, 'manual should have 0 unique hosts (no job_host_summary merge)'
+    assert manual_entry['ok_total'] == 0, 'manual should have 0 ok tasks (no job_host_summary merge)'
+    assert manual_entry['failures_total'] == 0, 'manual should have 0 failures (no job_host_summary merge)'
+
+    # Validate 'scheduled' launch_type (jobs 2 and 6)
+    assert scheduled_entry['jobs_total'] == 2, 'scheduled should have 2 jobs'
+    assert scheduled_entry['jobs_failed_total'] == 2, 'scheduled should have 2 failed jobs (both job 2 and job 6 have failed=1)'
+    assert scheduled_entry['jobs_succeeded_total'] == 0, 'scheduled should have 0 succeeded jobs'
+    assert scheduled_entry['jobs_never_started_total'] == 1, 'scheduled should have 1 never started job'
+    assert scheduled_entry['job_type_total'] == 2, 'scheduled should have 2 job types (job and adhoccommand)'
+    assert scheduled_entry['job_duration_total_seconds'] == pytest.approx(5.0), 'scheduled should have 5s total duration'
+    # Should have default host summary fields
+    assert scheduled_entry['unique_hosts_total'] == 0, 'scheduled should have 0 unique hosts (no job_host_summary merge)'
+
+    # Validate 'workflow' launch_type (job 3)
+    assert workflow_entry['jobs_total'] == 1, 'workflow should have 1 job'
+    assert workflow_entry['jobs_failed_total'] == 0, 'workflow should have 0 failed jobs'
+    assert workflow_entry['jobs_succeeded_total'] == 1, 'workflow should have 1 succeeded job'
+    assert workflow_entry['job_type_total'] == 1, 'workflow should have 1 job type (workflowjob)'
+    assert workflow_entry['job_duration_total_seconds'] == pytest.approx(7.0), 'workflow should have 7s total duration'
+    # Should have default host summary fields
+    assert workflow_entry['unique_hosts_total'] == 0, 'workflow should have 0 unique hosts (no job_host_summary merge)'
+
+    # Validate 'callback' launch_type (job 4)
+    assert callback_entry['jobs_total'] == 1, 'callback should have 1 job'
+    assert callback_entry['jobs_failed_total'] == 0, 'callback should have 0 failed jobs'
+    assert callback_entry['jobs_succeeded_total'] == 1, 'callback should have 1 succeeded job'
+    assert callback_entry['job_type_total'] == 1, 'callback should have 1 job type (job)'
+    assert callback_entry['job_duration_total_seconds'] == pytest.approx(2.0), 'callback should have 2s total duration'
+    # Should have default host summary fields
+    assert callback_entry['unique_hosts_total'] == 0, 'callback should have 0 unique hosts (no job_host_summary merge)'
+
+    # Verify that launch_type_*_total fields are NOT present (since we're grouping by launch_type)
+    assert 'launch_type_manual_total' not in manual_entry, 'Should not have launch_type_manual_total when grouped by launch_type'
+    assert 'launch_type_scheduled_total' not in scheduled_entry, 'Should not have launch_type_scheduled_total when grouped by launch_type'
+    assert 'launch_type_workflow_total' not in workflow_entry, 'Should not have launch_type_workflow_total when grouped by launch_type'
+    assert 'launch_type_callback_total' not in callback_entry, 'Should not have launch_type_callback_total when grouped by launch_type'
+
+    # Verify that job_type_total is present (instead of launch_type counts)
+    assert 'job_type_total' in manual_entry, 'Should have job_type_total field'
+    assert 'job_type_total' in scheduled_entry, 'Should have job_type_total field'
+    assert 'job_type_total' in workflow_entry, 'Should have job_type_total field'
+    assert 'job_type_total' in callback_entry, 'Should have job_type_total field'
+
+    # Verify totals match between jobs_by_job_type and jobs_by_launch_type
+    total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
+    total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == result['statistics']['jobs_total'], (
+        f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, statistics={result["statistics"]["jobs_total"]}'
+    )
+
 
 def test_empty_csv_files_handling(cleanup_test_data):
     """
@@ -525,6 +609,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Validate flattened structure exists even with empty data
     assert 'statistics' in result
     assert 'jobs_by_job_type' in result
+    assert 'jobs_by_launch_type' in result
     # job_host_summary is now merged into jobs_by_job_type
     assert 'module_stats' in result
     assert 'collection_name_stats' in result
@@ -567,6 +652,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
     assert len(result['jobs_by_job_type']) == 0, 'jobs_by_job_type should be empty with no data'
+    assert isinstance(result['jobs_by_launch_type'], list), 'jobs_by_launch_type should be a list'
+    assert len(result['jobs_by_launch_type']) == 0, 'jobs_by_launch_type should be empty with no data'
     # job_host_summary is now merged into jobs_by_job_type
 
     assert isinstance(result['module_stats'], list), 'module_stats should be a list'
