@@ -252,10 +252,16 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'launch_type_unknown_total': ('launch_type', lambda x: (x == 'unknown').sum()),
         }
 
+        # Ansible versions aggregation - array of unique versions
+        ansible_versions_aggregation = {
+            'ansible_versions': ('ansible_version', lambda x: sorted([str(v) for v in x.dropna().unique() if pd.notna(v)])),
+        }
+
         # Aggregations grouped by job_type (model)
         # Add launch_type counts specific to job_type grouping
         aggregations_by_job_type_dict = common_aggregations.copy()
         aggregations_by_job_type_dict.update(launch_type_aggregations)
+        aggregations_by_job_type_dict.update(ansible_versions_aggregation)
 
         aggregations_by_job_type = (
             dataframe.groupby('model')
@@ -271,6 +277,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_launch_type_dict.update({
             'job_type_total': ('model', 'nunique'),  # Count distinct job types instead of launch types
         })
+        aggregations_by_launch_type_dict.update(ansible_versions_aggregation)
 
         aggregations_by_launch_type = (
             dataframe.groupby('launch_type')
