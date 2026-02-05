@@ -109,8 +109,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Split and create CSV files for each collector ==========
 
     # 1. Jobs data - split into 2 CSV files
+    # Note: There are 6 jobs in the test data, split evenly: part1: 3 jobs, part2: 3 jobs
     jobs_part1 = jobs[:3]  # First 3 jobs
-    jobs_part2 = jobs[3:]  # Remaining jobs
+    jobs_part2 = jobs[3:]  # Remaining 3 jobs
 
     jobs_csv_files = []
     csv1 = create_csv_file(jobs_part1, f'{data_dir}/part1_unified_jobs.csv')
@@ -121,9 +122,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         jobs_csv_files.append(csv2)
 
     # 2. Events data - split into 3 CSV files
-    events_part1 = events[:100]  # First 100 events
-    events_part2 = events[100:200]  # Middle events
-    events_part3 = events[200:]  # Remaining events
+    # Note: There are only 20 events in the test data, so we split them into 3 parts:
+    # part1: 7 events, part2: 7 events, part3: 6 events
+    # This ensures all three batches are tested for proper batch processing
+    events_part1 = events[:7]  # First 7 events
+    events_part2 = events[7:14]  # Middle 7 events
+    events_part3 = events[14:]  # Remaining 6 events
 
     events_csv_files = []
     csv1 = create_csv_file(events_part1, f'{data_dir}/part1_main_jobevent.csv')
@@ -137,6 +141,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         events_csv_files.append(csv3)
 
     # 3. Execution environments - split into 2 CSV files
+    # Note: There are 5 entries in the test data, split as: part1: 2 entries, part2: 3 entries
     ee_part1 = execution_environments[:2]
     ee_part2 = execution_environments[2:]
 
@@ -149,8 +154,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         ee_csv_files.append(csv2)
 
     # 4. Job host summary - split into 2 CSV files
+    # Note: There are 16 entries in the test data, split evenly: part1: 8 entries, part2: 8 entries
     jhs_part1 = jobhostsummary[:8]  # First 8 entries
-    jhs_part2 = jobhostsummary[8:]  # Remaining entries
+    jhs_part2 = jobhostsummary[8:]  # Remaining 8 entries
 
     jhs_csv_files = []
     csv1 = create_csv_file(jhs_part1, f'{data_dir}/part1_job_host_summary.csv')
@@ -161,8 +167,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         jhs_csv_files.append(csv2)
 
     # 5. Credentials - split into 2 CSV files
+    # Note: There are 10 entries in the test data, split evenly: part1: 5 entries, part2: 5 entries
     cred_part1 = credentials[:5]  # First 5 entries
-    cred_part2 = credentials[5:]  # Remaining entries
+    cred_part2 = credentials[5:]  # Remaining 5 entries
 
     cred_csv_files = []
     csv1 = create_csv_file(cred_part1, f'{data_dir}/part1_credentials.csv')
