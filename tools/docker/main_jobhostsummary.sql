@@ -706,6 +706,127 @@ $yaml$,
     END LOOP;
   END LOOP;
   --
+  -- Add warning and deprecated events (job-level annotation events)
+  -- These don't have task_uuid, host_id, etc. - they're job-level annotations
+  -- Note: host_name, play, role, task, playbook are NOT NULL in schema, so we use empty strings
+  --
+  -- Add 2 warning events (one for job 1, one for job 2)
+  INSERT INTO public.main_jobevent (
+    created,
+    modified,
+    event,
+    event_data,
+    failed,
+    changed,
+    host_name,
+    play,
+    role,
+    task,
+    counter,
+    host_id,
+    job_id,
+    uuid,
+    parent_uuid,
+    end_line,
+    playbook,
+    start_line,
+    stdout,
+    verbosity,
+    job_created
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'warning',
+    '{"warning": "This playbook uses deprecated features"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events (host_name is NOT NULL)
+    '',  -- Empty string for play (NOT NULL constraint)
+    '',  -- Empty string for role (NOT NULL constraint)
+    '',  -- Empty string for task (NOT NULL constraint)
+    100,
+    NULL,  -- host_id is nullable
+    unified_jobs[1],
+    gen_random_uuid()::text,
+    '',  -- Empty string for parent_uuid (NOT NULL constraint)
+    0,
+    '',  -- Empty string for playbook (NOT NULL constraint)
+    0,
+    'Warning: This playbook uses deprecated features',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+  ),
+  (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'warning',
+    '{"warning": "Module XYZ will be removed in future version"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events
+    '',
+    '',
+    '',
+    101,
+    NULL,  -- host_id is nullable
+    unified_jobs[2],
+    gen_random_uuid()::text,
+    '',
+    0,
+    '',
+    0,
+    'Warning: Module XYZ will be removed in future version',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+  );
+  --
+  -- Add 1 deprecated event (for job 3)
+  INSERT INTO public.main_jobevent (
+    created,
+    modified,
+    event,
+    event_data,
+    failed,
+    changed,
+    host_name,
+    play,
+    role,
+    task,
+    counter,
+    host_id,
+    job_id,
+    uuid,
+    parent_uuid,
+    end_line,
+    playbook,
+    start_line,
+    stdout,
+    verbosity,
+    job_created
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'deprecated',
+    '{"deprecated": "The old_module is deprecated, use new_module instead"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events
+    '',
+    '',
+    '',
+    102,
+    NULL,  -- host_id is nullable
+    unified_jobs[3],
+    gen_random_uuid()::text,
+    '',
+    0,
+    '',
+    0,
+    'Deprecated: The old_module is deprecated, use new_module instead',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+  );
+  --
   -- Execution Environments
   --
   INSERT INTO public.main_executionenvironment (

@@ -122,12 +122,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         jobs_csv_files.append(csv2)
 
     # 2. Events data - split into 3 CSV files
-    # Note: There are only 20 events in the test data, so we split them into 3 parts:
-    # part1: 7 events, part2: 7 events, part3: 6 events
+    # Note: There are 23 events in the test data (20 task events + 2 warnings + 1 deprecated),
+    # so we split them into 3 parts: part1: 8 events, part2: 8 events, part3: 7 events
     # This ensures all three batches are tested for proper batch processing
-    events_part1 = events[:7]  # First 7 events
-    events_part2 = events[7:14]  # Middle 7 events
-    events_part3 = events[14:]  # Remaining 6 events
+    events_part1 = events[:8]  # First 8 events
+    events_part2 = events[8:16]  # Middle 8 events
+    events_part3 = events[16:]  # Remaining 7 events
 
     events_csv_files = []
     csv1 = create_csv_file(events_part1, f'{data_dir}/part1_main_jobevent.csv')
@@ -336,6 +336,13 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Verify values from concatenated data across 3 tarballs
     assert result['statistics']['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
     assert result['statistics']['hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
+    
+    # Verify warnings_total and deprecations_total
+    # Test data has 2 warnings (job 1 and job 2) and 1 deprecated (job 3)
+    assert 'warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
+    assert result['statistics']['warnings_total'] == 2, f"Expected 2 warnings, got {result['statistics']['warnings_total']}"
+    assert 'deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
+    assert result['statistics']['deprecations_total'] == 1, f"Expected 1 deprecated event, got {result['statistics']['deprecations_total']}"
 
     # Check specific known modules are present in module_stats
     module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
@@ -529,6 +536,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     assert 'modules_used_to_automate_total' in statistics
     assert 'hosts_automated_total' in statistics
+    assert 'warnings_total' in statistics
+    assert 'deprecations_total' in statistics
     assert 'execution_environments_total' in statistics
     assert 'execution_environments_default_total' in statistics
     assert 'execution_environments_custom_total' in statistics
@@ -539,9 +548,11 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'unique_hosts_total' in statistics
     assert 'jobhostsummary_total' in statistics
 
-    # All statistics should be None for empty data (except jobhostsummary_total which should be 0)
+    # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['modules_used_to_automate_total'] is None
     assert statistics['hosts_automated_total'] is None
+    assert statistics['warnings_total'] == 0, f'warnings_total should be 0 for empty data, got {statistics["warnings_total"]}'
+    assert statistics['deprecations_total'] == 0, f'deprecations_total should be 0 for empty data, got {statistics["deprecations_total"]}'
     assert statistics['execution_environments_total'] is None
     assert statistics['execution_environments_default_total'] is None
     assert statistics['execution_environments_custom_total'] is None

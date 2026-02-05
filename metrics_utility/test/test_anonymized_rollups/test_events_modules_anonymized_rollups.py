@@ -316,14 +316,64 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
+    # ================================================================
+    # Warning and Deprecated events (job-level annotation events)
+    # These don't have task_uuid, host_id, module_name, etc.
+    # ================================================================
+    # Job 1 - warning event
+    {
+        'job_id': 1,
+        'playbook': None,
+        'host_id': None,
+        'task_uuid': None,
+        'event': 'warning',
+        'task_action': None,
+        'job_created': '2024-01-01 00:00:00+00',
+        'job_started': '2024-01-01 00:01:00+00',
+        'job_finished': '2024-01-01 00:10:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
+    # Job 2 - warning event
+    {
+        'job_id': 2,
+        'playbook': None,
+        'host_id': None,
+        'task_uuid': None,
+        'event': 'warning',
+        'task_action': None,
+        'job_created': '2024-01-02 12:00:00+00',
+        'job_started': '2024-01-02 12:04:00+00',
+        'job_finished': '2024-01-02 12:20:00+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
+    # Job 3 - deprecated event
+    {
+        'job_id': 3,
+        'playbook': None,
+        'host_id': None,
+        'task_uuid': None,
+        'event': 'deprecated',
+        'task_action': None,
+        'job_created': '2024-01-03 08:00:00+00',
+        'job_started': '2024-01-03 08:05:00+00',
+        'job_finished': '2024-01-03 08:18:00+00',
+        'job_failed': False,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
 ]
 
 
 def test_events_modules_aggregations_basic():
     df = pd.DataFrame(events)
     # ensure string-typed columns for .str-based filtering in prepare_data
+    # Handle None values for warning/deprecated events which don't have these fields
     for col in ['host_id', 'job_id', 'playbook']:
-        df[col] = df[col].astype(str)
+        df[col] = df[col].astype(str).replace('None', None)
     # provide default event_data for ignore_errors lookup in prepare_data
     df['event_data'] = [{}] * len(df)
     events_modules_anonymized_rollup = EventModulesAnonymizedRollup()
@@ -572,3 +622,10 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['task_failed_and_ignored_total'] == 0
     assert custom_coll['task_skipped_total'] == 0
     assert custom_coll['task_unreachable_total'] == 0
+
+    # Verify warnings_total and deprecations_total
+    # We added 2 warning events (job 1 and job 2) and 1 deprecated event (job 3)
+    # Total events: 20 task events + 2 warnings + 1 deprecated = 23 events
+    assert result['event_total'] == 23, f"Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result['event_total']}"
+    assert result['warnings_total'] == 2, f"Expected 2 warnings, got {result['warnings_total']}"
+    assert result['deprecations_total'] == 1, f"Expected 1 deprecated event, got {result['deprecations_total']}"
