@@ -1,0 +1,89 @@
+name: SonarCloud Static Scans (PR)
+
+on:
+  workflow_run:
+    workflows:
+      - Pytest tests
+    types:
+      - completed
+
+permissions: read-all
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Static Scans (PR)
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fetch Code Coverage Report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Fetch PR Number
+        uses: actions/download-artifact@v4
+        with:
+          name: pr_number
+          path: pr-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Extract and validate PR Number
+        run: |
+          cat pr-artifact/pr_number.txt
+          VALID_PR=$(head -n1 pr-artifact/pr_number.txt | awk '{print $2}' | grep -E '^[0-9]+$') || true
+          if [ -z "$VALID_PR" ]; then
+            echo "Invalid PR number (must be a single integer)"
+            exit 1
+          fi
+          echo "PR_NUMBER=$VALID_PR" >> $GITHUB_ENV
+
+      - name: Get Additional PR Information
+        uses: octokit/request-action@v2.x
+        id: pr_info
+        with:
+          route: GET /repos/{repo}/pulls/{number}
+          repo: ${{ github.event.repository.full_name }}
+          number: ${{ env.PR_NUMBER }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Additional PR Information
+        run: |
+          PR_BASE='${{ fromJson(steps.pr_info.outputs.data).base.ref }}'
+          PR_HEAD='${{ fromJson(steps.pr_info.outputs.data).head.ref }}'
+          echo "PR_BASE=$PR_BASE" >> $GITHUB_ENV
+          echo "PR_HEAD=$PR_HEAD" >> $GITHUB_ENV
+
+      - name: Checkout Code for PR
+        run: |
+          gh pr checkout "$PR_NUMBER"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ env.PR_NUMBER }}
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+          SONAR_ORGANIZATION: ansible
+          SONAR_PROJECT_KEY: ansible_metrics-utility
+          SONAR_TOKEN: ${{ secrets.CICD_ORG_SONAR_TOKEN_CICD_BOT }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dsonar.python.coverage.reportPaths=coverage-artifact/coverage.xml
+            -Dsonar.scm.revision=${{ github.event.workflow_run.head_sha }}
+            -Dsonar.pullrequest.key=${{ env.PR_NUMBER }}
+            -Dsonar.pullrequest.branch=${{ env.PR_HEAD }}
+            -Dsonar.pullrequest.base=${{ env.PR_BASE }}
+            -Dsonar.pullrequest.provider=github
