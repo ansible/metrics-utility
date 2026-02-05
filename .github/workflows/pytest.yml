@@ -90,6 +90,7 @@ jobs:
           uv run pytest -s -v --cov=. --cov-report=xml
 
       - name: "Upload code coverage report"
+        if: ${{ github.base_ref }}
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
