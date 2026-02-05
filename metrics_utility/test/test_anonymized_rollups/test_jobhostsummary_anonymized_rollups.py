@@ -221,14 +221,14 @@ def test_jobhostsummary_anonymized():
 
     print(result)
 
-    # result should be a dict with 'by_job_type' (list) and 'jobhostsummary_total'
+    # result should be a dict with 'by_job_type' (list) and 'job_host_pairs_total'
     assert 'by_job_type' in result, 'result should have by_job_type key'
     assert isinstance(result['by_job_type'], list), 'by_job_type should be a list'
-    assert 'jobhostsummary_total' in result, 'result should have jobhostsummary_total key'
-    assert isinstance(result['jobhostsummary_total'], int), 'jobhostsummary_total should be an integer'
+    assert 'job_host_pairs_total' in result, 'result should have job_host_pairs_total key'
+    assert isinstance(result['job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
 
-    # Verify jobhostsummary_total count: 16 rows total (5+5 for job type, 3+3 for workflowjob type)
-    assert result['jobhostsummary_total'] == 16, f'Should have 16 total job host summary records, got {result["jobhostsummary_total"]}'
+    # Verify job_host_pairs_total count: 16 rows total (5+5 for job type, 3+3 for workflowjob type)
+    assert result['job_host_pairs_total'] == 16, f'Should have 16 total job host summary records, got {result["job_host_pairs_total"]}'
 
     # Should have 2 job_type groups: 'job' and 'workflowjob'
     assert len(result['by_job_type']) == 2, 'Should have 2 job_type groups'

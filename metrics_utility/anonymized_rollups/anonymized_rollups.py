@@ -109,7 +109,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate unique_hosts_total by summing unique_hosts_total from all job_type groups
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
-    jobhostsummary_total = job_host_summary_root.get('jobhostsummary_total')
+    job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
 
     statistics = {
         # from events_modules
@@ -129,7 +129,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'forks_total': jobs.get('forks_total'),
         # from job_host_summary (sum of all job_type groups)
         'unique_hosts_total': unique_hosts_total,
-        'jobhostsummary_total': jobhostsummary_total,
+        'job_host_pairs_total': job_host_pairs_total,
         # from credentials (global credential type counts)
         **credentials_data,
     }

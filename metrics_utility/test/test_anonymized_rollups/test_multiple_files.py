@@ -285,9 +285,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # job type has 5 unique hosts (h1-h5), workflowjob type has 3 unique hosts (h1-h3)
     # Total = 5 + 3 = 8 (some hosts appear in both types)
     assert result['statistics']['unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
-    # jobhostsummary_total should be 16 (10 for job type + 6 for workflowjob type)
-    assert result['statistics']['jobhostsummary_total'] == 16, (
-        f'Should have 16 total job host summary records, got {result["statistics"]["jobhostsummary_total"]}'
+    # job_host_pairs_total should be 16 (10 for job type + 6 for workflowjob type)
+    assert result['statistics']['job_host_pairs_total'] == 16, (
+        f'Should have 16 total job host summary records, got {result["statistics"]["job_host_pairs_total"]}'
     )
 
     # Find the 'job' type group in jobs_by_job_type
@@ -546,7 +546,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'ansible_version' in statistics
     assert 'forks_total' in statistics
     assert 'unique_hosts_total' in statistics
-    assert 'jobhostsummary_total' in statistics
+    assert 'job_host_pairs_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['modules_used_to_automate_total'] is None
@@ -561,8 +561,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['ansible_version'] is None
     assert statistics['forks_total'] is None
     assert statistics['unique_hosts_total'] is None
-    # jobhostsummary_total should be 0 (not None) when there's no data, as it represents a count
-    assert statistics['jobhostsummary_total'] == 0, f'jobhostsummary_total should be 0 for empty data, got {statistics["jobhostsummary_total"]}'
+    # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count
+    assert statistics['job_host_pairs_total'] == 0, f'job_host_pairs_total should be 0 for empty data, got {statistics["job_host_pairs_total"]}'
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'

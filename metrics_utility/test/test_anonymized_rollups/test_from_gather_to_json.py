@@ -90,7 +90,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'ansible_version' in statistics
     assert 'forks_total' in statistics
     assert 'unique_hosts_total' in statistics
-    assert 'jobhostsummary_total' in statistics
+    assert 'job_host_pairs_total' in statistics
     # Credentials fields may be present if credentials data exists
     # (credential_type_*_total fields are added dynamically based on credential types in the data)
 
@@ -103,7 +103,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['jobs_total'], int)
     assert isinstance(statistics['forks_total'], int)
     assert isinstance(statistics['unique_hosts_total'], int)
-    assert isinstance(statistics['jobhostsummary_total'], int), 'jobhostsummary_total should be an integer'
+    assert isinstance(statistics['job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
 
     # Validate arrays structure
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
@@ -208,10 +208,10 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate job_host_summary data merged into jobs_by_job_type
     print('--- Validating job_host_summary data values (merged into jobs_by_job_type) ---')
     assert statistics['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
-    # jobhostsummary_total should be the count of all job host summary records
+    # job_host_pairs_total should be the count of all job host summary records
     # With 3 jobs and 2 hosts, we should have 3 * 2 = 6 job host summary records
-    assert statistics['jobhostsummary_total'] == 6, (
-        f'Should have 6 total job host summary records (3 jobs × 2 hosts), got {statistics["jobhostsummary_total"]}'
+    assert statistics['job_host_pairs_total'] == 6, (
+        f'Should have 6 total job host summary records (3 jobs × 2 hosts), got {statistics["job_host_pairs_total"]}'
     )
 
     # Find the job entry with job_type='job'

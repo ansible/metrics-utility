@@ -14,16 +14,16 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def merge(self, data_all, data_new):
         """
-        Override merge to handle the new structure with jobhostsummary_total and aggregated data.
-        Concatenates aggregated dataframes and sums jobhostsummary_total.
+        Override merge to handle the new structure with job_host_pairs_total and aggregated data.
+        Concatenates aggregated dataframes and sums job_host_pairs_total.
         """
         # Handle initial None case (first iteration from load_anonymized_rollup_data)
         if data_all is None:
             return data_new
 
-        # Concatenate aggregated dataframes and sum jobhostsummary_totals
+        # Concatenate aggregated dataframes and sum job_host_pairs_totals
         return {
-            'jobhostsummary_total': data_all['jobhostsummary_total'] + data_new['jobhostsummary_total'],
+            'job_host_pairs_total': data_all['job_host_pairs_total'] + data_new['job_host_pairs_total'],
             'aggregated': pd.concat([data_all['aggregated'], data_new['aggregated']], ignore_index=True),
         }
 
@@ -44,13 +44,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def prepare(self, dataframe):
         # Count all records before processing
-        jobhostsummary_total = len(dataframe)
+        job_host_pairs_total = len(dataframe)
 
         # Group by job_type (model) and sum task columns to reduce data volume early
         # This significantly improves performance when processing large batches
         if dataframe.empty:
             return {
-                'jobhostsummary_total': jobhostsummary_total,
+                'job_host_pairs_total': job_host_pairs_total,
                 'aggregated': dataframe,
             }
 
@@ -76,7 +76,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         return {
-            'jobhostsummary_total': jobhostsummary_total,
+            'job_host_pairs_total': job_host_pairs_total,
             'aggregated': aggregated,
         }
 
@@ -89,7 +89,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         Success rate and average - this can compute SaaS team from the metrics
 
-        data is a dict with 'jobhostsummary_total' and 'aggregated' dataframe
+        data is a dict with 'job_host_pairs_total' and 'aggregated' dataframe
         """
 
         # Handle None input (no data files)
@@ -97,13 +97,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'json': {
                     'by_job_type': [],
-                    'jobhostsummary_total': 0,
+                    'job_host_pairs_total': 0,
                 },
-                'rollup': {'aggregated': pd.DataFrame(), 'jobhostsummary_total': 0},
+                'rollup': {'aggregated': pd.DataFrame(), 'job_host_pairs_total': 0},
             }
 
-        # Extract jobhostsummary_total and aggregated dataframe from the data structure
-        jobhostsummary_total = data.get('jobhostsummary_total', 0)
+        # Extract job_host_pairs_total and aggregated dataframe from the data structure
+        job_host_pairs_total = data.get('job_host_pairs_total', 0)
         dataframe = data.get('aggregated', pd.DataFrame())
 
         # Return empty result if dataframe is empty
@@ -111,9 +111,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'json': {
                     'by_job_type': [],
-                    'jobhostsummary_total': jobhostsummary_total,
+                    'job_host_pairs_total': job_host_pairs_total,
                 },
-                'rollup': {'aggregated': dataframe, 'jobhostsummary_total': jobhostsummary_total},
+                'rollup': {'aggregated': dataframe, 'job_host_pairs_total': job_host_pairs_total},
             }
 
         # Group by job_type and aggregate across all batches
@@ -148,13 +148,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         rollup_data = {
             # pandas.DataFrame
             'aggregations_by_job_type': aggregations_by_job_type,
-            'jobhostsummary_total': jobhostsummary_total,
+            'job_host_pairs_total': job_host_pairs_total,
         }
 
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
-            'jobhostsummary_total': jobhostsummary_total,
+            'job_host_pairs_total': job_host_pairs_total,
         }
 
         return {
