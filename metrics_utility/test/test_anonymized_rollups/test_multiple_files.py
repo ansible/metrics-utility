@@ -233,6 +233,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert isinstance(jobs_list, list)
     assert len(jobs_list) == 3  # job, workflowjob, adhoccommand
     assert result['statistics']['jobs_total'] == 5  # Total jobs across all job types
+    # job_templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
+    assert result['statistics']['job_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
 
     # 'job' type should have data from both tarballs (jobs 1, 2, 4)
     job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job' and j['jobs_total'] == 3]
@@ -727,6 +729,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'unique_hosts_total' in statistics
     assert 'job_host_pairs_total' in statistics
     assert 'playbooks_total' in statistics
+    assert 'job_templates_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['modules_used_to_automate_total'] is None
@@ -745,6 +748,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['job_host_pairs_total'] == 0, f'job_host_pairs_total should be 0 for empty data, got {statistics["job_host_pairs_total"]}'
     # playbooks_total should be 0 (not None) when there's no data, as it represents a count
     assert statistics['playbooks_total'] == 0, f'playbooks_total should be 0 for empty data, got {statistics["playbooks_total"]}'
+    # job_templates_total should be None when there's no data (no job_type groups)
+    assert statistics['job_templates_total'] is None, f'job_templates_total should be None for empty data, got {statistics["job_templates_total"]}'
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'

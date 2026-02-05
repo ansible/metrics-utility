@@ -131,6 +131,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     modules_used_per_playbook_total: Dict[str, int] = events_modules.get('modules_used_per_playbook_total', {}) or {}
     playbooks_total = len(modules_used_per_playbook_total)
 
+    # Calculate job_templates_total by summing templates_total from all job_type groups
+    job_templates_total = sum(job.get('templates_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+
     statistics = {
         # from events_modules
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
@@ -148,6 +151,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'organizations_total': jobs.get('organizations_total'),
         'ansible_version': jobs.get('ansible_version'),
         'forks_total': jobs.get('forks_total'),
+        'job_templates_total': job_templates_total,
         # from job_host_summary (sum of all job_type groups)
         'unique_hosts_total': unique_hosts_total,
         'job_host_pairs_total': job_host_pairs_total,

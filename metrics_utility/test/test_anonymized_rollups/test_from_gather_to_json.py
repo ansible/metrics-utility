@@ -93,6 +93,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'unique_hosts_total' in statistics
     assert 'job_host_pairs_total' in statistics
     assert 'playbooks_total' in statistics
+    assert 'job_templates_total' in statistics
     # Credentials fields may be present if credentials data exists
     # (credential_type_*_total fields are added dynamically based on credential types in the data)
 
@@ -107,6 +108,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['unique_hosts_total'], int)
     assert isinstance(statistics['job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
     assert isinstance(statistics['playbooks_total'], int), 'playbooks_total should be an integer'
+    assert isinstance(statistics['job_templates_total'], int), 'job_templates_total should be an integer'
 
     # Validate arrays structure
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
@@ -240,6 +242,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert len(json_data['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
     job = json_data['jobs_by_job_type'][0]
     assert job['jobs_total'] == 3, 'Job type should have 3 jobs'
+    assert statistics['job_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
     assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
     assert job['jobs_succeeded_total'] == 3, 'Should have 3 succeeded jobs'
     assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_total'], 'Succeeded + failed should equal total'
