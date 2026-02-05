@@ -236,6 +236,49 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
+        # Aggregations grouped by launch_type (instead of job_type)
+        # Count job_types instead of launch_types
+        aggregations_by_launch_type = (
+            dataframe.groupby('launch_type')
+            .agg(
+                jobs_total=('id', 'nunique'),
+                jobs_failed_total=('failed', 'sum'),
+                jobs_successful_total=('failed', lambda x: (~x).sum()),
+                jobs_never_started_total=('started', lambda x: x.isna().sum()),
+                job_duration_maximum_seconds=('job_duration_seconds', 'max'),
+                job_duration_minimum_seconds=('job_duration_seconds', 'min'),
+                job_duration_total_seconds=('job_duration_seconds', 'sum'),
+                jobs_successful_duration_total_seconds=(
+                    'job_duration_seconds',
+                    lambda x: x[~dataframe.loc[x.index, 'failed']].sum(),
+                ),
+                jobs_failed_duration_total_seconds=(
+                    'job_duration_seconds',
+                    lambda x: x[dataframe.loc[x.index, 'failed']].sum(),
+                ),
+                job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
+                job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
+                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
+                templates_total=('job_template_name', 'nunique'),
+                job_type_total=('model', 'nunique'),  # Count distinct job types instead of launch types
+                # inventory name
+                inventories_total=('inventory_name', 'nunique'),
+                # jobs using projects by scm types
+                jobs_using_scm_type_git_total=('scm_type', lambda x: (x == 'git').sum()),
+                jobs_using_scm_type_hg_total=('scm_type', lambda x: (x == 'hg').sum()),
+                jobs_using_scm_type_svn_total=('scm_type', lambda x: (x == 'svn').sum()),
+                jobs_using_scm_type_insights_total=('scm_type', lambda x: (x == 'insights').sum()),
+                jobs_using_scm_type_archive_total=('scm_type', lambda x: (x == 'archive').sum()),
+                jobs_using_scm_type_manual_total=('scm_type', lambda x: ((x == '') | (x.isna())).sum()),
+                jobs_using_scm_type_unknown_total=(
+                    'scm_type',
+                    lambda x: (~x.isin(['git', 'hg', 'svn', 'insights', 'archive', '']) & x.notna()).sum(),
+                ),
+            )
+            .reset_index()
+            .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
+        )
+
         organizations_total = dataframe['organization_name'].nunique()
         ansible_version = dataframe['ansible_version'].iloc[0] if len(dataframe) > 0 else None
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
@@ -248,6 +291,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         rollup_data = {
             # pandas.DataFrame
             'aggregations_by_job_type': aggregations_by_job_type,
+            'aggregations_by_launch_type': aggregations_by_launch_type,
             'organizations_total': organizations_total,
             'ansible_version': ansible_version,
             'forks_total': forks_total,
@@ -258,6 +302,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
+            'by_launch_type': aggregations_by_launch_type.to_dict(orient='records'),
             'organizations_total': organizations_total,
             'ansible_version': ansible_version,
             'forks_total': forks_total,

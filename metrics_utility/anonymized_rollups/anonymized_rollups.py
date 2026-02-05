@@ -43,6 +43,7 @@ def anonymize_data(data, salt):
     Args:
         data: Flattened data structure with keys:
             - jobs_by_job_type: array of job stats (grouped by job_type, merged with job_host_summary and credentials data)
+            - jobs_by_launch_type: array of job stats (grouped by launch_type, with default host summary fields)
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
             - modules_used_per_playbook: array of {playbook_id, modules_used}
@@ -56,6 +57,12 @@ def anonymize_data(data, salt):
     # Note: jobs_by_job_type is now grouped by job_type, but may still have job_template_name for templates_total
     if 'jobs_by_job_type' in data and data['jobs_by_job_type']:
         for job in data['jobs_by_job_type']:
+            if job and 'job_template_name' in job and job['job_template_name']:
+                job['job_template_name'] = hash(job['job_template_name'], salt)
+
+    # anonymize jobs_by_launch_type job template name (if present)
+    if 'jobs_by_launch_type' in data and data['jobs_by_launch_type']:
+        for job in data['jobs_by_launch_type']:
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
@@ -90,6 +97,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
+      - jobs_by_launch_type: array (grouped by launch_type, with default host summary fields)
       - collections_versions: array of {name, version, job_count} from installed collections
     """
     events_modules = data.get('events_modules', {})
@@ -197,6 +205,17 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
         jobs_by_job_type_merged.append(merged_job)
 
+    # 5b) Create jobs_by_launch_type (similar structure but grouped by launch_type)
+    # Note: job_host_summary is grouped by job_type, not launch_type, so we can't merge it
+    # We'll use default values for host summary fields
+    jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
+    jobs_by_launch_type_merged: List[Dict[str, Any]] = []
+    for job in jobs_by_launch_type:
+        merged_job = job.copy()
+        # Add default host summary fields since we can't merge job_host_summary by launch_type
+        merged_job.update(default_host_summary_fields)
+        jobs_by_launch_type_merged.append(merged_job)
+
     # 6) assemble the flattened object
     flattened: Dict[str, Any] = {
         'statistics': statistics,
@@ -204,6 +223,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'module_stats': module_stats,
         'collection_name_stats': collection_name_stats,
         'jobs_by_job_type': jobs_by_job_type_merged,
+        'jobs_by_launch_type': jobs_by_launch_type_merged,
         'collections_versions': collections_versions,
     }
 
