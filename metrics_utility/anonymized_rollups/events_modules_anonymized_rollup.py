@@ -105,11 +105,17 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
         # Count all events before pruning
-        event_total = len(dataframe)
+        event_total = len(dataframe) if dataframe is not None and not dataframe.empty else 0
 
         # Count warnings and deprecations before filtering
-        warnings_total = len(dataframe[dataframe['event'] == 'warning']) if 'event' in dataframe.columns else 0
-        deprecations_total = len(dataframe[dataframe['event'] == 'deprecated']) if 'event' in dataframe.columns else 0
+        # These events don't have task_uuid, host_id, module_name, etc., so they're filtered out later
+        # but we count them here for statistics
+        if dataframe is None or dataframe.empty or 'event' not in dataframe.columns:
+            warnings_total = 0
+            deprecations_total = 0
+        else:
+            warnings_total = len(dataframe[dataframe['event'] == 'warning'])
+            deprecations_total = len(dataframe[dataframe['event'] == 'deprecated'])
 
         # Failure/Success rate of modules
         success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
