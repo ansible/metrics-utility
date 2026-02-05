@@ -401,6 +401,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     playbook_modules = result['modules_used_per_playbook']
     assert isinstance(playbook_modules, list), 'modules_used_per_playbook should be a list'
     assert len(playbook_modules) == 5, 'Should have 5 playbooks'
+    assert result['statistics']['playbooks_total'] == 5, 'Should have 5 total playbooks'
     # Check values sum to expected total
     total_module_usage = sum(p['modules_used'] for p in playbook_modules)
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
@@ -725,6 +726,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'forks_total' in statistics
     assert 'unique_hosts_total' in statistics
     assert 'job_host_pairs_total' in statistics
+    assert 'playbooks_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['modules_used_to_automate_total'] is None
@@ -741,6 +743,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['unique_hosts_total'] is None
     # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count
     assert statistics['job_host_pairs_total'] == 0, f'job_host_pairs_total should be 0 for empty data, got {statistics["job_host_pairs_total"]}'
+    # playbooks_total should be 0 (not None) when there's no data, as it represents a count
+    assert statistics['playbooks_total'] == 0, f'playbooks_total should be 0 for empty data, got {statistics["playbooks_total"]}'
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'

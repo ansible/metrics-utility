@@ -92,6 +92,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'forks_total' in statistics
     assert 'unique_hosts_total' in statistics
     assert 'job_host_pairs_total' in statistics
+    assert 'playbooks_total' in statistics
     # Credentials fields may be present if credentials data exists
     # (credential_type_*_total fields are added dynamically based on credential types in the data)
 
@@ -105,6 +106,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['forks_total'], int)
     assert isinstance(statistics['unique_hosts_total'], int)
     assert isinstance(statistics['job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
+    assert isinstance(statistics['playbooks_total'], int), 'playbooks_total should be an integer'
 
     # Validate arrays structure
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
@@ -213,6 +215,7 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate modules_used_per_playbook structure and values (now an array, not dict)
     print('--- Validating modules_used_per_playbook ---')
     assert len(json_data['modules_used_per_playbook']) == 1, 'Should have 1 playbook'
+    assert statistics['playbooks_total'] == 1, 'Should have 1 total playbook'
     playbook_entry = json_data['modules_used_per_playbook'][0]
     assert 'playbook_id' in playbook_entry, 'Playbook entry should have playbook_id'
     assert 'modules_used' in playbook_entry, 'Playbook entry should have modules_used'

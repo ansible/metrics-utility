@@ -127,6 +127,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
     job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
 
+    # Calculate playbooks_total from modules_used_per_playbook_total dict
+    modules_used_per_playbook_total: Dict[str, int] = events_modules.get('modules_used_per_playbook_total', {}) or {}
+    playbooks_total = len(modules_used_per_playbook_total)
+
     statistics = {
         # from events_modules
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
@@ -134,6 +138,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'event_total': events_modules.get('event_total'),
         'warnings_total': events_modules.get('warnings_total'),
         'deprecations_total': events_modules.get('deprecations_total'),
+        'playbooks_total': playbooks_total,
         # from execution_environments
         'execution_environments_total': execution_environments.get('execution_environments_total'),
         'execution_environments_default_total': execution_environments.get('execution_environments_default_total'),
@@ -151,9 +156,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # 2) modules_used_per_playbook (convert map -> array)
-    mup_map: Dict[str, int] = events_modules.get('modules_used_per_playbook_total', {}) or {}
     modules_used_per_playbook: List[Dict[str, Any]] = [
-        {'playbook_id': playbook_id, 'modules_used': modules_used} for playbook_id, modules_used in mup_map.items()
+        {'playbook_id': playbook_id, 'modules_used': modules_used} for playbook_id, modules_used in modules_used_per_playbook_total.items()
     ]
 
     # 3) arrays copied as-is from their respective parents
