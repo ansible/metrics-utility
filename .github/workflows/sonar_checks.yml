@@ -37,18 +37,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Extract PR Number
+      - name: Extract and validate PR Number
         run: |
           cat pr-artifact/pr_number.txt
-          echo $(head -n1 pr-artifact/pr_number.txt | awk '{print $2}')
-          echo "PR_NUMBER=$(head -n1 pr-artifact/pr_number.txt | awk '{print $2}')" >> $GITHUB_ENV
-
-      - name: Validate PR Number
-        run: |
-          if ! echo "${{ env.PR_NUMBER }}" | grep -qE '^[0-9]+$'; then
-            echo "Invalid PR number (must be a single integer): ${{ env.PR_NUMBER }}"
+          VALID_PR=$(head -n1 pr-artifact/pr_number.txt | awk '{print $2}' | grep -E '^[0-9]+$') || true
+          if [ -z "$VALID_PR" ]; then
+            echo "Invalid PR number (must be a single integer)"
             exit 1
           fi
+          echo "PR_NUMBER=$VALID_PR" >> $GITHUB_ENV
 
       - name: Get Additional PR Information
         uses: octokit/request-action@v2.x
@@ -62,8 +59,10 @@ jobs:
 
       - name: Set Additional PR Information
         run: |
-          echo "PR_BASE=${{ fromJson(steps.pr_info.outputs.data).base.ref }}" >> $GITHUB_ENV
-          echo "PR_HEAD=${{ fromJson(steps.pr_info.outputs.data).head.ref }}" >> $GITHUB_ENV
+          PR_BASE='${{ fromJson(steps.pr_info.outputs.data).base.ref }}'
+          PR_HEAD='${{ fromJson(steps.pr_info.outputs.data).head.ref }}'
+          echo "PR_BASE=$PR_BASE" >> $GITHUB_ENV
+          echo "PR_HEAD=$PR_HEAD" >> $GITHUB_ENV
 
       - name: Checkout Code for PR
         run: |
