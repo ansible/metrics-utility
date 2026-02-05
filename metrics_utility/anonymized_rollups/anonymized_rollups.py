@@ -134,6 +134,14 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate job_templates_total by summing templates_total from all job_type groups
     job_templates_total = sum(job.get('templates_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
 
+    # Merge ansible_versions from all job_type groups (unique values, sorted)
+    ansible_versions_set = set()
+    for job in jobs_by_job_type:
+        ansible_versions = job.get('ansible_versions', [])
+        if isinstance(ansible_versions, list):
+            ansible_versions_set.update(ansible_versions)
+    ansible_versions_merged = sorted(list(ansible_versions_set)) if ansible_versions_set else []
+
     statistics = {
         # from events_modules
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
@@ -150,6 +158,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_total': jobs_total,
         'organizations_total': jobs.get('organizations_total'),
         'ansible_version': jobs.get('ansible_version'),
+        'ansible_versions': ansible_versions_merged,
         'forks_total': jobs.get('forks_total'),
         'job_templates_total': job_templates_total,
         # from job_host_summary (sum of all job_type groups)

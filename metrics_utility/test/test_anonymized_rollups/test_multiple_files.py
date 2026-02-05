@@ -235,6 +235,32 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['jobs_total'] == 5  # Total jobs across all job types
     # job_templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
     assert result['statistics']['job_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
+    
+    # Validate ansible_versions in statistics is merged from jobs_by_job_type
+    assert 'ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
+    statistics_ansible_versions = result['statistics']['ansible_versions']
+    assert isinstance(statistics_ansible_versions, list), 'ansible_versions should be a list'
+    # Get ansible_versions from jobs_by_job_type and merge them
+    jobs_by_job_type = result.get('jobs_by_job_type', [])
+    expected_versions_set = set()
+    for job in jobs_by_job_type:
+        ansible_versions = job.get('ansible_versions', [])
+        if isinstance(ansible_versions, list):
+            expected_versions_set.update(ansible_versions)
+    expected_versions = sorted(list(expected_versions_set))
+    assert statistics_ansible_versions == expected_versions, (
+        f"Expected ansible_versions {expected_versions} in statistics, got {statistics_ansible_versions}"
+    )
+    # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
+    # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
+    assert len(statistics_ansible_versions) == 5, (
+        f"Expected 5 unique ansible versions, got {len(statistics_ansible_versions)}"
+    )
+    assert '2.9.0' in statistics_ansible_versions
+    assert '2.10.0' in statistics_ansible_versions
+    assert '2.11.0' in statistics_ansible_versions
+    assert '2.12.0' in statistics_ansible_versions
+    assert '2.14.0' in statistics_ansible_versions
 
     # 'job' type should have data from both tarballs (jobs 1, 2, 4)
     job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job' and j['jobs_total'] == 3]
@@ -782,6 +808,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['jobs_total'] is None
     assert statistics['organizations_total'] is None
     assert statistics['ansible_version'] is None
+    assert 'ansible_versions' in statistics, 'Should have ansible_versions field in statistics'
+    assert statistics['ansible_versions'] == [], 'ansible_versions should be empty list for empty data'
     assert statistics['forks_total'] is None
     assert statistics['unique_hosts_total'] is None
     # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count

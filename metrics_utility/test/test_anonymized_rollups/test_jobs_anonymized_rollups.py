@@ -626,3 +626,84 @@ def test_jobs_anonymized_rollups_installed_collections():
         assert 'job_count' in collection
         assert isinstance(collection['job_count'], int)
         assert collection['job_count'] > 0
+
+
+def test_jobs_anonymized_rollups_statistics_ansible_versions():
+    """Test that ansible_versions in statistics is correctly merged from jobs_by_job_type."""
+    import os
+    import shutil
+    from datetime import datetime
+
+    from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+    from metrics_utility.test.test_anonymized_rollups.test_events_modules_anonymized_rollups import events
+    from metrics_utility.test.test_anonymized_rollups.test_execution_environments_anonymized_rollups import execution_environments
+    from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized_rollups import jobhostsummary
+    from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
+
+    # Cleanup
+    out_dir = './out'
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+
+    since = datetime(2025, 6, 13, 0, 0, 0)
+    until = datetime(2025, 6, 14, 0, 0, 0)
+    base_path = './out'
+    year, month, day = since.year, since.month, since.day
+    data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
+
+    # Create CSV files
+    def create_csv_file(data_list, csv_path):
+        os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+        if not data_list:
+            return None
+        df = pd.DataFrame(data_list)
+        df.to_csv(csv_path, index=False, encoding='utf-8')
+        return csv_path
+
+    jobs_csv = create_csv_file(jobs, f'{data_dir}/unified_jobs.csv')
+    events_csv = create_csv_file(events, f'{data_dir}/main_jobevent.csv')
+    ee_csv = create_csv_file(execution_environments, f'{data_dir}/execution_environments.csv')
+    jhs_csv = create_csv_file(jobhostsummary, f'{data_dir}/job_host_summary.csv')
+    cred_csv = create_csv_file(credentials, f'{data_dir}/credentials.csv')
+
+    input_data = {
+        'unified_jobs': [jobs_csv] if jobs_csv else [],
+        'job_host_summary': [jhs_csv] if jhs_csv else [],
+        'main_jobevent': [events_csv] if events_csv else [],
+        'execution_environments': [ee_csv] if ee_csv else [],
+        'credentials': [cred_csv] if cred_csv else [],
+    }
+
+    result = compute_anonymized_rollup_from_raw_data(
+        input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
+    )
+
+    # Validate statistics has ansible_versions
+    assert 'statistics' in result, 'Should have statistics in result'
+    statistics = result['statistics']
+    assert 'ansible_versions' in statistics, 'Should have ansible_versions in statistics'
+
+    # Get ansible_versions from jobs_by_job_type
+    jobs_by_job_type = result.get('jobs_by_job_type', [])
+    expected_versions_set = set()
+    for job in jobs_by_job_type:
+        ansible_versions = job.get('ansible_versions', [])
+        if isinstance(ansible_versions, list):
+            expected_versions_set.update(ansible_versions)
+    expected_versions = sorted(list(expected_versions_set))
+
+    # Validate ansible_versions in statistics matches merged values from jobs_by_job_type
+    assert statistics['ansible_versions'] == expected_versions, (
+        f"Expected ansible_versions {expected_versions} in statistics, got {statistics['ansible_versions']}"
+    )
+
+    # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
+    # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
+    assert len(statistics['ansible_versions']) == 5, (
+        f"Expected 5 unique ansible versions, got {len(statistics['ansible_versions'])}"
+    )
+    assert '2.9.0' in statistics['ansible_versions']
+    assert '2.10.0' in statistics['ansible_versions']
+    assert '2.11.0' in statistics['ansible_versions']
+    assert '2.12.0' in statistics['ansible_versions']
+    assert '2.14.0' in statistics['ansible_versions']
