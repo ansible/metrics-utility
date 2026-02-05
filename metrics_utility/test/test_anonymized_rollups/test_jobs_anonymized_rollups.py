@@ -232,6 +232,23 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_adhoccommand['job_waiting_time_minimum_seconds'])
     assert rec_adhoccommand['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
+    # Validate ansible_versions in by_job_type
+    # 'job' type has jobs 1, 2, 4 with versions: 2.9.0, 2.10.0, 2.12.0
+    assert 'ansible_versions' in rec_job, 'Should have ansible_versions field in by_job_type'
+    assert rec_job['ansible_versions'] == ['2.10.0', '2.12.0', '2.9.0'], (
+        f"Expected ['2.10.0', '2.12.0', '2.9.0'] for job type, got {rec_job['ansible_versions']}"
+    )
+    # 'workflowjob' type has job 3 with version: 2.11.0
+    assert 'ansible_versions' in rec_workflowjob, 'Should have ansible_versions field in by_job_type'
+    assert rec_workflowjob['ansible_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['ansible_versions']}"
+    )
+    # 'adhoccommand' type has job 6 with version: 2.14.0
+    assert 'ansible_versions' in rec_adhoccommand, 'Should have ansible_versions field in by_job_type'
+    assert rec_adhoccommand['ansible_versions'] == ['2.14.0'], (
+        f"Expected ['2.14.0'] for adhoccommand type, got {rec_adhoccommand['ansible_versions']}"
+    )
+
     # ========== Validate by_launch_type aggregations ==========
     # Result should have 'by_launch_type' list
     assert 'by_launch_type' in result
@@ -312,6 +329,28 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert 'job_type_total' in rec_scheduled
     assert 'job_type_total' in rec_workflow
     assert 'job_type_total' in rec_callback
+
+    # Validate ansible_versions in by_launch_type
+    # 'manual' launch_type has job 1 with version: 2.9.0
+    assert 'ansible_versions' in rec_manual, 'Should have ansible_versions field in by_launch_type'
+    assert rec_manual['ansible_versions'] == ['2.9.0'], (
+        f"Expected ['2.9.0'] for manual launch_type, got {rec_manual['ansible_versions']}"
+    )
+    # 'scheduled' launch_type has jobs 2, 6 with versions: 2.10.0, 2.14.0
+    assert 'ansible_versions' in rec_scheduled, 'Should have ansible_versions field in by_launch_type'
+    assert rec_scheduled['ansible_versions'] == ['2.10.0', '2.14.0'], (
+        f"Expected ['2.10.0', '2.14.0'] for scheduled launch_type, got {rec_scheduled['ansible_versions']}"
+    )
+    # 'workflow' launch_type has job 3 with version: 2.11.0
+    assert 'ansible_versions' in rec_workflow, 'Should have ansible_versions field in by_launch_type'
+    assert rec_workflow['ansible_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['ansible_versions']}"
+    )
+    # 'callback' launch_type has job 4 with version: 2.12.0
+    assert 'ansible_versions' in rec_callback, 'Should have ansible_versions field in by_launch_type'
+    assert rec_callback['ansible_versions'] == ['2.12.0'], (
+        f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['ansible_versions']}"
+    )
 
     # Verify totals match between by_job_type and by_launch_type
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in by_job_type)

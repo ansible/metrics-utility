@@ -253,6 +253,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert job_type['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
     # Check job_type field
     assert job_type['job_type'] == 'job'
+    # Validate ansible_versions in by_job_type
+    # 'job' type has jobs 1, 2, 4 with versions: 2.9.0, 2.10.0, 2.12.0
+    assert 'ansible_versions' in job_type, 'Should have ansible_versions field in by_job_type'
+    assert job_type['ansible_versions'] == ['2.10.0', '2.12.0', '2.9.0'], (
+        f"Expected ['2.10.0', '2.12.0', '2.9.0'] for job type, got {job_type['ansible_versions']}"
+    )
 
     # 'workflowjob' type should have 1 job executed
     workflowjob_type_jobs = [j for j in jobs_list if j['job_type'] == 'workflowjob' and j['jobs_never_started_total'] == 0]
@@ -265,6 +271,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert workflowjob_type['job_waiting_time_total_seconds'] == pytest.approx(4.0)
     # Check job_type field
     assert workflowjob_type['job_type'] == 'workflowjob'
+    # Validate ansible_versions in by_job_type
+    # 'workflowjob' type has job 3 with version: 2.11.0
+    assert 'ansible_versions' in workflowjob_type, 'Should have ansible_versions field in by_job_type'
+    assert workflowjob_type['ansible_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['ansible_versions']}"
+    )
 
     # 'adhoccommand' type should have never started job
     adhoccommand_type_jobs = [j for j in jobs_list if j['job_type'] == 'adhoccommand' and j['jobs_never_started_total'] == 1]
@@ -277,6 +289,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert adhoccommand_type['job_waiting_time_total_seconds'] == pytest.approx(0.0)
     # Check job_type field
     assert adhoccommand_type['job_type'] == 'adhoccommand'
+    # Validate ansible_versions in by_job_type
+    # 'adhoccommand' type has job 6 with version: 2.14.0
+    assert 'ansible_versions' in adhoccommand_type, 'Should have ansible_versions field in by_job_type'
+    assert adhoccommand_type['ansible_versions'] == ['2.14.0'], (
+        f"Expected ['2.14.0'] for adhoccommand type, got {adhoccommand_type['ansible_versions']}"
+    )
 
     # ========== Validate Execution Environments ==========
     assert result['statistics']['execution_environments_total'] == 5
@@ -563,6 +581,28 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert 'job_type_total' in scheduled_entry, 'Should have job_type_total field'
     assert 'job_type_total' in workflow_entry, 'Should have job_type_total field'
     assert 'job_type_total' in callback_entry, 'Should have job_type_total field'
+
+    # Validate ansible_versions in by_launch_type
+    # 'manual' launch_type has job 1 with version: 2.9.0
+    assert 'ansible_versions' in manual_entry, 'Should have ansible_versions field in by_launch_type'
+    assert manual_entry['ansible_versions'] == ['2.9.0'], (
+        f"Expected ['2.9.0'] for manual launch_type, got {manual_entry['ansible_versions']}"
+    )
+    # 'scheduled' launch_type has jobs 2, 6 with versions: 2.10.0, 2.14.0
+    assert 'ansible_versions' in scheduled_entry, 'Should have ansible_versions field in by_launch_type'
+    assert scheduled_entry['ansible_versions'] == ['2.10.0', '2.14.0'], (
+        f"Expected ['2.10.0', '2.14.0'] for scheduled launch_type, got {scheduled_entry['ansible_versions']}"
+    )
+    # 'workflow' launch_type has job 3 with version: 2.11.0
+    assert 'ansible_versions' in workflow_entry, 'Should have ansible_versions field in by_launch_type'
+    assert workflow_entry['ansible_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['ansible_versions']}"
+    )
+    # 'callback' launch_type has job 4 with version: 2.12.0
+    assert 'ansible_versions' in callback_entry, 'Should have ansible_versions field in by_launch_type'
+    assert callback_entry['ansible_versions'] == ['2.12.0'], (
+        f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['ansible_versions']}"
+    )
 
     # ========== Validate Jobs by Ansible Version ==========
     jobs_by_ansible_version_list = result['jobs_by_ansible_version']
