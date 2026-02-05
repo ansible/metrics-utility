@@ -33,22 +33,7 @@ from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized
 
 # Import test data from other test files
 from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups import jobs
-
-
-# Credentials test data matching credentials_service collector output format
-# Columns: credential_type, job_id, model
-# Matches job IDs from jobs test data (1-6)
-credentials = [
-    {'credential_type': 'Machine', 'job_id': 1, 'model': 'job'},
-    {'credential_type': 'Machine', 'job_id': 2, 'model': 'job'},
-    {'credential_type': 'Vault', 'job_id': 1, 'model': 'job'},
-    {'credential_type': 'Source Control', 'job_id': 3, 'model': 'workflowjob'},
-    {'credential_type': 'Source Control', 'job_id': 3, 'model': 'workflowjob'},
-    {'credential_type': 'Network', 'job_id': 4, 'model': 'job'},
-    {'credential_type': 'Amazon Web Services', 'job_id': 4, 'model': 'job'},
-    {'credential_type': 'Amazon Web Services', 'job_id': 5, 'model': 'adhoccommand'},
-    {'credential_type': 'Container Registry', 'job_id': 6, 'model': 'adhoccommand'},
-]
+from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
 
 
 @pytest.fixture(scope='module')
@@ -408,8 +393,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Validate Credentials ==========
     print('--- Validating credentials data values ---')
     # Credentials are added to statistics
-    # Expected counts from credentials test data:
-    # Machine: 2, Vault: 1, Source Control: 2, Network: 1, Amazon Web Services: 2, Container Registry: 1
+    # Expected counts from credentials test data (from test_credentials_anonymized_rollup.py):
+    # Machine: 2, Vault: 1, Source Control: 2, Network: 1, Amazon Web Services: 3, Container Registry: 1
     assert 'credential_type_machine_total' in result['statistics'], 'Should have credential_type_machine_total in statistics'
     assert result['statistics']['credential_type_machine_total'] == 2, 'Should have 2 Machine credentials'
     assert 'credential_type_vault_total' in result['statistics'], 'Should have credential_type_vault_total in statistics'
@@ -419,7 +404,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert 'credential_type_network_total' in result['statistics'], 'Should have credential_type_network_total in statistics'
     assert result['statistics']['credential_type_network_total'] == 1, 'Should have 1 Network credential'
     assert 'credential_type_amazon_web_services_total' in result['statistics'], 'Should have credential_type_amazon_web_services_total in statistics'
-    assert result['statistics']['credential_type_amazon_web_services_total'] == 2, 'Should have 2 Amazon Web Services credentials'
+    assert result['statistics']['credential_type_amazon_web_services_total'] == 3, 'Should have 3 Amazon Web Services credentials'
     assert 'credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
     assert result['statistics']['credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
 
