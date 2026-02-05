@@ -116,6 +116,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
         'hosts_automated_total': events_modules.get('hosts_automated_total'),
         'event_total': events_modules.get('event_total'),
+        'warnings_total': events_modules.get('warnings_total'),
+        'deprecations_total': events_modules.get('deprecations_total'),
         # from execution_environments
         'execution_environments_total': execution_environments.get('execution_environments_total'),
         'execution_environments_default_total': execution_environments.get('execution_environments_default_total'),

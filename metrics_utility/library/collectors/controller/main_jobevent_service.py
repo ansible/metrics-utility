@@ -95,6 +95,10 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
         'runner_item_on_unreachable',
         'runner_on_skipped',
         'runner_item_on_skipped',
+
+        # job annotations
+        'warning',
+        'deprecated',
     ]
     event_types_str = ','.join(f"'{event}'" for event in relevant_events)
     event_type_where_clause = f'e.event IN ({event_types_str})'
