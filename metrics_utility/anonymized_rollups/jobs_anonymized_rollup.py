@@ -183,98 +183,78 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['created']).dt.total_seconds()
 
+        # Build common aggregation dictionary shared by both groupings
+        common_aggregations = {
+            'jobs_total': ('id', 'nunique'),
+            'jobs_failed_total': ('failed', 'sum'),
+            'jobs_successful_total': ('failed', lambda x: (~x).sum()),
+            'jobs_never_started_total': ('started', lambda x: x.isna().sum()),
+            'job_duration_maximum_seconds': ('job_duration_seconds', 'max'),
+            'job_duration_minimum_seconds': ('job_duration_seconds', 'min'),
+            'job_duration_total_seconds': ('job_duration_seconds', 'sum'),
+            'jobs_successful_duration_total_seconds': (
+                'job_duration_seconds',
+                lambda x: x[~dataframe.loc[x.index, 'failed']].sum(),
+            ),
+            'jobs_failed_duration_total_seconds': (
+                'job_duration_seconds',
+                lambda x: x[dataframe.loc[x.index, 'failed']].sum(),
+            ),
+            'job_waiting_time_maximum_seconds': ('job_waiting_time_seconds', 'max'),
+            'job_waiting_time_minimum_seconds': ('job_waiting_time_seconds', 'min'),
+            'job_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
+            'templates_total': ('job_template_name', 'nunique'),
+            # inventory name
+            'inventories_total': ('inventory_name', 'nunique'),
+            # jobs using projects by scm types
+            'jobs_using_scm_type_git_total': ('scm_type', lambda x: (x == 'git').sum()),
+            'jobs_using_scm_type_hg_total': ('scm_type', lambda x: (x == 'hg').sum()),
+            'jobs_using_scm_type_svn_total': ('scm_type', lambda x: (x == 'svn').sum()),
+            'jobs_using_scm_type_insights_total': ('scm_type', lambda x: (x == 'insights').sum()),
+            'jobs_using_scm_type_archive_total': ('scm_type', lambda x: (x == 'archive').sum()),
+            'jobs_using_scm_type_manual_total': ('scm_type', lambda x: ((x == '') | (x.isna())).sum()),
+            'jobs_using_scm_type_unknown_total': (
+                'scm_type',
+                lambda x: (~x.isin(['git', 'hg', 'svn', 'insights', 'archive', '']) & x.notna()).sum(),
+            ),
+        }
+
+        # Aggregations grouped by job_type (model)
+        # Add launch_type counts specific to job_type grouping
+        aggregations_by_job_type_dict = common_aggregations.copy()
+        aggregations_by_job_type_dict.update({
+            'launch_type_manual_total': ('launch_type', lambda x: (x == 'manual').sum()),
+            'launch_type_relaunch_total': ('launch_type', lambda x: (x == 'relaunch').sum()),
+            'launch_type_callback_total': ('launch_type', lambda x: (x == 'callback').sum()),
+            'launch_type_scheduled_total': ('launch_type', lambda x: (x == 'scheduled').sum()),
+            'launch_type_dependency_total': ('launch_type', lambda x: (x == 'dependency').sum()),
+            'launch_type_workflow_total': ('launch_type', lambda x: (x == 'workflow').sum()),
+            'launch_type_webhook_total': ('launch_type', lambda x: (x == 'webhook').sum()),
+            'launch_type_sync_total': ('launch_type', lambda x: (x == 'sync').sum()),
+            'launch_type_scm_total': ('launch_type', lambda x: (x == 'scm').sum()),
+            'launch_type_api_total': ('launch_type', lambda x: (x == 'api').sum()),
+            'launch_type_system_total': ('launch_type', lambda x: (x == 'system').sum()),
+            'launch_type_unknown_total': ('launch_type', lambda x: (x == 'unknown').sum()),
+        })
+
         aggregations_by_job_type = (
             dataframe.groupby('model')
-            .agg(
-                jobs_total=('id', 'nunique'),
-                jobs_failed_total=('failed', 'sum'),
-                jobs_successful_total=('failed', lambda x: (~x).sum()),
-                jobs_never_started_total=('started', lambda x: x.isna().sum()),
-                job_duration_maximum_seconds=('job_duration_seconds', 'max'),
-                job_duration_minimum_seconds=('job_duration_seconds', 'min'),
-                job_duration_total_seconds=('job_duration_seconds', 'sum'),
-                jobs_successful_duration_total_seconds=(
-                    'job_duration_seconds',
-                    lambda x: x[~dataframe.loc[x.index, 'failed']].sum(),
-                ),
-                jobs_failed_duration_total_seconds=(
-                    'job_duration_seconds',
-                    lambda x: x[dataframe.loc[x.index, 'failed']].sum(),
-                ),
-                job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
-                job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
-                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-                templates_total=('job_template_name', 'nunique'),
-                launch_type_manual_total=('launch_type', lambda x: (x == 'manual').sum()),
-                launch_type_relaunch_total=('launch_type', lambda x: (x == 'relaunch').sum()),
-                launch_type_callback_total=('launch_type', lambda x: (x == 'callback').sum()),
-                launch_type_scheduled_total=('launch_type', lambda x: (x == 'scheduled').sum()),
-                launch_type_dependency_total=('launch_type', lambda x: (x == 'dependency').sum()),
-                launch_type_workflow_total=('launch_type', lambda x: (x == 'workflow').sum()),
-                launch_type_webhook_total=('launch_type', lambda x: (x == 'webhook').sum()),
-                launch_type_sync_total=('launch_type', lambda x: (x == 'sync').sum()),
-                launch_type_scm_total=('launch_type', lambda x: (x == 'scm').sum()),
-                launch_type_api_total=('launch_type', lambda x: (x == 'api').sum()),
-                launch_type_system_total=('launch_type', lambda x: (x == 'system').sum()),
-                launch_type_unknown_total=('launch_type', lambda x: (x == 'unknown').sum()),
-                # inventory name
-                inventories_total=('inventory_name', 'nunique'),
-                # jobs using projects by scm types
-                jobs_using_scm_type_git_total=('scm_type', lambda x: (x == 'git').sum()),
-                jobs_using_scm_type_hg_total=('scm_type', lambda x: (x == 'hg').sum()),
-                jobs_using_scm_type_svn_total=('scm_type', lambda x: (x == 'svn').sum()),
-                jobs_using_scm_type_insights_total=('scm_type', lambda x: (x == 'insights').sum()),
-                jobs_using_scm_type_archive_total=('scm_type', lambda x: (x == 'archive').sum()),
-                jobs_using_scm_type_manual_total=('scm_type', lambda x: ((x == '') | (x.isna())).sum()),
-                jobs_using_scm_type_unknown_total=(
-                    'scm_type',
-                    lambda x: (~x.isin(['git', 'hg', 'svn', 'insights', 'archive', '']) & x.notna()).sum(),
-                ),
-            )
+            .agg(**aggregations_by_job_type_dict)
             .reset_index()
             .rename(columns={'model': 'job_type'})
             .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
-        # Aggregations grouped by launch_type (instead of job_type)
-        # Count job_types instead of launch_types
+        # Aggregations grouped by launch_type
+        # Add job_type_total specific to launch_type grouping
+        aggregations_by_launch_type_dict = common_aggregations.copy()
+        aggregations_by_launch_type_dict.update({
+            'job_type_total': ('model', 'nunique'),  # Count distinct job types instead of launch types
+        })
+
         aggregations_by_launch_type = (
             dataframe.groupby('launch_type')
-            .agg(
-                jobs_total=('id', 'nunique'),
-                jobs_failed_total=('failed', 'sum'),
-                jobs_successful_total=('failed', lambda x: (~x).sum()),
-                jobs_never_started_total=('started', lambda x: x.isna().sum()),
-                job_duration_maximum_seconds=('job_duration_seconds', 'max'),
-                job_duration_minimum_seconds=('job_duration_seconds', 'min'),
-                job_duration_total_seconds=('job_duration_seconds', 'sum'),
-                jobs_successful_duration_total_seconds=(
-                    'job_duration_seconds',
-                    lambda x: x[~dataframe.loc[x.index, 'failed']].sum(),
-                ),
-                jobs_failed_duration_total_seconds=(
-                    'job_duration_seconds',
-                    lambda x: x[dataframe.loc[x.index, 'failed']].sum(),
-                ),
-                job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
-                job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
-                job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-                templates_total=('job_template_name', 'nunique'),
-                job_type_total=('model', 'nunique'),  # Count distinct job types instead of launch types
-                # inventory name
-                inventories_total=('inventory_name', 'nunique'),
-                # jobs using projects by scm types
-                jobs_using_scm_type_git_total=('scm_type', lambda x: (x == 'git').sum()),
-                jobs_using_scm_type_hg_total=('scm_type', lambda x: (x == 'hg').sum()),
-                jobs_using_scm_type_svn_total=('scm_type', lambda x: (x == 'svn').sum()),
-                jobs_using_scm_type_insights_total=('scm_type', lambda x: (x == 'insights').sum()),
-                jobs_using_scm_type_archive_total=('scm_type', lambda x: (x == 'archive').sum()),
-                jobs_using_scm_type_manual_total=('scm_type', lambda x: ((x == '') | (x.isna())).sum()),
-                jobs_using_scm_type_unknown_total=(
-                    'scm_type',
-                    lambda x: (~x.isin(['git', 'hg', 'svn', 'insights', 'archive', '']) & x.notna()).sum(),
-                ),
-            )
+            .agg(**aggregations_by_launch_type_dict)
             .reset_index()
             .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
