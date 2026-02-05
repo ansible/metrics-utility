@@ -9,16 +9,10 @@ jobs:
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout metrics-utility (${{ github.ref }})"
+      - name: "Checkout metrics-utility"
         uses: actions/checkout@v6
-        if: ${{ ! github.base_ref }}
-
-      - name: "Checkout metrics-utility (${{ github.event.pull_request.head.ref }})"
-        uses: actions/checkout@v6
-        if: ${{ github.base_ref }}
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
 
       - name: "Install uv"
         uses: astral-sh/setup-uv@v7
@@ -94,6 +88,23 @@ jobs:
           METRICS_UTILITY_DB_HOST: "localhost"
         run: |
           uv run pytest -s -v --cov=. --cov-report=xml
+
+      - name: "Upload code coverage report"
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+      - name: "Save off PR number"
+        if: github.event_name == 'pull_request'
+        run: echo "PR ${{ github.event.pull_request.number }}" > pr_number.txt
+
+      - name: "Upload PR number"
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr_number
+          path: pr_number.txt
 
       - name: "Send code coverage report to Sonar Cloud (on push)"
         uses: SonarSource/sonarqube-scan-action@v6
