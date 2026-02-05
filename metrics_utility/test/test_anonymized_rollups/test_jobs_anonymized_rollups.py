@@ -320,6 +320,112 @@ def test_jobs_anonymized_rollups_base_aggregation():
         f'Total jobs should match: by_job_type={total_jobs_by_job_type}, by_launch_type={total_jobs_by_launch_type}'
     )
 
+    # ========== Validate by_ansible_version aggregations ==========
+    # Result should have 'by_ansible_version' list
+    assert 'by_ansible_version' in result
+
+    # Extract the by_ansible_version list
+    by_ansible_version = result['by_ansible_version']
+    assert isinstance(by_ansible_version, list)
+
+    # Expected ansible versions from test data (jobs 1-4 and 6, job 5 is filtered out):
+    # Job 1: 2.9.0
+    # Job 2: 2.10.0
+    # Job 3: 2.11.0
+    # Job 4: 2.12.0
+    # Job 6: 2.14.0
+    # So we should have 5 ansible versions
+    assert len(by_ansible_version) == 5
+
+    # Identify records by ansible_version
+    rec_2_9_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.9.0'), None)
+    rec_2_10_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.10.0'), None)
+    rec_2_11_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.11.0'), None)
+    rec_2_12_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.12.0'), None)
+    rec_2_14_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.14.0'), None)
+
+    assert rec_2_9_0 is not None, 'Should have ansible_version 2.9.0'
+    assert rec_2_10_0 is not None, 'Should have ansible_version 2.10.0'
+    assert rec_2_11_0 is not None, 'Should have ansible_version 2.11.0'
+    assert rec_2_12_0 is not None, 'Should have ansible_version 2.12.0'
+    assert rec_2_14_0 is not None, 'Should have ansible_version 2.14.0'
+
+    # '2.9.0' ansible_version (job 1)
+    assert rec_2_9_0['jobs_total'] == 1
+    assert rec_2_9_0['jobs_failed_total'] == 0
+    assert rec_2_9_0['jobs_succeeded_total'] == 1
+    assert rec_2_9_0['jobs_never_started_total'] == 0
+    assert rec_2_9_0['job_type_total'] == 1  # Only 'job' type
+    assert rec_2_9_0['launch_type_manual_total'] == 1  # manual launch type
+    assert rec_2_9_0['templates_total'] == 1  # Template T1
+    assert rec_2_9_0['job_duration_total_seconds'] == pytest.approx(3.0, rel=1e-6)
+    assert rec_2_9_0['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
+
+    # '2.10.0' ansible_version (job 2)
+    assert rec_2_10_0['jobs_total'] == 1
+    assert rec_2_10_0['jobs_failed_total'] == 1
+    assert rec_2_10_0['jobs_succeeded_total'] == 0
+    assert rec_2_10_0['jobs_never_started_total'] == 0
+    assert rec_2_10_0['job_type_total'] == 1  # Only 'job' type
+    assert rec_2_10_0['launch_type_scheduled_total'] == 1  # scheduled launch type
+    assert rec_2_10_0['templates_total'] == 1  # Template T1
+    assert rec_2_10_0['job_duration_total_seconds'] == pytest.approx(5.0, rel=1e-6)
+    assert rec_2_10_0['job_waiting_time_total_seconds'] == pytest.approx(2.0, rel=1e-6)
+
+    # '2.11.0' ansible_version (job 3)
+    assert rec_2_11_0['jobs_total'] == 1
+    assert rec_2_11_0['jobs_failed_total'] == 0
+    assert rec_2_11_0['jobs_succeeded_total'] == 1
+    assert rec_2_11_0['jobs_never_started_total'] == 0
+    assert rec_2_11_0['job_type_total'] == 1  # Only 'workflowjob' type
+    assert rec_2_11_0['launch_type_workflow_total'] == 1  # workflow launch type
+    assert rec_2_11_0['templates_total'] == 1  # Template T2
+    assert rec_2_11_0['job_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert rec_2_11_0['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
+
+    # '2.12.0' ansible_version (job 4)
+    assert rec_2_12_0['jobs_total'] == 1
+    assert rec_2_12_0['jobs_failed_total'] == 0
+    assert rec_2_12_0['jobs_succeeded_total'] == 1
+    assert rec_2_12_0['jobs_never_started_total'] == 0
+    assert rec_2_12_0['job_type_total'] == 1  # Only 'job' type
+    assert rec_2_12_0['launch_type_callback_total'] == 1  # callback launch type
+    assert rec_2_12_0['templates_total'] == 1  # Template T1
+    assert rec_2_12_0['job_duration_total_seconds'] == pytest.approx(2.0, rel=1e-6)
+    assert rec_2_12_0['job_waiting_time_total_seconds'] == pytest.approx(1.0, rel=1e-6)
+
+    # '2.14.0' ansible_version (job 6)
+    assert rec_2_14_0['jobs_total'] == 1
+    assert rec_2_14_0['jobs_failed_total'] == 1
+    assert rec_2_14_0['jobs_succeeded_total'] == 0
+    assert rec_2_14_0['jobs_never_started_total'] == 1  # Job 6 never started
+    assert rec_2_14_0['job_type_total'] == 1  # Only 'adhoccommand' type
+    assert rec_2_14_0['launch_type_scheduled_total'] == 1  # scheduled launch type
+    assert rec_2_14_0['templates_total'] == 1  # Template T3
+    assert rec_2_14_0['job_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
+    assert rec_2_14_0['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
+
+    # Verify that job_type_total is present (counts distinct job types per ansible_version)
+    assert 'job_type_total' in rec_2_9_0
+    assert 'job_type_total' in rec_2_10_0
+    assert 'job_type_total' in rec_2_11_0
+    assert 'job_type_total' in rec_2_12_0
+    assert 'job_type_total' in rec_2_14_0
+
+    # Verify that launch_type_*_total fields are present (since we're grouping by ansible_version)
+    assert 'launch_type_manual_total' in rec_2_9_0
+    assert 'launch_type_scheduled_total' in rec_2_10_0
+    assert 'launch_type_workflow_total' in rec_2_11_0
+    assert 'launch_type_callback_total' in rec_2_12_0
+    assert 'launch_type_scheduled_total' in rec_2_14_0
+
+    # Verify totals match across all groupings
+    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in by_ansible_version)
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == 5, (
+        f'Total jobs should match: by_job_type={total_jobs_by_job_type}, '
+        f'by_launch_type={total_jobs_by_launch_type}, by_ansible_version={total_jobs_by_ansible_version}'
+    )
+
 
 def test_jobs_anonymized_rollups_ansible_version():
     """Test that ansible_version and organizations_total are correctly aggregated at top level."""

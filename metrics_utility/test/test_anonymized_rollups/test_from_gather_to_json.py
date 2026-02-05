@@ -160,6 +160,28 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'launch_type_manual_total' not in job
             assert 'launch_type_scheduled_total' not in job
 
+    # Validate jobs_by_ansible_version have required fields (grouped by ansible_version, with default host summary fields)
+    if json_data['jobs_by_ansible_version']:
+        for job in json_data['jobs_by_ansible_version']:
+            assert 'ansible_version' in job
+            assert 'jobs_total' in job
+            assert 'jobs_failed_total' in job
+            assert 'jobs_succeeded_total' in job
+            assert 'templates_total' in job
+            assert 'job_type_total' in job  # Count of distinct job types
+            # Host summary fields (default values, not merged from job_host_summary)
+            assert 'dark_total' in job
+            assert 'failures_total' in job
+            assert 'ok_total' in job
+            assert 'skipped_total' in job
+            assert 'ignored_total' in job
+            assert 'rescued_total' in job
+            assert 'unique_hosts_total' in job
+            # Should have launch_type_*_total fields (since we're grouping by ansible_version)
+            assert 'launch_type_manual_total' in job or 'launch_type_scheduled_total' in job or 'launch_type_workflow_total' in job, (
+                'Should have at least one launch_type_*_total field when grouping by ansible_version'
+            )
+
     # ========== Validate actual data values and relationships ==========
 
     # Validate statistics actual values
@@ -257,12 +279,29 @@ def test_from_gather_to_json(cleanup_glob):
     assert launch_type_entry['jobs_total'] >= 1, 'Should have at least 1 job in launch_type group'
     assert 'job_type_total' in launch_type_entry, 'Should have job_type_total field'
     assert launch_type_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
-    # Verify totals match between jobs_by_job_type and jobs_by_launch_type
+
+    # Validate jobs_by_ansible_version actual values
+    print('--- Validating jobs_by_ansible_version data values ---')
+    assert len(json_data['jobs_by_ansible_version']) >= 1, 'Should have at least 1 ansible_version group'
+    # Find the ansible_version entry (should have at least one)
+    ansible_version_entry = json_data['jobs_by_ansible_version'][0]
+    assert 'ansible_version' in ansible_version_entry, 'Should have ansible_version field'
+    assert ansible_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in ansible_version group'
+    assert 'job_type_total' in ansible_version_entry, 'Should have job_type_total field'
+    assert ansible_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
+    # Verify launch_type counts are present (since we're grouping by ansible_version)
+    assert 'launch_type_manual_total' in ansible_version_entry or 'launch_type_scheduled_total' in ansible_version_entry, (
+        'Should have launch_type_*_total fields when grouping by ansible_version'
+    )
+
+    # Verify totals match between all groupings
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_launch_type'])
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == statistics['jobs_total'], (
+    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_ansible_version'])
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == statistics['jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
-        f'jobs_by_launch_type={total_jobs_by_launch_type}, statistics={statistics["jobs_total"]}'
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
+        f'statistics={statistics["jobs_total"]}'
     )
 
     # Validate cross-section data consistency

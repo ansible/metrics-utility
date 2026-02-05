@@ -561,12 +561,105 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert 'job_type_total' in workflow_entry, 'Should have job_type_total field'
     assert 'job_type_total' in callback_entry, 'Should have job_type_total field'
 
-    # Verify totals match between jobs_by_job_type and jobs_by_launch_type
+    # ========== Validate Jobs by Ansible Version ==========
+    jobs_by_ansible_version_list = result['jobs_by_ansible_version']
+    assert isinstance(jobs_by_ansible_version_list, list), 'jobs_by_ansible_version should be a list'
+    
+    # Expected ansible versions from test data (jobs 1-4 and 6, job 5 is filtered out):
+    # Job 1: 2.9.0
+    # Job 2: 2.10.0
+    # Job 3: 2.11.0
+    # Job 4: 2.12.0
+    # Job 6: 2.14.0
+    # So we should have 5 ansible versions
+    assert len(jobs_by_ansible_version_list) == 5, f'Should have 5 ansible versions, got {len(jobs_by_ansible_version_list)}'
+
+    # Find ansible version entries
+    version_2_9_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.9.0'), None)
+    version_2_10_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.10.0'), None)
+    version_2_11_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.11.0'), None)
+    version_2_12_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.12.0'), None)
+    version_2_14_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.14.0'), None)
+
+    assert version_2_9_0 is not None, 'Should have ansible_version 2.9.0'
+    assert version_2_10_0 is not None, 'Should have ansible_version 2.10.0'
+    assert version_2_11_0 is not None, 'Should have ansible_version 2.11.0'
+    assert version_2_12_0 is not None, 'Should have ansible_version 2.12.0'
+    assert version_2_14_0 is not None, 'Should have ansible_version 2.14.0'
+
+    # Validate '2.9.0' ansible_version (job 1)
+    assert version_2_9_0['jobs_total'] == 1, '2.9.0 should have 1 job'
+    assert version_2_9_0['jobs_failed_total'] == 0, '2.9.0 should have 0 failed jobs'
+    assert version_2_9_0['jobs_succeeded_total'] == 1, '2.9.0 should have 1 succeeded job'
+    assert version_2_9_0['job_type_total'] == 1, '2.9.0 should have 1 job type (job)'
+    assert version_2_9_0['launch_type_manual_total'] == 1, '2.9.0 should have 1 manual launch type'
+    assert version_2_9_0['job_duration_total_seconds'] == pytest.approx(3.0), '2.9.0 should have 3s total duration'
+    # Should have default host summary fields
+    assert version_2_9_0['unique_hosts_total'] == 0, '2.9.0 should have 0 unique hosts (no job_host_summary merge)'
+
+    # Validate '2.10.0' ansible_version (job 2)
+    assert version_2_10_0['jobs_total'] == 1, '2.10.0 should have 1 job'
+    assert version_2_10_0['jobs_failed_total'] == 1, '2.10.0 should have 1 failed job'
+    assert version_2_10_0['jobs_succeeded_total'] == 0, '2.10.0 should have 0 succeeded jobs'
+    assert version_2_10_0['job_type_total'] == 1, '2.10.0 should have 1 job type (job)'
+    assert version_2_10_0['launch_type_scheduled_total'] == 1, '2.10.0 should have 1 scheduled launch type'
+    assert version_2_10_0['job_duration_total_seconds'] == pytest.approx(5.0), '2.10.0 should have 5s total duration'
+    # Should have default host summary fields
+    assert version_2_10_0['unique_hosts_total'] == 0, '2.10.0 should have 0 unique hosts (no job_host_summary merge)'
+
+    # Validate '2.11.0' ansible_version (job 3)
+    assert version_2_11_0['jobs_total'] == 1, '2.11.0 should have 1 job'
+    assert version_2_11_0['jobs_failed_total'] == 0, '2.11.0 should have 0 failed jobs'
+    assert version_2_11_0['jobs_succeeded_total'] == 1, '2.11.0 should have 1 succeeded job'
+    assert version_2_11_0['job_type_total'] == 1, '2.11.0 should have 1 job type (workflowjob)'
+    assert version_2_11_0['launch_type_workflow_total'] == 1, '2.11.0 should have 1 workflow launch type'
+    assert version_2_11_0['job_duration_total_seconds'] == pytest.approx(7.0), '2.11.0 should have 7s total duration'
+    # Should have default host summary fields
+    assert version_2_11_0['unique_hosts_total'] == 0, '2.11.0 should have 0 unique hosts (no job_host_summary merge)'
+
+    # Validate '2.12.0' ansible_version (job 4)
+    assert version_2_12_0['jobs_total'] == 1, '2.12.0 should have 1 job'
+    assert version_2_12_0['jobs_failed_total'] == 0, '2.12.0 should have 0 failed jobs'
+    assert version_2_12_0['jobs_succeeded_total'] == 1, '2.12.0 should have 1 succeeded job'
+    assert version_2_12_0['job_type_total'] == 1, '2.12.0 should have 1 job type (job)'
+    assert version_2_12_0['launch_type_callback_total'] == 1, '2.12.0 should have 1 callback launch type'
+    assert version_2_12_0['job_duration_total_seconds'] == pytest.approx(2.0), '2.12.0 should have 2s total duration'
+    # Should have default host summary fields
+    assert version_2_12_0['unique_hosts_total'] == 0, '2.12.0 should have 0 unique hosts (no job_host_summary merge)'
+
+    # Validate '2.14.0' ansible_version (job 6)
+    assert version_2_14_0['jobs_total'] == 1, '2.14.0 should have 1 job'
+    assert version_2_14_0['jobs_failed_total'] == 1, '2.14.0 should have 1 failed job'
+    assert version_2_14_0['jobs_succeeded_total'] == 0, '2.14.0 should have 0 succeeded jobs'
+    assert version_2_14_0['jobs_never_started_total'] == 1, '2.14.0 should have 1 never started job'
+    assert version_2_14_0['job_type_total'] == 1, '2.14.0 should have 1 job type (adhoccommand)'
+    assert version_2_14_0['launch_type_scheduled_total'] == 1, '2.14.0 should have 1 scheduled launch type'
+    assert version_2_14_0['job_duration_total_seconds'] == pytest.approx(0.0), '2.14.0 should have 0s total duration'
+    # Should have default host summary fields
+    assert version_2_14_0['unique_hosts_total'] == 0, '2.14.0 should have 0 unique hosts (no job_host_summary merge)'
+
+    # Verify that job_type_total is present (counts distinct job types per ansible_version)
+    assert 'job_type_total' in version_2_9_0, 'Should have job_type_total field'
+    assert 'job_type_total' in version_2_10_0, 'Should have job_type_total field'
+    assert 'job_type_total' in version_2_11_0, 'Should have job_type_total field'
+    assert 'job_type_total' in version_2_12_0, 'Should have job_type_total field'
+    assert 'job_type_total' in version_2_14_0, 'Should have job_type_total field'
+
+    # Verify that launch_type_*_total fields are present (since we're grouping by ansible_version)
+    assert 'launch_type_manual_total' in version_2_9_0, 'Should have launch_type_manual_total field'
+    assert 'launch_type_scheduled_total' in version_2_10_0, 'Should have launch_type_scheduled_total field'
+    assert 'launch_type_workflow_total' in version_2_11_0, 'Should have launch_type_workflow_total field'
+    assert 'launch_type_callback_total' in version_2_12_0, 'Should have launch_type_callback_total field'
+    assert 'launch_type_scheduled_total' in version_2_14_0, 'Should have launch_type_scheduled_total field'
+
+    # Verify totals match between all groupings
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == result['statistics']['jobs_total'], (
+    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in jobs_by_ansible_version_list)
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == result['statistics']['jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
-        f'jobs_by_launch_type={total_jobs_by_launch_type}, statistics={result["statistics"]["jobs_total"]}'
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
+        f'statistics={result["statistics"]["jobs_total"]}'
     )
 
 
