@@ -188,10 +188,19 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .agg(
                 jobs_total=('id', 'nunique'),
                 jobs_failed_total=('failed', 'sum'),
+                jobs_successful_total=('failed', lambda x: (~x).sum()),
                 jobs_never_started_total=('started', lambda x: x.isna().sum()),
                 job_duration_maximum_seconds=('job_duration_seconds', 'max'),
                 job_duration_minimum_seconds=('job_duration_seconds', 'min'),
                 job_duration_total_seconds=('job_duration_seconds', 'sum'),
+                jobs_successful_duration_total_seconds=(
+                    'job_duration_seconds',
+                    lambda x: x[~dataframe.loc[x.index, 'failed']].sum(),
+                ),
+                jobs_failed_duration_total_seconds=(
+                    'job_duration_seconds',
+                    lambda x: x[dataframe.loc[x.index, 'failed']].sum(),
+                ),
                 job_waiting_time_maximum_seconds=('job_waiting_time_seconds', 'max'),
                 job_waiting_time_minimum_seconds=('job_waiting_time_seconds', 'min'),
                 job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
