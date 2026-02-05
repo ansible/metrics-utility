@@ -126,15 +126,27 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         """
         This function will create first level aggregation of the job dataframe, the result is json
 
-        Aggregations grouped by job_type (model):
-        - Number of jobs executed
-        - Number of jobs failed
-        - Number of jobs that succeeded
-        - Number of distinct templates
+        Creates three groupings:
+        1. Aggregations grouped by job_type (model):
+           - Number of jobs executed
+           - Number of jobs failed
+           - Number of jobs that succeeded
+           - Number of distinct templates
+           - Launch type counts (manual, scheduled, etc.)
+           - Job duration and waiting time statistics
 
-        Job duration maximum seconds - by job_type
-        Job duration minimum seconds - by job_type
-        Job total seconds by job_type
+        2. Aggregations grouped by launch_type:
+           - Same statistics as above
+           - Job type count (distinct job types per launch type)
+
+        3. Aggregations grouped by ansible_version:
+           - Same statistics as above
+           - Job type count (distinct job types per ansible version)
+           - Launch type counts (manual, scheduled, etc.)
+
+        Job duration maximum seconds - by grouping
+        Job duration minimum seconds - by grouping
+        Job total seconds by grouping
         The same as above but for waiting times
 
         Active number of customer by Controller Version - this will be skipped for now
@@ -179,6 +191,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         if 'failed' in dataframe.columns:
             dataframe['failed'] = dataframe['failed'].replace({'t': True, 'f': False}).fillna(False).astype(bool)
 
+        # Normalize ansible_version: treat empty strings as NaN for consistent grouping
+        # pandas groupby will group all NaN values together
+        if 'ansible_version' in dataframe.columns:
+            dataframe['ansible_version'] = dataframe['ansible_version'].replace('', pd.NA)
+
         # compute job duration in seconds, .dt.total_seconds()
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['created']).dt.total_seconds()
@@ -219,10 +236,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             ),
         }
 
-        # Aggregations grouped by job_type (model)
-        # Add launch_type counts specific to job_type grouping
-        aggregations_by_job_type_dict = common_aggregations.copy()
-        aggregations_by_job_type_dict.update({
+        # Launch type aggregations - reusable across multiple groupings
+        launch_type_aggregations = {
             'launch_type_manual_total': ('launch_type', lambda x: (x == 'manual').sum()),
             'launch_type_relaunch_total': ('launch_type', lambda x: (x == 'relaunch').sum()),
             'launch_type_callback_total': ('launch_type', lambda x: (x == 'callback').sum()),
@@ -235,7 +250,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'launch_type_api_total': ('launch_type', lambda x: (x == 'api').sum()),
             'launch_type_system_total': ('launch_type', lambda x: (x == 'system').sum()),
             'launch_type_unknown_total': ('launch_type', lambda x: (x == 'unknown').sum()),
-        })
+        }
+
+        # Aggregations grouped by job_type (model)
+        # Add launch_type counts specific to job_type grouping
+        aggregations_by_job_type_dict = common_aggregations.copy()
+        aggregations_by_job_type_dict.update(launch_type_aggregations)
 
         aggregations_by_job_type = (
             dataframe.groupby('model')
@@ -259,6 +279,21 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
+        # Aggregations grouped by ansible_version
+        # Add both job_type_total and launch_type counts (since we're grouping by ansible_version)
+        aggregations_by_ansible_version_dict = common_aggregations.copy()
+        aggregations_by_ansible_version_dict.update({
+            'job_type_total': ('model', 'nunique'),  # Count distinct job types
+        })
+        aggregations_by_ansible_version_dict.update(launch_type_aggregations)
+
+        aggregations_by_ansible_version = (
+            dataframe.groupby('ansible_version')
+            .agg(**aggregations_by_ansible_version_dict)
+            .reset_index()
+            .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
+        )
+
         organizations_total = dataframe['organization_name'].nunique()
         ansible_version = dataframe['ansible_version'].iloc[0] if len(dataframe) > 0 else None
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
@@ -272,6 +307,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             # pandas.DataFrame
             'aggregations_by_job_type': aggregations_by_job_type,
             'aggregations_by_launch_type': aggregations_by_launch_type,
+            'aggregations_by_ansible_version': aggregations_by_ansible_version,
             'organizations_total': organizations_total,
             'ansible_version': ansible_version,
             'forks_total': forks_total,
@@ -283,6 +319,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
             'by_launch_type': aggregations_by_launch_type.to_dict(orient='records'),
+            'by_ansible_version': aggregations_by_ansible_version.to_dict(orient='records'),
             'organizations_total': organizations_total,
             'ansible_version': ansible_version,
             'forks_total': forks_total,
