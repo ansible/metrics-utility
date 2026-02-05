@@ -1,7 +1,5 @@
 # Metrics Utility Collectors: Database Tables and Partition Analysis
 
-**Related Issue**: [AAP-64936](https://issues.redhat.com/browse/AAP-64936) - Investigate collectors & rollup functionality
-
 **Last Updated**: February 2026
 
 ## Overview
@@ -31,10 +29,8 @@ The following tables in Ansible Automation Platform Controller are partitioned b
 | Table Name | Partition Key | Partition Type | Partition Naming Pattern |
 |------------|---------------|----------------|-------------------------|
 | `main_jobevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_jobevent_YYYYMMDD_HH` |
-| `main_adhoccommandevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_adhoccommandevent_YYYYMMDD_HH` |
-| `main_inventoryupdateevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_inventoryupdateevent_YYYYMMDD_HH` |
-| `main_projectupdateevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_projectupdateevent_YYYYMMDD_HH` |
-| `main_systemjobevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_systemjobevent_YYYYMMDD_HH` |
+
+**Note**: While other event tables (`main_adhoccommandevent`, `main_inventoryupdateevent`, `main_projectupdateevent`, `main_systemjobevent`) are also partitioned in the Controller database, **metrics-utility collectors do not currently access these tables**, so they are not documented here.
 
 ### Partition Structure
 
@@ -529,7 +525,6 @@ All collectors leverage indexes where available:
 
 ## References
 
-- [AAP-64936](https://issues.redhat.com/browse/AAP-64936) - Investigate collectors & rollup functionality
 - PostgreSQL Partition Pruning: https://www.postgresql.org/docs/current/ddl-partitioning.html#DDL-PARTITION-PRUNING
 - Collector Source Code: `metrics_utility/library/collectors/controller/`
 - Partition Schema: `tools/docker/latest.sql`
