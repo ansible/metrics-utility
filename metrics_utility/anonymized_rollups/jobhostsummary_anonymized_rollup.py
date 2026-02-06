@@ -56,6 +56,11 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 'aggregated': dataframe,
             }
 
+        # Check if job_remote_id column exists
+        if 'job_remote_id' not in dataframe.columns:
+            # If job_remote_id is missing, create a default value
+            dataframe['job_remote_id'] = None
+
         # Check if model column exists (for backward compatibility)
         if 'model' not in dataframe.columns:
             # If model is missing, create a default 'unknown' value
@@ -71,10 +76,10 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if 'launch_type' not in dataframe.columns:
             dataframe['launch_type'] = 'unknown'
 
-        # Group by model, launch_type, and ansible_version to preserve all dimensions
-        # This allows us to aggregate by each dimension separately in base()
+        # Group by job_remote_id, model, launch_type, and ansible_version to preserve all dimensions
+        # This allows us to aggregate by each dimension separately in base() while tracking jobs
         aggregated = (
-            dataframe.groupby(['model', 'launch_type', 'ansible_version'])
+            dataframe.groupby(['job_remote_id', 'model', 'launch_type', 'ansible_version'])
             .agg(
                 dark_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
