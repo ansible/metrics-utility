@@ -81,4 +81,6 @@ uv run pytest -s {file name}
 
 8) Validate if tests input data and output report match by how ansible works - if jobs, job host summaries, events fit together - if reports match of whats in the input data
 
+9) Let me know if you find any logical problem between real test run (the real output data) and how ansible should work
+
 
