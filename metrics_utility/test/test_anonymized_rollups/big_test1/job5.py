@@ -68,9 +68,6 @@ jobs = [
         'created': '2024-01-15 13:59:30.000000+00',  # 30s wait
         'model': 'job',
         'launch_type': 'manual',
-        'number_of_jobs_executed': 1,
-        'number_of_jobs_failed': 0,
-        'number_of_jobs_succeeded': 1,
         'forks': 10,
         'inventory_name': 'test-inventory',
         'scm_type': 'git',
