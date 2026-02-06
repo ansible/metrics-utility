@@ -22,6 +22,17 @@ playbook: playbook2.yml
 - community.general.archive
 - community.weird.git
 
+## T3
+scm type: manual
+job type: workflow
+playbook: playbook2.yml
+
+### list of tasks and their modules
+- ansible.builtin.copy
+- community.general.git
+- community.general.archive
+- community.weird.git
+
 # Hosts
 Host1
 Host2
@@ -55,7 +66,7 @@ How to create new job data:
 
 1) Get inspiration from existing jobs like job1.py
 
-2) Pick job template from this document
+2) Pick random job template from this document, determine its launch type randomly, determine randomly its version - but everything must fit how ansible works
 
 3) Select hosts that you should run at from this document
 
