@@ -172,7 +172,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'job' type counts (ids 1, 2, 4 - 3 jobs total)
     assert rec_job['jobs_total'] == 3
     assert rec_job['jobs_failed_total'] == 1
-    assert rec_job['jobs_succeeded_total'] == 2
     assert rec_job['jobs_never_started_total'] == 0
     assert rec_job['templates_total'] == 1  # All from template T1
 
@@ -189,7 +188,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'workflowjob' type counts (id 3 - 1 job)
     assert rec_workflowjob['jobs_total'] == 1
     assert rec_workflowjob['jobs_failed_total'] == 0
-    assert rec_workflowjob['jobs_succeeded_total'] == 1
     assert rec_workflowjob['jobs_never_started_total'] == 0
     assert rec_workflowjob['templates_total'] == 1  # From template T2
 
@@ -206,7 +204,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'adhoccommand' type counts (id 6 - 1 job that never started)
     assert rec_adhoccommand['jobs_total'] == 1
     assert rec_adhoccommand['jobs_failed_total'] == 1
-    assert rec_adhoccommand['jobs_succeeded_total'] == 0
     assert rec_adhoccommand['jobs_never_started_total'] == 1
     assert rec_adhoccommand['templates_total'] == 1  # From template T3
 
@@ -268,7 +265,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'manual' launch_type (job 1)
     assert rec_manual['jobs_total'] == 1
     assert rec_manual['jobs_failed_total'] == 0
-    assert rec_manual['jobs_succeeded_total'] == 1
     assert rec_manual['jobs_never_started_total'] == 0
     assert rec_manual['job_type_total'] == 1  # Only 'job' type
     assert rec_manual['templates_total'] == 1  # Template T1
@@ -278,7 +274,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'scheduled' launch_type (jobs 2 and 6)
     assert rec_scheduled['jobs_total'] == 2
     assert rec_scheduled['jobs_failed_total'] == 2  # Job 2 failed, job 6 failed (both have failed=1)
-    assert rec_scheduled['jobs_succeeded_total'] == 0
     assert rec_scheduled['jobs_never_started_total'] == 1  # Job 6 never started
     assert rec_scheduled['job_type_total'] == 2  # 'job' (job 2) and 'adhoccommand' (job 6)
     assert rec_scheduled['templates_total'] == 2  # Template T1 (job 2) and T3 (job 6)
@@ -289,7 +284,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'workflow' launch_type (job 3)
     assert rec_workflow['jobs_total'] == 1
     assert rec_workflow['jobs_failed_total'] == 0
-    assert rec_workflow['jobs_succeeded_total'] == 1
     assert rec_workflow['jobs_never_started_total'] == 0
     assert rec_workflow['job_type_total'] == 1  # Only 'workflowjob' type
     assert rec_workflow['templates_total'] == 1  # Template T2
@@ -299,7 +293,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # 'callback' launch_type (job 4)
     assert rec_callback['jobs_total'] == 1
     assert rec_callback['jobs_failed_total'] == 0
-    assert rec_callback['jobs_succeeded_total'] == 1
     assert rec_callback['jobs_never_started_total'] == 0
     assert rec_callback['job_type_total'] == 1  # Only 'job' type
     assert rec_callback['templates_total'] == 1  # Template T1
@@ -380,7 +373,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # '2.9.0' ansible_version (job 1)
     assert rec_2_9_0['jobs_total'] == 1
     assert rec_2_9_0['jobs_failed_total'] == 0
-    assert rec_2_9_0['jobs_succeeded_total'] == 1
     assert rec_2_9_0['jobs_never_started_total'] == 0
     assert rec_2_9_0['job_type_total'] == 1  # Only 'job' type
     assert rec_2_9_0['launch_type_manual_total'] == 1  # manual launch type
@@ -391,7 +383,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # '2.10.0' ansible_version (job 2)
     assert rec_2_10_0['jobs_total'] == 1
     assert rec_2_10_0['jobs_failed_total'] == 1
-    assert rec_2_10_0['jobs_succeeded_total'] == 0
     assert rec_2_10_0['jobs_never_started_total'] == 0
     assert rec_2_10_0['job_type_total'] == 1  # Only 'job' type
     assert rec_2_10_0['launch_type_scheduled_total'] == 1  # scheduled launch type
@@ -402,7 +393,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # '2.11.0' ansible_version (job 3)
     assert rec_2_11_0['jobs_total'] == 1
     assert rec_2_11_0['jobs_failed_total'] == 0
-    assert rec_2_11_0['jobs_succeeded_total'] == 1
     assert rec_2_11_0['jobs_never_started_total'] == 0
     assert rec_2_11_0['job_type_total'] == 1  # Only 'workflowjob' type
     assert rec_2_11_0['launch_type_workflow_total'] == 1  # workflow launch type
@@ -413,7 +403,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # '2.12.0' ansible_version (job 4)
     assert rec_2_12_0['jobs_total'] == 1
     assert rec_2_12_0['jobs_failed_total'] == 0
-    assert rec_2_12_0['jobs_succeeded_total'] == 1
     assert rec_2_12_0['jobs_never_started_total'] == 0
     assert rec_2_12_0['job_type_total'] == 1  # Only 'job' type
     assert rec_2_12_0['launch_type_callback_total'] == 1  # callback launch type
@@ -424,7 +413,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # '2.14.0' ansible_version (job 6)
     assert rec_2_14_0['jobs_total'] == 1
     assert rec_2_14_0['jobs_failed_total'] == 1
-    assert rec_2_14_0['jobs_succeeded_total'] == 0
     assert rec_2_14_0['jobs_never_started_total'] == 1  # Job 6 never started
     assert rec_2_14_0['job_type_total'] == 1  # Only 'adhoccommand' type
     assert rec_2_14_0['launch_type_scheduled_total'] == 1  # scheduled launch type

@@ -132,7 +132,6 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'job_type' in job
             assert 'jobs_total' in job
             assert 'jobs_failed_total' in job
-            assert 'jobs_succeeded_total' in job
             assert 'templates_total' in job
             # Host summary fields (merged from job_host_summary)
             assert 'dark_total' in job
@@ -149,7 +148,6 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'launch_type' in job
             assert 'jobs_total' in job
             assert 'jobs_failed_total' in job
-            assert 'jobs_succeeded_total' in job
             assert 'templates_total' in job
             assert 'job_type_total' in job  # Count of distinct job types
             # Host summary fields (default values, not merged from job_host_summary)
@@ -170,7 +168,6 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'ansible_version' in job
             assert 'jobs_total' in job
             assert 'jobs_failed_total' in job
-            assert 'jobs_succeeded_total' in job
             assert 'templates_total' in job
             assert 'job_type_total' in job  # Count of distinct job types
             # Host summary fields (default values, not merged from job_host_summary)
@@ -244,8 +241,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert job['jobs_total'] == 3, 'Job type should have 3 jobs'
     assert statistics['job_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
     assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
-    assert job['jobs_succeeded_total'] == 3, 'Should have 3 succeeded jobs'
-    assert job['jobs_succeeded_total'] + job['jobs_failed_total'] == job['jobs_total'], 'Succeeded + failed should equal total'
     # job_type should be 'job' from django_content_type.model
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
 

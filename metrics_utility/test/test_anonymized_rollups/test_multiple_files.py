@@ -268,7 +268,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     job_type = job_type_jobs[0]
     assert job_type['jobs_total'] == 3
     assert job_type['jobs_failed_total'] == 1
-    assert job_type['jobs_succeeded_total'] == 2
     assert job_type['jobs_never_started_total'] == 0
     # Check timing statistics
     assert job_type['job_duration_total_seconds'] == pytest.approx(10.0)
@@ -292,7 +291,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     workflowjob_type = workflowjob_type_jobs[0]
     assert workflowjob_type['jobs_total'] == 1
     assert workflowjob_type['jobs_failed_total'] == 0
-    assert workflowjob_type['jobs_succeeded_total'] == 1
     assert workflowjob_type['job_duration_total_seconds'] == pytest.approx(7.0)
     assert workflowjob_type['job_waiting_time_total_seconds'] == pytest.approx(4.0)
     # Check job_type field
@@ -310,7 +308,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     adhoccommand_type = adhoccommand_type_jobs[0]
     assert adhoccommand_type['jobs_total'] == 1
     assert adhoccommand_type['jobs_failed_total'] == 1
-    assert adhoccommand_type['jobs_succeeded_total'] == 0
     assert adhoccommand_type['job_duration_total_seconds'] == pytest.approx(0.0)
     assert adhoccommand_type['job_waiting_time_total_seconds'] == pytest.approx(0.0)
     # Check job_type field
@@ -560,7 +557,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate 'manual' launch_type (job 1)
     assert manual_entry['jobs_total'] == 1, 'manual should have 1 job'
     assert manual_entry['jobs_failed_total'] == 0, 'manual should have 0 failed jobs'
-    assert manual_entry['jobs_succeeded_total'] == 1, 'manual should have 1 succeeded job'
     assert manual_entry['job_type_total'] == 1, 'manual should have 1 job type (job)'
     assert manual_entry['job_duration_total_seconds'] == pytest.approx(3.0), 'manual should have 3s total duration'
     # job_host_summary is now properly merged by launch_type, so we should have actual values if data exists
@@ -571,7 +567,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate 'scheduled' launch_type (jobs 2 and 6)
     assert scheduled_entry['jobs_total'] == 2, 'scheduled should have 2 jobs'
     assert scheduled_entry['jobs_failed_total'] == 2, 'scheduled should have 2 failed jobs (both job 2 and job 6 have failed=1)'
-    assert scheduled_entry['jobs_succeeded_total'] == 0, 'scheduled should have 0 succeeded jobs'
     assert scheduled_entry['jobs_never_started_total'] == 1, 'scheduled should have 1 never started job'
     assert scheduled_entry['job_type_total'] == 2, 'scheduled should have 2 job types (job and adhoccommand)'
     assert scheduled_entry['job_duration_total_seconds'] == pytest.approx(5.0), 'scheduled should have 5s total duration'
@@ -581,7 +576,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate 'workflow' launch_type (job 3)
     assert workflow_entry['jobs_total'] == 1, 'workflow should have 1 job'
     assert workflow_entry['jobs_failed_total'] == 0, 'workflow should have 0 failed jobs'
-    assert workflow_entry['jobs_succeeded_total'] == 1, 'workflow should have 1 succeeded job'
     assert workflow_entry['job_type_total'] == 1, 'workflow should have 1 job type (workflowjob)'
     assert workflow_entry['job_duration_total_seconds'] == pytest.approx(7.0), 'workflow should have 7s total duration'
     # job_host_summary is now properly merged by launch_type
@@ -590,7 +584,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate 'callback' launch_type (job 4)
     assert callback_entry['jobs_total'] == 1, 'callback should have 1 job'
     assert callback_entry['jobs_failed_total'] == 0, 'callback should have 0 failed jobs'
-    assert callback_entry['jobs_succeeded_total'] == 1, 'callback should have 1 succeeded job'
     assert callback_entry['job_type_total'] == 1, 'callback should have 1 job type (job)'
     assert callback_entry['job_duration_total_seconds'] == pytest.approx(2.0), 'callback should have 2s total duration'
     # job_host_summary is now properly merged by launch_type
@@ -659,7 +652,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate '2.9.0' ansible_version (job 1)
     assert version_2_9_0['jobs_total'] == 1, '2.9.0 should have 1 job'
     assert version_2_9_0['jobs_failed_total'] == 0, '2.9.0 should have 0 failed jobs'
-    assert version_2_9_0['jobs_succeeded_total'] == 1, '2.9.0 should have 1 succeeded job'
     assert version_2_9_0['job_type_total'] == 1, '2.9.0 should have 1 job type (job)'
     assert version_2_9_0['launch_type_manual_total'] == 1, '2.9.0 should have 1 manual launch type'
     assert version_2_9_0['job_duration_total_seconds'] == pytest.approx(3.0), '2.9.0 should have 3s total duration'
@@ -669,7 +661,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate '2.10.0' ansible_version (job 2)
     assert version_2_10_0['jobs_total'] == 1, '2.10.0 should have 1 job'
     assert version_2_10_0['jobs_failed_total'] == 1, '2.10.0 should have 1 failed job'
-    assert version_2_10_0['jobs_succeeded_total'] == 0, '2.10.0 should have 0 succeeded jobs'
     assert version_2_10_0['job_type_total'] == 1, '2.10.0 should have 1 job type (job)'
     assert version_2_10_0['launch_type_scheduled_total'] == 1, '2.10.0 should have 1 scheduled launch type'
     assert version_2_10_0['job_duration_total_seconds'] == pytest.approx(5.0), '2.10.0 should have 5s total duration'
@@ -679,7 +670,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate '2.11.0' ansible_version (job 3)
     assert version_2_11_0['jobs_total'] == 1, '2.11.0 should have 1 job'
     assert version_2_11_0['jobs_failed_total'] == 0, '2.11.0 should have 0 failed jobs'
-    assert version_2_11_0['jobs_succeeded_total'] == 1, '2.11.0 should have 1 succeeded job'
     assert version_2_11_0['job_type_total'] == 1, '2.11.0 should have 1 job type (workflowjob)'
     assert version_2_11_0['launch_type_workflow_total'] == 1, '2.11.0 should have 1 workflow launch type'
     assert version_2_11_0['job_duration_total_seconds'] == pytest.approx(7.0), '2.11.0 should have 7s total duration'
@@ -689,7 +679,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate '2.12.0' ansible_version (job 4)
     assert version_2_12_0['jobs_total'] == 1, '2.12.0 should have 1 job'
     assert version_2_12_0['jobs_failed_total'] == 0, '2.12.0 should have 0 failed jobs'
-    assert version_2_12_0['jobs_succeeded_total'] == 1, '2.12.0 should have 1 succeeded job'
     assert version_2_12_0['job_type_total'] == 1, '2.12.0 should have 1 job type (job)'
     assert version_2_12_0['launch_type_callback_total'] == 1, '2.12.0 should have 1 callback launch type'
     assert version_2_12_0['job_duration_total_seconds'] == pytest.approx(2.0), '2.12.0 should have 2s total duration'
@@ -699,7 +688,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate '2.14.0' ansible_version (job 6)
     assert version_2_14_0['jobs_total'] == 1, '2.14.0 should have 1 job'
     assert version_2_14_0['jobs_failed_total'] == 1, '2.14.0 should have 1 failed job'
-    assert version_2_14_0['jobs_succeeded_total'] == 0, '2.14.0 should have 0 succeeded jobs'
     assert version_2_14_0['jobs_never_started_total'] == 1, '2.14.0 should have 1 never started job'
     assert version_2_14_0['job_type_total'] == 1, '2.14.0 should have 1 job type (adhoccommand)'
     assert version_2_14_0['launch_type_scheduled_total'] == 1, '2.14.0 should have 1 scheduled launch type'

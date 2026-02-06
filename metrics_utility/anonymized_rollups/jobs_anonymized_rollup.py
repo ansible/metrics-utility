@@ -268,7 +268,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .agg(**aggregations_by_job_type_dict)
             .reset_index()
             .rename(columns={'model': 'job_type'})
-            .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
         # Aggregations grouped by launch_type
@@ -283,7 +282,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             dataframe.groupby('launch_type')
             .agg(**aggregations_by_launch_type_dict)
             .reset_index()
-            .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
         # Aggregations grouped by ansible_version
@@ -298,7 +296,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             dataframe.groupby('ansible_version')
             .agg(**aggregations_by_ansible_version_dict)
             .reset_index()
-            .assign(jobs_succeeded_total=lambda x: x['jobs_total'] - x['jobs_failed_total'])
         )
 
         organizations_total = dataframe['organization_name'].nunique()
