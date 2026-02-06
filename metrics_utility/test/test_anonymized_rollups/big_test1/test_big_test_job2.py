@@ -10,10 +10,10 @@ This test verifies anonymized rollups for a single job with:
 Host outcomes:
 - Host1: all 3 tasks ok (successful)
 - Host2: Task 1 ok, Task 2 failed then ok (retry successful), Task 3 ok (successful)
-- Host3: Task 1 failed then ok (retry successful), Task 2 dark (unreachable), Task 3 ok (successful)
+- Host3: Task 1 failed then ok (retry successful), Task 2 dark (unreachable), Task 3 ok (unreachable - has dark task)
 - Host4: Task 1 ok, Task 2 ok, Task 3 failed (1st attempt) -> failed (2nd attempt) -> ok (retry successful on 3rd attempt) (successful)
 
-Job Final Outcome: successful (all hosts succeeded)
+Job Final Outcome: successful (job succeeded, but Host3 is unreachable due to dark task)
 """
 
 import json
@@ -87,9 +87,9 @@ def test_big_test2():
         assert job_type_data['ok_total'] == 11, f'Should have 11 ok tasks total, got {job_type_data["ok_total"]}'
         assert job_type_data['failures_total'] == 0, f'Should have 0 failures total, got {job_type_data["failures_total"]}'
         assert job_type_data['dark_total'] == 1, f'Should have 1 dark total, got {job_type_data["dark_total"]}'
-        assert job_type_data['hosts_successful_total'] == 4, f'Should have 4 successful hosts, got {job_type_data["hosts_successful_total"]}'
+        assert job_type_data['hosts_successful_total'] == 3, f'Should have 3 successful hosts, got {job_type_data["hosts_successful_total"]}'
         assert job_type_data['hosts_failed_total'] == 0, f'Should have 0 failed hosts, got {job_type_data["hosts_failed_total"]}'
-        assert job_type_data['hosts_unreachable_total'] == 0, f'Should have 0 unreachable hosts, got {job_type_data["hosts_unreachable_total"]}'
+        assert job_type_data['hosts_unreachable_total'] == 1, f'Should have 1 unreachable host, got {job_type_data["hosts_unreachable_total"]}'
 
         # Verify by_launch_type aggregation (in jobs_by_launch_type)
         assert 'jobs_by_launch_type' in result, 'result should have jobs_by_launch_type'
