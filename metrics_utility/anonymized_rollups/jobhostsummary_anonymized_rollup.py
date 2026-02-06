@@ -41,12 +41,14 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     # ignored
     # rescued
     # model (job_type)
+    # ansible_version
+    # launch_type
 
     def prepare(self, dataframe):
         # Count all records before processing
         job_host_pairs_total = len(dataframe)
 
-        # Group by job_type (model) and sum task columns to reduce data volume early
+        # Group by job_type (model), launch_type, and ansible_version and sum task columns to reduce data volume early
         # This significantly improves performance when processing large batches
         if dataframe.empty:
             return {
@@ -59,9 +61,20 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             # If model is missing, create a default 'unknown' value
             dataframe['model'] = 'unknown'
 
-        # Group by job_type (model) and sum task columns
+        # Normalize ansible_version: treat empty strings as NaN for consistent grouping
+        if 'ansible_version' in dataframe.columns:
+            dataframe['ansible_version'] = dataframe['ansible_version'].replace('', pd.NA)
+        else:
+            dataframe['ansible_version'] = pd.NA
+
+        # Handle launch_type: if missing, set to 'unknown'
+        if 'launch_type' not in dataframe.columns:
+            dataframe['launch_type'] = 'unknown'
+
+        # Group by model, launch_type, and ansible_version to preserve all dimensions
+        # This allows us to aggregate by each dimension separately in base()
         aggregated = (
-            dataframe.groupby('model')
+            dataframe.groupby(['model', 'launch_type', 'ansible_version'])
             .agg(
                 dark_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
@@ -82,10 +95,20 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def base(self, data):
         """
-        Aggregations grouped by job_type (model):
-        - Number of tasks executed (sum of all tasks executed per job_type)
-        - Success ratio of tasks executed (ratio between ok and failed tasks (and others))
-        - Unique hosts per job_type
+        Aggregations grouped by:
+        1. job_type (model):
+           - Number of tasks executed (sum of all tasks executed per job_type)
+           - Success ratio of tasks executed (ratio between ok and failed tasks (and others))
+           - Unique hosts per job_type
+
+        2. launch_type:
+           - Same statistics as above
+           - Job type count (distinct job types per launch type)
+
+        3. ansible_version:
+           - Same statistics as above
+           - Job type count (distinct job types per ansible version)
+           - Launch type counts
 
         Success rate and average - this can compute SaaS team from the metrics
 
@@ -97,6 +120,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'json': {
                     'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_ansible_version': [],
                     'job_host_pairs_total': 0,
                 },
                 'rollup': {'aggregated': pd.DataFrame(), 'job_host_pairs_total': 0},
@@ -111,13 +136,14 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'json': {
                     'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_ansible_version': [],
                     'job_host_pairs_total': job_host_pairs_total,
                 },
                 'rollup': {'aggregated': dataframe, 'job_host_pairs_total': job_host_pairs_total},
             }
 
-        # Group by job_type and aggregate across all batches
-        # Union unique_hosts sets for each job_type
+        # Union unique_hosts sets for aggregation
         def union_hosts(series):
             """Union all sets in the series"""
             result = set()
@@ -128,17 +154,48 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     result.update(hosts_set)
             return result
 
+        # Common aggregation dictionary
+        common_aggregations = {
+            'dark_total': ('dark_total', 'sum'),
+            'failures_total': ('failures_total', 'sum'),
+            'ok_total': ('ok_total', 'sum'),
+            'skipped_total': ('skipped_total', 'sum'),
+            'ignored_total': ('ignored_total', 'sum'),
+            'rescued_total': ('rescued_total', 'sum'),
+            'unique_hosts': ('unique_hosts', union_hosts),
+        }
+
+        # Aggregations grouped by job_type
         aggregations_by_job_type = (
             dataframe.groupby('job_type')
-            .agg(
-                dark_total=('dark_total', 'sum'),
-                failures_total=('failures_total', 'sum'),
-                ok_total=('ok_total', 'sum'),
-                skipped_total=('skipped_total', 'sum'),
-                ignored_total=('ignored_total', 'sum'),
-                rescued_total=('rescued_total', 'sum'),
-                unique_hosts=('unique_hosts', union_hosts),
-            )
+            .agg(**common_aggregations)
+            .reset_index()
+            .assign(unique_hosts_total=lambda x: x['unique_hosts'].apply(len))
+            .drop(columns=['unique_hosts'])
+        )
+
+        # Aggregations grouped by launch_type
+        # Add job_type_total to count distinct job types per launch type
+        aggregations_by_launch_type_dict = common_aggregations.copy()
+        aggregations_by_launch_type_dict['job_type_total'] = ('job_type', 'nunique')
+
+        aggregations_by_launch_type = (
+            dataframe.groupby('launch_type')
+            .agg(**aggregations_by_launch_type_dict)
+            .reset_index()
+            .assign(unique_hosts_total=lambda x: x['unique_hosts'].apply(len))
+            .drop(columns=['unique_hosts'])
+        )
+
+        # Aggregations grouped by ansible_version
+        # Add job_type_total and launch_type counts
+        aggregations_by_ansible_version_dict = common_aggregations.copy()
+        aggregations_by_ansible_version_dict['job_type_total'] = ('job_type', 'nunique')
+        aggregations_by_ansible_version_dict['launch_type_total'] = ('launch_type', 'nunique')
+
+        aggregations_by_ansible_version = (
+            dataframe.groupby('ansible_version')
+            .agg(**aggregations_by_ansible_version_dict)
             .reset_index()
             .assign(unique_hosts_total=lambda x: x['unique_hosts'].apply(len))
             .drop(columns=['unique_hosts'])
@@ -148,12 +205,16 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         rollup_data = {
             # pandas.DataFrame
             'aggregations_by_job_type': aggregations_by_job_type,
+            'aggregations_by_launch_type': aggregations_by_launch_type,
+            'aggregations_by_ansible_version': aggregations_by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
         }
 
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
+            'by_launch_type': aggregations_by_launch_type.to_dict(orient='records'),
+            'by_ansible_version': aggregations_by_ansible_version.to_dict(orient='records'),
             'job_host_pairs_total': job_host_pairs_total,
         }
 

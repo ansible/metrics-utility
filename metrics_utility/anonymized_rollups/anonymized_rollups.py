@@ -104,8 +104,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
-      - jobs_by_launch_type: array (grouped by launch_type, with default host summary fields)
-      - jobs_by_ansible_version: array (grouped by ansible_version, with default host summary fields)
+      - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
+      - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
     """
     events_modules = data.get('events_modules', {})
@@ -124,6 +124,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Calculate unique_hosts_total by summing unique_hosts_total from all job_type groups
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
+    job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
+    job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
     job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
 
@@ -189,7 +191,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         if item and 'collection_name' in item and 'collection_version' in item
     ]
 
-    # 5) Merge job_host_summary and credentials into jobs_by_job_type
+    # 5) Merge job_host_summary into jobs groupings (by_job_type, by_launch_type, by_ansible_version)
     # Create a lookup dict for job_host_summary by job_type
     jhs_lookup: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
 
@@ -230,26 +232,79 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
         jobs_by_job_type_merged.append(merged_job)
 
-    # 5b) Create jobs_by_launch_type (similar structure but grouped by launch_type)
-    # Note: job_host_summary is grouped by job_type, not launch_type, so we can't merge it
-    # We'll use default values for host summary fields
+    # 5b) Merge job_host_summary into jobs_by_launch_type (grouped by launch_type)
+    # Create a lookup dict for job_host_summary by launch_type
+    jhs_launch_type_lookup: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
+
     jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
     jobs_by_launch_type_merged: List[Dict[str, Any]] = []
     for job in jobs_by_launch_type:
+        launch_type = job.get('launch_type')
         merged_job = job.copy()
-        # Add default host summary fields since we can't merge job_host_summary by launch_type
-        merged_job.update(default_host_summary_fields)
+
+        # Add host summary fields from matching job_host_summary entry, or use defaults
+        if launch_type in jhs_launch_type_lookup:
+            jhs_data = jhs_launch_type_lookup[launch_type]
+            merged_job.update(
+                {
+                    'dark_total': jhs_data.get('dark_total', 0),
+                    'failures_total': jhs_data.get('failures_total', 0),
+                    'ok_total': jhs_data.get('ok_total', 0),
+                    'skipped_total': jhs_data.get('skipped_total', 0),
+                    'ignored_total': jhs_data.get('ignored_total', 0),
+                    'rescued_total': jhs_data.get('rescued_total', 0),
+                    'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+                }
+            )
+        else:
+            # No match found, use default values
+            merged_job.update(default_host_summary_fields)
+
         jobs_by_launch_type_merged.append(merged_job)
 
-    # 5c) Create jobs_by_ansible_version (similar structure but grouped by ansible_version)
-    # Note: job_host_summary is grouped by job_type, not ansible_version, so we can't merge it
-    # We'll use default values for host summary fields
+    # 5c) Merge job_host_summary into jobs_by_ansible_version (grouped by ansible_version)
+    # Create a lookup dict for job_host_summary by ansible_version
+    # Handle None/NaN values by converting to string for consistent lookup
+    jhs_ansible_version_lookup: Dict[str, Dict[str, Any]] = {}
+    for jhs in job_host_summary_by_ansible_version:
+        ansible_version_key = jhs.get('ansible_version')
+        # Convert None/NaN to string for consistent lookup
+        if ansible_version_key is None or (isinstance(ansible_version_key, float) and pd.isna(ansible_version_key)):
+            ansible_version_key = 'None'
+        else:
+            ansible_version_key = str(ansible_version_key)
+        jhs_ansible_version_lookup[ansible_version_key] = jhs
+
     jobs_by_ansible_version: List[Dict[str, Any]] = jobs.get('by_ansible_version', []) or []
     jobs_by_ansible_version_merged: List[Dict[str, Any]] = []
     for job in jobs_by_ansible_version:
+        ansible_version = job.get('ansible_version')
         merged_job = job.copy()
-        # Add default host summary fields since we can't merge job_host_summary by ansible_version
-        merged_job.update(default_host_summary_fields)
+
+        # Convert None/NaN to string for consistent lookup
+        if ansible_version is None or (isinstance(ansible_version, float) and pd.isna(ansible_version)):
+            ansible_version_key = 'None'
+        else:
+            ansible_version_key = str(ansible_version)
+
+        # Add host summary fields from matching job_host_summary entry, or use defaults
+        if ansible_version_key in jhs_ansible_version_lookup:
+            jhs_data = jhs_ansible_version_lookup[ansible_version_key]
+            merged_job.update(
+                {
+                    'dark_total': jhs_data.get('dark_total', 0),
+                    'failures_total': jhs_data.get('failures_total', 0),
+                    'ok_total': jhs_data.get('ok_total', 0),
+                    'skipped_total': jhs_data.get('skipped_total', 0),
+                    'ignored_total': jhs_data.get('ignored_total', 0),
+                    'rescued_total': jhs_data.get('rescued_total', 0),
+                    'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+                }
+            )
+        else:
+            # No match found, use default values
+            merged_job.update(default_host_summary_fields)
+
         jobs_by_ansible_version_merged.append(merged_job)
 
     # 6) assemble the flattened object

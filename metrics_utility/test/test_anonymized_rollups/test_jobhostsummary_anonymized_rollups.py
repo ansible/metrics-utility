@@ -18,6 +18,8 @@ jobhostsummary = [
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'manual',
     },
     {
         'dark': 0,
@@ -30,6 +32,8 @@ jobhostsummary = [
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'manual',
     },  # 1 failure
     {
         'dark': 0,
@@ -42,6 +46,8 @@ jobhostsummary = [
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'manual',
     },
     {
         'dark': 0,
@@ -54,6 +60,8 @@ jobhostsummary = [
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'manual',
     },  # 1 skipped
     {
         'dark': 0,
@@ -66,6 +74,8 @@ jobhostsummary = [
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'manual',
     },
     # job_template T1, job_id 1002, one host skips a task, another fails
     # number of tasks = 3
@@ -81,6 +91,8 @@ jobhostsummary = [
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'scheduled',
     },
     {
         'dark': 0,
@@ -93,6 +105,8 @@ jobhostsummary = [
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'scheduled',
     },  # 1 failure
     {
         'dark': 0,
@@ -105,6 +119,8 @@ jobhostsummary = [
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'scheduled',
     },  # 1 skipped
     {
         'dark': 0,
@@ -117,6 +133,8 @@ jobhostsummary = [
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'scheduled',
     },
     {
         'dark': 0,
@@ -129,6 +147,8 @@ jobhostsummary = [
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
+        'ansible_version': '2.9.10',
+        'launch_type': 'scheduled',
     },
     # job_template T2, job_id 2001, 5 tasks per job, 3 hosts
     # number of tasks = 5
@@ -144,6 +164,8 @@ jobhostsummary = [
         'job_remote_id': 2001,
         'job_template_name': 'T2',
         'model': 'workflowjob',
+        'ansible_version': '2.10.0',
+        'launch_type': 'workflow',
     },
     {
         'dark': 0,
@@ -156,6 +178,8 @@ jobhostsummary = [
         'job_remote_id': 2001,
         'job_template_name': 'T2',
         'model': 'workflowjob',
+        'ansible_version': '2.10.0',
+        'launch_type': 'workflow',
     },  # 1 failure
     {
         'dark': 0,
@@ -168,6 +192,8 @@ jobhostsummary = [
         'job_remote_id': 2001,
         'job_template_name': 'T2',
         'model': 'workflowjob',
+        'ansible_version': '2.10.0',
+        'launch_type': 'workflow',
     },
     # job_template T2, job_id 2002, one host executes only 4 tasks, another fails
     # number of tasks = 5
@@ -183,6 +209,8 @@ jobhostsummary = [
         'job_remote_id': 2002,
         'job_template_name': 'T2',
         'model': 'workflowjob',
+        'ansible_version': '2.10.0',
+        'launch_type': 'workflow',
     },
     {
         'dark': 0,
@@ -195,6 +223,8 @@ jobhostsummary = [
         'job_remote_id': 2002,
         'job_template_name': 'T2',
         'model': 'workflowjob',
+        'ansible_version': '2.10.0',
+        'launch_type': 'workflow',
     },  # 2 failures
     {
         'dark': 0,
@@ -207,6 +237,8 @@ jobhostsummary = [
         'job_remote_id': 2002,
         'job_template_name': 'T2',
         'model': 'workflowjob',
+        'ansible_version': '2.10.0',
+        'launch_type': 'workflow',
     },
 ]
 
@@ -221,9 +253,13 @@ def test_jobhostsummary_anonymized():
 
     print(result)
 
-    # result should be a dict with 'by_job_type' (list) and 'job_host_pairs_total'
+    # result should be a dict with 'by_job_type', 'by_launch_type', 'by_ansible_version' (lists) and 'job_host_pairs_total'
     assert 'by_job_type' in result, 'result should have by_job_type key'
     assert isinstance(result['by_job_type'], list), 'by_job_type should be a list'
+    assert 'by_launch_type' in result, 'result should have by_launch_type key'
+    assert isinstance(result['by_launch_type'], list), 'by_launch_type should be a list'
+    assert 'by_ansible_version' in result, 'result should have by_ansible_version key'
+    assert isinstance(result['by_ansible_version'], list), 'by_ansible_version should be a list'
     assert 'job_host_pairs_total' in result, 'result should have job_host_pairs_total key'
     assert isinstance(result['job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
 
@@ -258,3 +294,43 @@ def test_jobhostsummary_anonymized():
     assert workflowjob_type_data['skipped_total'] == 0  # T2: 0 skipped
     assert workflowjob_type_data['ignored_total'] == 0
     assert workflowjob_type_data['rescued_total'] == 0
+
+    # Verify by_launch_type groupings
+    # Should have 3 launch_type groups: 'manual', 'scheduled', 'workflow'
+    assert len(result['by_launch_type']) == 3, 'Should have 3 launch_type groups'
+
+    # Find the 'manual' launch_type group
+    manual_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'manual'), None)
+    assert manual_launch_type_data is not None, 'Should have launch_type manual'
+    assert manual_launch_type_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for manual'
+    assert manual_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (job) for manual'
+
+    # Find the 'scheduled' launch_type group
+    scheduled_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'scheduled'), None)
+    assert scheduled_launch_type_data is not None, 'Should have launch_type scheduled'
+    assert scheduled_launch_type_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for scheduled'
+    assert scheduled_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (job) for scheduled'
+
+    # Find the 'workflow' launch_type group
+    workflow_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'workflow'), None)
+    assert workflow_launch_type_data is not None, 'Should have launch_type workflow'
+    assert workflow_launch_type_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts for workflow'
+    assert workflow_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for workflow'
+
+    # Verify by_ansible_version groupings
+    # Should have 2 ansible_version groups: '2.9.10' and '2.10.0'
+    assert len(result['by_ansible_version']) == 2, 'Should have 2 ansible_version groups'
+
+    # Find the '2.9.10' ansible_version group
+    version_2910_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.9.10'), None)
+    assert version_2910_data is not None, 'Should have ansible_version 2.9.10'
+    assert version_2910_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for 2.9.10'
+    assert version_2910_data['job_type_total'] == 1, 'Should have 1 job type (job) for 2.9.10'
+    assert version_2910_data['launch_type_total'] == 2, 'Should have 2 launch types (manual, scheduled) for 2.9.10'
+
+    # Find the '2.10.0' ansible_version group
+    version_2100_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.10.0'), None)
+    assert version_2100_data is not None, 'Should have ansible_version 2.10.0'
+    assert version_2100_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts for 2.10.0'
+    assert version_2100_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for 2.10.0'
+    assert version_2100_data['launch_type_total'] == 1, 'Should have 1 launch type (workflow) for 2.10.0'
