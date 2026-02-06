@@ -41,9 +41,6 @@ job = {
     'created': '2024-01-01 09:59:55.000000+00',  # 5s before started (waiting time)
     'model': 'job',
     'launch_type': 'manual',
-    'number_of_jobs_executed': 1,
-    'number_of_jobs_failed': 1,
-    'number_of_jobs_succeeded': 0,
     'forks': 5,
     'inventory_name': 'inventory1',
     'scm_type': 'git',
