@@ -76,6 +76,10 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if 'launch_type' not in dataframe.columns:
             dataframe['launch_type'] = 'unknown'
 
+        dataframe['host_outcome'] = 'successful'
+        dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
+        dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
+
         # Group by job_remote_id, model, launch_type, and ansible_version to preserve all dimensions
         # This allows us to aggregate by each dimension separately in base() while tracking jobs
         aggregated = (
@@ -88,6 +92,10 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
                 unique_hosts=('host_name', lambda x: set(x)),
+
+                hosts_successful_total=('host_outcome', lambda x: (x == 'successful').sum()),
+                hosts_failed_total=('host_outcome', lambda x: (x == 'failed').sum()),
+                hosts_unreachable_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
             )
             .reset_index()
             .rename(columns={'model': 'job_type'})
@@ -168,6 +176,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'ignored_total': ('ignored_total', 'sum'),
             'rescued_total': ('rescued_total', 'sum'),
             'unique_hosts': ('unique_hosts', union_hosts),
+            'hosts_successful_total': ('hosts_successful_total', 'sum'),
+            'hosts_failed_total': ('hosts_failed_total', 'sum'),
+            'hosts_unreachable_total': ('hosts_unreachable_total', 'sum'),
         }
 
         # Aggregations grouped by job_type
