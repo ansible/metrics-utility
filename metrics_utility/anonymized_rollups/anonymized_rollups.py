@@ -204,6 +204,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'ignored_total': 0,
         'rescued_total': 0,
         'unique_hosts_total': 0,
+        'hosts_successful_total': 0,
+        'hosts_failed_total': 0,
+        'hosts_unreachable_total': 0,
     }
 
     # Merge job_host_summary data into jobs_by_job_type
@@ -224,6 +227,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
                     'ignored_total': jhs_data.get('ignored_total', 0),
                     'rescued_total': jhs_data.get('rescued_total', 0),
                     'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+                    'hosts_successful_total': jhs_data.get('hosts_successful_total', 0),
+                    'hosts_failed_total': jhs_data.get('hosts_failed_total', 0),
+                    'hosts_unreachable_total': jhs_data.get('hosts_unreachable_total', 0),
                 }
             )
         else:
@@ -254,6 +260,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
                     'ignored_total': jhs_data.get('ignored_total', 0),
                     'rescued_total': jhs_data.get('rescued_total', 0),
                     'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+                    'hosts_successful_total': jhs_data.get('hosts_successful_total', 0),
+                    'hosts_failed_total': jhs_data.get('hosts_failed_total', 0),
+                    'hosts_unreachable_total': jhs_data.get('hosts_unreachable_total', 0),
                 }
             )
         else:
@@ -299,6 +308,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
                     'ignored_total': jhs_data.get('ignored_total', 0),
                     'rescued_total': jhs_data.get('rescued_total', 0),
                     'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+                    'hosts_successful_total': jhs_data.get('hosts_successful_total', 0),
+                    'hosts_failed_total': jhs_data.get('hosts_failed_total', 0),
+                    'hosts_unreachable_total': jhs_data.get('hosts_unreachable_total', 0),
                 }
             )
         else:
