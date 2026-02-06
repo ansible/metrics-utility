@@ -40,9 +40,9 @@ if some task on host failed, it can be rerun 1-3 times, unless its
 unreachable (dark), those are not retried
 
 runs:
-ok - task succeded on host
+ok - task succeeded on host
 failed - task failed (can be rerun)
-dark - task unreachable (can be reruned)
+dark - task unreachable (not retried)
 
 the final outcome - you can see it inside:
 
