@@ -16,6 +16,7 @@ Host outcomes:
 Job Final Outcome: failed (because Host4 failed)
 """
 
+import json
 import os
 import shutil
 from datetime import datetime
@@ -109,11 +110,9 @@ def test_big_test1():
         assert ansible_version_data['job_type_total'] == 1, f'Should have 1 job type, got {ansible_version_data["job_type_total"]}'
         assert ansible_version_data['launch_type_manual_total'] == 1, f'Should have 1 manual launch type, got {ansible_version_data.get("launch_type_manual_total", 0)}'
 
-        print("Test passed successfully!")
-        print(f"Job host pairs total: {statistics['job_host_pairs_total']}")
-        print(f"Job type aggregation: {result['jobs_by_job_type']}")
-        print(f"Launch type aggregation: {result['jobs_by_launch_type']}")
-        print(f"Ansible version aggregation: {result['jobs_by_ansible_version']}")
+        # Pretty print the anonymized rollup result
+        json_content = json.dumps(result, indent=2, default=str)
+        print(json_content)
 
     finally:
         # Cleanup
