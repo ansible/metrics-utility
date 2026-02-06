@@ -63,6 +63,8 @@ def job_host_summary_service(*, db=None, since=None, until=None, output_dir=None
             mjs.job_id AS job_remote_id,
             mu.unified_job_template_id AS job_template_remote_id,
             mut.name AS job_template_name,
+            mu.ansible_version,
+            mu.launch_type,
             mi.id AS inventory_remote_id,
             mi.name AS inventory_name,
             mo.id AS organization_remote_id,
