@@ -11,6 +11,17 @@ playbook: playbook1.yml
 - ansible.builtin.file
 - ansible.builtin.yum
 
+## T2
+scm type: git
+job type: run
+playbook: playbook2.yml
+
+### list of tasks and their modules
+- ansible.builtin.copy
+- community.general.git
+- community.general.archive
+- community.weird.git
+
 # Hosts
 Host1
 Host2
