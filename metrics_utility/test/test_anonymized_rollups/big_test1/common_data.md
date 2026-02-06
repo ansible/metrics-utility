@@ -37,4 +37,24 @@ the final outcome - you can see it inside:
 
 metrics-utility/metrics_utility/anonymized_rollups/jobhostsummary_anonymized_rollup.py
 
+Test validation:
+uv run pytest -s {name}
+
+How to create new job data:
+
+1) Get inspiration from existing jobs like job1.py
+
+2) Pick job template from this document
+
+3) Select hosts that you should run at from this document
+
+4) Write first comment at the begining of the file, comment will have tasks runs on hosts with possible reruns
+
+5) Than you create job data
+
+6) Than you can create test for this job
+
+7) Validate the test by:
+uv run pytest -s {file name}
+
 
