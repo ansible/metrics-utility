@@ -21,8 +21,17 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     
     
     def merge(self, data_all, data_new):
+        # Handle initial None case (first iteration from load_anonymized_rollup_data)
+        if data_all is None:
+            return data_new
+        
+        # Ensure data_all is a dict with 'jobs' key
+        # Handle case where data_all might be a DataFrame (backward compatibility)
+        if isinstance(data_all, pd.DataFrame):
+            data_all = {'jobs': data_all}
+        
         # Simply merge the jobs dataframe
-        return pd.concat([data_all['jobs'], data_new['jobs']], ignore_index=True)
+        return {'jobs': pd.concat([data_all['jobs'], data_new['jobs']], ignore_index=True)}
 
     def __init__(self):
         super().__init__('jobs')
@@ -63,8 +72,61 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         Also includes installed collections statistics:
         - Collection name and version with job counts
 
-        data is a dict with 'jobs' (DataFrame) and 'collections' (DataFrame)
+        data is a dict with 'jobs' (DataFrame) or None if no data
         """
+        
+        # Handle None input (no data files)
+        if data is None:
+            return {
+                'json': {
+                    'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_ansible_version': [],
+                    'organizations_total': None,
+                    'ansible_version': None,
+                    'forks_total': None,
+                    'jobs_total': None,
+                    'installed_collections': [],
+                },
+                'rollup': {
+                    'aggregations_by_job_type': pd.DataFrame(),
+                    'aggregations_by_launch_type': pd.DataFrame(),
+                    'aggregations_by_ansible_version': pd.DataFrame(),
+                    'organizations_total': None,
+                    'ansible_version': None,
+                    'forks_total': None,
+                    'jobs_total': None,
+                    'installed_collections': pd.DataFrame(),
+                },
+            }
+        
+        # Extract jobs dataframe from data
+        dataframe = data.get('jobs', pd.DataFrame())
+        
+        # Handle empty dataframe
+        if dataframe.empty:
+            return {
+                'json': {
+                    'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_ansible_version': [],
+                    'organizations_total': 0,
+                    'ansible_version': None,
+                    'forks_total': 0,
+                    'jobs_total': 0,
+                    'installed_collections': [],
+                },
+                'rollup': {
+                    'aggregations_by_job_type': pd.DataFrame(),
+                    'aggregations_by_launch_type': pd.DataFrame(),
+                    'aggregations_by_ansible_version': pd.DataFrame(),
+                    'organizations_total': 0,
+                    'ansible_version': None,
+                    'forks_total': 0,
+                    'jobs_total': 0,
+                    'installed_collections': pd.DataFrame(),
+                },
+            }
 
         # Coerce datetime-like columns to pandas datetimes (timezone-aware if possible)
         # This allows inputs like '2025-09-29 13:16:53.637988+00'
@@ -178,8 +240,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
         jobs_total = int(dataframe['id'].nunique())  # Convert numpy int64 to Python int for JSON serialization
 
-        # Process collections statistics
-        collections_stats = self._process_collections(collections_df)
+        # Process collections statistics from jobs dataframe
+        collections_stats = self._process_collections_from_jobs(dataframe)
+        collections_df = pd.DataFrame(collections_stats) if collections_stats else pd.DataFrame()
 
         # Prepare rollup data (dataframe before conversion)
         rollup_data = {
@@ -210,3 +273,71 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'json': json_data,
             'rollup': rollup_data,
         }
+    
+    def _process_collections_from_jobs(self, dataframe):
+        """
+        Extract unique collection name and version pairs from jobs dataframe.
+        Count how many jobs use each unique collection+version combination.
+        
+        Returns a list of dicts with:
+        - collection_name: str
+        - collection_version: str
+        - job_count: int
+        """
+        if 'installed_collections' not in dataframe.columns:
+            return []
+        
+        # Dictionary to track collection name + version -> job count
+        collections_dict = {}
+        
+        # Iterate through each job's installed_collections
+        for idx, row in dataframe.iterrows():
+            installed_collections_str = row.get('installed_collections')
+            
+            # Skip if missing or empty
+            if pd.isna(installed_collections_str) or not installed_collections_str:
+                continue
+            
+            # Parse JSON string
+            try:
+                if isinstance(installed_collections_str, str):
+                    collections_data = json.loads(installed_collections_str)
+                else:
+                    # Already a dict
+                    collections_data = installed_collections_str
+            except (json.JSONDecodeError, TypeError):
+                # Skip invalid JSON
+                continue
+            
+            # Extract collection name and version pairs
+            if isinstance(collections_data, dict):
+                for collection_name, collection_info in collections_data.items():
+                    if not isinstance(collection_info, dict):
+                        continue
+                    
+                    version = collection_info.get('version', '')
+                    if not version:
+                        continue
+                    
+                    # Create unique key for collection name + version
+                    key = (collection_name, str(version))
+                    
+                    # Increment job count for this collection+version
+                    if key not in collections_dict:
+                        collections_dict[key] = 0
+                    collections_dict[key] += 1
+        
+        # Convert to list of dicts
+        collections_stats = [
+            {
+                'collection_name': collection_name,
+                'collection_version': collection_version,
+                'job_count': job_count,
+            }
+            for (collection_name, collection_version), job_count in collections_dict.items()
+        ]
+        
+        # Sort by collection_name, then by collection_version for consistent output
+        collections_stats.sort(key=lambda x: (x['collection_name'], x['collection_version']))
+        
+        return collections_stats
