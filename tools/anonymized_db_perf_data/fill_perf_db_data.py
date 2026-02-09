@@ -4,7 +4,9 @@
 import argparse
 import random
 import uuid
+from datetime import datetime, timedelta
 
+import helpers
 from helpers import (
     create_hosts,
     create_inventory,
@@ -179,8 +181,15 @@ if __name__ == '__main__':
     parser.add_argument('--job-count', type=int, default=20, help='Number of jobs to create (default: 5)')
     parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
     parser.add_argument('--template-count', type=int, default=10, help='Number of job templates to create (default: 10)')
+    parser.add_argument('--date', type=str, default=None, help='Constrain jobs to a single day (e.g. 2024-01-25). Default spreads across all of January 2024')
 
     args = parser.parse_args()
+
+    # Override date range if --date is provided
+    if args.date:
+        date = datetime.fromisoformat(args.date)
+        helpers.JOB_DATE_START = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        helpers.JOB_DATE_END = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     fill_perf_db_data(
         host_count=args.host_count,
