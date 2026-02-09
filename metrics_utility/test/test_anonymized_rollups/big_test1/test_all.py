@@ -234,6 +234,57 @@ def test_all_jobs_combined(cleanup_test_data):
     assert 'modules_used_per_playbook' in result
     assert 'collections_versions' in result
 
+    # ========== Validate Task Statistics (from job host summary data) ==========
+    statistics = result['statistics']
+    assert 'rollup_period_tasks_total' in statistics
+    assert 'rollup_period_task_ok_total' in statistics
+    assert 'rollup_period_task_failed_total' in statistics
+    assert 'rollup_period_task_skipped_total' in statistics
+    assert 'rollup_period_task_unreachable_total' in statistics
+    assert 'rollup_period_task_ignored_total' in statistics
+
+    # Expected totals calculated from all job host summary data:
+    # Job 1: ok=11, failures=1, dark=0, skipped=0, ignored=0
+    # Job 2: ok=11, failures=0, dark=1, skipped=0, ignored=0
+    # Job 3: ok=14, failures=1, dark=1, skipped=0, ignored=0
+    # Job 4: ok=10, failures=1, dark=1, skipped=0, ignored=0
+    # Job 5: ok=12, failures=0, dark=0, skipped=0, ignored=0
+    # Job 6: ok=14, failures=1, dark=1, skipped=0, ignored=0
+    # Job 7: ok=14, failures=1, dark=1, skipped=0, ignored=0
+    # Job 8: ok=12, failures=0, dark=0, skipped=0, ignored=0
+    # Totals: ok=98, failures=5, dark=5, skipped=0, ignored=0, tasks_total=108
+    assert statistics['rollup_period_task_ok_total'] == 98, (
+        f'Should have 98 ok tasks total, got {statistics["rollup_period_task_ok_total"]}'
+    )
+    assert statistics['rollup_period_task_failed_total'] == 5, (
+        f'Should have 5 failed tasks total, got {statistics["rollup_period_task_failed_total"]}'
+    )
+    assert statistics['rollup_period_task_unreachable_total'] == 5, (
+        f'Should have 5 unreachable tasks total, got {statistics["rollup_period_task_unreachable_total"]}'
+    )
+    assert statistics['rollup_period_task_skipped_total'] == 0, (
+        f'Should have 0 skipped tasks total, got {statistics["rollup_period_task_skipped_total"]}'
+    )
+    assert statistics['rollup_period_task_ignored_total'] == 0, (
+        f'Should have 0 ignored tasks total, got {statistics["rollup_period_task_ignored_total"]}'
+    )
+    assert statistics['rollup_period_tasks_total'] == 108, (
+        f'Should have 108 total tasks, got {statistics["rollup_period_tasks_total"]}'
+    )
+
+    # Verify that the sum matches
+    calculated_total = (
+        statistics['rollup_period_task_ok_total'] +
+        statistics['rollup_period_task_failed_total'] +
+        statistics['rollup_period_task_unreachable_total'] +
+        statistics['rollup_period_task_skipped_total'] +
+        statistics['rollup_period_task_ignored_total']
+    )
+    assert calculated_total == statistics['rollup_period_tasks_total'], (
+        f'Sum of individual task counts ({calculated_total}) should equal rollup_period_tasks_total '
+        f'({statistics["rollup_period_tasks_total"]})'
+    )
+
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_job_type']
     assert isinstance(jobs_list, list)
