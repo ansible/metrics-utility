@@ -232,13 +232,13 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     jobs_list = result['jobs_by_job_type']
     assert isinstance(jobs_list, list)
     assert len(jobs_list) == 3  # job, workflowjob, adhoccommand
-    assert result['statistics']['jobs_total'] == 5  # Total jobs across all job types
+    assert result['statistics']['rollup_period_jobs_total'] == 5  # Total jobs across all job types
     # job_templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
-    assert result['statistics']['job_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
+    assert result['statistics']['rollup_period_job_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
     
     # Validate ansible_versions in statistics is merged from jobs_by_job_type
-    assert 'ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
-    statistics_ansible_versions = result['statistics']['ansible_versions']
+    assert 'rollup_period_ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
+    statistics_ansible_versions = result['statistics']['rollup_period_ansible_versions']
     assert isinstance(statistics_ansible_versions, list), 'ansible_versions should be a list'
     # Get ansible_versions from jobs_by_job_type and merge them
     jobs_by_job_type = result.get('jobs_by_job_type', [])
@@ -320,18 +320,18 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     )
 
     # ========== Validate Execution Environments ==========
-    assert result['statistics']['execution_environments_total'] == 5
-    assert result['statistics']['execution_environments_default_total'] == 2
-    assert result['statistics']['execution_environments_custom_total'] == 3
+    assert result['statistics']['rollup_period_execution_environments_total'] == 5
+    assert result['statistics']['rollup_period_execution_environments_default_total'] == 2
+    assert result['statistics']['rollup_period_execution_environments_custom_total'] == 3
 
     # ========== Validate Job Host Summary (merged into jobs_by_job_type) ==========
     # unique_hosts_total is now summed across all job_type groups
     # job type has 5 unique hosts (h1-h5), workflowjob type has 3 unique hosts (h1-h3)
     # Total = 5 + 3 = 8 (some hosts appear in both types)
-    assert result['statistics']['unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
+    assert result['statistics']['rollup_period_unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
     # job_host_pairs_total should be 16 (10 for job type + 6 for workflowjob type)
-    assert result['statistics']['job_host_pairs_total'] == 16, (
-        f'Should have 16 total job host summary records, got {result["statistics"]["job_host_pairs_total"]}'
+    assert result['statistics']['rollup_period_job_host_pairs_total'] == 16, (
+        f'Should have 16 total job host summary records, got {result["statistics"]["rollup_period_job_host_pairs_total"]}'
     )
 
     # Find the 'job' type group in jobs_by_job_type
@@ -378,15 +378,15 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # In flattened structure, events_modules data is now in statistics and direct arrays
 
     # Verify values from concatenated data across 3 tarballs
-    assert result['statistics']['modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert result['statistics']['hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert result['statistics']['rollup_period_modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
+    assert result['statistics']['rollup_period_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
     
     # Verify warnings_total and deprecations_total
     # Test data has 2 warnings (job 1 and job 2) and 1 deprecated (job 3)
-    assert 'warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
-    assert result['statistics']['warnings_total'] == 2, f"Expected 2 warnings, got {result['statistics']['warnings_total']}"
-    assert 'deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
-    assert result['statistics']['deprecations_total'] == 1, f"Expected 1 deprecated event, got {result['statistics']['deprecations_total']}"
+    assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
+    assert result['statistics']['rollup_period_warnings_total'] == 2, f"Expected 2 warnings, got {result['statistics']['rollup_period_warnings_total']}"
+    assert 'rollup_period_deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
+    assert result['statistics']['rollup_period_deprecations_total'] == 1, f"Expected 1 deprecated event, got {result['statistics']['rollup_period_deprecations_total']}"
 
     # Check specific known modules are present in module_stats
     module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
@@ -444,7 +444,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     playbook_modules = result['modules_used_per_playbook']
     assert isinstance(playbook_modules, list), 'modules_used_per_playbook should be a list'
     assert len(playbook_modules) == 5, 'Should have 5 playbooks'
-    assert result['statistics']['playbooks_total'] == 5, 'Should have 5 total playbooks'
+    assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
     # Check values sum to expected total
     total_module_usage = sum(p['modules_used'] for p in playbook_modules)
     assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
@@ -454,18 +454,18 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Credentials are added to statistics
     # Expected counts from credentials test data (from test_credentials_anonymized_rollup.py):
     # Machine: 2, Vault: 1, Source Control: 2, Network: 1, Amazon Web Services: 3, Container Registry: 1
-    assert 'credential_type_machine_total' in result['statistics'], 'Should have credential_type_machine_total in statistics'
-    assert result['statistics']['credential_type_machine_total'] == 2, 'Should have 2 Machine credentials'
-    assert 'credential_type_vault_total' in result['statistics'], 'Should have credential_type_vault_total in statistics'
-    assert result['statistics']['credential_type_vault_total'] == 1, 'Should have 1 Vault credential'
-    assert 'credential_type_source_control_total' in result['statistics'], 'Should have credential_type_source_control_total in statistics'
-    assert result['statistics']['credential_type_source_control_total'] == 2, 'Should have 2 Source Control credentials'
-    assert 'credential_type_network_total' in result['statistics'], 'Should have credential_type_network_total in statistics'
-    assert result['statistics']['credential_type_network_total'] == 1, 'Should have 1 Network credential'
-    assert 'credential_type_amazon_web_services_total' in result['statistics'], 'Should have credential_type_amazon_web_services_total in statistics'
-    assert result['statistics']['credential_type_amazon_web_services_total'] == 3, 'Should have 3 Amazon Web Services credentials'
-    assert 'credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
-    assert result['statistics']['credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
+    assert 'rollup_period_credential_type_machine_total' in result['statistics'], 'Should have credential_type_machine_total in statistics'
+    assert result['statistics']['rollup_period_credential_type_machine_total'] == 2, 'Should have 2 Machine credentials'
+    assert 'rollup_period_credential_type_vault_total' in result['statistics'], 'Should have credential_type_vault_total in statistics'
+    assert result['statistics']['rollup_period_credential_type_vault_total'] == 1, 'Should have 1 Vault credential'
+    assert 'rollup_period_credential_type_source_control_total' in result['statistics'], 'Should have credential_type_source_control_total in statistics'
+    assert result['statistics']['rollup_period_credential_type_source_control_total'] == 2, 'Should have 2 Source Control credentials'
+    assert 'rollup_period_credential_type_network_total' in result['statistics'], 'Should have credential_type_network_total in statistics'
+    assert result['statistics']['rollup_period_credential_type_network_total'] == 1, 'Should have 1 Network credential'
+    assert 'rollup_period_credential_type_amazon_web_services_total' in result['statistics'], 'Should have credential_type_amazon_web_services_total in statistics'
+    assert result['statistics']['rollup_period_credential_type_amazon_web_services_total'] == 3, 'Should have 3 Amazon Web Services credentials'
+    assert 'rollup_period_credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
+    assert result['statistics']['rollup_period_credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
 
     # ========== Validate Collections Versions ==========
     print('--- Validating collections_versions data values ---')
@@ -713,10 +713,10 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
     total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in jobs_by_ansible_version_list)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == result['statistics']['jobs_total'], (
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == result['statistics']['rollup_period_jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
         f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
-        f'statistics={result["statistics"]["jobs_total"]}'
+        f'statistics={result["statistics"]["rollup_period_jobs_total"]}'
     )
 
 
@@ -769,43 +769,43 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Verify statistics contains all fields (with null values for empty data)
     statistics = result['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dict'
-    assert 'modules_used_to_automate_total' in statistics
-    assert 'hosts_automated_total' in statistics
-    assert 'warnings_total' in statistics
-    assert 'deprecations_total' in statistics
-    assert 'execution_environments_total' in statistics
-    assert 'execution_environments_default_total' in statistics
-    assert 'execution_environments_custom_total' in statistics
-    assert 'jobs_total' in statistics
-    assert 'organizations_total' in statistics
-    assert 'ansible_version' in statistics
-    assert 'forks_total' in statistics
-    assert 'unique_hosts_total' in statistics
-    assert 'job_host_pairs_total' in statistics
-    assert 'playbooks_total' in statistics
-    assert 'job_templates_total' in statistics
+    assert 'rollup_period_modules_used_to_automate_total' in statistics
+    assert 'rollup_period_hosts_automated_total' in statistics
+    assert 'rollup_period_warnings_total' in statistics
+    assert 'rollup_period_deprecations_total' in statistics
+    assert 'rollup_period_execution_environments_total' in statistics
+    assert 'rollup_period_execution_environments_default_total' in statistics
+    assert 'rollup_period_execution_environments_custom_total' in statistics
+    assert 'rollup_period_jobs_total' in statistics
+    assert 'rollup_period_organizations_total' in statistics
+    assert 'rollup_period_ansible_version' in statistics
+    assert 'rollup_period_forks_total' in statistics
+    assert 'rollup_period_unique_hosts_total' in statistics
+    assert 'rollup_period_job_host_pairs_total' in statistics
+    assert 'rollup_period_playbooks_total' in statistics
+    assert 'rollup_period_job_templates_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
-    assert statistics['modules_used_to_automate_total'] is None
-    assert statistics['hosts_automated_total'] is None
-    assert statistics['warnings_total'] == 0, f'warnings_total should be 0 for empty data, got {statistics["warnings_total"]}'
-    assert statistics['deprecations_total'] == 0, f'deprecations_total should be 0 for empty data, got {statistics["deprecations_total"]}'
-    assert statistics['execution_environments_total'] is None
-    assert statistics['execution_environments_default_total'] is None
-    assert statistics['execution_environments_custom_total'] is None
-    assert statistics['jobs_total'] is None
-    assert statistics['organizations_total'] is None
-    assert statistics['ansible_version'] is None
-    assert 'ansible_versions' in statistics, 'Should have ansible_versions field in statistics'
-    assert statistics['ansible_versions'] == [], 'ansible_versions should be empty list for empty data'
-    assert statistics['forks_total'] is None
-    assert statistics['unique_hosts_total'] is None
+    assert statistics['rollup_period_modules_used_to_automate_total'] is None
+    assert statistics['rollup_period_hosts_automated_total'] is None
+    assert statistics['rollup_period_warnings_total'] == 0, f'warnings_total should be 0 for empty data, got {statistics["rollup_period_warnings_total"]}'
+    assert statistics['rollup_period_deprecations_total'] == 0, f'deprecations_total should be 0 for empty data, got {statistics["rollup_period_deprecations_total"]}'
+    assert statistics['rollup_period_execution_environments_total'] is None
+    assert statistics['rollup_period_execution_environments_default_total'] is None
+    assert statistics['rollup_period_execution_environments_custom_total'] is None
+    assert statistics['rollup_period_jobs_total'] is None
+    assert statistics['rollup_period_organizations_total'] is None
+    assert statistics['rollup_period_ansible_version'] is None
+    assert 'rollup_period_ansible_versions' in statistics, 'Should have ansible_versions field in statistics'
+    assert statistics['rollup_period_ansible_versions'] == [], 'ansible_versions should be empty list for empty data'
+    assert statistics['rollup_period_forks_total'] is None
+    assert statistics['rollup_period_unique_hosts_total'] is None
     # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count
-    assert statistics['job_host_pairs_total'] == 0, f'job_host_pairs_total should be 0 for empty data, got {statistics["job_host_pairs_total"]}'
+    assert statistics['rollup_period_job_host_pairs_total'] == 0, f'job_host_pairs_total should be 0 for empty data, got {statistics["rollup_period_job_host_pairs_total"]}'
     # playbooks_total should be 0 (not None) when there's no data, as it represents a count
-    assert statistics['playbooks_total'] == 0, f'playbooks_total should be 0 for empty data, got {statistics["playbooks_total"]}'
+    assert statistics['rollup_period_playbooks_total'] == 0, f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'
     # job_templates_total should be None when there's no data (no job_type groups)
-    assert statistics['job_templates_total'] is None, f'job_templates_total should be None for empty data, got {statistics["job_templates_total"]}'
+    assert statistics['rollup_period_job_templates_total'] is None, f'job_templates_total should be None for empty data, got {statistics["rollup_period_job_templates_total"]}'
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
@@ -828,5 +828,5 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     # Verify credentials fields are not present in statistics when there's no data
     # (credentials_data would be empty dict, so no credential_type_* fields should exist)
-    credential_fields = [k for k in statistics.keys() if k.startswith('credential_type_')]
+    credential_fields = [k for k in statistics.keys() if k.startswith('rollup_period_credential_type_')]
     assert len(credential_fields) == 0, 'Should have no credential fields in statistics when there is no credentials data'

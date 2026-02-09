@@ -211,7 +211,7 @@ def test_all_jobs_combined(cleanup_test_data):
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_job_type']
     assert isinstance(jobs_list, list)
-    assert result['statistics']['jobs_total'] == 8, f'Should have 8 total jobs, got {result["statistics"]["jobs_total"]}'
+    assert result['statistics']['rollup_period_jobs_total'] == 8, f'Should have 8 total jobs, got {result["statistics"]["rollup_period_jobs_total"]}'
 
     # Validate job types: 'job' (7 jobs) and 'workflowjob' (1 job)
     job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job']
@@ -229,8 +229,8 @@ def test_all_jobs_combined(cleanup_test_data):
     assert workflowjob_type['job_type'] == 'workflowjob'
 
     # Validate ansible_versions in statistics
-    assert 'ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
-    statistics_ansible_versions = result['statistics']['ansible_versions']
+    assert 'rollup_period_ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
+    statistics_ansible_versions = result['statistics']['rollup_period_ansible_versions']
     assert isinstance(statistics_ansible_versions, list), 'ansible_versions should be a list'
     # Expected: 2.15.0, 2.16.0, 2.17.0, 2.18.0, 2.19.0
     expected_versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
@@ -297,8 +297,8 @@ def test_all_jobs_combined(cleanup_test_data):
     # Job8: 4 hosts (4 successful)
 
     # Total job_host_pairs: 8 jobs × 4 hosts = 32
-    assert result['statistics']['job_host_pairs_total'] == 32, (
-        f'Should have 32 total job host pairs, got {result["statistics"]["job_host_pairs_total"]}'
+    assert result['statistics']['rollup_period_job_host_pairs_total'] == 32, (
+        f'Should have 32 total job host pairs, got {result["statistics"]["rollup_period_job_host_pairs_total"]}'
     )
 
     # Validate merged host summary fields for 'job' type (jobs 1-6, 8 = 7 jobs)
@@ -329,8 +329,8 @@ def test_all_jobs_combined(cleanup_test_data):
     # T2/T3: ansible.builtin.copy (duplicate), community.general.git, community.general.archive, community.weird.git
     # Total unique: 6 modules
     assert len(module_stats) == 6, f'Should have 6 unique modules, got {len(module_stats)}'
-    assert result['statistics']['modules_used_to_automate_total'] == 6, (
-        f'Should have 6 modules in statistics, got {result["statistics"]["modules_used_to_automate_total"]}'
+    assert result['statistics']['rollup_period_modules_used_to_automate_total'] == 6, (
+        f'Should have 6 modules in statistics, got {result["statistics"]["rollup_period_modules_used_to_automate_total"]}'
     )
     
     # Verify module stats structure (module names are anonymized, so we check structure)
@@ -357,17 +357,17 @@ def test_all_jobs_combined(cleanup_test_data):
     assert isinstance(playbook_modules, list), 'modules_used_per_playbook should be a list'
     # Should have at least 2 playbooks (playbook1.yml and playbook2.yml)
     assert len(playbook_modules) >= 2, f'Should have at least 2 playbooks, got {len(playbook_modules)}'
-    assert 'playbooks_total' in result['statistics'], 'Should have playbooks_total in statistics'
-    assert result['statistics']['playbooks_total'] >= 2, f'Should have at least 2 total playbooks, got {result["statistics"]["playbooks_total"]}'
+    assert 'rollup_period_playbooks_total' in result['statistics'], 'Should have playbooks_total in statistics'
+    assert result['statistics']['rollup_period_playbooks_total'] >= 2, f'Should have at least 2 total playbooks, got {result["statistics"]["rollup_period_playbooks_total"]}'
 
     # ========== Verify totals match between all groupings ==========
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
     total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in jobs_by_ansible_version_list)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == result['statistics']['jobs_total'], (
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == result['statistics']['rollup_period_jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
         f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
-        f'statistics={result["statistics"]["jobs_total"]}'
+        f'statistics={result["statistics"]["rollup_period_jobs_total"]}'
     )
 
     print('\n=== All validations passed! ===')

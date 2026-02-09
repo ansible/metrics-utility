@@ -144,31 +144,34 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             ansible_versions_set.update(ansible_versions)
     ansible_versions_merged = sorted(list(ansible_versions_set)) if ansible_versions_set else []
 
+    # Build statistics with rollup_period_ prefix for all fields
     statistics = {
         # from events_modules
-        'modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
-        'hosts_automated_total': events_modules.get('hosts_automated_total'),
-        'event_total': events_modules.get('event_total'),
-        'warnings_total': events_modules.get('warnings_total'),
-        'deprecations_total': events_modules.get('deprecations_total'),
-        'playbooks_total': playbooks_total,
+        'rollup_period_modules_used_to_automate_total': events_modules.get('modules_used_to_automate_total'),
+        'rollup_period_hosts_automated_total': events_modules.get('hosts_automated_total'),
+        'rollup_period_event_total': events_modules.get('event_total'),
+        'rollup_period_warnings_total': events_modules.get('warnings_total'),
+        'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
+        'rollup_period_playbooks_total': playbooks_total,
         # from execution_environments
-        'execution_environments_total': execution_environments.get('execution_environments_total'),
-        'execution_environments_default_total': execution_environments.get('execution_environments_default_total'),
-        'execution_environments_custom_total': execution_environments.get('execution_environments_custom_total'),
+        'rollup_period_execution_environments_total': execution_environments.get('execution_environments_total'),
+        'rollup_period_execution_environments_default_total': execution_environments.get('execution_environments_default_total'),
+        'rollup_period_execution_environments_custom_total': execution_environments.get('execution_environments_custom_total'),
         # from jobs (top-level fields)
-        'jobs_total': jobs_total,
-        'organizations_total': jobs.get('organizations_total'),
-        'ansible_version': jobs.get('ansible_version'),
-        'ansible_versions': ansible_versions_merged,
-        'forks_total': jobs.get('forks_total'),
-        'job_templates_total': job_templates_total,
+        'rollup_period_jobs_total': jobs_total,
+        'rollup_period_organizations_total': jobs.get('organizations_total'),
+        'rollup_period_ansible_version': jobs.get('ansible_version'),
+        'rollup_period_ansible_versions': ansible_versions_merged,
+        'rollup_period_forks_total': jobs.get('forks_total'),
+        'rollup_period_job_templates_total': job_templates_total,
         # from job_host_summary (sum of all job_type groups)
-        'unique_hosts_total': unique_hosts_total,
-        'job_host_pairs_total': job_host_pairs_total,
-        # from credentials (global credential type counts)
-        **credentials_data,
+        'rollup_period_unique_hosts_total': unique_hosts_total,
+        'rollup_period_job_host_pairs_total': job_host_pairs_total,
     }
+    
+    # Add credentials data with prefix
+    for key, value in credentials_data.items():
+        statistics[f'rollup_period_{key}'] = value
 
     # 2) modules_used_per_playbook (convert map -> array)
     modules_used_per_playbook: List[Dict[str, Any]] = [

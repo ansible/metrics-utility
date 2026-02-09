@@ -74,8 +74,8 @@ def test_big_test8():
         # The result structure is flattened, so job host summary data is in statistics and jobs_by_* arrays
         assert 'statistics' in result, 'result should have statistics key'
         statistics = result['statistics']
-        assert 'job_host_pairs_total' in statistics, 'statistics should have job_host_pairs_total'
-        assert statistics['job_host_pairs_total'] == 4, f'Should have 4 job host pairs, got {statistics["job_host_pairs_total"]}'
+        assert 'rollup_period_job_host_pairs_total' in statistics, 'statistics should have job_host_pairs_total'
+        assert statistics['rollup_period_job_host_pairs_total'] == 4, f'Should have 4 job host pairs, got {statistics["rollup_period_job_host_pairs_total"]}'
 
         # Verify by_job_type aggregation (in jobs_by_job_type)
         assert 'jobs_by_job_type' in result, 'result should have jobs_by_job_type'

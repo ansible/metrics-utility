@@ -657,7 +657,7 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     # Validate statistics has ansible_versions
     assert 'statistics' in result, 'Should have statistics in result'
     statistics = result['statistics']
-    assert 'ansible_versions' in statistics, 'Should have ansible_versions in statistics'
+    assert 'rollup_period_ansible_versions' in statistics, 'Should have ansible_versions in statistics'
 
     # Get ansible_versions from jobs_by_job_type
     jobs_by_job_type = result.get('jobs_by_job_type', [])
@@ -669,17 +669,17 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     expected_versions = sorted(list(expected_versions_set))
 
     # Validate ansible_versions in statistics matches merged values from jobs_by_job_type
-    assert statistics['ansible_versions'] == expected_versions, (
-        f"Expected ansible_versions {expected_versions} in statistics, got {statistics['ansible_versions']}"
+    assert statistics['rollup_period_ansible_versions'] == expected_versions, (
+        f"Expected ansible_versions {expected_versions} in statistics, got {statistics['rollup_period_ansible_versions']}"
     )
 
     # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
     # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
-    assert len(statistics['ansible_versions']) == 5, (
-        f"Expected 5 unique ansible versions, got {len(statistics['ansible_versions'])}"
+    assert len(statistics['rollup_period_ansible_versions']) == 5, (
+        f"Expected 5 unique ansible versions, got {len(statistics['rollup_period_ansible_versions'])}"
     )
-    assert '2.9.0' in statistics['ansible_versions']
-    assert '2.10.0' in statistics['ansible_versions']
-    assert '2.11.0' in statistics['ansible_versions']
-    assert '2.12.0' in statistics['ansible_versions']
-    assert '2.14.0' in statistics['ansible_versions']
+    assert '2.9.0' in statistics['rollup_period_ansible_versions']
+    assert '2.10.0' in statistics['rollup_period_ansible_versions']
+    assert '2.11.0' in statistics['rollup_period_ansible_versions']
+    assert '2.12.0' in statistics['rollup_period_ansible_versions']
+    assert '2.14.0' in statistics['rollup_period_ansible_versions']
