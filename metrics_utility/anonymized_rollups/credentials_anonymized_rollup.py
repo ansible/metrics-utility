@@ -74,13 +74,7 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
         # Convert to sorted list
         credential_types_list = sorted([str(ct) for ct in unique_credential_types])
 
-        # Prepare rollup data (dataframe before conversion)
-        aggregated = pd.DataFrame({'credential_type': unique_credential_types})
-
-        # Prepare JSON data (sorted list of unique credential types)
-        json_data = credential_types_list
-
         return {
-            'json': json_data,
-            'rollup': {'aggregated': aggregated},
+            'json': credential_types_list,
+           
         }

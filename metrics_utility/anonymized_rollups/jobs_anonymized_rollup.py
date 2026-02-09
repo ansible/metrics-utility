@@ -244,19 +244,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         collections_stats = self._process_collections_from_jobs(dataframe)
         collections_df = pd.DataFrame(collections_stats) if collections_stats else pd.DataFrame()
 
-        # Prepare rollup data (dataframe before conversion)
-        rollup_data = {
-            # pandas.DataFrame
-            'aggregations_by_job_type': aggregations_by_job_type,
-            'aggregations_by_launch_type': aggregations_by_launch_type,
-            'aggregations_by_ansible_version': aggregations_by_ansible_version,
-            'organizations_total': organizations_total,
-            'ansible_version': ansible_version,
-            'forks_total': forks_total,
-            'jobs_total': jobs_total,
-            'installed_collections': collections_df,  # DataFrame with collection statistics
-        }
-
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
@@ -271,7 +258,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         return {
             'json': json_data,
-            'rollup': rollup_data,
         }
     
     def _process_collections_from_jobs(self, dataframe):

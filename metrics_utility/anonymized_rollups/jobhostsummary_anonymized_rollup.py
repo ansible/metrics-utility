@@ -217,15 +217,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             .drop(columns=['unique_hosts'])
         )
 
-        # Prepare rollup data (dataframe before conversion)
-        rollup_data = {
-            # pandas.DataFrame
-            'aggregations_by_job_type': aggregations_by_job_type,
-            'aggregations_by_launch_type': aggregations_by_launch_type,
-            'aggregations_by_ansible_version': aggregations_by_ansible_version,
-            'job_host_pairs_total': job_host_pairs_total,
-        }
-
         # Prepare JSON data (converted to list of dicts)
         json_data = {
             'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
@@ -236,5 +227,4 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         return {
             'json': json_data,
-            'rollup': rollup_data,
         }

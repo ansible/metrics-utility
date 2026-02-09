@@ -430,15 +430,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         else:
             hosts_automated_total = 0
 
-        # Prepare rollup data (dataframes before conversion)
-        rollup_data = {
-            'module_stats': module_stats,
-            'hosts_automated_total': {'hosts_automated_total': hosts_automated_total},
-            'event_total': event_total,
-            'warnings_total': warnings_total,
-            'deprecations_total': deprecations_total,
-        }
-
         # Prepare JSON data (converted to dicts/lists)
         json_data = {
             'modules_used_to_automate_total': modules_used_to_automate_total,
@@ -453,5 +444,4 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         return {
             'json': json_data,
-            'rollup': rollup_data,
         }

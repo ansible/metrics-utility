@@ -38,12 +38,6 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
             'execution_environments_custom_total': execution_environments_custom_total,
         }
 
-        # Prepare rollup data (raw values before conversion)
-        rollup_data = {
-            'execution_environments': json_data,
-        }
-
         return {
             'json': json_data,
-            'rollup': rollup_data,
         }
