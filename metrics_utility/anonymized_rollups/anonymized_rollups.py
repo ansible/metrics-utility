@@ -390,29 +390,29 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
 def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base_path, save_rollups: bool = True, save_rollups_packed: bool = True):
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
     jobs_result = JobsAnonymizedRollup().base(jobs)
-    if save_rollups:
+    if save_rollups and 'rollup' in jobs_result:
         JobsAnonymizedRollup().save_rollup(jobs_result['rollup'], base_path, since, until, packed=save_rollups_packed)
 
     job_host_summary = load_anonymized_rollup_data(JobHostSummaryAnonymizedRollup(), input_data['job_host_summary'])
     job_host_summary_result = JobHostSummaryAnonymizedRollup().base(job_host_summary)
-    if save_rollups:
+    if save_rollups and 'rollup' in job_host_summary_result:
         JobHostSummaryAnonymizedRollup().save_rollup(job_host_summary_result['rollup'], base_path, since, until, packed=save_rollups_packed)
 
     events_modules = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), input_data['main_jobevent'])
     events_modules_result = EventModulesAnonymizedRollup().base(events_modules)
-    if save_rollups:
+    if save_rollups and 'rollup' in events_modules_result:
         EventModulesAnonymizedRollup().save_rollup(events_modules_result['rollup'], base_path, since, until, packed=save_rollups_packed)
 
     execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), input_data['execution_environments'])
     execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
-    if save_rollups:
+    if save_rollups and 'rollup' in execution_environments_result:
         ExecutionEnvironmentsAnonymizedRollup().save_rollup(
             execution_environments_result['rollup'], base_path, since, until, packed=save_rollups_packed
         )
 
     credentials = load_anonymized_rollup_data(CredentialsAnonymizedRollup(), input_data['credentials'])
     credentials_result = CredentialsAnonymizedRollup().base(credentials)
-    if save_rollups:
+    if save_rollups and 'rollup' in credentials_result:
         CredentialsAnonymizedRollup().save_rollup(credentials_result['rollup'], base_path, since, until, packed=save_rollups_packed)
 
     anonymized_rollup = anonymize_rollups(

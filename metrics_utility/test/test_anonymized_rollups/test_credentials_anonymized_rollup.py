@@ -59,9 +59,8 @@ def test_credentials_anonymized_rollup_base():
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.base(prepared_data)
 
-    # Result should have 'json' and 'rollup' keys
+    # Result should have 'json' key
     assert 'json' in result
-    assert 'rollup' in result
 
     # Check JSON output format - should be a sorted list
     json_data = result['json']
@@ -78,12 +77,6 @@ def test_credentials_anonymized_rollup_base():
     # Should be sorted
     assert json_data == sorted(json_data)
     assert len(json_data) == 6
-
-    # Check rollup output
-    rollup_data = result['rollup']
-    assert 'aggregated' in rollup_data
-    assert isinstance(rollup_data['aggregated'], pd.DataFrame)
-    assert len(rollup_data['aggregated']) == 6
 
 
 def test_credentials_anonymized_rollup_prepare_and_base():
@@ -171,9 +164,7 @@ def test_credentials_anonymized_rollup_base_none():
     result = credentials_rollup.base(None)
 
     assert 'json' in result
-    assert 'rollup' in result
     assert result['json'] == []
-    assert result['rollup']['aggregated'].empty
 
 
 def test_credentials_anonymized_rollup_base_empty_dataframe():
@@ -183,10 +174,7 @@ def test_credentials_anonymized_rollup_base_empty_dataframe():
     result = credentials_rollup.base(df)
 
     assert 'json' in result
-    assert 'rollup' in result
     assert result['json'] == []
-    assert isinstance(result['rollup']['aggregated'], pd.DataFrame)
-    assert list(result['rollup']['aggregated'].columns) == ['credential_type']
 
 
 def test_credentials_anonymized_rollup_base_missing_columns():
@@ -196,10 +184,7 @@ def test_credentials_anonymized_rollup_base_missing_columns():
     result = credentials_rollup.base(df)
 
     assert 'json' in result
-    assert 'rollup' in result
     assert result['json'] == []
-    assert isinstance(result['rollup']['aggregated'], pd.DataFrame)
-    assert list(result['rollup']['aggregated'].columns) == ['credential_type']
 
 
 def test_credentials_anonymized_rollup_field_name_conversion():

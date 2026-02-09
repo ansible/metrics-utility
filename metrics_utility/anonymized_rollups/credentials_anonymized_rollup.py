@@ -52,21 +52,18 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
         if data is None:
             return {
                 'json': [],
-                'rollup': {'aggregated': pd.DataFrame()},
             }
 
         # Return empty result if dataframe is empty
         if data.empty:
             return {
                 'json': [],
-                'rollup': {'aggregated': pd.DataFrame(columns=['credential_type'])},
             }
 
         # Ensure required columns exist
         if 'credential_type' not in data.columns:
             return {
                 'json': [],
-                'rollup': {'aggregated': pd.DataFrame(columns=['credential_type'])},
             }
 
         # Get unique credential types across all batches
