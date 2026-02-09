@@ -376,9 +376,42 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     total_ok = sum(j.get('ok_total', 0) for j in jobs_list)
     total_failures = sum(j.get('failures_total', 0) for j in jobs_list)
     total_skipped = sum(j.get('skipped_total', 0) for j in jobs_list)
+    total_dark = sum(j.get('dark_total', 0) for j in jobs_list)
+    total_ignored = sum(j.get('ignored_total', 0) for j in jobs_list)
     assert total_ok == 52, 'Should have 52 ok tasks total (26 from job + 26 from workflowjob)'
     assert total_failures == 6, 'Should have 6 failures total (2 from job + 4 from workflowjob)'
     assert total_skipped == 2, 'Should have 2 skipped total (2 from job + 0 from workflowjob)'
+    assert total_dark == 0, 'Should have 0 dark (unreachable) tasks total'
+    assert total_ignored == 0, 'Should have 0 ignored tasks total'
+
+    # Verify task statistics in statistics dictionary match the totals
+    assert 'rollup_period_tasks_total' in result['statistics'], 'Should have rollup_period_tasks_total in statistics'
+    assert 'rollup_period_task_ok_total' in result['statistics'], 'Should have rollup_period_task_ok_total in statistics'
+    assert 'rollup_period_task_failed_total' in result['statistics'], 'Should have rollup_period_task_failed_total in statistics'
+    assert 'rollup_period_task_skipped_total' in result['statistics'], 'Should have rollup_period_task_skipped_total in statistics'
+    assert 'rollup_period_task_unreachable_total' in result['statistics'], 'Should have rollup_period_task_unreachable_total in statistics'
+    assert 'rollup_period_task_ignored_total' in result['statistics'], 'Should have rollup_period_task_ignored_total in statistics'
+    
+    # Verify the statistics match the calculated totals
+    expected_tasks_total = total_ok + total_failures + total_skipped + total_dark + total_ignored
+    assert result['statistics']['rollup_period_tasks_total'] == expected_tasks_total, (
+        f'rollup_period_tasks_total should be {expected_tasks_total}, got {result["statistics"]["rollup_period_tasks_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_ok_total'] == total_ok, (
+        f'rollup_period_task_ok_total should be {total_ok}, got {result["statistics"]["rollup_period_task_ok_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_failed_total'] == total_failures, (
+        f'rollup_period_task_failed_total should be {total_failures}, got {result["statistics"]["rollup_period_task_failed_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_skipped_total'] == total_skipped, (
+        f'rollup_period_task_skipped_total should be {total_skipped}, got {result["statistics"]["rollup_period_task_skipped_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_unreachable_total'] == total_dark, (
+        f'rollup_period_task_unreachable_total should be {total_dark}, got {result["statistics"]["rollup_period_task_unreachable_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_ignored_total'] == total_ignored, (
+        f'rollup_period_task_ignored_total should be {total_ignored}, got {result["statistics"]["rollup_period_task_ignored_total"]}'
+    )
 
     # ========== Validate Events Modules ==========
     # In flattened structure, events_modules data is now in statistics and direct arrays
@@ -793,6 +826,12 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_job_host_pairs_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
     assert 'rollup_period_job_templates_total' in statistics
+    assert 'rollup_period_tasks_total' in statistics
+    assert 'rollup_period_task_ok_total' in statistics
+    assert 'rollup_period_task_failed_total' in statistics
+    assert 'rollup_period_task_skipped_total' in statistics
+    assert 'rollup_period_task_unreachable_total' in statistics
+    assert 'rollup_period_task_ignored_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['rollup_period_modules_used_to_automate_total'] is None
@@ -819,6 +858,13 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_playbooks_total'] == 0, f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'
     # job_templates_total should be None when there's no data (no job_type groups)
     assert statistics['rollup_period_job_templates_total'] is None, f'job_templates_total should be None for empty data, got {statistics["rollup_period_job_templates_total"]}'
+    # Task statistics should be 0 (not None) when there's no data, as they're calculated from empty jobs_by_job_type list
+    assert statistics['rollup_period_tasks_total'] == 0, f'rollup_period_tasks_total should be 0 for empty data, got {statistics["rollup_period_tasks_total"]}'
+    assert statistics['rollup_period_task_ok_total'] == 0, f'rollup_period_task_ok_total should be 0 for empty data, got {statistics["rollup_period_task_ok_total"]}'
+    assert statistics['rollup_period_task_failed_total'] == 0, f'rollup_period_task_failed_total should be 0 for empty data, got {statistics["rollup_period_task_failed_total"]}'
+    assert statistics['rollup_period_task_skipped_total'] == 0, f'rollup_period_task_skipped_total should be 0 for empty data, got {statistics["rollup_period_task_skipped_total"]}'
+    assert statistics['rollup_period_task_unreachable_total'] == 0, f'rollup_period_task_unreachable_total should be 0 for empty data, got {statistics["rollup_period_task_unreachable_total"]}'
+    assert statistics['rollup_period_task_ignored_total'] == 0, f'rollup_period_task_ignored_total should be 0 for empty data, got {statistics["rollup_period_task_ignored_total"]}'
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
