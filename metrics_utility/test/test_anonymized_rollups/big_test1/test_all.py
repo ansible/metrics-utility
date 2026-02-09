@@ -25,6 +25,8 @@ import pytest
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 
 # Import all job data from job1 through job8
+from metrics_utility.test.test_anonymized_rollups.big_test1.credentials import credentials
+from metrics_utility.test.test_anonymized_rollups.big_test1.execution_environments import execution_environments
 from metrics_utility.test.test_anonymized_rollups.big_test1.job1 import events as events1, jobhostsummary as jhs1, jobs as jobs1
 from metrics_utility.test.test_anonymized_rollups.big_test1.job2 import events as events2, jobhostsummary as jhs2, jobs as jobs2
 from metrics_utility.test.test_anonymized_rollups.big_test1.job3 import events as events3, jobhostsummary as jhs3, jobs as jobs3
@@ -161,6 +163,30 @@ def test_all_jobs_combined(cleanup_test_data):
     if csv3:
         jhs_csv_files.append(csv3)
 
+    # 4. Execution environments - split into 2 CSV files
+    ee_part1 = execution_environments[:4]
+    ee_part2 = execution_environments[4:]
+
+    ee_csv_files = []
+    csv1 = create_csv_file(ee_part1, f'{data_dir}/part1_execution_environments.csv')
+    if csv1:
+        ee_csv_files.append(csv1)
+    csv2 = create_csv_file(ee_part2, f'{data_dir}/part2_execution_environments.csv')
+    if csv2:
+        ee_csv_files.append(csv2)
+
+    # 5. Credentials - split into 2 CSV files
+    cred_part1 = credentials[:8]  # First 8 entries
+    cred_part2 = credentials[8:]  # Remaining 8 entries
+
+    cred_csv_files = []
+    csv1 = create_csv_file(cred_part1, f'{data_dir}/part1_credentials.csv')
+    if csv1:
+        cred_csv_files.append(csv1)
+    csv2 = create_csv_file(cred_part2, f'{data_dir}/part2_credentials.csv')
+    if csv2:
+        cred_csv_files.append(csv2)
+
     # ========== Run the anonymized rollup computation ==========
 
     # Create input_data dict with lists of CSV file paths
@@ -168,8 +194,8 @@ def test_all_jobs_combined(cleanup_test_data):
         'unified_jobs': jobs_csv_files,
         'job_host_summary': jhs_csv_files,
         'main_jobevent': events_csv_files,
-        'execution_environments': [],  # Empty for this test
-        'credentials': [],  # Empty for this test
+        'execution_environments': ee_csv_files,
+        'credentials': cred_csv_files,
     }
 
     result = compute_anonymized_rollup_from_raw_data(
@@ -359,6 +385,33 @@ def test_all_jobs_combined(cleanup_test_data):
     assert len(playbook_modules) >= 2, f'Should have at least 2 playbooks, got {len(playbook_modules)}'
     assert 'rollup_period_playbooks_total' in result['statistics'], 'Should have playbooks_total in statistics'
     assert result['statistics']['rollup_period_playbooks_total'] >= 2, f'Should have at least 2 total playbooks, got {result["statistics"]["rollup_period_playbooks_total"]}'
+
+    # ========== Validate Execution Environments ==========
+    assert 'rollup_period_execution_environments_total' in result['statistics']
+    assert result['statistics']['rollup_period_execution_environments_total'] == 8
+    assert result['statistics']['rollup_period_execution_environments_default_total'] == 4
+    assert result['statistics']['rollup_period_execution_environments_custom_total'] == 4
+
+    # ========== Validate Credentials ==========
+    # Expected totals from credentials.py:
+    # - credential_type_machine_total: 8 (all jobs have Machine)
+    # - credential_type_amazon_web_services_total: 3 (jobs 1, 5, 7)
+    # - credential_type_vault_total: 2 (jobs 2, 8)
+    # - credential_type_network_total: 1 (job 3)
+    # - credential_type_source_control_total: 1 (job 4)
+    # - credential_type_container_registry_total: 1 (job 6)
+    assert 'rollup_period_credential_type_machine_total' in result['statistics']
+    assert result['statistics']['rollup_period_credential_type_machine_total'] == 8
+    assert 'rollup_period_credential_type_amazon_web_services_total' in result['statistics']
+    assert result['statistics']['rollup_period_credential_type_amazon_web_services_total'] == 3
+    assert 'rollup_period_credential_type_vault_total' in result['statistics']
+    assert result['statistics']['rollup_period_credential_type_vault_total'] == 2
+    assert 'rollup_period_credential_type_network_total' in result['statistics']
+    assert result['statistics']['rollup_period_credential_type_network_total'] == 1
+    assert 'rollup_period_credential_type_source_control_total' in result['statistics']
+    assert result['statistics']['rollup_period_credential_type_source_control_total'] == 1
+    assert 'rollup_period_credential_type_container_registry_total' in result['statistics']
+    assert result['statistics']['rollup_period_credential_type_container_registry_total'] == 1
 
     # ========== Verify totals match between all groupings ==========
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])

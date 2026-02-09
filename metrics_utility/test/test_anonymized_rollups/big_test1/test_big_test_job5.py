@@ -25,6 +25,8 @@ import pandas as pd
 import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+from metrics_utility.test.test_anonymized_rollups.big_test1.credentials import credentials
+from metrics_utility.test.test_anonymized_rollups.big_test1.execution_environments import execution_environments
 from metrics_utility.test.test_anonymized_rollups.big_test1.job5 import events, jobhostsummary, jobs
 
 
@@ -41,19 +43,24 @@ def test_big_test5():
         jobs_csv = os.path.join(test_dir, 'jobs.csv')
         events_csv = os.path.join(test_dir, 'events.csv')
         jobhostsummary_csv = os.path.join(test_dir, 'jobhostsummary.csv')
+        execution_environments_csv = os.path.join(test_dir, 'execution_environments.csv')
+        credentials_csv = os.path.join(test_dir, 'credentials.csv')
         
         pd.DataFrame(jobs).to_csv(jobs_csv, index=False)
         pd.DataFrame(events).to_csv(events_csv, index=False)
         pd.DataFrame(jobhostsummary).to_csv(jobhostsummary_csv, index=False)
+        pd.DataFrame(execution_environments).to_csv(execution_environments_csv, index=False)
+        # Filter credentials for job 5 only
+        job5_credentials = [c for c in credentials if c['job_id'] == 5]
+        pd.DataFrame(job5_credentials).to_csv(credentials_csv, index=False)
 
         # Prepare input_data with lists of CSV file paths
-        # Empty datasets are represented as empty lists (not created as CSV files)
         input_data = {
             'unified_jobs': [jobs_csv],
             'job_host_summary': [jobhostsummary_csv],
             'main_jobevent': [events_csv],
-            'execution_environments': [],  # Empty list for empty data
-            'credentials': [],  # Empty list for empty data
+            'execution_environments': [execution_environments_csv],
+            'credentials': [credentials_csv],
         }
 
         # Set up date range for the test (using job dates)
@@ -109,6 +116,18 @@ def test_big_test5():
         assert ansible_version_data['ansible_version'] == '2.16.0', 'ansible_version should be "2.16.0"'
         assert ansible_version_data['job_type_total'] == 1, f'Should have 1 job type, got {ansible_version_data["job_type_total"]}'
         assert ansible_version_data['launch_type_manual_total'] == 1, f'Should have 1 manual launch type, got {ansible_version_data.get("launch_type_manual_total", 0)}'
+
+        # Verify execution environments
+        assert 'rollup_period_execution_environments_total' in statistics
+        assert statistics['rollup_period_execution_environments_total'] == 8
+        assert statistics['rollup_period_execution_environments_default_total'] == 4
+        assert statistics['rollup_period_execution_environments_custom_total'] == 4
+
+        # Verify credentials (Job 5 has Machine and Amazon Web Services)
+        assert 'rollup_period_credential_type_machine_total' in statistics
+        assert statistics['rollup_period_credential_type_machine_total'] == 1
+        assert 'rollup_period_credential_type_amazon_web_services_total' in statistics
+        assert statistics['rollup_period_credential_type_amazon_web_services_total'] == 1
 
         # Pretty print the anonymized rollup result
         json_content = json.dumps(result, indent=2, default=str)
