@@ -136,6 +136,13 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate job_templates_total by summing templates_total from all job_type groups
     job_templates_total = sum(job.get('templates_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
 
+    # Calculate job statistics by summing from all job_type groups (jobs_by_job_type contains all jobs)
+    rollup_period_jobs_successful = sum(job.get('jobs_successful_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    rollup_period_jobs_failed = sum(job.get('jobs_failed_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    rollup_period_jobs_duration_all_statuses_seconds = sum(job.get('job_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    rollup_period_jobs_successful_duration_total_seconds = sum(job.get('jobs_successful_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    rollup_period_jobs_failed_duration_total_seconds = sum(job.get('jobs_failed_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+
     # Merge ansible_versions from all job_type groups (unique values, sorted)
     ansible_versions_set = set()
     for job in jobs_by_job_type:
@@ -165,6 +172,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_execution_environments_custom_total': execution_environments.get('execution_environments_custom_total'),
         # from jobs (top-level fields)
         'rollup_period_jobs_total': jobs_total,
+        'rollup_period_jobs_successful': rollup_period_jobs_successful,
+        'rollup_period_jobs_failed': rollup_period_jobs_failed,
+        'rollup_period_jobs_duration_all_statuses_seconds': rollup_period_jobs_duration_all_statuses_seconds,
+        'rollup_period_jobs_successful_duration_total_seconds': rollup_period_jobs_successful_duration_total_seconds,
+        'rollup_period_jobs_failed_duration_total_seconds': rollup_period_jobs_failed_duration_total_seconds,
         'rollup_period_organizations_total': jobs.get('organizations_total'),
         'rollup_period_ansible_version': jobs.get('ansible_version'),
         'rollup_period_ansible_versions': ansible_versions_merged,

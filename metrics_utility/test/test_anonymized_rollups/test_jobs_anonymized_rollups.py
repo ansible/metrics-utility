@@ -668,6 +668,13 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     assert 'statistics' in result, 'Should have statistics in result'
     statistics = result['statistics']
     assert 'rollup_period_ansible_versions' in statistics, 'Should have ansible_versions in statistics'
+    
+    # Validate new job statistics fields exist
+    assert 'rollup_period_jobs_successful' in statistics, 'Should have jobs_successful in statistics'
+    assert 'rollup_period_jobs_failed' in statistics, 'Should have jobs_failed in statistics'
+    assert 'rollup_period_jobs_duration_all_statuses_seconds' in statistics, 'Should have jobs_duration_all_statuses_seconds in statistics'
+    assert 'rollup_period_jobs_successful_duration_total_seconds' in statistics, 'Should have jobs_successful_duration_total_seconds in statistics'
+    assert 'rollup_period_jobs_failed_duration_total_seconds' in statistics, 'Should have jobs_failed_duration_total_seconds in statistics'
 
     # Get ansible_versions from jobs_by_job_type
     jobs_by_job_type = result.get('jobs_by_job_type', [])
@@ -693,6 +700,40 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     assert '2.11.0' in statistics['rollup_period_ansible_versions']
     assert '2.12.0' in statistics['rollup_period_ansible_versions']
     assert '2.14.0' in statistics['rollup_period_ansible_versions']
+    
+    # Validate new job statistics match sum from jobs_by_job_type
+    if jobs_by_job_type:
+        expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in jobs_by_job_type)
+        expected_jobs_failed = sum(j.get('jobs_failed_total', 0) for j in jobs_by_job_type)
+        expected_duration_all = sum(j.get('job_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
+        expected_duration_successful = sum(j.get('jobs_successful_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
+        expected_duration_failed = sum(j.get('jobs_failed_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
+
+        if statistics['rollup_period_jobs_successful'] is not None:
+            assert statistics['rollup_period_jobs_successful'] == expected_jobs_successful, (
+                f'jobs_successful should match sum from jobs_by_job_type: expected={expected_jobs_successful}, '
+                f'got={statistics["rollup_period_jobs_successful"]}'
+            )
+        if statistics['rollup_period_jobs_failed'] is not None:
+            assert statistics['rollup_period_jobs_failed'] == expected_jobs_failed, (
+                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, '
+                f'got={statistics["rollup_period_jobs_failed"]}'
+            )
+        if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
+            assert abs(statistics['rollup_period_jobs_duration_all_statuses_seconds'] - expected_duration_all) < 0.001, (
+                f'jobs_duration_all_statuses_seconds should match sum from jobs_by_job_type: expected={expected_duration_all}, '
+                f'got={statistics["rollup_period_jobs_duration_all_statuses_seconds"]}'
+            )
+        if statistics['rollup_period_jobs_successful_duration_total_seconds'] is not None:
+            assert abs(statistics['rollup_period_jobs_successful_duration_total_seconds'] - expected_duration_successful) < 0.001, (
+                f'jobs_successful_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_successful}, '
+                f'got={statistics["rollup_period_jobs_successful_duration_total_seconds"]}'
+            )
+        if statistics['rollup_period_jobs_failed_duration_total_seconds'] is not None:
+            assert abs(statistics['rollup_period_jobs_failed_duration_total_seconds'] - expected_duration_failed) < 0.001, (
+                f'jobs_failed_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_failed}, '
+                f'got={statistics["rollup_period_jobs_failed_duration_total_seconds"]}'
+            )
     
     # Validate scm_types in statistics
     assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'

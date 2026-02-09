@@ -87,6 +87,11 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_execution_environments_default_total' in statistics
     assert 'rollup_period_execution_environments_custom_total' in statistics
     assert 'rollup_period_jobs_total' in statistics
+    assert 'rollup_period_jobs_successful' in statistics
+    assert 'rollup_period_jobs_failed' in statistics
+    assert 'rollup_period_jobs_duration_all_statuses_seconds' in statistics
+    assert 'rollup_period_jobs_successful_duration_total_seconds' in statistics
+    assert 'rollup_period_jobs_failed_duration_total_seconds' in statistics
     assert 'rollup_period_organizations_total' in statistics
     assert 'rollup_period_ansible_version' in statistics
     assert 'rollup_period_forks_total' in statistics
@@ -105,6 +110,17 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['rollup_period_execution_environments_default_total'], int)
     assert isinstance(statistics['rollup_period_execution_environments_custom_total'], int)
     assert isinstance(statistics['rollup_period_jobs_total'], int)
+    # New job statistics fields can be int or None (if no jobs)
+    if statistics['rollup_period_jobs_successful'] is not None:
+        assert isinstance(statistics['rollup_period_jobs_successful'], (int, float)), 'jobs_successful should be int or float'
+    if statistics['rollup_period_jobs_failed'] is not None:
+        assert isinstance(statistics['rollup_period_jobs_failed'], (int, float)), 'jobs_failed should be int or float'
+    if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
+        assert isinstance(statistics['rollup_period_jobs_duration_all_statuses_seconds'], (int, float)), 'jobs_duration_all_statuses_seconds should be int or float'
+    if statistics['rollup_period_jobs_successful_duration_total_seconds'] is not None:
+        assert isinstance(statistics['rollup_period_jobs_successful_duration_total_seconds'], (int, float)), 'jobs_successful_duration_total_seconds should be int or float'
+    if statistics['rollup_period_jobs_failed_duration_total_seconds'] is not None:
+        assert isinstance(statistics['rollup_period_jobs_failed_duration_total_seconds'], (int, float)), 'jobs_failed_duration_total_seconds should be int or float'
     assert isinstance(statistics['rollup_period_forks_total'], int)
     assert isinstance(statistics['rollup_period_unique_hosts_total'], int)
     assert isinstance(statistics['rollup_period_job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
@@ -305,6 +321,41 @@ def test_from_gather_to_json(cleanup_glob):
         f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
         f'statistics={statistics["rollup_period_jobs_total"]}'
     )
+
+    # Validate new job statistics match sum from jobs_by_job_type
+    print('--- Validating job statistics match jobs_by_job_type sums ---')
+    if json_data['jobs_by_job_type']:
+        expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in json_data['jobs_by_job_type'])
+        expected_jobs_failed = sum(j.get('jobs_failed_total', 0) for j in json_data['jobs_by_job_type'])
+        expected_duration_all = sum(j.get('job_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
+        expected_duration_successful = sum(j.get('jobs_successful_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
+        expected_duration_failed = sum(j.get('jobs_failed_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
+
+        if statistics['rollup_period_jobs_successful'] is not None:
+            assert statistics['rollup_period_jobs_successful'] == expected_jobs_successful, (
+                f'jobs_successful should match sum from jobs_by_job_type: expected={expected_jobs_successful}, '
+                f'got={statistics["rollup_period_jobs_successful"]}'
+            )
+        if statistics['rollup_period_jobs_failed'] is not None:
+            assert statistics['rollup_period_jobs_failed'] == expected_jobs_failed, (
+                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, '
+                f'got={statistics["rollup_period_jobs_failed"]}'
+            )
+        if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
+            assert abs(statistics['rollup_period_jobs_duration_all_statuses_seconds'] - expected_duration_all) < 0.001, (
+                f'jobs_duration_all_statuses_seconds should match sum from jobs_by_job_type: expected={expected_duration_all}, '
+                f'got={statistics["rollup_period_jobs_duration_all_statuses_seconds"]}'
+            )
+        if statistics['rollup_period_jobs_successful_duration_total_seconds'] is not None:
+            assert abs(statistics['rollup_period_jobs_successful_duration_total_seconds'] - expected_duration_successful) < 0.001, (
+                f'jobs_successful_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_successful}, '
+                f'got={statistics["rollup_period_jobs_successful_duration_total_seconds"]}'
+            )
+        if statistics['rollup_period_jobs_failed_duration_total_seconds'] is not None:
+            assert abs(statistics['rollup_period_jobs_failed_duration_total_seconds'] - expected_duration_failed) < 0.001, (
+                f'jobs_failed_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_failed}, '
+                f'got={statistics["rollup_period_jobs_failed_duration_total_seconds"]}'
+            )
 
     # Validate cross-section data consistency
     print('--- Validating cross-section data consistency ---')
