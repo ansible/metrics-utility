@@ -72,7 +72,7 @@ jobs:
           PR_NUMBER: ${{ env.PR_NUMBER }}
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6
+        uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_HOST_URL: https://sonarcloud.io
           SONAR_ORGANIZATION: ansible
