@@ -451,21 +451,20 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
     # ========== Validate Credentials ==========
     print('--- Validating credentials data values ---')
-    # Credentials are added to statistics
-    # Expected counts from credentials test data (from test_credentials_anonymized_rollup.py):
-    # Machine: 2, Vault: 1, Source Control: 2, Network: 1, Amazon Web Services: 3, Container Registry: 1
-    assert 'rollup_period_credential_type_machine_total' in result['statistics'], 'Should have credential_type_machine_total in statistics'
-    assert result['statistics']['rollup_period_credential_type_machine_total'] == 2, 'Should have 2 Machine credentials'
-    assert 'rollup_period_credential_type_vault_total' in result['statistics'], 'Should have credential_type_vault_total in statistics'
-    assert result['statistics']['rollup_period_credential_type_vault_total'] == 1, 'Should have 1 Vault credential'
-    assert 'rollup_period_credential_type_source_control_total' in result['statistics'], 'Should have credential_type_source_control_total in statistics'
-    assert result['statistics']['rollup_period_credential_type_source_control_total'] == 2, 'Should have 2 Source Control credentials'
-    assert 'rollup_period_credential_type_network_total' in result['statistics'], 'Should have credential_type_network_total in statistics'
-    assert result['statistics']['rollup_period_credential_type_network_total'] == 1, 'Should have 1 Network credential'
-    assert 'rollup_period_credential_type_amazon_web_services_total' in result['statistics'], 'Should have credential_type_amazon_web_services_total in statistics'
-    assert result['statistics']['rollup_period_credential_type_amazon_web_services_total'] == 3, 'Should have 3 Amazon Web Services credentials'
-    assert 'rollup_period_credential_type_container_registry_total' in result['statistics'], 'Should have credential_type_container_registry_total in statistics'
-    assert result['statistics']['rollup_period_credential_type_container_registry_total'] == 1, 'Should have 1 Container Registry credential'
+    # Credentials are added to statistics as a list of unique credential types
+    # Expected credential types from credentials test data (from test_credentials_anonymized_rollup.py):
+    # Amazon Web Services, Container Registry, Machine, Network, Source Control, Vault
+    assert 'rollup_period_credential_types' in result['statistics'], 'Should have rollup_period_credential_types in statistics'
+    credential_types = result['statistics']['rollup_period_credential_types']
+    assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
+    assert 'Amazon Web Services' in credential_types
+    assert 'Container Registry' in credential_types
+    assert 'Machine' in credential_types
+    assert 'Network' in credential_types
+    assert 'Source Control' in credential_types
+    assert 'Vault' in credential_types
+    assert len(credential_types) == 6, f'Should have 6 unique credential types, got {len(credential_types)}'
+    assert credential_types == sorted(credential_types), 'credential_types should be sorted'
 
     # ========== Validate Collections Versions ==========
     print('--- Validating collections_versions data values ---')
@@ -826,7 +825,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(result['collections_versions'], list), 'collections_versions should be a list'
     assert len(result['collections_versions']) == 0, 'collections_versions should be empty with no data'
 
-    # Verify credentials fields are not present in statistics when there's no data
-    # (credentials_data would be empty dict, so no credential_type_* fields should exist)
-    credential_fields = [k for k in statistics.keys() if k.startswith('rollup_period_credential_type_')]
-    assert len(credential_fields) == 0, 'Should have no credential fields in statistics when there is no credentials data'
+    # Verify credentials field is present but empty when there's no data
+    # (credentials_list would be empty list)
+    assert 'rollup_period_credential_types' in statistics
+    assert statistics['rollup_period_credential_types'] == [], 'Should have empty credential_types list when there is no credentials data'

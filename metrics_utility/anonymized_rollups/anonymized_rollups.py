@@ -114,8 +114,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
 
-    # credentials_root is already the dict of credential counts (from the 'json' field)
-    credentials_data: Dict[str, Any] = credentials_root if isinstance(credentials_root, dict) else {}
+    # credentials_root is now a list of unique credential types (from the 'json' field)
+    credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
 
     # 1) statistics (collect only primitive totals)
     # Get jobs_total directly from jobs data, or calculate by summing jobs_total from all job_type groups as fallback
@@ -144,6 +144,25 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             ansible_versions_set.update(ansible_versions)
     ansible_versions_merged = sorted(list(ansible_versions_set)) if ansible_versions_set else []
 
+    # Extract SCM types from jobs_by_job_type
+    # Check jobs_using_scm_type_*_total fields across all job_type groups
+    scm_types_set = set()
+    scm_type_field_prefix = 'jobs_using_scm_type_'
+    scm_type_field_suffix = '_total'
+    # Known SCM types from jobs_anonymized_rollup.py
+    known_scm_types = ['git', 'hg', 'svn', 'insights', 'archive', 'manual', 'unknown']
+    
+    for job in jobs_by_job_type:
+        for scm_type in known_scm_types:
+            field_name = f'{scm_type_field_prefix}{scm_type}{scm_type_field_suffix}'
+            count = job.get(field_name, 0)
+            if count and count > 0:
+                scm_types_set.add(scm_type)
+    scm_types_merged = sorted(list(scm_types_set)) if scm_types_set else []
+
+    # Extract credential types from credentials_list (already sorted list from credentials rollup)
+    credential_types_merged = credentials_list if isinstance(credentials_list, list) else []
+
     # Build statistics with rollup_period_ prefix for all fields
     statistics = {
         # from events_modules
@@ -167,11 +186,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         # from job_host_summary (sum of all job_type groups)
         'rollup_period_unique_hosts_total': unique_hosts_total,
         'rollup_period_job_host_pairs_total': job_host_pairs_total,
+        # computed arrays
+        'rollup_period_scm_types': scm_types_merged,
+        'rollup_period_credential_types': credential_types_merged,
     }
-    
-    # Add credentials data with prefix
-    for key, value in credentials_data.items():
-        statistics[f'rollup_period_{key}'] = value
 
     # 2) modules_used_per_playbook (convert map -> array)
     modules_used_per_playbook: List[Dict[str, Any]] = [

@@ -393,25 +393,24 @@ def test_all_jobs_combined(cleanup_test_data):
     assert result['statistics']['rollup_period_execution_environments_custom_total'] == 4
 
     # ========== Validate Credentials ==========
-    # Expected totals from credentials.py:
-    # - credential_type_machine_total: 8 (all jobs have Machine)
-    # - credential_type_amazon_web_services_total: 3 (jobs 1, 5, 7)
-    # - credential_type_vault_total: 2 (jobs 2, 8)
-    # - credential_type_network_total: 1 (job 3)
-    # - credential_type_source_control_total: 1 (job 4)
-    # - credential_type_container_registry_total: 1 (job 6)
-    assert 'rollup_period_credential_type_machine_total' in result['statistics']
-    assert result['statistics']['rollup_period_credential_type_machine_total'] == 8
-    assert 'rollup_period_credential_type_amazon_web_services_total' in result['statistics']
-    assert result['statistics']['rollup_period_credential_type_amazon_web_services_total'] == 3
-    assert 'rollup_period_credential_type_vault_total' in result['statistics']
-    assert result['statistics']['rollup_period_credential_type_vault_total'] == 2
-    assert 'rollup_period_credential_type_network_total' in result['statistics']
-    assert result['statistics']['rollup_period_credential_type_network_total'] == 1
-    assert 'rollup_period_credential_type_source_control_total' in result['statistics']
-    assert result['statistics']['rollup_period_credential_type_source_control_total'] == 1
-    assert 'rollup_period_credential_type_container_registry_total' in result['statistics']
-    assert result['statistics']['rollup_period_credential_type_container_registry_total'] == 1
+    # Expected credential types from credentials.py (all jobs combined):
+    # - Amazon Web Services (jobs 1, 5, 7)
+    # - Container Registry (job 6)
+    # - Machine (all jobs)
+    # - Network (job 3)
+    # - Source Control (job 4)
+    # - Vault (jobs 2, 8)
+    assert 'rollup_period_credential_types' in result['statistics']
+    credential_types = result['statistics']['rollup_period_credential_types']
+    assert isinstance(credential_types, list)
+    assert 'Amazon Web Services' in credential_types
+    assert 'Container Registry' in credential_types
+    assert 'Machine' in credential_types
+    assert 'Network' in credential_types
+    assert 'Source Control' in credential_types
+    assert 'Vault' in credential_types
+    assert len(credential_types) == 6
+    assert credential_types == sorted(credential_types)  # Should be sorted
 
     # ========== Verify totals match between all groupings ==========
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])

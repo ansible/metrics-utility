@@ -20,40 +20,39 @@ credentials = [
 
 
 def test_credentials_anonymized_rollup_prepare():
-    """Test prepare() method counts occurrences of each credential type in a batch."""
+    """Test prepare() method extracts unique credential types in a batch."""
     df = pd.DataFrame(credentials)
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.prepare(df)
 
-    # Result should be a DataFrame with credential_type and count columns
+    # Result should be a DataFrame with credential_type column only
     assert isinstance(result, pd.DataFrame)
     assert 'credential_type' in result.columns
-    assert 'count' in result.columns
 
-    # Check counts for each credential type
-    result_dict = dict(zip(result['credential_type'], result['count']))
-    assert result_dict['Machine'] == 2
-    assert result_dict['Vault'] == 1
-    assert result_dict['Source Control'] == 2
-    assert result_dict['Network'] == 1
-    assert result_dict['Amazon Web Services'] == 3
-    assert result_dict['Container Registry'] == 1
+    # Check unique credential types
+    credential_types = set(result['credential_type'].dropna().unique())
+    assert 'Machine' in credential_types
+    assert 'Vault' in credential_types
+    assert 'Source Control' in credential_types
+    assert 'Network' in credential_types
+    assert 'Amazon Web Services' in credential_types
+    assert 'Container Registry' in credential_types
 
     # Total rows should be 6 (one per unique credential type)
     assert len(result) == 6
 
 
 def test_credentials_anonymized_rollup_base():
-    """Test base() method sums counts across batches and converts to JSON format."""
-    # Simulate data from prepare() - already aggregated by credential_type
+    """Test base() method gets unique credential types across batches and converts to JSON format."""
+    # Simulate data from prepare() - unique credential types
     prepared_data = pd.DataFrame(
         [
-            {'credential_type': 'Machine', 'count': 2},
-            {'credential_type': 'Vault', 'count': 1},
-            {'credential_type': 'Source Control', 'count': 2},
-            {'credential_type': 'Network', 'count': 1},
-            {'credential_type': 'Amazon Web Services', 'count': 3},
-            {'credential_type': 'Container Registry', 'count': 1},
+            {'credential_type': 'Machine'},
+            {'credential_type': 'Vault'},
+            {'credential_type': 'Source Control'},
+            {'credential_type': 'Network'},
+            {'credential_type': 'Amazon Web Services'},
+            {'credential_type': 'Container Registry'},
         ]
     )
 
@@ -64,28 +63,21 @@ def test_credentials_anonymized_rollup_base():
     assert 'json' in result
     assert 'rollup' in result
 
-    # Check JSON output format
+    # Check JSON output format - should be a sorted list
     json_data = result['json']
-    assert isinstance(json_data, dict)
+    assert isinstance(json_data, list)
 
-    # Check field name conversion (spaces to underscores, lowercase)
-    assert 'credential_type_machine_total' in json_data
-    assert json_data['credential_type_machine_total'] == 2
+    # Check that all credential types are present (sorted)
+    assert 'Amazon Web Services' in json_data
+    assert 'Container Registry' in json_data
+    assert 'Machine' in json_data
+    assert 'Network' in json_data
+    assert 'Source Control' in json_data
+    assert 'Vault' in json_data
 
-    assert 'credential_type_vault_total' in json_data
-    assert json_data['credential_type_vault_total'] == 1
-
-    assert 'credential_type_source_control_total' in json_data
-    assert json_data['credential_type_source_control_total'] == 2
-
-    assert 'credential_type_network_total' in json_data
-    assert json_data['credential_type_network_total'] == 1
-
-    assert 'credential_type_amazon_web_services_total' in json_data
-    assert json_data['credential_type_amazon_web_services_total'] == 3
-
-    assert 'credential_type_container_registry_total' in json_data
-    assert json_data['credential_type_container_registry_total'] == 1
+    # Should be sorted
+    assert json_data == sorted(json_data)
+    assert len(json_data) == 6
 
     # Check rollup output
     rollup_data = result['rollup']
@@ -106,29 +98,32 @@ def test_credentials_anonymized_rollup_prepare_and_base():
     result = credentials_rollup.base(prepared)
     json_data = result['json']
 
-    # Verify counts match
-    assert json_data['credential_type_machine_total'] == 2
-    assert json_data['credential_type_vault_total'] == 1
-    assert json_data['credential_type_source_control_total'] == 2
-    assert json_data['credential_type_network_total'] == 1
-    assert json_data['credential_type_amazon_web_services_total'] == 3
-    assert json_data['credential_type_container_registry_total'] == 1
+    # Verify it's a sorted list with all unique credential types
+    assert isinstance(json_data, list)
+    assert len(json_data) == 6
+    assert 'Amazon Web Services' in json_data
+    assert 'Container Registry' in json_data
+    assert 'Machine' in json_data
+    assert 'Network' in json_data
+    assert 'Source Control' in json_data
+    assert 'Vault' in json_data
+    assert json_data == sorted(json_data)
 
 
 def test_credentials_anonymized_rollup_multiple_batches():
-    """Test that base() correctly sums counts from multiple batches."""
+    """Test that base() correctly gets unique credential types from multiple batches."""
     # Simulate multiple batches from prepare()
     batch1 = pd.DataFrame(
         [
-            {'credential_type': 'Machine', 'count': 2},
-            {'credential_type': 'Vault', 'count': 1},
+            {'credential_type': 'Machine'},
+            {'credential_type': 'Vault'},
         ]
     )
 
     batch2 = pd.DataFrame(
         [
-            {'credential_type': 'Machine', 'count': 3},  # Same type, different batch
-            {'credential_type': 'Network', 'count': 1},
+            {'credential_type': 'Machine'},  # Same type, different batch (should be deduplicated)
+            {'credential_type': 'Network'},
         ]
     )
 
@@ -139,10 +134,13 @@ def test_credentials_anonymized_rollup_multiple_batches():
     result = credentials_rollup.base(combined)
     json_data = result['json']
 
-    # Machine should be summed: 2 + 3 = 5
-    assert json_data['credential_type_machine_total'] == 5
-    assert json_data['credential_type_vault_total'] == 1
-    assert json_data['credential_type_network_total'] == 1
+    # Should be a sorted list with unique credential types
+    assert isinstance(json_data, list)
+    assert len(json_data) == 3  # Machine, Vault, Network (Machine appears only once)
+    assert 'Machine' in json_data
+    assert 'Vault' in json_data
+    assert 'Network' in json_data
+    assert json_data == sorted(json_data)
 
 
 def test_credentials_anonymized_rollup_prepare_empty_dataframe():
@@ -153,7 +151,7 @@ def test_credentials_anonymized_rollup_prepare_empty_dataframe():
 
     assert isinstance(result, pd.DataFrame)
     assert result.empty
-    assert list(result.columns) == ['credential_type', 'count']
+    assert list(result.columns) == ['credential_type']
 
 
 def test_credentials_anonymized_rollup_prepare_missing_column():
@@ -164,7 +162,7 @@ def test_credentials_anonymized_rollup_prepare_missing_column():
 
     assert isinstance(result, pd.DataFrame)
     assert result.empty
-    assert list(result.columns) == ['credential_type', 'count']
+    assert list(result.columns) == ['credential_type']
 
 
 def test_credentials_anonymized_rollup_base_none():
@@ -174,7 +172,7 @@ def test_credentials_anonymized_rollup_base_none():
 
     assert 'json' in result
     assert 'rollup' in result
-    assert result['json'] == {}
+    assert result['json'] == []
     assert result['rollup']['aggregated'].empty
 
 
@@ -186,35 +184,35 @@ def test_credentials_anonymized_rollup_base_empty_dataframe():
 
     assert 'json' in result
     assert 'rollup' in result
-    assert result['json'] == {}
+    assert result['json'] == []
     assert isinstance(result['rollup']['aggregated'], pd.DataFrame)
-    assert list(result['rollup']['aggregated'].columns) == ['credential_type', 'count']
+    assert list(result['rollup']['aggregated'].columns) == ['credential_type']
 
 
 def test_credentials_anonymized_rollup_base_missing_columns():
     """Test base() with missing required columns."""
-    df = pd.DataFrame([{'some_column': 'value'}])  # Missing credential_type and count
+    df = pd.DataFrame([{'some_column': 'value'}])  # Missing credential_type
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.base(df)
 
     assert 'json' in result
     assert 'rollup' in result
-    assert result['json'] == {}
+    assert result['json'] == []
     assert isinstance(result['rollup']['aggregated'], pd.DataFrame)
-    assert list(result['rollup']['aggregated'].columns) == ['credential_type', 'count']
+    assert list(result['rollup']['aggregated'].columns) == ['credential_type']
 
 
 def test_credentials_anonymized_rollup_field_name_conversion():
-    """Test that credential type names are correctly converted to field names."""
+    """Test that credential type names are preserved correctly."""
     # Test various name formats
     test_data = pd.DataFrame(
         [
-            {'credential_type': 'Machine', 'count': 1},
-            {'credential_type': 'Source Control', 'count': 1},  # Space
-            {'credential_type': 'Amazon Web Services', 'count': 1},  # Multiple spaces
-            {'credential_type': 'Container-Registry', 'count': 1},  # Hyphen
-            {'credential_type': 'My-Custom Type', 'count': 1},  # Hyphen and space
-            {'credential_type': 'UPPERCASE', 'count': 1},  # Uppercase
+            {'credential_type': 'Machine'},
+            {'credential_type': 'Source Control'},  # Space
+            {'credential_type': 'Amazon Web Services'},  # Multiple spaces
+            {'credential_type': 'Container-Registry'},  # Hyphen
+            {'credential_type': 'My-Custom Type'},  # Hyphen and space
+            {'credential_type': 'UPPERCASE'},  # Uppercase
         ]
     )
 
@@ -222,14 +220,13 @@ def test_credentials_anonymized_rollup_field_name_conversion():
     result = credentials_rollup.base(test_data)
     json_data = result['json']
 
-    # Check field name conversions
-    assert 'credential_type_machine_total' in json_data
-    assert 'credential_type_source_control_total' in json_data
-    assert 'credential_type_amazon_web_services_total' in json_data
-    assert 'credential_type_container_registry_total' in json_data
-    assert 'credential_type_my_custom_type_total' in json_data
-    assert 'credential_type_uppercase_total' in json_data
-
-    # All should have count of 1
-    for key in json_data:
-        assert json_data[key] == 1
+    # Should be a sorted list with all credential types preserved
+    assert isinstance(json_data, list)
+    assert len(json_data) == 6
+    assert 'Amazon Web Services' in json_data
+    assert 'Container-Registry' in json_data
+    assert 'Machine' in json_data
+    assert 'My-Custom Type' in json_data
+    assert 'Source Control' in json_data
+    assert 'UPPERCASE' in json_data
+    assert json_data == sorted(json_data)

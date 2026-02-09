@@ -53,10 +53,10 @@ credentials = [
     {'credential_type': 'Vault', 'job_id': 8, 'model': 'job'},
 ]
 
-# Expected totals:
-# - credential_type_machine_total: 8 (all jobs have Machine)
-# - credential_type_amazon_web_services_total: 3 (jobs 1, 5, 7)
-# - credential_type_vault_total: 2 (jobs 2, 8)
-# - credential_type_network_total: 1 (job 3)
-# - credential_type_source_control_total: 1 (job 4)
-# - credential_type_container_registry_total: 1 (job 6)
+# Expected unique credential types (all jobs combined):
+# - Amazon Web Services (jobs 1, 5, 7)
+# - Container Registry (job 6)
+# - Machine (all jobs)
+# - Network (job 3)
+# - Source Control (job 4)
+# - Vault (jobs 2, 8)

@@ -94,8 +94,8 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_job_host_pairs_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
     assert 'rollup_period_job_templates_total' in statistics
-    # Credentials fields may be present if credentials data exists
-    # (credential_type_*_total fields are added dynamically based on credential types in the data)
+    # Credentials field may be present if credentials data exists
+    # (rollup_period_credential_types is a list of unique credential type names)
 
     # Validate statistics data types
     assert isinstance(statistics['rollup_period_modules_used_to_automate_total'], int)
@@ -319,23 +319,21 @@ def test_from_gather_to_json(cleanup_glob):
     # - Job 1: Machine + Amazon Web Services
     # - Job 2: Machine + Vault
     # - Job 3: Machine + Amazon Web Services + Network
-    # Expected counts:
-    # - Machine: 3 (all jobs)
-    # - Amazon Web Services: 2 (jobs 1 and 3)
-    # - Vault: 1 (job 2)
-    # - Network: 1 (job 3)
+    # Expected unique credential types:
+    # - Amazon Web Services
+    # - Machine
+    # - Network
+    # - Vault
 
-    assert 'rollup_period_credential_type_machine_total' in statistics, 'Should have credential_type_machine_total in statistics'
-    assert statistics['rollup_period_credential_type_machine_total'] == 3, 'Should have 3 Machine credentials (all jobs)'
-
-    assert 'rollup_period_credential_type_amazon_web_services_total' in statistics, 'Should have credential_type_amazon_web_services_total in statistics'
-    assert statistics['rollup_period_credential_type_amazon_web_services_total'] == 2, 'Should have 2 Amazon Web Services credentials (jobs 1 and 3)'
-
-    assert 'rollup_period_credential_type_vault_total' in statistics, 'Should have credential_type_vault_total in statistics'
-    assert statistics['rollup_period_credential_type_vault_total'] == 1, 'Should have 1 Vault credential (job 2)'
-
-    assert 'rollup_period_credential_type_network_total' in statistics, 'Should have credential_type_network_total in statistics'
-    assert statistics['rollup_period_credential_type_network_total'] == 1, 'Should have 1 Network credential (job 3)'
+    assert 'rollup_period_credential_types' in statistics, 'Should have rollup_period_credential_types in statistics'
+    credential_types = statistics['rollup_period_credential_types']
+    assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
+    assert 'Amazon Web Services' in credential_types
+    assert 'Machine' in credential_types
+    assert 'Network' in credential_types
+    assert 'Vault' in credential_types
+    assert len(credential_types) == 4, f'Should have 4 unique credential types, got {len(credential_types)}'
+    assert credential_types == sorted(credential_types), 'credential_types should be sorted'
 
     print('✅ All data value assertions passed!')
 
@@ -388,14 +386,10 @@ def test_half_day_rollup(cleanup_glob):
 
     # Validate credentials structure (if present)
     # Based on main_jobhostsummary.sql, we expect 4 credential types
-    expected_credential_fields = [
-        'rollup_period_credential_type_machine_total',
-        'rollup_period_credential_type_amazon_web_services_total',
-        'rollup_period_credential_type_vault_total',
-        'rollup_period_credential_type_network_total',
-    ]
-    for field in expected_credential_fields:
-        assert field in json_data['statistics'], f'Should have {field} in statistics'
-        assert isinstance(json_data['statistics'][field], int), f'{field} should be an integer'
+    assert 'rollup_period_credential_types' in json_data['statistics'], 'Should have rollup_period_credential_types in statistics'
+    credential_types = json_data['statistics']['rollup_period_credential_types']
+    assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
+    assert len(credential_types) == 4, f'Should have 4 unique credential types, got {len(credential_types)}'
+    assert credential_types == sorted(credential_types), 'credential_types should be sorted'
 
     print('✅ Basic structure assertions passed!')
