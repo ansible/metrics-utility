@@ -151,11 +151,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert isinstance(result, dict)
     assert 'by_job_type' in result
     assert 'organizations_total' in result
-    assert 'ansible_version' in result
 
     # Check top-level fields
     assert result['organizations_total'] == 3  # Org1, Org2, and Org3 (job 5 filtered out, but job 6 with Org3 remains)
-    assert result['ansible_version'] == '2.9.0'  # First ansible_version in dataframe
     # Check scm_types: jobs 1,2,3,4,6 have scm_types: git, svn, git, git, unknown (job 5 filtered out)
     assert 'scm_types' in result, 'Should have scm_types field in result'
     assert result['scm_types'] == ['git', 'svn', 'unknown'], (
@@ -448,7 +446,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
 
 
 def test_jobs_anonymized_rollups_ansible_version():
-    """Test that ansible_version and organizations_total are correctly aggregated at top level."""
+    """Test that organizations_total is correctly aggregated at top level."""
     df = pd.DataFrame(jobs)
     jobs_anonymized_rollup = JobsAnonymizedRollup()
     prepared_data = jobs_anonymized_rollup.prepare(df)
@@ -456,20 +454,15 @@ def test_jobs_anonymized_rollups_ansible_version():
     result = result['json']
 
     # Verify top-level fields are present
-    assert 'ansible_version' in result
     assert 'organizations_total' in result
-    assert result['ansible_version'] is not None
     assert result['organizations_total'] is not None
-
-    # Verify ansible_version uses 'first' value from dataframe (first job: id 1 with '2.9.0')
-    assert result['ansible_version'] == '2.9.0'
 
     # Verify organizations_total counts unique organizations (Org1, Org2, and Org3 - job 5 filtered out, but job 6 with Org3 remains)
     assert result['organizations_total'] == 3
 
 
 def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
-    """Test ansible_version aggregation when multiple versions exist."""
+    """Test organizations_total aggregation when multiple organizations exist."""
     test_jobs = [
         {
             'id': 1,
@@ -530,8 +523,6 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
     by_job_type = result['by_job_type']
     rec_job = next(r for r in by_job_type if r['job_type'] == 'job')
 
-    # Should use 'first' value from dataframe (first job: id 1 with '2.9.0')
-    assert result['ansible_version'] == '2.9.0'
     assert result['organizations_total'] == 3  # Org1, Org2, Org3
     assert rec_job['jobs_total'] == 3  # All three jobs are included
     # Check scm_types: jobs 1,2,3 have scm_types: git, svn, git

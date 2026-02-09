@@ -178,7 +178,6 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_jobs_successful_duration_total_seconds': rollup_period_jobs_successful_duration_total_seconds,
         'rollup_period_jobs_failed_duration_total_seconds': rollup_period_jobs_failed_duration_total_seconds,
         'rollup_period_organizations_total': jobs.get('organizations_total'),
-        'rollup_period_ansible_version': jobs.get('ansible_version'),
         'rollup_period_ansible_versions': ansible_versions_merged,
         'rollup_period_forks_total': jobs.get('forks_total'),
         'rollup_period_job_templates_total': job_templates_total,

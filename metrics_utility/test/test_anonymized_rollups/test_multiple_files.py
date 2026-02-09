@@ -788,7 +788,6 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_jobs_successful_duration_total_seconds' in statistics
     assert 'rollup_period_jobs_failed_duration_total_seconds' in statistics
     assert 'rollup_period_organizations_total' in statistics
-    assert 'rollup_period_ansible_version' in statistics
     assert 'rollup_period_forks_total' in statistics
     assert 'rollup_period_unique_hosts_total' in statistics
     assert 'rollup_period_job_host_pairs_total' in statistics
@@ -810,7 +809,6 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_jobs_successful_duration_total_seconds'] is None, 'jobs_successful_duration_total_seconds should be None for empty data'
     assert statistics['rollup_period_jobs_failed_duration_total_seconds'] is None, 'jobs_failed_duration_total_seconds should be None for empty data'
     assert statistics['rollup_period_organizations_total'] is None
-    assert statistics['rollup_period_ansible_version'] is None
     assert 'rollup_period_ansible_versions' in statistics, 'Should have ansible_versions field in statistics'
     assert statistics['rollup_period_ansible_versions'] == [], 'ansible_versions should be empty list for empty data'
     assert statistics['rollup_period_forks_total'] is None

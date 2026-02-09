@@ -93,7 +93,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_jobs_successful_duration_total_seconds' in statistics
     assert 'rollup_period_jobs_failed_duration_total_seconds' in statistics
     assert 'rollup_period_organizations_total' in statistics
-    assert 'rollup_period_ansible_version' in statistics
     assert 'rollup_period_forks_total' in statistics
     assert 'rollup_period_unique_hosts_total' in statistics
     assert 'rollup_period_job_host_pairs_total' in statistics
