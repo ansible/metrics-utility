@@ -156,6 +156,11 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # Check top-level fields
     assert result['organizations_total'] == 3  # Org1, Org2, and Org3 (job 5 filtered out, but job 6 with Org3 remains)
     assert result['ansible_version'] == '2.9.0'  # First ansible_version in dataframe
+    # Check scm_types: jobs 1,2,3,4,6 have scm_types: git, svn, git, git, unknown (job 5 filtered out)
+    assert 'scm_types' in result, 'Should have scm_types field in result'
+    assert result['scm_types'] == ['git', 'svn', 'unknown'], (
+        f"Expected ['git', 'svn', 'unknown'] for scm_types, got {result['scm_types']}"
+    )
 
     # Extract the by_job_type list
     by_job_type = result['by_job_type']
@@ -529,6 +534,11 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
     assert result['ansible_version'] == '2.9.0'
     assert result['organizations_total'] == 3  # Org1, Org2, Org3
     assert rec_job['jobs_total'] == 3  # All three jobs are included
+    # Check scm_types: jobs 1,2,3 have scm_types: git, svn, git
+    assert 'scm_types' in result, 'Should have scm_types field in result'
+    assert result['scm_types'] == ['git', 'svn'], (
+        f"Expected ['git', 'svn'] for scm_types, got {result['scm_types']}"
+    )
 
 
 def test_jobs_anonymized_rollups_installed_collections():
@@ -683,3 +693,9 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     assert '2.11.0' in statistics['rollup_period_ansible_versions']
     assert '2.12.0' in statistics['rollup_period_ansible_versions']
     assert '2.14.0' in statistics['rollup_period_ansible_versions']
+    
+    # Validate scm_types in statistics
+    assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'
+    assert statistics['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
+        f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {statistics['rollup_period_scm_types']}"
+    )

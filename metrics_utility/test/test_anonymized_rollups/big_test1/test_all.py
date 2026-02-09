@@ -263,6 +263,12 @@ def test_all_jobs_combined(cleanup_test_data):
     assert len(statistics_ansible_versions) == 5, f'Should have 5 unique ansible versions, got {len(statistics_ansible_versions)}'
     for version in expected_versions:
         assert version in statistics_ansible_versions, f'Should have ansible version {version}'
+    
+    # Validate scm_types in statistics
+    assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
+    assert result['statistics']['rollup_period_scm_types'] == ['git', 'manual'], (
+        f"Expected ['git', 'manual'] for rollup_period_scm_types, got {result['statistics']['rollup_period_scm_types']}"
+    )
 
     # ========== Validate Jobs by Launch Type ==========
     jobs_by_launch_type_list = result['jobs_by_launch_type']

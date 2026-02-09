@@ -261,6 +261,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert '2.11.0' in statistics_ansible_versions
     assert '2.12.0' in statistics_ansible_versions
     assert '2.14.0' in statistics_ansible_versions
+    
+    # Validate scm_types in statistics
+    assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
+    assert result['statistics']['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
+        f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {result['statistics']['rollup_period_scm_types']}"
+    )
 
     # 'job' type should have data from both tarballs (jobs 1, 2, 4)
     job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job' and j['jobs_total'] == 3]
@@ -829,3 +835,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # (credentials_list would be empty list)
     assert 'rollup_period_credential_types' in statistics
     assert statistics['rollup_period_credential_types'] == [], 'Should have empty credential_types list when there is no credentials data'
+    
+    # Verify scm_types field is present but empty when there's no data
+    assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'
+    assert statistics['rollup_period_scm_types'] == [], 'Should have empty scm_types list when there is no jobs data'

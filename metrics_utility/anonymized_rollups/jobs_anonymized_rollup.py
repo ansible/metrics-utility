@@ -87,6 +87,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                     'forks_total': None,
                     'jobs_total': None,
                     'installed_collections': [],
+                    'scm_types': [],
                 },
                 'rollup': {
                     'aggregations_by_job_type': pd.DataFrame(),
@@ -115,6 +116,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                     'forks_total': 0,
                     'jobs_total': 0,
                     'installed_collections': [],
+                    'scm_types': [],
                 },
                 'rollup': {
                     'aggregations_by_job_type': pd.DataFrame(),
@@ -240,6 +242,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
         jobs_total = int(dataframe['id'].nunique())  # Convert numpy int64 to Python int for JSON serialization
 
+        # Extract unique scm_type values from dataframe
+        scm_types = []
+        if 'scm_type' in dataframe.columns:
+            scm_types = sorted([str(v) for v in dataframe['scm_type'].dropna().unique() if pd.notna(v) and str(v).strip()])
+
         # Process collections statistics from jobs dataframe
         collections_stats = self._process_collections_from_jobs(dataframe)
         collections_df = pd.DataFrame(collections_stats) if collections_stats else pd.DataFrame()
@@ -254,6 +261,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'forks_total': forks_total,
             'jobs_total': jobs_total,
             'installed_collections': collections_stats,  # List of dicts with collection statistics
+            'scm_types': scm_types,  # List of unique scm_type values
         }
 
         return {

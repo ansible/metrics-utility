@@ -94,6 +94,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_job_host_pairs_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
     assert 'rollup_period_job_templates_total' in statistics
+    assert 'rollup_period_scm_types' in statistics
     # Credentials field may be present if credentials data exists
     # (rollup_period_credential_types is a list of unique credential type names)
 

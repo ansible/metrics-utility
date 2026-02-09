@@ -144,21 +144,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             ansible_versions_set.update(ansible_versions)
     ansible_versions_merged = sorted(list(ansible_versions_set)) if ansible_versions_set else []
 
-    # Extract SCM types from jobs_by_job_type
-    # Check jobs_using_scm_type_*_total fields across all job_type groups
-    scm_types_set = set()
-    scm_type_field_prefix = 'jobs_using_scm_type_'
-    scm_type_field_suffix = '_total'
-    # Known SCM types from jobs_anonymized_rollup.py
-    known_scm_types = ['git', 'hg', 'svn', 'insights', 'archive', 'manual', 'unknown']
-    
-    for job in jobs_by_job_type:
-        for scm_type in known_scm_types:
-            field_name = f'{scm_type_field_prefix}{scm_type}{scm_type_field_suffix}'
-            count = job.get(field_name, 0)
-            if count and count > 0:
-                scm_types_set.add(scm_type)
-    scm_types_merged = sorted(list(scm_types_set)) if scm_types_set else []
+    # Extract SCM types directly from jobs data (computed in jobs_anonymized_rollup.base)
+    scm_types_merged = jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else []
 
     # Extract credential types from credentials_list (already sorted list from credentials rollup)
     credential_types_merged = credentials_list if isinstance(credentials_list, list) else []
