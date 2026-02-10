@@ -233,8 +233,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert isinstance(jobs_list, list)
     assert len(jobs_list) == 3  # job, workflowjob, adhoccommand
     assert result['statistics']['rollup_period_jobs_total'] == 5  # Total jobs across all job types
-    # job_templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
-    assert result['statistics']['rollup_period_job_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
+    # templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
+    assert result['statistics']['rollup_period_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
 
     # Validate controller_versions in statistics is merged from jobs_by_job_type
     assert 'rollup_period_controller_versions' in result['statistics'], 'Should have controller_versions in statistics'
@@ -323,8 +323,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
     # ========== Validate Execution Environments ==========
     assert result['statistics']['rollup_period_execution_environments_total'] == 5
-    assert result['statistics']['rollup_period_execution_environments_default_total'] == 2
-    assert result['statistics']['rollup_period_execution_environments_custom_total'] == 3
+    assert result['statistics']['rollup_period_EE_default_total'] == 2
+    assert result['statistics']['rollup_period_EE_custom_total'] == 3
 
     # ========== Validate Job Host Summary (merged into jobs_by_job_type) ==========
     # unique_hosts_total is now summed across all job_type groups
@@ -413,7 +413,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # In flattened structure, events_modules data is now in statistics and direct arrays
 
     # Verify values from concatenated data across 3 tarballs
-    assert result['statistics']['rollup_period_modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
+    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
     assert result['statistics']['rollup_period_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
 
     # Verify warnings_total and deprecations_total
@@ -796,13 +796,13 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Verify statistics contains all fields (with null values for empty data)
     statistics = result['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dict'
-    assert 'rollup_period_modules_used_to_automate_total' in statistics
+    assert 'rollup_period_modules_total' in statistics
     assert 'rollup_period_hosts_automated_total' in statistics
     assert 'rollup_period_warnings_total' in statistics
     assert 'rollup_period_deprecations_total' in statistics
     assert 'rollup_period_execution_environments_total' in statistics
-    assert 'rollup_period_execution_environments_default_total' in statistics
-    assert 'rollup_period_execution_environments_custom_total' in statistics
+    assert 'rollup_period_EE_default_total' in statistics
+    assert 'rollup_period_EE_custom_total' in statistics
     assert 'rollup_period_jobs_total' in statistics
     assert 'rollup_period_jobs_successful' in statistics
     assert 'rollup_period_jobs_failed' in statistics
@@ -817,7 +817,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_failed_hosts_total' in statistics
     assert 'rollup_period_unreachable_hosts_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
-    assert 'rollup_period_job_templates_total' in statistics
+    assert 'rollup_period_templates_total' in statistics
     assert 'rollup_period_tasks_total' in statistics
     assert 'rollup_period_task_ok_total' in statistics
     assert 'rollup_period_task_failed_total' in statistics
@@ -826,7 +826,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_task_ignored_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
-    assert statistics['rollup_period_modules_used_to_automate_total'] is None
+    assert statistics['rollup_period_modules_total'] is None
     assert statistics['rollup_period_hosts_automated_total'] is None
     assert statistics['rollup_period_warnings_total'] == 0, (
         f'warnings_total should be 0 for empty data, got {statistics["rollup_period_warnings_total"]}'
@@ -835,8 +835,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
         f'deprecations_total should be 0 for empty data, got {statistics["rollup_period_deprecations_total"]}'
     )
     assert statistics['rollup_period_execution_environments_total'] is None
-    assert statistics['rollup_period_execution_environments_default_total'] is None
-    assert statistics['rollup_period_execution_environments_custom_total'] is None
+    assert statistics['rollup_period_EE_default_total'] is None
+    assert statistics['rollup_period_EE_custom_total'] is None
     assert statistics['rollup_period_jobs_total'] is None
     assert statistics['rollup_period_jobs_successful'] is None, 'jobs_successful should be None for empty data'
     assert statistics['rollup_period_jobs_failed'] is None, 'jobs_failed should be None for empty data'
@@ -862,9 +862,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_playbooks_total'] == 0, (
         f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'
     )
-    # job_templates_total should be None when there's no data (no job_type groups)
-    assert statistics['rollup_period_job_templates_total'] is None, (
-        f'job_templates_total should be None for empty data, got {statistics["rollup_period_job_templates_total"]}'
+    # templates_total should be None when there's no data (no job_type groups)
+    assert statistics['rollup_period_templates_total'] is None, (
+        f'templates_total should be None for empty data, got {statistics["rollup_period_templates_total"]}'
     )
     # Task statistics should be 0 (not None) when there's no data, as they're calculated from empty jobs_by_job_type list
     assert statistics['rollup_period_tasks_total'] == 0, (

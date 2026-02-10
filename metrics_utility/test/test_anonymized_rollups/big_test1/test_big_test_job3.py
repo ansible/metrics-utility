@@ -124,8 +124,8 @@ def test_big_test3():
         # Verify execution environments
         assert 'rollup_period_execution_environments_total' in statistics
         assert statistics['rollup_period_execution_environments_total'] == 8
-        assert statistics['rollup_period_execution_environments_default_total'] == 4
-        assert statistics['rollup_period_execution_environments_custom_total'] == 4
+        assert statistics['rollup_period_EE_default_total'] == 4
+        assert statistics['rollup_period_EE_custom_total'] == 4
 
         # Verify credentials (Job 3 has Machine and Network)
         assert 'rollup_period_credential_types' in statistics

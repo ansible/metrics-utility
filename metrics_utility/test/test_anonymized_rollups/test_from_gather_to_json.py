@@ -81,11 +81,11 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate statistics structure (contains all the scalar totals)
     statistics = json_data['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
-    assert 'rollup_period_modules_used_to_automate_total' in statistics
+    assert 'rollup_period_modules_total' in statistics
     assert 'rollup_period_hosts_automated_total' in statistics
     assert 'rollup_period_execution_environments_total' in statistics
-    assert 'rollup_period_execution_environments_default_total' in statistics
-    assert 'rollup_period_execution_environments_custom_total' in statistics
+    assert 'rollup_period_EE_default_total' in statistics
+    assert 'rollup_period_EE_custom_total' in statistics
     assert 'rollup_period_jobs_total' in statistics
     assert 'rollup_period_jobs_successful' in statistics
     assert 'rollup_period_jobs_failed' in statistics
@@ -100,7 +100,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_failed_hosts_total' in statistics
     assert 'rollup_period_unreachable_hosts_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
-    assert 'rollup_period_job_templates_total' in statistics
+    assert 'rollup_period_templates_total' in statistics
     assert 'rollup_period_scm_types' in statistics
     assert 'rollup_period_tasks_total' in statistics
     assert 'rollup_period_task_ok_total' in statistics
@@ -112,11 +112,11 @@ def test_from_gather_to_json(cleanup_glob):
     # (rollup_period_credential_types is a list of unique credential type names)
 
     # Validate statistics data types
-    assert isinstance(statistics['rollup_period_modules_used_to_automate_total'], int)
+    assert isinstance(statistics['rollup_period_modules_total'], int)
     assert isinstance(statistics['rollup_period_hosts_automated_total'], int)
     assert isinstance(statistics['rollup_period_execution_environments_total'], int)
-    assert isinstance(statistics['rollup_period_execution_environments_default_total'], int)
-    assert isinstance(statistics['rollup_period_execution_environments_custom_total'], int)
+    assert isinstance(statistics['rollup_period_EE_default_total'], int)
+    assert isinstance(statistics['rollup_period_EE_custom_total'], int)
     assert isinstance(statistics['rollup_period_jobs_total'], int)
     # New job statistics fields can be int or None (if no jobs)
     if statistics['rollup_period_jobs_successful'] is not None:
@@ -146,7 +146,7 @@ def test_from_gather_to_json(cleanup_glob):
     if statistics['rollup_period_unreachable_hosts_total'] is not None:
         assert isinstance(statistics['rollup_period_unreachable_hosts_total'], int), 'unreachable_hosts_total should be an integer'
     assert isinstance(statistics['rollup_period_playbooks_total'], int), 'playbooks_total should be an integer'
-    assert isinstance(statistics['rollup_period_job_templates_total'], int), 'job_templates_total should be an integer'
+    assert isinstance(statistics['rollup_period_templates_total'], int), 'templates_total should be an integer'
 
     # Validate arrays structure
     assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
@@ -225,7 +225,7 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate statistics actual values
     print('\n--- Validating statistics data values ---')
-    assert statistics['rollup_period_modules_used_to_automate_total'] == 1, 'Should have 1 module'
+    assert statistics['rollup_period_modules_total'] == 1, 'Should have 1 module'
     assert statistics['rollup_period_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
     assert len(json_data['module_stats']) == 1, 'Should have 1 module stats'
     assert len(json_data['collection_name_stats']) == 1, 'Should have 1 collection stats'
@@ -261,12 +261,12 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate execution_environments actual values
     print('--- Validating execution_environments data values ---')
     assert statistics['rollup_period_execution_environments_total'] == 2, 'Should have 2 total execution environments'
-    assert statistics['rollup_period_execution_environments_default_total'] == 1, 'Should have 1 default execution environment'
-    assert statistics['rollup_period_execution_environments_custom_total'] == 1, 'Should have 1 custom execution environment'
+    assert statistics['rollup_period_EE_default_total'] == 1, 'Should have 1 default execution environment'
+    assert statistics['rollup_period_EE_custom_total'] == 1, 'Should have 1 custom execution environment'
     # Validate that total = default + custom
     assert (
         statistics['rollup_period_execution_environments_total']
-        == statistics['rollup_period_execution_environments_default_total'] + statistics['rollup_period_execution_environments_custom_total']
+        == statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
     ), 'Total EE should equal default + custom'
 
     # Validate jobs actual values
@@ -277,7 +277,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert len(json_data['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
     job = json_data['jobs_by_job_type'][0]
     assert job['jobs_total'] == 3, 'Job type should have 3 jobs'
-    assert statistics['rollup_period_job_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
+    assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
     assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
     # job_type should be 'job' from django_content_type.model
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"

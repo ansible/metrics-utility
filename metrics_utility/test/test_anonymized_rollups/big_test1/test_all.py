@@ -424,8 +424,8 @@ def test_all_jobs_combined(cleanup_test_data):
     # T2/T3: ansible.builtin.copy (duplicate), community.general.git, community.general.archive, community.weird.git
     # Total unique: 6 modules
     assert len(module_stats) == 6, f'Should have 6 unique modules, got {len(module_stats)}'
-    assert result['statistics']['rollup_period_modules_used_to_automate_total'] == 6, (
-        f'Should have 6 modules in statistics, got {result["statistics"]["rollup_period_modules_used_to_automate_total"]}'
+    assert result['statistics']['rollup_period_modules_total'] == 6, (
+        f'Should have 6 modules in statistics, got {result["statistics"]["rollup_period_modules_total"]}'
     )
 
     # Verify module stats structure (module names are anonymized, so we check structure)
@@ -460,8 +460,8 @@ def test_all_jobs_combined(cleanup_test_data):
     # ========== Validate Execution Environments ==========
     assert 'rollup_period_execution_environments_total' in result['statistics']
     assert result['statistics']['rollup_period_execution_environments_total'] == 8
-    assert result['statistics']['rollup_period_execution_environments_default_total'] == 4
-    assert result['statistics']['rollup_period_execution_environments_custom_total'] == 4
+    assert result['statistics']['rollup_period_EE_default_total'] == 4
+    assert result['statistics']['rollup_period_EE_custom_total'] == 4
 
     # ========== Validate Credentials ==========
     # Expected credential types from credentials.py (all jobs combined):
