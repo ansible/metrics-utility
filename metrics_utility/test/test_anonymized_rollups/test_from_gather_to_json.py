@@ -96,6 +96,9 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_forks_total' in statistics
     assert 'rollup_period_unique_hosts_total' in statistics
     assert 'rollup_period_job_host_pairs_total' in statistics
+    assert 'rollup_period_successful_hosts_total' in statistics
+    assert 'rollup_period_failed_hosts_total' in statistics
+    assert 'rollup_period_unreachable_hosts_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
     assert 'rollup_period_job_templates_total' in statistics
     assert 'rollup_period_scm_types' in statistics
@@ -135,6 +138,13 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['rollup_period_forks_total'], int)
     assert isinstance(statistics['rollup_period_unique_hosts_total'], int)
     assert isinstance(statistics['rollup_period_job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
+    # Host outcome totals can be int or None (if no job host summary data)
+    if statistics['rollup_period_successful_hosts_total'] is not None:
+        assert isinstance(statistics['rollup_period_successful_hosts_total'], int), 'successful_hosts_total should be an integer'
+    if statistics['rollup_period_failed_hosts_total'] is not None:
+        assert isinstance(statistics['rollup_period_failed_hosts_total'], int), 'failed_hosts_total should be an integer'
+    if statistics['rollup_period_unreachable_hosts_total'] is not None:
+        assert isinstance(statistics['rollup_period_unreachable_hosts_total'], int), 'unreachable_hosts_total should be an integer'
     assert isinstance(statistics['rollup_period_playbooks_total'], int), 'playbooks_total should be an integer'
     assert isinstance(statistics['rollup_period_job_templates_total'], int), 'job_templates_total should be an integer'
 

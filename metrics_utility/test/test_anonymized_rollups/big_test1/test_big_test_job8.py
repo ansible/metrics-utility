@@ -85,6 +85,18 @@ def test_big_test8():
         assert statistics['rollup_period_job_host_pairs_total'] == 4, (
             f'Should have 4 job host pairs, got {statistics["rollup_period_job_host_pairs_total"]}'
         )
+        assert 'rollup_period_successful_hosts_total' in statistics, 'statistics should have successful_hosts_total'
+        assert statistics['rollup_period_successful_hosts_total'] == 4, (
+            f'Should have 4 successful hosts, got {statistics["rollup_period_successful_hosts_total"]}'
+        )
+        assert 'rollup_period_failed_hosts_total' in statistics, 'statistics should have failed_hosts_total'
+        assert statistics['rollup_period_failed_hosts_total'] == 0, (
+            f'Should have 0 failed hosts, got {statistics["rollup_period_failed_hosts_total"]}'
+        )
+        assert 'rollup_period_unreachable_hosts_total' in statistics, 'statistics should have unreachable_hosts_total'
+        assert statistics['rollup_period_unreachable_hosts_total'] == 0, (
+            f'Should have 0 unreachable hosts, got {statistics["rollup_period_unreachable_hosts_total"]}'
+        )
 
         # Verify by_job_type aggregation (in jobs_by_job_type)
         assert 'jobs_by_job_type' in result, 'result should have jobs_by_job_type'

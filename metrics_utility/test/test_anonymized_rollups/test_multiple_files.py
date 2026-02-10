@@ -813,6 +813,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_forks_total' in statistics
     assert 'rollup_period_unique_hosts_total' in statistics
     assert 'rollup_period_job_host_pairs_total' in statistics
+    assert 'rollup_period_successful_hosts_total' in statistics
+    assert 'rollup_period_failed_hosts_total' in statistics
+    assert 'rollup_period_unreachable_hosts_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
     assert 'rollup_period_job_templates_total' in statistics
     assert 'rollup_period_tasks_total' in statistics
@@ -851,6 +854,10 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_job_host_pairs_total'] == 0, (
         f'job_host_pairs_total should be 0 for empty data, got {statistics["rollup_period_job_host_pairs_total"]}'
     )
+    # Host outcome totals should be None for empty data
+    assert statistics['rollup_period_successful_hosts_total'] is None, 'successful_hosts_total should be None for empty data'
+    assert statistics['rollup_period_failed_hosts_total'] is None, 'failed_hosts_total should be None for empty data'
+    assert statistics['rollup_period_unreachable_hosts_total'] is None, 'unreachable_hosts_total should be None for empty data'
     # playbooks_total should be 0 (not None) when there's no data, as it represents a count
     assert statistics['rollup_period_playbooks_total'] == 0, (
         f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'

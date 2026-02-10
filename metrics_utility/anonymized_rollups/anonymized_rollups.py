@@ -128,6 +128,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_by_controller_version: List[Dict[str, Any]] = job_host_summary_root.get('by_controller_version', []) or []
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
     job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
+    # Calculate host outcome totals by summing from all job_type groups
+    successful_hosts_total = sum(jhs.get('successful_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
+    failed_hosts_total = sum(jhs.get('failed_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
+    unreachable_hosts_total = sum(jhs.get('unreachable_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
 
     # Calculate playbooks_total from modules_used_per_playbook_total dict
     modules_used_per_playbook_total: Dict[str, int] = events_modules.get('modules_used_per_playbook_total', {}) or {}
@@ -194,6 +198,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         # from job_host_summary (sum of all job_type groups)
         'rollup_period_unique_hosts_total': unique_hosts_total,
         'rollup_period_job_host_pairs_total': job_host_pairs_total,
+        'rollup_period_successful_hosts_total': successful_hosts_total,
+        'rollup_period_failed_hosts_total': failed_hosts_total,
+        'rollup_period_unreachable_hosts_total': unreachable_hosts_total,
         # computed arrays
         'rollup_period_scm_types': scm_types_merged,
         'rollup_period_credential_types': credential_types_merged,
