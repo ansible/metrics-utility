@@ -97,9 +97,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
                 unique_hosts=('host_name', lambda x: set(x)),
-                hosts_successful_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                hosts_failed_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                hosts_unreachable_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
+                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
+                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
             )
             .reset_index()
             .rename(columns={'model': 'job_type'})  # Keep ansible_version in dataframe, rename to controller_version in output
@@ -184,9 +184,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     ignored_total=('ignored_total', 'sum'),
                     rescued_total=('rescued_total', 'sum'),
                     unique_hosts=('unique_hosts', union_hosts),
-                    hosts_successful_total=('hosts_successful_total', 'sum'),
-                    hosts_failed_total=('hosts_failed_total', 'sum'),
-                    hosts_unreachable_total=('hosts_unreachable_total', 'sum'),
+                    successful_hosts_total=('successful_hosts_total', 'sum'),
+                    failed_hosts_total=('failed_hosts_total', 'sum'),
+                    unreachable_hosts_total=('unreachable_hosts_total', 'sum'),
                     # Preserve constant fields per job_remote_id
                     job_type=('job_type', 'first'),
                     launch_type=('launch_type', 'first'),
@@ -204,9 +204,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'ignored_total': ('ignored_total', 'sum'),
             'rescued_total': ('rescued_total', 'sum'),
             'unique_hosts': ('unique_hosts', union_hosts),
-            'hosts_successful_total': ('hosts_successful_total', 'sum'),
-            'hosts_failed_total': ('hosts_failed_total', 'sum'),
-            'hosts_unreachable_total': ('hosts_unreachable_total', 'sum'),
+            'successful_hosts_total': ('successful_hosts_total', 'sum'),
+            'failed_hosts_total': ('failed_hosts_total', 'sum'),
+            'unreachable_hosts_total': ('unreachable_hosts_total', 'sum'),
         }
 
         # Aggregations grouped by job_type

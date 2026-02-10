@@ -96,9 +96,9 @@ def test_big_test5():
         assert job_type_data['ok_total'] == 12, f'Should have 12 ok tasks total, got {job_type_data["ok_total"]}'
         assert job_type_data['failures_total'] == 0, f'Should have 0 failures total, got {job_type_data["failures_total"]}'
         assert job_type_data['dark_total'] == 0, f'Should have 0 dark total, got {job_type_data["dark_total"]}'
-        assert job_type_data['hosts_successful_total'] == 4, f'Should have 4 successful hosts, got {job_type_data["hosts_successful_total"]}'
-        assert job_type_data['hosts_failed_total'] == 0, f'Should have 0 failed hosts, got {job_type_data["hosts_failed_total"]}'
-        assert job_type_data['hosts_unreachable_total'] == 0, f'Should have 0 unreachable hosts, got {job_type_data["hosts_unreachable_total"]}'
+        assert job_type_data['successful_hosts_total'] == 4, f'Should have 4 successful hosts, got {job_type_data["successful_hosts_total"]}'
+        assert job_type_data['failed_hosts_total'] == 0, f'Should have 0 failed hosts, got {job_type_data["failed_hosts_total"]}'
+        assert job_type_data['unreachable_hosts_total'] == 0, f'Should have 0 unreachable hosts, got {job_type_data["unreachable_hosts_total"]}'
 
         # Verify by_launch_type aggregation (in jobs_by_launch_type)
         assert 'jobs_by_launch_type' in result, 'result should have jobs_by_launch_type'
