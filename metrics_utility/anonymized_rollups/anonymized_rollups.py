@@ -44,7 +44,7 @@ def anonymize_data(data, salt):
         data: Flattened data structure with keys:
             - jobs_by_job_type: array of job stats (grouped by job_type, merged with job_host_summary and credentials data)
             - jobs_by_launch_type: array of job stats (grouped by launch_type, with default host summary fields)
-            - jobs_by_ansible_version: array of job stats (grouped by ansible_version, with default host summary fields)
+            - jobs_by_controller_version: array of job stats (grouped by controller_version, with default host summary fields)
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
             - modules_used_per_playbook: array of {playbook_id, modules_used}
@@ -67,9 +67,9 @@ def anonymize_data(data, salt):
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
-    # anonymize jobs_by_ansible_version job template name (if present)
-    if 'jobs_by_ansible_version' in data and data['jobs_by_ansible_version']:
-        for job in data['jobs_by_ansible_version']:
+    # anonymize jobs_by_controller_version job template name (if present)
+    if 'jobs_by_controller_version' in data and data['jobs_by_controller_version']:
+        for job in data['jobs_by_controller_version']:
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
@@ -105,7 +105,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - collection_name_stats: array (copied as-is)
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
-      - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
+      - jobs_by_controller_version: array (grouped by controller_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
     """
     events_modules = data.get('events_modules', {})
@@ -125,7 +125,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate unique_hosts_total by summing unique_hosts_total from all job_type groups
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
-    job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
+    job_host_summary_by_controller_version: List[Dict[str, Any]] = job_host_summary_root.get('by_controller_version', []) or []
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
     job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
 
@@ -135,6 +135,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Calculate job_templates_total by summing templates_total from all job_type groups
     job_templates_total = sum(job.get('templates_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+
+    # Calculate inventories_total by summing inventories_total from all job_type groups
+    inventories_total = sum(job.get('inventories_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
 
     # Calculate job statistics by summing from all job_type groups (jobs_by_job_type contains all jobs)
     rollup_period_jobs_successful = sum(job.get('jobs_successful_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
@@ -149,13 +152,13 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         sum(job.get('jobs_failed_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
     )
 
-    # Merge ansible_versions from all job_type groups (unique values, sorted)
-    ansible_versions_set = set()
+    # Merge controller_versions from all job_type groups (unique values, sorted)
+    controller_versions_set = set()
     for job in jobs_by_job_type:
-        ansible_versions = job.get('ansible_versions', [])
-        if isinstance(ansible_versions, list):
-            ansible_versions_set.update(ansible_versions)
-    ansible_versions_merged = sorted(list(ansible_versions_set)) if ansible_versions_set else []
+        controller_versions = job.get('controller_versions', [])
+        if isinstance(controller_versions, list):
+            controller_versions_set.update(controller_versions)
+    controller_versions_merged = sorted(list(controller_versions_set)) if controller_versions_set else []
 
     # Extract SCM types directly from jobs data (computed in jobs_anonymized_rollup.base)
     scm_types_merged = jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else []
@@ -184,9 +187,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_jobs_successful_duration_total_seconds': rollup_period_jobs_successful_duration_total_seconds,
         'rollup_period_jobs_failed_duration_total_seconds': rollup_period_jobs_failed_duration_total_seconds,
         'rollup_period_organizations_total': jobs.get('organizations_total'),
-        'rollup_period_ansible_versions': ansible_versions_merged,
+        'rollup_period_controller_versions': controller_versions_merged,
         'rollup_period_forks_total': jobs.get('forks_total'),
         'rollup_period_job_templates_total': job_templates_total,
+        'rollup_period_inventories_total': inventories_total,
         # from job_host_summary (sum of all job_type groups)
         'rollup_period_unique_hosts_total': unique_hosts_total,
         'rollup_period_job_host_pairs_total': job_host_pairs_total,
@@ -216,7 +220,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         if item and 'collection_name' in item and 'collection_version' in item
     ]
 
-    # 5) Merge job_host_summary into jobs groupings (by_job_type, by_launch_type, by_ansible_version)
+    # 5) Merge job_host_summary into jobs groupings (by_job_type, by_launch_type, by_controller_version)
     # Create a lookup dict for job_host_summary by job_type
     jhs_lookup: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
 
@@ -296,34 +300,34 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
         jobs_by_launch_type_merged.append(merged_job)
 
-    # 5c) Merge job_host_summary into jobs_by_ansible_version (grouped by ansible_version)
-    # Create a lookup dict for job_host_summary by ansible_version
+    # 5c) Merge job_host_summary into jobs_by_controller_version (grouped by controller_version)
+    # Create a lookup dict for job_host_summary by controller_version
     # Handle None/NaN values by converting to string for consistent lookup
-    jhs_ansible_version_lookup: Dict[str, Dict[str, Any]] = {}
-    for jhs in job_host_summary_by_ansible_version:
-        ansible_version_key = jhs.get('ansible_version')
+    jhs_controller_version_lookup: Dict[str, Dict[str, Any]] = {}
+    for jhs in job_host_summary_by_controller_version:
+        controller_version_key = jhs.get('controller_version')
         # Convert None/NaN to string for consistent lookup
-        if ansible_version_key is None or (isinstance(ansible_version_key, float) and pd.isna(ansible_version_key)):
-            ansible_version_key = 'None'
+        if controller_version_key is None or (isinstance(controller_version_key, float) and pd.isna(controller_version_key)):
+            controller_version_key = 'None'
         else:
-            ansible_version_key = str(ansible_version_key)
-        jhs_ansible_version_lookup[ansible_version_key] = jhs
+            controller_version_key = str(controller_version_key)
+        jhs_controller_version_lookup[controller_version_key] = jhs
 
-    jobs_by_ansible_version: List[Dict[str, Any]] = jobs.get('by_ansible_version', []) or []
-    jobs_by_ansible_version_merged: List[Dict[str, Any]] = []
-    for job in jobs_by_ansible_version:
-        ansible_version = job.get('ansible_version')
+    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('by_controller_version', []) or []
+    jobs_by_controller_version_merged: List[Dict[str, Any]] = []
+    for job in jobs_by_controller_version:
+        controller_version = job.get('controller_version')
         merged_job = job.copy()
 
         # Convert None/NaN to string for consistent lookup
-        if ansible_version is None or (isinstance(ansible_version, float) and pd.isna(ansible_version)):
-            ansible_version_key = 'None'
+        if controller_version is None or (isinstance(controller_version, float) and pd.isna(controller_version)):
+            controller_version_key = 'None'
         else:
-            ansible_version_key = str(ansible_version)
+            controller_version_key = str(controller_version)
 
         # Add host summary fields from matching job_host_summary entry, or use defaults
-        if ansible_version_key in jhs_ansible_version_lookup:
-            jhs_data = jhs_ansible_version_lookup[ansible_version_key]
+        if controller_version_key in jhs_controller_version_lookup:
+            jhs_data = jhs_controller_version_lookup[controller_version_key]
             merged_job.update(
                 {
                     'dark_total': jhs_data.get('dark_total', 0),
@@ -342,7 +346,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
             # No match found, use default values
             merged_job.update(default_host_summary_fields)
 
-        jobs_by_ansible_version_merged.append(merged_job)
+        jobs_by_controller_version_merged.append(merged_job)
 
     # Calculate task statistics from jobs_by_job_type_merged
     # Sum all task fields from all jobs in jobs_by_job_type
@@ -379,7 +383,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'collection_name_stats': collection_name_stats,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
-        'jobs_by_ansible_version': jobs_by_ansible_version_merged,
+        'jobs_by_controller_version': jobs_by_controller_version_merged,
         'collections_versions': collections_versions,
     }
 

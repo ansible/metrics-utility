@@ -109,16 +109,16 @@ def test_big_test6():
         assert launch_type_data['launch_type'] == 'scheduled', 'launch_type should be "scheduled"'
         assert launch_type_data['job_type_total'] == 1, f'Should have 1 job type, got {launch_type_data["job_type_total"]}'
 
-        # Verify by_ansible_version aggregation (in jobs_by_ansible_version)
-        assert 'jobs_by_ansible_version' in result, 'result should have jobs_by_ansible_version'
-        assert isinstance(result['jobs_by_ansible_version'], list), 'jobs_by_ansible_version should be a list'
-        assert len(result['jobs_by_ansible_version']) == 1, 'Should have 1 ansible_version group'
+        # Verify by_controller_version aggregation (in jobs_by_controller_version)
+        assert 'jobs_by_controller_version' in result, 'result should have jobs_by_controller_version'
+        assert isinstance(result['jobs_by_controller_version'], list), 'jobs_by_controller_version should be a list'
+        assert len(result['jobs_by_controller_version']) == 1, 'Should have 1 controller_version group'
 
-        ansible_version_data = result['jobs_by_ansible_version'][0]
-        assert ansible_version_data['ansible_version'] == '2.17.0', 'ansible_version should be "2.17.0"'
-        assert ansible_version_data['job_type_total'] == 1, f'Should have 1 job type, got {ansible_version_data["job_type_total"]}'
-        assert ansible_version_data['launch_type_scheduled_total'] == 1, (
-            f'Should have 1 scheduled launch type, got {ansible_version_data.get("launch_type_scheduled_total", 0)}'
+        controller_version_data = result['jobs_by_controller_version'][0]
+        assert controller_version_data['controller_version'] == '2.17.0', 'controller_version should be "2.17.0"'
+        assert controller_version_data['job_type_total'] == 1, f'Should have 1 job type, got {controller_version_data["job_type_total"]}'
+        assert controller_version_data['launch_type_scheduled_total'] == 1, (
+            f'Should have 1 scheduled launch type, got {controller_version_data.get("launch_type_scheduled_total", 0)}'
         )
 
         # Verify execution environments

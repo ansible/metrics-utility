@@ -245,7 +245,7 @@ def test_all_jobs_combined(cleanup_test_data):
     assert 'statistics' in result
     assert 'jobs_by_job_type' in result
     assert 'jobs_by_launch_type' in result
-    assert 'jobs_by_ansible_version' in result
+    assert 'jobs_by_controller_version' in result
     assert 'module_stats' in result
     assert 'collection_name_stats' in result
     assert 'modules_used_per_playbook' in result
@@ -317,15 +317,15 @@ def test_all_jobs_combined(cleanup_test_data):
     assert workflowjob_type['jobs_total'] == 1, f'Should have 1 job of type "workflowjob", got {workflowjob_type["jobs_total"]}'
     assert workflowjob_type['job_type'] == 'workflowjob'
 
-    # Validate ansible_versions in statistics
-    assert 'rollup_period_ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
-    statistics_ansible_versions = result['statistics']['rollup_period_ansible_versions']
-    assert isinstance(statistics_ansible_versions, list), 'ansible_versions should be a list'
+    # Validate controller_versions in statistics
+    assert 'rollup_period_controller_versions' in result['statistics'], 'Should have controller_versions in statistics'
+    statistics_controller_versions = result['statistics']['rollup_period_controller_versions']
+    assert isinstance(statistics_controller_versions, list), 'controller_versions should be a list'
     # Expected: 2.15.0, 2.16.0, 2.17.0, 2.18.0, 2.19.0
     expected_versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
-    assert len(statistics_ansible_versions) == 5, f'Should have 5 unique ansible versions, got {len(statistics_ansible_versions)}'
+    assert len(statistics_controller_versions) == 5, f'Should have 5 unique controller versions, got {len(statistics_controller_versions)}'
     for version in expected_versions:
-        assert version in statistics_ansible_versions, f'Should have ansible version {version}'
+        assert version in statistics_controller_versions, f'Should have controller version {version}'
 
     # Validate scm_types in statistics
     assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
@@ -355,24 +355,24 @@ def test_all_jobs_combined(cleanup_test_data):
     assert workflow_entry['jobs_total'] == 1, f'workflow should have 1 job, got {workflow_entry["jobs_total"]}'
     assert callback_entry['jobs_total'] == 1, f'callback should have 1 job, got {callback_entry["jobs_total"]}'
 
-    # ========== Validate Jobs by Ansible Version ==========
-    jobs_by_ansible_version_list = result['jobs_by_ansible_version']
-    assert isinstance(jobs_by_ansible_version_list, list), 'jobs_by_ansible_version should be a list'
+    # ========== Validate Jobs by Controller Version ==========
+    jobs_by_controller_version_list = result['jobs_by_controller_version']
+    assert isinstance(jobs_by_controller_version_list, list), 'jobs_by_controller_version should be a list'
 
     # Expected: 2.15.0 (3 jobs), 2.16.0 (2 jobs), 2.17.0 (1 job), 2.18.0 (1 job), 2.19.0 (1 job)
-    assert len(jobs_by_ansible_version_list) == 5, f'Should have 5 ansible versions, got {len(jobs_by_ansible_version_list)}'
+    assert len(jobs_by_controller_version_list) == 5, f'Should have 5 controller versions, got {len(jobs_by_controller_version_list)}'
 
-    version_2_15_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.15.0'), None)
-    version_2_16_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.16.0'), None)
-    version_2_17_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.17.0'), None)
-    version_2_18_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.18.0'), None)
-    version_2_19_0 = next((j for j in jobs_by_ansible_version_list if j.get('ansible_version') == '2.19.0'), None)
+    version_2_15_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.15.0'), None)
+    version_2_16_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.16.0'), None)
+    version_2_17_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.17.0'), None)
+    version_2_18_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.18.0'), None)
+    version_2_19_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.19.0'), None)
 
-    assert version_2_15_0 is not None, 'Should have ansible_version 2.15.0'
-    assert version_2_16_0 is not None, 'Should have ansible_version 2.16.0'
-    assert version_2_17_0 is not None, 'Should have ansible_version 2.17.0'
-    assert version_2_18_0 is not None, 'Should have ansible_version 2.18.0'
-    assert version_2_19_0 is not None, 'Should have ansible_version 2.19.0'
+    assert version_2_15_0 is not None, 'Should have controller_version 2.15.0'
+    assert version_2_16_0 is not None, 'Should have controller_version 2.16.0'
+    assert version_2_17_0 is not None, 'Should have controller_version 2.17.0'
+    assert version_2_18_0 is not None, 'Should have controller_version 2.18.0'
+    assert version_2_19_0 is not None, 'Should have controller_version 2.19.0'
 
     assert version_2_15_0['jobs_total'] == 3, f'2.15.0 should have 3 jobs, got {version_2_15_0["jobs_total"]}'
     assert version_2_16_0['jobs_total'] == 2, f'2.16.0 should have 2 jobs, got {version_2_16_0["jobs_total"]}'
@@ -486,10 +486,10 @@ def test_all_jobs_combined(cleanup_test_data):
     # ========== Verify totals match between all groupings ==========
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
-    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in jobs_by_ansible_version_list)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == result['statistics']['rollup_period_jobs_total'], (
+    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
-        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
         f'statistics={result["statistics"]["rollup_period_jobs_total"]}'
     )
 

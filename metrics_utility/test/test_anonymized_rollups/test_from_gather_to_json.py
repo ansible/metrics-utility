@@ -190,10 +190,10 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'launch_type_manual_total' not in job
             assert 'launch_type_scheduled_total' not in job
 
-    # Validate jobs_by_ansible_version have required fields (grouped by ansible_version, with default host summary fields)
-    if json_data['jobs_by_ansible_version']:
-        for job in json_data['jobs_by_ansible_version']:
-            assert 'ansible_version' in job
+    # Validate jobs_by_controller_version have required fields (grouped by controller_version, with default host summary fields)
+    if json_data['jobs_by_controller_version']:
+        for job in json_data['jobs_by_controller_version']:
+            assert 'controller_version' in job
             assert 'jobs_total' in job
             assert 'jobs_failed_total' in job
             assert 'templates_total' in job
@@ -309,27 +309,27 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'job_type_total' in launch_type_entry, 'Should have job_type_total field'
     assert launch_type_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
 
-    # Validate jobs_by_ansible_version actual values
-    print('--- Validating jobs_by_ansible_version data values ---')
-    assert len(json_data['jobs_by_ansible_version']) >= 1, 'Should have at least 1 ansible_version group'
-    # Find the ansible_version entry (should have at least one)
-    ansible_version_entry = json_data['jobs_by_ansible_version'][0]
-    assert 'ansible_version' in ansible_version_entry, 'Should have ansible_version field'
-    assert ansible_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in ansible_version group'
-    assert 'job_type_total' in ansible_version_entry, 'Should have job_type_total field'
-    assert ansible_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
-    # Verify launch_type counts are present (since we're grouping by ansible_version)
-    assert 'launch_type_manual_total' in ansible_version_entry or 'launch_type_scheduled_total' in ansible_version_entry, (
-        'Should have launch_type_*_total fields when grouping by ansible_version'
+    # Validate jobs_by_controller_version actual values
+    print('--- Validating jobs_by_controller_version data values ---')
+    assert len(json_data['jobs_by_controller_version']) >= 1, 'Should have at least 1 controller_version group'
+    # Find the controller_version entry (should have at least one)
+    controller_version_entry = json_data['jobs_by_controller_version'][0]
+    assert 'controller_version' in controller_version_entry, 'Should have controller_version field'
+    assert controller_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in controller_version group'
+    assert 'job_type_total' in controller_version_entry, 'Should have job_type_total field'
+    assert controller_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
+    # Verify launch_type counts are present (since we're grouping by controller_version)
+    assert 'launch_type_manual_total' in controller_version_entry or 'launch_type_scheduled_total' in controller_version_entry, (
+        'Should have launch_type_*_total fields when grouping by controller_version'
     )
 
     # Verify totals match between all groupings
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_launch_type'])
-    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_ansible_version'])
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == statistics['rollup_period_jobs_total'], (
+    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_controller_version'])
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == statistics['rollup_period_jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
-        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
         f'statistics={statistics["rollup_period_jobs_total"]}'
     )
 
