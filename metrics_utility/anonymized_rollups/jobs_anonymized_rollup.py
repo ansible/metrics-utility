@@ -1,5 +1,7 @@
 import json
 
+from collections import Counter
+
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
@@ -13,23 +15,22 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         # filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
-                
+
         # Return both the filtered dataframe and collections statistics
         return {
             'jobs': dataframe,
         }
-    
-    
+
     def merge(self, data_all, data_new):
         # Handle initial None case (first iteration from load_anonymized_rollup_data)
         if data_all is None:
             return data_new
-        
+
         # Ensure data_all is a dict with 'jobs' key
         # Handle case where data_all might be a DataFrame (backward compatibility)
         if isinstance(data_all, pd.DataFrame):
             data_all = {'jobs': data_all}
-        
+
         # Simply merge the jobs dataframe
         return {'jobs': pd.concat([data_all['jobs'], data_new['jobs']], ignore_index=True)}
 
@@ -74,7 +75,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         data is a dict with 'jobs' (DataFrame) or None if no data
         """
-        
+
         # Handle None input (no data files)
         if data is None:
             return {
@@ -98,10 +99,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                     'installed_collections': pd.DataFrame(),
                 },
             }
-        
+
         # Extract jobs dataframe from data
         dataframe = data.get('jobs', pd.DataFrame())
-        
+
         # Handle empty dataframe
         if dataframe.empty:
             return {
@@ -145,23 +146,29 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_seconds'] = (dataframe['finished'] - dataframe['started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['started'] - dataframe['created']).dt.total_seconds()
 
+        # Pre-compute boolean columns for efficient aggregations (avoids lambda functions)
+        dataframe['jobs_successful'] = ~dataframe['failed']
+        dataframe['jobs_never_started'] = dataframe['started'].isna()
+        dataframe['job_duration_successful_seconds'] = dataframe['job_duration_seconds'].where(dataframe['jobs_successful'], 0)
+        dataframe['job_duration_failed_seconds'] = dataframe['job_duration_seconds'].where(dataframe['failed'], 0)
+
+        # Pre-compute launch_type boolean columns for vectorized aggregations
+        launch_types = ['manual', 'relaunch', 'callback', 'scheduled', 'dependency', 'workflow', 'webhook', 'sync', 'scm', 'api', 'system', 'unknown']
+        for launch_type in launch_types:
+            dataframe[f'launch_type_{launch_type}'] = dataframe['launch_type'] == launch_type
+
         # Build common aggregation dictionary shared by both groupings
+        # Using pre-computed columns instead of lambdas for better performance
         common_aggregations = {
             'jobs_total': ('id', 'nunique'),
             'jobs_failed_total': ('failed', 'sum'),
-            'jobs_successful_total': ('failed', lambda x: (~x).sum()),
-            'jobs_never_started_total': ('started', lambda x: x.isna().sum()),
+            'jobs_successful_total': ('jobs_successful', 'sum'),
+            'jobs_never_started_total': ('jobs_never_started', 'sum'),
             'job_duration_maximum_seconds': ('job_duration_seconds', 'max'),
             'job_duration_minimum_seconds': ('job_duration_seconds', 'min'),
             'job_duration_total_seconds': ('job_duration_seconds', 'sum'),
-            'jobs_successful_duration_total_seconds': (
-                'job_duration_seconds',
-                lambda x: x[~dataframe.loc[x.index, 'failed']].sum(),
-            ),
-            'jobs_failed_duration_total_seconds': (
-                'job_duration_seconds',
-                lambda x: x[dataframe.loc[x.index, 'failed']].sum(),
-            ),
+            'jobs_successful_duration_total_seconds': ('job_duration_successful_seconds', 'sum'),
+            'jobs_failed_duration_total_seconds': ('job_duration_failed_seconds', 'sum'),
             'job_waiting_time_maximum_seconds': ('job_waiting_time_seconds', 'max'),
             'job_waiting_time_minimum_seconds': ('job_waiting_time_seconds', 'min'),
             'job_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
@@ -171,25 +178,31 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             # jobs using projects by scm types
         }
 
-        # Launch type aggregations - reusable across multiple groupings
+        # Launch type aggregations - using pre-computed boolean columns for vectorized operations
         launch_type_aggregations = {
-            'launch_type_manual_total': ('launch_type', lambda x: (x == 'manual').sum()),
-            'launch_type_relaunch_total': ('launch_type', lambda x: (x == 'relaunch').sum()),
-            'launch_type_callback_total': ('launch_type', lambda x: (x == 'callback').sum()),
-            'launch_type_scheduled_total': ('launch_type', lambda x: (x == 'scheduled').sum()),
-            'launch_type_dependency_total': ('launch_type', lambda x: (x == 'dependency').sum()),
-            'launch_type_workflow_total': ('launch_type', lambda x: (x == 'workflow').sum()),
-            'launch_type_webhook_total': ('launch_type', lambda x: (x == 'webhook').sum()),
-            'launch_type_sync_total': ('launch_type', lambda x: (x == 'sync').sum()),
-            'launch_type_scm_total': ('launch_type', lambda x: (x == 'scm').sum()),
-            'launch_type_api_total': ('launch_type', lambda x: (x == 'api').sum()),
-            'launch_type_system_total': ('launch_type', lambda x: (x == 'system').sum()),
-            'launch_type_unknown_total': ('launch_type', lambda x: (x == 'unknown').sum()),
+            'launch_type_manual_total': ('launch_type_manual', 'sum'),
+            'launch_type_relaunch_total': ('launch_type_relaunch', 'sum'),
+            'launch_type_callback_total': ('launch_type_callback', 'sum'),
+            'launch_type_scheduled_total': ('launch_type_scheduled', 'sum'),
+            'launch_type_dependency_total': ('launch_type_dependency', 'sum'),
+            'launch_type_workflow_total': ('launch_type_workflow', 'sum'),
+            'launch_type_webhook_total': ('launch_type_webhook', 'sum'),
+            'launch_type_sync_total': ('launch_type_sync', 'sum'),
+            'launch_type_scm_total': ('launch_type_scm', 'sum'),
+            'launch_type_api_total': ('launch_type_api', 'sum'),
+            'launch_type_system_total': ('launch_type_system', 'sum'),
+            'launch_type_unknown_total': ('launch_type_unknown', 'sum'),
         }
 
-        # Ansible versions aggregation - array of unique versions
+        # Ansible versions aggregation - optimized to avoid lambda
+        # We'll compute this separately after groupby for better performance
+        def get_ansible_versions(grouped_series):
+            """Helper function to extract sorted unique ansible versions from a group"""
+            unique_versions = grouped_series.dropna().unique()
+            return sorted([str(v) for v in unique_versions if pd.notna(v)])
+
         ansible_versions_aggregation = {
-            'ansible_versions': ('ansible_version', lambda x: sorted([str(v) for v in x.dropna().unique() if pd.notna(v)])),
+            'ansible_versions': ('ansible_version', get_ansible_versions),
         }
 
         # Aggregations grouped by job_type (model)
@@ -198,40 +211,31 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type_dict.update(launch_type_aggregations)
         aggregations_by_job_type_dict.update(ansible_versions_aggregation)
 
-        aggregations_by_job_type = (
-            dataframe.groupby('model')
-            .agg(**aggregations_by_job_type_dict)
-            .reset_index()
-            .rename(columns={'model': 'job_type'})
-        )
+        aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
 
         # Aggregations grouped by launch_type
         # Add job_type_total specific to launch_type grouping
         aggregations_by_launch_type_dict = common_aggregations.copy()
-        aggregations_by_launch_type_dict.update({
-            'job_type_total': ('model', 'nunique'),  # Count distinct job types instead of launch types
-        })
+        aggregations_by_launch_type_dict.update(
+            {
+                'job_type_total': ('model', 'nunique'),  # Count distinct job types instead of launch types
+            }
+        )
         aggregations_by_launch_type_dict.update(ansible_versions_aggregation)
 
-        aggregations_by_launch_type = (
-            dataframe.groupby('launch_type')
-            .agg(**aggregations_by_launch_type_dict)
-            .reset_index()
-        )
+        aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
 
         # Aggregations grouped by ansible_version
         # Add both job_type_total and launch_type counts (since we're grouping by ansible_version)
         aggregations_by_ansible_version_dict = common_aggregations.copy()
-        aggregations_by_ansible_version_dict.update({
-            'job_type_total': ('model', 'nunique'),  # Count distinct job types
-        })
+        aggregations_by_ansible_version_dict.update(
+            {
+                'job_type_total': ('model', 'nunique'),  # Count distinct job types
+            }
+        )
         aggregations_by_ansible_version_dict.update(launch_type_aggregations)
 
-        aggregations_by_ansible_version = (
-            dataframe.groupby('ansible_version')
-            .agg(**aggregations_by_ansible_version_dict)
-            .reset_index()
-        )
+        aggregations_by_ansible_version = dataframe.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
 
         organizations_total = dataframe['organization_name'].nunique()
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
@@ -261,12 +265,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'json': json_data,
         }
-    
+
     def _process_collections_from_jobs(self, dataframe):
         """
         Extract unique collection name and version pairs from jobs dataframe.
         Count how many jobs use each unique collection+version combination.
-        
+
+        Optimized version using itertuples() and Counter for better performance.
+
         Returns a list of dicts with:
         - collection_name: str
         - collection_version: str
@@ -274,59 +280,58 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         """
         if 'installed_collections' not in dataframe.columns:
             return []
-        
-        # Dictionary to track collection name + version -> job count
-        collections_dict = {}
-        
-        # Use itertuples() instead of iterrows() for 10-100x better performance
-        # itertuples() returns namedtuples which are much faster than Series objects
+
+        # Use Counter for efficient counting
+        collections_counter = Counter()
+
+        # Use itertuples() for fastest row iteration (10-100x faster than iterrows)
+        # itertuples() creates namedtuples with column names as attributes
+        # Column names with special characters are sanitized, but 'installed_collections' should work fine
         for row in dataframe.itertuples(index=False):
-            installed_collections_str = getattr(row, 'installed_collections', None)
-            
-            # Skip if missing or empty
-            if pd.isna(installed_collections_str) or not installed_collections_str:
+            installed_collections_data = getattr(row, 'installed_collections', None)
+
+            # Skip if missing or empty (fast check)
+            if pd.isna(installed_collections_data) or not installed_collections_data:
                 continue
-            
-            # Parse JSON string
+
+            # Parse JSON string if needed
             try:
-                if isinstance(installed_collections_str, str):
-                    collections_data = json.loads(installed_collections_str)
+                if isinstance(installed_collections_data, str):
+                    collections_data = json.loads(installed_collections_data)
+                elif isinstance(installed_collections_data, dict):
+                    collections_data = installed_collections_data
                 else:
-                    # Already a dict
-                    collections_data = installed_collections_str
+                    continue
             except (json.JSONDecodeError, TypeError):
-                # Skip invalid JSON
                 continue
-            
+
             # Extract collection name and version pairs
-            if isinstance(collections_data, dict):
-                for collection_name, collection_info in collections_data.items():
-                    if not isinstance(collection_info, dict):
-                        continue
-                    
-                    version = collection_info.get('version', '')
-                    if not version:
-                        continue
-                    
-                    # Create unique key for collection name + version
-                    key = (collection_name, str(version))
-                    
-                    # Increment job count for this collection+version
-                    if key not in collections_dict:
-                        collections_dict[key] = 0
-                    collections_dict[key] += 1
-        
-        # Convert to list of dicts
+            if not isinstance(collections_data, dict):
+                continue
+
+            # Process all collections for this job
+            for collection_name, collection_info in collections_data.items():
+                if not isinstance(collection_info, dict):
+                    continue
+
+                version = collection_info.get('version', '')
+                if not version:
+                    continue
+
+                # Use Counter for efficient counting
+                collections_counter[(collection_name, str(version))] += 1
+
+        # Convert Counter to list of dicts
         collections_stats = [
             {
                 'collection_name': collection_name,
                 'collection_version': collection_version,
                 'job_count': job_count,
             }
-            for (collection_name, collection_version), job_count in collections_dict.items()
+            for (collection_name, collection_version), job_count in collections_counter.items()
         ]
-        
+
         # Sort by collection_name, then by collection_version for consistent output
         collections_stats.sort(key=lambda x: (x['collection_name'], x['collection_version']))
-        
+
         return collections_stats

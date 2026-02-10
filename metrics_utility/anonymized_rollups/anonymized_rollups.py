@@ -139,9 +139,15 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate job statistics by summing from all job_type groups (jobs_by_job_type contains all jobs)
     rollup_period_jobs_successful = sum(job.get('jobs_successful_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
     rollup_period_jobs_failed = sum(job.get('jobs_failed_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    rollup_period_jobs_duration_all_statuses_seconds = sum(job.get('job_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    rollup_period_jobs_successful_duration_total_seconds = sum(job.get('jobs_successful_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    rollup_period_jobs_failed_duration_total_seconds = sum(job.get('jobs_failed_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    rollup_period_jobs_duration_all_statuses_seconds = (
+        sum(job.get('job_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    )
+    rollup_period_jobs_successful_duration_total_seconds = (
+        sum(job.get('jobs_successful_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    )
+    rollup_period_jobs_failed_duration_total_seconds = (
+        sum(job.get('jobs_failed_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    )
 
     # Merge ansible_versions from all job_type groups (unique values, sorted)
     ansible_versions_set = set()
@@ -346,22 +352,24 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     rollup_period_task_unreachable_total = sum(job.get('dark_total', 0) for job in jobs_by_job_type_merged)
     rollup_period_task_ignored_total = sum(job.get('ignored_total', 0) for job in jobs_by_job_type_merged)
     rollup_period_tasks_total = (
-        rollup_period_task_ok_total +
-        rollup_period_task_failed_total +
-        rollup_period_task_skipped_total +
-        rollup_period_task_unreachable_total +
-        rollup_period_task_ignored_total
+        rollup_period_task_ok_total
+        + rollup_period_task_failed_total
+        + rollup_period_task_skipped_total
+        + rollup_period_task_unreachable_total
+        + rollup_period_task_ignored_total
     )
 
     # Add task statistics to the statistics dictionary
-    statistics.update({
-        'rollup_period_tasks_total': rollup_period_tasks_total,
-        'rollup_period_task_ok_total': rollup_period_task_ok_total,
-        'rollup_period_task_failed_total': rollup_period_task_failed_total,
-        'rollup_period_task_skipped_total': rollup_period_task_skipped_total,
-        'rollup_period_task_unreachable_total': rollup_period_task_unreachable_total,
-        'rollup_period_task_ignored_total': rollup_period_task_ignored_total,
-    })
+    statistics.update(
+        {
+            'rollup_period_tasks_total': rollup_period_tasks_total,
+            'rollup_period_task_ok_total': rollup_period_task_ok_total,
+            'rollup_period_task_failed_total': rollup_period_task_failed_total,
+            'rollup_period_task_skipped_total': rollup_period_task_skipped_total,
+            'rollup_period_task_unreachable_total': rollup_period_task_unreachable_total,
+            'rollup_period_task_ignored_total': rollup_period_task_ignored_total,
+        }
+    )
 
     # 6) assemble the flattened object
     flattened: Dict[str, Any] = {

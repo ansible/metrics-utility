@@ -626,6 +626,6 @@ def test_events_modules_aggregations_basic():
     # Verify warnings_total and deprecations_total
     # We added 2 warning events (job 1 and job 2) and 1 deprecated event (job 3)
     # Total events: 20 task events + 2 warnings + 1 deprecated = 23 events
-    assert result['event_total'] == 23, f"Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result['event_total']}"
-    assert result['warnings_total'] == 2, f"Expected 2 warnings, got {result['warnings_total']}"
-    assert result['deprecations_total'] == 1, f"Expected 1 deprecated event, got {result['deprecations_total']}"
+    assert result['event_total'] == 23, f'Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result["event_total"]}'
+    assert result['warnings_total'] == 2, f'Expected 2 warnings, got {result["warnings_total"]}'
+    assert result['deprecations_total'] == 1, f'Expected 1 deprecated event, got {result["deprecations_total"]}'

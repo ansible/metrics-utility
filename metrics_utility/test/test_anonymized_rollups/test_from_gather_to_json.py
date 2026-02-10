@@ -121,11 +121,17 @@ def test_from_gather_to_json(cleanup_glob):
     if statistics['rollup_period_jobs_failed'] is not None:
         assert isinstance(statistics['rollup_period_jobs_failed'], (int, float)), 'jobs_failed should be int or float'
     if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
-        assert isinstance(statistics['rollup_period_jobs_duration_all_statuses_seconds'], (int, float)), 'jobs_duration_all_statuses_seconds should be int or float'
+        assert isinstance(statistics['rollup_period_jobs_duration_all_statuses_seconds'], (int, float)), (
+            'jobs_duration_all_statuses_seconds should be int or float'
+        )
     if statistics['rollup_period_jobs_successful_duration_total_seconds'] is not None:
-        assert isinstance(statistics['rollup_period_jobs_successful_duration_total_seconds'], (int, float)), 'jobs_successful_duration_total_seconds should be int or float'
+        assert isinstance(statistics['rollup_period_jobs_successful_duration_total_seconds'], (int, float)), (
+            'jobs_successful_duration_total_seconds should be int or float'
+        )
     if statistics['rollup_period_jobs_failed_duration_total_seconds'] is not None:
-        assert isinstance(statistics['rollup_period_jobs_failed_duration_total_seconds'], (int, float)), 'jobs_failed_duration_total_seconds should be int or float'
+        assert isinstance(statistics['rollup_period_jobs_failed_duration_total_seconds'], (int, float)), (
+            'jobs_failed_duration_total_seconds should be int or float'
+        )
     assert isinstance(statistics['rollup_period_forks_total'], int)
     assert isinstance(statistics['rollup_period_unique_hosts_total'], int)
     assert isinstance(statistics['rollup_period_job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
@@ -343,8 +349,7 @@ def test_from_gather_to_json(cleanup_glob):
             )
         if statistics['rollup_period_jobs_failed'] is not None:
             assert statistics['rollup_period_jobs_failed'] == expected_jobs_failed, (
-                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, '
-                f'got={statistics["rollup_period_jobs_failed"]}'
+                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, got={statistics["rollup_period_jobs_failed"]}'
             )
         if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
             assert abs(statistics['rollup_period_jobs_duration_all_statuses_seconds'] - expected_duration_all) < 0.001, (

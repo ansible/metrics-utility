@@ -19,10 +19,10 @@ Job Final Outcome: failed (because Host4 failed)
 import json
 import os
 import shutil
+
 from datetime import datetime
 
 import pandas as pd
-import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.test_anonymized_rollups.big_test1.credentials import credentials
@@ -45,7 +45,7 @@ def test_big_test1():
         jobhostsummary_csv = os.path.join(test_dir, 'jobhostsummary.csv')
         execution_environments_csv = os.path.join(test_dir, 'execution_environments.csv')
         credentials_csv = os.path.join(test_dir, 'credentials.csv')
-        
+
         pd.DataFrame(jobs).to_csv(jobs_csv, index=False)
         pd.DataFrame(events).to_csv(events_csv, index=False)
         pd.DataFrame(jobhostsummary).to_csv(jobhostsummary_csv, index=False)
@@ -82,13 +82,15 @@ def test_big_test1():
         assert 'statistics' in result, 'result should have statistics key'
         statistics = result['statistics']
         assert 'rollup_period_job_host_pairs_total' in statistics, 'statistics should have job_host_pairs_total'
-        assert statistics['rollup_period_job_host_pairs_total'] == 4, f'Should have 4 job host pairs, got {statistics["rollup_period_job_host_pairs_total"]}'
+        assert statistics['rollup_period_job_host_pairs_total'] == 4, (
+            f'Should have 4 job host pairs, got {statistics["rollup_period_job_host_pairs_total"]}'
+        )
 
         # Verify by_job_type aggregation (in jobs_by_job_type)
         assert 'jobs_by_job_type' in result, 'result should have jobs_by_job_type'
         assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
         assert len(result['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
-        
+
         job_type_data = result['jobs_by_job_type'][0]
         assert job_type_data['job_type'] == 'job', 'job_type should be "job"'
         assert job_type_data['ok_total'] == 11, f'Should have 11 ok tasks total, got {job_type_data["ok_total"]}'
@@ -102,7 +104,7 @@ def test_big_test1():
         assert 'jobs_by_launch_type' in result, 'result should have jobs_by_launch_type'
         assert isinstance(result['jobs_by_launch_type'], list), 'jobs_by_launch_type should be a list'
         assert len(result['jobs_by_launch_type']) == 1, 'Should have 1 launch_type group'
-        
+
         launch_type_data = result['jobs_by_launch_type'][0]
         assert launch_type_data['launch_type'] == 'manual', 'launch_type should be "manual"'
         assert launch_type_data['job_type_total'] == 1, f'Should have 1 job type, got {launch_type_data["job_type_total"]}'
@@ -111,11 +113,13 @@ def test_big_test1():
         assert 'jobs_by_ansible_version' in result, 'result should have jobs_by_ansible_version'
         assert isinstance(result['jobs_by_ansible_version'], list), 'jobs_by_ansible_version should be a list'
         assert len(result['jobs_by_ansible_version']) == 1, 'Should have 1 ansible_version group'
-        
+
         ansible_version_data = result['jobs_by_ansible_version'][0]
         assert ansible_version_data['ansible_version'] == '2.15.0', 'ansible_version should be "2.15.0"'
         assert ansible_version_data['job_type_total'] == 1, f'Should have 1 job type, got {ansible_version_data["job_type_total"]}'
-        assert ansible_version_data['launch_type_manual_total'] == 1, f'Should have 1 manual launch type, got {ansible_version_data.get("launch_type_manual_total", 0)}'
+        assert ansible_version_data['launch_type_manual_total'] == 1, (
+            f'Should have 1 manual launch type, got {ansible_version_data.get("launch_type_manual_total", 0)}'
+        )
 
         # Verify execution environments
         assert 'rollup_period_execution_environments_total' in statistics

@@ -52,6 +52,7 @@
 
 import json
 
+
 # Jobs dataset
 jobs = [
     {
@@ -69,9 +70,11 @@ jobs = [
         'forks': 10,
         'inventory_name': 'test-inventory',
         'scm_type': 'git',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.15.0'},
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.15.0'},
+            }
+        ),
     },
 ]
 

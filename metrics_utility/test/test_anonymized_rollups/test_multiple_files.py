@@ -27,13 +27,13 @@ import pandas as pd
 import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
 from metrics_utility.test.test_anonymized_rollups.test_events_modules_anonymized_rollups import events
 from metrics_utility.test.test_anonymized_rollups.test_execution_environments_anonymized_rollups import execution_environments
 from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized_rollups import jobhostsummary
 
 # Import test data from other test files
 from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups import jobs
-from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
 
 
 @pytest.fixture(scope='module')
@@ -235,7 +235,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert result['statistics']['rollup_period_jobs_total'] == 5  # Total jobs across all job types
     # job_templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
     assert result['statistics']['rollup_period_job_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
-    
+
     # Validate ansible_versions in statistics is merged from jobs_by_job_type
     assert 'rollup_period_ansible_versions' in result['statistics'], 'Should have ansible_versions in statistics'
     statistics_ansible_versions = result['statistics']['rollup_period_ansible_versions']
@@ -249,19 +249,17 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
             expected_versions_set.update(ansible_versions)
     expected_versions = sorted(list(expected_versions_set))
     assert statistics_ansible_versions == expected_versions, (
-        f"Expected ansible_versions {expected_versions} in statistics, got {statistics_ansible_versions}"
+        f'Expected ansible_versions {expected_versions} in statistics, got {statistics_ansible_versions}'
     )
     # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
     # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
-    assert len(statistics_ansible_versions) == 5, (
-        f"Expected 5 unique ansible versions, got {len(statistics_ansible_versions)}"
-    )
+    assert len(statistics_ansible_versions) == 5, f'Expected 5 unique ansible versions, got {len(statistics_ansible_versions)}'
     assert '2.9.0' in statistics_ansible_versions
     assert '2.10.0' in statistics_ansible_versions
     assert '2.11.0' in statistics_ansible_versions
     assert '2.12.0' in statistics_ansible_versions
     assert '2.14.0' in statistics_ansible_versions
-    
+
     # Validate scm_types in statistics
     assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
     assert result['statistics']['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
@@ -304,9 +302,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate ansible_versions in by_job_type
     # 'workflowjob' type has job 3 with version: 2.11.0
     assert 'ansible_versions' in workflowjob_type, 'Should have ansible_versions field in by_job_type'
-    assert workflowjob_type['ansible_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['ansible_versions']}"
-    )
+    assert workflowjob_type['ansible_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['ansible_versions']}"
 
     # 'adhoccommand' type should have never started job
     adhoccommand_type_jobs = [j for j in jobs_list if j['job_type'] == 'adhoccommand' and j['jobs_never_started_total'] == 1]
@@ -391,7 +387,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert 'rollup_period_task_skipped_total' in result['statistics'], 'Should have rollup_period_task_skipped_total in statistics'
     assert 'rollup_period_task_unreachable_total' in result['statistics'], 'Should have rollup_period_task_unreachable_total in statistics'
     assert 'rollup_period_task_ignored_total' in result['statistics'], 'Should have rollup_period_task_ignored_total in statistics'
-    
+
     # Verify the statistics match the calculated totals
     expected_tasks_total = total_ok + total_failures + total_skipped + total_dark + total_ignored
     assert result['statistics']['rollup_period_tasks_total'] == expected_tasks_total, (
@@ -419,13 +415,17 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Verify values from concatenated data across 3 tarballs
     assert result['statistics']['rollup_period_modules_used_to_automate_total'] == 7, 'Should have 7 unique modules from all tarballs'
     assert result['statistics']['rollup_period_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
-    
+
     # Verify warnings_total and deprecations_total
     # Test data has 2 warnings (job 1 and job 2) and 1 deprecated (job 3)
     assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
-    assert result['statistics']['rollup_period_warnings_total'] == 2, f"Expected 2 warnings, got {result['statistics']['rollup_period_warnings_total']}"
+    assert result['statistics']['rollup_period_warnings_total'] == 2, (
+        f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'
+    )
     assert 'rollup_period_deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
-    assert result['statistics']['rollup_period_deprecations_total'] == 1, f"Expected 1 deprecated event, got {result['statistics']['rollup_period_deprecations_total']}"
+    assert result['statistics']['rollup_period_deprecations_total'] == 1, (
+        f'Expected 1 deprecated event, got {result["statistics"]["rollup_period_deprecations_total"]}'
+    )
 
     # Check specific known modules are present in module_stats
     module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
@@ -526,39 +526,34 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # community.aws 1.5.0: 1 job (3)
 
     # Convert to dict for easier lookup
-    collections_dict = {
-        (c['name'], c['version']): c['job_count']
-        for c in collections_versions
-    }
+    collections_dict = {(c['name'], c['version']): c['job_count'] for c in collections_versions}
 
     # Verify ansible.builtin 2.9.10 appears in 5 jobs
     assert collections_dict.get(('ansible.builtin', '2.9.10')) == 5, (
-        f"Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(('ansible.builtin', '2.9.10'))}"
+        f'Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(("ansible.builtin", "2.9.10"))}'
     )
 
     # Verify community.general appears with different versions (testing same collection with different versions)
     assert collections_dict.get(('community.general', '1.0.0')) == 2, (
-        f"Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(('community.general', '1.0.0'))}"
+        f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'
     )
     assert collections_dict.get(('community.general', '2.0.0')) == 2, (
-        f"Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(('community.general', '2.0.0'))}"
+        f'Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(("community.general", "2.0.0"))}'
     )
     assert collections_dict.get(('community.general', '3.0.0')) == 1, (
-        f"Expected community.general 3.0.0 in 1 job, got {collections_dict.get(('community.general', '3.0.0'))}"
+        f'Expected community.general 3.0.0 in 1 job, got {collections_dict.get(("community.general", "3.0.0"))}'
     )
 
     # Verify other collections
     assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
-        f"Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(('ansible.windows', '1.0.0'))}"
+        f'Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(("ansible.windows", "1.0.0"))}'
     )
     assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
-        f"Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(('community.aws', '1.5.0'))}"
+        f'Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(("community.aws", "1.5.0"))}'
     )
 
     # Verify total number of unique collection-version pairs
-    assert len(collections_versions) == 6, (
-        f"Expected 6 unique collection-version pairs, got {len(collections_versions)}"
-    )
+    assert len(collections_versions) == 6, f'Expected 6 unique collection-version pairs, got {len(collections_versions)}'
 
     # Verify all entries have required fields (name, version, job_count)
     for collection in collections_versions:
@@ -571,7 +566,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Validate Jobs by Launch Type ==========
     jobs_by_launch_type_list = result['jobs_by_launch_type']
     assert isinstance(jobs_by_launch_type_list, list), 'jobs_by_launch_type should be a list'
-    
+
     # Expected launch types from test data (jobs 1-4 and 6, job 5 is filtered out):
     # Job 1: manual
     # Job 2: scheduled
@@ -642,9 +637,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate ansible_versions in by_launch_type
     # 'manual' launch_type has job 1 with version: 2.9.0
     assert 'ansible_versions' in manual_entry, 'Should have ansible_versions field in by_launch_type'
-    assert manual_entry['ansible_versions'] == ['2.9.0'], (
-        f"Expected ['2.9.0'] for manual launch_type, got {manual_entry['ansible_versions']}"
-    )
+    assert manual_entry['ansible_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {manual_entry['ansible_versions']}"
     # 'scheduled' launch_type has jobs 2, 6 with versions: 2.10.0, 2.14.0
     assert 'ansible_versions' in scheduled_entry, 'Should have ansible_versions field in by_launch_type'
     assert scheduled_entry['ansible_versions'] == ['2.10.0', '2.14.0'], (
@@ -652,19 +645,15 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     )
     # 'workflow' launch_type has job 3 with version: 2.11.0
     assert 'ansible_versions' in workflow_entry, 'Should have ansible_versions field in by_launch_type'
-    assert workflow_entry['ansible_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['ansible_versions']}"
-    )
+    assert workflow_entry['ansible_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['ansible_versions']}"
     # 'callback' launch_type has job 4 with version: 2.12.0
     assert 'ansible_versions' in callback_entry, 'Should have ansible_versions field in by_launch_type'
-    assert callback_entry['ansible_versions'] == ['2.12.0'], (
-        f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['ansible_versions']}"
-    )
+    assert callback_entry['ansible_versions'] == ['2.12.0'], f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['ansible_versions']}"
 
     # ========== Validate Jobs by Ansible Version ==========
     jobs_by_ansible_version_list = result['jobs_by_ansible_version']
     assert isinstance(jobs_by_ansible_version_list, list), 'jobs_by_ansible_version should be a list'
-    
+
     # Expected ansible versions from test data (jobs 1-4 and 6, job 5 is filtered out):
     # Job 1: 2.9.0
     # Job 2: 2.10.0
@@ -836,8 +825,12 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['rollup_period_modules_used_to_automate_total'] is None
     assert statistics['rollup_period_hosts_automated_total'] is None
-    assert statistics['rollup_period_warnings_total'] == 0, f'warnings_total should be 0 for empty data, got {statistics["rollup_period_warnings_total"]}'
-    assert statistics['rollup_period_deprecations_total'] == 0, f'deprecations_total should be 0 for empty data, got {statistics["rollup_period_deprecations_total"]}'
+    assert statistics['rollup_period_warnings_total'] == 0, (
+        f'warnings_total should be 0 for empty data, got {statistics["rollup_period_warnings_total"]}'
+    )
+    assert statistics['rollup_period_deprecations_total'] == 0, (
+        f'deprecations_total should be 0 for empty data, got {statistics["rollup_period_deprecations_total"]}'
+    )
     assert statistics['rollup_period_execution_environments_total'] is None
     assert statistics['rollup_period_execution_environments_default_total'] is None
     assert statistics['rollup_period_execution_environments_custom_total'] is None
@@ -845,7 +838,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_jobs_successful'] is None, 'jobs_successful should be None for empty data'
     assert statistics['rollup_period_jobs_failed'] is None, 'jobs_failed should be None for empty data'
     assert statistics['rollup_period_jobs_duration_all_statuses_seconds'] is None, 'jobs_duration_all_statuses_seconds should be None for empty data'
-    assert statistics['rollup_period_jobs_successful_duration_total_seconds'] is None, 'jobs_successful_duration_total_seconds should be None for empty data'
+    assert statistics['rollup_period_jobs_successful_duration_total_seconds'] is None, (
+        'jobs_successful_duration_total_seconds should be None for empty data'
+    )
     assert statistics['rollup_period_jobs_failed_duration_total_seconds'] is None, 'jobs_failed_duration_total_seconds should be None for empty data'
     assert statistics['rollup_period_organizations_total'] is None
     assert 'rollup_period_ansible_versions' in statistics, 'Should have ansible_versions field in statistics'
@@ -853,18 +848,36 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_forks_total'] is None
     assert statistics['rollup_period_unique_hosts_total'] is None
     # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count
-    assert statistics['rollup_period_job_host_pairs_total'] == 0, f'job_host_pairs_total should be 0 for empty data, got {statistics["rollup_period_job_host_pairs_total"]}'
+    assert statistics['rollup_period_job_host_pairs_total'] == 0, (
+        f'job_host_pairs_total should be 0 for empty data, got {statistics["rollup_period_job_host_pairs_total"]}'
+    )
     # playbooks_total should be 0 (not None) when there's no data, as it represents a count
-    assert statistics['rollup_period_playbooks_total'] == 0, f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'
+    assert statistics['rollup_period_playbooks_total'] == 0, (
+        f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'
+    )
     # job_templates_total should be None when there's no data (no job_type groups)
-    assert statistics['rollup_period_job_templates_total'] is None, f'job_templates_total should be None for empty data, got {statistics["rollup_period_job_templates_total"]}'
+    assert statistics['rollup_period_job_templates_total'] is None, (
+        f'job_templates_total should be None for empty data, got {statistics["rollup_period_job_templates_total"]}'
+    )
     # Task statistics should be 0 (not None) when there's no data, as they're calculated from empty jobs_by_job_type list
-    assert statistics['rollup_period_tasks_total'] == 0, f'rollup_period_tasks_total should be 0 for empty data, got {statistics["rollup_period_tasks_total"]}'
-    assert statistics['rollup_period_task_ok_total'] == 0, f'rollup_period_task_ok_total should be 0 for empty data, got {statistics["rollup_period_task_ok_total"]}'
-    assert statistics['rollup_period_task_failed_total'] == 0, f'rollup_period_task_failed_total should be 0 for empty data, got {statistics["rollup_period_task_failed_total"]}'
-    assert statistics['rollup_period_task_skipped_total'] == 0, f'rollup_period_task_skipped_total should be 0 for empty data, got {statistics["rollup_period_task_skipped_total"]}'
-    assert statistics['rollup_period_task_unreachable_total'] == 0, f'rollup_period_task_unreachable_total should be 0 for empty data, got {statistics["rollup_period_task_unreachable_total"]}'
-    assert statistics['rollup_period_task_ignored_total'] == 0, f'rollup_period_task_ignored_total should be 0 for empty data, got {statistics["rollup_period_task_ignored_total"]}'
+    assert statistics['rollup_period_tasks_total'] == 0, (
+        f'rollup_period_tasks_total should be 0 for empty data, got {statistics["rollup_period_tasks_total"]}'
+    )
+    assert statistics['rollup_period_task_ok_total'] == 0, (
+        f'rollup_period_task_ok_total should be 0 for empty data, got {statistics["rollup_period_task_ok_total"]}'
+    )
+    assert statistics['rollup_period_task_failed_total'] == 0, (
+        f'rollup_period_task_failed_total should be 0 for empty data, got {statistics["rollup_period_task_failed_total"]}'
+    )
+    assert statistics['rollup_period_task_skipped_total'] == 0, (
+        f'rollup_period_task_skipped_total should be 0 for empty data, got {statistics["rollup_period_task_skipped_total"]}'
+    )
+    assert statistics['rollup_period_task_unreachable_total'] == 0, (
+        f'rollup_period_task_unreachable_total should be 0 for empty data, got {statistics["rollup_period_task_unreachable_total"]}'
+    )
+    assert statistics['rollup_period_task_ignored_total'] == 0, (
+        f'rollup_period_task_ignored_total should be 0 for empty data, got {statistics["rollup_period_task_ignored_total"]}'
+    )
 
     # Verify all arrays are empty
     assert isinstance(result['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
@@ -889,7 +902,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # (credentials_list would be empty list)
     assert 'rollup_period_credential_types' in statistics
     assert statistics['rollup_period_credential_types'] == [], 'Should have empty credential_types list when there is no credentials data'
-    
+
     # Verify scm_types field is present but empty when there's no data
     assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'
     assert statistics['rollup_period_scm_types'] == [], 'Should have empty scm_types list when there is no jobs data'

@@ -23,10 +23,12 @@ jobs = [
         'forks': 5,
         'inventory_name': 'inventory1',
         'scm_type': 'git',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.9.10'},
-            'community.general': {'version': '1.0.0'},
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.9.10'},
+                'community.general': {'version': '1.0.0'},
+            }
+        ),
     },  # duration 3s, wait 0s
     {
         'id': 2,
@@ -43,11 +45,13 @@ jobs = [
         'forks': 10,
         'inventory_name': 'inventory1',
         'scm_type': 'svn',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.9.10'},  # Same version as job 1
-            'community.general': {'version': '2.0.0'},  # Different version - same collection
-            'ansible.windows': {'version': '1.0.0'},
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.9.10'},  # Same version as job 1
+                'community.general': {'version': '2.0.0'},  # Different version - same collection
+                'ansible.windows': {'version': '1.0.0'},
+            }
+        ),
     },  # duration 5s (failed), wait 2s
     # controller A, ansible 2.11.0, template T2
     {
@@ -65,11 +69,13 @@ jobs = [
         'forks': 20,
         'inventory_name': 'inventory2',
         'scm_type': 'git',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.9.10'},  # Same version as jobs 1 and 2
-            'community.general': {'version': '2.0.0'},  # Same version as job 2
-            'community.aws': {'version': '1.5.0'},
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.9.10'},  # Same version as jobs 1 and 2
+                'community.general': {'version': '2.0.0'},  # Same version as job 2
+                'community.aws': {'version': '1.5.0'},
+            }
+        ),
     },  # duration 7s, wait 4s
     # controller B, ansible 2.12.0, template T1
     {
@@ -87,10 +93,12 @@ jobs = [
         'forks': 15,
         'inventory_name': 'inventory1',
         'scm_type': 'git',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.9.10'},  # Same version as other jobs
-            'community.general': {'version': '1.0.0'},  # Same version as job 1
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.9.10'},  # Same version as other jobs
+                'community.general': {'version': '1.0.0'},  # Same version as job 1
+            }
+        ),
     },  # duration 2s, wait 1s
     # invalid rows (should be filtered out)
     {
@@ -107,9 +115,11 @@ jobs = [
         'forks': 0,
         'inventory_name': 'inventory3',
         'scm_type': 'manual',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.9.10'},
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.9.10'},
+            }
+        ),
     },
     {
         'id': 6,
@@ -125,10 +135,12 @@ jobs = [
         'forks': 0,
         'inventory_name': 'inventory3',
         'scm_type': 'unknown',
-        'installed_collections': json.dumps({
-            'ansible.builtin': {'version': '2.9.10'},
-            'community.general': {'version': '3.0.0'},  # Another version of community.general
-        }),
+        'installed_collections': json.dumps(
+            {
+                'ansible.builtin': {'version': '2.9.10'},
+                'community.general': {'version': '3.0.0'},  # Another version of community.general
+            }
+        ),
     },
 ]
 
@@ -156,9 +168,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert result['organizations_total'] == 3  # Org1, Org2, and Org3 (job 5 filtered out, but job 6 with Org3 remains)
     # Check scm_types: jobs 1,2,3,4,6 have scm_types: git, svn, git, git, unknown (job 5 filtered out)
     assert 'scm_types' in result, 'Should have scm_types field in result'
-    assert result['scm_types'] == ['git', 'svn', 'unknown'], (
-        f"Expected ['git', 'svn', 'unknown'] for scm_types, got {result['scm_types']}"
-    )
+    assert result['scm_types'] == ['git', 'svn', 'unknown'], f"Expected ['git', 'svn', 'unknown'] for scm_types, got {result['scm_types']}"
 
     # Extract the by_job_type list
     by_job_type = result['by_job_type']
@@ -228,9 +238,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     )
     # 'workflowjob' type has job 3 with version: 2.11.0
     assert 'ansible_versions' in rec_workflowjob, 'Should have ansible_versions field in by_job_type'
-    assert rec_workflowjob['ansible_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['ansible_versions']}"
-    )
+    assert rec_workflowjob['ansible_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['ansible_versions']}"
     # 'adhoccommand' type has job 6 with version: 2.14.0
     assert 'ansible_versions' in rec_adhoccommand, 'Should have ansible_versions field in by_job_type'
     assert rec_adhoccommand['ansible_versions'] == ['2.14.0'], (
@@ -317,9 +325,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # Validate ansible_versions in by_launch_type
     # 'manual' launch_type has job 1 with version: 2.9.0
     assert 'ansible_versions' in rec_manual, 'Should have ansible_versions field in by_launch_type'
-    assert rec_manual['ansible_versions'] == ['2.9.0'], (
-        f"Expected ['2.9.0'] for manual launch_type, got {rec_manual['ansible_versions']}"
-    )
+    assert rec_manual['ansible_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {rec_manual['ansible_versions']}"
     # 'scheduled' launch_type has jobs 2, 6 with versions: 2.10.0, 2.14.0
     assert 'ansible_versions' in rec_scheduled, 'Should have ansible_versions field in by_launch_type'
     assert rec_scheduled['ansible_versions'] == ['2.10.0', '2.14.0'], (
@@ -327,14 +333,10 @@ def test_jobs_anonymized_rollups_base_aggregation():
     )
     # 'workflow' launch_type has job 3 with version: 2.11.0
     assert 'ansible_versions' in rec_workflow, 'Should have ansible_versions field in by_launch_type'
-    assert rec_workflow['ansible_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['ansible_versions']}"
-    )
+    assert rec_workflow['ansible_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['ansible_versions']}"
     # 'callback' launch_type has job 4 with version: 2.12.0
     assert 'ansible_versions' in rec_callback, 'Should have ansible_versions field in by_launch_type'
-    assert rec_callback['ansible_versions'] == ['2.12.0'], (
-        f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['ansible_versions']}"
-    )
+    assert rec_callback['ansible_versions'] == ['2.12.0'], f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['ansible_versions']}"
 
     # Verify totals match between by_job_type and by_launch_type
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in by_job_type)
@@ -527,9 +529,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
     assert rec_job['jobs_total'] == 3  # All three jobs are included
     # Check scm_types: jobs 1,2,3 have scm_types: git, svn, git
     assert 'scm_types' in result, 'Should have scm_types field in result'
-    assert result['scm_types'] == ['git', 'svn'], (
-        f"Expected ['git', 'svn'] for scm_types, got {result['scm_types']}"
-    )
+    assert result['scm_types'] == ['git', 'svn'], f"Expected ['git', 'svn'] for scm_types, got {result['scm_types']}"
 
 
 def test_jobs_anonymized_rollups_installed_collections():
@@ -561,40 +561,35 @@ def test_jobs_anonymized_rollups_installed_collections():
     # community.aws 1.5.0: 1 job (3)
 
     # Convert to dict for easier lookup
-    collections_dict = {
-        (c['collection_name'], c['collection_version']): c['job_count']
-        for c in installed_collections
-    }
+    collections_dict = {(c['collection_name'], c['collection_version']): c['job_count'] for c in installed_collections}
 
     # Verify ansible.builtin 2.9.10 appears in 5 jobs
     assert collections_dict.get(('ansible.builtin', '2.9.10')) == 5, (
-        f"Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(('ansible.builtin', '2.9.10'))}"
+        f'Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(("ansible.builtin", "2.9.10"))}'
     )
 
     # Verify community.general appears with different versions
     assert collections_dict.get(('community.general', '1.0.0')) == 2, (
-        f"Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(('community.general', '1.0.0'))}"
+        f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'
     )
     assert collections_dict.get(('community.general', '2.0.0')) == 2, (
-        f"Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(('community.general', '2.0.0'))}"
+        f'Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(("community.general", "2.0.0"))}'
     )
     assert collections_dict.get(('community.general', '3.0.0')) == 1, (
-        f"Expected community.general 3.0.0 in 1 job, got {collections_dict.get(('community.general', '3.0.0'))}"
+        f'Expected community.general 3.0.0 in 1 job, got {collections_dict.get(("community.general", "3.0.0"))}'
     )
 
     # Verify other collections
     assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
-        f"Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(('ansible.windows', '1.0.0'))}"
+        f'Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(("ansible.windows", "1.0.0"))}'
     )
     assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
-        f"Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(('community.aws', '1.5.0'))}"
+        f'Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(("community.aws", "1.5.0"))}'
     )
 
     # Verify total number of unique collection-version pairs
     # Should have 6 unique pairs: ansible.builtin 2.9.10, community.general (3 versions), ansible.windows 1.0.0, community.aws 1.5.0
-    assert len(installed_collections) == 6, (
-        f"Expected 6 unique collection-version pairs, got {len(installed_collections)}"
-    )
+    assert len(installed_collections) == 6, f'Expected 6 unique collection-version pairs, got {len(installed_collections)}'
 
     # Verify all entries have required fields
     for collection in installed_collections:
@@ -609,13 +604,14 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     """Test that ansible_versions in statistics is correctly merged from jobs_by_job_type."""
     import os
     import shutil
+
     from datetime import datetime
 
     from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+    from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
     from metrics_utility.test.test_anonymized_rollups.test_events_modules_anonymized_rollups import events
     from metrics_utility.test.test_anonymized_rollups.test_execution_environments_anonymized_rollups import execution_environments
     from metrics_utility.test.test_anonymized_rollups.test_jobhostsummary_anonymized_rollups import jobhostsummary
-    from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
 
     # Cleanup
     out_dir = './out'
@@ -659,7 +655,7 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     assert 'statistics' in result, 'Should have statistics in result'
     statistics = result['statistics']
     assert 'rollup_period_ansible_versions' in statistics, 'Should have ansible_versions in statistics'
-    
+
     # Validate new job statistics fields exist
     assert 'rollup_period_jobs_successful' in statistics, 'Should have jobs_successful in statistics'
     assert 'rollup_period_jobs_failed' in statistics, 'Should have jobs_failed in statistics'
@@ -678,20 +674,20 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
 
     # Validate ansible_versions in statistics matches merged values from jobs_by_job_type
     assert statistics['rollup_period_ansible_versions'] == expected_versions, (
-        f"Expected ansible_versions {expected_versions} in statistics, got {statistics['rollup_period_ansible_versions']}"
+        f'Expected ansible_versions {expected_versions} in statistics, got {statistics["rollup_period_ansible_versions"]}'
     )
 
     # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
     # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
     assert len(statistics['rollup_period_ansible_versions']) == 5, (
-        f"Expected 5 unique ansible versions, got {len(statistics['rollup_period_ansible_versions'])}"
+        f'Expected 5 unique ansible versions, got {len(statistics["rollup_period_ansible_versions"])}'
     )
     assert '2.9.0' in statistics['rollup_period_ansible_versions']
     assert '2.10.0' in statistics['rollup_period_ansible_versions']
     assert '2.11.0' in statistics['rollup_period_ansible_versions']
     assert '2.12.0' in statistics['rollup_period_ansible_versions']
     assert '2.14.0' in statistics['rollup_period_ansible_versions']
-    
+
     # Validate new job statistics match sum from jobs_by_job_type
     if jobs_by_job_type:
         expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in jobs_by_job_type)
@@ -707,8 +703,7 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
             )
         if statistics['rollup_period_jobs_failed'] is not None:
             assert statistics['rollup_period_jobs_failed'] == expected_jobs_failed, (
-                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, '
-                f'got={statistics["rollup_period_jobs_failed"]}'
+                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, got={statistics["rollup_period_jobs_failed"]}'
             )
         if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
             assert abs(statistics['rollup_period_jobs_duration_all_statuses_seconds'] - expected_duration_all) < 0.001, (
@@ -725,7 +720,7 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
                 f'jobs_failed_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_failed}, '
                 f'got={statistics["rollup_period_jobs_failed_duration_total_seconds"]}'
             )
-    
+
     # Validate scm_types in statistics
     assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'
     assert statistics['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (

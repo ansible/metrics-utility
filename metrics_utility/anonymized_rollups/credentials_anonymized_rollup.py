@@ -73,5 +73,4 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
 
         return {
             'json': credential_types_list,
-           
         }

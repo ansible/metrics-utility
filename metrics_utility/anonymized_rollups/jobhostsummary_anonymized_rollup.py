@@ -92,7 +92,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
                 unique_hosts=('host_name', lambda x: set(x)),
-
                 hosts_successful_total=('host_outcome', lambda x: (x == 'successful').sum()),
                 hosts_failed_total=('host_outcome', lambda x: (x == 'failed').sum()),
                 hosts_unreachable_total=('host_outcome', lambda x: (x == 'unreachable').sum()),

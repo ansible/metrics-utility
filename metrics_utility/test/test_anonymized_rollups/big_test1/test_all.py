@@ -17,6 +17,7 @@ The test validates:
 
 import os
 import shutil
+
 from datetime import datetime
 
 import pandas as pd
@@ -27,14 +28,30 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonym
 # Import all job data from job1 through job8
 from metrics_utility.test.test_anonymized_rollups.big_test1.credentials import credentials
 from metrics_utility.test.test_anonymized_rollups.big_test1.execution_environments import execution_environments
-from metrics_utility.test.test_anonymized_rollups.big_test1.job1 import events as events1, jobhostsummary as jhs1, jobs as jobs1
-from metrics_utility.test.test_anonymized_rollups.big_test1.job2 import events as events2, jobhostsummary as jhs2, jobs as jobs2
-from metrics_utility.test.test_anonymized_rollups.big_test1.job3 import events as events3, jobhostsummary as jhs3, jobs as jobs3
-from metrics_utility.test.test_anonymized_rollups.big_test1.job4 import events as events4, jobhostsummary as jhs4, jobs as jobs4
-from metrics_utility.test.test_anonymized_rollups.big_test1.job5 import events as events5, jobhostsummary as jhs5, jobs as jobs5
-from metrics_utility.test.test_anonymized_rollups.big_test1.job6 import events as events6, jobhostsummary as jhs6, jobs as jobs6
-from metrics_utility.test.test_anonymized_rollups.big_test1.job7 import events as events7, jobhostsummary as jhs7, jobs as jobs7
-from metrics_utility.test.test_anonymized_rollups.big_test1.job8 import events as events8, jobhostsummary as jhs8, jobs as jobs8
+from metrics_utility.test.test_anonymized_rollups.big_test1.job1 import events as events1
+from metrics_utility.test.test_anonymized_rollups.big_test1.job1 import jobhostsummary as jhs1
+from metrics_utility.test.test_anonymized_rollups.big_test1.job1 import jobs as jobs1
+from metrics_utility.test.test_anonymized_rollups.big_test1.job2 import events as events2
+from metrics_utility.test.test_anonymized_rollups.big_test1.job2 import jobhostsummary as jhs2
+from metrics_utility.test.test_anonymized_rollups.big_test1.job2 import jobs as jobs2
+from metrics_utility.test.test_anonymized_rollups.big_test1.job3 import events as events3
+from metrics_utility.test.test_anonymized_rollups.big_test1.job3 import jobhostsummary as jhs3
+from metrics_utility.test.test_anonymized_rollups.big_test1.job3 import jobs as jobs3
+from metrics_utility.test.test_anonymized_rollups.big_test1.job4 import events as events4
+from metrics_utility.test.test_anonymized_rollups.big_test1.job4 import jobhostsummary as jhs4
+from metrics_utility.test.test_anonymized_rollups.big_test1.job4 import jobs as jobs4
+from metrics_utility.test.test_anonymized_rollups.big_test1.job5 import events as events5
+from metrics_utility.test.test_anonymized_rollups.big_test1.job5 import jobhostsummary as jhs5
+from metrics_utility.test.test_anonymized_rollups.big_test1.job5 import jobs as jobs5
+from metrics_utility.test.test_anonymized_rollups.big_test1.job6 import events as events6
+from metrics_utility.test.test_anonymized_rollups.big_test1.job6 import jobhostsummary as jhs6
+from metrics_utility.test.test_anonymized_rollups.big_test1.job6 import jobs as jobs6
+from metrics_utility.test.test_anonymized_rollups.big_test1.job7 import events as events7
+from metrics_utility.test.test_anonymized_rollups.big_test1.job7 import jobhostsummary as jhs7
+from metrics_utility.test.test_anonymized_rollups.big_test1.job7 import jobs as jobs7
+from metrics_utility.test.test_anonymized_rollups.big_test1.job8 import events as events8
+from metrics_utility.test.test_anonymized_rollups.big_test1.job8 import jobhostsummary as jhs8
+from metrics_utility.test.test_anonymized_rollups.big_test1.job8 import jobs as jobs8
 
 
 @pytest.fixture(scope='module')
@@ -126,9 +143,9 @@ def test_all_jobs_combined(cleanup_test_data):
     total_events = len(all_events)
     events_per_part = total_events // 4
     events_part1 = all_events[:events_per_part]
-    events_part2 = all_events[events_per_part:2 * events_per_part]
-    events_part3 = all_events[2 * events_per_part:3 * events_per_part]
-    events_part4 = all_events[3 * events_per_part:]
+    events_part2 = all_events[events_per_part : 2 * events_per_part]
+    events_part3 = all_events[2 * events_per_part : 3 * events_per_part]
+    events_part4 = all_events[3 * events_per_part :]
 
     events_csv_files = []
     csv1 = create_csv_file(events_part1, f'{data_dir}/part1_main_jobevent.csv')
@@ -149,8 +166,8 @@ def test_all_jobs_combined(cleanup_test_data):
     total_jhs = len(all_jobhostsummary)
     jhs_per_part = total_jhs // 3
     jhs_part1 = all_jobhostsummary[:jhs_per_part]
-    jhs_part2 = all_jobhostsummary[jhs_per_part:2 * jhs_per_part]
-    jhs_part3 = all_jobhostsummary[2 * jhs_per_part:]
+    jhs_part2 = all_jobhostsummary[jhs_per_part : 2 * jhs_per_part]
+    jhs_part3 = all_jobhostsummary[2 * jhs_per_part :]
 
     jhs_csv_files = []
     csv1 = create_csv_file(jhs_part1, f'{data_dir}/part1_job_host_summary.csv')
@@ -253,9 +270,7 @@ def test_all_jobs_combined(cleanup_test_data):
     # Job 7: ok=14, failures=1, dark=1, skipped=0, ignored=0
     # Job 8: ok=12, failures=0, dark=0, skipped=0, ignored=0
     # Totals: ok=98, failures=5, dark=5, skipped=0, ignored=0, tasks_total=108
-    assert statistics['rollup_period_task_ok_total'] == 98, (
-        f'Should have 98 ok tasks total, got {statistics["rollup_period_task_ok_total"]}'
-    )
+    assert statistics['rollup_period_task_ok_total'] == 98, f'Should have 98 ok tasks total, got {statistics["rollup_period_task_ok_total"]}'
     assert statistics['rollup_period_task_failed_total'] == 5, (
         f'Should have 5 failed tasks total, got {statistics["rollup_period_task_failed_total"]}'
     )
@@ -268,21 +283,18 @@ def test_all_jobs_combined(cleanup_test_data):
     assert statistics['rollup_period_task_ignored_total'] == 0, (
         f'Should have 0 ignored tasks total, got {statistics["rollup_period_task_ignored_total"]}'
     )
-    assert statistics['rollup_period_tasks_total'] == 108, (
-        f'Should have 108 total tasks, got {statistics["rollup_period_tasks_total"]}'
-    )
+    assert statistics['rollup_period_tasks_total'] == 108, f'Should have 108 total tasks, got {statistics["rollup_period_tasks_total"]}'
 
     # Verify that the sum matches
     calculated_total = (
-        statistics['rollup_period_task_ok_total'] +
-        statistics['rollup_period_task_failed_total'] +
-        statistics['rollup_period_task_unreachable_total'] +
-        statistics['rollup_period_task_skipped_total'] +
-        statistics['rollup_period_task_ignored_total']
+        statistics['rollup_period_task_ok_total']
+        + statistics['rollup_period_task_failed_total']
+        + statistics['rollup_period_task_unreachable_total']
+        + statistics['rollup_period_task_skipped_total']
+        + statistics['rollup_period_task_ignored_total']
     )
     assert calculated_total == statistics['rollup_period_tasks_total'], (
-        f'Sum of individual task counts ({calculated_total}) should equal rollup_period_tasks_total '
-        f'({statistics["rollup_period_tasks_total"]})'
+        f'Sum of individual task counts ({calculated_total}) should equal rollup_period_tasks_total ({statistics["rollup_period_tasks_total"]})'
     )
 
     # ========== Validate Jobs ==========
@@ -314,7 +326,7 @@ def test_all_jobs_combined(cleanup_test_data):
     assert len(statistics_ansible_versions) == 5, f'Should have 5 unique ansible versions, got {len(statistics_ansible_versions)}'
     for version in expected_versions:
         assert version in statistics_ansible_versions, f'Should have ansible version {version}'
-    
+
     # Validate scm_types in statistics
     assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
     assert result['statistics']['rollup_period_scm_types'] == ['git', 'manual'], (
@@ -415,7 +427,7 @@ def test_all_jobs_combined(cleanup_test_data):
     assert result['statistics']['rollup_period_modules_used_to_automate_total'] == 6, (
         f'Should have 6 modules in statistics, got {result["statistics"]["rollup_period_modules_used_to_automate_total"]}'
     )
-    
+
     # Verify module stats structure (module names are anonymized, so we check structure)
     for module in module_stats:
         assert 'module_name' in module, 'Each module should have module_name field'
@@ -428,7 +440,7 @@ def test_all_jobs_combined(cleanup_test_data):
     assert isinstance(collection_stats, list), 'collection_name_stats should be a list'
     # Expected: 3 unique collections (ansible.builtin, community.general, community.weird)
     assert len(collection_stats) == 3, f'Should have 3 unique collections, got {len(collection_stats)}'
-    
+
     # Verify collection stats structure (collection names are anonymized, so we check structure)
     for collection in collection_stats:
         assert 'collection_name' in collection, 'Each collection should have collection_name field'
@@ -441,7 +453,9 @@ def test_all_jobs_combined(cleanup_test_data):
     # Should have at least 2 playbooks (playbook1.yml and playbook2.yml)
     assert len(playbook_modules) >= 2, f'Should have at least 2 playbooks, got {len(playbook_modules)}'
     assert 'rollup_period_playbooks_total' in result['statistics'], 'Should have playbooks_total in statistics'
-    assert result['statistics']['rollup_period_playbooks_total'] >= 2, f'Should have at least 2 total playbooks, got {result["statistics"]["rollup_period_playbooks_total"]}'
+    assert result['statistics']['rollup_period_playbooks_total'] >= 2, (
+        f'Should have at least 2 total playbooks, got {result["statistics"]["rollup_period_playbooks_total"]}'
+    )
 
     # ========== Validate Execution Environments ==========
     assert 'rollup_period_execution_environments_total' in result['statistics']

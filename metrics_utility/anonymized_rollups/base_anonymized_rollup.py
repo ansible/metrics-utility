@@ -17,7 +17,7 @@ class BaseAnonymizedRollup:
 
     # Merges two data (it dont have to be dataframes if overriden)
     # this is used in batch processing
-    # where we need to merge partial rollup with current batch aggregation 
+    # where we need to merge partial rollup with current batch aggregation
     def merge(self, dataframe_all, dataframe_new):
         if dataframe_all is None:
             return dataframe_new

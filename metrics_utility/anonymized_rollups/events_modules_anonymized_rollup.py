@@ -298,7 +298,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if dataframe.empty:
             return {
                 'json': {'event_total': event_total, 'warnings_total': warnings_total, 'deprecations_total': deprecations_total},
-                'rollup': {'aggregated': dataframe, 'event_total': event_total, 'warnings_total': warnings_total, 'deprecations_total': deprecations_total},
+                'rollup': {
+                    'aggregated': dataframe,
+                    'event_total': event_total,
+                    'warnings_total': warnings_total,
+                    'deprecations_total': deprecations_total,
+                },
             }
 
         # Final aggregation: handle any cross-batch duplicates, sum them, loss of precision is acceptable
