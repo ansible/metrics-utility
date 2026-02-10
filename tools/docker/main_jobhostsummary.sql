@@ -15,7 +15,7 @@ DECLARE
   --random_suffix    TEXT := substring(md5(random()::text), 1, 5);
   random_suffix                   TEXT := '2025-06-13';
   --
-  random_ip        TEXT := 
+  random_ip        TEXT :=
      (floor(random()*256)::int)::text
      ||'.'||(floor(random()*256)::int)::text
      ||'.'||(floor(random()*256)::int)::text
@@ -56,7 +56,7 @@ BEGIN
   )
   RETURNING id
     INTO default_organization_id;
-  --  
+  --
   RAISE NOTICE 'Inserted Organization % with id = %',
                'default_org_' || random_suffix,
                default_organization_id;
@@ -213,17 +213,19 @@ $yaml$,
     old_pk,
     last_job_failed,
     status,
-    organization_id
+    organization_id,
+    org_unique
     )
   VALUES (
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                          -- created
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                          -- modified
-    '',                                             -- description
-    'default_unified_job_template_' || random_suffix,  -- name w/ random suffix
-    0,                                              -- old_pk (must be >= 0)
-    false,                                          -- last_job_failed
-    'never updated',                                -- status (adjust as needed)
-    default_organization_id                         -- organization_id
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00', -- created
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00', -- modified
+    '',                                                -- description
+    'default_unified_job_template_' || random_suffix,  -- name (w/ random suffix)
+    0,                                                 -- old_pk (must be >= 0)
+    false,                                             -- last_job_failed
+    'never updated',                                   -- status (adjust as needed)
+    default_organization_id,                           -- organization_id
+    false                                              -- org_unique
   )
   RETURNING id
   INTO default_unified_job_template_id;
@@ -253,21 +255,21 @@ $yaml$,
       scm_track_submodules
   ) VALUES (
       default_unified_job_template_id,
-      'LOCAL_PATH',                    
-      'SCM_TYPE',                      
-      'SCM_URL',                       
-      'SCM_BRANCH',                   
-      TRUE,                           
-      FALSE,                           
-      TRUE,                            
-      0,                               
-      0,                               
-      'SCM_REVISION',                  
-      '{}'::jsonb,                   
-      '{}'::jsonb,   
-      'SCM_REFSPEC',                   
-      TRUE,                            
-      FALSE                            
+      'LOCAL_PATH',
+      'SCM_TYPE',
+      'SCM_URL',
+      'SCM_BRANCH',
+      TRUE,
+      FALSE,
+      TRUE,
+      0,
+      0,
+      'SCM_REVISION',
+      '{}'::jsonb,
+      '{}'::jsonb,
+      'SCM_REFSPEC',
+      TRUE,
+      FALSE
   );
   --
   -- Job Template
@@ -458,36 +460,38 @@ $yaml$,
       scm_branch,
       webhook_guid,
       webhook_service,
-      survey_passwords
+      survey_passwords,
+      event_queries_processed
     )
     VALUES (
-      unified_job_id,               -- link to the unified job
-      'manual',                     -- job_type
-      '',                           -- playbook
-      0,                            -- forks
-      '',                           -- "limit"
-      0,                            -- verbosity
-      '{}'::text,                   -- extra_vars
-      '{}'::text,                   -- job_tags
-      false,                        -- force_handlers
-      '',                           -- skip_tags
-      '',                           -- start_at_task
-      false,                        -- become_enabled
-      default_inventory_id,         -- from your DECLARE
-      default_unified_job_template_id, -- from your DECLARE
-      default_unified_job_template_id, -- from your DECLARE
-      false,                        -- allow_simultaneous
-      '{}'::text,                   -- artifacts
-      0,                            -- timeout
-      '',                           -- scm_revision
-      false,                        -- use_fact_cache
-      false,                        -- diff_mode
-      0,                            -- job_slice_count
-      0,                            -- job_slice_number
-      '',                           -- scm_branch
-      gen_random_uuid()::text,      -- webhook_guid
-      'github',                     -- webhook_service
-      '{}'::jsonb                   -- survey_passwords
+      unified_job_id,                  -- unifiedjob_ptr_id
+      'manual',                        -- job_type
+      '',                              -- playbook
+      0,                               -- forks
+      '',                              -- limit
+      0,                               -- verbosity
+      '{}'::text,                      -- extra_vars
+      '{}'::text,                      -- job_tags
+      false,                           -- force_handlers
+      '',                              -- skip_tags
+      '',                              -- start_at_task
+      false,                           -- become_enabled
+      default_inventory_id,            -- inventory_id
+      default_unified_job_template_id, -- job_template_id
+      default_unified_job_template_id, -- project_id
+      false,                           -- allow_simultaneous
+      '{}'::text,                      -- artifacts
+      0,                               -- timeout
+      '',                              -- scm_revision
+      false,                           -- use_fact_cache
+      false,                           -- diff_mode
+      0,                               -- job_slice_count
+      0,                               -- job_slice_number
+      '',                              -- scm_branch
+      gen_random_uuid()::text,         -- webhook_guid
+      'github',                        -- webhook_service
+      '{}'::jsonb,                     -- survey_passwords
+      false                            -- event_queries_processed
     );
   END LOOP;
   --
@@ -543,13 +547,13 @@ $yaml$,
     END LOOP;
   END LOOP;
   --
-  RAISE NOTICE 'Inserted %×% job-host summary rows', 
+  RAISE NOTICE 'Inserted %×% job-host summary rows',
                array_length(unified_jobs,1),
                array_length(host_ids,1);
 
   -- Ensure hourly partition exists for 2025-06-13 10:00
   IF NOT EXISTS (
-    SELECT 1 FROM information_schema.tables 
+    SELECT 1 FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name = 'main_jobevent_20250613_10'
   ) THEN
     EXECUTE 'CREATE TABLE public.main_jobevent_20250613_10 (LIKE public.main_jobevent INCLUDING DEFAULTS INCLUDING CONSTRAINTS)';
@@ -679,7 +683,7 @@ $yaml$,
     managed,
     name,
     pull
-) VALUES 
+) VALUES
 (
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
@@ -700,6 +704,3 @@ $yaml$,
 );
 END
 $$;
-
-
-

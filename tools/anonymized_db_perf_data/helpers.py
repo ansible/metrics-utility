@@ -267,12 +267,12 @@ def create_project(name='Perf Test Project', org_id=None):
     sql_ujt = f"""
     INSERT INTO main_unifiedjobtemplate (
         created, modified, name, description, polymorphic_ctype_id,
-        last_job_failed, status, organization_id
+        last_job_failed, status, organization_id, org_unique
     )
     VALUES (
         NOW(), NOW(), '{name}', 'Performance testing project',
         (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'project'),
-        FALSE, 'never updated', {org_id}
+        FALSE, 'never updated', {org_id}, FALSE
     )
     RETURNING id;
     """
@@ -322,12 +322,12 @@ def create_job_templates(project_id, inventory_id, template_count=10, unique_suf
         sql_ujt = f"""
         INSERT INTO main_unifiedjobtemplate (
             created, modified, name, description, polymorphic_ctype_id,
-            last_job_failed, status
+            last_job_failed, status, org_unique
         )
         VALUES (
             NOW(), NOW(), '{template_name}', 'Performance testing job template',
             (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'jobtemplate'),
-            FALSE, 'never updated'
+            FALSE, 'never updated', FALSE
         )
         RETURNING id;
         """
@@ -448,7 +448,7 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
         become_enabled, inventory_id, project_id, allow_simultaneous,
         artifacts, timeout, scm_revision, use_fact_cache, diff_mode,
         job_slice_count, job_slice_number, scm_branch, webhook_guid,
-        webhook_service, survey_passwords, job_template_id
+        webhook_service, survey_passwords, job_template_id, event_queries_processed
     )
     VALUES (
         {job_id}, 'run', 'site.yml', 5, '', 0,
@@ -456,7 +456,7 @@ def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=
         FALSE, {inventory_id}, {project_id}, FALSE,
         '', 0, '', FALSE, FALSE,
         1, 0, 'main', '',
-        '', '{{}}'::jsonb, {ujt_value}
+        '', '{{}}'::jsonb, {ujt_value}, FALSE
     )
     RETURNING unifiedjob_ptr_id;
     """
