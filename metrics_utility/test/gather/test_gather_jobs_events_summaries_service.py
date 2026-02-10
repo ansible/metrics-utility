@@ -160,19 +160,25 @@ jobs_lines = [
     (
         '1,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,"{""a10.acos_axapi"": {""version"": ""1.0.0""}, ""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
         '2,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,scheduled,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,"{""a10.acos_axapi"": {""version"": ""1.0.0""}, ""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
         '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,workflow,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,"{""a10.acos_axapi"": {""version"": ""1.0.0""}, ""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,20,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,20,'
         'default_unified_job_template_2025-06-13,git'
     ),
 ]

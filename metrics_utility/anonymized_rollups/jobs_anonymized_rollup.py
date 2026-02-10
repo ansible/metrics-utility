@@ -248,7 +248,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         # Process collections statistics from jobs dataframe
         collections_stats = self._process_collections_from_jobs(dataframe)
-        collections_df = pd.DataFrame(collections_stats) if collections_stats else pd.DataFrame()
 
         # Prepare JSON data (converted to list of dicts)
         json_data = {
