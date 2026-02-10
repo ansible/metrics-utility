@@ -278,9 +278,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Dictionary to track collection name + version -> job count
         collections_dict = {}
         
-        # Iterate through each job's installed_collections
-        for idx, row in dataframe.iterrows():
-            installed_collections_str = row.get('installed_collections')
+        # Use itertuples() instead of iterrows() for 10-100x better performance
+        # itertuples() returns namedtuples which are much faster than Series objects
+        for row in dataframe.itertuples(index=False):
+            installed_collections_str = getattr(row, 'installed_collections', None)
             
             # Skip if missing or empty
             if pd.isna(installed_collections_str) or not installed_collections_str:
