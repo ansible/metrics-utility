@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import shlex
 import subprocess
 import sys
 
@@ -115,18 +116,23 @@ def run_command(args, config):
         NAMESPACE = os.getenv('NAMESPACE')
         POD_NAME = os.getenv('POD_NAME')
 
-        # Use oc exec to run the command
-        oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{container_cmd}"'  # noqa: E501
-        print('Running OpenShift:', oc_cmd)
-        return subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+        # Use oc exec to run the command with proper argument escaping
+        oc_cmd = ['oc', 'exec', '-n', NAMESPACE, POD_NAME, '--', '/bin/bash', '-c', container_cmd]
+        print('Running OpenShift:', ' '.join(shlex.quote(arg) for arg in oc_cmd))
+        return subprocess.run(oc_cmd, check=False, capture_output=True, text=True)
 
     else:
         raise ValueError(f'Unsupported environment: {ENVIRONMENT}')
 
 
 def oc_login():
-    # subprocess run
-    subprocess.run(OC_LOGIN_COMMAND, shell=True)
+    # subprocess run with proper shell execution for login command
+    # OC_LOGIN_COMMAND is expected to be a full command string from environment
+    # Split it safely for execution without shell=True
+    import shlex
+
+    cmd_parts = shlex.split(OC_LOGIN_COMMAND)
+    subprocess.run(cmd_parts, check=False)
 
 
 def list_gathered_files(config):
@@ -175,11 +181,11 @@ def list_gathered_files(config):
         result = subprocess.run(ssh_cmd, check=False, capture_output=True, text=True)
 
     elif ENVIRONMENT == 'OpenShift':
-        # OpenShift deployment via oc command
+        # OpenShift deployment via oc command with proper argument escaping
         cmd = f'find {ship_path} -type f -ls 2>/dev/null || echo "No files found or directory does not exist"'
-        oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{cmd}"'
-        print('Running OpenShift ls:', oc_cmd)
-        result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+        oc_cmd = ['oc', 'exec', '-n', NAMESPACE, POD_NAME, '--', '/bin/bash', '-c', cmd]
+        print('Running OpenShift ls:', ' '.join(shlex.quote(arg) for arg in oc_cmd))
+        result = subprocess.run(oc_cmd, check=False, capture_output=True, text=True)
     else:
         print(f'Unsupported environment for listing files: {ENVIRONMENT}')
         return

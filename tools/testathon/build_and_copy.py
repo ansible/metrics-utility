@@ -55,6 +55,7 @@ Report parameters via METRICS_UTILITY_* variables (optional):
 """
 
 import os
+import shlex
 import subprocess
 import sys
 
@@ -241,7 +242,9 @@ def run_build_report_openshift(env_vars, ship_path, user_args, namespace=None, p
     # login if command provided
     if oc_login_command:
         print('Logging into OpenShift cluster...')
-        subprocess.run(oc_login_command, shell=True, check=False)
+        # Split command safely for execution without shell=True
+        cmd_parts = shlex.split(oc_login_command)
+        subprocess.run(cmd_parts, check=False)
 
     # Ensure NAMESPACE and POD_NAME are available
     if not namespace or not pod_name:
@@ -267,9 +270,9 @@ def run_build_report_openshift(env_vars, ship_path, user_args, namespace=None, p
     env_vars_str = ' '.join(env_list)
     container_cmd = f'{env_vars_str} metrics-utility build_report {user_args}'
 
-    oc_cmd = f'oc exec -n {namespace} {pod_name} -- /bin/bash -c "{container_cmd}"'
-    print(f'Executing: {oc_cmd}')
-    result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+    oc_cmd = ['oc', 'exec', '-n', namespace, pod_name, '--', '/bin/bash', '-c', container_cmd]
+    print(f'Executing: {" ".join(shlex.quote(arg) for arg in oc_cmd)}')
+    result = subprocess.run(oc_cmd, check=False, capture_output=True, text=True)
 
     return result
 
@@ -341,7 +344,9 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
         oc_login_command = os.getenv('OC_LOGIN_COMMAND', '')
         if oc_login_command:
             print('Logging into OpenShift cluster before copy...')
-            subprocess.run(oc_login_command, shell=True, check=False)
+            # Split command safely for execution without shell=True
+            cmd_parts = shlex.split(oc_login_command)
+            subprocess.run(cmd_parts, check=False)
 
         namespace = os.getenv('NAMESPACE')
         pod_name = os.getenv('POD_NAME')

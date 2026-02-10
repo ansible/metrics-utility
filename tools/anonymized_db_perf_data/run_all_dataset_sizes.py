@@ -26,6 +26,7 @@ Usage:
 """
 
 import argparse
+import shlex
 import subprocess
 import sys
 import time
@@ -69,7 +70,9 @@ DATASETS = [
 def run_command(cmd, description):
     """Run a command and return success status."""
     print(f'\n  → {description}...')
-    result = subprocess.run(cmd, shell=True)
+    # Split command safely for execution without shell=True
+    cmd_parts = shlex.split(cmd)
+    result = subprocess.run(cmd_parts)
     if result.returncode != 0:
         print(f'    ✗ Failed with exit code {result.returncode}')
         return False

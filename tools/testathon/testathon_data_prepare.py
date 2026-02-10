@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import random
+import shlex
 import string
 import subprocess
 import time
@@ -472,8 +473,11 @@ def set_different_modified_dates(dates):
 
 
 def oc_login():
-    # subprocess run
-    subprocess.run(OC_LOGIN_COMMAND, shell=True)
+    # subprocess run with proper shell execution for login command
+    # OC_LOGIN_COMMAND is expected to be a full command string from environment
+    # Split it safely for execution without shell=True
+    cmd_parts = shlex.split(OC_LOGIN_COMMAND)
+    subprocess.run(cmd_parts, check=False)
 
 
 def get_all_organizations():
