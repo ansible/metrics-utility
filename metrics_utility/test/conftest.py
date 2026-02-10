@@ -38,7 +38,7 @@ def setup_processed_dataframe(fixed_now):
         mock_df_for_batch_processed[col] = pd.to_datetime(mock_df_for_batch_processed[col], utc=True).dt.tz_localize(None)
 
     mock_df_for_batch_processed['last_deleted'] = mock_df_for_batch_processed['last_deleted'].apply(
-        lambda x: (x.isoformat(timespec='seconds') if pd.notna(x) and isinstance(x, dt_actual.datetime) else None)
+        lambda x: x.isoformat(timespec='seconds') if pd.notna(x) and isinstance(x, dt_actual.datetime) else None
     )
 
     mock_batches = [{'host_metric': mock_df_for_batch_processed}]
