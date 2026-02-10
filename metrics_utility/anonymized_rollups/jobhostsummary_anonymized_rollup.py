@@ -84,11 +84,11 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
 
-        # Group by job_remote_id, model, launch_type, and ansible_version to preserve all dimensions
-        # Note: We keep ansible_version in the dataframe (as collected from SQL), but rename it to controller_version in output
+        # Group by job_remote_id, model, launch_type, and controller_version to preserve all dimensions
+        # Note: ansible_version was renamed to controller_version above
         # This allows us to aggregate by each dimension separately in base() while tracking jobs
         aggregated = (
-            dataframe.groupby(['job_remote_id', 'model', 'launch_type', 'ansible_version'])
+            dataframe.groupby(['job_remote_id', 'model', 'launch_type', 'controller_version'])
             .agg(
                 dark_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
@@ -171,6 +171,30 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     result.update(hosts_set)
             return result
 
+        # IMPORTANT: First aggregate by job_remote_id to merge jobs that appeared in multiple batches
+        # This ensures each job is counted once, even if its hosts were split across batches
+        if 'job_remote_id' in dataframe.columns:
+            dataframe = (
+                dataframe.groupby('job_remote_id')
+                .agg(
+                    dark_total=('dark_total', 'sum'),
+                    failures_total=('failures_total', 'sum'),
+                    ok_total=('ok_total', 'sum'),
+                    skipped_total=('skipped_total', 'sum'),
+                    ignored_total=('ignored_total', 'sum'),
+                    rescued_total=('rescued_total', 'sum'),
+                    unique_hosts=('unique_hosts', union_hosts),
+                    hosts_successful_total=('hosts_successful_total', 'sum'),
+                    hosts_failed_total=('hosts_failed_total', 'sum'),
+                    hosts_unreachable_total=('hosts_unreachable_total', 'sum'),
+                    # Preserve constant fields per job_remote_id
+                    job_type=('job_type', 'first'),
+                    launch_type=('launch_type', 'first'),
+                    controller_version=('controller_version', 'first'),
+                )
+                .reset_index()
+            )
+
         # Common aggregation dictionary
         common_aggregations = {
             'dark_total': ('dark_total', 'sum'),
@@ -214,10 +238,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_controller_version_dict['launch_type_total'] = ('launch_type', 'nunique')
 
         aggregations_by_controller_version = (
-            dataframe.groupby('ansible_version')
+            dataframe.groupby('controller_version')
             .agg(**aggregations_by_controller_version_dict)
             .reset_index()
-            .rename(columns={'ansible_version': 'controller_version'})  # Rename to controller_version in output
             .assign(unique_hosts_total=lambda x: x['unique_hosts'].apply(len))
             .drop(columns=['unique_hosts'])
         )
