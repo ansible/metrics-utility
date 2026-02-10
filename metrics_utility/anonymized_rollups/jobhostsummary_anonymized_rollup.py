@@ -77,6 +77,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if 'launch_type' not in dataframe.columns:
             dataframe['launch_type'] = 'unknown'
 
+        # rename column ansible_version to controller_version
+        dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
+
         dataframe['host_outcome'] = 'successful'
         dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
