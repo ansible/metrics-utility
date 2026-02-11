@@ -386,4 +386,19 @@ events = [
         'resolved_action': None,
         'ignore_errors': False,
     },
+    # Job-level deprecated event
+    {
+        'job_id': 5,
+        'playbook': None,
+        'host_id': None,
+        'task_uuid': None,
+        'event': 'deprecated',
+        'task_action': None,
+        'job_created': '2024-01-15 13:59:30+00',
+        'job_started': '2024-01-15 14:00:00+00',
+        'job_finished': '2024-01-15 14:06:00+00',
+        'job_failed': False,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
 ]

@@ -184,6 +184,8 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'warnings': '["File permissions may be too permissive"]',
+        'deprecations': None,
     },
     {
         'job_id': 1,
@@ -255,6 +257,8 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'warnings': None,
+        'deprecations': '["The yum module is deprecated, use dnf instead"]',
     },
     # Host3 - Task 1 ok, Task 2 failed then ok (retry successful), Task 3 ok
     {
@@ -355,6 +359,8 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'warnings': '["Package installation failed", "Check repository configuration"]',
+        'deprecations': '["The yum module is deprecated, use dnf instead"]',
     },
     {
         'job_id': 1,
@@ -377,6 +383,21 @@ events = [
         'task_uuid': 'task-003',
         'event': 'runner_on_failed',
         'task_action': 'ansible.builtin.yum',
+        'job_created': '2024-01-15 09:59:30+00',
+        'job_started': '2024-01-15 10:00:00+00',
+        'job_finished': '2024-01-15 10:05:30+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
+    # Job-level warning event
+    {
+        'job_id': 1,
+        'playbook': None,
+        'host_id': None,
+        'task_uuid': None,
+        'event': 'warning',
+        'task_action': None,
         'job_created': '2024-01-15 09:59:30+00',
         'job_started': '2024-01-15 10:00:00+00',
         'job_finished': '2024-01-15 10:05:30+00',

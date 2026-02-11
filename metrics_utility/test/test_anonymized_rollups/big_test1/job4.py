@@ -200,6 +200,8 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'warnings': '["Yum repository cache may be stale"]',
+        'deprecations': '["The yum module is deprecated, use dnf instead"]',
     },
     # Host2 - Task 1 ok, Task 2 failed (1st attempt) -> failed (2nd attempt) -> ok (retry successful on 3rd attempt), Task 3 ok
     {
@@ -379,6 +381,21 @@ events = [
         'task_uuid': 'task-003',
         'event': 'runner_on_failed',
         'task_action': 'ansible.builtin.yum',
+        'job_created': '2024-01-15 12:59:30+00',
+        'job_started': '2024-01-15 13:00:00+00',
+        'job_finished': '2024-01-15 13:06:30+00',
+        'job_failed': True,
+        'resolved_action': None,
+        'ignore_errors': False,
+    },
+    # Job-level warning event
+    {
+        'job_id': 4,
+        'playbook': None,
+        'host_id': None,
+        'task_uuid': None,
+        'event': 'warning',
+        'task_action': None,
         'job_created': '2024-01-15 12:59:30+00',
         'job_started': '2024-01-15 13:00:00+00',
         'job_finished': '2024-01-15 13:06:30+00',
