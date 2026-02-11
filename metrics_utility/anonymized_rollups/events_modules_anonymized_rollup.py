@@ -197,7 +197,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'task_failed_and_ignored_event',
             'task_unreachable_event',
             'task_skipped_event',
-            'event'
+            'event',
+            'warnings',
+            'deprecations'
         ]
 
         dataframe = dataframe[columns_to_keep]
