@@ -253,6 +253,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 playbook=('playbook', 'first'),
                 warnings_total=('is_warning', 'sum'),
                 deprecations_total=('is_deprecation', 'sum'),
+                processed_events_total=('event', 'size'),
            )
             .assign(
                 # mutually exclusive categories - only one can be true
@@ -292,6 +293,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             host_ids=('host_id', lambda x: set(x)),
             warnings_total=('warnings_total', 'sum'),
             deprecations_total=('deprecations_total', 'sum'),
+            processed_events_total=('processed_events_total', 'sum'),
         )
 
         return {
@@ -364,6 +366,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             host_ids=('host_ids', lambda x: set().union(*[s for s in x.dropna() if isinstance(s, set)])),
             warnings_total=('warnings_total', 'sum'),
             deprecations_total=('deprecations_total', 'sum'),
+            processed_events_total=('processed_events_total', 'sum'),
         )
 
         # Modules used to automate
@@ -410,6 +413,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_failed_duration_total_seconds': ('jobs_failed_duration_total_seconds', 'sum'),
             'warnings_total': ('warnings_total', 'sum'),
             'deprecations_total': ('deprecations_total', 'sum'),
+            'processed_events_total': ('processed_events_total', 'sum'),
         }
 
         # Per-module counts
