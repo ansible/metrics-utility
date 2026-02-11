@@ -417,6 +417,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['jobs_never_started_total'] == 0
     assert copy_stats['hosts_total'] == 3
     assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
+    assert copy_stats['processed_events_total'] == 5  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
 
     # ansible.netcommon.cli_config (certified)
     template_stats = stats_by_module['ansible.netcommon.cli_config']
@@ -431,6 +432,7 @@ def test_events_modules_aggregations_basic():
     assert template_stats['jobs_never_started_total'] == 0
     assert template_stats['hosts_total'] == 2
     assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
+    assert template_stats['processed_events_total'] == 2  # Job 1 Host 4: 1 event (unreachable), Job 3 Host 3: 1 event (item_ok)
 
     # ansible.posix.firewalld (certified)
     firewalld_stats = stats_by_module['ansible.posix.firewalld']
@@ -445,6 +447,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['jobs_never_started_total'] == 0
     assert firewalld_stats['hosts_total'] == 2
     assert firewalld_stats['jobs_failed_because_of_module_failure_total'] == 1
+    assert firewalld_stats['processed_events_total'] == 2  # Job 3 Host 1: 1 event (ok), Job 4 Host 4: 1 event (failed)
 
     # community.aws.ec2 (community)
     ec2_stats = stats_by_module['community.aws.ec2']
@@ -459,6 +462,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['jobs_never_started_total'] == 0
     assert ec2_stats['hosts_total'] == 4
     assert ec2_stats['jobs_failed_because_of_module_failure_total'] == 0
+    assert ec2_stats['processed_events_total'] == 4  # Job 3 Host 2: 1 event (ok), Job 4 Host 6: 1 event (ok), Job 4 Host 7: 1 event (failed), Job 4 Host 8: 1 event (skipped)
 
     # community.general.yum (community)
     yum_stats = stats_by_module['community.general.yum']
@@ -473,6 +477,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['jobs_never_started_total'] == 1
     assert yum_stats['hosts_total'] == 2
     assert yum_stats['jobs_failed_because_of_module_failure_total'] == 3
+    assert yum_stats['processed_events_total'] == 3  # Job 1 Host 2: 1 event (failed), Job 2 Host 2: 1 event (async_failed), Job 5 Host 9: 1 event (failed)
 
     # community.mongodb.insert (community)
     mongo_stats = stats_by_module['community.mongodb.insert']
@@ -487,6 +492,7 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['jobs_never_started_total'] == 0
     assert mongo_stats['hosts_total'] == 2
     assert mongo_stats['jobs_failed_because_of_module_failure_total'] == 0
+    assert mongo_stats['processed_events_total'] == 3  # Job 1 Host 3: 1 event (async_ok), Job 2 Host 1: 2 events (failed, ok)
 
     # custom.user.collection (Unknown)
     custom_stats = stats_by_module['custom.user.collection']
@@ -501,6 +507,7 @@ def test_events_modules_aggregations_basic():
     assert custom_stats['jobs_never_started_total'] == 0
     assert custom_stats['hosts_total'] == 1
     assert custom_stats['jobs_failed_because_of_module_failure_total'] == 0
+    assert custom_stats['processed_events_total'] == 1  # Job 1 Host 1: 1 event (ok)
 
     # collection_name_stats assertions
 
@@ -520,6 +527,7 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['task_failed_and_ignored_total'] == 0
     assert netcommon_coll['task_skipped_total'] == 0
     assert netcommon_coll['task_unreachable_total'] == 1
+    assert netcommon_coll['processed_events_total'] == 2  # Same as cli_config module (2 events)
 
     # ansible.posix
     posix_coll = coll_by_name['ansible.posix']
@@ -537,6 +545,7 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['task_failed_and_ignored_total'] == 0
     assert posix_coll['task_skipped_total'] == 0
     assert posix_coll['task_unreachable_total'] == 0
+    assert posix_coll['processed_events_total'] == 2  # Same as firewalld module (2 events)
 
     # ansible.windows
     windows_coll = coll_by_name['ansible.windows']
@@ -554,6 +563,7 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['task_failed_and_ignored_total'] == 0
     assert windows_coll['task_skipped_total'] == 0
     assert windows_coll['task_unreachable_total'] == 0
+    assert windows_coll['processed_events_total'] == 5  # Same as win_copy module (5 events)
 
     # community.aws
     aws_coll = coll_by_name['community.aws']
@@ -571,6 +581,7 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['task_failed_and_ignored_total'] == 1
     assert aws_coll['task_skipped_total'] == 1
     assert aws_coll['task_unreachable_total'] == 0
+    assert aws_coll['processed_events_total'] == 4  # Same as ec2 module (4 events)
 
     # community.general
     general_coll = coll_by_name['community.general']
@@ -588,6 +599,7 @@ def test_events_modules_aggregations_basic():
     assert general_coll['task_failed_and_ignored_total'] == 0
     assert general_coll['task_skipped_total'] == 0
     assert general_coll['task_unreachable_total'] == 0
+    assert general_coll['processed_events_total'] == 3  # Same as yum module (3 events)
 
     # community.mongodb
     mongodb_coll = coll_by_name['community.mongodb']
@@ -605,6 +617,7 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['task_failed_and_ignored_total'] == 0
     assert mongodb_coll['task_skipped_total'] == 0
     assert mongodb_coll['task_unreachable_total'] == 0
+    assert mongodb_coll['processed_events_total'] == 3  # Same as insert module (3 events)
 
     # custom.user
     custom_coll = coll_by_name['custom.user']
@@ -622,10 +635,11 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['task_failed_and_ignored_total'] == 0
     assert custom_coll['task_skipped_total'] == 0
     assert custom_coll['task_unreachable_total'] == 0
+    assert custom_coll['processed_events_total'] == 1  # Same as collection module (1 event)
 
     # Verify warnings_total and deprecations_total
     # We added 2 warning events (job 1 and job 2) and 1 deprecated event (job 3)
     # Total events: 20 task events + 2 warnings + 1 deprecated = 23 events
-    assert result['event_total'] == 23, f'Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result["event_total"]}'
+    assert result['collected_events_total'] == 23, f'Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result["collected_events_total"]}'
     assert result['warnings_total'] == 2, f'Expected 2 warnings, got {result["warnings_total"]}'
     assert result['deprecations_total'] == 1, f'Expected 1 deprecated event, got {result["deprecations_total"]}'

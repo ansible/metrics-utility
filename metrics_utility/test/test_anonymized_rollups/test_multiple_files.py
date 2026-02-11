@@ -452,6 +452,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert win_copy['task_success_with_reruns_total'] == 2
     assert win_copy['task_failed_total'] == 0
     assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
+    assert win_copy['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic
 
     # Verify another module (community.general.yum)
     yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
@@ -462,6 +463,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert yum['jobs_never_started_total'] == 1
     assert yum['task_failed_total'] == 3
     assert yum['jobs_failed_because_of_module_failure_total'] == 3
+    assert yum['processed_events_total'] == 3  # Same as test_events_modules_aggregations_basic
 
     # Verify collection stats
     collection_stats = result['collection_name_stats']
@@ -477,6 +479,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert windows_coll['hosts_total'] == 3
     assert windows_coll['task_clean_success_total'] == 1
     assert windows_coll['task_success_with_reruns_total'] == 2
+    assert windows_coll['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic
 
     # Verify playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
     assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'

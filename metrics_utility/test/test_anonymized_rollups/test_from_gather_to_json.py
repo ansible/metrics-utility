@@ -163,6 +163,7 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'collection_name' in module_stat
             assert 'jobs_total' in module_stat
             assert 'hosts_total' in module_stat
+            assert 'processed_events_total' in module_stat
 
     # Validate jobs_by_job_type have required fields (now grouped by job_type, merged with job_host_summary)
     if json_data['jobs_by_job_type']:
@@ -239,6 +240,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_module_stats['task_clean_success_total'] == 6, 'Should have 6 successful tasks (3 jobs × 2 hosts)'
     assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
     assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
+    assert first_module_stats['processed_events_total'] == 6, 'Should have 6 processed events (3 jobs × 2 hosts)'
 
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
@@ -248,6 +250,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_collection_stats['jobs_total'] == 3, 'Collection should have 3 jobs'
     assert first_collection_stats['hosts_total'] == 2, 'Collection should have 2 hosts'
     assert first_collection_stats['task_clean_success_total'] == 6, 'Collection should have 6 successful tasks'
+    assert first_collection_stats['processed_events_total'] == 6, 'Collection should have 6 processed events (3 jobs × 2 hosts)'
 
     # Validate playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
     print('--- Validating playbooks_total ---')

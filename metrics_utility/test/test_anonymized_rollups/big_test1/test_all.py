@@ -447,6 +447,9 @@ def test_all_jobs_combined(cleanup_test_data):
         assert 'collection_name' in module, 'Each module should have collection_name field'
         assert 'jobs_total' in module, 'Each module should have jobs_total field'
         assert 'hosts_total' in module, 'Each module should have hosts_total field'
+        assert 'processed_events_total' in module, 'Each module should have processed_events_total field'
+        assert isinstance(module['processed_events_total'], (int, float)), 'processed_events_total should be a number'
+        assert module['processed_events_total'] > 0, 'processed_events_total should be positive'
 
     # ========== Validate Collection Stats ==========
     collection_stats = result['collection_name_stats']
@@ -459,6 +462,9 @@ def test_all_jobs_combined(cleanup_test_data):
         assert 'collection_name' in collection, 'Each collection should have collection_name field'
         assert 'collection_source' in collection, 'Each collection should have collection_source field'
         assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
+        assert 'processed_events_total' in collection, 'Each collection should have processed_events_total field'
+        assert isinstance(collection['processed_events_total'], (int, float)), 'processed_events_total should be a number'
+        assert collection['processed_events_total'] > 0, 'processed_events_total should be positive'
 
     # ========== Validate Playbooks ==========
     # modules_used_per_playbook is computed but not included in final output
