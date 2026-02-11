@@ -2,7 +2,7 @@ import json
 import random
 import uuid
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from modules import MODULES
 
@@ -403,10 +403,12 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
     return host_ids
 
 
-def create_job(name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0, job_template_id=None):
+def create_job(
+    name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0, job_template_id=None, start_date=None, end_date=None
+):
     """Create a job (via unified_job) and return its auto-generated ID and timestamps."""
     # Get deterministic timestamps for this job
-    created, started, finished = get_job_timestamps(job_index)
+    created, started, finished = get_job_timestamps(job_index, start_date, end_date)
     elapsed = (finished - started).total_seconds()
 
     created_str = created.strftime('%Y-%m-%d %H:%M:%S+00')
@@ -518,23 +520,15 @@ def create_job_host_summaries(job_id, host_count, job_created, job_finished, uni
 # Random seed for deterministic generation
 RANDOM_SEED = 42
 
-# Job date range: January 2024
-JOB_DATE_START = datetime(2024, 1, 1, 0, 0, 0)
-JOB_DATE_END = datetime(2024, 1, 31, 23, 59, 59)
 
-
-def create_jobevent_partitions():
-    """Create hourly partitions for main_jobevent for January 2024 (batch SQL)."""
-    print('Creating jobevent partitions for January 2024...')
-
-    # Create partitions for each hour in January 2024
-    start = datetime(2024, 1, 1, 0, 0, 0)
-    end = datetime(2024, 2, 1, 0, 0, 0)
+def create_jobevent_partitions(start_date, end_date):
+    """Create hourly partitions for main_jobevent (batch SQL)."""
+    print(f'Creating jobevent partitions from {start_date} to {end_date}...')
 
     # Build all CREATE TABLE statements in one batch
     statements = []
-    current = start
-    while current < end:
+    current = start_date
+    while current < end_date:
         next_hour = current + timedelta(hours=1)
         partition_name = f'main_jobevent_{current.strftime("%Y%m%d_%H")}'
 
@@ -550,20 +544,20 @@ def create_jobevent_partitions():
     sql = ';\n'.join(statements) + ';'
     run(sql)
 
-    print(f'Created {len(statements)} hourly partitions for January 2024')
+    print(f'Created {len(statements)} hourly partitions')
 
 
-def get_job_timestamps(job_index):
-    """Generate deterministic job timestamps within January 2024.
+def get_job_timestamps(job_index, start_date, end_date):
+    """Generate deterministic job timestamps within the given date range.
 
     Returns (created, started, finished) timestamps.
     """
     rng = random.Random(RANDOM_SEED + job_index)
 
-    # Job created: random time within January 2024
-    total_seconds = int((JOB_DATE_END - JOB_DATE_START).total_seconds())
+    # Job created: random time within the date range
+    total_seconds = int((end_date - start_date).total_seconds())
     created_offset = rng.randint(0, total_seconds - 7200)  # Leave room for job duration
-    created = JOB_DATE_START + timedelta(seconds=created_offset)
+    created = start_date + timedelta(seconds=created_offset)
 
     # Job started: 1-60 minutes after created (queue wait time)
     wait_seconds = rng.randint(60, 3600)

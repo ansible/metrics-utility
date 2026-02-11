@@ -5,6 +5,8 @@ import argparse
 import random
 import uuid
 
+from datetime import datetime, timedelta
+
 from helpers import (
     create_hosts,
     create_inventory,
@@ -87,7 +89,7 @@ def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffi
     }
 
 
-def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10):
+def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10, start_date=None, end_date=None):
     """Fill the database with performance test data.
 
     Note: This function does NOT clean existing data. Use clean_all_data.py to clean before filling.
@@ -97,21 +99,22 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
         job_count: Number of jobs to create
         task_count: Number of tasks per job
         template_count: Number of job templates to create
+        start_date: Start of the date range for job timestamps
+        end_date: End of the date range for job timestamps
     """
     print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job, {template_count} templates ===')
 
-    # Create partitions for January 2024 (required for partitioned main_jobevent)
-    create_jobevent_partitions()
+    create_jobevent_partitions(start_date, end_date)
 
     init_data = fill_init_data(host_count=host_count, task_count=task_count, template_count=template_count)
 
     for i in range(job_count):
-        fill_job(init_data, i)
+        fill_job(init_data, i, start_date, end_date)
 
     print_counts()
 
 
-def fill_job_data(init_data, job_index):
+def fill_job_data(init_data, job_index, start_date, end_date):
     """Create a job using the init_data IDs. Returns (job_id, job_created, job_finished)."""
     # Randomly select a job template
     templates = init_data['templates']
@@ -125,6 +128,8 @@ def fill_job_data(init_data, job_index):
         org_id=init_data['org_id'],
         job_index=job_index,
         job_template_id=template_id,
+        start_date=start_date,
+        end_date=end_date,
     )
     return job_id, job_created, job_finished
 
@@ -137,8 +142,8 @@ def fill_jobevent(init_data, job_id, job_index, job_created):
     create_job_events(job_id, init_data['host_ids'], init_data['task_count'], job_index, job_created, unique_suffix=init_data.get('unique_suffix'))
 
 
-def fill_job(init_data, job_index):
-    job_id, job_created, job_finished = fill_job_data(init_data, job_index)
+def fill_job(init_data, job_index, start_date, end_date):
+    job_id, job_created, job_finished = fill_job_data(init_data, job_index, start_date, end_date)
     fill_jobhostsummary(init_data, job_id, job_created, job_finished)
     fill_jobevent(init_data, job_id, job_index, job_created)
     return
@@ -179,12 +184,26 @@ if __name__ == '__main__':
     parser.add_argument('--job-count', type=int, default=20, help='Number of jobs to create (default: 5)')
     parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
     parser.add_argument('--template-count', type=int, default=10, help='Number of job templates to create (default: 10)')
+    parser.add_argument(
+        '--date', type=str, default=None, help='Constrain jobs to a single day (e.g. 2024-01-25). Default spreads across all of January 2024'
+    )
 
     args = parser.parse_args()
+
+    # Override date range if --date is provided
+    if args.date:
+        date = datetime.fromisoformat(args.date)
+        start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        start_date = datetime(2024, 1, 1, 0, 0, 0)
+        end_date = datetime(2024, 1, 31, 23, 59, 59)
 
     fill_perf_db_data(
         host_count=args.host_count,
         job_count=args.job_count,
         task_count=args.task_count,
         template_count=args.template_count,
+        start_date=start_date,
+        end_date=end_date,
     )
