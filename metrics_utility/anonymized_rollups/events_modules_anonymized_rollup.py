@@ -225,9 +225,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 job_duration_seconds=('job_duration_seconds', 'first'),
                 job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
                 playbook=('playbook', 'first'),
-                warnings_total=('event', lambda x: (x == 'warning').sum()),
-                deprecations_total=('event', lambda x: (x == 'deprecated').sum()),
-            )
+           )
             .assign(
                 # mutually exclusive categories - only one can be true
                 task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
@@ -264,8 +262,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             playbook=('playbook', 'first'),
             host_ids=('host_id', lambda x: set(x)),
-            warnings_total=('warnings_total', 'sum'),
-            deprecations_total=('deprecations_total', 'sum'),
         )
 
         return {
