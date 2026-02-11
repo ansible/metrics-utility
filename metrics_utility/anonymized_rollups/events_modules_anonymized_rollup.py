@@ -122,9 +122,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed']
         unreachable_events_list = ['runner_on_unreachable', 'runner_item_on_unreachable']
         skipped_events_list = ['runner_on_skipped', 'runner_item_on_skipped']
+        warnings_and_deprecations_events_list = ['warning', 'deprecated']
 
         # Filter for only the event types that are used in analysis
-        all_relevant_events = success_events_list + failed_events_list + unreachable_events_list + skipped_events_list
+        all_relevant_events = success_events_list + failed_events_list + unreachable_events_list + skipped_events_list + warnings_and_deprecations_events_list
         dataframe = dataframe[dataframe['event'].isin(all_relevant_events)]
 
         # Prepare data
