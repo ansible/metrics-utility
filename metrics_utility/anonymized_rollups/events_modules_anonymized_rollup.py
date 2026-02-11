@@ -348,6 +348,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # common aggregation for module_stats and collection_name_stats
         common_aggregation = {
             'jobs_total': ('job_id', 'nunique'),
+            'jobs_successful_total': ('job_failed', lambda x: (~x).sum()),
+            'jobs_failed_total': ('job_failed', lambda x: x.sum()),
+            'jobs_duration_total_seconds': ('job_duration_seconds', 'sum'),
+            'jobs_successful_duration_total_seconds': ('job_duration_seconds', lambda x: x[~x['job_failed']].sum()),
+            'jobs_failed_duration_total_seconds': ('job_duration_seconds', lambda x: x[x['job_failed']].sum()),
+            'jobs_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
             'jobs_never_started_total': ('job_started', lambda x: x.isna().sum()),
             'hosts_total': ('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
             'task_clean_success_total': ('task_clean_success', 'sum'),
@@ -362,63 +368,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Per-module counts
         # receiver of this data can easily calculate success rates
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
-
         collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
-
-        # Per-job statistics for modules (similar to collection_name)
-        per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
-            job_duration_seconds=('job_duration_seconds', 'first'),
-            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
-            job_containing_module_failed=('job_failed', 'max'),
-        )
-
-        job_time_stats_module = per_job_module.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
-            jobs_total=('job_id', 'nunique'),
-            job_duration_total_seconds=('job_duration_seconds', 'sum'),
-            jobs_successful_duration_total_seconds=(
-                'job_duration_seconds',
-                lambda x: x[~per_job_module.loc[x.index, 'job_containing_module_failed']].sum(),
-            ),
-            jobs_failed_duration_total_seconds=(
-                'job_duration_seconds',
-                lambda x: x[per_job_module.loc[x.index, 'job_containing_module_failed']].sum(),
-            ),
-            job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-            jobs_containing_module_failed_total=('job_containing_module_failed', 'sum'),
-        )
-
-        per_job_collection_name = dataframe.groupby(['job_id', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
-            job_duration_seconds=('job_duration_seconds', 'first'),
-            job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
-            host_count=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
-            job_containing_collection_name_failed=('job_failed', 'max'),
-        )
-
-        job_time_stats_collection_name = per_job_collection_name.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(
-            jobs_total=('job_id', 'nunique'),
-            job_duration_total_seconds=('job_duration_seconds', 'sum'),
-            jobs_successful_duration_total_seconds=(
-                'job_duration_seconds',
-                lambda x: x[~per_job_collection_name.loc[x.index, 'job_containing_collection_name_failed']].sum(),
-            ),
-            jobs_failed_duration_total_seconds=(
-                'job_duration_seconds',
-                lambda x: x[per_job_collection_name.loc[x.index, 'job_containing_collection_name_failed']].sum(),
-            ),
-            job_waiting_time_total_seconds=('job_waiting_time_seconds', 'sum'),
-            jobs_containing_collection_name_failed_total=('job_containing_collection_name_failed', 'sum'),
-        )
-
-        # merge module_stats and job_time_stats_module into one list based on module_name
-        module_stats_dict = module_stats.to_dict(orient='records')
-        job_time_stats_module_dict = job_time_stats_module.to_dict(orient='records')
-        merged_list_module = merge_by_name(module_stats_dict, job_time_stats_module_dict, 'module_name')
-
-        # merge collection_stats and job_time_stats into one list based on collection_source
-        collection_name_stats_dict = collection_name_stats.to_dict(orient='records')
-        job_time_stats_collection_name_dict = job_time_stats_collection_name.to_dict(orient='records')
-        merged_list_collection_name = merge_by_name(collection_name_stats_dict, job_time_stats_collection_name_dict, 'collection_name')
 
         # Get hosts_automated_total from the dataframe by unioning all host_ids sets
         if not dataframe.empty and 'host_ids' in dataframe.columns:
