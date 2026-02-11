@@ -222,8 +222,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'task_unreachable_event',
             'task_skipped_event',
             'event',
-            'warnings',
-            'deprecations'
+            'is_warning',
+            'is_deprecation'
         ]
 
         dataframe = dataframe[columns_to_keep]
@@ -245,6 +245,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 job_duration_seconds=('job_duration_seconds', 'first'),
                 job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
                 playbook=('playbook', 'first'),
+                warnings_total=('is_warning', 'sum'),
+                deprecations_total=('is_deprecation', 'sum'),
            )
             .assign(
                 # mutually exclusive categories - only one can be true
@@ -282,6 +284,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             playbook=('playbook', 'first'),
             host_ids=('host_id', lambda x: set(x)),
+            warnings_total=('warnings_total', 'sum'),
+            deprecations_total=('deprecations_total', 'sum'),
         )
 
         return {
