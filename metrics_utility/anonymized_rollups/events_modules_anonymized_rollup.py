@@ -251,8 +251,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_started=('job_started', 'first'),
             job_failed=('job_failed', 'first'),
             job_duration_seconds=('job_duration_seconds', 'first'),
-            job_successful_duration=lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
-            job_failed_duration=lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             playbook=('playbook', 'first'),
             host_ids=('host_id', lambda x: set(x)),
@@ -350,11 +348,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # common aggregation for module_stats and collection_name_stats
         common_aggregation = {
             'jobs_total': ('job_id', 'nunique'),
-            'jobs_successful_total': ('job_successful', 'sum'),
+            'jobs_successful_total': (lambda x: ~x['job_failed'], 'sum'),
             'jobs_failed_total': ('job_failed', 'sum'),
             'jobs_duration_total_seconds': ('job_duration_seconds', 'sum'),
-            'jobs_successful_duration_total_seconds': ('job_successful_duration', 'sum'),
-            'jobs_failed_duration_total_seconds': ('job_failed_duration', 'sum'),
             'jobs_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
             'jobs_never_started_total': ('job_started', lambda x: x.isna().sum()),
             'hosts_total': ('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
@@ -367,10 +363,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_failed_because_of_module_failure_total': ('job_id_that_contained_failed_task', 'nunique'),
         }
 
+        common_assign = {
+            'jobs_successful_duration_total_seconds': lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
+            'jobs_failed_duration_total_seconds': lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
+        }
+
         # Per-module counts
         # receiver of this data can easily calculate success rates
-        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
-        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation).assign(**common_assign)
+        
+        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation).assign(**common_assign)
 
         # Get hosts_automated_total from the dataframe by unioning all host_ids sets
         if not dataframe.empty and 'host_ids' in dataframe.columns:
