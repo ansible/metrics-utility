@@ -510,9 +510,9 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['jobs_total'] == 2
     assert netcommon_coll['jobs_never_started_total'] == 0
     assert netcommon_coll['hosts_total'] == 2
-    assert netcommon_coll['job_duration_total_seconds'] == pytest.approx(1320.0)
-    assert netcommon_coll['job_waiting_time_total_seconds'] == pytest.approx(360.0)
-    assert netcommon_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert netcommon_coll['jobs_duration_total_seconds'] == pytest.approx(1320.0)
+    assert netcommon_coll['jobs_waiting_time_total_seconds'] == pytest.approx(360.0)
+    assert netcommon_coll['jobs_failed_total'] == 1
     assert netcommon_coll['jobs_failed_because_of_module_failure_total'] == 0
     assert netcommon_coll['task_clean_success_total'] == 1
     assert netcommon_coll['task_success_with_reruns_total'] == 0
@@ -527,9 +527,9 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['jobs_total'] == 2
     assert posix_coll['jobs_never_started_total'] == 0
     assert posix_coll['hosts_total'] == 2
-    assert posix_coll['job_duration_total_seconds'] == pytest.approx(1380.0)
-    assert posix_coll['job_waiting_time_total_seconds'] == pytest.approx(900.0)
-    assert posix_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert posix_coll['jobs_duration_total_seconds'] == pytest.approx(1380.0)
+    assert posix_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
+    assert posix_coll['jobs_failed_total'] == 1
     assert posix_coll['jobs_failed_because_of_module_failure_total'] == 1
     assert posix_coll['task_clean_success_total'] == 1
     assert posix_coll['task_success_with_reruns_total'] == 0
@@ -544,9 +544,9 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['jobs_total'] == 3
     assert windows_coll['jobs_never_started_total'] == 0
     assert windows_coll['hosts_total'] == 3
-    assert windows_coll['job_duration_total_seconds'] == pytest.approx(2100.0)
-    assert windows_coll['job_waiting_time_total_seconds'] == pytest.approx(900.0)
-    assert windows_coll['jobs_containing_collection_name_failed_total'] == 3
+    assert windows_coll['jobs_duration_total_seconds'] == pytest.approx(2100.0)
+    assert windows_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
+    assert windows_coll['jobs_failed_total'] == 3
     assert windows_coll['jobs_failed_because_of_module_failure_total'] == 0
     assert windows_coll['task_clean_success_total'] == 1
     assert windows_coll['task_success_with_reruns_total'] == 2
@@ -561,9 +561,9 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['jobs_total'] == 2
     assert aws_coll['jobs_never_started_total'] == 0
     assert aws_coll['hosts_total'] == 4
-    assert aws_coll['job_duration_total_seconds'] == pytest.approx(1380.0)
-    assert aws_coll['job_waiting_time_total_seconds'] == pytest.approx(900.0)
-    assert aws_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert aws_coll['jobs_duration_total_seconds'] == pytest.approx(1380.0)
+    assert aws_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
+    assert aws_coll['jobs_failed_total'] == 1
     assert aws_coll['jobs_failed_because_of_module_failure_total'] == 0
     assert aws_coll['task_clean_success_total'] == 2
     assert aws_coll['task_success_with_reruns_total'] == 0
@@ -578,9 +578,9 @@ def test_events_modules_aggregations_basic():
     assert general_coll['jobs_total'] == 3
     assert general_coll['jobs_never_started_total'] == 1
     assert general_coll['hosts_total'] == 2
-    assert general_coll['job_duration_total_seconds'] == pytest.approx(1500.0)
-    assert general_coll['job_waiting_time_total_seconds'] == pytest.approx(300.0)
-    assert general_coll['jobs_containing_collection_name_failed_total'] == 3
+    assert general_coll['jobs_duration_total_seconds'] == pytest.approx(1500.0)
+    assert general_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
+    assert general_coll['jobs_failed_total'] == 3
     assert general_coll['jobs_failed_because_of_module_failure_total'] == 3
     assert general_coll['task_clean_success_total'] == 0
     assert general_coll['task_success_with_reruns_total'] == 0
@@ -595,9 +595,9 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['jobs_total'] == 2
     assert mongodb_coll['jobs_never_started_total'] == 0
     assert mongodb_coll['hosts_total'] == 2
-    assert mongodb_coll['job_duration_total_seconds'] == pytest.approx(1500.0)
-    assert mongodb_coll['job_waiting_time_total_seconds'] == pytest.approx(300.0)
-    assert mongodb_coll['jobs_containing_collection_name_failed_total'] == 2
+    assert mongodb_coll['jobs_duration_total_seconds'] == pytest.approx(1500.0)
+    assert mongodb_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
+    assert mongodb_coll['jobs_failed_total'] == 2
     assert mongodb_coll['jobs_failed_because_of_module_failure_total'] == 0
     assert mongodb_coll['task_clean_success_total'] == 1
     assert mongodb_coll['task_success_with_reruns_total'] == 1
@@ -612,9 +612,9 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['jobs_total'] == 1
     assert custom_coll['jobs_never_started_total'] == 0
     assert custom_coll['hosts_total'] == 1
-    assert custom_coll['job_duration_total_seconds'] == pytest.approx(540.0)
-    assert custom_coll['job_waiting_time_total_seconds'] == pytest.approx(60.0)
-    assert custom_coll['jobs_containing_collection_name_failed_total'] == 1
+    assert custom_coll['jobs_duration_total_seconds'] == pytest.approx(540.0)
+    assert custom_coll['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)
+    assert custom_coll['jobs_failed_total'] == 1
     assert custom_coll['jobs_failed_because_of_module_failure_total'] == 0
     assert custom_coll['task_clean_success_total'] == 1
     assert custom_coll['task_success_with_reruns_total'] == 0

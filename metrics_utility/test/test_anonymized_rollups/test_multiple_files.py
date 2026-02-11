@@ -451,7 +451,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert win_copy['task_clean_success_total'] == 1
     assert win_copy['task_success_with_reruns_total'] == 2
     assert win_copy['task_failed_total'] == 0
-    assert win_copy['job_duration_total_seconds'] == pytest.approx(2100.0)
+    assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
 
     # Verify another module (community.general.yum)
     yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
