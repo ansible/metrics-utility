@@ -171,8 +171,28 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
 
         # determine module level warnings and deprecations
-        dataframe['is_deprecation'] = dataframe['deprecations'].notna()
-        dataframe['is_warning'] = dataframe['warnings'].notna()
+        # Parse JSON arrays and check if they contain items
+        def parse_and_check_json_array(x):
+            """Parse JSON array (string, list, or dict) and return True if it contains items."""
+            if pd.isnull(x):
+                return False
+            try:
+                # If already a list/dict, use it directly
+                if isinstance(x, (list, dict)):
+                    parsed = x
+                else:
+                    # If string, parse it
+                    parsed = json.loads(x) if isinstance(x, str) else x
+                # Check if it's a non-empty array
+                if isinstance(parsed, list):
+                    return len(parsed) > 0
+                # If it's a dict or other structure, check if it's truthy
+                return bool(parsed)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return False
+
+        dataframe['is_warning'] = dataframe['warnings'].apply(parse_and_check_json_array).astype(bool)
+        dataframe['is_deprecation'] = dataframe['deprecations'].apply(parse_and_check_json_array).astype(bool)
 
         dataframe = dataframe[
             dataframe['module_name'].notna()
