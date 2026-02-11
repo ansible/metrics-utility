@@ -172,7 +172,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         # from events_modules
         'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
         'rollup_period_hosts_automated_total': events_modules.get('hosts_automated_total'),
-        'rollup_period_automation_events_total': events_modules.get('event_total'),
+        'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
         'rollup_period_warnings_total': events_modules.get('warnings_total'),
         'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
         'rollup_period_playbooks_total': playbooks_total,

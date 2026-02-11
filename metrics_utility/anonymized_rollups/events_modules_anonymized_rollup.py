@@ -85,7 +85,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def merge(self, data_all, data_new):
         """
-        Override merge to handle the new structure with event_total, warnings_total, deprecations_total and task_summary.
+        Override merge to handle the new structure with collected_events_total, warnings_total, deprecations_total and task_summary.
         Concatenates task_summary dataframes and sums event totals.
         """
         # Handle initial None case (first iteration from load_anonymized_rollup_data)
@@ -94,7 +94,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Concatenate task_summary dataframes and sum event totals
         return {
-            'event_total': data_all['event_total'] + data_new['event_total'],
+            'collected_events_total': data_all['collected_events_total'] + data_new['collected_events_total'],
             'warnings_total': data_all.get('warnings_total', 0) + data_new.get('warnings_total', 0),
             'deprecations_total': data_all.get('deprecations_total', 0) + data_new.get('deprecations_total', 0),
             'task_summary': pd.concat([data_all['task_summary'], data_new['task_summary']], ignore_index=True),
@@ -105,7 +105,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
         # Count all events before pruning
-        event_total = len(dataframe) if dataframe is not None and not dataframe.empty else 0
+        collected_events_total = len(dataframe) if dataframe is not None and not dataframe.empty else 0
 
         # Count warnings and deprecations before filtering
         # These events don't have task_uuid, host_id, module_name, etc., so they're filtered out later
@@ -295,7 +295,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         return {
-            'event_total': event_total,
+            'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
             'deprecations_total': deprecations_total,
             'task_summary': task_summary,
@@ -316,18 +316,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
 
 
-        data is a dict with 'event_total' and 'task_summary' dataframe
+        data is a dict with 'collected_events_total' and 'task_summary' dataframe
         """
 
         # Handle None input (no data files)
         if data is None:
             return {
-                'json': {'event_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
-                'rollup': {'aggregated': pd.DataFrame(), 'event_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
+                'json': {'collected_events_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
+                'rollup': {'aggregated': pd.DataFrame(), 'collected_events_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
             }
 
         # Extract event totals and task_summary dataframe from the data structure
-        event_total = data.get('event_total', 0)
+        collected_events_total = data.get('collected_events_total', 0)
         warnings_total = data.get('warnings_total', 0)
         deprecations_total = data.get('deprecations_total', 0)
         dataframe = data.get('task_summary', pd.DataFrame())
@@ -335,10 +335,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
             return {
-                'json': {'event_total': event_total, 'warnings_total': warnings_total, 'deprecations_total': deprecations_total},
+                'json': {'collected_events_total': collected_events_total, 'warnings_total': warnings_total, 'deprecations_total': deprecations_total},
                 'rollup': {
                     'aggregated': dataframe,
-                    'event_total': event_total,
+                    'collected_events_total': collected_events_total,
                     'warnings_total': warnings_total,
                     'deprecations_total': deprecations_total,
                 },
@@ -433,7 +433,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': module_stats.to_dict(orient='records'),
             'collection_name_stats': collection_name_stats.to_dict(orient='records'),
             'hosts_automated_total': hosts_automated_total,
-            'event_total': event_total,
+            'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
             'deprecations_total': deprecations_total,
         }

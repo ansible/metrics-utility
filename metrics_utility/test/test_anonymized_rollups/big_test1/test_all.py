@@ -296,6 +296,20 @@ def test_all_jobs_combined(cleanup_test_data):
         f'Sum of individual task counts ({calculated_total}) should equal rollup_period_tasks_total ({statistics["rollup_period_tasks_total"]})'
     )
 
+    # ========== Validate Events Statistics ==========
+    assert 'rollup_period_collected_events_total' in statistics, 'Should have rollup_period_collected_events_total in statistics'
+    assert statistics['rollup_period_collected_events_total'] == 142, (
+        f'Should have 142 collected events total, got {statistics["rollup_period_collected_events_total"]}'
+    )
+    assert 'rollup_period_warnings_total' in statistics, 'Should have rollup_period_warnings_total in statistics'
+    assert statistics['rollup_period_warnings_total'] == 3, (
+        f'Should have 3 warnings total, got {statistics["rollup_period_warnings_total"]}'
+    )
+    assert 'rollup_period_deprecations_total' in statistics, 'Should have rollup_period_deprecations_total in statistics'
+    assert statistics['rollup_period_deprecations_total'] == 2, (
+        f'Should have 2 deprecations total, got {statistics["rollup_period_deprecations_total"]}'
+    )
+
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_job_type']
     assert isinstance(jobs_list, list)
