@@ -344,33 +344,26 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Task status categories are already computed in prepare(), so we can use dataframe directly
         task_summary = dataframe
 
+
+        # common aggregation for module_stats and collection_name_stats
+        common_aggregation = {
+            'jobs_total': ('job_id', 'nunique'),
+            'jobs_never_started_total': ('job_started', lambda x: x.isna().sum()),
+            'hosts_total': ('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
+            'task_clean_success_total': ('task_clean_success', 'sum'),
+            'task_success_with_reruns_total': ('task_success_with_reruns', 'sum'),
+            'task_failed_total': ('task_failed', 'sum'),
+            'task_unreachable_total': ('task_unreachable', 'sum'),
+            'task_skipped_total': ('task_skipped', 'sum'),
+            'task_failed_and_ignored_total': ('task_failed_and_ignored', 'sum'),
+            'jobs_failed_because_of_module_failure_total': ('job_id_that_contained_failed_task', 'nunique'),
+        }
+
         # Per-module counts
         # receiver of this data can easily calculate success rates
-        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
-            jobs_total=('job_id', 'nunique'),
-            jobs_never_started_total=('job_started', lambda x: x.isna().sum()),
-            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
-            task_clean_success_total=('task_clean_success', 'sum'),
-            task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
-            task_failed_total=('task_failed', 'sum'),
-            task_unreachable_total=('task_unreachable', 'sum'),
-            task_skipped_total=('task_skipped', 'sum'),
-            task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
-            jobs_failed_because_of_module_failure_total=('job_id_that_contained_failed_task', 'nunique'),
-        )
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
 
-        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(
-            jobs_total=('job_id', 'nunique'),
-            jobs_never_started_total=('job_started', lambda x: x.isna().sum()),
-            hosts_total=('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
-            jobs_failed_because_of_collection_name_failure_total=('job_id_that_contained_failed_task', 'nunique'),
-            task_clean_success_total=('task_clean_success', 'sum'),
-            task_success_with_reruns_total=('task_success_with_reruns', 'sum'),
-            task_failed_total=('task_failed', 'sum'),
-            task_unreachable_total=('task_unreachable', 'sum'),
-            task_skipped_total=('task_skipped', 'sum'),
-            task_failed_and_ignored_total=('task_failed_and_ignored', 'sum'),
-        )
+        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
 
         # Per-job statistics for modules (similar to collection_name)
         per_job_module = dataframe.groupby(['job_id', 'module_name', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
