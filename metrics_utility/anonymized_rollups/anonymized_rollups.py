@@ -47,7 +47,6 @@ def anonymize_data(data, salt):
             - jobs_by_controller_version: array of job stats (grouped by controller_version, with default host summary fields)
             - module_stats: array of module statistics
             - collection_name_stats: array of collection statistics
-            - modules_used_per_playbook: array of {playbook_id, modules_used}
             - collections_versions: array of {name, version, job_count} from installed collections
         salt: Salt string for hashing
     """
@@ -89,24 +88,22 @@ def anonymize_data(data, salt):
                 if 'collection_name' in collection and collection['collection_name']:
                     collection['collection_name'] = hash(collection['collection_name'], salt)
 
-    # anonymize modules_used_per_playbook - anonymize playbook_id (which is the playbook name)
-    if 'modules_used_per_playbook' in data and data['modules_used_per_playbook']:
-        for playbook_entry in data['modules_used_per_playbook']:
-            if playbook_entry and 'playbook_id' in playbook_entry and playbook_entry['playbook_id']:
-                playbook_entry['playbook_id'] = hash(playbook_entry['playbook_id'], salt)
+    # Note: modules_used_per_playbook anonymization removed since it's not in final output
+    # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
 
 
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
       - statistics: object of primitive totals (includes credentials)
-      - modules_used_per_playbook: array of {playbook_id, modules_used}
       - module_stats: array (copied as-is)
       - collection_name_stats: array (copied as-is)
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_controller_version: array (grouped by controller_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
+    
+    Note: modules_used_per_playbook is computed but not included in final output.
     """
     events_modules = data.get('events_modules', {})
     execution_environments = data.get('execution_environments', {})
@@ -191,7 +188,6 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_jobs_successful_duration_total_seconds': rollup_period_jobs_successful_duration_total_seconds,
         'rollup_period_jobs_failed_duration_total_seconds': rollup_period_jobs_failed_duration_total_seconds,
         'rollup_period_organizations_total': jobs.get('organizations_total'),
-        'rollup_period_controller_versions': controller_versions_merged,
         'rollup_period_forks_total': jobs.get('forks_total'),
         'rollup_period_templates_total': job_templates_total,
         'rollup_period_inventories_total': inventories_total,
@@ -201,9 +197,6 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_successful_hosts_total': successful_hosts_total,
         'rollup_period_failed_hosts_total': failed_hosts_total,
         'rollup_period_unreachable_hosts_total': unreachable_hosts_total,
-        # computed arrays
-        'rollup_period_scm_types': scm_types_merged,
-        'rollup_period_credential_types': credential_types_merged,
     }
 
     # 2) modules_used_per_playbook (convert map -> array)
@@ -383,9 +376,12 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     # 6) assemble the flattened object
+    # Note: modules_used_per_playbook is computed but not included in final output
     flattened: Dict[str, Any] = {
         'statistics': statistics,
-        'modules_used_per_playbook': modules_used_per_playbook,
+        'rollup_period_controller_versions': controller_versions_merged,
+        'rollup_period_scm_types': scm_types_merged,
+        'rollup_period_credential_types': credential_types_merged,
         'module_stats': module_stats,
         'collection_name_stats': collection_name_stats,
         'jobs_by_job_type': jobs_by_job_type_merged,

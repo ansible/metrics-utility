@@ -69,14 +69,16 @@ def test_from_gather_to_json(cleanup_glob):
 
         # ========== Validate the json_data that are containing what they should ==========
 
-        # Validate top-level flattened structure
-        assert 'statistics' in json_data, "Missing 'statistics' in json_data"
-        assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
-        assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
-        assert 'modules_used_per_playbook' in json_data, "Missing 'modules_used_per_playbook' in json_data"
-        assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
-        assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
-        # job_host_summary is now merged into jobs_by_job_type
+    # Validate top-level flattened structure
+    assert 'statistics' in json_data, "Missing 'statistics' in json_data"
+    assert 'rollup_period_controller_versions' in json_data, "Missing 'rollup_period_controller_versions' at top level"
+    assert 'rollup_period_scm_types' in json_data, "Missing 'rollup_period_scm_types' at top level"
+    assert 'rollup_period_credential_types' in json_data, "Missing 'rollup_period_credential_types' at top level"
+    assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
+    assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
+    assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
+    assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
+    # job_host_summary is now merged into jobs_by_job_type
 
     # Validate statistics structure (contains all the scalar totals)
     statistics = json_data['statistics']
@@ -101,15 +103,14 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_unreachable_hosts_total' in statistics
     assert 'rollup_period_playbooks_total' in statistics
     assert 'rollup_period_templates_total' in statistics
-    assert 'rollup_period_scm_types' in statistics
     assert 'rollup_period_tasks_total' in statistics
     assert 'rollup_period_task_ok_total' in statistics
     assert 'rollup_period_task_failed_total' in statistics
     assert 'rollup_period_task_skipped_total' in statistics
     assert 'rollup_period_task_unreachable_total' in statistics
     assert 'rollup_period_task_ignored_total' in statistics
-    # Credentials field may be present if credentials data exists
-    # (rollup_period_credential_types is a list of unique credential type names)
+    # Arrays are now at top level, not in statistics
+    # (rollup_period_controller_versions, rollup_period_scm_types, rollup_period_credential_types are at top level)
 
     # Validate statistics data types
     assert isinstance(statistics['rollup_period_modules_total'], int)
@@ -149,7 +150,6 @@ def test_from_gather_to_json(cleanup_glob):
     assert isinstance(statistics['rollup_period_templates_total'], int), 'templates_total should be an integer'
 
     # Validate arrays structure
-    assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
     assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
     assert isinstance(json_data['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
@@ -249,14 +249,9 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_collection_stats['hosts_total'] == 2, 'Collection should have 2 hosts'
     assert first_collection_stats['task_clean_success_total'] == 6, 'Collection should have 6 successful tasks'
 
-    # Validate modules_used_per_playbook structure and values (now an array, not dict)
-    print('--- Validating modules_used_per_playbook ---')
-    assert len(json_data['modules_used_per_playbook']) == 1, 'Should have 1 playbook'
+    # Validate playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
+    print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'
-    playbook_entry = json_data['modules_used_per_playbook'][0]
-    assert 'playbook_id' in playbook_entry, 'Playbook entry should have playbook_id'
-    assert 'modules_used' in playbook_entry, 'Playbook entry should have modules_used'
-    assert playbook_entry['modules_used'] == 1, 'Playbook should use 1 module'
 
     # Validate execution_environments actual values
     print('--- Validating execution_environments data values ---')
@@ -397,8 +392,8 @@ def test_from_gather_to_json(cleanup_glob):
     # - Network
     # - Vault
 
-    assert 'rollup_period_credential_types' in statistics, 'Should have rollup_period_credential_types in statistics'
-    credential_types = statistics['rollup_period_credential_types']
+    assert 'rollup_period_credential_types' in json_data, 'Should have rollup_period_credential_types at top level'
+    credential_types = json_data['rollup_period_credential_types']
     assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
     assert 'Amazon Web Services' in credential_types
     assert 'Machine' in credential_types
@@ -442,7 +437,6 @@ def test_half_day_rollup(cleanup_glob):
     assert 'statistics' in json_data, "Missing 'statistics' in json_data"
     assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
     assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
-    assert 'modules_used_per_playbook' in json_data, "Missing 'modules_used_per_playbook' in json_data"
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     # job_host_summary is now merged into jobs_by_job_type
@@ -451,15 +445,14 @@ def test_half_day_rollup(cleanup_glob):
     assert isinstance(json_data['statistics'], dict), 'statistics should be a dictionary'
     assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
     assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
-    assert isinstance(json_data['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
     assert isinstance(json_data['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
     assert isinstance(json_data['jobs_by_launch_type'], list), 'jobs_by_launch_type should be a list'
     # job_host_summary is now merged into jobs_by_job_type
 
     # Validate credentials structure (if present)
     # Based on main_jobhostsummary.sql, we expect 4 credential types
-    assert 'rollup_period_credential_types' in json_data['statistics'], 'Should have rollup_period_credential_types in statistics'
-    credential_types = json_data['statistics']['rollup_period_credential_types']
+    assert 'rollup_period_credential_types' in json_data, 'Should have rollup_period_credential_types at top level'
+    credential_types = json_data['rollup_period_credential_types']
     assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
     assert len(credential_types) == 4, f'Should have 4 unique credential types, got {len(credential_types)}'
     assert credential_types == sorted(credential_types), 'credential_types should be sorted'

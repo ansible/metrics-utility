@@ -225,7 +225,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         # job_host_summary is now merged into jobs_by_job_type
         assert 'module_stats' in result
         assert 'collection_name_stats' in result
-        assert 'modules_used_per_playbook' in result
         assert 'collections_versions' in result
 
     # ========== Validate Jobs ==========
@@ -236,9 +235,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
     assert result['statistics']['rollup_period_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
 
-    # Validate controller_versions in statistics is merged from jobs_by_job_type
-    assert 'rollup_period_controller_versions' in result['statistics'], 'Should have controller_versions in statistics'
-    statistics_controller_versions = result['statistics']['rollup_period_controller_versions']
+    # Validate controller_versions at top level is merged from jobs_by_job_type
+    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
+    statistics_controller_versions = result['rollup_period_controller_versions']
     assert isinstance(statistics_controller_versions, list), 'controller_versions should be a list'
     # Get controller_versions from jobs_by_job_type and merge them
     jobs_by_job_type = result.get('jobs_by_job_type', [])
@@ -260,10 +259,10 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert '2.12.0' in statistics_controller_versions
     assert '2.14.0' in statistics_controller_versions
 
-    # Validate scm_types in statistics
-    assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
-    assert result['statistics']['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
-        f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {result['statistics']['rollup_period_scm_types']}"
+    # Validate scm_types at top level
+    assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
+    assert result['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
+        f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {result['rollup_period_scm_types']}"
     )
 
     # 'job' type should have data from both tarballs (jobs 1, 2, 4)
@@ -479,22 +478,16 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert windows_coll['task_clean_success_total'] == 1
     assert windows_coll['task_success_with_reruns_total'] == 2
 
-    # Verify modules_used_per_playbook is now an array with 5 entries (flattened structure)
-    playbook_modules = result['modules_used_per_playbook']
-    assert isinstance(playbook_modules, list), 'modules_used_per_playbook should be a list'
-    assert len(playbook_modules) == 5, 'Should have 5 playbooks'
+    # Verify playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
     assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
-    # Check values sum to expected total
-    total_module_usage = sum(p['modules_used'] for p in playbook_modules)
-    assert total_module_usage == 15, 'Total module usage across playbooks should be 15'
 
     # ========== Validate Credentials ==========
     print('--- Validating credentials data values ---')
-    # Credentials are added to statistics as a list of unique credential types
+    # Credentials are added at top level as a list of unique credential types
     # Expected credential types from credentials test data (from test_credentials_anonymized_rollup.py):
     # Amazon Web Services, Container Registry, Machine, Network, Source Control, Vault
-    assert 'rollup_period_credential_types' in result['statistics'], 'Should have rollup_period_credential_types in statistics'
-    credential_types = result['statistics']['rollup_period_credential_types']
+    assert 'rollup_period_credential_types' in result, 'Should have rollup_period_credential_types at top level'
+    credential_types = result['rollup_period_credential_types']
     assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
     assert 'Amazon Web Services' in credential_types
     assert 'Container Registry' in credential_types
@@ -790,7 +783,6 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # job_host_summary is now merged into jobs_by_job_type
     assert 'module_stats' in result
     assert 'collection_name_stats' in result
-    assert 'modules_used_per_playbook' in result
     assert 'collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
@@ -846,8 +838,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     )
     assert statistics['rollup_period_jobs_failed_duration_total_seconds'] is None, 'jobs_failed_duration_total_seconds should be None for empty data'
     assert statistics['rollup_period_organizations_total'] is None
-    assert 'rollup_period_controller_versions' in statistics, 'Should have controller_versions field in statistics'
-    assert statistics['rollup_period_controller_versions'] == [], 'controller_versions should be empty list for empty data'
+    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions field at top level'
+    assert result['rollup_period_controller_versions'] == [], 'controller_versions should be empty list for empty data'
     assert statistics['rollup_period_forks_total'] is None
     assert statistics['rollup_period_unique_hosts_total'] is None
     # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count
@@ -899,17 +891,16 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(result['collection_name_stats'], list), 'collection_name_stats should be a list'
     assert len(result['collection_name_stats']) == 0, 'collection_name_stats should be empty with no data'
 
-    assert isinstance(result['modules_used_per_playbook'], list), 'modules_used_per_playbook should be a list'
-    assert len(result['modules_used_per_playbook']) == 0, 'modules_used_per_playbook should be empty with no data'
+    # modules_used_per_playbook is computed but not included in final output
 
     assert isinstance(result['collections_versions'], list), 'collections_versions should be a list'
     assert len(result['collections_versions']) == 0, 'collections_versions should be empty with no data'
 
     # Verify credentials field is present but empty when there's no data
     # (credentials_list would be empty list)
-    assert 'rollup_period_credential_types' in statistics
-    assert statistics['rollup_period_credential_types'] == [], 'Should have empty credential_types list when there is no credentials data'
+    assert 'rollup_period_credential_types' in result
+    assert result['rollup_period_credential_types'] == [], 'Should have empty credential_types list when there is no credentials data'
 
     # Verify scm_types field is present but empty when there's no data
-    assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'
-    assert statistics['rollup_period_scm_types'] == [], 'Should have empty scm_types list when there is no jobs data'
+    assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
+    assert result['rollup_period_scm_types'] == [], 'Should have empty scm_types list when there is no jobs data'

@@ -248,7 +248,6 @@ def test_all_jobs_combined(cleanup_test_data):
     assert 'jobs_by_controller_version' in result
     assert 'module_stats' in result
     assert 'collection_name_stats' in result
-    assert 'modules_used_per_playbook' in result
     assert 'collections_versions' in result
 
     # ========== Validate Task Statistics (from job host summary data) ==========
@@ -317,9 +316,9 @@ def test_all_jobs_combined(cleanup_test_data):
     assert workflowjob_type['jobs_total'] == 1, f'Should have 1 job of type "workflowjob", got {workflowjob_type["jobs_total"]}'
     assert workflowjob_type['job_type'] == 'workflowjob'
 
-    # Validate controller_versions in statistics
-    assert 'rollup_period_controller_versions' in result['statistics'], 'Should have controller_versions in statistics'
-    statistics_controller_versions = result['statistics']['rollup_period_controller_versions']
+    # Validate controller_versions at top level
+    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
+    statistics_controller_versions = result['rollup_period_controller_versions']
     assert isinstance(statistics_controller_versions, list), 'controller_versions should be a list'
     # Expected: 2.15.0, 2.16.0, 2.17.0, 2.18.0, 2.19.0
     expected_versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
@@ -327,10 +326,10 @@ def test_all_jobs_combined(cleanup_test_data):
     for version in expected_versions:
         assert version in statistics_controller_versions, f'Should have controller version {version}'
 
-    # Validate scm_types in statistics
-    assert 'rollup_period_scm_types' in result['statistics'], 'Should have rollup_period_scm_types in statistics'
-    assert result['statistics']['rollup_period_scm_types'] == ['git', 'manual'], (
-        f"Expected ['git', 'manual'] for rollup_period_scm_types, got {result['statistics']['rollup_period_scm_types']}"
+    # Validate scm_types at top level
+    assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
+    assert result['rollup_period_scm_types'] == ['git', 'manual'], (
+        f"Expected ['git', 'manual'] for rollup_period_scm_types, got {result['rollup_period_scm_types']}"
     )
 
     # ========== Validate Jobs by Launch Type ==========
@@ -448,10 +447,7 @@ def test_all_jobs_combined(cleanup_test_data):
         assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
 
     # ========== Validate Playbooks ==========
-    playbook_modules = result['modules_used_per_playbook']
-    assert isinstance(playbook_modules, list), 'modules_used_per_playbook should be a list'
-    # Should have at least 2 playbooks (playbook1.yml and playbook2.yml)
-    assert len(playbook_modules) >= 2, f'Should have at least 2 playbooks, got {len(playbook_modules)}'
+    # modules_used_per_playbook is computed but not included in final output
     assert 'rollup_period_playbooks_total' in result['statistics'], 'Should have playbooks_total in statistics'
     assert result['statistics']['rollup_period_playbooks_total'] >= 2, (
         f'Should have at least 2 total playbooks, got {result["statistics"]["rollup_period_playbooks_total"]}'
@@ -471,8 +467,8 @@ def test_all_jobs_combined(cleanup_test_data):
     # - Network (job 3)
     # - Source Control (job 4)
     # - Vault (jobs 2, 8)
-    assert 'rollup_period_credential_types' in result['statistics']
-    credential_types = result['statistics']['rollup_period_credential_types']
+    assert 'rollup_period_credential_types' in result
+    credential_types = result['rollup_period_credential_types']
     assert isinstance(credential_types, list)
     assert 'Amazon Web Services' in credential_types
     assert 'Container Registry' in credential_types

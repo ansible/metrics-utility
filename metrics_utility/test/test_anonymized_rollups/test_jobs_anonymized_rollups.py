@@ -651,10 +651,10 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
         input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
     )
 
-    # Validate statistics has controller_versions
+    # Validate result has controller_versions at top level
     assert 'statistics' in result, 'Should have statistics in result'
     statistics = result['statistics']
-    assert 'rollup_period_controller_versions' in statistics, 'Should have controller_versions in statistics'
+    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
 
     # Validate new job statistics fields exist
     assert 'rollup_period_jobs_successful' in statistics, 'Should have jobs_successful in statistics'
@@ -672,21 +672,21 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
             expected_versions_set.update(controller_versions)
     expected_versions = sorted(list(expected_versions_set))
 
-    # Validate controller_versions in statistics matches merged values from jobs_by_job_type
-    assert statistics['rollup_period_controller_versions'] == expected_versions, (
-        f'Expected controller_versions {expected_versions} in statistics, got {statistics["rollup_period_controller_versions"]}'
+    # Validate controller_versions at top level matches merged values from jobs_by_job_type
+    assert result['rollup_period_controller_versions'] == expected_versions, (
+        f'Expected controller_versions {expected_versions} at top level, got {result["rollup_period_controller_versions"]}'
     )
 
     # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
     # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
-    assert len(statistics['rollup_period_controller_versions']) == 5, (
-        f'Expected 5 unique controller versions, got {len(statistics["rollup_period_controller_versions"])}'
+    assert len(result['rollup_period_controller_versions']) == 5, (
+        f'Expected 5 unique controller versions, got {len(result["rollup_period_controller_versions"])}'
     )
-    assert '2.9.0' in statistics['rollup_period_controller_versions']
-    assert '2.10.0' in statistics['rollup_period_controller_versions']
-    assert '2.11.0' in statistics['rollup_period_controller_versions']
-    assert '2.12.0' in statistics['rollup_period_controller_versions']
-    assert '2.14.0' in statistics['rollup_period_controller_versions']
+    assert '2.9.0' in result['rollup_period_controller_versions']
+    assert '2.10.0' in result['rollup_period_controller_versions']
+    assert '2.11.0' in result['rollup_period_controller_versions']
+    assert '2.12.0' in result['rollup_period_controller_versions']
+    assert '2.14.0' in result['rollup_period_controller_versions']
 
     # Validate new job statistics match sum from jobs_by_job_type
     if jobs_by_job_type:
@@ -721,8 +721,8 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
                 f'got={statistics["rollup_period_jobs_failed_duration_total_seconds"]}'
             )
 
-    # Validate scm_types in statistics
-    assert 'rollup_period_scm_types' in statistics, 'Should have rollup_period_scm_types in statistics'
-    assert statistics['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
-        f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {statistics['rollup_period_scm_types']}"
+    # Validate scm_types at top level
+    assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
+    assert result['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
+        f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {result['rollup_period_scm_types']}"
     )

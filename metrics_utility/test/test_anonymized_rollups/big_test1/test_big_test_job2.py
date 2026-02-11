@@ -128,11 +128,11 @@ def test_big_test2():
         assert statistics['rollup_period_EE_custom_total'] == 4
 
         # Verify credentials (Job 2 has Machine and Vault)
-        assert 'rollup_period_credential_types' in statistics
-        assert isinstance(statistics['rollup_period_credential_types'], list)
-        assert 'Machine' in statistics['rollup_period_credential_types']
-        assert 'Vault' in statistics['rollup_period_credential_types']
-        assert len(statistics['rollup_period_credential_types']) == 2
+        assert 'rollup_period_credential_types' in result
+        assert isinstance(result['rollup_period_credential_types'], list)
+        assert 'Machine' in result['rollup_period_credential_types']
+        assert 'Vault' in result['rollup_period_credential_types']
+        assert len(result['rollup_period_credential_types']) == 2
 
         # Pretty print the anonymized rollup result
         json_content = json.dumps(result, indent=2, default=str)
