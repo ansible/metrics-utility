@@ -170,6 +170,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['task_unreachable_event'] = dataframe['event'].isin(unreachable_events_list)
         dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
 
+        # determine module level warnings and deprecations
+        dataframe['is_deprecation'] = dataframe['deprecations'].notna()
+        dataframe['is_warning'] = dataframe['warnings'].notna()
+
         dataframe = dataframe[
             dataframe['module_name'].notna()
             & dataframe['host_id'].notna()
