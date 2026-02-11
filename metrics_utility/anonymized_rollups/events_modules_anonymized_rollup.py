@@ -197,6 +197,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'task_failed_and_ignored_event',
             'task_unreachable_event',
             'task_skipped_event',
+            'event'
         ]
 
         dataframe = dataframe[columns_to_keep]
@@ -218,6 +219,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 job_duration_seconds=('job_duration_seconds', 'first'),
                 job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
                 playbook=('playbook', 'first'),
+                warnings_total=('event', lambda x: (x == 'warning').sum()),
+                deprecations_total=('event', lambda x: (x == 'deprecated').sum()),
             )
             .assign(
                 # mutually exclusive categories - only one can be true
@@ -255,6 +258,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             playbook=('playbook', 'first'),
             host_ids=('host_id', lambda x: set(x)),
+            warnings_total=('warnings_total', 'sum'),
+            deprecations_total=('deprecations_total', 'sum'),
         )
 
         return {
@@ -325,6 +330,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_duration_seconds=('job_duration_seconds', 'first'),
             job_waiting_time_seconds=('job_waiting_time_seconds', 'first'),
             host_ids=('host_ids', lambda x: set().union(*[s for s in x.dropna() if isinstance(s, set)])),
+            warnings_total=('warnings_total', 'sum'),
+            deprecations_total=('deprecations_total', 'sum'),
         )
 
         # Modules used to automate
@@ -369,6 +376,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_failed_because_of_module_failure_total': ('job_id_that_contained_failed_task', 'nunique'),
             'jobs_successful_duration_total_seconds': ('jobs_successful_duration_total_seconds', 'sum'),
             'jobs_failed_duration_total_seconds': ('jobs_failed_duration_total_seconds', 'sum'),
+            'warnings_total': ('warnings_total', 'sum'),
+            'deprecations_total': ('deprecations_total', 'sum'),
         }
 
         # Per-module counts
