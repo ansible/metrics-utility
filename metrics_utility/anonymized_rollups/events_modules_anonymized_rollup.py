@@ -344,11 +344,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Task status categories are already computed in prepare(), so we can use dataframe directly
         task_summary = dataframe
 
+        # Compute duration columns before aggregation
+        task_summary = task_summary.assign(
+            jobs_successful_duration_total_seconds=lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
+            jobs_failed_duration_total_seconds=lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
+        )
 
         # common aggregation for module_stats and collection_name_stats
         common_aggregation = {
             'jobs_total': ('job_id', 'nunique'),
-            'jobs_successful_total': (lambda x: ~x['job_failed'], 'sum'),
+            'jobs_successful_total': ('job_failed', lambda x: (~x).sum()),
             'jobs_failed_total': ('job_failed', 'sum'),
             'jobs_duration_total_seconds': ('job_duration_seconds', 'sum'),
             'jobs_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
@@ -361,18 +366,15 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'task_skipped_total': ('task_skipped', 'sum'),
             'task_failed_and_ignored_total': ('task_failed_and_ignored', 'sum'),
             'jobs_failed_because_of_module_failure_total': ('job_id_that_contained_failed_task', 'nunique'),
-        }
-
-        common_assign = {
-            'jobs_successful_duration_total_seconds': lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
-            'jobs_failed_duration_total_seconds': lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
+            'jobs_successful_duration_total_seconds': ('jobs_successful_duration_total_seconds', 'sum'),
+            'jobs_failed_duration_total_seconds': ('jobs_failed_duration_total_seconds', 'sum'),
         }
 
         # Per-module counts
         # receiver of this data can easily calculate success rates
-        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation).assign(**common_assign)
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
         
-        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation).assign(**common_assign)
+        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
 
         # Get hosts_automated_total from the dataframe by unioning all host_ids sets
         if not dataframe.empty and 'host_ids' in dataframe.columns:
