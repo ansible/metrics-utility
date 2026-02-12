@@ -484,7 +484,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             role_stats['task_ok_total'] +
             role_stats['task_ok_with_retries_total'] +
             role_stats['task_failed_total'] +
-            role_stats['achable_total'] +
+            role_stats['task_unreachable_total'] +
             role_stats['task_skipped_total'] +
             role_stats['task_failed_and_ignored_total']
         )
@@ -513,4 +513,3 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'json': json_data,
         }
-task_unre

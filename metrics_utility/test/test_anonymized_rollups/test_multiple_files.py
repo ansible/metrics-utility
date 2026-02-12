@@ -891,8 +891,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(result['module_stats'], list), 'module_stats should be a list'
     assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'
 
-        assert isinstance(result['collection_stats'], list), 'collection_stats should be a list'
-        assert len(result['collection_stats']) == 0, 'collection_stats should be empty with no data'
+    assert isinstance(result['collection_stats'], list), 'collection_stats should be a list'
+    assert len(result['collection_stats']) == 0, 'collection_stats should be empty with no data'
 
     # modules_used_per_playbook is computed but not included in final output
 
