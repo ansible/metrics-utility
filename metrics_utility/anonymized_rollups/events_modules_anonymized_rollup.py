@@ -211,7 +211,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # rename ansible_version to controller_version, the fast way
         # change the metadata, no dataframe copy
-        dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
+        # If ansible_version doesn't exist, create controller_version with None values
+        if 'ansible_version' in dataframe.columns:
+            dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
+        else:
+            dataframe['controller_version'] = None
 
         # Select only the columns needed for analysis to save memory
         columns_to_keep = [
@@ -422,8 +426,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'warnings_total': ('warnings_total', 'sum'),
             'deprecations_total': ('deprecations_total', 'sum'),
             'processed_events_total': ('processed_events_total', 'sum'),
-            # this should be set of controller versions
-            'controller_version': ('controller_version', lambda x: set(x.dropna())),
+            # this should be list of controller versions (sorted for consistency)
+            'controller_version': ('controller_version', lambda x: sorted(set(x.dropna()))),
         }
 
         # Per-module counts

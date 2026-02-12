@@ -242,7 +242,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
     assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
     assert first_module_stats['processed_events_total'] == 6, 'Should have 6 processed events (3 jobs × 2 hosts)'
-    assert first_module_stats['controller_version'] == '2.9.10', f'Expected controller_version to be "2.9.10", got {first_module_stats.get("controller_version")}'
+    assert first_module_stats['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {first_module_stats.get("controller_version")}'
 
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
