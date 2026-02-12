@@ -246,10 +246,10 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate module_stats actual values
     print('--- Validating module_stats data values ---')
     # Find modules by name (order may vary)
-    # Note: ansible.builtin.yum will be anonymized (hashed) because ansible.builtin is not in collections.json
+    # Note: ansible.builtin.yum will be anonymized (replaced with "Unknown") because ansible.builtin is not in collections.json
     module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
     
-    # Find the anonymized module (has Unknown collection_source and hashed name)
+    # Find the anonymized module (has Unknown collection_source and "Unknown" name)
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Unknown']
     assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
     yum_module = anonymized_modules[0]
@@ -260,9 +260,9 @@ def test_from_gather_to_json(cleanup_glob):
     assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
     assert yum_module['processed_events_total'] == 6, 'Should have 6 processed events for ansible.builtin.yum (3 jobs × 2 hosts)'
     assert yum_module['controller_versions'] == ['2.9.10'], f'Expected controller_versions to be ["2.9.10"], got {yum_module.get("controller_versions")}'
-    # Module name should be hashed (64 char hex string)
-    assert len(yum_module['module_name']) == 64, 'Anonymized module name should be a 64-character hash'
-    assert all(c in '0123456789abcdef' for c in yum_module['module_name']), 'Anonymized module name should be hexadecimal'
+    # Module name should be "Unknown" (not hashed)
+    assert yum_module['module_name'] == 'Unknown', f'Anonymized module name should be "Unknown", got {yum_module["module_name"]}'
+    assert yum_module['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {yum_module.get("collection_name")}'
     
     # Validate a10.acos_axapi.a10_slb_virtual_server module (not anonymized)
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
@@ -278,7 +278,7 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate collection_stats
     print('--- Validating collection_stats data values ---')
     # Find collections by name (order may vary)
-    # Note: ansible.builtin will be anonymized (hashed) because it's not in collections.json
+    # Note: ansible.builtin will be anonymized (replaced with "Unknown") because it's not in collections.json
     collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
     
     # Validate a10.acos_axapi collection (not anonymized)
@@ -293,7 +293,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert a10_collection['task_ok_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
     
-    # Validate anonymized ansible.builtin collection (has Unknown collection_source and hashed name)
+    # Validate anonymized ansible.builtin collection (has Unknown collection_source and "Unknown" name)
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Unknown']
     assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
     builtin_collection = anonymized_collections[0]
@@ -305,20 +305,19 @@ def test_from_gather_to_json(cleanup_glob):
     assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
     assert builtin_collection['task_ok_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
     assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
-    # Collection name should be hashed (64 char hex string)
-    assert len(builtin_collection['collection_name']) == 64, 'Anonymized collection name should be a 64-character hash'
+    # Collection name should be "Unknown" (not hashed)
+    assert builtin_collection['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {builtin_collection["collection_name"]}'
 
-    # Validate anonymized role_stats (roles with Unknown collection_source should have hashed role names)
+    # Validate anonymized role_stats (roles with Unknown collection_source should have "Unknown" role names)
     if 'role_stats' in json_data and json_data['role_stats']:
         anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Unknown']
         for role_stat in anonymized_roles:
-            # Role name should be hashed (64 char hex string)
+            # Role name should be "Unknown" (not hashed)
             if role_stat.get('role'):
-                assert len(role_stat['role']) == 64, f'Anonymized role name should be a 64-character hash, got {len(role_stat.get("role", ""))}'
-            # Collection name should also be hashed if present
+                assert role_stat['role'] == 'Unknown', f'Anonymized role name should be "Unknown", got {role_stat.get("role")}'
+            # Collection name should also be "Unknown" if present
             if role_stat.get('collection_name'):
-                assert len(role_stat['collection_name']) == 64, f'Anonymized collection_name in role_stat should be a 64-character hash, got {len(role_stat.get("collection_name", ""))}'
-    assert all(c in '0123456789abcdef' for c in builtin_collection['collection_name']), 'Anonymized collection name should be hexadecimal'
+                assert role_stat['collection_name'] == 'Unknown', f'Anonymized collection_name in role_stat should be "Unknown", got {role_stat.get("collection_name")}'
 
     # Validate playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
     print('--- Validating playbooks_total ---')
