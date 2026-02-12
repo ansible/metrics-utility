@@ -14,7 +14,13 @@ class TestStorageSegmentAvailable:
         storage_segment = StorageSegment()
         chunks = storage_segment._split_into_chunks(segment_data, storage_segment.REGULAR_MESSAGE_LIMIT)
 
-        assert len(chunks) == 1
+        # Each top-level key gets its own chunk, even for small data
+        assert len(chunks) == 5
+        assert 'statistics' in chunks[0]
+        assert 'module_stats' in chunks[1]
+        assert 'collection_name_stats' in chunks[2]
+        assert 'jobs_by_job_type' in chunks[3]
+        assert 'job_host_summary' in chunks[4]
 
     def test_correct_splitting_for_large_data(self):
         storage_segment = StorageSegment()
@@ -40,9 +46,13 @@ class TestStorageSegmentAvailable:
     def test_correct_splitting_for_large_data_with_bulk(self):
         storage_segment = StorageSegment(use_bulk=True)
         chunks = storage_segment._split_into_chunks(segment_data_large, storage_segment.BULK_MESSAGE_LIMIT)
-        assert len(chunks) == 1
-        assert 'module_stats' in chunks[0]
-        assert 'collection_name_stats' in chunks[0]
+        # Even with bulk mode, we split by top-level keys
+        assert len(chunks) == 5
+        assert 'statistics' in chunks[0]
+        assert 'module_stats' in chunks[1]
+        assert 'collection_name_stats' in chunks[2]
+        assert 'jobs_by_job_type' in chunks[3]
+        assert 'job_host_summary' in chunks[4]
 
     def test_simple_list_data(self):
         data = {'test_list': ['item1', 'item2']}
@@ -136,22 +146,24 @@ class TestStorageSegmentAvailable:
         chunks = storage_segment.put(artifact_name='test_bulk_artifact', dict=segment_data_large, event_name='Test Bulk Event')
 
         # Assert
-        # Should NOT split - only 1 chunk because bulk limit is 500MB
-        assert len(chunks) == 1
-        assert mock_analytics.track.call_count == 1
+        # Even with bulk mode, we split by top-level keys (5 chunks)
+        assert len(chunks) == 5
+        assert mock_analytics.track.call_count == 5
         assert mock_analytics.flush.call_count == 1
 
-        # Verify the single call
-        call_args = mock_analytics.track.call_args[1]
+        # Verify chunk numbering in the calls
+        for i, call in enumerate(mock_analytics.track.call_args_list, 1):
+            call_kwargs = call[1]
+            chunk_info = call_kwargs['properties']['chunk_info']
+            assert chunk_info['chunk_number'] == i
+            assert chunk_info['total_chunks'] == 5
+
+        # Verify the first call
+        call_args = mock_analytics.track.call_args_list[0][1]
         assert call_args['event'] == 'Test Bulk Event'
         assert call_args['properties']['artifact_name'] == 'test_bulk_artifact'
 
-        # Verify chunk info shows it's 1 of 1
-        chunk_info = call_args['properties']['chunk_info']
-        assert chunk_info['chunk_number'] == 1
-        assert chunk_info['total_chunks'] == 1
-
-        # Verify the data contains all expected keys (not split)
-        data = call_args['properties']['data']
-        assert 'module_stats' in data
-        assert 'collection_name_stats' in data
+        # Verify each chunk contains one top-level key
+        for i, call in enumerate(mock_analytics.track.call_args_list):
+            data = call[1]['properties']['data']
+            assert len(data) == 1, f'Chunk {i+1} should contain exactly one top-level key'
