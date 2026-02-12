@@ -449,11 +449,11 @@ def test_events_modules_aggregations_basic():
 
     # Verify per-role stats (aligned to current aggregation output)
     stats_by_role = {row['role'] if row['role'] is not None else 'None': row for row in result['role_stats']}
-    
+
     # Verify role_stats exists and has data
     assert 'role_stats' in result
     assert len(result['role_stats']) > 0
-    
+
     # Verify a specific role has stats (ansible.windows.win_copy_role)
     if 'ansible.windows.win_copy_role' in stats_by_role:
         win_copy_role_stats = stats_by_role['ansible.windows.win_copy_role']
@@ -463,16 +463,24 @@ def test_events_modules_aggregations_basic():
         assert 'collection_name' in win_copy_role_stats, 'role_stats should have collection_name field'
         assert 'collection_source' in win_copy_role_stats, 'role_stats should have collection_source field'
         # For collection-based roles, collection_name should be extracted (ansible.windows.win_copy_role -> ansible.windows)
-        assert win_copy_role_stats['collection_name'] == 'ansible.windows', f"Expected collection_name 'ansible.windows', got {win_copy_role_stats['collection_name']}"
-        assert win_copy_role_stats['collection_source'] == 'certified', f"Expected collection_source 'certified', got {win_copy_role_stats['collection_source']}"
-    
+        assert win_copy_role_stats['collection_name'] == 'ansible.windows', (
+            f"Expected collection_name 'ansible.windows', got {win_copy_role_stats['collection_name']}"
+        )
+        assert win_copy_role_stats['collection_source'] == 'certified', (
+            f"Expected collection_source 'certified', got {win_copy_role_stats['collection_source']}"
+        )
+
     # Verify standalone role (custom.standalone_role) has Unknown collection_source
     if 'custom.standalone_role' in stats_by_role:
         standalone_role_stats = stats_by_role['custom.standalone_role']
         # Standalone roles should have None collection_name and Unknown collection_source
-        assert standalone_role_stats.get('collection_name') is None or standalone_role_stats.get('collection_name') == '', f"Standalone role should have None collection_name, got {standalone_role_stats.get('collection_name')}"
-        assert standalone_role_stats['collection_source'] == 'Unknown', f"Standalone role should have 'Unknown' collection_source, got {standalone_role_stats['collection_source']}"
-    
+        assert standalone_role_stats.get('collection_name') is None or standalone_role_stats.get('collection_name') == '', (
+            f'Standalone role should have None collection_name, got {standalone_role_stats.get("collection_name")}'
+        )
+        assert standalone_role_stats['collection_source'] == 'Unknown', (
+            f"Standalone role should have 'Unknown' collection_source, got {standalone_role_stats['collection_source']}"
+        )
+
     # ansible.windows.win_copy (certified)
     copy_stats = stats_by_module['ansible.windows.win_copy']
     assert copy_stats['collection_source'] == 'certified'
@@ -487,7 +495,9 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['jobs_never_started_total'] == 0
     assert copy_stats['unique_hosts_total'] == 3
     assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert copy_stats['processed_events_total'] == 5  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
+    assert (
+        copy_stats['processed_events_total'] == 5
+    )  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
     assert 'controller_versions' in copy_stats, 'Should have controller_versions field'
     assert isinstance(copy_stats['controller_versions'], list), 'controller_versions should be a list'
 
@@ -539,7 +549,9 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['jobs_never_started_total'] == 0
     assert ec2_stats['unique_hosts_total'] == 4
     assert ec2_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert ec2_stats['processed_events_total'] == 4  # Job 3 Host 2: 1 event (ok), Job 4 Host 6: 1 event (ok), Job 4 Host 7: 1 event (failed), Job 4 Host 8: 1 event (skipped)
+    assert (
+        ec2_stats['processed_events_total'] == 4
+    )  # Job 3 Host 2: 1 event (ok), Job 4 Host 6: 1 event (ok), Job 4 Host 7: 1 event (failed), Job 4 Host 8: 1 event (skipped)
 
     # community.general.yum (community)
     yum_stats = stats_by_module['community.general.yum']
@@ -555,7 +567,9 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['jobs_never_started_total'] == 1
     assert yum_stats['unique_hosts_total'] == 2
     assert yum_stats['jobs_failed_because_of_module_failure_total'] == 3
-    assert yum_stats['processed_events_total'] == 3  # Job 1 Host 2: 1 event (failed), Job 2 Host 2: 1 event (async_failed), Job 5 Host 9: 1 event (failed)
+    assert (
+        yum_stats['processed_events_total'] == 3
+    )  # Job 1 Host 2: 1 event (failed), Job 2 Host 2: 1 event (async_failed), Job 5 Host 9: 1 event (failed)
 
     # community.mongodb.insert (community)
     mongo_stats = stats_by_module['community.mongodb.insert']
@@ -729,6 +743,8 @@ def test_events_modules_aggregations_basic():
     # Verify warnings_total and deprecations_total
     # We added 2 warning events (job 1 and job 2) and 1 deprecated event (job 3)
     # Total events: 20 task events + 2 warnings + 1 deprecated = 23 events
-    assert result['collected_events_total'] == 23, f'Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result["collected_events_total"]}'
+    assert result['collected_events_total'] == 23, (
+        f'Expected 23 total events (20 task events + 2 warnings + 1 deprecated), got {result["collected_events_total"]}'
+    )
     assert result['warnings_total'] == 2, f'Expected 2 warnings, got {result["warnings_total"]}'
     assert result['deprecations_total'] == 1, f'Expected 1 deprecated event, got {result["deprecations_total"]}'

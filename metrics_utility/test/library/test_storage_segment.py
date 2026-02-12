@@ -166,4 +166,4 @@ class TestStorageSegmentAvailable:
         # Verify each chunk contains one top-level key
         for i, call in enumerate(mock_analytics.track.call_args_list):
             data = call[1]['properties']['data']
-            assert len(data) == 1, f'Chunk {i+1} should contain exactly one top-level key'
+            assert len(data) == 1, f'Chunk {i + 1} should contain exactly one top-level key'

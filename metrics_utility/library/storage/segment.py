@@ -41,7 +41,7 @@ class StorageSegment:
     def _split_into_chunks(self, data, max_size):
         """
         Split data into chunks based on max_size.
-        
+
         Always splits by top-level keys - each top-level key gets its own chunk(s).
         If a top-level key's value is a list, that list may be split into multiple chunks
         if it exceeds max_size.

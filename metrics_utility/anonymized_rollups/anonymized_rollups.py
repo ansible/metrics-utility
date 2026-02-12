@@ -41,7 +41,7 @@ def anonymize_data(data, salt):
     """
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
-    
+
     For items with collection_source == 'Unknown', replaces module names, collection names,
     and role names with the string "Unknown" instead of hashing them.
 
@@ -111,7 +111,7 @@ def anonymize_data(data, salt):
             collections = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         collections = {}
-    
+
     if 'collections_versions' in data and data['collections_versions']:
         for collection_version in data['collections_versions']:
             if collection_version and 'name' in collection_version:
@@ -136,7 +136,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_controller_version: array (grouped by controller_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
-    
+
     Note: modules_used_per_playbook is computed but not included in final output.
     """
     events_modules = data.get('events_modules', {})
@@ -160,9 +160,13 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
     job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
     # Calculate host outcome totals by summing from all job_type groups
-    successful_hosts_total = sum(jhs.get('successful_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
+    successful_hosts_total = (
+        sum(jhs.get('successful_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
+    )
     failed_hosts_total = sum(jhs.get('failed_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
-    unreachable_hosts_total = sum(jhs.get('unreachable_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
+    unreachable_hosts_total = (
+        sum(jhs.get('unreachable_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
+    )
 
     # Calculate playbooks_total from modules_used_per_playbook_total dict
     modules_used_per_playbook_total: Dict[str, int] = events_modules.get('modules_used_per_playbook_total', {}) or {}
@@ -234,9 +238,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     # 2) modules_used_per_playbook (convert map -> array)
-    modules_used_per_playbook: List[Dict[str, Any]] = [
-        {'playbook_id': playbook_id, 'modules_used': modules_used} for playbook_id, modules_used in modules_used_per_playbook_total.items()
-    ]
+    # Note: modules_used_per_playbook is computed but not included in final output
+    # modules_used_per_playbook: List[Dict[str, Any]] = [
+    #     {'playbook_id': playbook_id, 'modules_used': modules_used} for playbook_id, modules_used in modules_used_per_playbook_total.items()
+    # ]
 
     # 3) arrays copied as-is from their respective parents
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []

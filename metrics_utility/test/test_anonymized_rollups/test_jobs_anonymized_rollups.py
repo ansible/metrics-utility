@@ -192,9 +192,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_job['job_duration_maximum_seconds'] == pytest.approx(5.0, rel=1e-6)
     assert rec_job['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)
     assert rec_job['jobs_duration_total_seconds'] == pytest.approx(10.0, rel=1e-6)
-    
+
     # 'job' type should have is_automation = True
-    assert rec_job['is_automation'] == True, 'job type should have is_automation = True'
+    assert rec_job['is_automation'], 'job type should have is_automation = True'
 
     # 'job' type waiting times (seconds): 0.0, 2.0, 1.0
     assert rec_job['job_waiting_time_maximum_seconds'] == pytest.approx(2.0, rel=1e-6)
@@ -211,9 +211,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_workflowjob['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)
     assert rec_workflowjob['job_duration_minimum_seconds'] == pytest.approx(7.0, rel=1e-6)
     assert rec_workflowjob['jobs_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
-    
+
     # 'workflowjob' type should have is_automation = False
-    assert rec_workflowjob['is_automation'] == False, 'workflowjob type should have is_automation = False'
+    assert not rec_workflowjob['is_automation'], 'workflowjob type should have is_automation = False'
 
     # 'workflowjob' type waiting (seconds): 4.0
     assert rec_workflowjob['job_waiting_time_maximum_seconds'] == pytest.approx(4.0, rel=1e-6)
@@ -230,9 +230,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_adhoccommand['job_duration_maximum_seconds'])
     assert pd.isna(rec_adhoccommand['job_duration_minimum_seconds'])
     assert rec_adhoccommand['jobs_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
-    
+
     # 'adhoccommand' type should have is_automation = False
-    assert rec_adhoccommand['is_automation'] == False, 'adhoccommand type should have is_automation = False'
+    assert not rec_adhoccommand['is_automation'], 'adhoccommand type should have is_automation = False'
 
     # 'adhoccommand' type should have NaN for all waiting time metrics and 0 for totals
     assert pd.isna(rec_adhoccommand['job_waiting_time_maximum_seconds'])
@@ -247,7 +247,9 @@ def test_jobs_anonymized_rollups_base_aggregation():
     )
     # 'workflowjob' type has job 3 with version: 2.11.0
     assert 'controller_versions' in rec_workflowjob, 'Should have controller_versions field in by_job_type'
-    assert rec_workflowjob['controller_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['controller_versions']}"
+    assert rec_workflowjob['controller_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['controller_versions']}"
+    )
     # 'adhoccommand' type has job 6 with version: 2.14.0
     assert 'controller_versions' in rec_adhoccommand, 'Should have controller_versions field in by_job_type'
     assert rec_adhoccommand['controller_versions'] == ['2.14.0'], (
@@ -342,10 +344,14 @@ def test_jobs_anonymized_rollups_base_aggregation():
     )
     # 'workflow' launch_type has job 3 with version: 2.11.0
     assert 'controller_versions' in rec_workflow, 'Should have controller_versions field in by_launch_type'
-    assert rec_workflow['controller_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['controller_versions']}"
+    assert rec_workflow['controller_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['controller_versions']}"
+    )
     # 'callback' launch_type has job 4 with version: 2.12.0
     assert 'controller_versions' in rec_callback, 'Should have controller_versions field in by_launch_type'
-    assert rec_callback['controller_versions'] == ['2.12.0'], f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['controller_versions']}"
+    assert rec_callback['controller_versions'] == ['2.12.0'], (
+        f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['controller_versions']}"
+    )
 
     # Verify totals match between by_job_type and by_launch_type
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in by_job_type)

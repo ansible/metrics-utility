@@ -302,9 +302,7 @@ def test_all_jobs_combined(cleanup_test_data):
         f'Should have 142 collected events total, got {statistics["rollup_period_collected_events_total"]}'
     )
     assert 'rollup_period_warnings_total' in statistics, 'Should have rollup_period_warnings_total in statistics'
-    assert statistics['rollup_period_warnings_total'] == 3, (
-        f'Should have 3 warnings total, got {statistics["rollup_period_warnings_total"]}'
-    )
+    assert statistics['rollup_period_warnings_total'] == 3, f'Should have 3 warnings total, got {statistics["rollup_period_warnings_total"]}'
     assert 'rollup_period_deprecations_total' in statistics, 'Should have rollup_period_deprecations_total in statistics'
     assert statistics['rollup_period_deprecations_total'] == 2, (
         f'Should have 2 deprecations total, got {statistics["rollup_period_deprecations_total"]}'
@@ -506,8 +504,12 @@ def test_all_jobs_combined(cleanup_test_data):
     # Verify that known collection roles have valid collection_source values
     valid_sources = {'certified', 'community', 'validated', 'partner'}
     for role_stat in known_collection_roles:
-        assert role_stat['collection_source'] in valid_sources, f'Known collection role should have valid collection_source, got {role_stat["collection_source"]}'
-        assert role_stat['collection_name'] is not None and role_stat['collection_name'] != '', f'Known collection role should have collection_name, got {role_stat["collection_name"]}'
+        assert role_stat['collection_source'] in valid_sources, (
+            f'Known collection role should have valid collection_source, got {role_stat["collection_source"]}'
+        )
+        assert role_stat['collection_name'] is not None and role_stat['collection_name'] != '', (
+            f'Known collection role should have collection_name, got {role_stat["collection_name"]}'
+        )
 
     # ========== Validate Playbooks ==========
     # modules_used_per_playbook is computed but not included in final output
@@ -546,7 +548,9 @@ def test_all_jobs_combined(cleanup_test_data):
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
     total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total'], (
+    assert (
+        total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total']
+    ), (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
         f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
         f'statistics={result["statistics"]["rollup_period_jobs_total"]}'

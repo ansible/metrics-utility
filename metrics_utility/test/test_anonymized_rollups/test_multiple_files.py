@@ -301,7 +301,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Validate controller_versions in by_job_type
     # 'workflowjob' type has job 3 with version: 2.11.0
     assert 'controller_versions' in workflowjob_type, 'Should have controller_versions field in by_job_type'
-    assert workflowjob_type['controller_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['controller_versions']}"
+    assert workflowjob_type['controller_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['controller_versions']}"
+    )
 
     # 'adhoccommand' type should have never started job
     adhoccommand_type_jobs = [j for j in jobs_list if j['job_type'] == 'adhoccommand' and j['jobs_never_started_total'] == 1]
@@ -642,10 +644,14 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     )
     # 'workflow' launch_type has job 3 with version: 2.11.0
     assert 'controller_versions' in workflow_entry, 'Should have controller_versions field in by_launch_type'
-    assert workflow_entry['controller_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['controller_versions']}"
+    assert workflow_entry['controller_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['controller_versions']}"
+    )
     # 'callback' launch_type has job 4 with version: 2.12.0
     assert 'controller_versions' in callback_entry, 'Should have controller_versions field in by_launch_type'
-    assert callback_entry['controller_versions'] == ['2.12.0'], f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['controller_versions']}"
+    assert callback_entry['controller_versions'] == ['2.12.0'], (
+        f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['controller_versions']}"
+    )
 
     # ========== Validate Jobs by Controller Version ==========
     jobs_by_controller_version_list = result['jobs_by_controller_version']
@@ -737,7 +743,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
     total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total'], (
+    assert (
+        total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total']
+    ), (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
         f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
         f'statistics={result["statistics"]["rollup_period_jobs_total"]}'

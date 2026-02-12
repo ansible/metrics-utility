@@ -213,7 +213,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type_dict.update(controller_versions_aggregation)
 
         aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
-        
+
         # Add is_automation field: True if job_type is 'job', False otherwise
         aggregations_by_job_type['is_automation'] = aggregations_by_job_type['job_type'] == 'job'
 
@@ -239,7 +239,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         )
         aggregations_by_controller_version_dict.update(launch_type_aggregations)
 
-        aggregations_by_controller_version = dataframe.groupby('ansible_version').agg(**aggregations_by_controller_version_dict).reset_index().rename(columns={'ansible_version': 'controller_version'})
+        aggregations_by_controller_version = (
+            dataframe.groupby('ansible_version')
+            .agg(**aggregations_by_controller_version_dict)
+            .reset_index()
+            .rename(columns={'ansible_version': 'controller_version'})
+        )
 
         organizations_total = dataframe['organization_name'].nunique()
         forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization

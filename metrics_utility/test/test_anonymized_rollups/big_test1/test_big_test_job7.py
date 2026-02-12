@@ -90,9 +90,7 @@ def test_big_test7():
             f'Should have 2 successful hosts, got {statistics["rollup_period_successful_hosts_total"]}'
         )
         assert 'rollup_period_failed_hosts_total' in statistics, 'statistics should have failed_hosts_total'
-        assert statistics['rollup_period_failed_hosts_total'] == 1, (
-            f'Should have 1 failed host, got {statistics["rollup_period_failed_hosts_total"]}'
-        )
+        assert statistics['rollup_period_failed_hosts_total'] == 1, f'Should have 1 failed host, got {statistics["rollup_period_failed_hosts_total"]}'
         assert 'rollup_period_unreachable_hosts_total' in statistics, 'statistics should have unreachable_hosts_total'
         assert statistics['rollup_period_unreachable_hosts_total'] == 1, (
             f'Should have 1 unreachable host, got {statistics["rollup_period_unreachable_hosts_total"]}'

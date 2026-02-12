@@ -150,7 +150,7 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
         if not key_parts and row:
             key_parts.append(row[0] if row else '')
         return tuple(key_parts or ('',))
-    
+
     actual_data_sorted = sorted(actual_data, key=lambda r: get_sort_key(r, header))
     expected_data_sorted = sorted(expected_data, key=lambda r: get_sort_key(r, header))
 

@@ -177,7 +177,6 @@ events = [
         'resolved_role': 'ansible.builtin.copy_role',
         'role': 'ansible.builtin.copy_role',
         'job_created': '2024-01-15 10:59:30+00',
-        'role': None,
         'ignore_errors': False,
         'ansible_version': '2.17.0',
     },

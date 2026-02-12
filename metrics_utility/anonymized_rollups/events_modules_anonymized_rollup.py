@@ -126,7 +126,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         warnings_and_deprecations_events_list = ['warning', 'deprecated']
 
         # Filter for only the event types that are used in analysis
-        all_relevant_events = success_events_list + failed_events_list + unreachable_events_list + skipped_events_list + warnings_and_deprecations_events_list
+        all_relevant_events = (
+            success_events_list + failed_events_list + unreachable_events_list + skipped_events_list + warnings_and_deprecations_events_list
+        )
         dataframe = dataframe[dataframe['event'].isin(all_relevant_events)]
 
         # Prepare data
@@ -274,7 +276,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 processed_events_total=('event', 'size'),
                 controller_version=('controller_version', 'first'),
                 role=('role', 'first'),  # Keep role for later aggregation
-           )
+            )
             .assign(
                 # mutually exclusive categories - only one can be true
                 task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
@@ -360,7 +362,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # TODO - ensure all columns are present in the dataframe, then let analysis run with empty data
         if dataframe.empty:
             return {
-                'json': {'collected_events_total': collected_events_total, 'warnings_total': warnings_total, 'deprecations_total': deprecations_total},
+                'json': {
+                    'collected_events_total': collected_events_total,
+                    'warnings_total': warnings_total,
+                    'deprecations_total': deprecations_total,
+                },
                 'rollup': {
                     'aggregated': dataframe,
                     'collected_events_total': collected_events_total,
@@ -446,26 +452,28 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Per-module counts
         # receiver of this data can easily calculate success rates
-        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
+            **common_aggregation
+        )
         # Compute tasks_total as sum of all task status totals
         module_stats['tasks_total'] = (
-            module_stats['task_ok_total'] +
-            module_stats['task_ok_with_retries_total'] +
-            module_stats['task_failed_total'] +
-            module_stats['task_unreachable_total'] +
-            module_stats['task_skipped_total'] +
-            module_stats['task_failed_and_ignored_total']
+            module_stats['task_ok_total']
+            + module_stats['task_ok_with_retries_total']
+            + module_stats['task_failed_total']
+            + module_stats['task_unreachable_total']
+            + module_stats['task_skipped_total']
+            + module_stats['task_failed_and_ignored_total']
         )
-        
+
         collection_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
         # Compute tasks_total as sum of all task status totals
         collection_stats['tasks_total'] = (
-            collection_stats['task_ok_total'] +
-            collection_stats['task_ok_with_retries_total'] +
-            collection_stats['task_failed_total'] +
-            collection_stats['task_unreachable_total'] +
-            collection_stats['task_skipped_total'] +
-            collection_stats['task_failed_and_ignored_total']
+            collection_stats['task_ok_total']
+            + collection_stats['task_ok_with_retries_total']
+            + collection_stats['task_failed_total']
+            + collection_stats['task_unreachable_total']
+            + collection_stats['task_skipped_total']
+            + collection_stats['task_failed_and_ignored_total']
         )
 
         # Extract collection_name from role for collection-based roles (namespace.collection.role)
@@ -475,18 +483,20 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         task_summary['role_collection_name'] = task_summary['role'].apply(lambda x: extract_collection_name(x) if x else None)
         # Map role collection_name to collection_source
         task_summary['role_collection_source'] = task_summary['role_collection_name'].map(self.collections).fillna('Unknown')
-        
-        role_stats = task_summary.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+
+        role_stats = task_summary.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
+            **common_aggregation
+        )
         # Rename columns to match expected output format
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
         # Compute tasks_total as sum of all task status totals
         role_stats['tasks_total'] = (
-            role_stats['task_ok_total'] +
-            role_stats['task_ok_with_retries_total'] +
-            role_stats['task_failed_total'] +
-            role_stats['task_unreachable_total'] +
-            role_stats['task_skipped_total'] +
-            role_stats['task_failed_and_ignored_total']
+            role_stats['task_ok_total']
+            + role_stats['task_ok_with_retries_total']
+            + role_stats['task_failed_total']
+            + role_stats['task_unreachable_total']
+            + role_stats['task_skipped_total']
+            + role_stats['task_failed_and_ignored_total']
         )
 
         # Get hosts_automated_total from the dataframe by unioning all host_ids sets
