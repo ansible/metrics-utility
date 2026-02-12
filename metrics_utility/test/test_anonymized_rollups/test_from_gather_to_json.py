@@ -162,7 +162,7 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'collection_source' in module_stat
             assert 'collection_name' in module_stat
             assert 'jobs_total' in module_stat
-            assert 'hosts_total' in module_stat
+            assert 'unique_hosts_total' in module_stat
             assert 'processed_events_total' in module_stat
 
     # Validate jobs_by_job_type have required fields (now grouped by job_type, merged with job_host_summary)
@@ -236,7 +236,7 @@ def test_from_gather_to_json(cleanup_glob):
     first_module_stats = json_data['module_stats'][0]
     assert first_module_stats['module_name'] == 'a10.acos_axapi.a10_slb_virtual_server', 'Module stats should match module'
     assert first_module_stats['jobs_total'] == 3, 'Should have 3 jobs using this module'
-    assert first_module_stats['hosts_total'] == 2, 'Should have 2 hosts for this module'
+    assert first_module_stats['unique_hosts_total'] == 2, 'Should have 2 hosts for this module'
     assert first_module_stats['task_clean_success_total'] == 6, 'Should have 6 successful tasks (3 jobs × 2 hosts)'
     assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
     assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
@@ -248,7 +248,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_collection_stats['collection_name'] == 'a10.acos_axapi', 'Collection name should match'
     assert first_collection_stats['collection_source'] == 'community', 'Collection should be from community'
     assert first_collection_stats['jobs_total'] == 3, 'Collection should have 3 jobs'
-    assert first_collection_stats['hosts_total'] == 2, 'Collection should have 2 hosts'
+    assert first_collection_stats['unique_hosts_total'] == 2, 'Collection should have 2 hosts'
     assert first_collection_stats['task_clean_success_total'] == 6, 'Collection should have 6 successful tasks'
     assert first_collection_stats['processed_events_total'] == 6, 'Collection should have 6 processed events (3 jobs × 2 hosts)'
 
@@ -379,7 +379,7 @@ def test_from_gather_to_json(cleanup_glob):
     print('--- Validating cross-section data consistency ---')
     # Validate that module stats hosts match the total automated hosts
     for module_stat in json_data['module_stats']:
-        assert module_stat['hosts_total'] <= statistics['rollup_period_hosts_automated_total'], (
+        assert module_stat['unique_hosts_total'] <= statistics['rollup_period_hosts_automated_total'], (
             f'Module {module_stat["module_name"][:50]} hosts should not exceed total automated hosts'
         )
 

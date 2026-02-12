@@ -447,7 +447,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert win_copy['collection_source'] == 'certified'
     assert win_copy['collection_name'] == 'ansible.windows'
     assert win_copy['jobs_total'] == 3
-    assert win_copy['hosts_total'] == 3
+    assert win_copy['unique_hosts_total'] == 3
     assert win_copy['task_clean_success_total'] == 1
     assert win_copy['task_success_with_reruns_total'] == 2
     assert win_copy['task_failed_total'] == 0
@@ -476,7 +476,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     windows_coll = windows_collection[0]
     assert windows_coll['collection_source'] == 'certified'
     assert windows_coll['jobs_total'] == 3
-    assert windows_coll['hosts_total'] == 3
+    assert windows_coll['unique_hosts_total'] == 3
     assert windows_coll['task_clean_success_total'] == 1
     assert windows_coll['task_success_with_reruns_total'] == 2
     assert windows_coll['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic

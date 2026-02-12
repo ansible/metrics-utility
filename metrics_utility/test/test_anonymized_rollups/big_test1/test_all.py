@@ -446,7 +446,7 @@ def test_all_jobs_combined(cleanup_test_data):
         assert 'module_name' in module, 'Each module should have module_name field'
         assert 'collection_name' in module, 'Each module should have collection_name field'
         assert 'jobs_total' in module, 'Each module should have jobs_total field'
-        assert 'hosts_total' in module, 'Each module should have hosts_total field'
+        assert 'unique_hosts_total' in module, 'Each module should have unique_hosts_total field'
         assert 'processed_events_total' in module, 'Each module should have processed_events_total field'
         assert isinstance(module['processed_events_total'], (int, float)), 'processed_events_total should be a number'
         assert module['processed_events_total'] > 0, 'processed_events_total should be positive'

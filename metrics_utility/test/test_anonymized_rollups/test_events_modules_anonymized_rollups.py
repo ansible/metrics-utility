@@ -415,7 +415,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['task_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['jobs_never_started_total'] == 0
-    assert copy_stats['hosts_total'] == 3
+    assert copy_stats['unique_hosts_total'] == 3
     assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert copy_stats['processed_events_total'] == 5  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
 
@@ -430,7 +430,7 @@ def test_events_modules_aggregations_basic():
     assert template_stats['task_unreachable_total'] == 1
     assert template_stats['jobs_total'] == 2
     assert template_stats['jobs_never_started_total'] == 0
-    assert template_stats['hosts_total'] == 2
+    assert template_stats['unique_hosts_total'] == 2
     assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert template_stats['processed_events_total'] == 2  # Job 1 Host 4: 1 event (unreachable), Job 3 Host 3: 1 event (item_ok)
 
@@ -445,7 +445,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['task_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['jobs_never_started_total'] == 0
-    assert firewalld_stats['hosts_total'] == 2
+    assert firewalld_stats['unique_hosts_total'] == 2
     assert firewalld_stats['jobs_failed_because_of_module_failure_total'] == 1
     assert firewalld_stats['processed_events_total'] == 2  # Job 3 Host 1: 1 event (ok), Job 4 Host 4: 1 event (failed)
 
@@ -460,7 +460,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['task_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['jobs_never_started_total'] == 0
-    assert ec2_stats['hosts_total'] == 4
+    assert ec2_stats['unique_hosts_total'] == 4
     assert ec2_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert ec2_stats['processed_events_total'] == 4  # Job 3 Host 2: 1 event (ok), Job 4 Host 6: 1 event (ok), Job 4 Host 7: 1 event (failed), Job 4 Host 8: 1 event (skipped)
 
@@ -475,7 +475,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['task_unreachable_total'] == 0
     assert yum_stats['jobs_total'] == 3
     assert yum_stats['jobs_never_started_total'] == 1
-    assert yum_stats['hosts_total'] == 2
+    assert yum_stats['unique_hosts_total'] == 2
     assert yum_stats['jobs_failed_because_of_module_failure_total'] == 3
     assert yum_stats['processed_events_total'] == 3  # Job 1 Host 2: 1 event (failed), Job 2 Host 2: 1 event (async_failed), Job 5 Host 9: 1 event (failed)
 
@@ -490,7 +490,7 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_unreachable_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['jobs_never_started_total'] == 0
-    assert mongo_stats['hosts_total'] == 2
+    assert mongo_stats['unique_hosts_total'] == 2
     assert mongo_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert mongo_stats['processed_events_total'] == 3  # Job 1 Host 3: 1 event (async_ok), Job 2 Host 1: 2 events (failed, ok)
 
@@ -505,7 +505,7 @@ def test_events_modules_aggregations_basic():
     assert custom_stats['task_unreachable_total'] == 0
     assert custom_stats['jobs_total'] == 1
     assert custom_stats['jobs_never_started_total'] == 0
-    assert custom_stats['hosts_total'] == 1
+    assert custom_stats['unique_hosts_total'] == 1
     assert custom_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert custom_stats['processed_events_total'] == 1  # Job 1 Host 1: 1 event (ok)
 
@@ -516,7 +516,7 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['collection_source'] == 'certified'
     assert netcommon_coll['jobs_total'] == 2
     assert netcommon_coll['jobs_never_started_total'] == 0
-    assert netcommon_coll['hosts_total'] == 2
+    assert netcommon_coll['unique_hosts_total'] == 2
     assert netcommon_coll['jobs_duration_total_seconds'] == pytest.approx(1320.0)
     assert netcommon_coll['jobs_waiting_time_total_seconds'] == pytest.approx(360.0)
     assert netcommon_coll['jobs_failed_total'] == 1
@@ -534,7 +534,7 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['collection_source'] == 'certified'
     assert posix_coll['jobs_total'] == 2
     assert posix_coll['jobs_never_started_total'] == 0
-    assert posix_coll['hosts_total'] == 2
+    assert posix_coll['unique_hosts_total'] == 2
     assert posix_coll['jobs_duration_total_seconds'] == pytest.approx(1380.0)
     assert posix_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert posix_coll['jobs_failed_total'] == 1
@@ -552,7 +552,7 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['collection_source'] == 'certified'
     assert windows_coll['jobs_total'] == 3
     assert windows_coll['jobs_never_started_total'] == 0
-    assert windows_coll['hosts_total'] == 3
+    assert windows_coll['unique_hosts_total'] == 3
     assert windows_coll['jobs_duration_total_seconds'] == pytest.approx(2100.0)
     assert windows_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert windows_coll['jobs_failed_total'] == 3
@@ -570,7 +570,7 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['collection_source'] == 'community'
     assert aws_coll['jobs_total'] == 2
     assert aws_coll['jobs_never_started_total'] == 0
-    assert aws_coll['hosts_total'] == 4
+    assert aws_coll['unique_hosts_total'] == 4
     assert aws_coll['jobs_duration_total_seconds'] == pytest.approx(1380.0)
     assert aws_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert aws_coll['jobs_failed_total'] == 1
@@ -588,7 +588,7 @@ def test_events_modules_aggregations_basic():
     assert general_coll['collection_source'] == 'community'
     assert general_coll['jobs_total'] == 3
     assert general_coll['jobs_never_started_total'] == 1
-    assert general_coll['hosts_total'] == 2
+    assert general_coll['unique_hosts_total'] == 2
     assert general_coll['jobs_duration_total_seconds'] == pytest.approx(1500.0)
     assert general_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
     assert general_coll['jobs_failed_total'] == 3
@@ -606,7 +606,7 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['collection_source'] == 'community'
     assert mongodb_coll['jobs_total'] == 2
     assert mongodb_coll['jobs_never_started_total'] == 0
-    assert mongodb_coll['hosts_total'] == 2
+    assert mongodb_coll['unique_hosts_total'] == 2
     assert mongodb_coll['jobs_duration_total_seconds'] == pytest.approx(1500.0)
     assert mongodb_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
     assert mongodb_coll['jobs_failed_total'] == 2
@@ -624,7 +624,7 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['collection_source'] == 'Unknown'
     assert custom_coll['jobs_total'] == 1
     assert custom_coll['jobs_never_started_total'] == 0
-    assert custom_coll['hosts_total'] == 1
+    assert custom_coll['unique_hosts_total'] == 1
     assert custom_coll['jobs_duration_total_seconds'] == pytest.approx(540.0)
     assert custom_coll['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)
     assert custom_coll['jobs_failed_total'] == 1

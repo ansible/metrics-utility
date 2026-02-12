@@ -401,7 +401,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_duration_total_seconds': ('job_duration_seconds', 'sum'),
             'jobs_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
             'jobs_never_started_total': ('job_started', lambda x: x.isna().sum()),
-            'hosts_total': ('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
+            'unique_hosts_total': ('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
             'task_clean_success_total': ('task_clean_success', 'sum'),
             'task_success_with_reruns_total': ('task_success_with_reruns', 'sum'),
             'task_failed_total': ('task_failed', 'sum'),
