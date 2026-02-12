@@ -414,8 +414,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
             'jobs_never_started_total': ('job_started', lambda x: x.isna().sum()),
             'unique_hosts_total': ('host_ids', lambda x: len(set().union(*[s for s in x.dropna() if isinstance(s, set)]))),
-            'task_clean_success_total': ('task_clean_success', 'sum'),
-            'task_success_with_reruns_total': ('task_success_with_reruns', 'sum'),
+            'task_ok_total': ('task_clean_success', 'sum'),
+            'task_ok_with_retries_total': ('task_success_with_reruns', 'sum'),
             'task_failed_total': ('task_failed', 'sum'),
             'task_unreachable_total': ('task_unreachable', 'sum'),
             'task_skipped_total': ('task_skipped', 'sum'),
@@ -427,7 +427,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'deprecations_total': ('deprecations_total', 'sum'),
             'processed_events_total': ('processed_events_total', 'sum'),
             # this should be list of controller versions (sorted for consistency)
-            'controller_version': ('controller_version', lambda x: sorted(set(x.dropna()))),
+            'controller_versions': ('controller_version', lambda x: sorted(set(x.dropna()))),
         }
 
         # Per-module counts
@@ -435,8 +435,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
         # Compute tasks_total as sum of all task status totals
         module_stats['tasks_total'] = (
-            module_stats['task_clean_success_total'] +
-            module_stats['task_success_with_reruns_total'] +
+            module_stats['task_ok_total'] +
+            module_stats['task_ok_with_retries_total'] +
             module_stats['task_failed_total'] +
             module_stats['task_unreachable_total'] +
             module_stats['task_skipped_total'] +
@@ -446,8 +446,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
         # Compute tasks_total as sum of all task status totals
         collection_name_stats['tasks_total'] = (
-            collection_name_stats['task_clean_success_total'] +
-            collection_name_stats['task_success_with_reruns_total'] +
+            collection_name_stats['task_ok_total'] +
+            collection_name_stats['task_ok_with_retries_total'] +
             collection_name_stats['task_failed_total'] +
             collection_name_stats['task_unreachable_total'] +
             collection_name_stats['task_skipped_total'] +

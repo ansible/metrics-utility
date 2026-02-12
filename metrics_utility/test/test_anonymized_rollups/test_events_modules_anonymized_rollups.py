@@ -407,8 +407,8 @@ def test_events_modules_aggregations_basic():
     # ansible.windows.win_copy (certified)
     copy_stats = stats_by_module['ansible.windows.win_copy']
     assert copy_stats['collection_source'] == 'certified'
-    assert copy_stats['task_clean_success_total'] == 1
-    assert copy_stats['task_success_with_reruns_total'] == 2
+    assert copy_stats['task_ok_total'] == 1
+    assert copy_stats['task_ok_with_retries_total'] == 2
     assert copy_stats['task_failed_total'] == 0
     assert copy_stats['task_failed_and_ignored_total'] == 0
     assert copy_stats['task_skipped_total'] == 0
@@ -419,14 +419,14 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['unique_hosts_total'] == 3
     assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert copy_stats['processed_events_total'] == 5  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
-    assert 'controller_version' in copy_stats, 'Should have controller_version field'
-    assert isinstance(copy_stats['controller_version'], list), 'controller_version should be a list'
+    assert 'controller_versions' in copy_stats, 'Should have controller_versions field'
+    assert isinstance(copy_stats['controller_versions'], list), 'controller_versions should be a list'
 
     # ansible.netcommon.cli_config (certified)
     template_stats = stats_by_module['ansible.netcommon.cli_config']
     assert template_stats['collection_source'] == 'certified'
-    assert template_stats['task_clean_success_total'] == 1
-    assert template_stats['task_success_with_reruns_total'] == 0
+    assert template_stats['task_ok_total'] == 1
+    assert template_stats['task_ok_with_retries_total'] == 0
     assert template_stats['task_failed_total'] == 0
     assert template_stats['task_failed_and_ignored_total'] == 0
     assert template_stats['task_skipped_total'] == 0
@@ -437,14 +437,14 @@ def test_events_modules_aggregations_basic():
     assert template_stats['unique_hosts_total'] == 2
     assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert template_stats['processed_events_total'] == 2  # Job 1 Host 4: 1 event (unreachable), Job 3 Host 3: 1 event (item_ok)
-    assert 'controller_version' in template_stats, 'Should have controller_version field'
-    assert isinstance(template_stats['controller_version'], list), 'controller_version should be a list'
+    assert 'controller_versions' in template_stats, 'Should have controller_versions field'
+    assert isinstance(template_stats['controller_versions'], list), 'controller_versions should be a list'
 
     # ansible.posix.firewalld (certified)
     firewalld_stats = stats_by_module['ansible.posix.firewalld']
     assert firewalld_stats['collection_source'] == 'certified'
-    assert firewalld_stats['task_clean_success_total'] == 1
-    assert firewalld_stats['task_success_with_reruns_total'] == 0
+    assert firewalld_stats['task_ok_total'] == 1
+    assert firewalld_stats['task_ok_with_retries_total'] == 0
     assert firewalld_stats['task_failed_total'] == 1
     assert firewalld_stats['task_failed_and_ignored_total'] == 0
     assert firewalld_stats['task_skipped_total'] == 0
@@ -459,8 +459,8 @@ def test_events_modules_aggregations_basic():
     # community.aws.ec2 (community)
     ec2_stats = stats_by_module['community.aws.ec2']
     assert ec2_stats['collection_source'] == 'community'
-    assert ec2_stats['task_clean_success_total'] == 2
-    assert ec2_stats['task_success_with_reruns_total'] == 0
+    assert ec2_stats['task_ok_total'] == 2
+    assert ec2_stats['task_ok_with_retries_total'] == 0
     assert ec2_stats['task_failed_total'] == 0
     assert ec2_stats['task_failed_and_ignored_total'] == 1
     assert ec2_stats['task_skipped_total'] == 1
@@ -475,8 +475,8 @@ def test_events_modules_aggregations_basic():
     # community.general.yum (community)
     yum_stats = stats_by_module['community.general.yum']
     assert yum_stats['collection_source'] == 'community'
-    assert yum_stats['task_clean_success_total'] == 0
-    assert yum_stats['task_success_with_reruns_total'] == 0
+    assert yum_stats['task_ok_total'] == 0
+    assert yum_stats['task_ok_with_retries_total'] == 0
     assert yum_stats['task_failed_total'] == 3
     assert yum_stats['task_failed_and_ignored_total'] == 0
     assert yum_stats['task_skipped_total'] == 0
@@ -491,8 +491,8 @@ def test_events_modules_aggregations_basic():
     # community.mongodb.insert (community)
     mongo_stats = stats_by_module['community.mongodb.insert']
     assert mongo_stats['collection_source'] == 'community'
-    assert mongo_stats['task_clean_success_total'] == 1
-    assert mongo_stats['task_success_with_reruns_total'] == 1
+    assert mongo_stats['task_ok_total'] == 1
+    assert mongo_stats['task_ok_with_retries_total'] == 1
     assert mongo_stats['task_failed_total'] == 0
     assert mongo_stats['task_failed_and_ignored_total'] == 0
     assert mongo_stats['task_skipped_total'] == 0
@@ -507,8 +507,8 @@ def test_events_modules_aggregations_basic():
     # custom.user.collection (Unknown)
     custom_stats = stats_by_module['custom.user.collection']
     assert custom_stats['collection_source'] == 'Unknown'
-    assert custom_stats['task_clean_success_total'] == 1
-    assert custom_stats['task_success_with_reruns_total'] == 0
+    assert custom_stats['task_ok_total'] == 1
+    assert custom_stats['task_ok_with_retries_total'] == 0
     assert custom_stats['task_failed_total'] == 0
     assert custom_stats['task_failed_and_ignored_total'] == 0
     assert custom_stats['task_skipped_total'] == 0
@@ -532,16 +532,16 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['jobs_waiting_time_total_seconds'] == pytest.approx(360.0)
     assert netcommon_coll['jobs_failed_total'] == 1
     assert netcommon_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert netcommon_coll['task_clean_success_total'] == 1
-    assert netcommon_coll['task_success_with_reruns_total'] == 0
+    assert netcommon_coll['task_ok_total'] == 1
+    assert netcommon_coll['task_ok_with_retries_total'] == 0
     assert netcommon_coll['task_failed_total'] == 0
     assert netcommon_coll['task_failed_and_ignored_total'] == 0
     assert netcommon_coll['task_skipped_total'] == 0
     assert netcommon_coll['task_unreachable_total'] == 1
     assert netcommon_coll['tasks_total'] == 2
     assert netcommon_coll['processed_events_total'] == 2  # Same as cli_config module (2 events)
-    assert 'controller_version' in netcommon_coll, 'Should have controller_version field'
-    assert isinstance(netcommon_coll['controller_version'], list), 'controller_version should be a list'
+    assert 'controller_versions' in netcommon_coll, 'Should have controller_versions field'
+    assert isinstance(netcommon_coll['controller_versions'], list), 'controller_versions should be a list'
 
     # ansible.posix
     posix_coll = coll_by_name['ansible.posix']
@@ -553,8 +553,8 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert posix_coll['jobs_failed_total'] == 1
     assert posix_coll['jobs_failed_because_of_module_failure_total'] == 1
-    assert posix_coll['task_clean_success_total'] == 1
-    assert posix_coll['task_success_with_reruns_total'] == 0
+    assert posix_coll['task_ok_total'] == 1
+    assert posix_coll['task_ok_with_retries_total'] == 0
     assert posix_coll['task_failed_total'] == 1
     assert posix_coll['task_failed_and_ignored_total'] == 0
     assert posix_coll['task_skipped_total'] == 0
@@ -572,8 +572,8 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert windows_coll['jobs_failed_total'] == 3
     assert windows_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert windows_coll['task_clean_success_total'] == 1
-    assert windows_coll['task_success_with_reruns_total'] == 2
+    assert windows_coll['task_ok_total'] == 1
+    assert windows_coll['task_ok_with_retries_total'] == 2
     assert windows_coll['task_failed_total'] == 0
     assert windows_coll['task_failed_and_ignored_total'] == 0
     assert windows_coll['task_skipped_total'] == 0
@@ -591,8 +591,8 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert aws_coll['jobs_failed_total'] == 1
     assert aws_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert aws_coll['task_clean_success_total'] == 2
-    assert aws_coll['task_success_with_reruns_total'] == 0
+    assert aws_coll['task_ok_total'] == 2
+    assert aws_coll['task_ok_with_retries_total'] == 0
     assert aws_coll['task_failed_total'] == 0
     assert aws_coll['task_failed_and_ignored_total'] == 1
     assert aws_coll['task_skipped_total'] == 1
@@ -610,8 +610,8 @@ def test_events_modules_aggregations_basic():
     assert general_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
     assert general_coll['jobs_failed_total'] == 3
     assert general_coll['jobs_failed_because_of_module_failure_total'] == 3
-    assert general_coll['task_clean_success_total'] == 0
-    assert general_coll['task_success_with_reruns_total'] == 0
+    assert general_coll['task_ok_total'] == 0
+    assert general_coll['task_ok_with_retries_total'] == 0
     assert general_coll['task_failed_total'] == 3
     assert general_coll['task_failed_and_ignored_total'] == 0
     assert general_coll['task_skipped_total'] == 0
@@ -629,8 +629,8 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
     assert mongodb_coll['jobs_failed_total'] == 2
     assert mongodb_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert mongodb_coll['task_clean_success_total'] == 1
-    assert mongodb_coll['task_success_with_reruns_total'] == 1
+    assert mongodb_coll['task_ok_total'] == 1
+    assert mongodb_coll['task_ok_with_retries_total'] == 1
     assert mongodb_coll['task_failed_total'] == 0
     assert mongodb_coll['task_failed_and_ignored_total'] == 0
     assert mongodb_coll['task_skipped_total'] == 0
@@ -648,8 +648,8 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)
     assert custom_coll['jobs_failed_total'] == 1
     assert custom_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert custom_coll['task_clean_success_total'] == 1
-    assert custom_coll['task_success_with_reruns_total'] == 0
+    assert custom_coll['task_ok_total'] == 1
+    assert custom_coll['task_ok_with_retries_total'] == 0
     assert custom_coll['task_failed_total'] == 0
     assert custom_coll['task_failed_and_ignored_total'] == 0
     assert custom_coll['task_skipped_total'] == 0

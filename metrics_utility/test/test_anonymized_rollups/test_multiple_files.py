@@ -448,8 +448,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert win_copy['collection_name'] == 'ansible.windows'
     assert win_copy['jobs_total'] == 3
     assert win_copy['unique_hosts_total'] == 3
-    assert win_copy['task_clean_success_total'] == 1
-    assert win_copy['task_success_with_reruns_total'] == 2
+    assert win_copy['task_ok_total'] == 1
+    assert win_copy['task_ok_with_retries_total'] == 2
     assert win_copy['task_failed_total'] == 0
     assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
     assert win_copy['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic
@@ -477,8 +477,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert windows_coll['collection_source'] == 'certified'
     assert windows_coll['jobs_total'] == 3
     assert windows_coll['unique_hosts_total'] == 3
-    assert windows_coll['task_clean_success_total'] == 1
-    assert windows_coll['task_success_with_reruns_total'] == 2
+    assert windows_coll['task_ok_total'] == 1
+    assert windows_coll['task_ok_with_retries_total'] == 2
     assert windows_coll['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic
 
     # Verify playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)

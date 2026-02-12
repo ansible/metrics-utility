@@ -164,8 +164,8 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'jobs_total' in module_stat
             assert 'unique_hosts_total' in module_stat
             assert 'processed_events_total' in module_stat
-            assert 'controller_version' in module_stat, 'Each module_stat should have controller_version field'
-            assert isinstance(module_stat['controller_version'], list), 'controller_version should be a list'
+            assert 'controller_versions' in module_stat, 'Each module_stat should have controller_versions field'
+            assert isinstance(module_stat['controller_versions'], list), 'controller_versions should be a list'
 
     # Validate collection_name_stats have required fields
     if json_data['collection_name_stats']:
@@ -174,8 +174,8 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'collection_source' in collection_stat
             assert 'jobs_total' in collection_stat
             assert 'processed_events_total' in collection_stat
-            assert 'controller_version' in collection_stat, 'Each collection_stat should have controller_version field'
-            assert isinstance(collection_stat['controller_version'], list), 'controller_version should be a list'
+            assert 'controller_versions' in collection_stat, 'Each collection_stat should have controller_versions field'
+            assert isinstance(collection_stat['controller_versions'], list), 'controller_versions should be a list'
 
     # Validate jobs_by_job_type have required fields (now grouped by job_type, merged with job_host_summary)
     if json_data['jobs_by_job_type']:
@@ -255,11 +255,11 @@ def test_from_gather_to_json(cleanup_glob):
     yum_module = anonymized_modules[0]
     assert yum_module['jobs_total'] == 3, 'Should have 3 jobs using ansible.builtin.yum (anonymized)'
     assert yum_module['unique_hosts_total'] == 2, 'Should have 2 hosts for ansible.builtin.yum (anonymized)'
-    assert yum_module['task_clean_success_total'] == 6, 'Should have 6 successful tasks for ansible.builtin.yum (3 jobs × 2 hosts)'
-    assert yum_module['task_success_with_reruns_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
+    assert yum_module['task_ok_total'] == 6, 'Should have 6 successful tasks for ansible.builtin.yum (3 jobs × 2 hosts)'
+    assert yum_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
     assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
     assert yum_module['processed_events_total'] == 6, 'Should have 6 processed events for ansible.builtin.yum (3 jobs × 2 hosts)'
-    assert yum_module['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {yum_module.get("controller_version")}'
+    assert yum_module['controller_versions'] == ['2.9.10'], f'Expected controller_versions to be ["2.9.10"], got {yum_module.get("controller_versions")}'
     # Module name should be hashed (64 char hex string)
     assert len(yum_module['module_name']) == 64, 'Anonymized module name should be a 64-character hash'
     assert all(c in '0123456789abcdef' for c in yum_module['module_name']), 'Anonymized module name should be hexadecimal'
@@ -269,11 +269,11 @@ def test_from_gather_to_json(cleanup_glob):
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
     assert a10_module['jobs_total'] == 3, 'Should have 3 jobs using a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['unique_hosts_total'] == 2, 'Should have 2 hosts for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['task_clean_success_total'] == 6, 'Should have 6 successful tasks for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
-    assert a10_module['task_success_with_reruns_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['task_ok_total'] == 6, 'Should have 6 successful tasks for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['task_failed_total'] == 0, 'Should have 0 failures for a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['processed_events_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
-    assert a10_module['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {a10_module.get("controller_version")}'
+    assert a10_module['controller_versions'] == ['2.9.10'], f'Expected controller_versions to be ["2.9.10"], got {a10_module.get("controller_versions")}'
 
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
@@ -286,11 +286,11 @@ def test_from_gather_to_json(cleanup_glob):
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'
     assert a10_collection['collection_source'] == 'community', 'a10.acos_axapi collection should be from community'
     assert a10_collection['jobs_total'] == 3, 'a10.acos_axapi collection should have 3 jobs'
-    assert 'controller_version' in a10_collection, 'Each collection_stat should have controller_version field'
-    assert isinstance(a10_collection['controller_version'], list), 'controller_version should be a list'
-    assert a10_collection['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {a10_collection.get("controller_version")}'
+    assert 'controller_versions' in a10_collection, 'Each collection_stat should have controller_versions field'
+    assert isinstance(a10_collection['controller_versions'], list), 'controller_versions should be a list'
+    assert a10_collection['controller_versions'] == ['2.9.10'], f'Expected controller_versions to be ["2.9.10"], got {a10_collection.get("controller_versions")}'
     assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
-    assert a10_collection['task_clean_success_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
+    assert a10_collection['task_ok_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
     
     # Validate anonymized ansible.builtin collection (has Unknown collection_source and hashed name)
@@ -299,11 +299,11 @@ def test_from_gather_to_json(cleanup_glob):
     builtin_collection = anonymized_collections[0]
     assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
     assert builtin_collection['jobs_total'] == 3, 'ansible.builtin collection should have 3 jobs'
-    assert 'controller_version' in builtin_collection, 'Each collection_stat should have controller_version field'
-    assert isinstance(builtin_collection['controller_version'], list), 'controller_version should be a list'
-    assert builtin_collection['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {builtin_collection.get("controller_version")}'
+    assert 'controller_versions' in builtin_collection, 'Each collection_stat should have controller_versions field'
+    assert isinstance(builtin_collection['controller_versions'], list), 'controller_versions should be a list'
+    assert builtin_collection['controller_versions'] == ['2.9.10'], f'Expected controller_versions to be ["2.9.10"], got {builtin_collection.get("controller_versions")}'
     assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
-    assert builtin_collection['task_clean_success_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
+    assert builtin_collection['task_ok_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
     assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
     # Collection name should be hashed (64 char hex string)
     assert len(builtin_collection['collection_name']) == 64, 'Anonymized collection name should be a 64-character hash'
