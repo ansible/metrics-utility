@@ -29,15 +29,14 @@ def test_dataframe_to_csv_files_empty():
 
 
 def test_dataframe_to_csv_files_none_input():
-    """Test that None input is handled gracefully."""
+    """Test that None input is handled gracefully by returning no files."""
     with tempfile.TemporaryDirectory() as tmpdir:
         df = None
 
-        # Should not crash, should create empty file
+        # Should not crash, should return empty list (no files created)
         files = dataframe_to_csv_files(df, 'test_table', tmpdir)
 
-        assert len(files) == 1
-        assert os.path.exists(files[0])
+        assert len(files) == 0
 
 
 def test_dataframe_to_csv_files_small():
@@ -181,3 +180,32 @@ def test_dataframe_to_csv_files_table_name_formatting():
             files = dataframe_to_csv_files(df, table_name, tmpdir)
             assert len(files) == 1
             assert files[0].endswith(expected_filename)
+
+
+def test_dataframe_to_csv_files_none_with_csv_compat():
+    """Test that None input doesn't break CSV compatibility path (no EmptyDataError)."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Create files from None - should return empty list
+        files = dataframe_to_csv_files(None, 'test_table', tmpdir)
+        assert len(files) == 0
+
+        # Verify that iterating over the files list (as in load_anonymized_rollup_data)
+        # works without errors
+        for file_path in files:
+            # This should never execute since files is empty
+            pd.read_csv(file_path)  # Would raise EmptyDataError if file was created
+
+        # Also test empty DataFrame with no columns
+        empty_df = pd.DataFrame()
+        files = dataframe_to_csv_files(empty_df, 'test_table', tmpdir)
+        assert len(files) == 0
+
+        # But empty DataFrame WITH columns should create a file with headers
+        df_with_columns = pd.DataFrame(columns=['a', 'b', 'c'])
+        files = dataframe_to_csv_files(df_with_columns, 'test_table', tmpdir)
+        assert len(files) == 1
+
+        # This file should be readable
+        result = pd.read_csv(files[0])
+        assert result.empty
+        assert list(result.columns) == ['a', 'b', 'c']
