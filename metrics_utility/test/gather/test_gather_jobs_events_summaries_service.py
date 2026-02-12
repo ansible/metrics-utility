@@ -308,80 +308,80 @@ def test_job_host_summary_service_command(cleanup_glob):
 
 
 main_jobevent_service_lines = [
-    'id,created,modified,job_created,job_finished,uuid,parent_uuid,event,'
+    'id,created,modified,job_created,job_finished,ansible_version,uuid,parent_uuid,event,'
     'task_action,resolved_action,resolved_role,duration,start,end,task_uuid,ignore_errors,failed,'
     'changed,playbook,play,task,role,job_remote_id,job_id,host_remote_id,host_id,'
     'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '13,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     '13aac8b6-038d-4cbe-af99-67276d80d01b,,warning,,,,,,,,f,f,f,,,'
     ',,1,1,,,,,,,f,2025-06-13 10:00:00+00',
     '14,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     '8cdfc02a-8b52-4fe9-883a-1d6608f68c3f,,warning,,,,,,,,f,f,f,,,'
     ',,2,2,,,,,,,f,2025-06-13 10:00:00+00',
     '15,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
     '150d1d0c-dccb-4940-83ee-4d75c2f22493,,deprecated,,,,,,,,f,f,f,,,'
     ',,3,3,,,,,,,f,2025-06-13 10:00:00+00',
 ]
