@@ -167,7 +167,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_never_started_total': ('jobs_never_started', 'sum'),
             'job_duration_maximum_seconds': ('job_duration_seconds', 'max'),
             'job_duration_minimum_seconds': ('job_duration_seconds', 'min'),
-            'job_duration_total_seconds': ('job_duration_seconds', 'sum'),
+            'jobs_duration_total_seconds': ('job_duration_seconds', 'sum'),
             'jobs_successful_duration_total_seconds': ('job_duration_successful_seconds', 'sum'),
             'jobs_failed_duration_total_seconds': ('job_duration_failed_seconds', 'sum'),
             'job_waiting_time_maximum_seconds': ('job_waiting_time_seconds', 'max'),
@@ -213,6 +213,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type_dict.update(controller_versions_aggregation)
 
         aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
+        
+        # Add is_automation field: True if job_type is 'job', False otherwise
+        aggregations_by_job_type['is_automation'] = aggregations_by_job_type['job_type'] == 'job'
 
         # Aggregations grouped by launch_type
         # Add job_type_total specific to launch_type grouping

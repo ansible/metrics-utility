@@ -338,7 +338,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
 
     # Validate job duration fields are non-negative
-    assert job['job_duration_total_seconds'] >= 0, 'Job duration total should be non-negative'
+    assert job['jobs_duration_total_seconds'] >= 0, 'Job duration total should be non-negative'
     assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
 
     # Validate job waiting time fields are non-negative
@@ -403,7 +403,7 @@ def test_from_gather_to_json(cleanup_glob):
     if json_data['jobs_by_job_type']:
         expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in json_data['jobs_by_job_type'])
         expected_jobs_failed = sum(j.get('jobs_failed_total', 0) for j in json_data['jobs_by_job_type'])
-        expected_duration_all = sum(j.get('job_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
+        expected_duration_all = sum(j.get('jobs_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
         expected_duration_successful = sum(j.get('jobs_successful_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
         expected_duration_failed = sum(j.get('jobs_failed_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
 

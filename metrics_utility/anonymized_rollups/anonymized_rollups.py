@@ -144,7 +144,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     rollup_period_jobs_successful = sum(job.get('jobs_successful_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
     rollup_period_jobs_failed = sum(job.get('jobs_failed_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
     rollup_period_jobs_duration_all_statuses_seconds = (
-        sum(job.get('job_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+        sum(job.get('jobs_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
     )
     rollup_period_jobs_successful_duration_total_seconds = (
         sum(job.get('jobs_successful_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
