@@ -41,6 +41,17 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 Other collectors (in `metrics_utility.library.collectors.others`):
 * `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`
 
+For CLI usage or when CSV files are needed, use the `dataframe_to_csv_files()` helper from `metrics_utility.library.csv_utils`:
+
+```python
+from metrics_utility.library.csv_utils import dataframe_to_csv_files
+
+df = execution_environments(db=db).gather()
+csv_files = dataframe_to_csv_files(df, 'main_executionenvironment', '/tmp/output')
+# Returns: ['/tmp/output/main_executionenvironment_table.csv']
+# or ['.._split0.csv', '.._split1.csv', ...] for large datasets
+```
+
 
 #### Package
 
