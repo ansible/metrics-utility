@@ -500,6 +500,15 @@ def test_all_jobs_combined(cleanup_test_data):
         assert isinstance(role_stat['processed_events_total'], (int, float)), 'processed_events_total should be a number'
         assert role_stat['processed_events_total'] > 0, 'processed_events_total should be positive'
 
+    # Verify that at least one role has a known collection_source (not "Unknown")
+    known_collection_roles = [r for r in role_stats if r.get('collection_source') != 'Unknown']
+    assert len(known_collection_roles) > 0, 'Should have at least one role from a known collection (not Unknown)'
+    # Verify that known collection roles have valid collection_source values
+    valid_sources = {'certified', 'community', 'validated', 'partner'}
+    for role_stat in known_collection_roles:
+        assert role_stat['collection_source'] in valid_sources, f'Known collection role should have valid collection_source, got {role_stat["collection_source"]}'
+        assert role_stat['collection_name'] is not None and role_stat['collection_name'] != '', f'Known collection role should have collection_name, got {role_stat["collection_name"]}'
+
     # ========== Validate Playbooks ==========
     # modules_used_per_playbook is computed but not included in final output
     assert 'rollup_period_playbooks_total' in result['statistics'], 'Should have playbooks_total in statistics'
