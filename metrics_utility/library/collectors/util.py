@@ -51,8 +51,20 @@ def copy_table(db, query, params=None, prepend_query=False):
         with db.cursor() as cursor:
             cursor.execute(_yaml_json_functions())
 
-    # Use pandas read_sql for optimized DataFrame creation
-    df = pd.read_sql(query, db, params=params)
+    # Execute query and create DataFrame from results
+    # Using cursor approach since pd.read_sql doesn't work well with psycopg3
+    with db.cursor() as cursor:
+        cursor.execute(query, params)
+
+        # Get column names from cursor description
+        columns = [desc[0] for desc in cursor.description]
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Create DataFrame
+        df = pd.DataFrame(rows, columns=columns)
+
     return df
 
 
