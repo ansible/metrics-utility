@@ -75,7 +75,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert 'rollup_period_scm_types' in json_data, "Missing 'rollup_period_scm_types' at top level"
     assert 'rollup_period_credential_types' in json_data, "Missing 'rollup_period_credential_types' at top level"
     assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
-    assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
+    assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     # job_host_summary is now merged into jobs_by_job_type
@@ -151,7 +151,7 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate arrays structure
     assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
-    assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
+    assert isinstance(json_data['collection_stats'], list), 'collection_stats should be a list'
     assert isinstance(json_data['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
     assert isinstance(json_data['jobs_by_launch_type'], list), 'jobs_by_launch_type should be a list'
 
@@ -167,9 +167,9 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'controller_versions' in module_stat, 'Each module_stat should have controller_versions field'
             assert isinstance(module_stat['controller_versions'], list), 'controller_versions should be a list'
 
-    # Validate collection_name_stats have required fields
-    if json_data['collection_name_stats']:
-        for collection_stat in json_data['collection_name_stats']:
+    # Validate collection_stats have required fields
+    if json_data['collection_stats']:
+        for collection_stat in json_data['collection_stats']:
             assert 'collection_name' in collection_stat
             assert 'collection_source' in collection_stat
             assert 'jobs_total' in collection_stat
@@ -241,7 +241,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert statistics['rollup_period_modules_total'] == 2, 'Should have 2 modules (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
     assert statistics['rollup_period_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
     assert len(json_data['module_stats']) == 2, 'Should have 2 module stats'
-    assert len(json_data['collection_name_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
+    assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
 
     # Validate module_stats actual values
     print('--- Validating module_stats data values ---')
@@ -275,11 +275,11 @@ def test_from_gather_to_json(cleanup_glob):
     assert a10_module['processed_events_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
     assert a10_module['controller_versions'] == ['2.9.10'], f'Expected controller_versions to be ["2.9.10"], got {a10_module.get("controller_versions")}'
 
-    # Validate collection_name_stats
-    print('--- Validating collection_name_stats data values ---')
+    # Validate collection_stats
+    print('--- Validating collection_stats data values ---')
     # Find collections by name (order may vary)
     # Note: ansible.builtin will be anonymized (hashed) because it's not in collections.json
-    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_name_stats']}
+    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
     
     # Validate a10.acos_axapi collection (not anonymized)
     a10_collection = collection_stats_dict.get('a10.acos_axapi')
@@ -294,7 +294,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
     
     # Validate anonymized ansible.builtin collection (has Unknown collection_source and hashed name)
-    anonymized_collections = [c for c in json_data['collection_name_stats'] if c.get('collection_source') == 'Unknown']
+    anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Unknown']
     assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
     builtin_collection = anonymized_collections[0]
     assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
@@ -307,6 +307,17 @@ def test_from_gather_to_json(cleanup_glob):
     assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
     # Collection name should be hashed (64 char hex string)
     assert len(builtin_collection['collection_name']) == 64, 'Anonymized collection name should be a 64-character hash'
+
+    # Validate anonymized role_stats (roles with Unknown collection_source should have hashed role names)
+    if 'role_stats' in json_data and json_data['role_stats']:
+        anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Unknown']
+        for role_stat in anonymized_roles:
+            # Role name should be hashed (64 char hex string)
+            if role_stat.get('role'):
+                assert len(role_stat['role']) == 64, f'Anonymized role name should be a 64-character hash, got {len(role_stat.get("role", ""))}'
+            # Collection name should also be hashed if present
+            if role_stat.get('collection_name'):
+                assert len(role_stat['collection_name']) == 64, f'Anonymized collection_name in role_stat should be a 64-character hash, got {len(role_stat.get("collection_name", ""))}'
     assert all(c in '0123456789abcdef' for c in builtin_collection['collection_name']), 'Anonymized collection name should be hexadecimal'
 
     # Validate playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
@@ -496,7 +507,7 @@ def test_half_day_rollup(cleanup_glob):
     # Basic assertions - just validate structure
     assert 'statistics' in json_data, "Missing 'statistics' in json_data"
     assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
-    assert 'collection_name_stats' in json_data, "Missing 'collection_name_stats' in json_data"
+    assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     # job_host_summary is now merged into jobs_by_job_type
@@ -504,7 +515,7 @@ def test_half_day_rollup(cleanup_glob):
     # Validate basic types
     assert isinstance(json_data['statistics'], dict), 'statistics should be a dictionary'
     assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
-    assert isinstance(json_data['collection_name_stats'], list), 'collection_name_stats should be a list'
+    assert isinstance(json_data['collection_stats'], list), 'collection_stats should be a list'
     assert isinstance(json_data['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
     assert isinstance(json_data['jobs_by_launch_type'], list), 'jobs_by_launch_type should be a list'
     # job_host_summary is now merged into jobs_by_job_type

@@ -21,6 +21,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': 'ansible.windows.win_copy_role',
+        'role': 'ansible.windows.win_copy_role',
         'ignore_errors': False,
     },
     {
@@ -35,6 +37,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': 'custom.standalone_role',
+        'role': 'custom.standalone_role',
         'ignore_errors': False,
     },
     {
@@ -49,6 +53,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': 'ansible.windows.win_copy_role',
+        'role': 'ansible.windows.win_copy_role',
         'ignore_errors': False,
     },
     # Job 1 Host 2 – t002 (yum failed final)
@@ -64,6 +70,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 1 Host 3 – t003 (mongodb insert async success)
@@ -79,6 +87,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 1 Host 4 – t004 (cli_config unreachable)
@@ -94,6 +104,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': 'ansible.netcommon.cli_config_role',
+        'role': 'ansible.netcommon.cli_config_role',
         'ignore_errors': False,
     },
     # ================================================================
@@ -112,6 +124,8 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     {
@@ -126,6 +140,8 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 2 Host 2 – t002 (yum async failed final)
@@ -141,6 +157,8 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 2 Host 3 – t001 (win_copy ok)
@@ -156,6 +174,8 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # ================================================================
@@ -174,6 +194,8 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'resolved_role': 'ansible.posix.firewalld_role',
+        'role': 'ansible.posix.firewalld_role',
         'ignore_errors': False,
     },
     # Job 3 Host 2 – t009 (ec2 provision ok)
@@ -189,6 +211,8 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 3 Host 3 – t004 (cli_config ok)
@@ -204,6 +228,8 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'resolved_role': 'ansible.netcommon.cli_config_role',
+        'role': 'ansible.netcommon.cli_config_role',
         'ignore_errors': False,
     },
     # ================================================================
@@ -222,6 +248,8 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': 'ansible.posix.firewalld_role',
+        'role': 'ansible.posix.firewalld_role',
         'ignore_errors': False,
     },
     # Job 4 Host 5 – t001 (win_copy retried and success)
@@ -237,6 +265,8 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': 'ansible.windows.win_copy_role',
+        'role': 'ansible.windows.win_copy_role',
         'ignore_errors': False,
     },
     {
@@ -266,6 +296,8 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 4 Host 7 – t009 failed, but ignored
@@ -296,6 +328,8 @@ events = [
         'job_finished': '2024-01-05 18:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # ================================================================
@@ -314,6 +348,8 @@ events = [
         'job_finished': '2024-01-06 10:00:05+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # ================================================================
@@ -333,6 +369,8 @@ events = [
         'job_finished': '2024-01-01 00:10:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 2 - warning event
@@ -348,6 +386,8 @@ events = [
         'job_finished': '2024-01-02 12:20:00+00',
         'job_failed': True,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
     # Job 3 - deprecated event
@@ -363,6 +403,8 @@ events = [
         'job_finished': '2024-01-03 08:18:00+00',
         'job_failed': False,
         'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
         'ignore_errors': False,
     },
 ]
@@ -400,10 +442,37 @@ def test_events_modules_aggregations_basic():
     assert result['hosts_automated_total'] == 9
 
     # collection stats assertions (current aggregation schema)
-    coll_by_name = {row['collection_name']: row for row in result['collection_name_stats']}
+    coll_by_name = {row['collection_name']: row for row in result['collection_stats']}
 
     # Verify per-module stats (aligned to current aggregation output)
     stats_by_module = {row['module_name']: row for row in result['module_stats']}
+
+    # Verify per-role stats (aligned to current aggregation output)
+    stats_by_role = {row['role'] if row['role'] is not None else 'None': row for row in result['role_stats']}
+    
+    # Verify role_stats exists and has data
+    assert 'role_stats' in result
+    assert len(result['role_stats']) > 0
+    
+    # Verify a specific role has stats (ansible.windows.win_copy_role)
+    if 'ansible.windows.win_copy_role' in stats_by_role:
+        win_copy_role_stats = stats_by_role['ansible.windows.win_copy_role']
+        assert win_copy_role_stats['tasks_total'] > 0
+        assert 'jobs_total' in win_copy_role_stats
+        # Verify collection_name and collection_source are present
+        assert 'collection_name' in win_copy_role_stats, 'role_stats should have collection_name field'
+        assert 'collection_source' in win_copy_role_stats, 'role_stats should have collection_source field'
+        # For collection-based roles, collection_name should be extracted (ansible.windows.win_copy_role -> ansible.windows)
+        assert win_copy_role_stats['collection_name'] == 'ansible.windows', f"Expected collection_name 'ansible.windows', got {win_copy_role_stats['collection_name']}"
+        assert win_copy_role_stats['collection_source'] == 'certified', f"Expected collection_source 'certified', got {win_copy_role_stats['collection_source']}"
+    
+    # Verify standalone role (custom.standalone_role) has Unknown collection_source
+    if 'custom.standalone_role' in stats_by_role:
+        standalone_role_stats = stats_by_role['custom.standalone_role']
+        # Standalone roles should have None collection_name and Unknown collection_source
+        assert standalone_role_stats.get('collection_name') is None or standalone_role_stats.get('collection_name') == '', f"Standalone role should have None collection_name, got {standalone_role_stats.get('collection_name')}"
+        assert standalone_role_stats['collection_source'] == 'Unknown', f"Standalone role should have 'Unknown' collection_source, got {standalone_role_stats['collection_source']}"
+    
     # ansible.windows.win_copy (certified)
     copy_stats = stats_by_module['ansible.windows.win_copy']
     assert copy_stats['collection_source'] == 'certified'
@@ -520,7 +589,7 @@ def test_events_modules_aggregations_basic():
     assert custom_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert custom_stats['processed_events_total'] == 1  # Job 1 Host 1: 1 event (ok)
 
-    # collection_name_stats assertions
+    # collection_stats assertions
 
     # ansible.netcommon
     netcommon_coll = coll_by_name['ansible.netcommon']

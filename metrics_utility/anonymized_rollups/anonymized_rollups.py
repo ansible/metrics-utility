@@ -46,7 +46,7 @@ def anonymize_data(data, salt):
             - jobs_by_launch_type: array of job stats (grouped by launch_type, with default host summary fields)
             - jobs_by_controller_version: array of job stats (grouped by controller_version, with default host summary fields)
             - module_stats: array of module statistics
-            - collection_name_stats: array of collection statistics
+            - collection_stats: array of collection statistics
             - collections_versions: array of {name, version, job_count} from installed collections
         salt: Salt string for hashing
     """
@@ -81,12 +81,21 @@ def anonymize_data(data, salt):
                 if 'collection_name' in module and module['collection_name']:
                     module['collection_name'] = hash(module['collection_name'], salt)
 
-    # anonymize collection_name_stats - anonymize collection name for 'Unknown' sources
-    if 'collection_name_stats' in data and data['collection_name_stats']:
-        for collection in data['collection_name_stats']:
+    # anonymize collection_stats - anonymize collection name for 'Unknown' sources
+    if 'collection_stats' in data and data['collection_stats']:
+        for collection in data['collection_stats']:
             if collection and collection.get('collection_source') == 'Unknown':
                 if 'collection_name' in collection and collection['collection_name']:
                     collection['collection_name'] = hash(collection['collection_name'], salt)
+
+    # anonymize role_stats - anonymize role name for 'Unknown' sources
+    if 'role_stats' in data and data['role_stats']:
+        for role in data['role_stats']:
+            if role and role.get('collection_source') == 'Unknown':
+                if 'role' in role and role['role']:
+                    role['role'] = hash(role['role'], salt)
+                if 'collection_name' in role and role['collection_name']:
+                    role['collection_name'] = hash(role['collection_name'], salt)
 
     # Note: modules_used_per_playbook anonymization removed since it's not in final output
     # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
@@ -97,7 +106,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     Manually flattens the given nested report into:
       - statistics: object of primitive totals (includes credentials)
       - module_stats: array (copied as-is)
-      - collection_name_stats: array (copied as-is)
+      - collection_stats: array (copied as-is)
+      - role_stats: array (copied as-is)
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_controller_version: array (grouped by controller_version, merged with job_host_summary data)
@@ -206,7 +216,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # 3) arrays copied as-is from their respective parents
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
-    collection_name_stats: List[Dict[str, Any]] = events_modules.get('collection_name_stats', []) or []
+    collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
+    role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
 
     # 4) Extract and transform installed collections from jobs data
     installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
@@ -383,7 +394,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_scm_types': scm_types_merged,
         'rollup_period_credential_types': credential_types_merged,
         'module_stats': module_stats,
-        'collection_name_stats': collection_name_stats,
+        'collection_stats': collection_stats,
+        'role_stats': role_stats,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_controller_version': jobs_by_controller_version_merged,

@@ -18,7 +18,7 @@ class TestStorageSegmentAvailable:
         assert len(chunks) == 5
         assert 'statistics' in chunks[0]
         assert 'module_stats' in chunks[1]
-        assert 'collection_name_stats' in chunks[2]
+        assert 'collection_stats' in chunks[2]
         assert 'jobs_by_job_type' in chunks[3]
         assert 'job_host_summary' in chunks[4]
 
@@ -35,7 +35,7 @@ class TestStorageSegmentAvailable:
         assert 'module_stats' in chunks[1]
         assert 'module_stats' in chunks[2]
         assert 'module_stats' in chunks[3]
-        assert 'collection_name_stats' in chunks[4]
+        assert 'collection_stats' in chunks[4]
         assert 'jobs_by_job_type' in chunks[5]
         assert 'job_host_summary' in chunks[6]
 
@@ -50,7 +50,7 @@ class TestStorageSegmentAvailable:
         assert len(chunks) == 5
         assert 'statistics' in chunks[0]
         assert 'module_stats' in chunks[1]
-        assert 'collection_name_stats' in chunks[2]
+        assert 'collection_stats' in chunks[2]
         assert 'jobs_by_job_type' in chunks[3]
         assert 'job_host_summary' in chunks[4]
 

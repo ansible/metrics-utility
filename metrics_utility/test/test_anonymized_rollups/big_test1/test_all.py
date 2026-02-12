@@ -247,7 +247,7 @@ def test_all_jobs_combined(cleanup_test_data):
     assert 'jobs_by_launch_type' in result
     assert 'jobs_by_controller_version' in result
     assert 'module_stats' in result
-    assert 'collection_name_stats' in result
+    assert 'collection_stats' in result
     assert 'collections_versions' in result
 
     # ========== Validate Task Statistics (from job host summary data) ==========
@@ -461,8 +461,8 @@ def test_all_jobs_combined(cleanup_test_data):
             assert version in expected_versions, f'Unexpected controller_versions {version} in module {module.get("module_name")}'
 
     # ========== Validate Collection Stats ==========
-    collection_stats = result['collection_name_stats']
-    assert isinstance(collection_stats, list), 'collection_name_stats should be a list'
+    collection_stats = result['collection_stats']
+    assert isinstance(collection_stats, list), 'collection_stats should be a list'
     # Expected: 3 unique collections (ansible.builtin, community.general, community.weird)
     assert len(collection_stats) == 3, f'Should have 3 unique collections, got {len(collection_stats)}'
 
@@ -482,6 +482,23 @@ def test_all_jobs_combined(cleanup_test_data):
         expected_versions = {'2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'}
         for version in collection['controller_versions']:
             assert version in expected_versions, f'Unexpected controller_versions {version} in collection {collection.get("collection_name")}'
+
+    # ========== Validate Role Stats ==========
+    assert 'role_stats' in result, 'Should have role_stats in result'
+    role_stats = result['role_stats']
+    assert isinstance(role_stats, list), 'role_stats should be a list'
+    assert len(role_stats) > 0, 'role_stats should not be empty'
+
+    # Verify role stats structure
+    for role_stat in role_stats:
+        assert 'role' in role_stat, 'Each role_stat should have role field'
+        assert 'collection_name' in role_stat, 'Each role_stat should have collection_name field'
+        assert 'collection_source' in role_stat, 'Each role_stat should have collection_source field'
+        assert 'jobs_total' in role_stat, 'Each role_stat should have jobs_total field'
+        assert 'tasks_total' in role_stat, 'Each role_stat should have tasks_total field'
+        assert 'processed_events_total' in role_stat, 'Each role_stat should have processed_events_total field'
+        assert isinstance(role_stat['processed_events_total'], (int, float)), 'processed_events_total should be a number'
+        assert role_stat['processed_events_total'] > 0, 'processed_events_total should be positive'
 
     # ========== Validate Playbooks ==========
     # modules_used_per_playbook is computed but not included in final output

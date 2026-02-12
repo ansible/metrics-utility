@@ -224,7 +224,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         assert 'jobs_by_launch_type' in result
         # job_host_summary is now merged into jobs_by_job_type
         assert 'module_stats' in result
-        assert 'collection_name_stats' in result
+        assert 'collection_stats' in result
         assert 'collections_versions' in result
 
     # ========== Validate Jobs ==========
@@ -466,8 +466,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert yum['processed_events_total'] == 3  # Same as test_events_modules_aggregations_basic
 
     # Verify collection stats
-    collection_stats = result['collection_name_stats']
-    assert isinstance(collection_stats, list), 'collection_name_stats should be a list'
+    collection_stats = result['collection_stats']
+    assert isinstance(collection_stats, list), 'collection_stats should be a list'
     assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
 
     # Verify specific collection stats (ansible.windows)
@@ -785,7 +785,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'jobs_by_launch_type' in result
     # job_host_summary is now merged into jobs_by_job_type
     assert 'module_stats' in result
-    assert 'collection_name_stats' in result
+    assert 'collection_stats' in result
     assert 'collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
@@ -891,8 +891,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(result['module_stats'], list), 'module_stats should be a list'
     assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'
 
-    assert isinstance(result['collection_name_stats'], list), 'collection_name_stats should be a list'
-    assert len(result['collection_name_stats']) == 0, 'collection_name_stats should be empty with no data'
+        assert isinstance(result['collection_stats'], list), 'collection_stats should be a list'
+        assert len(result['collection_stats']) == 0, 'collection_stats should be empty with no data'
 
     # modules_used_per_playbook is computed but not included in final output
 

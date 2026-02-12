@@ -5,6 +5,7 @@ import re
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
@@ -147,6 +148,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             dataframe['resolved_action'].fillna(dataframe['task_action']).where(lambda s: s.notna() & (s.astype(str).str.strip() != ''))
         )
 
+        # add role column into the dataframe based on dataframe_content_usage.py approach
+        # If resolved_role is not there, fill it with role column
+        dataframe['role'] = dataframe['resolved_role'].fillna(dataframe['role']).astype(str)
+        # Only get valid role names into role column
+        dataframe['role'] = dataframe['role'].apply(lambda x: DataframeContentUsage.extract_role_name(x))
+
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
 
         # Vectorized extraction of collection name (much faster than .apply())
@@ -226,6 +233,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'playbook',
             'collection_name',
             'collection_source',
+            'role',
             'job_failed',
             'job_started',
             'job_duration_seconds',
@@ -245,6 +253,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # This groups by (job, host, task, module, collection) and summarizes all events
         # This can reduce the number of rows, depends of number of retries
+        # Note: role is kept as a column but not used for grouping here to avoid splitting tasks unnecessarily
         task_summary = (
             dataframe.groupby(
                 ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
@@ -264,6 +273,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 deprecations_total=('is_deprecation', 'sum'),
                 processed_events_total=('event', 'size'),
                 controller_version=('controller_version', 'first'),
+                role=('role', 'first'),  # Keep role for later aggregation
            )
             .assign(
                 # mutually exclusive categories - only one can be true
@@ -284,6 +294,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # note that prepare is called in batches and one job and task can be split between batches
         # This will cause acceptable precision loss, because we will end up with two entries for the same job and task
         # duplicated entries will be summed in base function
+        # Note: role is kept as a column but not used for grouping here
         task_summary = task_summary.groupby(
             ['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
         ).agg(
@@ -305,6 +316,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             deprecations_total=('deprecations_total', 'sum'),
             processed_events_total=('processed_events_total', 'sum'),
             controller_version=('controller_version', 'first'),
+            role=('role', 'first'),  # Keep role for later aggregation
         )
 
         return {
@@ -358,6 +370,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             }
 
         # Final aggregation: handle any cross-batch duplicates, sum them, loss of precision is acceptable
+        # Note: role is kept as a column but not used for grouping here
         dataframe = dataframe.groupby(
             ['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
         ).agg(
@@ -379,6 +392,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             deprecations_total=('deprecations_total', 'sum'),
             processed_events_total=('processed_events_total', 'sum'),
             controller_version=('controller_version', 'first'),
+            role=('role', 'first'),  # Keep role for role_stats aggregation
         )
 
         # Modules used to automate
@@ -405,7 +419,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             jobs_failed_duration_total_seconds=lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
         )
 
-        # common aggregation for module_stats and collection_name_stats
+        # common aggregation for module_stats and collection_stats
         common_aggregation = {
             'jobs_total': ('job_id', 'nunique'),
             'jobs_successful_total': ('job_failed', lambda x: (~x).sum()),
@@ -443,15 +457,36 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             module_stats['task_failed_and_ignored_total']
         )
         
-        collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+        collection_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
         # Compute tasks_total as sum of all task status totals
-        collection_name_stats['tasks_total'] = (
-            collection_name_stats['task_ok_total'] +
-            collection_name_stats['task_ok_with_retries_total'] +
-            collection_name_stats['task_failed_total'] +
-            collection_name_stats['task_unreachable_total'] +
-            collection_name_stats['task_skipped_total'] +
-            collection_name_stats['task_failed_and_ignored_total']
+        collection_stats['tasks_total'] = (
+            collection_stats['task_ok_total'] +
+            collection_stats['task_ok_with_retries_total'] +
+            collection_stats['task_failed_total'] +
+            collection_stats['task_unreachable_total'] +
+            collection_stats['task_skipped_total'] +
+            collection_stats['task_failed_and_ignored_total']
+        )
+
+        # Extract collection_name from role for collection-based roles (namespace.collection.role)
+        # For standalone roles (namespace.role), collection_name will be None
+        # Note: task_summary already has collection_name/collection_source from the MODULE,
+        # but for role_stats we need the ROLE's collection (which may differ from the module's collection)
+        task_summary['role_collection_name'] = task_summary['role'].apply(lambda x: extract_collection_name(x) if x else None)
+        # Map role collection_name to collection_source
+        task_summary['role_collection_source'] = task_summary['role_collection_name'].map(self.collections).fillna('Unknown')
+        
+        role_stats = task_summary.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+        # Rename columns to match expected output format
+        role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
+        # Compute tasks_total as sum of all task status totals
+        role_stats['tasks_total'] = (
+            role_stats['task_ok_total'] +
+            role_stats['task_ok_with_retries_total'] +
+            role_stats['task_failed_total'] +
+            role_stats['achable_total'] +
+            role_stats['task_skipped_total'] +
+            role_stats['task_failed_and_ignored_total']
         )
 
         # Get hosts_automated_total from the dataframe by unioning all host_ids sets
@@ -467,7 +502,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'modules_used_to_automate_total': modules_used_to_automate_total,
             'modules_used_per_playbook_total': modules_used_per_playbook_total.to_dict(),
             'module_stats': module_stats.to_dict(orient='records'),
-            'collection_name_stats': collection_name_stats.to_dict(orient='records'),
+            'collection_stats': collection_stats.to_dict(orient='records'),
+            'role_stats': role_stats.to_dict(orient='records'),
             'hosts_automated_total': hosts_automated_total,
             'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
@@ -477,3 +513,4 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'json': json_data,
         }
+task_unre

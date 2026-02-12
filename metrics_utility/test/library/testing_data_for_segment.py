@@ -161,7 +161,7 @@ segment_data = {
             'avg_job_waiting_time_seconds': 60.0,
         },
     ],
-    'collection_name_stats': [
+    'collection_stats': [
         {
             'collection_name': 'ansible.netcommon',
             'collection_source': 'certified',
