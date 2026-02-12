@@ -1,4 +1,6 @@
 import hashlib
+import json
+import os
 
 from typing import Any, Dict, List
 
@@ -100,6 +102,24 @@ def anonymize_data(data, salt):
                     role['role'] = 'Unknown'
                 if 'collection_name' in role and role['collection_name']:
                     role['collection_name'] = 'Unknown'
+
+    # anonymize collections_versions - replace collection name and version with 'Unknown' for unknown collections
+    # Load collections.json to check if collection is known
+    collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
+    try:
+        with open(collections_path, 'r') as f:
+            collections = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        collections = {}
+    
+    if 'collections_versions' in data and data['collections_versions']:
+        for collection_version in data['collections_versions']:
+            if collection_version and 'name' in collection_version:
+                collection_name = collection_version.get('name', '')
+                # If collection is not in the known collections mapping, replace name and version with 'Unknown'
+                if collection_name and collection_name not in collections:
+                    collection_version['name'] = 'Unknown'
+                    collection_version['version'] = 'Unknown'
 
     # Note: modules_used_per_playbook anonymization removed since it's not in final output
     # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output

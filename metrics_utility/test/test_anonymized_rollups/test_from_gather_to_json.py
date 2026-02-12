@@ -319,6 +319,27 @@ def test_from_gather_to_json(cleanup_glob):
             if role_stat.get('collection_name'):
                 assert role_stat['collection_name'] == 'Unknown', f'Anonymized collection_name in role_stat should be "Unknown", got {role_stat.get("collection_name")}'
 
+    # Validate collections_versions - unknown collections should have "Unknown" as name and version
+    print('--- Validating collections_versions data values ---')
+    if 'collections_versions' in json_data and json_data['collections_versions']:
+        collections_versions = json_data['collections_versions']
+        assert isinstance(collections_versions, list), 'collections_versions should be a list'
+        # Find unknown collections (ansible.builtin should be replaced with "Unknown")
+        unknown_collections = [c for c in collections_versions if c.get('name') == 'Unknown']
+        known_collections = [c for c in collections_versions if c.get('name') != 'Unknown']
+        # Should have at least one unknown collection (ansible.builtin)
+        assert len(unknown_collections) > 0, 'Should have at least one collection with "Unknown" name (ansible.builtin)'
+        # Verify unknown collections have "Unknown" as both name and version
+        for collection in unknown_collections:
+            assert collection['name'] == 'Unknown', f'Unknown collection should have name "Unknown", got {collection.get("name")}'
+            assert collection['version'] == 'Unknown', f'Unknown collection should have version "Unknown", got {collection.get("version")}'
+        # Verify known collections have their actual names and versions
+        for collection in known_collections:
+            assert collection['name'] != 'Unknown', f'Known collection should not have name "Unknown", got {collection.get("name")}'
+            assert collection['version'] != 'Unknown', f'Known collection should not have version "Unknown", got {collection.get("version")}'
+            assert 'version' in collection, 'Each collection should have version field'
+            assert 'job_count' in collection, 'Each collection should have job_count field'
+
     # Validate playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
     print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'

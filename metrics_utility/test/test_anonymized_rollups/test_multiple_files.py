@@ -513,20 +513,21 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # Job 4: ansible.builtin 2.9.10, community.general 1.0.0
     # Job 6: ansible.builtin 2.9.10, community.general 3.0.0
 
-    # Expected counts:
-    # ansible.builtin 2.9.10: 5 jobs (1, 2, 3, 4, 6)
+    # Expected counts (after anonymization - unknown collections are replaced with "Unknown" for both name and version):
+    # Unknown Unknown (ansible.builtin): 5 jobs (1, 2, 3, 4, 6)
     # community.general 1.0.0: 2 jobs (1, 4)
     # community.general 2.0.0: 2 jobs (2, 3)
     # community.general 3.0.0: 1 job (6)
     # ansible.windows 1.0.0: 1 job (2)
-    # community.aws 1.5.0: 1 job (3)
+    # community.aws 1.5.0: 1 job (3) - community.aws is in collections.json, so it's not anonymized
 
     # Convert to dict for easier lookup
     collections_dict = {(c['name'], c['version']): c['job_count'] for c in collections_versions}
 
-    # Verify ansible.builtin 2.9.10 appears in 5 jobs
-    assert collections_dict.get(('ansible.builtin', '2.9.10')) == 5, (
-        f'Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(("ansible.builtin", "2.9.10"))}'
+    # Verify Unknown Unknown (ansible.builtin) appears in 5 jobs
+    # ansible.builtin is not in collections.json, so it's anonymized to "Unknown" for both name and version
+    assert collections_dict.get(('Unknown', 'Unknown')) == 5, (
+        f'Expected Unknown Unknown (ansible.builtin) in 5 jobs, got {collections_dict.get(("Unknown", "Unknown"))}'
     )
 
     # Verify community.general appears with different versions (testing same collection with different versions)
