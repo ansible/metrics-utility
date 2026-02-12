@@ -238,35 +238,76 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate statistics actual values
     print('\n--- Validating statistics data values ---')
-    assert statistics['rollup_period_modules_total'] == 1, 'Should have 1 module'
+    assert statistics['rollup_period_modules_total'] == 2, 'Should have 2 modules (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
     assert statistics['rollup_period_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
-    assert len(json_data['module_stats']) == 1, 'Should have 1 module stats'
-    assert len(json_data['collection_name_stats']) == 1, 'Should have 1 collection stats'
+    assert len(json_data['module_stats']) == 2, 'Should have 2 module stats'
+    assert len(json_data['collection_name_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
 
     # Validate module_stats actual values
     print('--- Validating module_stats data values ---')
-    first_module_stats = json_data['module_stats'][0]
-    assert first_module_stats['module_name'] == 'a10.acos_axapi.a10_slb_virtual_server', 'Module stats should match module'
-    assert first_module_stats['jobs_total'] == 3, 'Should have 3 jobs using this module'
-    assert first_module_stats['unique_hosts_total'] == 2, 'Should have 2 hosts for this module'
-    assert first_module_stats['task_clean_success_total'] == 6, 'Should have 6 successful tasks (3 jobs × 2 hosts)'
-    assert first_module_stats['task_success_with_reruns_total'] == 0, 'Should have 0 reruns'
-    assert first_module_stats['task_failed_total'] == 0, 'Should have 0 failures'
-    assert first_module_stats['processed_events_total'] == 6, 'Should have 6 processed events (3 jobs × 2 hosts)'
-    assert first_module_stats['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {first_module_stats.get("controller_version")}'
+    # Find modules by name (order may vary)
+    # Note: ansible.builtin.yum will be anonymized (hashed) because ansible.builtin is not in collections.json
+    module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
+    
+    # Find the anonymized module (has Unknown collection_source and hashed name)
+    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Unknown']
+    assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
+    yum_module = anonymized_modules[0]
+    assert yum_module['jobs_total'] == 3, 'Should have 3 jobs using ansible.builtin.yum (anonymized)'
+    assert yum_module['unique_hosts_total'] == 2, 'Should have 2 hosts for ansible.builtin.yum (anonymized)'
+    assert yum_module['task_clean_success_total'] == 6, 'Should have 6 successful tasks for ansible.builtin.yum (3 jobs × 2 hosts)'
+    assert yum_module['task_success_with_reruns_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
+    assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
+    assert yum_module['processed_events_total'] == 6, 'Should have 6 processed events for ansible.builtin.yum (3 jobs × 2 hosts)'
+    assert yum_module['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {yum_module.get("controller_version")}'
+    # Module name should be hashed (64 char hex string)
+    assert len(yum_module['module_name']) == 64, 'Anonymized module name should be a 64-character hash'
+    assert all(c in '0123456789abcdef' for c in yum_module['module_name']), 'Anonymized module name should be hexadecimal'
+    
+    # Validate a10.acos_axapi.a10_slb_virtual_server module (not anonymized)
+    a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
+    assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
+    assert a10_module['jobs_total'] == 3, 'Should have 3 jobs using a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['unique_hosts_total'] == 2, 'Should have 2 hosts for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['task_clean_success_total'] == 6, 'Should have 6 successful tasks for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['task_success_with_reruns_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['task_failed_total'] == 0, 'Should have 0 failures for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['processed_events_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {a10_module.get("controller_version")}'
 
     # Validate collection_name_stats
     print('--- Validating collection_name_stats data values ---')
-    first_collection_stats = json_data['collection_name_stats'][0]
-    assert first_collection_stats['collection_name'] == 'a10.acos_axapi', 'Collection name should match'
-    assert first_collection_stats['collection_source'] == 'community', 'Collection should be from community'
-    assert first_collection_stats['jobs_total'] == 3, 'Collection should have 3 jobs'
-    assert 'controller_version' in first_collection_stats, 'Each collection_stat should have controller_version field'
-    assert isinstance(first_collection_stats['controller_version'], list), 'controller_version should be a list'
-    assert first_collection_stats['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {first_collection_stats.get("controller_version")}'
-    assert first_collection_stats['unique_hosts_total'] == 2, 'Collection should have 2 hosts'
-    assert first_collection_stats['task_clean_success_total'] == 6, 'Collection should have 6 successful tasks'
-    assert first_collection_stats['processed_events_total'] == 6, 'Collection should have 6 processed events (3 jobs × 2 hosts)'
+    # Find collections by name (order may vary)
+    # Note: ansible.builtin will be anonymized (hashed) because it's not in collections.json
+    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_name_stats']}
+    
+    # Validate a10.acos_axapi collection (not anonymized)
+    a10_collection = collection_stats_dict.get('a10.acos_axapi')
+    assert a10_collection is not None, 'Should have a10.acos_axapi collection'
+    assert a10_collection['collection_source'] == 'community', 'a10.acos_axapi collection should be from community'
+    assert a10_collection['jobs_total'] == 3, 'a10.acos_axapi collection should have 3 jobs'
+    assert 'controller_version' in a10_collection, 'Each collection_stat should have controller_version field'
+    assert isinstance(a10_collection['controller_version'], list), 'controller_version should be a list'
+    assert a10_collection['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {a10_collection.get("controller_version")}'
+    assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
+    assert a10_collection['task_clean_success_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
+    assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
+    
+    # Validate anonymized ansible.builtin collection (has Unknown collection_source and hashed name)
+    anonymized_collections = [c for c in json_data['collection_name_stats'] if c.get('collection_source') == 'Unknown']
+    assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
+    builtin_collection = anonymized_collections[0]
+    assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
+    assert builtin_collection['jobs_total'] == 3, 'ansible.builtin collection should have 3 jobs'
+    assert 'controller_version' in builtin_collection, 'Each collection_stat should have controller_version field'
+    assert isinstance(builtin_collection['controller_version'], list), 'controller_version should be a list'
+    assert builtin_collection['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {builtin_collection.get("controller_version")}'
+    assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
+    assert builtin_collection['task_clean_success_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
+    assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
+    # Collection name should be hashed (64 char hex string)
+    assert len(builtin_collection['collection_name']) == 64, 'Anonymized collection name should be a 64-character hash'
+    assert all(c in '0123456789abcdef' for c in builtin_collection['collection_name']), 'Anonymized collection name should be hexadecimal'
 
     # Validate playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
     print('--- Validating playbooks_total ---')

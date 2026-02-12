@@ -11,6 +11,7 @@ from django.db import connection
 
 from metrics_utility.library.collectors.controller.credentials_service import credentials_service
 from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
+from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
 from metrics_utility.test.util import run_gather_ext
@@ -128,8 +129,33 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
     actual_data = rows[1:]
     assert len(actual_data) == len(expected_data), f'\nRow count mismatch: expected {len(expected_data)}, got {len(actual_data)}'
 
+    # Sort both actual and expected data for consistent comparison
+    # Use available columns: job_id, host_id (if present), event (if present)
+    def get_sort_key(row, header_row):
+        """Create sort key from available columns."""
+        key_parts = []
+        # Always try job_id if present
+        if 'job_id' in header_row:
+            idx = header_row.index('job_id')
+            key_parts.append(row[idx] if idx < len(row) else '')
+        # Try host_id if present
+        if 'host_id' in header_row:
+            idx = header_row.index('host_id')
+            key_parts.append(row[idx] if idx < len(row) else '')
+        # Try event if present
+        if 'event' in header_row:
+            idx = header_row.index('event')
+            key_parts.append(row[idx] if idx < len(row) else '')
+        # Fallback: use first column if no standard columns found
+        if not key_parts and row:
+            key_parts.append(row[0] if row else '')
+        return tuple(key_parts or ('',))
+    
+    actual_data_sorted = sorted(actual_data, key=lambda r: get_sort_key(r, header))
+    expected_data_sorted = sorted(expected_data, key=lambda r: get_sort_key(r, header))
+
     skip_columns = set(skip_columns_names)
-    for i, (expected_row, actual_row) in enumerate(zip(expected_data, actual_data), start=1):
+    for i, (expected_row, actual_row) in enumerate(zip(expected_data_sorted, actual_data_sorted), start=1):
         for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
             col_name = header[idx]
             if col_name in skip_columns:
@@ -314,7 +340,7 @@ main_jobevent_service_lines = [
     'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,f,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -324,7 +350,7 @@ main_jobevent_service_lines = [
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -334,7 +360,7 @@ main_jobevent_service_lines = [
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,f,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -344,7 +370,7 @@ main_jobevent_service_lines = [
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -354,7 +380,7 @@ main_jobevent_service_lines = [
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -364,7 +390,7 @@ main_jobevent_service_lines = [
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
     '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
-    'UUID,,runner_on_start,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
     '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -399,18 +425,26 @@ main_jobevent_service_skip_columns = [
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_main_jobevent_service_command(cleanup_glob):
-    """Build and validate main_jobevent_service.csv contents in the generated tarball."""
-    # prepare env
+    """Build and validate main_jobevent_service output from new library collector."""
+    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
+    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
-    test_env = env_vars.copy()
-    test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-    test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_jobevent_service'
+    # Run the new collector directly
+    with tempfile.TemporaryDirectory() as tmpdir:
+        collector_instance = main_jobevent_service(db=connection, since=since, until=until, output_dir=tmpdir)
+        csv_files = collector_instance.gather()
 
-    # run the gather command
-    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+        # Find the main_jobevent_service CSV file (generated as main_jobevent_table.csv)
+        csv_file = None
+        for f in csv_files:
+            if 'main_jobevent_table.csv' in f or f.endswith('main_jobevent_table.csv'):
+                csv_file = f
+                break
 
-    # validate CSV inside generated tarball(s)
-    validate_csv_in_tarballs(file_paths, 'main_jobevent_service.csv', main_jobevent_service_lines, main_jobevent_service_skip_columns)
+        assert csv_file is not None, f'main_jobevent_service CSV not found in {csv_files}'
+
+        # Validate CSV content
+        validate_csv_file(csv_file, main_jobevent_service_lines, main_jobevent_service_skip_columns)
 
 
 execution_environments_lines = [

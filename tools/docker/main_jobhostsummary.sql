@@ -636,7 +636,7 @@ $yaml$,
       ) VALUES (
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-        'runner_on_start',
+        'runner_on_ok',
         event_data_1,
         false,
         false,
