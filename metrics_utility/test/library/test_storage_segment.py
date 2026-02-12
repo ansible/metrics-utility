@@ -22,23 +22,20 @@ class TestStorageSegmentAvailable:
         chunks = storage_segment._split_into_chunks(segment_data_large, storage_segment.REGULAR_MESSAGE_LIMIT)
 
         # assertions based on result
-        assert len(chunks) == 9
+        assert len(chunks) == 7
 
         # statistics is first key of first chunk
         assert 'statistics' in chunks[0]
-        assert 'modules_used_per_playbook' in chunks[1]
+        assert 'module_stats' in chunks[1]
         assert 'module_stats' in chunks[2]
         assert 'module_stats' in chunks[3]
-        assert 'module_stats' in chunks[4]
-        assert 'module_stats' in chunks[5]
-        assert 'collection_name_stats' in chunks[6]
-        assert 'jobs_by_job_type' in chunks[7]
-        assert 'job_host_summary' in chunks[8]
+        assert 'collection_name_stats' in chunks[4]
+        assert 'jobs_by_job_type' in chunks[5]
+        assert 'job_host_summary' in chunks[6]
 
-        assert len(chunks[2]['module_stats']) == 37
-        assert len(chunks[3]['module_stats']) == 37
-        assert len(chunks[4]['module_stats']) == 37
-        assert len(chunks[5]['module_stats']) == 1
+        assert len(chunks[1]['module_stats']) == 38
+        assert len(chunks[2]['module_stats']) == 38
+        assert len(chunks[3]['module_stats']) == 36
 
     def test_correct_splitting_for_large_data_with_bulk(self):
         storage_segment = StorageSegment(use_bulk=True)
@@ -113,9 +110,9 @@ class TestStorageSegmentAvailable:
         chunks = storage_segment.put(artifact_name='test_large_artifact', dict=segment_data_large, event_name='Test Large Event')
 
         # Assert
-        # Should split into 9 chunks as tested earlier
-        assert len(chunks) == 9
-        assert mock_analytics.track.call_count == 9
+        # Should split into 7 chunks as tested earlier
+        assert len(chunks) == 7
+        assert mock_analytics.track.call_count == 7
         assert mock_analytics.flush.call_count == 1
 
         # Verify chunk numbering in the calls
@@ -123,7 +120,7 @@ class TestStorageSegmentAvailable:
             call_kwargs = call[1]
             chunk_info = call_kwargs['properties']['chunk_info']
             assert chunk_info['chunk_number'] == i
-            assert chunk_info['total_chunks'] == 9
+            assert chunk_info['total_chunks'] == 7
 
     @patch('metrics_utility.library.storage.segment.analytics')
     @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
