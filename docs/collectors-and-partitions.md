@@ -511,15 +511,15 @@ All collectors leverage indexes where available:
 | Collector | Tables | Partitioned? | Partition Key | Time Range Support | Recommended Usage |
 |-----------|--------|---------------|---------------|-------------------|-------------------|
 | `execution_environments` | `main_executionenvironment` | ❌ | N/A | ❌ | Daily snapshot |
-| `job_host_summary_service` | `main_unifiedjob`, `main_jobhostsummary`, ... | ❌ | N/A | ✅ | ✅ **Preferred** |
+| `job_host_summary_service` | `main_unifiedjob`, `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization` | ❌ | N/A | ✅ | ✅ **Preferred** |
 | `main_jobevent_service` | `main_unifiedjob`, `main_jobevent` | ✅ | `job_created` (hourly) | ✅ | ✅ **Preferred** |
-| `unified_jobs` | `main_unifiedjob`, ... | ❌ | N/A | ✅ | ✅ **Preferred** |
+| `unified_jobs` | `main_unifiedjob`, `main_unifiedjobtemplate`, `django_content_type`, `main_job`, `main_inventory`, `main_organization`, `main_executionenvironment` | ❌ | N/A | ✅ | ✅ **Preferred** |
 | `main_jobevent` (legacy) | `main_jobhostsummary`, `main_jobevent` | ✅ | `job_created` (hourly) | ✅ | ⚠️ Legacy |
-| `job_host_summary` (legacy) | `main_jobhostsummary`, ... | ❌ | N/A | ✅ | ⚠️ Legacy |
+| `job_host_summary` (legacy) | `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ✅ | ⚠️ Legacy |
 | `config` | `conf_setting`, `main_instance` | ❌ | N/A | ❌ | Daily snapshot |
-| `main_host` | `main_host`, ... | ❌ | N/A | ❌ | Daily snapshot |
-| `main_host_daily` | `main_host`, ... | ❌ | N/A | ✅ | Incremental |
-| `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, ... | ❌ | N/A | ✅ | Incremental |
+| `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ❌ | Daily snapshot |
+| `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ✅ | Incremental |
+| `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | ❌ | N/A | ✅ | Incremental |
 
 ---
 
