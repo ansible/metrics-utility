@@ -419,8 +419,26 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Per-module counts
         # receiver of this data can easily calculate success rates
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(**common_aggregation)
+        # Compute tasks_total as sum of all task status totals
+        module_stats['tasks_total'] = (
+            module_stats['task_clean_success_total'] +
+            module_stats['task_success_with_reruns_total'] +
+            module_stats['task_failed_total'] +
+            module_stats['task_unreachable_total'] +
+            module_stats['task_skipped_total'] +
+            module_stats['task_failed_and_ignored_total']
+        )
         
         collection_name_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+        # Compute tasks_total as sum of all task status totals
+        collection_name_stats['tasks_total'] = (
+            collection_name_stats['task_clean_success_total'] +
+            collection_name_stats['task_success_with_reruns_total'] +
+            collection_name_stats['task_failed_total'] +
+            collection_name_stats['task_unreachable_total'] +
+            collection_name_stats['task_skipped_total'] +
+            collection_name_stats['task_failed_and_ignored_total']
+        )
 
         # Get hosts_automated_total from the dataframe by unioning all host_ids sets
         if not dataframe.empty and 'host_ids' in dataframe.columns:

@@ -413,6 +413,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['task_failed_and_ignored_total'] == 0
     assert copy_stats['task_skipped_total'] == 0
     assert copy_stats['task_unreachable_total'] == 0
+    assert copy_stats['tasks_total'] == 3
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['jobs_never_started_total'] == 0
     assert copy_stats['unique_hosts_total'] == 3
@@ -428,6 +429,7 @@ def test_events_modules_aggregations_basic():
     assert template_stats['task_failed_and_ignored_total'] == 0
     assert template_stats['task_skipped_total'] == 0
     assert template_stats['task_unreachable_total'] == 1
+    assert template_stats['tasks_total'] == 2
     assert template_stats['jobs_total'] == 2
     assert template_stats['jobs_never_started_total'] == 0
     assert template_stats['unique_hosts_total'] == 2
@@ -443,6 +445,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['task_failed_and_ignored_total'] == 0
     assert firewalld_stats['task_skipped_total'] == 0
     assert firewalld_stats['task_unreachable_total'] == 0
+    assert firewalld_stats['tasks_total'] == 2
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['jobs_never_started_total'] == 0
     assert firewalld_stats['unique_hosts_total'] == 2
@@ -458,6 +461,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['task_failed_and_ignored_total'] == 1
     assert ec2_stats['task_skipped_total'] == 1
     assert ec2_stats['task_unreachable_total'] == 0
+    assert ec2_stats['tasks_total'] == 4
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['jobs_never_started_total'] == 0
     assert ec2_stats['unique_hosts_total'] == 4
@@ -473,6 +477,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['task_failed_and_ignored_total'] == 0
     assert yum_stats['task_skipped_total'] == 0
     assert yum_stats['task_unreachable_total'] == 0
+    assert yum_stats['tasks_total'] == 3
     assert yum_stats['jobs_total'] == 3
     assert yum_stats['jobs_never_started_total'] == 1
     assert yum_stats['unique_hosts_total'] == 2
@@ -488,6 +493,7 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['task_failed_and_ignored_total'] == 0
     assert mongo_stats['task_skipped_total'] == 0
     assert mongo_stats['task_unreachable_total'] == 0
+    assert mongo_stats['tasks_total'] == 2
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['jobs_never_started_total'] == 0
     assert mongo_stats['unique_hosts_total'] == 2
@@ -503,6 +509,7 @@ def test_events_modules_aggregations_basic():
     assert custom_stats['task_failed_and_ignored_total'] == 0
     assert custom_stats['task_skipped_total'] == 0
     assert custom_stats['task_unreachable_total'] == 0
+    assert custom_stats['tasks_total'] == 1
     assert custom_stats['jobs_total'] == 1
     assert custom_stats['jobs_never_started_total'] == 0
     assert custom_stats['unique_hosts_total'] == 1
@@ -527,6 +534,7 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['task_failed_and_ignored_total'] == 0
     assert netcommon_coll['task_skipped_total'] == 0
     assert netcommon_coll['task_unreachable_total'] == 1
+    assert netcommon_coll['tasks_total'] == 2
     assert netcommon_coll['processed_events_total'] == 2  # Same as cli_config module (2 events)
 
     # ansible.posix
@@ -545,6 +553,7 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['task_failed_and_ignored_total'] == 0
     assert posix_coll['task_skipped_total'] == 0
     assert posix_coll['task_unreachable_total'] == 0
+    assert posix_coll['tasks_total'] == 2
     assert posix_coll['processed_events_total'] == 2  # Same as firewalld module (2 events)
 
     # ansible.windows
@@ -563,6 +572,7 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['task_failed_and_ignored_total'] == 0
     assert windows_coll['task_skipped_total'] == 0
     assert windows_coll['task_unreachable_total'] == 0
+    assert windows_coll['tasks_total'] == 3
     assert windows_coll['processed_events_total'] == 5  # Same as win_copy module (5 events)
 
     # community.aws
@@ -581,6 +591,7 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['task_failed_and_ignored_total'] == 1
     assert aws_coll['task_skipped_total'] == 1
     assert aws_coll['task_unreachable_total'] == 0
+    assert aws_coll['tasks_total'] == 4
     assert aws_coll['processed_events_total'] == 4  # Same as ec2 module (4 events)
 
     # community.general
@@ -599,6 +610,7 @@ def test_events_modules_aggregations_basic():
     assert general_coll['task_failed_and_ignored_total'] == 0
     assert general_coll['task_skipped_total'] == 0
     assert general_coll['task_unreachable_total'] == 0
+    assert general_coll['tasks_total'] == 3
     assert general_coll['processed_events_total'] == 3  # Same as yum module (3 events)
 
     # community.mongodb
@@ -617,6 +629,7 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['task_failed_and_ignored_total'] == 0
     assert mongodb_coll['task_skipped_total'] == 0
     assert mongodb_coll['task_unreachable_total'] == 0
+    assert mongodb_coll['tasks_total'] == 2
     assert mongodb_coll['processed_events_total'] == 3  # Same as insert module (3 events)
 
     # custom.user
@@ -635,6 +648,7 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['task_failed_and_ignored_total'] == 0
     assert custom_coll['task_skipped_total'] == 0
     assert custom_coll['task_unreachable_total'] == 0
+    assert custom_coll['tasks_total'] == 1
     assert custom_coll['processed_events_total'] == 1  # Same as collection module (1 event)
 
     # Verify warnings_total and deprecations_total

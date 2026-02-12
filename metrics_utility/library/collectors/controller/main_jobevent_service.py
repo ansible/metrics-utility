@@ -114,6 +114,7 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
             e.modified,
             e.job_created,
             uj.finished as job_finished,
+            uj.ansible_version,
             e.uuid,
             e.parent_uuid,
             e.event,
