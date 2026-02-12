@@ -20,18 +20,6 @@ def test_main_indirectmanagednodeaudit_basic():
     assert instance.kwargs['until'] == until
 
 
-def test_main_indirectmanagednodeaudit_with_output_dir():
-    """Test main_indirectmanagednodeaudit with custom output_dir."""
-    mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    output_dir = '/tmp/test_output'
-
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until, output_dir=output_dir)
-
-    assert instance.kwargs['output_dir'] == output_dir
-
-
 @patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
 def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
     """Test that main_indirectmanagednodeaudit calls copy_table."""
@@ -47,7 +35,6 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
     call_args = mock_copy_table.call_args
 
     assert call_args[1]['db'] == mock_db
-    assert call_args[1]['table'] == 'main_indirectmanagednodeaudit'
     assert 'query' in call_args[1]
     assert result == ['/tmp/main_indirectmanagednodeaudit_table.csv']
 

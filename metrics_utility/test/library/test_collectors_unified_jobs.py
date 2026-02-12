@@ -20,18 +20,6 @@ def test_unified_jobs_basic():
     assert instance.kwargs['until'] == until
 
 
-def test_unified_jobs_with_output_dir():
-    """Test unified_jobs with custom output_dir."""
-    mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    output_dir = '/tmp/test_output'
-
-    instance = unified_jobs(db=mock_db, since=since, until=until, output_dir=output_dir)
-
-    assert instance.kwargs['output_dir'] == output_dir
-
-
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_calls_copy_table(mock_copy_table):
     """Test that unified_jobs calls copy_table."""
@@ -47,7 +35,6 @@ def test_unified_jobs_calls_copy_table(mock_copy_table):
     call_args = mock_copy_table.call_args
 
     assert call_args[1]['db'] == mock_db
-    assert call_args[1]['table'] == 'unified_jobs'
     assert 'query' in call_args[1]
     assert result == ['/tmp/unified_jobs_table.csv']
 

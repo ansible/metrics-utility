@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def credentials_service(*, db=None, since=None, until=None, output_dir=None):
+def credentials_service(*, db=None, since=None, until=None):
     query = f"""
         SELECT
             main_credentialtype.name as credential_type,
@@ -19,4 +19,4 @@ def credentials_service(*, db=None, since=None, until=None, output_dir=None):
         ORDER BY main_unifiedjob.id ASC, main_credentialtype.name ASC
     """
 
-    return copy_table(db=db, table='credentials', query=query, output_dir=output_dir)
+    return copy_table(db=db, query=query)

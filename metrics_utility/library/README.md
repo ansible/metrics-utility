@@ -11,8 +11,8 @@ It provides an abstraction over collectors, packaging and storage, extraction, r
 
 Collector is python function which accepts params, gathers data, and returns it in one of the supported formats.
 
-It either returns a python dict, which gets serialized into JSON,
-or a list of filenames of temporary files it created.
+It either returns a python dict (for snapshot collectors like config),
+or a pandas DataFrame (for SQL-based collectors).
 
 It's exported decorated to wrap calls into BaseCollector subclass instances, so that param passing can happen separately from .gather().
 The wrapper ensures that any calls to `my_collector(db=connection).gather()` do the same thing as an undecorated `my_collector(db=connection)` - this is so that initialization can happen before db locks are acquired.
@@ -28,14 +28,15 @@ Currently supported:
 
 Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `config(db, billing_provider_params).gather() -> Dict`
-* `execution_environments(db, [output_dir]).gather() -> [filenames]`
-* `job_host_summary(db, since, until, [output_dir]).gather() -> [filenames]`
-* `job_host_summary_service(db, since, until, [output_dir]).gather() -> [filenames]`
-* `main_host(db, [output_dir]).gather() -> [filenames]`
-* `main_indirectmanagednodeaudit(db, since, until, [output_dir]).gather() -> [filenames]`
-* `main_jobevent(db, since, until, [output_dir]).gather() -> [filenames]`
-* `main_jobevent_service(db, since, until, [output_dir]).gather() -> [filenames]`
-* `unified_jobs(db, since, until, [output_dir]).gather() -> [filenames]`
+* `execution_environments(db).gather() -> DataFrame`
+* `job_host_summary(db, since, until).gather() -> DataFrame`
+* `job_host_summary_service(db, since, until).gather() -> DataFrame`
+* `main_host(db).gather() -> DataFrame`
+* `main_host_daily(db, since, until).gather() -> DataFrame`
+* `main_indirectmanagednodeaudit(db, since, until).gather() -> DataFrame`
+* `main_jobevent(db, since, until).gather() -> DataFrame`
+* `main_jobevent_service(db, since, until).gather() -> DataFrame`
+* `unified_jobs(db, since, until).gather() -> DataFrame`
 
 Other collectors (in `metrics_utility.library.collectors.others`):
 * `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`

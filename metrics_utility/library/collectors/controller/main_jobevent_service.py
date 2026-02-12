@@ -4,7 +4,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
+def main_jobevent_service(*, db=None, since=None, until=None):
     """
     Collects job events for jobs that finished in the given time window.
 
@@ -160,4 +160,4 @@ def main_jobevent_service(*, db=None, since=None, until=None, output_dir=None):
         WHERE {where_clause}
     """
 
-    return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir)
+    return copy_table(db=db, query=query)

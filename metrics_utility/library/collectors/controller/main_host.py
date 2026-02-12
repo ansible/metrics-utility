@@ -87,13 +87,13 @@ def _main_host_query(where):
 
 
 @collector
-def main_host(*, db=None, output_dir=None):
+def main_host(*, db=None):
     query = _main_host_query("enabled='t'")
-    return copy_table(db=db, table='main_host', query=query, prepend_query=True, output_dir=output_dir)
+    return copy_table(db=db, query=query, prepend_query=True)
 
 
 @collector
-def main_host_daily(*, db=None, since=None, until=None, output_dir=None):
+def main_host_daily(*, db=None, since=None, until=None):
     # prefer running with until=False, to not skip hosts that keep being modified
 
     where = f"""
@@ -102,4 +102,4 @@ def main_host_daily(*, db=None, since=None, until=None, output_dir=None):
         OR {date_where('main_host.modified', since, until)})
     """
     query = _main_host_query(where)
-    return copy_table(db=db, table='main_host_daily', query=query, prepend_query=True, output_dir=output_dir)
+    return copy_table(db=db, query=query, prepend_query=True)

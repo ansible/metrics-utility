@@ -20,18 +20,6 @@ def test_main_jobevent_service_basic():
     assert instance.kwargs['until'] == until
 
 
-def test_main_jobevent_service_with_output_dir():
-    """Test main_jobevent_service with custom output_dir."""
-    mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    output_dir = '/tmp/test_output'
-
-    instance = main_jobevent_service(db=mock_db, since=since, until=until, output_dir=output_dir)
-
-    assert instance.kwargs['output_dir'] == output_dir
-
-
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     """Test that collector returns empty CSV with headers when no jobs are found."""
@@ -67,8 +55,6 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     """Test that collector calls copy_table when jobs are found."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
-    # Configure mock cursor to simulate psycopg3 (no copy_expert method)
-    del mock_cursor.copy_expert
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
     mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
@@ -90,7 +76,6 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     call_args = mock_copy_table.call_args
 
     assert call_args[1]['db'] == mock_db
-    assert call_args[1]['table'] == 'main_jobevent'
     assert 'query' in call_args[1]
     assert result == ['/tmp/main_jobevent_table.csv']
 
@@ -100,8 +85,6 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
-    # Configure mock cursor to simulate psycopg3 (no copy_expert method)
-    del mock_cursor.copy_expert
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
     mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
@@ -211,8 +194,6 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
     """Test that query handles playbook_on_stats event specially."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
-    # Configure mock cursor to simulate psycopg3 (no copy_expert method)
-    del mock_cursor.copy_expert
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
     mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
 

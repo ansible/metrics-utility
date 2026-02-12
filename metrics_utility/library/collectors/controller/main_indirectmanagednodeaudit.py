@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output_dir=None):
+def main_indirectmanagednodeaudit(*, db=None, since=None, until=None):
     where = ' AND '.join(
         [
             f"main_indirectmanagednodeaudit.created >= '{since.isoformat()}'",
@@ -40,4 +40,4 @@ def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output_dir
         ORDER BY main_indirectmanagednodeaudit.created ASC
     """
 
-    return copy_table(db=db, table='main_indirectmanagednodeaudit', query=query, output_dir=output_dir)
+    return copy_table(db=db, query=query)

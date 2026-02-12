@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def job_host_summary_service(*, db=None, since=None, until=None, output_dir=None):
+def job_host_summary_service(*, db=None, since=None, until=None):
     where = ' AND '.join(
         [
             f"mu.finished >= '{since.isoformat()}'",
@@ -85,4 +85,4 @@ def job_host_summary_service(*, db=None, since=None, until=None, output_dir=None
         ORDER BY mu.finished ASC
     """
 
-    return copy_table(db=db, table='main_jobhostsummary', query=query, prepend_query=True, output_dir=output_dir)
+    return copy_table(db=db, query=query, prepend_query=True)

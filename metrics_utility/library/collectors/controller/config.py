@@ -96,10 +96,10 @@ def _get_install_type():
     return 'traditional'
 
 
+# FIXME: psycopg.sql
 def _get_controller_settings(db, keys):
     settings = {}
     with db.cursor() as cursor:
-        # FIXME: psycopg.sql ?
         in_sql = "'" + "', '".join(keys) + "'"
         cursor.execute(f'SELECT key, value FROM conf_setting WHERE key IN ({in_sql})')
         for key, value in cursor.fetchall():

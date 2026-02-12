@@ -1,12 +1,8 @@
-import os
-import pathlib
-import tempfile
-
 from unittest.mock import MagicMock
 
 import pytest
 
-from metrics_utility.library.collectors.util import collector, init_tmp_dir
+from metrics_utility.library.collectors.util import collector
 
 
 def test_collector_decorator_basic():
@@ -121,68 +117,6 @@ def test_collector_decorator_staticmethod():
     assert hasattr(instance, 'fn')
     # Can call the original function directly
     assert instance.fn(value=10) == 20
-
-
-def test_init_tmp_dir():
-    """Test that init_tmp_dir creates proper directory structure."""
-    result = init_tmp_dir()
-
-    # Should return a Path object
-    assert isinstance(result, pathlib.Path)
-
-    # Directory should exist
-    assert result.exists()
-    assert result.is_dir()
-
-    # Should be named 'stage'
-    assert result.name == 'stage'
-
-    # Parent should have 'awx_analytics-' prefix
-    assert 'awx_analytics-' in result.parent.name
-
-    # Parent should be in temp directory
-    assert str(result.parent).startswith(tempfile.gettempdir())
-
-    # Cleanup
-    import shutil
-
-    shutil.rmtree(result.parent)
-
-
-def test_init_tmp_dir_permissions():
-    """Test that stage directory has correct permissions."""
-    result = init_tmp_dir()
-
-    # Check permissions (0o700)
-    stat_info = os.stat(result)
-    permissions = oct(stat_info.st_mode)[-3:]
-
-    assert permissions == '700'
-
-    # Cleanup
-    import shutil
-
-    shutil.rmtree(result.parent)
-
-
-def test_init_tmp_dir_unique():
-    """Test that init_tmp_dir creates unique directories."""
-    dir1 = init_tmp_dir()
-    dir2 = init_tmp_dir()
-
-    # Should be different directories
-    assert dir1 != dir2
-    assert dir1.parent != dir2.parent
-
-    # Both should exist
-    assert dir1.exists()
-    assert dir2.exists()
-
-    # Cleanup
-    import shutil
-
-    shutil.rmtree(dir1.parent)
-    shutil.rmtree(dir2.parent)
 
 
 def test_collector_decorator_exception_handling():

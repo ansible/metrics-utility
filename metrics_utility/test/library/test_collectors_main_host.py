@@ -14,16 +14,6 @@ def test_main_host_basic():
     assert instance.kwargs['db'] == mock_db
 
 
-def test_main_host_with_output_dir():
-    """Test main_host with custom output_dir."""
-    mock_db = MagicMock()
-    output_dir = '/tmp/test_output'
-
-    instance = main_host(db=mock_db, output_dir=output_dir)
-
-    assert instance.kwargs['output_dir'] == output_dir
-
-
 @patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_calls_copy_table(mock_copy_table):
     """Test that main_host calls copy_table with correct parameters."""
@@ -37,7 +27,6 @@ def test_main_host_calls_copy_table(mock_copy_table):
     call_args = mock_copy_table.call_args
 
     assert call_args[1]['db'] == mock_db
-    assert call_args[1]['table'] == 'main_host'
     assert call_args[1]['prepend_query'] is True
     assert 'query' in call_args[1]
     assert result == ['/tmp/main_host_table.csv']
