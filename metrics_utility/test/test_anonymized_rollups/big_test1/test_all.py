@@ -450,6 +450,15 @@ def test_all_jobs_combined(cleanup_test_data):
         assert 'processed_events_total' in module, 'Each module should have processed_events_total field'
         assert isinstance(module['processed_events_total'], (int, float)), 'processed_events_total should be a number'
         assert module['processed_events_total'] > 0, 'processed_events_total should be positive'
+        assert 'controller_version' in module, 'Each module should have controller_version field'
+        assert isinstance(module['controller_version'], list), 'controller_version should be a list'
+        # controller_version should contain the ansible_version values from the jobs
+        # Jobs 1-3: 2.15.0, Job 4: 2.16.0, Job 5: 2.16.0, Job 6: 2.17.0, Job 7: 2.18.0, Job 8: 2.19.0
+        assert len(module['controller_version']) > 0, 'controller_version should not be empty'
+        # Verify all versions are valid (should be in the expected set)
+        expected_versions = {'2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'}
+        for version in module['controller_version']:
+            assert version in expected_versions, f'Unexpected controller_version {version} in module {module.get("module_name")}'
 
     # ========== Validate Collection Stats ==========
     collection_stats = result['collection_name_stats']
@@ -465,6 +474,14 @@ def test_all_jobs_combined(cleanup_test_data):
         assert 'processed_events_total' in collection, 'Each collection should have processed_events_total field'
         assert isinstance(collection['processed_events_total'], (int, float)), 'processed_events_total should be a number'
         assert collection['processed_events_total'] > 0, 'processed_events_total should be positive'
+        assert 'controller_version' in collection, 'Each collection should have controller_version field'
+        assert isinstance(collection['controller_version'], list), 'controller_version should be a list'
+        # controller_version should contain the ansible_version values from the jobs
+        assert len(collection['controller_version']) > 0, 'controller_version should not be empty'
+        # Verify all versions are valid (should be in the expected set)
+        expected_versions = {'2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'}
+        for version in collection['controller_version']:
+            assert version in expected_versions, f'Unexpected controller_version {version} in collection {collection.get("collection_name")}'
 
     # ========== Validate Playbooks ==========
     # modules_used_per_playbook is computed but not included in final output

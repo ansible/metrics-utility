@@ -171,6 +171,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
         'warnings': '["Copy operation completed but file size differs"]',
         'deprecations': None,
     },
@@ -187,6 +188,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -201,6 +203,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host2 - Task 1 ok, Task 2 failed then ok (retry successful), Task 3 ok
     {
@@ -216,6 +219,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -230,6 +234,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -244,6 +249,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -258,6 +264,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host3 - Task 1 failed then ok (retry successful), Task 2 dark (unreachable), Task 3 ok
     {
@@ -273,6 +280,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -287,6 +295,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -301,6 +310,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -315,6 +325,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host4 - Task 1 ok, Task 2 ok, Task 3 failed (1st attempt) -> failed (2nd attempt) -> ok (retry successful on 3rd attempt)
     {
@@ -330,6 +341,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -344,6 +356,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -358,6 +371,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -372,6 +386,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 2,
@@ -386,6 +401,7 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Job-level warning event
     {
@@ -401,5 +417,6 @@ events = [
         'job_failed': False,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
 ]

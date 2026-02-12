@@ -170,6 +170,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -184,6 +185,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
         'warnings': '["File permissions may be too permissive"]',
         'deprecations': None,
     },
@@ -200,6 +202,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host2 - Task 1 failed then ok (retry successful), Task 2 ok, Task 3 ok
     {
@@ -215,6 +218,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -229,6 +233,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -243,6 +248,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -257,6 +263,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
         'warnings': None,
         'deprecations': '["The yum module is deprecated, use dnf instead"]',
     },
@@ -274,6 +281,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -288,6 +296,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -302,6 +311,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -316,6 +326,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host4 - Task 1 ok, Task 2 ok, Task 3 failed (3 attempts, all failed)
     {
@@ -331,6 +342,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -345,6 +357,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -359,6 +372,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
         'warnings': '["Package installation failed", "Check repository configuration"]',
         'deprecations': '["The yum module is deprecated, use dnf instead"]',
     },
@@ -375,6 +389,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 1,
@@ -389,6 +404,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Job-level warning event
     {
@@ -404,5 +420,6 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
 ]

@@ -180,6 +180,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -194,6 +195,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
         'warnings': None,
         'deprecations': '["Git module will be removed in Ansible 2.20"]',
     },
@@ -210,6 +212,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -224,6 +227,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host2 - Task 1 ok, Task 2 failed then ok (retry successful), Task 3 ok, Task 4 ok
     {
@@ -239,6 +243,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -253,6 +258,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -267,6 +273,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -281,6 +288,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -295,6 +303,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host3 - Task 1 ok, Task 2 ok, Task 3 dark (unreachable), Task 4 ok
     {
@@ -310,6 +319,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -324,6 +334,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -338,6 +349,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -352,6 +364,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Host4 - Task 1 ok, Task 2 ok, Task 3 failed (3 attempts, all failed), Task 4 ok
     {
@@ -367,6 +380,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -381,6 +395,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -395,6 +410,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -409,6 +425,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -423,6 +440,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     {
         'job_id': 3,
@@ -437,6 +455,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
     # Job-level deprecated event
     {
@@ -452,5 +471,6 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.15.0',
     },
 ]

@@ -172,6 +172,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -186,6 +187,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -200,6 +202,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
         'warnings': '["Yum repository cache may be stale"]',
         'deprecations': '["The yum module is deprecated, use dnf instead"]',
     },
@@ -217,6 +220,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -231,6 +235,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -245,6 +250,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -259,6 +265,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -273,6 +280,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     # Host3 - Task 1 dark (unreachable), Task 2 ok, Task 3 ok
     {
@@ -288,6 +296,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -302,6 +311,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -316,6 +326,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     # Host4 - Task 1 ok, Task 2 ok, Task 3 failed (3 attempts, all failed)
     {
@@ -331,6 +342,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -345,6 +357,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -359,6 +372,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -373,6 +387,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     {
         'job_id': 4,
@@ -387,6 +402,7 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
     # Job-level warning event
     {
@@ -402,5 +418,6 @@ events = [
         'job_failed': True,
         'resolved_action': None,
         'ignore_errors': False,
+        'ansible_version': '2.16.0',
     },
 ]

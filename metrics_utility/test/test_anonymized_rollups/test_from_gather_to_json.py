@@ -165,6 +165,17 @@ def test_from_gather_to_json(cleanup_glob):
             assert 'unique_hosts_total' in module_stat
             assert 'processed_events_total' in module_stat
             assert 'controller_version' in module_stat, 'Each module_stat should have controller_version field'
+            assert isinstance(module_stat['controller_version'], list), 'controller_version should be a list'
+
+    # Validate collection_name_stats have required fields
+    if json_data['collection_name_stats']:
+        for collection_stat in json_data['collection_name_stats']:
+            assert 'collection_name' in collection_stat
+            assert 'collection_source' in collection_stat
+            assert 'jobs_total' in collection_stat
+            assert 'processed_events_total' in collection_stat
+            assert 'controller_version' in collection_stat, 'Each collection_stat should have controller_version field'
+            assert isinstance(collection_stat['controller_version'], list), 'controller_version should be a list'
 
     # Validate jobs_by_job_type have required fields (now grouped by job_type, merged with job_host_summary)
     if json_data['jobs_by_job_type']:
@@ -250,6 +261,9 @@ def test_from_gather_to_json(cleanup_glob):
     assert first_collection_stats['collection_name'] == 'a10.acos_axapi', 'Collection name should match'
     assert first_collection_stats['collection_source'] == 'community', 'Collection should be from community'
     assert first_collection_stats['jobs_total'] == 3, 'Collection should have 3 jobs'
+    assert 'controller_version' in first_collection_stats, 'Each collection_stat should have controller_version field'
+    assert isinstance(first_collection_stats['controller_version'], list), 'controller_version should be a list'
+    assert first_collection_stats['controller_version'] == ['2.9.10'], f'Expected controller_version to be ["2.9.10"], got {first_collection_stats.get("controller_version")}'
     assert first_collection_stats['unique_hosts_total'] == 2, 'Collection should have 2 hosts'
     assert first_collection_stats['task_clean_success_total'] == 6, 'Collection should have 6 successful tasks'
     assert first_collection_stats['processed_events_total'] == 6, 'Collection should have 6 processed events (3 jobs × 2 hosts)'
