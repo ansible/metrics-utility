@@ -26,7 +26,7 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
             }
 
         execution_environments_total = int(len(dataframe))
-        dataframe['managed'] = dataframe['managed'].map({'t': True, 'f': False})
+        dataframe['managed'] = dataframe['managed'].map({'t': True, 'f': False, True: True, False: False})
         execution_environments_default_total = int(dataframe['managed'].sum())
         execution_environments_custom_total = execution_environments_total - execution_environments_default_total
 
