@@ -209,6 +209,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             & (dataframe['playbook'].str.strip() != '')
         ]
 
+        # rename ansible_version to controller_version, the fast way
+        # change the metadata, no dataframe copy
+        dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
+
         # Select only the columns needed for analysis to save memory
         columns_to_keep = [
             'job_id',
@@ -229,7 +233,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'task_skipped_event',
             'event',
             'is_warning',
-            'is_deprecation'
+            'is_deprecation',
+            'controller_version',
         ]
 
         dataframe = dataframe[columns_to_keep]
@@ -254,6 +259,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 warnings_total=('is_warning', 'sum'),
                 deprecations_total=('is_deprecation', 'sum'),
                 processed_events_total=('event', 'size'),
+                controller_version=('controller_version', 'first'),
            )
             .assign(
                 # mutually exclusive categories - only one can be true
@@ -294,6 +300,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             warnings_total=('warnings_total', 'sum'),
             deprecations_total=('deprecations_total', 'sum'),
             processed_events_total=('processed_events_total', 'sum'),
+            controller_version=('controller_version', 'first'),
         )
 
         return {
@@ -367,6 +374,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             warnings_total=('warnings_total', 'sum'),
             deprecations_total=('deprecations_total', 'sum'),
             processed_events_total=('processed_events_total', 'sum'),
+            controller_version=('controller_version', 'first'),
         )
 
         # Modules used to automate
@@ -414,6 +422,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'warnings_total': ('warnings_total', 'sum'),
             'deprecations_total': ('deprecations_total', 'sum'),
             'processed_events_total': ('processed_events_total', 'sum'),
+            # this should be set of controller versions
+            'controller_version': ('controller_version', lambda x: set(x.dropna())),
         }
 
         # Per-module counts
