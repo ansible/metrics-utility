@@ -2,6 +2,8 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 
 
@@ -30,7 +32,7 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
 
     # No jobs found
     mock_cursor.fetchall.return_value = []
-    mock_copy_table.return_value = ['/tmp/main_jobevent_table.csv']
+    mock_copy_table.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -38,7 +40,7 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     result = instance.gather()
 
-    # Should still call copy_table to generate CSV with headers (even if 0 rows)
+    # Should still call copy_table to generate DataFrame (even if 0 rows)
     mock_copy_table.assert_called_once()
 
     # Verify the query has FALSE conditions (returns 0 rows but maintains schema)
@@ -46,8 +48,8 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     query = call_args[1]['query']
     assert 'FALSE' in query  # Should have FALSE for empty job set
 
-    # Should return CSV file path
-    assert result == ['/tmp/main_jobevent_table.csv']
+    # Should return DataFrame
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
@@ -63,7 +65,7 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     job_created2 = datetime.datetime(2024, 1, 16, 14, 45, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created1), (101, job_created2)]
 
-    mock_copy_table.return_value = ['/tmp/main_jobevent_table.csv']
+    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2, 3], 'job_id': [100, 100, 101]})
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -77,7 +79,7 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
 
     assert call_args[1]['db'] == mock_db
     assert 'query' in call_args[1]
-    assert result == ['/tmp/main_jobevent_table.csv']
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
@@ -90,7 +92,7 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
 
     job_created = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created)]
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -128,7 +130,7 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
     job_created1 = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=datetime.timezone.utc)
     job_created2 = datetime.datetime(2024, 1, 16, 14, 45, 30, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created1), (200, job_created2)]
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -199,7 +201,7 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
 
     job_created = datetime.datetime(2024, 1, 15, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created)]
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)

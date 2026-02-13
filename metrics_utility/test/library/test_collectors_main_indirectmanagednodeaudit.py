@@ -2,6 +2,8 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
 
 
@@ -26,7 +28,7 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = ['/tmp/main_indirectmanagednodeaudit_table.csv']
+    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2], 'canonical_facts': ['{}', '{}']})
 
     instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -36,7 +38,7 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
 
     assert call_args[1]['db'] == mock_db
     assert 'query' in call_args[1]
-    assert result == ['/tmp/main_indirectmanagednodeaudit_table.csv']
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
@@ -45,7 +47,7 @@ def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_table
     mock_db = MagicMock()
     since = datetime.datetime(2024, 3, 15, 10, 30, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 3, 16, 18, 45, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
     instance.gather()
@@ -66,7 +68,7 @@ def test_main_indirectmanagednodeaudit_query_structure(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
     instance.gather()

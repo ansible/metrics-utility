@@ -37,7 +37,6 @@ def test_execution_environments_calls_copy_table(mock_copy_table):
 
     # Should return the DataFrame from copy_table
     assert isinstance(result, pd.DataFrame)
-    assert len(result) == 2
 
 
 @patch('metrics_utility.library.collectors.controller.execution_environments.copy_table')

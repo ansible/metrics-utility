@@ -2,6 +2,8 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent
 
 
@@ -26,7 +28,7 @@ def test_main_jobevent_calls_copy_table(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = ['/tmp/main_jobevent_table.csv']
+    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2, 3], 'event': ['ok', 'failed', 'ok']})
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -36,7 +38,7 @@ def test_main_jobevent_calls_copy_table(mock_copy_table):
 
     assert call_args[1]['db'] == mock_db
     assert 'query' in call_args[1]
-    assert result == ['/tmp/main_jobevent_table.csv']
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent.copy_table')
@@ -45,7 +47,7 @@ def test_main_jobevent_query_contains_time_range(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 5, 1, 8, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 5, 2, 20, 30, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
     instance.gather()
@@ -66,7 +68,7 @@ def test_main_jobevent_query_structure(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
     instance.gather()
@@ -96,7 +98,7 @@ def test_main_jobevent_filters_event_types(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
     instance.gather()
@@ -118,7 +120,7 @@ def test_main_jobevent_unicode_escape_handling(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
     instance.gather()

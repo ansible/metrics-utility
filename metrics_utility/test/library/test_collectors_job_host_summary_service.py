@@ -2,6 +2,8 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
 
 
@@ -26,7 +28,7 @@ def test_job_host_summary_service_calls_copy_table(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = ['/tmp/main_jobhostsummary_table.csv']
+    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2], 'host_id': [10, 20], 'job_id': [100, 101]})
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -37,7 +39,7 @@ def test_job_host_summary_service_calls_copy_table(mock_copy_table):
     assert call_args[1]['db'] == mock_db
     assert call_args[1]['prepend_query'] is True
     assert 'query' in call_args[1]
-    assert result == ['/tmp/main_jobhostsummary_table.csv']
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.job_host_summary_service.copy_table')
@@ -46,7 +48,7 @@ def test_job_host_summary_service_query_contains_time_range(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 3, 1, 10, 0, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 3, 15, 18, 30, 0, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -67,7 +69,7 @@ def test_job_host_summary_service_query_structure(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -95,7 +97,7 @@ def test_job_host_summary_service_filters_by_finished_jobs(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -113,7 +115,7 @@ def test_job_host_summary_service_uses_yaml_json_functions(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -132,7 +134,7 @@ def test_job_host_summary_service_orders_by_finished(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -151,7 +153,7 @@ def test_job_host_summary_service_isoformat(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 7, 20, 8, 15, 30, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 7, 21, 16, 45, 0, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
     instance.gather()

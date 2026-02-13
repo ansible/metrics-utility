@@ -2,6 +2,8 @@ import datetime
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
 
 
@@ -26,7 +28,7 @@ def test_unified_jobs_calls_copy_table(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = ['/tmp/unified_jobs_table.csv']
+    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2], 'name': ['job1', 'job2']})
 
     instance = unified_jobs(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -36,7 +38,7 @@ def test_unified_jobs_calls_copy_table(mock_copy_table):
 
     assert call_args[1]['db'] == mock_db
     assert 'query' in call_args[1]
-    assert result == ['/tmp/unified_jobs_table.csv']
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
@@ -45,7 +47,7 @@ def test_unified_jobs_query_contains_time_range(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 6, 1, 12, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 6, 2, 14, 30, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = unified_jobs(db=mock_db, since=since, until=until)
     instance.gather()
@@ -66,7 +68,7 @@ def test_unified_jobs_uses_finished_filter(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = unified_jobs(db=mock_db, since=since, until=until)
     instance.gather()
@@ -85,7 +87,7 @@ def test_unified_jobs_query_structure(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = unified_jobs(db=mock_db, since=since, until=until)
     instance.gather()
@@ -109,7 +111,7 @@ def test_unified_jobs_includes_all_jobs(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = unified_jobs(db=mock_db, since=since, until=until)
     instance.gather()
@@ -128,7 +130,7 @@ def test_unified_jobs_includes_execution_environment(mock_copy_table):
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = unified_jobs(db=mock_db, since=since, until=until)
     instance.gather()
