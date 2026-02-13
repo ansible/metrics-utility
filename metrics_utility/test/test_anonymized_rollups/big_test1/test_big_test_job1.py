@@ -18,7 +18,7 @@ Job Final Outcome: failed (because Host4 failed)
 
 import json
 import os
-import shutil
+import tempfile
 
 from datetime import datetime
 
@@ -32,13 +32,8 @@ from metrics_utility.test.test_anonymized_rollups.big_test1.job1 import events, 
 
 def test_big_test1():
     """Test anonymized rollups for Job 1 scenario."""
-    # Create temporary directory for CSV files
-    test_dir = '/tmp/test_big_test1'
-    if os.path.exists(test_dir):
-        shutil.rmtree(test_dir)
-    os.makedirs(test_dir)
-
-    try:
+    # Create temporary directory for CSV files using tempfile
+    with tempfile.TemporaryDirectory(prefix='test_big_test1_') as test_dir:
         # Create DataFrames and write to CSV files
         jobs_csv = os.path.join(test_dir, 'jobs.csv')
         events_csv = os.path.join(test_dir, 'events.csv')
@@ -137,8 +132,3 @@ def test_big_test1():
         # Pretty print the anonymized rollup result
         json_content = json.dumps(result, indent=2, default=str)
         print(json_content)
-
-    finally:
-        # Cleanup
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)

@@ -18,7 +18,7 @@ Job Final Outcome: successful (job succeeded, but Host3 is unreachable due to da
 
 import json
 import os
-import shutil
+import tempfile
 
 from datetime import datetime
 
@@ -32,13 +32,8 @@ from metrics_utility.test.test_anonymized_rollups.big_test1.job2 import events, 
 
 def test_big_test2():
     """Test anonymized rollups for Job 2 scenario."""
-    # Create temporary directory for CSV files
-    test_dir = '/tmp/test_big_test2'
-    if os.path.exists(test_dir):
-        shutil.rmtree(test_dir)
-    os.makedirs(test_dir)
-
-    try:
+    # Create temporary directory for CSV files using tempfile
+    with tempfile.TemporaryDirectory(prefix='test_big_test2_') as test_dir:
         # Create DataFrames and write to CSV files
         jobs_csv = os.path.join(test_dir, 'jobs.csv')
         events_csv = os.path.join(test_dir, 'events.csv')
@@ -137,8 +132,3 @@ def test_big_test2():
         # Pretty print the anonymized rollup result
         json_content = json.dumps(result, indent=2, default=str)
         print(json_content)
-
-    finally:
-        # Cleanup
-        if os.path.exists(test_dir):
-            shutil.rmtree(test_dir)
