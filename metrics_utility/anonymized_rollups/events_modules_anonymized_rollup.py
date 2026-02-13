@@ -495,11 +495,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Note: task_summary already has collection_name/collection_source from the MODULE,
         # but for role_stats we need the ROLE's collection (which may differ from the module's collection)
         # Convert role to string first to avoid categorical issues
-        task_summary['role_collection_name'] = task_summary['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
+        task_summary['role_collection_name'] = (
+            task_summary['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
+        )
         # Map role collection_name to collection_source - convert to string first, then fillna, then convert to categorical
         role_collection_source_str = task_summary['role_collection_name'].astype(str).map(self.collections)
         task_summary['role_collection_source'] = role_collection_source_str.fillna('Unknown')
-        
+
         # Convert role collection columns to categorical for memory efficiency
         # Ensure 'Unknown' is included in role_collection_source categories
         if 'role_collection_name' in task_summary.columns:
@@ -536,12 +538,20 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Convert categorical columns back to strings before JSON serialization
         # This ensures JSON output contains strings, not categorical codes
-        categorical_columns = ['module_name', 'collection_name', 'collection_source', 'playbook', 'role', 'role_collection_name', 'role_collection_source']
+        categorical_columns = [
+            'module_name',
+            'collection_name',
+            'collection_source',
+            'playbook',
+            'role',
+            'role_collection_name',
+            'role_collection_source',
+        ]
         for df in [list_of_modules_used_to_automate, module_stats, collection_stats, role_stats]:
             for col in categorical_columns:
                 if col in df.columns and df[col].dtype.name == 'category':
                     df[col] = df[col].astype(str)
-        
+
         # Convert playbook index to string if it's categorical
         if modules_used_per_playbook_total.index.dtype.name == 'category':
             modules_used_per_playbook_total.index = modules_used_per_playbook_total.index.astype(str)
