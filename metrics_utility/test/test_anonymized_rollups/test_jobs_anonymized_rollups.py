@@ -395,7 +395,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_9_0['jobs_failed_total'] == 0
     assert rec_2_9_0['jobs_never_started_total'] == 0
     assert rec_2_9_0['job_type_total'] == 1  # Only 'job' type
-    assert rec_2_9_0['launch_type_manual_total'] == 1  # manual launch type
     assert rec_2_9_0['templates_total'] == 1  # Template T1
     assert rec_2_9_0['jobs_duration_total_seconds'] == pytest.approx(3.0, rel=1e-6)
     assert rec_2_9_0['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
@@ -405,7 +404,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_10_0['jobs_failed_total'] == 1
     assert rec_2_10_0['jobs_never_started_total'] == 0
     assert rec_2_10_0['job_type_total'] == 1  # Only 'job' type
-    assert rec_2_10_0['launch_type_scheduled_total'] == 1  # scheduled launch type
     assert rec_2_10_0['templates_total'] == 1  # Template T1
     assert rec_2_10_0['jobs_duration_total_seconds'] == pytest.approx(5.0, rel=1e-6)
     assert rec_2_10_0['job_waiting_time_total_seconds'] == pytest.approx(2.0, rel=1e-6)
@@ -415,7 +413,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_11_0['jobs_failed_total'] == 0
     assert rec_2_11_0['jobs_never_started_total'] == 0
     assert rec_2_11_0['job_type_total'] == 1  # Only 'workflowjob' type
-    assert rec_2_11_0['launch_type_workflow_total'] == 1  # workflow launch type
     assert rec_2_11_0['templates_total'] == 1  # Template T2
     assert rec_2_11_0['jobs_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
     assert rec_2_11_0['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
@@ -425,7 +422,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_12_0['jobs_failed_total'] == 0
     assert rec_2_12_0['jobs_never_started_total'] == 0
     assert rec_2_12_0['job_type_total'] == 1  # Only 'job' type
-    assert rec_2_12_0['launch_type_callback_total'] == 1  # callback launch type
     assert rec_2_12_0['templates_total'] == 1  # Template T1
     assert rec_2_12_0['jobs_duration_total_seconds'] == pytest.approx(2.0, rel=1e-6)
     assert rec_2_12_0['job_waiting_time_total_seconds'] == pytest.approx(1.0, rel=1e-6)
@@ -435,7 +431,6 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_14_0['jobs_failed_total'] == 1
     assert rec_2_14_0['jobs_never_started_total'] == 1  # Job 6 never started
     assert rec_2_14_0['job_type_total'] == 1  # Only 'adhoccommand' type
-    assert rec_2_14_0['launch_type_scheduled_total'] == 1  # scheduled launch type
     assert rec_2_14_0['templates_total'] == 1  # Template T3
     assert rec_2_14_0['jobs_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
     assert rec_2_14_0['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
@@ -447,12 +442,12 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert 'job_type_total' in rec_2_12_0
     assert 'job_type_total' in rec_2_14_0
 
-    # Verify that launch_type_*_total fields are present (since we're grouping by controller_version)
-    assert 'launch_type_manual_total' in rec_2_9_0
-    assert 'launch_type_scheduled_total' in rec_2_10_0
-    assert 'launch_type_workflow_total' in rec_2_11_0
-    assert 'launch_type_callback_total' in rec_2_12_0
-    assert 'launch_type_scheduled_total' in rec_2_14_0
+    # Verify that launch_type_*_total fields are NOT present (removed from all groupings)
+    assert 'launch_type_manual_total' not in rec_2_9_0
+    assert 'launch_type_scheduled_total' not in rec_2_10_0
+    assert 'launch_type_workflow_total' not in rec_2_11_0
+    assert 'launch_type_callback_total' not in rec_2_12_0
+    assert 'launch_type_scheduled_total' not in rec_2_14_0
 
     # Verify totals match across all groupings
     total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in by_controller_version)

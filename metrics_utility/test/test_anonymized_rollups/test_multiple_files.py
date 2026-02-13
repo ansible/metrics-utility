@@ -683,7 +683,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert version_2_9_0['jobs_total'] == 1, '2.9.0 should have 1 job'
     assert version_2_9_0['jobs_failed_total'] == 0, '2.9.0 should have 0 failed jobs'
     assert version_2_9_0['job_type_total'] == 1, '2.9.0 should have 1 job type (job)'
-    assert version_2_9_0['launch_type_manual_total'] == 1, '2.9.0 should have 1 manual launch type'
     assert version_2_9_0['jobs_duration_total_seconds'] == pytest.approx(3.0), '2.9.0 should have 3s total duration'
     # job_host_summary is now properly merged by controller_version
     assert 'unique_hosts_total' in version_2_9_0, 'Should have unique_hosts_total field from job_host_summary merge'
@@ -692,7 +691,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert version_2_10_0['jobs_total'] == 1, '2.10.0 should have 1 job'
     assert version_2_10_0['jobs_failed_total'] == 1, '2.10.0 should have 1 failed job'
     assert version_2_10_0['job_type_total'] == 1, '2.10.0 should have 1 job type (job)'
-    assert version_2_10_0['launch_type_scheduled_total'] == 1, '2.10.0 should have 1 scheduled launch type'
     assert version_2_10_0['jobs_duration_total_seconds'] == pytest.approx(5.0), '2.10.0 should have 5s total duration'
     # job_host_summary is now properly merged by controller_version
     assert 'unique_hosts_total' in version_2_10_0, 'Should have unique_hosts_total field from job_host_summary merge'
@@ -701,7 +699,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert version_2_11_0['jobs_total'] == 1, '2.11.0 should have 1 job'
     assert version_2_11_0['jobs_failed_total'] == 0, '2.11.0 should have 0 failed jobs'
     assert version_2_11_0['job_type_total'] == 1, '2.11.0 should have 1 job type (workflowjob)'
-    assert version_2_11_0['launch_type_workflow_total'] == 1, '2.11.0 should have 1 workflow launch type'
     assert version_2_11_0['jobs_duration_total_seconds'] == pytest.approx(7.0), '2.11.0 should have 7s total duration'
     # job_host_summary is now properly merged by controller_version
     assert 'unique_hosts_total' in version_2_11_0, 'Should have unique_hosts_total field from job_host_summary merge'
@@ -710,7 +707,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert version_2_12_0['jobs_total'] == 1, '2.12.0 should have 1 job'
     assert version_2_12_0['jobs_failed_total'] == 0, '2.12.0 should have 0 failed jobs'
     assert version_2_12_0['job_type_total'] == 1, '2.12.0 should have 1 job type (job)'
-    assert version_2_12_0['launch_type_callback_total'] == 1, '2.12.0 should have 1 callback launch type'
     assert version_2_12_0['jobs_duration_total_seconds'] == pytest.approx(2.0), '2.12.0 should have 2s total duration'
     # job_host_summary is now properly merged by controller_version
     assert 'unique_hosts_total' in version_2_12_0, 'Should have unique_hosts_total field from job_host_summary merge'
@@ -720,7 +716,6 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert version_2_14_0['jobs_failed_total'] == 1, '2.14.0 should have 1 failed job'
     assert version_2_14_0['jobs_never_started_total'] == 1, '2.14.0 should have 1 never started job'
     assert version_2_14_0['job_type_total'] == 1, '2.14.0 should have 1 job type (adhoccommand)'
-    assert version_2_14_0['launch_type_scheduled_total'] == 1, '2.14.0 should have 1 scheduled launch type'
     assert version_2_14_0['jobs_duration_total_seconds'] == pytest.approx(0.0), '2.14.0 should have 0s total duration'
     # job_host_summary is now properly merged by controller_version
     assert 'unique_hosts_total' in version_2_14_0, 'Should have unique_hosts_total field from job_host_summary merge'
@@ -732,12 +727,12 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert 'job_type_total' in version_2_12_0, 'Should have job_type_total field'
     assert 'job_type_total' in version_2_14_0, 'Should have job_type_total field'
 
-    # Verify that launch_type_*_total fields are present (since we're grouping by controller_version)
-    assert 'launch_type_manual_total' in version_2_9_0, 'Should have launch_type_manual_total field'
-    assert 'launch_type_scheduled_total' in version_2_10_0, 'Should have launch_type_scheduled_total field'
-    assert 'launch_type_workflow_total' in version_2_11_0, 'Should have launch_type_workflow_total field'
-    assert 'launch_type_callback_total' in version_2_12_0, 'Should have launch_type_callback_total field'
-    assert 'launch_type_scheduled_total' in version_2_14_0, 'Should have launch_type_scheduled_total field'
+    # Verify that launch_type_*_total fields are NOT present (removed from all groupings)
+    assert 'launch_type_manual_total' not in version_2_9_0, 'Should not have launch_type_manual_total field'
+    assert 'launch_type_scheduled_total' not in version_2_10_0, 'Should not have launch_type_scheduled_total field'
+    assert 'launch_type_workflow_total' not in version_2_11_0, 'Should not have launch_type_workflow_total field'
+    assert 'launch_type_callback_total' not in version_2_12_0, 'Should not have launch_type_callback_total field'
+    assert 'launch_type_scheduled_total' not in version_2_14_0, 'Should not have launch_type_scheduled_total field'
 
     # Verify totals match between all groupings
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])

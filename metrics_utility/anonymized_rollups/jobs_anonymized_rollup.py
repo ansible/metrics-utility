@@ -153,11 +153,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_duration_successful_seconds'] = dataframe['job_duration_seconds'].where(dataframe['jobs_successful'], 0)
         dataframe['job_duration_failed_seconds'] = dataframe['job_duration_seconds'].where(dataframe['failed'], 0)
 
-        # Pre-compute launch_type boolean columns for vectorized aggregations
-        launch_types = ['manual', 'relaunch', 'callback', 'scheduled', 'dependency', 'workflow', 'webhook', 'sync', 'scm', 'api', 'system', 'unknown']
-        for launch_type in launch_types:
-            dataframe[f'launch_type_{launch_type}'] = dataframe['launch_type'] == launch_type
-
         # Build common aggregation dictionary shared by both groupings
         # Using pre-computed columns instead of lambdas for better performance
         common_aggregations = {
@@ -179,22 +174,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             # jobs using projects by scm types
         }
 
-        # Launch type aggregations - using pre-computed boolean columns for vectorized operations
-        launch_type_aggregations = {
-            'launch_type_manual_total': ('launch_type_manual', 'sum'),
-            'launch_type_relaunch_total': ('launch_type_relaunch', 'sum'),
-            'launch_type_callback_total': ('launch_type_callback', 'sum'),
-            'launch_type_scheduled_total': ('launch_type_scheduled', 'sum'),
-            'launch_type_dependency_total': ('launch_type_dependency', 'sum'),
-            'launch_type_workflow_total': ('launch_type_workflow', 'sum'),
-            'launch_type_webhook_total': ('launch_type_webhook', 'sum'),
-            'launch_type_sync_total': ('launch_type_sync', 'sum'),
-            'launch_type_scm_total': ('launch_type_scm', 'sum'),
-            'launch_type_api_total': ('launch_type_api', 'sum'),
-            'launch_type_system_total': ('launch_type_system', 'sum'),
-            'launch_type_unknown_total': ('launch_type_unknown', 'sum'),
-        }
-
         # Controller versions aggregation - optimized to avoid lambda
         # We'll compute this separately after groupby for better performance
         def get_controller_versions(grouped_series):
@@ -207,9 +186,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         }
 
         # Aggregations grouped by job_type (model)
-        # Add launch_type counts specific to job_type grouping
         aggregations_by_job_type_dict = common_aggregations.copy()
-        aggregations_by_job_type_dict.update(launch_type_aggregations)
         aggregations_by_job_type_dict.update(controller_versions_aggregation)
 
         aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
@@ -230,14 +207,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
 
         # Aggregations grouped by controller_version
-        # Add both job_type_total and launch_type counts (since we're grouping by controller_version)
         aggregations_by_controller_version_dict = common_aggregations.copy()
         aggregations_by_controller_version_dict.update(
             {
                 'job_type_total': ('model', 'nunique'),  # Count distinct job types
             }
         )
-        aggregations_by_controller_version_dict.update(launch_type_aggregations)
 
         aggregations_by_controller_version = (
             dataframe.groupby('ansible_version')

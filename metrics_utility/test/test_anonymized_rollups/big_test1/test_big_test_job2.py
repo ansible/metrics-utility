@@ -112,9 +112,6 @@ def test_big_test2():
         controller_version_data = result['jobs_by_controller_version'][0]
         assert controller_version_data['controller_version'] == '2.15.0', 'controller_version should be "2.15.0"'
         assert controller_version_data['job_type_total'] == 1, f'Should have 1 job type, got {controller_version_data["job_type_total"]}'
-        assert controller_version_data['launch_type_manual_total'] == 1, (
-            f'Should have 1 manual launch type, got {controller_version_data.get("launch_type_manual_total", 0)}'
-        )
 
         # Verify execution environments
         assert 'rollup_period_execution_environments_total' in statistics
