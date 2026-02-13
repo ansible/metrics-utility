@@ -84,7 +84,7 @@ def test_from_gather_to_json(cleanup_glob):
     statistics = json_data['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
     assert 'rollup_period_modules_total' in statistics
-    assert 'rollup_period_hosts_automated_total' in statistics
+    assert 'rollup_period_unique_hosts_automated_total' in statistics
     assert 'rollup_period_execution_environments_total' in statistics
     assert 'rollup_period_EE_default_total' in statistics
     assert 'rollup_period_EE_custom_total' in statistics
@@ -114,8 +114,12 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Validate statistics data types
     assert isinstance(statistics['rollup_period_modules_total'], int)
-    assert isinstance(statistics['rollup_period_hosts_automated_total'], int)
+    assert isinstance(statistics['rollup_period_unique_hosts_automated_total'], int)
     assert isinstance(statistics['rollup_period_execution_environments_total'], int)
+    # Validate execution_environments_total is sum of default and custom
+    assert statistics['rollup_period_execution_environments_total'] == (
+        statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
+    ), 'execution_environments_total should be sum of EE_default and EE_custom'
     assert isinstance(statistics['rollup_period_EE_default_total'], int)
     assert isinstance(statistics['rollup_period_EE_custom_total'], int)
     assert isinstance(statistics['rollup_period_jobs_total'], int)
@@ -239,7 +243,7 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate statistics actual values
     print('\n--- Validating statistics data values ---')
     assert statistics['rollup_period_modules_total'] == 2, 'Should have 2 modules (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
-    assert statistics['rollup_period_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
+    assert statistics['rollup_period_unique_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
     assert len(json_data['module_stats']) == 2, 'Should have 2 module stats'
     assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
 
@@ -479,7 +483,7 @@ def test_from_gather_to_json(cleanup_glob):
     print('--- Validating cross-section data consistency ---')
     # Validate that module stats hosts match the total automated hosts
     for module_stat in json_data['module_stats']:
-        assert module_stat['unique_hosts_total'] <= statistics['rollup_period_hosts_automated_total'], (
+        assert module_stat['unique_hosts_total'] <= statistics['rollup_period_unique_hosts_automated_total'], (
             f'Module {module_stat["module_name"][:50]} hosts should not exceed total automated hosts'
         )
 

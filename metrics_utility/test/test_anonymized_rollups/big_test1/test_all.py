@@ -523,6 +523,10 @@ def test_all_jobs_combined(cleanup_test_data):
     assert result['statistics']['rollup_period_execution_environments_total'] == 8
     assert result['statistics']['rollup_period_EE_default_total'] == 4
     assert result['statistics']['rollup_period_EE_custom_total'] == 4
+    # Validate execution_environments_total is sum of default and custom
+    assert result['statistics']['rollup_period_execution_environments_total'] == (
+        result['statistics']['rollup_period_EE_default_total'] + result['statistics']['rollup_period_EE_custom_total']
+    ), 'execution_environments_total should be sum of EE_default and EE_custom'
 
     # ========== Validate Credentials ==========
     # Expected credential types from credentials.py (all jobs combined):

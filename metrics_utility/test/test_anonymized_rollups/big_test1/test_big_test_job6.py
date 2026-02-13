@@ -131,6 +131,10 @@ def test_big_test6():
         assert statistics['rollup_period_execution_environments_total'] == 8
         assert statistics['rollup_period_EE_default_total'] == 4
         assert statistics['rollup_period_EE_custom_total'] == 4
+        # Validate execution_environments_total is sum of default and custom
+        assert statistics['rollup_period_execution_environments_total'] == (
+            statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
+        ), 'execution_environments_total should be sum of EE_default and EE_custom'
 
         # Verify credentials (Job 6 has Machine and Container Registry)
         assert 'rollup_period_credential_types' in result

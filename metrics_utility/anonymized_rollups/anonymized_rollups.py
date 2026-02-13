@@ -205,19 +205,28 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Extract credential types from credentials_list (already sorted list from credentials rollup)
     credential_types_merged = credentials_list if isinstance(credentials_list, list) else []
 
+    # Calculate execution_environments_total as sum of default and custom
+    rollup_period_EE_default_total = execution_environments.get('execution_environments_default_total')
+    rollup_period_EE_custom_total = execution_environments.get('execution_environments_custom_total')
+    # If both are None, total is None; otherwise sum them (treating None as 0 for calculation)
+    if rollup_period_EE_default_total is None and rollup_period_EE_custom_total is None:
+        rollup_period_execution_environments_total = None
+    else:
+        rollup_period_execution_environments_total = (rollup_period_EE_default_total or 0) + (rollup_period_EE_custom_total or 0)
+
     # Build statistics with rollup_period_ prefix for all fields
     statistics = {
         # from events_modules
         'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-        'rollup_period_hosts_automated_total': events_modules.get('hosts_automated_total'),
+        'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
         'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
         'rollup_period_warnings_total': events_modules.get('warnings_total'),
         'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
         'rollup_period_playbooks_total': playbooks_total,
         # from execution_environments
-        'rollup_period_execution_environments_total': execution_environments.get('execution_environments_total'),
-        'rollup_period_EE_default_total': execution_environments.get('execution_environments_default_total'),
-        'rollup_period_EE_custom_total': execution_environments.get('execution_environments_custom_total'),
+        'rollup_period_execution_environments_total': rollup_period_execution_environments_total,
+        'rollup_period_EE_default_total': rollup_period_EE_default_total,
+        'rollup_period_EE_custom_total': rollup_period_EE_custom_total,
         # from jobs (top-level fields)
         'rollup_period_jobs_total': jobs_total,
         'rollup_period_jobs_successful': rollup_period_jobs_successful,

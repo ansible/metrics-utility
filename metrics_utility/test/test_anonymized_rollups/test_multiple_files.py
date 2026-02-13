@@ -415,7 +415,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
     # Verify values from concatenated data across 3 tarballs
     assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert result['statistics']['rollup_period_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
 
     # Verify warnings_total and deprecations_total
     # Test data has 2 warnings (job 1 and job 2) and 1 deprecated (job 3)
@@ -801,12 +801,17 @@ def test_empty_csv_files_handling(cleanup_test_data):
     statistics = result['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dict'
     assert 'rollup_period_modules_total' in statistics
-    assert 'rollup_period_hosts_automated_total' in statistics
+    assert 'rollup_period_unique_hosts_automated_total' in statistics
     assert 'rollup_period_warnings_total' in statistics
     assert 'rollup_period_deprecations_total' in statistics
     assert 'rollup_period_execution_environments_total' in statistics
     assert 'rollup_period_EE_default_total' in statistics
     assert 'rollup_period_EE_custom_total' in statistics
+    # Validate execution_environments_total is sum of default and custom
+    if statistics['rollup_period_execution_environments_total'] is not None:
+        assert statistics['rollup_period_execution_environments_total'] == (
+            (statistics['rollup_period_EE_default_total'] or 0) + (statistics['rollup_period_EE_custom_total'] or 0)
+        ), 'execution_environments_total should be sum of EE_default and EE_custom'
     assert 'rollup_period_jobs_total' in statistics
     assert 'rollup_period_jobs_successful' in statistics
     assert 'rollup_period_jobs_failed' in statistics
@@ -831,7 +836,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     # All statistics should be None for empty data (except counts which should be 0)
     assert statistics['rollup_period_modules_total'] is None
-    assert statistics['rollup_period_hosts_automated_total'] is None
+    assert statistics['rollup_period_unique_hosts_automated_total'] is None
     assert statistics['rollup_period_warnings_total'] == 0, (
         f'warnings_total should be 0 for empty data, got {statistics["rollup_period_warnings_total"]}'
     )
