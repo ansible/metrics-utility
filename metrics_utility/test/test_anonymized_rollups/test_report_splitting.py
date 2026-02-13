@@ -12,7 +12,6 @@ This test:
 
 import json
 import os
-import shutil
 
 import pytest
 
@@ -22,11 +21,11 @@ from metrics_utility.library.storage.segment import StorageSegment
 @pytest.fixture(scope='function')
 def cleanup_test_data():
     """Clean up test directories before and after test.
-    
+
     Note: Cleanup is disabled to allow data persistence for validation.
     Uncomment the cleanup code below if you want to clean up test data.
     """
-    out_dir = './out/test_report_splitting'
+    # out_dir = './out/test_report_splitting'  # Uncomment if enabling cleanup
 
     # Cleanup before test (commented out to persist data for validation)
     # if os.path.exists(out_dir):
@@ -42,12 +41,12 @@ def cleanup_test_data():
 def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50):
     """
     Create mock anonymized rollup data with the same structure as real reports.
-    
+
     Args:
         num_modules: Number of module_stats entries (default 200 to exceed size limit)
         num_jobs: Number of jobs_by_job_type entries (default 150 to exceed size limit)
         num_collections: Number of collection_stats entries (default 50)
-    
+
     Returns:
         Dictionary with anonymized rollup structure
     """
@@ -88,119 +87,133 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
     # Create large module_stats array
     module_stats = []
     for i in range(num_modules):
-        module_stats.append({
-            'module_name': f'ansible.builtin.module_{i:04d}',
-            'collection_source': 'certified' if i % 2 == 0 else 'community',
-            'collection_name': f'ansible.builtin' if i % 2 == 0 else f'community.module_{i % 10}',
-            'jobs_total': 10 + (i % 20),
-            'unique_hosts_total': 5 + (i % 15),
-            'processed_events_total': 50 + (i % 100),
-            'controller_versions': ['2.15.0', '2.16.0', '2.17.0'] if i % 3 == 0 else ['2.18.0', '2.19.0'],
-            'tasks_ok_total': 100 + (i % 50),
-            'tasks_failed_total': i % 10,
-            'tasks_skipped_total': i % 5,
-        })
+        module_stats.append(
+            {
+                'module_name': f'ansible.builtin.module_{i:04d}',
+                'collection_source': 'certified' if i % 2 == 0 else 'community',
+                'collection_name': 'ansible.builtin' if i % 2 == 0 else f'community.module_{i % 10}',
+                'jobs_total': 10 + (i % 20),
+                'unique_hosts_total': 5 + (i % 15),
+                'processed_events_total': 50 + (i % 100),
+                'controller_versions': ['2.15.0', '2.16.0', '2.17.0'] if i % 3 == 0 else ['2.18.0', '2.19.0'],
+                'tasks_ok_total': 100 + (i % 50),
+                'tasks_failed_total': i % 10,
+                'tasks_skipped_total': i % 5,
+            }
+        )
 
     # Create collection_stats array
     collection_stats = []
     for i in range(num_collections):
-        collection_stats.append({
-            'collection_name': f'ansible.collection_{i:03d}',
-            'collection_source': ['certified', 'community', 'validated', 'partner'][i % 4],
-            'jobs_total': 20 + (i % 30),
-            'processed_events_total': 200 + (i % 200),
-            'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
-            'unique_hosts_total': 10 + (i % 20),
-        })
+        collection_stats.append(
+            {
+                'collection_name': f'ansible.collection_{i:03d}',
+                'collection_source': ['certified', 'community', 'validated', 'partner'][i % 4],
+                'jobs_total': 20 + (i % 30),
+                'processed_events_total': 200 + (i % 200),
+                'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+                'unique_hosts_total': 10 + (i % 20),
+            }
+        )
 
     # Create role_stats array
     role_stats = []
     for i in range(30):  # Smaller array
-        role_stats.append({
-            'role': f'example_role_{i:03d}',
-            'collection_name': f'ansible.collection_{i % 10:03d}',
-            'collection_source': ['certified', 'community'][i % 2],
-            'jobs_total': 5 + (i % 15),
-            'tasks_total': 20 + (i % 30),
-            'processed_events_total': 100 + (i % 100),
-        })
+        role_stats.append(
+            {
+                'role': f'example_role_{i:03d}',
+                'collection_name': f'ansible.collection_{i % 10:03d}',
+                'collection_source': ['certified', 'community'][i % 2],
+                'jobs_total': 5 + (i % 15),
+                'tasks_total': 20 + (i % 30),
+                'processed_events_total': 100 + (i % 100),
+            }
+        )
 
     # Create large jobs_by_job_type array
     jobs_by_job_type = []
     for i in range(num_jobs):
-        jobs_by_job_type.append({
-            'job_type': 'job' if i % 2 == 0 else 'workflowjob',
-            'jobs_total': 1,
-            'jobs_successful_total': 1 if i % 10 != 0 else 0,
-            'jobs_failed_total': 1 if i % 10 == 0 else 0,
-            'jobs_duration_total_seconds': 100 + (i % 500),
-            'jobs_successful_duration_total_seconds': 90 + (i % 450) if i % 10 != 0 else 0,
-            'jobs_failed_duration_total_seconds': 50 + (i % 200) if i % 10 == 0 else 0,
-            'templates_total': 1,
-            'inventories_total': 1,
-            'controller_versions': ['2.15.0', '2.16.0'] if i % 2 == 0 else ['2.17.0', '2.18.0'],
-            'dark_total': i % 5,
-            'failures_total': i % 3,
-            'ok_total': 10 + (i % 20),
-            'skipped_total': i % 4,
-            'ignored_total': i % 2,
-            'rescued_total': 0,
-            'unique_hosts_total': 5 + (i % 15),
-            'successful_hosts_total': 4 + (i % 12),
-            'failed_hosts_total': i % 3,
-            'unreachable_hosts_total': i % 2,
-        })
+        jobs_by_job_type.append(
+            {
+                'job_type': 'job' if i % 2 == 0 else 'workflowjob',
+                'jobs_total': 1,
+                'jobs_successful_total': 1 if i % 10 != 0 else 0,
+                'jobs_failed_total': 1 if i % 10 == 0 else 0,
+                'jobs_duration_total_seconds': 100 + (i % 500),
+                'jobs_successful_duration_total_seconds': 90 + (i % 450) if i % 10 != 0 else 0,
+                'jobs_failed_duration_total_seconds': 50 + (i % 200) if i % 10 == 0 else 0,
+                'templates_total': 1,
+                'inventories_total': 1,
+                'controller_versions': ['2.15.0', '2.16.0'] if i % 2 == 0 else ['2.17.0', '2.18.0'],
+                'dark_total': i % 5,
+                'failures_total': i % 3,
+                'ok_total': 10 + (i % 20),
+                'skipped_total': i % 4,
+                'ignored_total': i % 2,
+                'rescued_total': 0,
+                'unique_hosts_total': 5 + (i % 15),
+                'successful_hosts_total': 4 + (i % 12),
+                'failed_hosts_total': i % 3,
+                'unreachable_hosts_total': i % 2,
+            }
+        )
 
     # Create jobs_by_launch_type array
     jobs_by_launch_type = []
     launch_types = ['manual', 'scheduled', 'workflow', 'callback']
     for i, launch_type in enumerate(launch_types):
-        jobs_by_launch_type.append({
-            'launch_type': launch_type,
-            'jobs_total': 25 + (i * 10),
-            'jobs_successful_total': 20 + (i * 8),
-            'jobs_failed_total': 5 + (i * 2),
-            'dark_total': i * 5,
-            'failures_total': i * 3,
-            'ok_total': 100 + (i * 20),
-            'skipped_total': i * 4,
-            'ignored_total': i * 2,
-            'rescued_total': 0,
-            'unique_hosts_total': 50 + (i * 10),
-            'successful_hosts_total': 45 + (i * 8),
-            'failed_hosts_total': 5 + (i * 2),
-            'unreachable_hosts_total': i * 2,
-        })
+        jobs_by_launch_type.append(
+            {
+                'launch_type': launch_type,
+                'jobs_total': 25 + (i * 10),
+                'jobs_successful_total': 20 + (i * 8),
+                'jobs_failed_total': 5 + (i * 2),
+                'dark_total': i * 5,
+                'failures_total': i * 3,
+                'ok_total': 100 + (i * 20),
+                'skipped_total': i * 4,
+                'ignored_total': i * 2,
+                'rescued_total': 0,
+                'unique_hosts_total': 50 + (i * 10),
+                'successful_hosts_total': 45 + (i * 8),
+                'failed_hosts_total': 5 + (i * 2),
+                'unreachable_hosts_total': i * 2,
+            }
+        )
 
     # Create jobs_by_controller_version array
     jobs_by_controller_version = []
     versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
     for i, version in enumerate(versions):
-        jobs_by_controller_version.append({
-            'controller_version': version,
-            'jobs_total': 30 + (i * 5),
-            'jobs_successful_total': 25 + (i * 4),
-            'jobs_failed_total': 5 + i,
-            'dark_total': i * 3,
-            'failures_total': i * 2,
-            'ok_total': 120 + (i * 15),
-            'skipped_total': i * 3,
-            'ignored_total': i,
-            'rescued_total': 0,
-            'unique_hosts_total': 60 + (i * 8),
-            'successful_hosts_total': 55 + (i * 7),
-            'failed_hosts_total': 5 + i,
-            'unreachable_hosts_total': i * 2,
-        })
+        jobs_by_controller_version.append(
+            {
+                'controller_version': version,
+                'jobs_total': 30 + (i * 5),
+                'jobs_successful_total': 25 + (i * 4),
+                'jobs_failed_total': 5 + i,
+                'dark_total': i * 3,
+                'failures_total': i * 2,
+                'ok_total': 120 + (i * 15),
+                'skipped_total': i * 3,
+                'ignored_total': i,
+                'rescued_total': 0,
+                'unique_hosts_total': 60 + (i * 8),
+                'successful_hosts_total': 55 + (i * 7),
+                'failed_hosts_total': 5 + i,
+                'unreachable_hosts_total': i * 2,
+            }
+        )
 
     # Create collections_versions array
     collections_versions = []
     for i in range(20):
-        collections_versions.append({
-            'name': f'ansible.collection_{i:03d}',
-            'version': f'1.{i}.0',
-            'job_count': 10 + (i % 20),
-        })
+        collections_versions.append(
+            {
+                'name': f'ansible.collection_{i:03d}',
+                'version': f'1.{i}.0',
+                'job_count': 10 + (i % 20),
+            }
+        )
 
     # Create large controller_versions array that will need to be split
     # Generate many version strings to exceed the 24KB limit
@@ -219,14 +232,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         'statistics': statistics,
         'rollup_period_controller_versions': controller_versions,
         'rollup_period_scm_types': ['git', 'manual', 'svn'],
-        'rollup_period_credential_types': [
-            'Amazon Web Services',
-            'Container Registry',
-            'Machine',
-            'Network',
-            'Source Control',
-            'Vault'
-        ],
+        'rollup_period_credential_types': ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault'],
         'module_stats': module_stats,
         'collection_stats': collection_stats,
         'role_stats': role_stats,
@@ -246,11 +252,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     """
     # Create mock anonymized rollup data with large arrays
     # Using 200 modules and 150 jobs should create arrays that exceed 24KB limit
-    anonymized_rollup = create_mock_anonymized_rollup_data(
-        num_modules=200,
-        num_jobs=150,
-        num_collections=50
-    )
+    anonymized_rollup = create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50)
 
     # Initialize StorageSegment
     storage_segment = StorageSegment()
@@ -259,7 +261,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     # Calculate total size of the data
     total_size = storage_segment._calculate_size(anonymized_rollup)
     print(f'\n{"=" * 80}')
-    print(f'=== TESTING ANONYMIZED ROLLUP SPLITTING ===')
+    print('=== TESTING ANONYMIZED ROLLUP SPLITTING ===')
     print(f'{"=" * 80}')
     print(f'Total data size: {total_size} bytes ({total_size / 1024:.1f} KB)')
     print(f'Message size limit: {max_size} bytes ({max_size / 1024:.1f} KB)')
@@ -272,7 +274,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     chunks = storage_segment._split_into_chunks(anonymized_rollup, max_size)
 
     print(f'\nTotal chunks created: {len(chunks)}')
-    
+
     # Validate that multiple chunks were created
     assert len(chunks) > 1, (
         f'Expected multiple chunks to be created, but got only {len(chunks)} chunk. '
@@ -297,11 +299,9 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     for i, chunk in enumerate(chunks, 1):
         chunk_size = storage_segment._calculate_size(chunk)
         chunk_sizes.append(chunk_size)
-        
+
         # Validate chunk size is within limit
-        assert chunk_size <= max_size, (
-            f'Chunk {i} size ({chunk_size} bytes) exceeds the limit ({max_size} bytes)'
-        )
+        assert chunk_size <= max_size, f'Chunk {i} size ({chunk_size} bytes) exceeds the limit ({max_size} bytes)'
 
         # Get the top-level key
         chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
@@ -311,14 +311,14 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
         chunk_path = os.path.join(output_dir, f'chunk_{i:03d}_of_{len(chunks):03d}_{chunk_key}.json')
         with open(chunk_path, 'w') as f:
             json.dump(chunk, f, indent=4)
-        
+
         print(f'Chunk {i}/{len(chunks)}: {chunk_key} - {chunk_size} bytes ({chunk_size / 1024:.1f} KB) - saved to {chunk_path}')
 
         # If it's a list, count items and track them
         if isinstance(chunk[chunk_key], list):
             num_items = len(chunk[chunk_key])
             print(f'  └─ Contains {num_items} items in {chunk_key}')
-            
+
             # Track items for validation
             if chunk_key not in total_items_in_chunks:
                 total_items_in_chunks[chunk_key] = 0
@@ -330,11 +330,13 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     if len(controller_versions_chunks) > 1:
         print(f'\n✓ rollup_period_controller_versions was split into {len(controller_versions_chunks)} chunks')
         assert len(controller_versions_chunks) > 1, 'rollup_period_controller_versions should be split into multiple chunks'
-        
+
         # Validate total items match
         total_version_items = total_items_in_chunks.get('rollup_period_controller_versions', 0)
-        assert total_version_items == len(anonymized_rollup['rollup_period_controller_versions']), (
-            f'Total controller version items in chunks ({total_version_items}) should match original ({len(anonymized_rollup["rollup_period_controller_versions"])})'
+        original_version_count = len(anonymized_rollup['rollup_period_controller_versions'])
+        assert total_version_items == original_version_count, (
+            f'Total controller version items in chunks ({total_version_items}) '
+            f'should match original ({original_version_count})'
         )
 
     # Check if module_stats was split
@@ -342,7 +344,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     if len(module_stats_chunks) > 1:
         print(f'✓ module_stats was split into {len(module_stats_chunks)} chunks')
         assert len(module_stats_chunks) > 1, 'module_stats should be split into multiple chunks'
-        
+
         # Validate total items match
         total_module_items = total_items_in_chunks.get('module_stats', 0)
         assert total_module_items == len(anonymized_rollup['module_stats']), (
@@ -354,7 +356,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     if len(jobs_chunks) > 1:
         print(f'✓ jobs_by_job_type was split into {len(jobs_chunks)} chunks')
         assert len(jobs_chunks) > 1, 'jobs_by_job_type should be split into multiple chunks'
-        
+
         # Validate total items match
         total_job_items = total_items_in_chunks.get('jobs_by_job_type', 0)
         assert total_job_items == len(anonymized_rollup['jobs_by_job_type']), (
@@ -363,8 +365,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
 
     # Validate that each top-level key appears in at least one chunk
     original_keys = set(anonymized_rollup.keys())
-    chunk_keys_set = set(chunk_keys)
-    
+
     # For keys that were split, they'll appear multiple times, but we just need to check they appear
     # For keys that weren't split, they should appear exactly once
     for key in original_keys:
@@ -375,9 +376,9 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     avg_chunk_size = sum(chunk_sizes) / len(chunk_sizes)
     max_chunk_size = max(chunk_sizes)
     min_chunk_size = min(chunk_sizes)
-    
+
     print(f'\n{"=" * 80}')
-    print(f'Chunk size statistics:')
+    print('Chunk size statistics:')
     print(f'  Average: {avg_chunk_size:.0f} bytes ({avg_chunk_size / 1024:.1f} KB)')
     print(f'  Maximum: {max_chunk_size:.0f} bytes ({max_chunk_size / 1024:.1f} KB)')
     print(f'  Minimum: {min_chunk_size:.0f} bytes ({min_chunk_size / 1024:.1f} KB)')
@@ -385,10 +386,10 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
 
     # Final validation: ensure we have multiple chunks
     assert len(chunks) > 1, 'Test should create multiple chunks to validate splitting functionality'
-    
+
     print(f'\n✓ Test passed: Successfully split anonymized rollup into {len(chunks)} chunks')
     print(f'✓ All chunks are within size limit ({max_size} bytes)')
-    print(f'✓ All data preserved correctly')
+    print('✓ All data preserved correctly')
 
 
 def test_anonymized_rollup_splitting_with_small_data(cleanup_test_data):
@@ -397,11 +398,7 @@ def test_anonymized_rollup_splitting_with_small_data(cleanup_test_data):
     This ensures the splitting logic works correctly for both large and small data.
     """
     # Create mock anonymized rollup data with small arrays
-    anonymized_rollup = create_mock_anonymized_rollup_data(
-        num_modules=5,
-        num_jobs=3,
-        num_collections=2
-    )
+    anonymized_rollup = create_mock_anonymized_rollup_data(num_modules=5, num_jobs=3, num_collections=2)
 
     # Initialize StorageSegment
     storage_segment = StorageSegment()
@@ -413,24 +410,21 @@ def test_anonymized_rollup_splitting_with_small_data(cleanup_test_data):
     # With small data, we should get one chunk per top-level key
     # But arrays should not be split if they're small enough
     assert len(chunks) >= len(anonymized_rollup), (
-        f'Should have at least one chunk per top-level key. '
-        f'Got {len(chunks)} chunks for {len(anonymized_rollup)} keys'
+        f'Should have at least one chunk per top-level key. Got {len(chunks)} chunks for {len(anonymized_rollup)} keys'
     )
 
     # Validate no array was unnecessarily split
     chunk_keys = [list(chunk.keys())[0] for chunk in chunks]
-    
+
     # Count how many times each key appears
     key_counts = {}
     for key in chunk_keys:
         key_counts[key] = key_counts.get(key, 0) + 1
-    
+
     # For small data, arrays should not be split (each should appear only once)
     for key, count in key_counts.items():
         if key in ['module_stats', 'jobs_by_job_type', 'collection_stats']:
             # These are arrays - with small data, they should not be split
-            assert count == 1, (
-                f'Array {key} should not be split with small data, but appears in {count} chunks'
-            )
+            assert count == 1, f'Array {key} should not be split with small data, but appears in {count} chunks'
 
     print(f'\n✓ Small data test passed: {len(chunks)} chunks created (no unnecessary splitting)')

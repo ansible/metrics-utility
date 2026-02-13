@@ -243,35 +243,35 @@ def test_all_jobs_combined(cleanup_test_data):
     print('\n' + '=' * 80)
     print('=== SPLITTING DATA INTO SEGMENT CHUNKS ===')
     print('=' * 80)
-    
+
     storage_segment = StorageSegment()
     chunks = storage_segment._split_into_chunks(result, storage_segment.REGULAR_MESSAGE_LIMIT)
-    
+
     print(f'Total chunks created: {len(chunks)}')
     print(f'Message size limit: {storage_segment.REGULAR_MESSAGE_LIMIT} bytes ({storage_segment.REGULAR_MESSAGE_LIMIT / 1024:.1f} KB)')
-    
+
     # Create directory for segment chunks
     segment_chunks_dir = f'./out/rollups/{year}/{month:02d}/{day:02d}/segment_chunks'
     os.makedirs(segment_chunks_dir, exist_ok=True)
-    
+
     # Save each chunk as a separate JSON file
     for i, chunk in enumerate(chunks, 1):
         chunk_size = storage_segment._calculate_size(chunk)
         chunk_json = json.dumps(chunk, indent=4)
         chunk_path = f'{segment_chunks_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
-        
+
         # Get the top-level key name for this chunk
         chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
-        
+
         with open(chunk_path, 'w') as f:
             f.write(chunk_json)
-        
+
         print(f'Chunk {i}/{len(chunks)}: {chunk_key} - {chunk_size} bytes ({chunk_size / 1024:.1f} KB) - saved to {chunk_path}')
-        
+
         # If it's a list, show how many items
         if isinstance(chunk[chunk_key], list):
             print(f'  └─ Contains {len(chunk[chunk_key])} items in {chunk_key}')
-    
+
     print('=' * 80)
 
     # ========== Validate the results ==========

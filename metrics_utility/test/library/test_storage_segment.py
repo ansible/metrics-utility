@@ -78,35 +78,19 @@ class TestStorageSegmentAvailable:
     def test_rollup_period_string_arrays(self):
         """Test that arrays of strings (like rollup_period_controller_versions) are split correctly."""
         data = {
-            'rollup_period_controller_versions': [
-                '2.15.0',
-                '2.16.0',
-                '2.17.0',
-                '2.18.0',
-                '2.19.0'
-            ],
-            'rollup_period_scm_types': [
-                'git',
-                'manual'
-            ],
-            'rollup_period_credential_types': [
-                'Amazon Web Services',
-                'Container Registry',
-                'Machine',
-                'Network',
-                'Source Control',
-                'Vault'
-            ],
+            'rollup_period_controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+            'rollup_period_scm_types': ['git', 'manual'],
+            'rollup_period_credential_types': ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault'],
         }
         storage_segment = StorageSegment()
         chunks = storage_segment._split_into_chunks(data, storage_segment.REGULAR_MESSAGE_LIMIT)
-        
+
         # Each top-level key should get its own chunk
         assert len(chunks) == 3
         assert 'rollup_period_controller_versions' in chunks[0]
         assert 'rollup_period_scm_types' in chunks[1]
         assert 'rollup_period_credential_types' in chunks[2]
-        
+
         # Verify the data is preserved correctly
         assert chunks[0]['rollup_period_controller_versions'] == data['rollup_period_controller_versions']
         assert chunks[1]['rollup_period_scm_types'] == data['rollup_period_scm_types']
