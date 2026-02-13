@@ -335,8 +335,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
         total_version_items = total_items_in_chunks.get('rollup_period_controller_versions', 0)
         original_version_count = len(anonymized_rollup['rollup_period_controller_versions'])
         assert total_version_items == original_version_count, (
-            f'Total controller version items in chunks ({total_version_items}) '
-            f'should match original ({original_version_count})'
+            f'Total controller version items in chunks ({total_version_items}) should match original ({original_version_count})'
         )
 
     # Check if module_stats was split
