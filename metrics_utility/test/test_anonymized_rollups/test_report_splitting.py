@@ -368,9 +368,7 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
         json.dump(anonymized_rollup, f, indent=4)
     print(f'\nSaved original data to: {original_path}')
 
-    chunk_sizes, chunk_keys, total_items_in_chunks = _save_and_validate_chunks(
-        chunks, storage_segment, max_size, output_dir, anonymized_rollup
-    )
+    chunk_sizes, chunk_keys, total_items_in_chunks = _save_and_validate_chunks(chunks, storage_segment, max_size, output_dir, anonymized_rollup)
 
     _validate_split_arrays(chunk_keys, total_items_in_chunks, anonymized_rollup)
     _validate_all_keys_present(chunk_keys, anonymized_rollup)

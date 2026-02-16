@@ -101,16 +101,16 @@ def split_data_into_parts(data_list, num_parts):
     """Split a list into roughly equal parts."""
     if not data_list:
         return []
-    
+
     total = len(data_list)
     items_per_part = total // num_parts
     parts = []
-    
+
     for i in range(num_parts):
         start = i * items_per_part
         end = (i + 1) * items_per_part if i < num_parts - 1 else total
         parts.append(data_list[start:end])
-    
+
     return parts
 
 
@@ -138,23 +138,23 @@ def create_all_csv_files(data_dir, all_jobs, all_events, all_jobhostsummary):
     # Jobs: split into 3 parts (3, 3, 2)
     jobs_parts = [all_jobs[:3], all_jobs[3:6], all_jobs[6:]]
     jobs_csv_files = create_csv_files_from_parts(jobs_parts, data_dir, 'part{part_num}_unified_jobs.csv')
-    
+
     # Events: split into 4 equal parts
     events_parts = split_data_into_parts(all_events, 4)
     events_csv_files = create_csv_files_from_parts(events_parts, data_dir, 'part{part_num}_main_jobevent.csv')
-    
+
     # Job host summary: split into 3 equal parts
     jhs_parts = split_data_into_parts(all_jobhostsummary, 3)
     jhs_csv_files = create_csv_files_from_parts(jhs_parts, data_dir, 'part{part_num}_job_host_summary.csv')
-    
+
     # Execution environments: split into 2 parts
     ee_parts = [execution_environments[:4], execution_environments[4:]]
     ee_csv_files = create_csv_files_from_parts(ee_parts, data_dir, 'part{part_num}_execution_environments.csv')
-    
+
     # Credentials: split into 2 parts
     cred_parts = [credentials[:8], credentials[8:]]
     cred_csv_files = create_csv_files_from_parts(cred_parts, data_dir, 'part{part_num}_credentials.csv')
-    
+
     return {
         'unified_jobs': jobs_csv_files,
         'job_host_summary': jhs_csv_files,
@@ -172,43 +172,43 @@ def save_result_and_chunks(result, since, until, year, month, day):
     print('=' * 80)
     print(json_content)
     print('=' * 80)
-    
+
     # Save the result as json
     json_path = f'./out/rollups/{year}/{month:02d}/{day:02d}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
     os.makedirs(os.path.dirname(json_path), exist_ok=True)
-    
+
     with open(json_path, 'w') as f:
         print(f'Saving result to {json_path}')
         f.write(json_content)
-    
+
     # Split data into Segment chunks
     print('\n' + '=' * 80)
     print('=== SPLITTING DATA INTO SEGMENT CHUNKS ===')
     print('=' * 80)
-    
+
     storage_segment = StorageSegment()
     chunks = storage_segment._split_into_chunks(result, storage_segment.REGULAR_MESSAGE_LIMIT)
-    
+
     print(f'Total chunks created: {len(chunks)}')
     print(f'Message size limit: {storage_segment.REGULAR_MESSAGE_LIMIT} bytes ({storage_segment.REGULAR_MESSAGE_LIMIT / 1024:.1f} KB)')
-    
+
     segment_chunks_dir = f'./out/rollups/{year}/{month:02d}/{day:02d}/segment_chunks'
     os.makedirs(segment_chunks_dir, exist_ok=True)
-    
+
     for i, chunk in enumerate(chunks, 1):
         chunk_size = storage_segment._calculate_size(chunk)
         chunk_json = json.dumps(chunk, indent=4)
         chunk_path = f'{segment_chunks_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
         chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
-        
+
         with open(chunk_path, 'w') as f:
             f.write(chunk_json)
-        
+
         print(f'Chunk {i}/{len(chunks)}: {chunk_key} - {chunk_size} bytes ({chunk_size / 1024:.1f} KB) - saved to {chunk_path}')
-        
+
         if isinstance(chunk[chunk_key], list):
             print(f'  └─ Contains {len(chunk[chunk_key])} items in {chunk_key}')
-    
+
     print('=' * 80)
 
 
@@ -244,14 +244,14 @@ def test_all_jobs_combined(cleanup_test_data):
     validate_result_structure(result)
     validate_task_statistics(result['statistics'])
     validate_events_statistics(result['statistics'])
-    
+
     job_type, workflowjob_type = validate_jobs(result)
     validate_controller_versions(result)
     validate_scm_types(result)
-    
+
     jobs_by_launch_type_list = validate_jobs_by_launch_type(result)
     jobs_by_controller_version_list = validate_jobs_by_controller_version(result)
-    
+
     validate_job_host_summary(result, job_type, workflowjob_type)
     validate_module_stats(result)
     validate_collection_stats(result)
@@ -287,7 +287,7 @@ def validate_task_statistics(statistics):
     ]
     for field in required_fields:
         assert field in statistics
-    
+
     # Expected totals: ok=98, failures=5, dark=5, skipped=0, ignored=0, tasks_total=108
     assert statistics['rollup_period_task_ok_total'] == 98
     assert statistics['rollup_period_task_failed_total'] == 5
@@ -295,7 +295,7 @@ def validate_task_statistics(statistics):
     assert statistics['rollup_period_task_skipped_total'] == 0
     assert statistics['rollup_period_task_ignored_total'] == 0
     assert statistics['rollup_period_tasks_total'] == 108
-    
+
     # Verify sum matches
     calculated_total = (
         statistics['rollup_period_task_ok_total']
@@ -313,27 +313,28 @@ def validate_events_statistics(statistics):
     assert statistics['rollup_period_warnings_total'] == 3
     assert statistics['rollup_period_deprecations_total'] == 2
 
+
 def validate_jobs(result):
     """Validate job-related data."""
     jobs_list = result['jobs_by_job_type']
     assert isinstance(jobs_list, list)
     assert result['statistics']['rollup_period_jobs_total'] == 8
-    
+
     # Validate job types: 'job' (7 jobs) and 'workflowjob' (1 job)
     job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job']
     workflowjob_type_jobs = [j for j in jobs_list if j['job_type'] == 'workflowjob']
-    
+
     assert len(job_type_jobs) == 1
     assert len(workflowjob_type_jobs) == 1
-    
+
     job_type = job_type_jobs[0]
     assert job_type['jobs_total'] == 7
     assert job_type['job_type'] == 'job'
-    
+
     workflowjob_type = workflowjob_type_jobs[0]
     assert workflowjob_type['jobs_total'] == 1
     assert workflowjob_type['job_type'] == 'workflowjob'
-    
+
     return job_type, workflowjob_type
 
 
@@ -342,7 +343,7 @@ def validate_controller_versions(result):
     assert 'rollup_period_controller_versions' in result
     statistics_controller_versions = result['rollup_period_controller_versions']
     assert isinstance(statistics_controller_versions, list)
-    
+
     expected_versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
     assert len(statistics_controller_versions) == 5
     for version in expected_versions:
@@ -354,6 +355,7 @@ def validate_scm_types(result):
     assert 'rollup_period_scm_types' in result
     assert result['rollup_period_scm_types'] == ['git', 'manual']
 
+
 def find_entry_by_key(entries, key, value):
     """Find an entry in a list by a key-value pair."""
     return next((entry for entry in entries if entry.get(key) == value), None)
@@ -364,19 +366,19 @@ def validate_jobs_by_launch_type(result):
     jobs_by_launch_type_list = result['jobs_by_launch_type']
     assert isinstance(jobs_by_launch_type_list, list)
     assert len(jobs_by_launch_type_list) == 4
-    
+
     expected_launch_types = {
         'manual': 5,
         'scheduled': 1,
         'workflow': 1,
         'callback': 1,
     }
-    
+
     for launch_type, expected_count in expected_launch_types.items():
         entry = find_entry_by_key(jobs_by_launch_type_list, 'launch_type', launch_type)
         assert entry is not None, f'Should have {launch_type} launch_type'
         assert entry['jobs_total'] == expected_count
-    
+
     return jobs_by_launch_type_list
 
 
@@ -385,7 +387,7 @@ def validate_jobs_by_controller_version(result):
     jobs_by_controller_version_list = result['jobs_by_controller_version']
     assert isinstance(jobs_by_controller_version_list, list)
     assert len(jobs_by_controller_version_list) == 5
-    
+
     expected_versions = {
         '2.15.0': 3,
         '2.16.0': 2,
@@ -393,18 +395,19 @@ def validate_jobs_by_controller_version(result):
         '2.18.0': 1,
         '2.19.0': 1,
     }
-    
+
     for version, expected_count in expected_versions.items():
         entry = find_entry_by_key(jobs_by_controller_version_list, 'controller_version', version)
         assert entry is not None, f'Should have controller_version {version}'
         assert entry['jobs_total'] == expected_count
-    
+
     return jobs_by_controller_version_list
+
 
 def validate_job_host_summary(result, job_type, workflowjob_type):
     """Validate job host summary data."""
     assert result['statistics']['rollup_period_job_host_pairs_total'] == 32
-    
+
     # Validate merged host summary fields for 'job' type
     required_fields = ['ok_total', 'failures_total', 'dark_total']
     for field in required_fields:
@@ -412,13 +415,14 @@ def validate_job_host_summary(result, job_type, workflowjob_type):
     assert job_type['ok_total'] > 0
     assert job_type['failures_total'] > 0
     assert job_type['dark_total'] > 0
-    
+
     # Validate merged host summary fields for 'workflowjob' type
     for field in required_fields:
         assert field in workflowjob_type
     assert workflowjob_type['ok_total'] > 0
     assert workflowjob_type['failures_total'] > 0
     assert workflowjob_type['dark_total'] > 0
+
 
 def validate_controller_versions_in_list(items, item_type):
     """Validate that controller_versions in items are valid."""
@@ -439,18 +443,22 @@ def validate_module_stats(result):
     assert isinstance(module_stats, list)
     assert len(module_stats) == 6
     assert result['statistics']['rollup_period_modules_total'] == 6
-    
+
     required_fields = [
-        'module_name', 'collection_name', 'jobs_total', 'unique_hosts_total',
-        'processed_events_total', 'controller_versions',
+        'module_name',
+        'collection_name',
+        'jobs_total',
+        'unique_hosts_total',
+        'processed_events_total',
+        'controller_versions',
     ]
-    
+
     for module in module_stats:
         for field in required_fields:
             assert field in module
         assert isinstance(module['processed_events_total'], (int, float))
         assert module['processed_events_total'] > 0
-    
+
     validate_controller_versions_in_list(module_stats, 'module')
 
 
@@ -459,19 +467,23 @@ def validate_collection_stats(result):
     collection_stats = result['collection_stats']
     assert isinstance(collection_stats, list)
     assert len(collection_stats) == 3
-    
+
     required_fields = [
-        'collection_name', 'collection_source', 'jobs_total',
-        'processed_events_total', 'controller_versions',
+        'collection_name',
+        'collection_source',
+        'jobs_total',
+        'processed_events_total',
+        'controller_versions',
     ]
-    
+
     for collection in collection_stats:
         for field in required_fields:
             assert field in collection
         assert isinstance(collection['processed_events_total'], (int, float))
         assert collection['processed_events_total'] > 0
-    
+
     validate_controller_versions_in_list(collection_stats, 'collection')
+
 
 def validate_role_stats(result):
     """Validate role statistics."""
@@ -479,22 +491,26 @@ def validate_role_stats(result):
     role_stats = result['role_stats']
     assert isinstance(role_stats, list)
     assert len(role_stats) > 0
-    
+
     required_fields = [
-        'role', 'collection_name', 'collection_source', 'jobs_total',
-        'tasks_total', 'processed_events_total',
+        'role',
+        'collection_name',
+        'collection_source',
+        'jobs_total',
+        'tasks_total',
+        'processed_events_total',
     ]
-    
+
     for role_stat in role_stats:
         for field in required_fields:
             assert field in role_stat
         assert isinstance(role_stat['processed_events_total'], (int, float))
         assert role_stat['processed_events_total'] > 0
-    
+
     # Verify that at least one role has a known collection_source
     known_collection_roles = [r for r in role_stats if r.get('collection_source') != 'Unknown']
     assert len(known_collection_roles) > 0
-    
+
     valid_sources = {'certified', 'community', 'validated', 'partner'}
     for role_stat in known_collection_roles:
         assert role_stat['collection_source'] in valid_sources
@@ -523,7 +539,7 @@ def validate_credentials(result):
     assert 'rollup_period_credential_types' in result
     credential_types = result['rollup_period_credential_types']
     assert isinstance(credential_types, list)
-    
+
     expected_types = {
         'Amazon Web Services',
         'Container Registry',
@@ -532,7 +548,7 @@ def validate_credentials(result):
         'Source Control',
         'Vault',
     }
-    
+
     assert len(credential_types) == 6
     for cred_type in expected_types:
         assert cred_type in credential_types
@@ -545,7 +561,7 @@ def validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_controll
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
     total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
     expected_total = result['statistics']['rollup_period_jobs_total']
-    
+
     assert total_jobs_by_job_type == expected_total
     assert total_jobs_by_launch_type == expected_total
     assert total_jobs_by_controller_version == expected_total

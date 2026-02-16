@@ -276,8 +276,14 @@ def _validate_events_modules(result):
     )
 
     module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
-    for module_name in ['ansible.netcommon.cli_config', 'ansible.posix.firewalld', 'ansible.windows.win_copy',
-                        'community.aws.ec2', 'community.general.yum', 'community.mongodb.insert']:
+    for module_name in [
+        'ansible.netcommon.cli_config',
+        'ansible.posix.firewalld',
+        'ansible.windows.win_copy',
+        'community.aws.ec2',
+        'community.general.yum',
+        'community.mongodb.insert',
+    ]:
         assert module_name in module_names
 
     module_stats = result['module_stats']

@@ -31,20 +31,31 @@ def _validate_statistics_structure(statistics):
     """Validate statistics structure contains all required fields."""
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
     required_fields = [
-        'rollup_period_modules_total', 'rollup_period_unique_hosts_automated_total',
-        'rollup_period_execution_environments_total', 'rollup_period_EE_default_total',
-        'rollup_period_EE_custom_total', 'rollup_period_jobs_total',
-        'rollup_period_jobs_successful', 'rollup_period_jobs_failed',
+        'rollup_period_modules_total',
+        'rollup_period_unique_hosts_automated_total',
+        'rollup_period_execution_environments_total',
+        'rollup_period_EE_default_total',
+        'rollup_period_EE_custom_total',
+        'rollup_period_jobs_total',
+        'rollup_period_jobs_successful',
+        'rollup_period_jobs_failed',
         'rollup_period_jobs_duration_all_statuses_seconds',
         'rollup_period_jobs_successful_duration_total_seconds',
         'rollup_period_jobs_failed_duration_total_seconds',
-        'rollup_period_organizations_total', 'rollup_period_forks_total',
-        'rollup_period_unique_hosts_total', 'rollup_period_job_host_pairs_total',
-        'rollup_period_successful_hosts_total', 'rollup_period_failed_hosts_total',
-        'rollup_period_unreachable_hosts_total', 'rollup_period_playbooks_total',
-        'rollup_period_templates_total', 'rollup_period_tasks_total',
-        'rollup_period_task_ok_total', 'rollup_period_task_failed_total',
-        'rollup_period_task_skipped_total', 'rollup_period_task_unreachable_total',
+        'rollup_period_organizations_total',
+        'rollup_period_forks_total',
+        'rollup_period_unique_hosts_total',
+        'rollup_period_job_host_pairs_total',
+        'rollup_period_successful_hosts_total',
+        'rollup_period_failed_hosts_total',
+        'rollup_period_unreachable_hosts_total',
+        'rollup_period_playbooks_total',
+        'rollup_period_templates_total',
+        'rollup_period_tasks_total',
+        'rollup_period_task_ok_total',
+        'rollup_period_task_failed_total',
+        'rollup_period_task_skipped_total',
+        'rollup_period_task_unreachable_total',
         'rollup_period_task_ignored_total',
     ]
     for field in required_fields:
@@ -62,9 +73,10 @@ def _validate_statistics_data_types(statistics):
     assert isinstance(statistics['rollup_period_EE_default_total'], int)
     assert isinstance(statistics['rollup_period_EE_custom_total'], int)
     assert isinstance(statistics['rollup_period_jobs_total'], int)
-    
+
     optional_int_float_fields = [
-        'rollup_period_jobs_successful', 'rollup_period_jobs_failed',
+        'rollup_period_jobs_successful',
+        'rollup_period_jobs_failed',
         'rollup_period_jobs_duration_all_statuses_seconds',
         'rollup_period_jobs_successful_duration_total_seconds',
         'rollup_period_jobs_failed_duration_total_seconds',
@@ -72,19 +84,20 @@ def _validate_statistics_data_types(statistics):
     for field in optional_int_float_fields:
         if statistics[field] is not None:
             assert isinstance(statistics[field], (int, float)), f'{field} should be int or float'
-    
+
     assert isinstance(statistics['rollup_period_forks_total'], int)
     assert isinstance(statistics['rollup_period_unique_hosts_total'], int)
     assert isinstance(statistics['rollup_period_job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
-    
+
     optional_int_fields = [
-        'rollup_period_successful_hosts_total', 'rollup_period_failed_hosts_total',
+        'rollup_period_successful_hosts_total',
+        'rollup_period_failed_hosts_total',
         'rollup_period_unreachable_hosts_total',
     ]
     for field in optional_int_fields:
         if statistics[field] is not None:
             assert isinstance(statistics[field], int), f'{field} should be an integer'
-    
+
     assert isinstance(statistics['rollup_period_playbooks_total'], int), 'playbooks_total should be an integer'
     assert isinstance(statistics['rollup_period_templates_total'], int), 'templates_total should be an integer'
 
@@ -190,7 +203,7 @@ def _validate_module_stats_values(json_data):
     """Validate module_stats actual values."""
     print('--- Validating module_stats data values ---')
     module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
-    
+
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Unknown']
     assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
     yum_module = anonymized_modules[0]
@@ -205,7 +218,7 @@ def _validate_module_stats_values(json_data):
     )
     assert yum_module['module_name'] == 'Unknown', f'Anonymized module name should be "Unknown", got {yum_module["module_name"]}'
     assert yum_module['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {yum_module.get("collection_name")}'
-    
+
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
     assert a10_module['jobs_total'] == 3, 'Should have 3 jobs using a10.acos_axapi.a10_slb_virtual_server'
@@ -223,7 +236,7 @@ def _validate_collection_stats_values(json_data):
     """Validate collection_stats actual values."""
     print('--- Validating collection_stats data values ---')
     collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
-    
+
     a10_collection = collection_stats_dict.get('a10.acos_axapi')
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'
     assert a10_collection['collection_source'] == 'community', 'a10.acos_axapi collection should be from community'
@@ -236,7 +249,7 @@ def _validate_collection_stats_values(json_data):
     assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
     assert a10_collection['task_ok_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
-    
+
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Unknown']
     assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
     builtin_collection = anonymized_collections[0]
@@ -266,7 +279,7 @@ def _validate_role_stats_and_collections_versions(json_data):
                 assert role_stat['collection_name'] == 'Unknown', (
                     f'Anonymized collection_name in role_stat should be "Unknown", got {role_stat.get("collection_name")}'
                 )
-    
+
     if 'collections_versions' in json_data and json_data['collections_versions']:
         print('--- Validating collections_versions data values ---')
         collections_versions = json_data['collections_versions']
@@ -307,7 +320,7 @@ def _validate_job_host_summary_values(json_data, statistics):
     assert statistics['rollup_period_job_host_pairs_total'] == 6, (
         f'Should have 6 total job host summary records (3 jobs × 2 hosts), got {statistics["rollup_period_job_host_pairs_total"]}'
     )
-    
+
     job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
     assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
     assert job_entry['ok_total'] == 6, 'Should have 6 ok tasks'
@@ -346,13 +359,13 @@ def _validate_job_statistics_match(json_data, statistics):
     print('--- Validating job statistics match jobs_by_job_type sums ---')
     if not json_data['jobs_by_job_type']:
         return
-    
+
     expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in json_data['jobs_by_job_type'])
     expected_jobs_failed = sum(j.get('jobs_failed_total', 0) for j in json_data['jobs_by_job_type'])
     expected_duration_all = sum(j.get('jobs_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
     expected_duration_successful = sum(j.get('jobs_successful_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
     expected_duration_failed = sum(j.get('jobs_failed_duration_total_seconds', 0) or 0 for j in json_data['jobs_by_job_type'])
-    
+
     if statistics['rollup_period_jobs_successful'] is not None:
         assert statistics['rollup_period_jobs_successful'] == expected_jobs_successful, (
             f'jobs_successful should match sum from jobs_by_job_type: expected={expected_jobs_successful}, '
@@ -468,7 +481,7 @@ def test_from_gather_to_json(cleanup_glob):
 
     # ========== Validate the json_data that are containing what they should ==========
     statistics = json_data['statistics']
-    
+
     # Validate structure
     _validate_top_level_structure(json_data)
     _validate_statistics_structure(statistics)
