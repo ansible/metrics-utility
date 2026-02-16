@@ -332,7 +332,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Ensure columns are Series (not None) before applying
         warnings_series = dataframe['warnings']
         deprecations_series = dataframe['deprecations']
-        
+
         dataframe['is_warning'] = warnings_series.apply(self._parse_and_check_json_array).astype(bool)
         dataframe['is_deprecation'] = deprecations_series.apply(self._parse_and_check_json_array).astype(bool)
         return dataframe
