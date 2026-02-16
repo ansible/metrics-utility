@@ -1,4 +1,3 @@
-
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 
 
