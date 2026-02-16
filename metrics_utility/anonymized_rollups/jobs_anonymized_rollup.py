@@ -16,115 +16,17 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
 
-        # Return both the filtered dataframe and collections statistics
-        return {
-            'jobs': dataframe,
-        }
-
-    def merge(self, data_all, data_new):
-        # Handle initial None case (first iteration from load_anonymized_rollup_data)
-        if data_all is None:
-            return data_new
-
-        # Ensure data_all is a dict with 'jobs' key
-        # Handle case where data_all might be a DataFrame (backward compatibility)
-        if isinstance(data_all, pd.DataFrame):
-            data_all = {'jobs': data_all}
-
-        # Simply merge the jobs dataframe
-        return {'jobs': pd.concat([data_all['jobs'], data_new['jobs']], ignore_index=True)}
-
-    def __init__(self):
-        super().__init__('jobs')
-        self.collector_names = ['unified_jobs']
-
-    def base(self, data):
-        """
-        This function will create first level aggregation of the job dataframe, the result is json
-
-        Creates three groupings:
-        1. Aggregations grouped by job_type (model):
-           - Number of jobs executed
-           - Number of jobs failed
-           - Number of jobs that succeeded
-           - Number of distinct templates
-           - Launch type counts (manual, scheduled, etc.)
-           - Job duration and waiting time statistics
-
-        2. Aggregations grouped by launch_type:
-           - Same statistics as above
-           - Job type count (distinct job types per launch type)
-
-        3. Aggregations grouped by controller_version:
-           - Same statistics as above
-           - Job type count (distinct job types per controller version)
-           - Launch type counts (manual, scheduled, etc.)
-
-        Job duration maximum seconds - by grouping
-        Job duration minimum seconds - by grouping
-        Job total seconds by grouping
-        The same as above but for waiting times
-
-        Active number of customer by Controller Version - this will be skipped for now
-        Active number of Customers - this will be skipped for now
-        Active number of Customers (anonymized? - the same as above?) - this will be skipped for now
-        Number of templates executed by company - this will be skipped for now
-
-        Also includes installed collections statistics:
-        - Collection name and version with job counts
-
-        data is a dict with 'jobs' (DataFrame) or None if no data
-        """
-
-        # Handle None input (no data files)
-        if data is None:
-            return {
-                'json': {
-                    'by_job_type': [],
-                    'by_launch_type': [],
-                    'by_controller_version': [],
-                    'organizations_total': None,
-                    'forks_total': None,
-                    'jobs_total': None,
-                    'installed_collections': [],
-                    'scm_types': [],
-                },
-                'rollup': {
-                    'aggregations_by_job_type': pd.DataFrame(),
-                    'aggregations_by_launch_type': pd.DataFrame(),
-                    'aggregations_by_controller_version': pd.DataFrame(),
-                    'organizations_total': None,
-                    'forks_total': None,
-                    'jobs_total': None,
-                    'installed_collections': pd.DataFrame(),
-                },
-            }
-
-        # Extract jobs dataframe from data
-        dataframe = data.get('jobs', pd.DataFrame())
-
         # Handle empty dataframe
         if dataframe.empty:
             return {
-                'json': {
-                    'by_job_type': [],
-                    'by_launch_type': [],
-                    'by_controller_version': [],
-                    'organizations_total': 0,
-                    'forks_total': 0,
-                    'jobs_total': 0,
-                    'installed_collections': [],
-                    'scm_types': [],
-                },
-                'rollup': {
-                    'aggregations_by_job_type': pd.DataFrame(),
-                    'aggregations_by_launch_type': pd.DataFrame(),
-                    'aggregations_by_controller_version': pd.DataFrame(),
-                    'organizations_total': 0,
-                    'forks_total': 0,
-                    'jobs_total': 0,
-                    'installed_collections': pd.DataFrame(),
-                },
+                'by_job_type': [],
+                'by_launch_type': [],
+                'by_controller_version': [],
+                'organizations': [],
+                'forks_total': 0,
+                'job_ids': [],
+                'scm_types': [],
+                'installed_collections': [],
             }
 
         # Coerce datetime-like columns to pandas datetimes (timezone-aware if possible)
@@ -156,7 +58,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Build common aggregation dictionary shared by both groupings
         # Using pre-computed columns instead of lambdas for better performance
         common_aggregations = {
-            'jobs_total': ('id', 'nunique'),
+            'job_ids': ('id', lambda x: sorted(list(set(x.dropna())))),
             'jobs_failed_total': ('failed', 'sum'),
             'jobs_successful_total': ('jobs_successful', 'sum'),
             'jobs_never_started_total': ('jobs_never_started', 'sum'),
@@ -168,14 +70,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'job_waiting_time_maximum_seconds': ('job_waiting_time_seconds', 'max'),
             'job_waiting_time_minimum_seconds': ('job_waiting_time_seconds', 'min'),
             'job_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
-            'templates_total': ('job_template_name', 'nunique'),
-            # inventory name
-            'inventories_total': ('inventory_name', 'nunique'),
-            # jobs using projects by scm types
+            'templates': ('job_template_name', lambda x: sorted(list(set(x.dropna())))),
+            'inventories': ('inventory_name', lambda x: sorted(list(set(x.dropna())))),
         }
 
-        # Controller versions aggregation - optimized to avoid lambda
-        # We'll compute this separately after groupby for better performance
+        # Controller versions aggregation
         def get_controller_versions(grouped_series):
             """Helper function to extract sorted unique controller versions from a group"""
             unique_versions = grouped_series.dropna().unique()
@@ -193,24 +92,31 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         # Add is_automation field: True if job_type is 'job', False otherwise
         aggregations_by_job_type['is_automation'] = aggregations_by_job_type['job_type'] == 'job'
+        # Compute jobs_total from job_ids list
+        aggregations_by_job_type['jobs_total'] = aggregations_by_job_type['job_ids'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_job_type['templates_total'] = aggregations_by_job_type['templates'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_job_type['inventories_total'] = aggregations_by_job_type['inventories'].apply(lambda x: len(x) if isinstance(x, list) else 0)
 
         # Aggregations grouped by launch_type
-        # Add job_type_total specific to launch_type grouping
         aggregations_by_launch_type_dict = common_aggregations.copy()
         aggregations_by_launch_type_dict.update(
             {
-                'job_type_total': ('model', 'nunique'),  # Count distinct job types instead of launch types
+                'job_types': ('model', lambda x: sorted(list(set(x.dropna())))),
             }
         )
         aggregations_by_launch_type_dict.update(controller_versions_aggregation)
 
         aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
+        aggregations_by_launch_type['jobs_total'] = aggregations_by_launch_type['job_ids'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_launch_type['templates_total'] = aggregations_by_launch_type['templates'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_launch_type['inventories_total'] = aggregations_by_launch_type['inventories'].apply(lambda x: len(x) if isinstance(x, list) else 0)
 
         # Aggregations grouped by controller_version
         aggregations_by_controller_version_dict = common_aggregations.copy()
         aggregations_by_controller_version_dict.update(
             {
-                'job_type_total': ('model', 'nunique'),  # Count distinct job types
+                'job_types': ('model', lambda x: sorted(list(set(x.dropna())))),
             }
         )
 
@@ -220,10 +126,20 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .reset_index()
             .rename(columns={'ansible_version': 'controller_version'})
         )
+        aggregations_by_controller_version['jobs_total'] = aggregations_by_controller_version['job_ids'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_controller_version['templates_total'] = aggregations_by_controller_version['templates'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_controller_version['inventories_total'] = aggregations_by_controller_version['inventories'].apply(lambda x: len(x) if isinstance(x, list) else 0)
 
-        organizations_total = dataframe['organization_name'].nunique()
-        forks_total = int(dataframe['forks'].sum())  # Convert numpy int64 to Python int for JSON serialization
-        jobs_total = int(dataframe['id'].nunique())  # Convert numpy int64 to Python int for JSON serialization
+        # Convert DataFrames to JSON (list of dicts)
+        by_job_type = aggregations_by_job_type.to_dict(orient='records')
+        by_launch_type = aggregations_by_launch_type.to_dict(orient='records')
+        by_controller_version = aggregations_by_controller_version.to_dict(orient='records')
+
+        # Track organizations, job_ids, scm_types, and collections for proper deduplication
+        organizations = sorted(list(set(dataframe['organization_name'].dropna().unique())))
+        job_ids = sorted(list(set(dataframe['id'].dropna().unique())))
+        forks_total = int(dataframe['forks'].sum()) if 'forks' in dataframe.columns else 0
 
         # Extract unique scm_type values from dataframe
         scm_types = []
@@ -233,16 +149,284 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Process collections statistics from jobs dataframe
         collections_stats = self._process_collections_from_jobs(dataframe)
 
-        # Prepare JSON data (converted to list of dicts)
+        return {
+            'by_job_type': by_job_type,
+            'by_launch_type': by_launch_type,
+            'by_controller_version': by_controller_version,
+            'organizations': organizations,
+            'forks_total': forks_total,
+            'job_ids': job_ids,
+            'scm_types': scm_types,
+            'installed_collections': collections_stats,
+        }
+
+    def merge(self, data_all, data_new):
+        """
+        Merge JSON structures from batches by summing numeric columns and unioning lists.
+        """
+        # Handle initial None case (first iteration from load_anonymized_rollup_data)
+        if data_all is None:
+            return data_new
+
+        def merge_stats_json(stats_all, stats_new, groupby_col):
+            """Merge two stats JSON lists by summing numeric columns and unioning lists."""
+            if not stats_all:
+                return stats_new if stats_new else []
+            if not stats_new:
+                return stats_all if stats_all else []
+
+            # Create lookup dictionaries keyed by grouping column
+            all_dict = {}
+            for item in stats_all:
+                key = item.get(groupby_col)
+                all_dict[key] = item.copy()
+
+            new_dict = {}
+            for item in stats_new:
+                key = item.get(groupby_col)
+                new_dict[key] = item.copy()
+
+            # Merge items
+            merged_list = []
+            all_keys = set(all_dict.keys()) | set(new_dict.keys())
+
+            # Numeric columns to sum
+            numeric_cols = [
+                'jobs_total', 'jobs_failed_total', 'jobs_successful_total', 'jobs_never_started_total',
+                'jobs_duration_total_seconds',
+                'jobs_successful_duration_total_seconds', 'jobs_failed_duration_total_seconds',
+                'job_waiting_time_total_seconds',
+                'templates_total', 'inventories_total', 'job_type_total',
+            ]
+
+            # List columns to union
+            list_cols = ['job_ids', 'templates', 'inventories', 'controller_versions', 'job_types']
+
+            for key in all_keys:
+                item_all = all_dict.get(key, {})
+                item_new = new_dict.get(key, {})
+
+                # Start with item_all or item_new
+                if item_all:
+                    merged_item = item_all.copy()
+                elif item_new:
+                    merged_item = item_new.copy()
+                else:
+                    continue
+
+                # If both exist, merge them
+                if item_all and item_new:
+                    # Sum numeric columns
+                    for col in numeric_cols:
+                        val_all = item_all.get(col) if item_all.get(col) is not None else 0
+                        val_new = item_new.get(col) if item_new.get(col) is not None else 0
+                        merged_item[col] = val_all + val_new
+
+                    # Handle max columns (take maximum)
+                    for col in ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']:
+                        if col in merged_item:
+                            val_all = item_all.get(col)
+                            val_new = item_new.get(col)
+                            if val_all is not None and val_new is not None:
+                                merged_item[col] = max(val_all, val_new)
+                            elif val_all is not None:
+                                merged_item[col] = val_all
+                            elif val_new is not None:
+                                merged_item[col] = val_new
+
+                    # Handle min columns (take minimum)
+                    for col in ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']:
+                        if col in merged_item:
+                            val_all = item_all.get(col)
+                            val_new = item_new.get(col)
+                            if val_all is not None and val_new is not None:
+                                merged_item[col] = min(val_all, val_new)
+                            elif val_all is not None:
+                                merged_item[col] = val_all
+                            elif val_new is not None:
+                                merged_item[col] = val_new
+
+                    # Union list columns
+                    for col in list_cols:
+                        list_all = item_all.get(col) if item_all.get(col) is not None else []
+                        list_new = item_new.get(col) if item_new.get(col) is not None else []
+                        # Convert to sets, union, convert back to sorted list
+                        set_all = set(list_all) if isinstance(list_all, list) else set()
+                        set_new = set(list_new) if isinstance(list_new, list) else set()
+                        merged_item[col] = sorted(list(set_all.union(set_new)))
+
+                    # Recompute totals from lists
+                    if 'job_ids' in merged_item:
+                        merged_item['jobs_total'] = len(merged_item['job_ids'])
+                    if 'templates' in merged_item:
+                        merged_item['templates_total'] = len(merged_item['templates'])
+                    if 'inventories' in merged_item:
+                        merged_item['inventories_total'] = len(merged_item['inventories'])
+                    if 'job_types' in merged_item:
+                        merged_item['job_type_total'] = len(merged_item['job_types'])
+
+                merged_list.append(merged_item)
+
+            return merged_list
+
+        # Merge by_job_type, by_launch_type, by_controller_version
+        by_job_type = merge_stats_json(
+            data_all.get('by_job_type', []),
+            data_new.get('by_job_type', []),
+            'job_type'
+        )
+
+        by_launch_type = merge_stats_json(
+            data_all.get('by_launch_type', []),
+            data_new.get('by_launch_type', []),
+            'launch_type'
+        )
+
+        by_controller_version = merge_stats_json(
+            data_all.get('by_controller_version', []),
+            data_new.get('by_controller_version', []),
+            'controller_version'
+        )
+
+        # Merge organizations, job_ids, scm_types lists (union and sort)
+        organizations_all = set(data_all.get('organizations', []))
+        organizations_new = set(data_new.get('organizations', []))
+        organizations = sorted(list(organizations_all.union(organizations_new)))
+
+        job_ids_all = set(data_all.get('job_ids', []))
+        job_ids_new = set(data_new.get('job_ids', []))
+        job_ids = sorted(list(job_ids_all.union(job_ids_new)))
+
+        scm_types_all = set(data_all.get('scm_types', []))
+        scm_types_new = set(data_new.get('scm_types', []))
+        scm_types = sorted(list(scm_types_all.union(scm_types_new)))
+
+        # Sum forks_total
+        forks_total = data_all.get('forks_total', 0) + data_new.get('forks_total', 0)
+
+        # Merge installed_collections (sum job_count for same collection+version)
+        collections_all = {(item['collection_name'], item['collection_version']): item['job_count'] for item in data_all.get('installed_collections', [])}
+        collections_new = {(item['collection_name'], item['collection_version']): item['job_count'] for item in data_new.get('installed_collections', [])}
+        
+        merged_collections = {}
+        all_collection_keys = set(collections_all.keys()) | set(collections_new.keys())
+        for key in all_collection_keys:
+            merged_collections[key] = collections_all.get(key, 0) + collections_new.get(key, 0)
+
+        installed_collections = [
+            {
+                'collection_name': collection_name,
+                'collection_version': collection_version,
+                'job_count': job_count,
+            }
+            for (collection_name, collection_version), job_count in merged_collections.items()
+        ]
+        # Sort by collection_name, then by collection_version for consistent output
+        installed_collections.sort(key=lambda x: (x['collection_name'], x['collection_version']))
+
+        return {
+            'by_job_type': by_job_type,
+            'by_launch_type': by_launch_type,
+            'by_controller_version': by_controller_version,
+            'organizations': organizations,
+            'forks_total': forks_total,
+            'job_ids': job_ids,
+            'scm_types': scm_types,
+            'installed_collections': installed_collections,
+        }
+
+    def __init__(self):
+        super().__init__('jobs')
+        self.collector_names = ['unified_jobs']
+
+    def base(self, data):
+        """
+        Returns the already-aggregated JSON data from prepare() and merge().
+        Computes final totals from lists/sets for proper deduplication.
+
+        data is a dict with already-aggregated JSON structures from prepare() and merge()
+        """
+
+        # Handle None input (no data files)
+        if data is None:
+            return {
+                'json': {
+                    'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_controller_version': [],
+                    'organizations_total': None,
+                    'forks_total': None,
+                    'jobs_total': None,
+                    'installed_collections': [],
+                    'scm_types': [],
+                },
+                'rollup': {
+                    'aggregations_by_job_type': pd.DataFrame(),
+                    'aggregations_by_launch_type': pd.DataFrame(),
+                    'aggregations_by_controller_version': pd.DataFrame(),
+                    'organizations_total': None,
+                    'forks_total': None,
+                    'jobs_total': None,
+                    'installed_collections': pd.DataFrame(),
+                },
+            }
+
+        # Extract data from the structure (already JSON)
+        by_job_type = data.get('by_job_type', [])
+        by_launch_type = data.get('by_launch_type', [])
+        by_controller_version = data.get('by_controller_version', [])
+        organizations = data.get('organizations', [])
+        forks_total = data.get('forks_total', 0)
+        job_ids = data.get('job_ids', [])
+        scm_types = data.get('scm_types', [])
+        installed_collections = data.get('installed_collections', [])
+
+        # Handle empty data
+        if not by_job_type and not by_launch_type and not by_controller_version:
+            return {
+                'json': {
+                    'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_controller_version': [],
+                    'organizations_total': 0,
+                    'forks_total': 0,
+                    'jobs_total': 0,
+                    'installed_collections': [],
+                    'scm_types': [],
+                },
+                'rollup': {
+                    'aggregations_by_job_type': pd.DataFrame(),
+                    'aggregations_by_launch_type': pd.DataFrame(),
+                    'aggregations_by_controller_version': pd.DataFrame(),
+                    'organizations_total': 0,
+                    'forks_total': 0,
+                    'jobs_total': 0,
+                    'installed_collections': pd.DataFrame(),
+                },
+            }
+
+        # Drop list columns from stats (we only need the computed totals, not the raw lists)
+        for stats_list in [by_job_type, by_launch_type, by_controller_version]:
+            for item in stats_list:
+                # Drop list columns that were used for deduplication
+                for col in ['job_ids', 'templates', 'inventories', 'job_types']:
+                    if col in item:
+                        del item[col]
+
+        # Compute final totals from lists
+        organizations_total = len(organizations)
+        jobs_total = len(job_ids)
+
+        # Prepare JSON data (already in JSON format)
         json_data = {
-            'by_job_type': aggregations_by_job_type.to_dict(orient='records'),
-            'by_launch_type': aggregations_by_launch_type.to_dict(orient='records'),
-            'by_controller_version': aggregations_by_controller_version.to_dict(orient='records'),
+            'by_job_type': by_job_type,
+            'by_launch_type': by_launch_type,
+            'by_controller_version': by_controller_version,
             'organizations_total': organizations_total,
             'forks_total': forks_total,
             'jobs_total': jobs_total,
-            'installed_collections': collections_stats,  # List of dicts with collection statistics
-            'scm_types': scm_types,  # List of unique scm_type values
+            'installed_collections': installed_collections,
+            'scm_types': scm_types,
         }
 
         return {
