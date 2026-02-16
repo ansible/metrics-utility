@@ -47,9 +47,7 @@ def test_credentials_anonymized_rollup_prepare():
 def test_credentials_anonymized_rollup_base():
     """Test base() method gets unique credential types across batches and converts to JSON format."""
     # Simulate data from prepare() and merge() - dictionary with credential_types list
-    prepared_data = {
-        'credential_types': ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault']
-    }
+    prepared_data = {'credential_types': ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault']}
 
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.base(prepared_data)
@@ -116,14 +114,14 @@ def test_credentials_anonymized_rollup_multiple_batches():
     )
 
     credentials_rollup = CredentialsAnonymizedRollup()
-    
+
     # Prepare each batch (returns dict)
     batch1 = credentials_rollup.prepare(batch1_df)
     batch2 = credentials_rollup.prepare(batch2_df)
-    
+
     # Merge batches
     merged = credentials_rollup.merge(batch1, batch2)
-    
+
     # Base aggregation
     result = credentials_rollup.base(merged)
     json_data = result['json']
@@ -164,10 +162,10 @@ def test_credentials_anonymized_rollup_merge_none():
     credentials_rollup = CredentialsAnonymizedRollup()
     batch1_df = pd.DataFrame([{'credential_type': 'Machine'}])
     batch1 = credentials_rollup.prepare(batch1_df)
-    
+
     # First merge should handle None
     merged = credentials_rollup.merge(None, batch1)
-    
+
     assert isinstance(merged, dict)
     assert 'credential_types' in merged
     assert 'Machine' in merged['credential_types']

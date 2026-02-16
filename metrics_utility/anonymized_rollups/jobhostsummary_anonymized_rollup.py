@@ -44,10 +44,18 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
             # Numeric columns to sum
             numeric_cols = [
-                'dark_total', 'failures_total', 'ok_total', 'skipped_total',
-                'ignored_total', 'rescued_total', 'successful_hosts_total',
-                'failed_hosts_total', 'unreachable_hosts_total', 'unique_hosts_total',
-                'job_type_total', 'launch_type_total',
+                'dark_total',
+                'failures_total',
+                'ok_total',
+                'skipped_total',
+                'ignored_total',
+                'rescued_total',
+                'successful_hosts_total',
+                'failed_hosts_total',
+                'unreachable_hosts_total',
+                'unique_hosts_total',
+                'job_type_total',
+                'launch_type_total',
             ]
 
             # List columns to union
@@ -95,22 +103,12 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return merged_list
 
         # Merge by_job_type, by_launch_type, by_controller_version
-        by_job_type = merge_stats_json(
-            data_all.get('by_job_type', []),
-            data_new.get('by_job_type', []),
-            'job_type'
-        )
+        by_job_type = merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
 
-        by_launch_type = merge_stats_json(
-            data_all.get('by_launch_type', []),
-            data_new.get('by_launch_type', []),
-            'launch_type'
-        )
+        by_launch_type = merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
 
         by_controller_version = merge_stats_json(
-            data_all.get('by_controller_version', []),
-            data_new.get('by_controller_version', []),
-            'controller_version'
+            data_all.get('by_controller_version', []), data_new.get('by_controller_version', []), 'controller_version'
         )
 
         # Sum job_host_pairs_total
@@ -261,23 +259,19 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         }
 
         # Aggregations grouped by job_type
-        aggregations_by_job_type = (
-            aggregated_by_job.groupby('job_type')
-            .agg(**common_aggregations)
-            .reset_index()
+        aggregations_by_job_type = aggregated_by_job.groupby('job_type').agg(**common_aggregations).reset_index()
+        aggregations_by_job_type['unique_hosts_total'] = aggregations_by_job_type['unique_hosts'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
         )
-        aggregations_by_job_type['unique_hosts_total'] = aggregations_by_job_type['unique_hosts'].apply(lambda x: len(x) if isinstance(x, list) else 0)
 
         # Aggregations grouped by launch_type
         aggregations_by_launch_type_dict = common_aggregations.copy()
         aggregations_by_launch_type_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
 
-        aggregations_by_launch_type = (
-            aggregated_by_job.groupby('launch_type')
-            .agg(**aggregations_by_launch_type_dict)
-            .reset_index()
+        aggregations_by_launch_type = aggregated_by_job.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
+        aggregations_by_launch_type['unique_hosts_total'] = aggregations_by_launch_type['unique_hosts'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
         )
-        aggregations_by_launch_type['unique_hosts_total'] = aggregations_by_launch_type['unique_hosts'].apply(lambda x: len(x) if isinstance(x, list) else 0)
         aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
 
         # Aggregations grouped by controller_version
@@ -286,13 +280,17 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_controller_version_dict['launch_types'] = ('launch_type', lambda x: sorted(list(set(x.dropna()))))
 
         aggregations_by_controller_version = (
-            aggregated_by_job.groupby('controller_version')
-            .agg(**aggregations_by_controller_version_dict)
-            .reset_index()
+            aggregated_by_job.groupby('controller_version').agg(**aggregations_by_controller_version_dict).reset_index()
         )
-        aggregations_by_controller_version['unique_hosts_total'] = aggregations_by_controller_version['unique_hosts'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_controller_version['launch_type_total'] = aggregations_by_controller_version['launch_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_controller_version['unique_hosts_total'] = aggregations_by_controller_version['unique_hosts'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
+        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
+        aggregations_by_controller_version['launch_type_total'] = aggregations_by_controller_version['launch_types'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
 
         # Convert DataFrames to JSON (list of dicts)
         by_job_type = aggregations_by_job_type.to_dict(orient='records')

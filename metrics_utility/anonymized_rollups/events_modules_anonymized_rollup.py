@@ -117,13 +117,25 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
             # Numeric columns to sum
             numeric_cols = [
-                'jobs_total', 'jobs_successful_total', 'jobs_failed_total',
-                'jobs_duration_total_seconds', 'jobs_waiting_time_total_seconds',
-                'jobs_never_started_total', 'task_ok_total', 'task_ok_with_retries_total',
-                'task_failed_total', 'task_unreachable_total', 'task_skipped_total',
-                'task_failed_and_ignored_total', 'jobs_failed_because_of_module_failure_total',
-                'jobs_successful_duration_total_seconds', 'jobs_failed_duration_total_seconds',
-                'warnings_total', 'deprecations_total', 'processed_events_total', 'tasks_total',
+                'jobs_total',
+                'jobs_successful_total',
+                'jobs_failed_total',
+                'jobs_duration_total_seconds',
+                'jobs_waiting_time_total_seconds',
+                'jobs_never_started_total',
+                'task_ok_total',
+                'task_ok_with_retries_total',
+                'task_failed_total',
+                'task_unreachable_total',
+                'task_skipped_total',
+                'task_failed_and_ignored_total',
+                'jobs_failed_because_of_module_failure_total',
+                'jobs_successful_duration_total_seconds',
+                'jobs_failed_duration_total_seconds',
+                'warnings_total',
+                'deprecations_total',
+                'processed_events_total',
+                'tasks_total',
                 'unique_hosts_total',
             ]
 
@@ -169,23 +181,17 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Merge module_stats
         module_stats = merge_stats_json(
-            data_all.get('module_stats', []),
-            data_new.get('module_stats', []),
-            ['module_name', 'collection_source', 'collection_name']
+            data_all.get('module_stats', []), data_new.get('module_stats', []), ['module_name', 'collection_source', 'collection_name']
         )
 
         # Merge collection_stats
         collection_stats = merge_stats_json(
-            data_all.get('collection_stats', []),
-            data_new.get('collection_stats', []),
-            ['collection_name', 'collection_source']
+            data_all.get('collection_stats', []), data_new.get('collection_stats', []), ['collection_name', 'collection_source']
         )
 
         # Merge role_stats
         role_stats = merge_stats_json(
-            data_all.get('role_stats', []),
-            data_new.get('role_stats', []),
-            ['role', 'collection_name', 'collection_source']
+            data_all.get('role_stats', []), data_new.get('role_stats', []), ['role', 'collection_name', 'collection_source']
         )
 
         # Merge unique_modules lists (union and sort)
@@ -487,9 +493,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         }
 
         # Compute module_stats
-        module_stats = task_summary.groupby(
-            ['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
-        ).agg(**common_aggregation)
+        module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
+            **common_aggregation
+        )
         module_stats['tasks_total'] = (
             module_stats['task_ok_total']
             + module_stats['task_ok_with_retries_total']
@@ -501,9 +507,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats['unique_hosts_total'] = module_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         # Compute collection_stats
-        collection_stats = task_summary.groupby(
-            ['collection_name', 'collection_source'], as_index=False, observed=True
-        ).agg(**common_aggregation)
+        collection_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
         collection_stats['tasks_total'] = (
             collection_stats['task_ok_total']
             + collection_stats['task_ok_with_retries_total']
@@ -522,9 +526,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         task_summary['role_collection_source'] = role_collection_source_str.fillna('Unknown')
 
         # Compute role_stats
-        role_stats = task_summary.groupby(
-            ['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True
-        ).agg(**common_aggregation)
+        role_stats = task_summary.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
+            **common_aggregation
+        )
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
         role_stats['tasks_total'] = (
             role_stats['task_ok_total']
@@ -542,7 +546,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             if not df.empty and 'host_ids' in df.columns:
                 df['host_ids'] = df['host_ids'].apply(lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else []))
             if not df.empty and 'controller_versions' in df.columns:
-                df['controller_versions'] = df['controller_versions'].apply(lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else []))
+                df['controller_versions'] = df['controller_versions'].apply(
+                    lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else [])
+                )
 
         # Convert categorical columns to strings before JSON conversion
         categorical_columns = ['module_name', 'collection_name', 'collection_source', 'role']
@@ -637,8 +643,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         # Convert modules_per_playbook dict (lists) to counts for JSON
         modules_used_per_playbook_total = {
-            playbook: len(module_list) if isinstance(module_list, list) else module_list
-            for playbook, module_list in modules_per_playbook.items()
+            playbook: len(module_list) if isinstance(module_list, list) else module_list for playbook, module_list in modules_per_playbook.items()
         }
 
         # Compute hosts_automated_total from unique_hosts list

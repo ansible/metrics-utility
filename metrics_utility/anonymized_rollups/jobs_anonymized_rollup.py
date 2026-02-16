@@ -109,8 +109,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
         aggregations_by_launch_type['jobs_total'] = aggregations_by_launch_type['job_ids'].apply(lambda x: len(x) if isinstance(x, list) else 0)
         aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_launch_type['templates_total'] = aggregations_by_launch_type['templates'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_launch_type['inventories_total'] = aggregations_by_launch_type['inventories'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_launch_type['templates_total'] = aggregations_by_launch_type['templates'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
+        aggregations_by_launch_type['inventories_total'] = aggregations_by_launch_type['inventories'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
 
         # Aggregations grouped by controller_version
         aggregations_by_controller_version_dict = common_aggregations.copy()
@@ -126,10 +130,18 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             .reset_index()
             .rename(columns={'ansible_version': 'controller_version'})
         )
-        aggregations_by_controller_version['jobs_total'] = aggregations_by_controller_version['job_ids'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_controller_version['templates_total'] = aggregations_by_controller_version['templates'].apply(lambda x: len(x) if isinstance(x, list) else 0)
-        aggregations_by_controller_version['inventories_total'] = aggregations_by_controller_version['inventories'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_controller_version['jobs_total'] = aggregations_by_controller_version['job_ids'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
+        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
+        aggregations_by_controller_version['templates_total'] = aggregations_by_controller_version['templates'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
+        aggregations_by_controller_version['inventories_total'] = aggregations_by_controller_version['inventories'].apply(
+            lambda x: len(x) if isinstance(x, list) else 0
+        )
 
         # Convert DataFrames to JSON (list of dicts)
         by_job_type = aggregations_by_job_type.to_dict(orient='records')
@@ -192,11 +204,17 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
             # Numeric columns to sum
             numeric_cols = [
-                'jobs_total', 'jobs_failed_total', 'jobs_successful_total', 'jobs_never_started_total',
+                'jobs_total',
+                'jobs_failed_total',
+                'jobs_successful_total',
+                'jobs_never_started_total',
                 'jobs_duration_total_seconds',
-                'jobs_successful_duration_total_seconds', 'jobs_failed_duration_total_seconds',
+                'jobs_successful_duration_total_seconds',
+                'jobs_failed_duration_total_seconds',
                 'job_waiting_time_total_seconds',
-                'templates_total', 'inventories_total', 'job_type_total',
+                'templates_total',
+                'inventories_total',
+                'job_type_total',
             ]
 
             # List columns to union
@@ -270,22 +288,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             return merged_list
 
         # Merge by_job_type, by_launch_type, by_controller_version
-        by_job_type = merge_stats_json(
-            data_all.get('by_job_type', []),
-            data_new.get('by_job_type', []),
-            'job_type'
-        )
+        by_job_type = merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
 
-        by_launch_type = merge_stats_json(
-            data_all.get('by_launch_type', []),
-            data_new.get('by_launch_type', []),
-            'launch_type'
-        )
+        by_launch_type = merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
 
         by_controller_version = merge_stats_json(
-            data_all.get('by_controller_version', []),
-            data_new.get('by_controller_version', []),
-            'controller_version'
+            data_all.get('by_controller_version', []), data_new.get('by_controller_version', []), 'controller_version'
         )
 
         # Merge organizations, job_ids, scm_types lists (union and sort)
@@ -305,9 +313,13 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         forks_total = data_all.get('forks_total', 0) + data_new.get('forks_total', 0)
 
         # Merge installed_collections (sum job_count for same collection+version)
-        collections_all = {(item['collection_name'], item['collection_version']): item['job_count'] for item in data_all.get('installed_collections', [])}
-        collections_new = {(item['collection_name'], item['collection_version']): item['job_count'] for item in data_new.get('installed_collections', [])}
-        
+        collections_all = {
+            (item['collection_name'], item['collection_version']): item['job_count'] for item in data_all.get('installed_collections', [])
+        }
+        collections_new = {
+            (item['collection_name'], item['collection_version']): item['job_count'] for item in data_new.get('installed_collections', [])
+        }
+
         merged_collections = {}
         all_collection_keys = set(collections_all.keys()) | set(collections_new.keys())
         for key in all_collection_keys:
