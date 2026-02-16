@@ -74,6 +74,31 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     When task is ignored, it is not retried.
     """
 
+    # Constants for merge operations
+    _NUMERIC_COLS = [
+        'jobs_total',
+        'jobs_successful_total',
+        'jobs_failed_total',
+        'jobs_duration_total_seconds',
+        'jobs_waiting_time_total_seconds',
+        'jobs_never_started_total',
+        'task_ok_total',
+        'task_ok_with_retries_total',
+        'task_failed_total',
+        'task_unreachable_total',
+        'task_skipped_total',
+        'task_failed_and_ignored_total',
+        'jobs_failed_because_of_module_failure_total',
+        'jobs_successful_duration_total_seconds',
+        'jobs_failed_duration_total_seconds',
+        'warnings_total',
+        'deprecations_total',
+        'processed_events_total',
+        'tasks_total',
+        'unique_hosts_total',
+    ]
+    _LIST_COLS = ['host_ids', 'controller_versions']
+
     def __init__(self):
         super().__init__('events_modules')
 
@@ -84,122 +109,78 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         with open(collections_path, 'r') as f:
             self.collections = json.load(f)
 
-    def merge(self, data_all, data_new):
-        """
-        Override merge to aggregate module_stats, collection_stats, role_stats from batches.
-        Works with JSON structures (lists of dicts), sums numeric columns and unions lists for proper deduplication.
-        """
-        # Handle initial None case (first iteration from load_anonymized_rollup_data)
-        if data_all is None:
-            return data_new
+    def _create_lookup_dict(self, stats_list, groupby_cols):
+        """Create a lookup dictionary keyed by grouping columns."""
+        lookup = {}
+        for item in stats_list:
+            key = tuple(item.get(col) for col in groupby_cols)
+            lookup[key] = item.copy()
+        return lookup
 
-        def merge_stats_json(stats_all, stats_new, groupby_cols):
-            """Merge two stats JSON lists by summing numeric columns and unioning lists."""
-            if not stats_all:
-                return stats_new if stats_new else []
-            if not stats_new:
-                return stats_all if stats_all else []
+    def _merge_numeric_columns(self, item_all, item_new, merged_item):
+        """Sum numeric columns from both items."""
+        for col in self._NUMERIC_COLS:
+            val_all = item_all.get(col) if item_all.get(col) is not None else 0
+            val_new = item_new.get(col) if item_new.get(col) is not None else 0
+            merged_item[col] = val_all + val_new
 
-            # Create lookup dictionaries keyed by grouping columns
-            all_dict = {}
-            for item in stats_all:
-                key = tuple(item.get(col) for col in groupby_cols)
-                all_dict[key] = item.copy()
+    def _merge_list_columns(self, item_all, item_new, merged_item):
+        """Union list columns from both items."""
+        for col in self._LIST_COLS:
+            list_all = item_all.get(col) if item_all.get(col) is not None else []
+            list_new = item_new.get(col) if item_new.get(col) is not None else []
+            set_all = set(list_all) if isinstance(list_all, list) else set()
+            set_new = set(list_new) if isinstance(list_new, list) else set()
+            merged_item[col] = sorted(list(set_all.union(set_new)))
 
-            new_dict = {}
-            for item in stats_new:
-                key = tuple(item.get(col) for col in groupby_cols)
-                new_dict[key] = item.copy()
+    def _merge_single_item(self, item_all, item_new):
+        """Merge a single item from all and new data."""
+        if item_all:
+            merged_item = item_all.copy()
+        elif item_new:
+            merged_item = item_new.copy()
+        else:
+            return None
 
-            # Merge items
-            merged_list = []
-            all_keys = set(all_dict.keys()) | set(new_dict.keys())
+        if item_all and item_new:
+            self._merge_numeric_columns(item_all, item_new, merged_item)
+            self._merge_list_columns(item_all, item_new, merged_item)
 
-            # Numeric columns to sum
-            numeric_cols = [
-                'jobs_total',
-                'jobs_successful_total',
-                'jobs_failed_total',
-                'jobs_duration_total_seconds',
-                'jobs_waiting_time_total_seconds',
-                'jobs_never_started_total',
-                'task_ok_total',
-                'task_ok_with_retries_total',
-                'task_failed_total',
-                'task_unreachable_total',
-                'task_skipped_total',
-                'task_failed_and_ignored_total',
-                'jobs_failed_because_of_module_failure_total',
-                'jobs_successful_duration_total_seconds',
-                'jobs_failed_duration_total_seconds',
-                'warnings_total',
-                'deprecations_total',
-                'processed_events_total',
-                'tasks_total',
-                'unique_hosts_total',
-            ]
+        if 'host_ids' in merged_item:
+            merged_item['unique_hosts_total'] = len(merged_item['host_ids'])
 
-            # List columns to union (convert to sets, union, convert back to sorted lists)
-            list_cols = ['host_ids', 'controller_versions']
+        return merged_item
 
-            for key in all_keys:
-                item_all = all_dict.get(key, {})
-                item_new = new_dict.get(key, {})
+    def _merge_stats_json(self, stats_all, stats_new, groupby_cols):
+        """Merge two stats JSON lists by summing numeric columns and unioning lists."""
+        if not stats_all:
+            return stats_new if stats_new else []
+        if not stats_new:
+            return stats_all if stats_all else []
 
-                # Start with item_all or item_new (prefer item_all for structure)
-                if item_all:
-                    merged_item = item_all.copy()
-                elif item_new:
-                    merged_item = item_new.copy()
-                else:
-                    continue  # Skip if both are empty (shouldn't happen)
+        all_dict = self._create_lookup_dict(stats_all, groupby_cols)
+        new_dict = self._create_lookup_dict(stats_new, groupby_cols)
 
-                # If both exist, merge them
-                if item_all and item_new:
-                    # Sum numeric columns
-                    for col in numeric_cols:
-                        val_all = item_all.get(col) if item_all.get(col) is not None else 0
-                        val_new = item_new.get(col) if item_new.get(col) is not None else 0
-                        merged_item[col] = val_all + val_new
+        merged_list = []
+        all_keys = set(all_dict.keys()) | set(new_dict.keys())
 
-                    # Union list columns
-                    for col in list_cols:
-                        list_all = item_all.get(col) if item_all.get(col) is not None else []
-                        list_new = item_new.get(col) if item_new.get(col) is not None else []
-                        # Convert to sets, union, convert back to sorted list
-                        set_all = set(list_all) if isinstance(list_all, list) else set()
-                        set_new = set(list_new) if isinstance(list_new, list) else set()
-                        merged_item[col] = sorted(list(set_all.union(set_new)))
-
-                # Recompute unique_hosts_total from host_ids list
-                if 'host_ids' in merged_item:
-                    merged_item['unique_hosts_total'] = len(merged_item['host_ids'])
-
+        for key in all_keys:
+            item_all = all_dict.get(key, {})
+            item_new = new_dict.get(key, {})
+            merged_item = self._merge_single_item(item_all, item_new)
+            if merged_item:
                 merged_list.append(merged_item)
 
-            return merged_list
+        return merged_list
 
-        # Merge module_stats
-        module_stats = merge_stats_json(
-            data_all.get('module_stats', []), data_new.get('module_stats', []), ['module_name', 'collection_source', 'collection_name']
-        )
-
-        # Merge collection_stats
-        collection_stats = merge_stats_json(
-            data_all.get('collection_stats', []), data_new.get('collection_stats', []), ['collection_name', 'collection_source']
-        )
-
-        # Merge role_stats
-        role_stats = merge_stats_json(
-            data_all.get('role_stats', []), data_new.get('role_stats', []), ['role', 'collection_name', 'collection_source']
-        )
-
-        # Merge unique_modules lists (union and sort)
+    def _merge_unique_modules(self, data_all, data_new):
+        """Merge unique_modules lists (union and sort)."""
         unique_modules_all = set(data_all.get('unique_modules', []))
         unique_modules_new = set(data_new.get('unique_modules', []))
-        unique_modules = sorted(list(unique_modules_all.union(unique_modules_new)))
+        return sorted(list(unique_modules_all.union(unique_modules_new)))
 
-        # Merge modules_per_playbook dicts (union lists per playbook)
+    def _merge_modules_per_playbook(self, data_all, data_new):
+        """Merge modules_per_playbook dicts (union lists per playbook)."""
         modules_per_playbook_all = data_all.get('modules_per_playbook', {})
         modules_per_playbook_new = data_new.get('modules_per_playbook', {})
         modules_per_playbook = {}
@@ -210,11 +191,31 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
             modules_per_playbook[playbook] = sorted(list(set_all.union(set_new)))
+        return modules_per_playbook
 
-        # Merge unique_hosts lists (union and sort)
+    def _merge_unique_hosts(self, data_all, data_new):
+        """Merge unique_hosts lists (union and sort)."""
         unique_hosts_all = set(data_all.get('unique_hosts', []))
         unique_hosts_new = set(data_new.get('unique_hosts', []))
-        unique_hosts = sorted(list(unique_hosts_all.union(unique_hosts_new)))
+        return sorted(list(unique_hosts_all.union(unique_hosts_new)))
+
+    def merge(self, data_all, data_new):
+        """
+        Override merge to aggregate module_stats, collection_stats, role_stats from batches.
+        Works with JSON structures (lists of dicts), sums numeric columns and unions lists for proper deduplication.
+        """
+        if data_all is None:
+            return data_new
+
+        module_stats = self._merge_stats_json(
+            data_all.get('module_stats', []), data_new.get('module_stats', []), ['module_name', 'collection_source', 'collection_name']
+        )
+        collection_stats = self._merge_stats_json(
+            data_all.get('collection_stats', []), data_new.get('collection_stats', []), ['collection_name', 'collection_source']
+        )
+        role_stats = self._merge_stats_json(
+            data_all.get('role_stats', []), data_new.get('role_stats', []), ['role', 'collection_name', 'collection_source']
+        )
 
         return {
             'collected_events_total': data_all['collected_events_total'] + data_new['collected_events_total'],
@@ -223,9 +224,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': module_stats,
             'collection_stats': collection_stats,
             'role_stats': role_stats,
-            'unique_modules': unique_modules,
-            'modules_per_playbook': modules_per_playbook,
-            'unique_hosts': unique_hosts,
+            'unique_modules': self._merge_unique_modules(data_all, data_new),
+            'modules_per_playbook': self._merge_modules_per_playbook(data_all, data_new),
+            'unique_hosts': self._merge_unique_hosts(data_all, data_new),
         }
 
     # Prepare is run for each batch of data
