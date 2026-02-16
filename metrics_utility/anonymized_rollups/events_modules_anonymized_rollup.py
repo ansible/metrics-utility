@@ -229,16 +229,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'unique_hosts': self._merge_unique_hosts(data_all, data_new),
         }
 
-    # Prepare is run for each batch of data
-    # then it is merged with other batches into one dataframes
-    # as default, merging is done by concatenating dataframes (defined in base class)
-    def prepare(self, dataframe):
-        # Count all events before pruning
+    def _count_initial_statistics(self, dataframe):
+        """Count all events, warnings, and deprecations before filtering."""
         collected_events_total = len(dataframe) if dataframe is not None and not dataframe.empty else 0
 
-        # Count warnings and deprecations before filtering
-        # These events don't have task_uuid, host_id, module_name, etc., so they're filtered out later
-        # but we count them here for statistics
         if dataframe is None or dataframe.empty or 'event' not in dataframe.columns:
             warnings_total = 0
             deprecations_total = 0
@@ -246,97 +240,101 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             warnings_total = len(dataframe[dataframe['event'] == 'warning'])
             deprecations_total = len(dataframe[dataframe['event'] == 'deprecated'])
 
-        # Failure/Success rate of modules
-        success_events_list = ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok']
-        failed_events_list = ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed']
-        unreachable_events_list = ['runner_on_unreachable', 'runner_item_on_unreachable']
-        skipped_events_list = ['runner_on_skipped', 'runner_item_on_skipped']
-        warnings_and_deprecations_events_list = ['warning', 'deprecated']
+        return collected_events_total, warnings_total, deprecations_total
 
-        # Filter for only the event types that are used in analysis
+    def _get_event_lists(self):
+        """Return lists of event types for filtering and marking."""
+        return {
+            'success': ['runner_on_ok', 'runner_on_async_ok', 'runner_item_on_ok'],
+            'failed': ['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed'],
+            'unreachable': ['runner_on_unreachable', 'runner_item_on_unreachable'],
+            'skipped': ['runner_on_skipped', 'runner_item_on_skipped'],
+            'warnings_and_deprecations': ['warning', 'deprecated'],
+        }
+
+    def _filter_relevant_events(self, dataframe, event_lists):
+        """Filter dataframe for only relevant event types."""
         all_relevant_events = (
-            success_events_list + failed_events_list + unreachable_events_list + skipped_events_list + warnings_and_deprecations_events_list
+            event_lists['success']
+            + event_lists['failed']
+            + event_lists['unreachable']
+            + event_lists['skipped']
+            + event_lists['warnings_and_deprecations']
         )
-        dataframe = dataframe[dataframe['event'].isin(all_relevant_events)]
+        return dataframe[dataframe['event'].isin(all_relevant_events)]
 
-        # Prepare data
-        collections = self.collections
-
-        # if missing ignore_errors column, insert it, default is False. If values is null, set it to False
+    def _prepare_basic_columns(self, dataframe):
+        """Prepare basic columns: ignore_errors, datetime, module_name, role, job_failed."""
         if 'ignore_errors' not in dataframe.columns:
             dataframe['ignore_errors'] = False
-
         dataframe['ignore_errors'] = dataframe['ignore_errors'].fillna(False).astype(bool)
 
-        # Coerce datetime-like columns to pandas datetimes (UTC) to accept strings like '...+00'
         for col in ['job_created', 'job_started', 'job_finished']:
             if col in dataframe.columns:
                 dataframe[col] = pd.to_datetime(dataframe[col], errors='coerce', utc=True)
 
-        # add module column into the dataframe based on dataframe_content_usage.py approach
         dataframe['module_name'] = (
             dataframe['resolved_action'].fillna(dataframe['task_action']).where(lambda s: s.notna() & (s.astype(str).str.strip() != ''))
         )
 
-        # add role column into the dataframe based on dataframe_content_usage.py approach
-        # If resolved_role is not there, fill it with role column
         dataframe['role'] = dataframe['resolved_role'].fillna(dataframe['role']).astype(str)
-        # Only get valid role names into role column
         dataframe['role'] = dataframe['role'].apply(lambda x: DataframeContentUsage.extract_role_name(x))
 
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
+        return dataframe
 
-        # Vectorized extraction of collection name (much faster than .apply())
-        # Extract first two parts (namespace.collection) from module name
-        # Requires at least 3 parts: namespace.collection.module
+    def _extract_collection_info(self, dataframe):
+        """Extract collection_name and collection_source from module_name."""
         dataframe['collection_name'] = dataframe['module_name'].str.extract(
             r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$', expand=False
         )
+        dataframe['collection_source'] = dataframe['collection_name'].map(self.collections).fillna('Unknown')
+        return dataframe
 
+    def _compute_job_metrics(self, dataframe):
+        """Compute job duration and waiting time metrics."""
         dataframe['job_duration_seconds'] = (dataframe['job_finished'] - dataframe['job_started']).dt.total_seconds()
         dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
+        return dataframe
 
-        # fill collection source from collections_types
-        dataframe['collection_source'] = dataframe['collection_name'].map(collections).fillna('Unknown')
+    def _mark_event_types(self, dataframe, event_lists):
+        """Mark different event types in the dataframe."""
+        dataframe['task_success_event'] = dataframe['event'].isin(event_lists['success'])
+        dataframe['task_failed_event'] = dataframe['event'].isin(event_lists['failed']) & ~dataframe['ignore_errors']
+        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(event_lists['failed']) & dataframe['ignore_errors']
+        dataframe['task_unreachable_event'] = dataframe['event'].isin(event_lists['unreachable'])
+        dataframe['task_skipped_event'] = dataframe['event'].isin(event_lists['skipped'])
+        return dataframe
 
-        # Mark events
-        dataframe['task_success_event'] = dataframe['event'].isin(success_events_list)
+    @staticmethod
+    def _parse_and_check_json_array(x):
+        """Parse JSON array (string, list, or dict) and return True if it contains items."""
+        if pd.isnull(x):
+            return False
+        try:
+            if isinstance(x, (list, dict)):
+                parsed = x
+            else:
+                parsed = json.loads(x) if isinstance(x, str) else x
+            if isinstance(parsed, list):
+                return len(parsed) > 0
+            return bool(parsed)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return False
 
-        dataframe['task_failed_event'] = dataframe['event'].isin(failed_events_list) & ~dataframe['ignore_errors']
-        dataframe['task_failed_and_ignored_event'] = dataframe['event'].isin(failed_events_list) & dataframe['ignore_errors']
-        dataframe['task_unreachable_event'] = dataframe['event'].isin(unreachable_events_list)
-        dataframe['task_skipped_event'] = dataframe['event'].isin(skipped_events_list)
-
-        # determine module level warnings and deprecations
-        # Ensure warnings and deprecations columns exist (they may be missing in test data)
+    def _parse_warnings_deprecations(self, dataframe):
+        """Parse warnings and deprecations columns."""
         if 'warnings' not in dataframe.columns:
             dataframe['warnings'] = None
         if 'deprecations' not in dataframe.columns:
             dataframe['deprecations'] = None
 
-        # Parse JSON arrays and check if they contain items
-        def parse_and_check_json_array(x):
-            """Parse JSON array (string, list, or dict) and return True if it contains items."""
-            if pd.isnull(x):
-                return False
-            try:
-                # If already a list/dict, use it directly
-                if isinstance(x, (list, dict)):
-                    parsed = x
-                else:
-                    # If string, parse it
-                    parsed = json.loads(x) if isinstance(x, str) else x
-                # Check if it's a non-empty array
-                if isinstance(parsed, list):
-                    return len(parsed) > 0
-                # If it's a dict or other structure, check if it's truthy
-                return bool(parsed)
-            except (json.JSONDecodeError, TypeError, ValueError):
-                return False
+        dataframe['is_warning'] = dataframe['warnings'].apply(self._parse_and_check_json_array).astype(bool)
+        dataframe['is_deprecation'] = dataframe['deprecations'].apply(self._parse_and_check_json_array).astype(bool)
+        return dataframe
 
-        dataframe['is_warning'] = dataframe['warnings'].apply(parse_and_check_json_array).astype(bool)
-        dataframe['is_deprecation'] = dataframe['deprecations'].apply(parse_and_check_json_array).astype(bool)
-
+    def _filter_and_select_columns(self, dataframe):
+        """Filter dataframe for required fields and select only needed columns."""
         dataframe = dataframe[
             dataframe['module_name'].notna()
             & dataframe['host_id'].notna()
@@ -346,44 +344,21 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             & (dataframe['playbook'].str.strip() != '')
         ]
 
-        # rename ansible_version to controller_version, the fast way
-        # change the metadata, no dataframe copy
-        # If ansible_version doesn't exist, create controller_version with None values
         if 'ansible_version' in dataframe.columns:
             dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
         else:
             dataframe['controller_version'] = None
 
-        # Select only the columns needed for analysis to save memory
         columns_to_keep = [
-            'job_id',
-            'host_id',
-            'task_uuid',
-            'module_name',
-            'playbook',
-            'collection_name',
-            'collection_source',
-            'role',
-            'job_failed',
-            'job_started',
-            'job_duration_seconds',
-            'job_waiting_time_seconds',
-            'task_success_event',
-            'task_failed_event',
-            'task_failed_and_ignored_event',
-            'task_unreachable_event',
-            'task_skipped_event',
-            'event',
-            'is_warning',
-            'is_deprecation',
-            'controller_version',
+            'job_id', 'host_id', 'task_uuid', 'module_name', 'playbook', 'collection_name', 'collection_source', 'role',
+            'job_failed', 'job_started', 'job_duration_seconds', 'job_waiting_time_seconds',
+            'task_success_event', 'task_failed_event', 'task_failed_and_ignored_event',
+            'task_unreachable_event', 'task_skipped_event', 'event', 'is_warning', 'is_deprecation', 'controller_version',
         ]
+        return dataframe[columns_to_keep]
 
-        dataframe = dataframe[columns_to_keep]
-
-        # This groups by (job, host, task, module, collection) and summarizes all events
-        # This can reduce the number of rows, depends of number of retries
-        # Note: role is kept as a column but not used for grouping here to avoid splitting tasks unnecessarily
+    def _create_task_summary(self, dataframe):
+        """Create initial task summary by grouping events."""
         task_summary = (
             dataframe.groupby(
                 ['job_id', 'host_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
@@ -403,10 +378,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 deprecations_total=('is_deprecation', 'sum'),
                 processed_events_total=('event', 'size'),
                 controller_version=('controller_version', 'first'),
-                role=('role', 'first'),  # Keep role for later aggregation
+                role=('role', 'first'),
             )
             .assign(
-                # mutually exclusive categories - only one can be true
                 task_clean_success=lambda x: x['seen_success'] & ~x['seen_failed'] & ~x['seen_unreachable'] & ~x['seen_skipped'],
                 task_success_with_reruns=lambda x: x['seen_success'] & (x['seen_failed'] | x['seen_unreachable']),
                 task_failed=lambda x: x['seen_failed'] & ~x['seen_success'],
@@ -418,14 +392,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 job_id_that_contained_failed_task=lambda df: df['job_id'].where(df['task_failed']),
             )
         )
+        return task_summary
 
-        # aggregate task_summary by job_id, task_uuid, module_name, collection_source, collection_name
-        # aggregate data for hosts together
-        # note that prepare is called in batches and one job and task can be split between batches
-        # This will cause acceptable precision loss, because we will end up with two entries for the same job and task
-        # duplicated entries will be summed in merge function
-        # Note: role is kept as a column but not used for grouping here
-        task_summary = task_summary.groupby(
+    def _aggregate_task_summary(self, task_summary):
+        """Aggregate task summary by job_id, task_uuid, module_name, collection_source, collection_name."""
+        return task_summary.groupby(
             ['job_id', 'task_uuid', 'module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
         ).agg(
             task_clean_success=('task_clean_success', 'sum'),
@@ -435,7 +406,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             task_unreachable=('task_unreachable', 'sum'),
             task_skipped=('task_skipped', 'sum'),
             job_id_that_contained_failed_task=('job_id_that_contained_failed_task', 'first'),
-            # Preserve columns needed for aggregation
             job_started=('job_started', 'first'),
             job_failed=('job_failed', 'first'),
             job_duration_seconds=('job_duration_seconds', 'first'),
@@ -446,31 +416,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             deprecations_total=('deprecations_total', 'sum'),
             processed_events_total=('processed_events_total', 'sum'),
             controller_version=('controller_version', 'first'),
-            role=('role', 'first'),  # Keep role for role_stats aggregation
+            role=('role', 'first'),
         )
 
-        # Handle empty task_summary
-        if task_summary.empty:
-            return {
-                'collected_events_total': collected_events_total,
-                'warnings_total': warnings_total,
-                'deprecations_total': deprecations_total,
-                'module_stats': [],
-                'collection_stats': [],
-                'role_stats': [],
-                'unique_modules': [],
-                'modules_per_playbook': {},
-                'unique_hosts': [],
-            }
-
-        # Compute duration columns before aggregation
-        task_summary = task_summary.assign(
-            jobs_successful_duration_total_seconds=lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
-            jobs_failed_duration_total_seconds=lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
-        )
-
-        # Common aggregation for module_stats, collection_stats, and role_stats
-        common_aggregation = {
+    def _get_common_aggregation(self):
+        """Get common aggregation dictionary for stats computation."""
+        return {
             'jobs_total': ('job_id', 'nunique'),
             'jobs_successful_total': ('job_failed', lambda x: (~x).sum()),
             'jobs_failed_total': ('job_failed', 'sum'),
@@ -493,56 +444,49 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'controller_versions': ('controller_version', lambda x: set(x.dropna())),
         }
 
-        # Compute module_stats
+    def _compute_tasks_total(self, stats_df):
+        """Compute tasks_total column for a stats dataframe."""
+        stats_df['tasks_total'] = (
+            stats_df['task_ok_total']
+            + stats_df['task_ok_with_retries_total']
+            + stats_df['task_failed_total']
+            + stats_df['task_unreachable_total']
+            + stats_df['task_skipped_total']
+            + stats_df['task_failed_and_ignored_total']
+        )
+        return stats_df
+
+    def _compute_all_stats(self, task_summary):
+        """Compute module_stats, collection_stats, and role_stats."""
+        common_aggregation = self._get_common_aggregation()
+
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             **common_aggregation
         )
-        module_stats['tasks_total'] = (
-            module_stats['task_ok_total']
-            + module_stats['task_ok_with_retries_total']
-            + module_stats['task_failed_total']
-            + module_stats['task_unreachable_total']
-            + module_stats['task_skipped_total']
-            + module_stats['task_failed_and_ignored_total']
-        )
+        module_stats = self._compute_tasks_total(module_stats)
         module_stats['unique_hosts_total'] = module_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
-        # Compute collection_stats
         collection_stats = task_summary.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
-        collection_stats['tasks_total'] = (
-            collection_stats['task_ok_total']
-            + collection_stats['task_ok_with_retries_total']
-            + collection_stats['task_failed_total']
-            + collection_stats['task_unreachable_total']
-            + collection_stats['task_skipped_total']
-            + collection_stats['task_failed_and_ignored_total']
-        )
+        collection_stats = self._compute_tasks_total(collection_stats)
         collection_stats['unique_hosts_total'] = collection_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
-        # Extract role collection information for role_stats
         task_summary['role_collection_name'] = (
             task_summary['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         )
         role_collection_source_str = task_summary['role_collection_name'].astype(str).map(self.collections)
         task_summary['role_collection_source'] = role_collection_source_str.fillna('Unknown')
 
-        # Compute role_stats
         role_stats = task_summary.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
             **common_aggregation
         )
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
-        role_stats['tasks_total'] = (
-            role_stats['task_ok_total']
-            + role_stats['task_ok_with_retries_total']
-            + role_stats['task_failed_total']
-            + role_stats['task_unreachable_total']
-            + role_stats['task_skipped_total']
-            + role_stats['task_failed_and_ignored_total']
-        )
+        role_stats = self._compute_tasks_total(role_stats)
         role_stats['unique_hosts_total'] = role_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
-        # Convert sets to lists for JSON serialization
-        # Convert host_ids sets to lists (we'll drop them in base, but need them for merge)
+        return module_stats, collection_stats, role_stats
+
+    def _convert_stats_to_json(self, module_stats, collection_stats, role_stats):
+        """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
             if not df.empty and 'host_ids' in df.columns:
                 df['host_ids'] = df['host_ids'].apply(lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else []))
@@ -551,7 +495,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else [])
                 )
 
-        # Convert categorical columns to strings before JSON conversion
         categorical_columns = ['module_name', 'collection_name', 'collection_source', 'role']
         for df in [module_stats, collection_stats, role_stats]:
             if not df.empty:
@@ -559,23 +502,66 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     if col in df.columns and df[col].dtype.name == 'category':
                         df[col] = df[col].astype(str)
 
-        # Convert DataFrames to JSON (list of dicts)
         module_stats_json = module_stats.to_dict(orient='records') if not module_stats.empty else []
         collection_stats_json = collection_stats.to_dict(orient='records') if not collection_stats.empty else []
         role_stats_json = role_stats.to_dict(orient='records') if not role_stats.empty else []
 
-        # Compute unique_modules set and convert to list
+        return module_stats_json, collection_stats_json, role_stats_json
+
+    def _compute_unique_metadata(self, task_summary):
+        """Compute unique_modules, modules_per_playbook, and unique_hosts."""
         unique_modules = sorted(list(set(task_summary['module_name'].dropna().unique())))
 
-        # Compute modules_per_playbook dict (playbook -> list of module names)
         modules_per_playbook = {}
         for playbook in task_summary['playbook'].dropna().unique():
             modules_in_playbook = sorted(list(set(task_summary[task_summary['playbook'] == playbook]['module_name'].dropna().unique())))
             modules_per_playbook[playbook] = modules_in_playbook
 
-        # Compute unique_hosts set from all host_ids and convert to list
         host_sets = [s for s in task_summary['host_ids'].dropna() if isinstance(s, set)]
         unique_hosts = sorted(list(set().union(*host_sets))) if host_sets else []
+
+        return unique_modules, modules_per_playbook, unique_hosts
+
+    # Prepare is run for each batch of data
+    # then it is merged with other batches into one dataframes
+    # as default, merging is done by concatenating dataframes (defined in base class)
+    def prepare(self, dataframe):
+        """Prepare dataframe for aggregation by filtering, transforming, and computing statistics."""
+        collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
+
+        event_lists = self._get_event_lists()
+        dataframe = self._filter_relevant_events(dataframe, event_lists)
+        dataframe = self._prepare_basic_columns(dataframe)
+        dataframe = self._extract_collection_info(dataframe)
+        dataframe = self._compute_job_metrics(dataframe)
+        dataframe = self._mark_event_types(dataframe, event_lists)
+        dataframe = self._parse_warnings_deprecations(dataframe)
+        dataframe = self._filter_and_select_columns(dataframe)
+
+        task_summary = self._create_task_summary(dataframe)
+        task_summary = self._aggregate_task_summary(task_summary)
+
+        if task_summary.empty:
+            return {
+                'collected_events_total': collected_events_total,
+                'warnings_total': warnings_total,
+                'deprecations_total': deprecations_total,
+                'module_stats': [],
+                'collection_stats': [],
+                'role_stats': [],
+                'unique_modules': [],
+                'modules_per_playbook': {},
+                'unique_hosts': [],
+            }
+
+        task_summary = task_summary.assign(
+            jobs_successful_duration_total_seconds=lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
+            jobs_failed_duration_total_seconds=lambda x: x['job_duration_seconds'].where(x['job_failed'], 0),
+        )
+
+        module_stats, collection_stats, role_stats = self._compute_all_stats(task_summary)
+        module_stats_json, collection_stats_json, role_stats_json = self._convert_stats_to_json(module_stats, collection_stats, role_stats)
+        unique_modules, modules_per_playbook, unique_hosts = self._compute_unique_metadata(task_summary)
 
         return {
             'collected_events_total': collected_events_total,
