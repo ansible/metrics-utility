@@ -268,33 +268,44 @@ def _validate_collection_stats_values(json_data):
     )
 
 
+def _validate_role_stats(json_data):
+    """Validate anonymized role_stats."""
+    if not ('role_stats' in json_data and json_data['role_stats']):
+        return
+    anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Unknown']
+    for role_stat in anonymized_roles:
+        if role_stat.get('role'):
+            assert role_stat['role'] == 'Unknown', f'Anonymized role name should be "Unknown", got {role_stat.get("role")}'
+        if role_stat.get('collection_name'):
+            assert role_stat['collection_name'] == 'Unknown', (
+                f'Anonymized collection_name in role_stat should be "Unknown", got {role_stat.get("collection_name")}'
+            )
+
+
+def _validate_collections_versions(json_data):
+    """Validate collections_versions."""
+    if not ('collections_versions' in json_data and json_data['collections_versions']):
+        return
+    print('--- Validating collections_versions data values ---')
+    collections_versions = json_data['collections_versions']
+    assert isinstance(collections_versions, list), 'collections_versions should be a list'
+    unknown_collections = [c for c in collections_versions if c.get('name') == 'Unknown']
+    known_collections = [c for c in collections_versions if c.get('name') != 'Unknown']
+    assert len(unknown_collections) > 0, 'Should have at least one collection with "Unknown" name (ansible.builtin)'
+    for collection in unknown_collections:
+        assert collection['name'] == 'Unknown', f'Unknown collection should have name "Unknown", got {collection.get("name")}'
+        assert collection['version'] == 'Unknown', f'Unknown collection should have version "Unknown", got {collection.get("version")}'
+    for collection in known_collections:
+        assert collection['name'] != 'Unknown', f'Known collection should not have name "Unknown", got {collection.get("name")}'
+        assert collection['version'] != 'Unknown', f'Known collection should not have version "Unknown", got {collection.get("version")}'
+        assert 'version' in collection, 'Each collection should have version field'
+        assert 'job_count' in collection, 'Each collection should have job_count field'
+
+
 def _validate_role_stats_and_collections_versions(json_data):
     """Validate anonymized role_stats and collections_versions."""
-    if 'role_stats' in json_data and json_data['role_stats']:
-        anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Unknown']
-        for role_stat in anonymized_roles:
-            if role_stat.get('role'):
-                assert role_stat['role'] == 'Unknown', f'Anonymized role name should be "Unknown", got {role_stat.get("role")}'
-            if role_stat.get('collection_name'):
-                assert role_stat['collection_name'] == 'Unknown', (
-                    f'Anonymized collection_name in role_stat should be "Unknown", got {role_stat.get("collection_name")}'
-                )
-
-    if 'collections_versions' in json_data and json_data['collections_versions']:
-        print('--- Validating collections_versions data values ---')
-        collections_versions = json_data['collections_versions']
-        assert isinstance(collections_versions, list), 'collections_versions should be a list'
-        unknown_collections = [c for c in collections_versions if c.get('name') == 'Unknown']
-        known_collections = [c for c in collections_versions if c.get('name') != 'Unknown']
-        assert len(unknown_collections) > 0, 'Should have at least one collection with "Unknown" name (ansible.builtin)'
-        for collection in unknown_collections:
-            assert collection['name'] == 'Unknown', f'Unknown collection should have name "Unknown", got {collection.get("name")}'
-            assert collection['version'] == 'Unknown', f'Unknown collection should have version "Unknown", got {collection.get("version")}'
-        for collection in known_collections:
-            assert collection['name'] != 'Unknown', f'Known collection should not have name "Unknown", got {collection.get("name")}'
-            assert collection['version'] != 'Unknown', f'Known collection should not have version "Unknown", got {collection.get("version")}'
-            assert 'version' in collection, 'Each collection should have version field'
-            assert 'job_count' in collection, 'Each collection should have job_count field'
+    _validate_role_stats(json_data)
+    _validate_collections_versions(json_data)
 
 
 def _validate_jobs_values(json_data, statistics):
