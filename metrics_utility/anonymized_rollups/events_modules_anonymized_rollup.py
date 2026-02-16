@@ -502,26 +502,47 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         return module_stats, collection_stats, role_stats
 
+    @staticmethod
+    def _convert_set_or_list_to_sorted_list(value):
+        """Convert set or list to sorted list, return empty list for other types."""
+        if isinstance(value, set):
+            return sorted(list(value))
+        if isinstance(value, list):
+            return value
+        return []
+
+    def _convert_list_columns_to_json_format(self, dataframe, column_name):
+        """Convert a list/set column in dataframe to JSON-compatible sorted list format."""
+        if dataframe.empty or column_name not in dataframe.columns:
+            return
+        dataframe[column_name] = dataframe[column_name].apply(self._convert_set_or_list_to_sorted_list)
+
+    def _convert_categorical_columns_to_string(self, dataframe):
+        """Convert categorical columns to string type for JSON serialization."""
+        if dataframe.empty:
+            return
+
+        categorical_columns = ['module_name', 'collection_name', 'collection_source', 'role']
+        for col in categorical_columns:
+            if col in dataframe.columns and dataframe[col].dtype.name == 'category':
+                dataframe[col] = dataframe[col].astype(str)
+
+    def _convert_dataframe_to_json_records(self, dataframe):
+        """Convert dataframe to JSON records format, return empty list if dataframe is empty."""
+        if dataframe.empty:
+            return []
+        return dataframe.to_dict(orient='records')
+
     def _convert_stats_to_json(self, module_stats, collection_stats, role_stats):
         """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
-            if not df.empty and 'host_ids' in df.columns:
-                df['host_ids'] = df['host_ids'].apply(lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else []))
-            if not df.empty and 'controller_versions' in df.columns:
-                df['controller_versions'] = df['controller_versions'].apply(
-                    lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else [])
-                )
+            self._convert_list_columns_to_json_format(df, 'host_ids')
+            self._convert_list_columns_to_json_format(df, 'controller_versions')
+            self._convert_categorical_columns_to_string(df)
 
-        categorical_columns = ['module_name', 'collection_name', 'collection_source', 'role']
-        for df in [module_stats, collection_stats, role_stats]:
-            if not df.empty:
-                for col in categorical_columns:
-                    if col in df.columns and df[col].dtype.name == 'category':
-                        df[col] = df[col].astype(str)
-
-        module_stats_json = module_stats.to_dict(orient='records') if not module_stats.empty else []
-        collection_stats_json = collection_stats.to_dict(orient='records') if not collection_stats.empty else []
-        role_stats_json = role_stats.to_dict(orient='records') if not role_stats.empty else []
+        module_stats_json = self._convert_dataframe_to_json_records(module_stats)
+        collection_stats_json = self._convert_dataframe_to_json_records(collection_stats)
+        role_stats_json = self._convert_dataframe_to_json_records(role_stats)
 
         return module_stats_json, collection_stats_json, role_stats_json
 

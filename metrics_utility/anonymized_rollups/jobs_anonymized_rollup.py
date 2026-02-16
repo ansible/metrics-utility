@@ -462,6 +462,39 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'json': json_data,
         }
 
+    def _parse_collections_data(self, installed_collections_data):
+        """
+        Parse collections data from row, handling JSON strings and dicts.
+        Returns dict or None if parsing fails.
+        """
+        if pd.isna(installed_collections_data) or not installed_collections_data:
+            return None
+
+        try:
+            if isinstance(installed_collections_data, str):
+                return json.loads(installed_collections_data)
+            if isinstance(installed_collections_data, dict):
+                return installed_collections_data
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        return None
+
+    def _process_collections_dict(self, collections_data, collections_counter):
+        """
+        Process a collections dict and update the counter with collection name/version pairs.
+        """
+        if not isinstance(collections_data, dict):
+            return
+
+        for collection_name, collection_info in collections_data.items():
+            if not isinstance(collection_info, dict):
+                continue
+
+            version = collection_info.get('version', '')
+            if version:
+                collections_counter[(collection_name, str(version))] += 1
+
     def _process_collections_from_jobs(self, dataframe):
         """
         Extract unique collection name and version pairs from jobs dataframe.
@@ -485,37 +518,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Column names with special characters are sanitized, but 'installed_collections' should work fine
         for row in dataframe.itertuples(index=False):
             installed_collections_data = getattr(row, 'installed_collections', None)
-
-            # Skip if missing or empty (fast check)
-            if pd.isna(installed_collections_data) or not installed_collections_data:
-                continue
-
-            # Parse JSON string if needed
-            try:
-                if isinstance(installed_collections_data, str):
-                    collections_data = json.loads(installed_collections_data)
-                elif isinstance(installed_collections_data, dict):
-                    collections_data = installed_collections_data
-                else:
-                    continue
-            except (json.JSONDecodeError, TypeError):
-                continue
-
-            # Extract collection name and version pairs
-            if not isinstance(collections_data, dict):
-                continue
-
-            # Process all collections for this job
-            for collection_name, collection_info in collections_data.items():
-                if not isinstance(collection_info, dict):
-                    continue
-
-                version = collection_info.get('version', '')
-                if not version:
-                    continue
-
-                # Use Counter for efficient counting
-                collections_counter[(collection_name, str(version))] += 1
+            collections_data = self._parse_collections_data(installed_collections_data)
+            if collections_data:
+                self._process_collections_dict(collections_data, collections_counter)
 
         # Convert Counter to list of dicts
         collections_stats = [
