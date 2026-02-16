@@ -95,23 +95,26 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
         pytest.fail(f'{csv_filename} not found in any tarballs.')
 
 
-def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
-    """Validate CSV file directly.
-
-    expected_lines: list of strings where first is header, rest rows
-    skip_columns_names: iterable of column names to skip comparison
-    """
-    # Use csv.reader for expected lines to properly handle quoted fields with commas
+def _parse_expected_csv(expected_lines):
+    """Parse expected CSV lines into header and data rows."""
     expected_reader = csv.reader(expected_lines)
     expected_rows = list(expected_reader)
-    expected_header = expected_rows[0]
-    expected_data = expected_rows[1:]
+    return expected_rows[0], expected_rows[1:]
 
+
+def _read_actual_csv(csv_file_path):
+    """Read and parse actual CSV file."""
     with open(csv_file_path, 'r') as f:
         text = f.read().splitlines()
+    reader = csv.reader(text)
+    rows = list(reader)
+    return rows[0], rows[1:], text
 
+
+def _print_comparison(actual_text, expected_lines):
+    """Print actual and expected CSV content for debugging."""
     print('original --------------------------------')
-    for line in text:
+    for line in actual_text:
         print(line)
     print('--------------------------------\n\n')
 
@@ -120,40 +123,40 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
         print(line)
     print('--------------------------------\n\n')
 
-    reader = csv.reader(text)
-    rows = list(reader)
 
-    header = rows[0]
-    assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
-
-    actual_data = rows[1:]
-    assert len(actual_data) == len(expected_data), f'\nRow count mismatch: expected {len(expected_data)}, got {len(actual_data)}'
-
-    # Sort both actual and expected data for consistent comparison
-    # Use available columns: job_id, host_id (if present), event (if present)
-    def get_sort_key(row, header_row):
-        """Create sort key from available columns."""
-        key_parts = []
-        # Always try job_id if present
-        if 'job_id' in header_row:
-            idx = header_row.index('job_id')
+def _get_sort_key(row, header_row):
+    """Create sort key from available columns: job_id, host_id, event, or first column."""
+    key_parts = []
+    sort_columns = ['job_id', 'host_id', 'event']
+    
+    for col_name in sort_columns:
+        if col_name in header_row:
+            idx = header_row.index(col_name)
             key_parts.append(row[idx] if idx < len(row) else '')
-        # Try host_id if present
-        if 'host_id' in header_row:
-            idx = header_row.index('host_id')
-            key_parts.append(row[idx] if idx < len(row) else '')
-        # Try event if present
-        if 'event' in header_row:
-            idx = header_row.index('event')
-            key_parts.append(row[idx] if idx < len(row) else '')
-        # Fallback: use first column if no standard columns found
-        if not key_parts and row:
-            key_parts.append(row[0] if row else '')
-        return tuple(key_parts or ('',))
+    
+    # Fallback: use first column if no standard columns found
+    if not key_parts and row:
+        key_parts.append(row[0])
+    
+    return tuple(key_parts or ('',))
 
-    actual_data_sorted = sorted(actual_data, key=lambda r: get_sort_key(r, header))
-    expected_data_sorted = sorted(expected_data, key=lambda r: get_sort_key(r, header))
 
+def _validate_header(actual_header, expected_header):
+    """Validate that CSV headers match."""
+    assert actual_header == expected_header, (
+        f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {actual_header}'
+    )
+
+
+def _validate_row_count(actual_data, expected_data):
+    """Validate that row counts match."""
+    assert len(actual_data) == len(expected_data), (
+        f'\nRow count mismatch: expected {len(expected_data)}, got {len(actual_data)}'
+    )
+
+
+def _validate_rows(actual_data_sorted, expected_data_sorted, header, skip_columns_names):
+    """Validate that all rows match, skipping specified columns."""
     skip_columns = set(skip_columns_names)
     for i, (expected_row, actual_row) in enumerate(zip(expected_data_sorted, actual_data_sorted), start=1):
         for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
@@ -161,8 +164,29 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
             if col_name in skip_columns:
                 continue
             assert exp_cell == act_cell, (
-                f'\nData mismatch on row {i + 1}, column {col_name!r} (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
+                f'\nData mismatch on row {i + 1}, column {col_name!r} (index {idx}):\n'
+                f'Expected: {exp_cell!r}\nActual:   {act_cell!r}'
             )
+
+
+def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
+    """Validate CSV file directly.
+
+    expected_lines: list of strings where first is header, rest rows
+    skip_columns_names: iterable of column names to skip comparison
+    """
+    expected_header, expected_data = _parse_expected_csv(expected_lines)
+    header, actual_data, text = _read_actual_csv(csv_file_path)
+    
+    _print_comparison(text, expected_lines)
+    _validate_header(header, expected_header)
+    _validate_row_count(actual_data, expected_data)
+
+    # Sort both actual and expected data for consistent comparison
+    actual_data_sorted = sorted(actual_data, key=lambda r: _get_sort_key(r, header))
+    expected_data_sorted = sorted(expected_data, key=lambda r: _get_sort_key(r, header))
+
+    _validate_rows(actual_data_sorted, expected_data_sorted, header, skip_columns_names)
 
 
 @pytest.fixture
