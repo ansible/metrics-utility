@@ -360,15 +360,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                     'installed_collections': [],
                     'scm_types': [],
                 },
-                'rollup': {
-                    'aggregations_by_job_type': pd.DataFrame(),
-                    'aggregations_by_launch_type': pd.DataFrame(),
-                    'aggregations_by_controller_version': pd.DataFrame(),
-                    'organizations_total': None,
-                    'forks_total': None,
-                    'jobs_total': None,
-                    'installed_collections': pd.DataFrame(),
-                },
             }
 
         # Extract data from the structure (already JSON)
@@ -393,15 +384,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                     'jobs_total': 0,
                     'installed_collections': [],
                     'scm_types': [],
-                },
-                'rollup': {
-                    'aggregations_by_job_type': pd.DataFrame(),
-                    'aggregations_by_launch_type': pd.DataFrame(),
-                    'aggregations_by_controller_version': pd.DataFrame(),
-                    'organizations_total': 0,
-                    'forks_total': 0,
-                    'jobs_total': 0,
-                    'installed_collections': pd.DataFrame(),
                 },
             }
 

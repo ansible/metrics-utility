@@ -603,7 +603,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if data is None:
             return {
                 'json': {'collected_events_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
-                'rollup': {'aggregated': pd.DataFrame(), 'collected_events_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
             }
 
         # Extract data from the structure (already JSON)
@@ -621,12 +620,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if not module_stats and not collection_stats and not role_stats:
             return {
                 'json': {
-                    'collected_events_total': collected_events_total,
-                    'warnings_total': warnings_total,
-                    'deprecations_total': deprecations_total,
-                },
-                'rollup': {
-                    'aggregated': pd.DataFrame(),
                     'collected_events_total': collected_events_total,
                     'warnings_total': warnings_total,
                     'deprecations_total': deprecations_total,

@@ -23,7 +23,6 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         if dataframe is None or dataframe.empty:
             return {
                 'json': {},
-                'rollup': {'aggregated': dataframe},
             }
 
         execution_environments_total = int(len(dataframe))

@@ -322,7 +322,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     'by_controller_version': [],
                     'job_host_pairs_total': 0,
                 },
-                'rollup': {'aggregated': pd.DataFrame(), 'job_host_pairs_total': 0},
             }
 
         # Extract data from the structure (already JSON)
@@ -340,7 +339,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     'by_controller_version': [],
                     'job_host_pairs_total': job_host_pairs_total,
                 },
-                'rollup': {'aggregated': pd.DataFrame(), 'job_host_pairs_total': job_host_pairs_total},
             }
 
         # Drop list columns from stats (we only need the computed totals, not the raw lists)
