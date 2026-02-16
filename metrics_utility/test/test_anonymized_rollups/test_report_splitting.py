@@ -28,8 +28,6 @@ def cleanup_test_data():
     yield  # Run test
 
 
-
-
 def _create_statistics_dict(num_modules, num_jobs):
     """Create statistics dictionary for anonymized rollup."""
     return {
@@ -75,19 +73,21 @@ def _create_module_stats(num_modules):
         collection_source = 'certified' if is_even else 'community'
         collection_name = 'ansible.builtin' if is_even else f'community.module_{i % 10}'
         controller_versions = ['2.15.0', '2.16.0', '2.17.0'] if is_divisible_by_3 else ['2.18.0', '2.19.0']
-        
-        module_stats.append({
-            'module_name': f'ansible.builtin.module_{i:04d}',
-            'collection_source': collection_source,
-            'collection_name': collection_name,
-            'jobs_total': 10 + (i % 20),
-            'unique_hosts_total': 5 + (i % 15),
-            'processed_events_total': 50 + (i % 100),
-            'controller_versions': controller_versions,
-            'tasks_ok_total': 100 + (i % 50),
-            'tasks_failed_total': i % 10,
-            'tasks_skipped_total': i % 5,
-        })
+
+        module_stats.append(
+            {
+                'module_name': f'ansible.builtin.module_{i:04d}',
+                'collection_source': collection_source,
+                'collection_name': collection_name,
+                'jobs_total': 10 + (i % 20),
+                'unique_hosts_total': 5 + (i % 15),
+                'processed_events_total': 50 + (i % 100),
+                'controller_versions': controller_versions,
+                'tasks_ok_total': 100 + (i % 50),
+                'tasks_failed_total': i % 10,
+                'tasks_skipped_total': i % 5,
+            }
+        )
     return module_stats
 
 
@@ -96,14 +96,16 @@ def _create_collection_stats(num_collections):
     collection_stats = []
     sources = ['certified', 'community', 'validated', 'partner']
     for i in range(num_collections):
-        collection_stats.append({
-            'collection_name': f'ansible.collection_{i:03d}',
-            'collection_source': sources[i % 4],
-            'jobs_total': 20 + (i % 30),
-            'processed_events_total': 200 + (i % 200),
-            'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
-            'unique_hosts_total': 10 + (i % 20),
-        })
+        collection_stats.append(
+            {
+                'collection_name': f'ansible.collection_{i:03d}',
+                'collection_source': sources[i % 4],
+                'jobs_total': 20 + (i % 30),
+                'processed_events_total': 200 + (i % 200),
+                'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+                'unique_hosts_total': 10 + (i % 20),
+            }
+        )
     return collection_stats
 
 
@@ -112,14 +114,16 @@ def _create_role_stats():
     role_stats = []
     sources = ['certified', 'community']
     for i in range(30):
-        role_stats.append({
-            'role': f'example_role_{i:03d}',
-            'collection_name': f'ansible.collection_{i % 10:03d}',
-            'collection_source': sources[i % 2],
-            'jobs_total': 5 + (i % 15),
-            'tasks_total': 20 + (i % 30),
-            'processed_events_total': 100 + (i % 100),
-        })
+        role_stats.append(
+            {
+                'role': f'example_role_{i:03d}',
+                'collection_name': f'ansible.collection_{i % 10:03d}',
+                'collection_source': sources[i % 2],
+                'jobs_total': 5 + (i % 15),
+                'tasks_total': 20 + (i % 30),
+                'processed_events_total': 100 + (i % 100),
+            }
+        )
     return role_stats
 
 
@@ -135,29 +139,31 @@ def _create_jobs_by_job_type(num_jobs):
         jobs_failed_total = 1 if not is_successful else 0
         jobs_successful_duration = 90 + (i % 450) if is_successful else 0
         jobs_failed_duration = 50 + (i % 200) if not is_successful else 0
-        
-        jobs_by_job_type.append({
-            'job_type': job_type,
-            'jobs_total': 1,
-            'jobs_successful_total': jobs_successful_total,
-            'jobs_failed_total': jobs_failed_total,
-            'jobs_duration_total_seconds': 100 + (i % 500),
-            'jobs_successful_duration_total_seconds': jobs_successful_duration,
-            'jobs_failed_duration_total_seconds': jobs_failed_duration,
-            'templates_total': 1,
-            'inventories_total': 1,
-            'controller_versions': controller_versions,
-            'dark_total': i % 5,
-            'failures_total': i % 3,
-            'ok_total': 10 + (i % 20),
-            'skipped_total': i % 4,
-            'ignored_total': i % 2,
-            'rescued_total': 0,
-            'unique_hosts_total': 5 + (i % 15),
-            'successful_hosts_total': 4 + (i % 12),
-            'failed_hosts_total': i % 3,
-            'unreachable_hosts_total': i % 2,
-        })
+
+        jobs_by_job_type.append(
+            {
+                'job_type': job_type,
+                'jobs_total': 1,
+                'jobs_successful_total': jobs_successful_total,
+                'jobs_failed_total': jobs_failed_total,
+                'jobs_duration_total_seconds': 100 + (i % 500),
+                'jobs_successful_duration_total_seconds': jobs_successful_duration,
+                'jobs_failed_duration_total_seconds': jobs_failed_duration,
+                'templates_total': 1,
+                'inventories_total': 1,
+                'controller_versions': controller_versions,
+                'dark_total': i % 5,
+                'failures_total': i % 3,
+                'ok_total': 10 + (i % 20),
+                'skipped_total': i % 4,
+                'ignored_total': i % 2,
+                'rescued_total': 0,
+                'unique_hosts_total': 5 + (i % 15),
+                'successful_hosts_total': 4 + (i % 12),
+                'failed_hosts_total': i % 3,
+                'unreachable_hosts_total': i % 2,
+            }
+        )
     return jobs_by_job_type
 
 
@@ -166,22 +172,24 @@ def _create_jobs_by_launch_type():
     jobs_by_launch_type = []
     launch_types = ['manual', 'scheduled', 'workflow', 'callback']
     for i, launch_type in enumerate(launch_types):
-        jobs_by_launch_type.append({
-            'launch_type': launch_type,
-            'jobs_total': 25 + (i * 10),
-            'jobs_successful_total': 20 + (i * 8),
-            'jobs_failed_total': 5 + (i * 2),
-            'dark_total': i * 5,
-            'failures_total': i * 3,
-            'ok_total': 100 + (i * 20),
-            'skipped_total': i * 4,
-            'ignored_total': i * 2,
-            'rescued_total': 0,
-            'unique_hosts_total': 50 + (i * 10),
-            'successful_hosts_total': 45 + (i * 8),
-            'failed_hosts_total': 5 + (i * 2),
-            'unreachable_hosts_total': i * 2,
-        })
+        jobs_by_launch_type.append(
+            {
+                'launch_type': launch_type,
+                'jobs_total': 25 + (i * 10),
+                'jobs_successful_total': 20 + (i * 8),
+                'jobs_failed_total': 5 + (i * 2),
+                'dark_total': i * 5,
+                'failures_total': i * 3,
+                'ok_total': 100 + (i * 20),
+                'skipped_total': i * 4,
+                'ignored_total': i * 2,
+                'rescued_total': 0,
+                'unique_hosts_total': 50 + (i * 10),
+                'successful_hosts_total': 45 + (i * 8),
+                'failed_hosts_total': 5 + (i * 2),
+                'unreachable_hosts_total': i * 2,
+            }
+        )
     return jobs_by_launch_type
 
 
@@ -190,22 +198,24 @@ def _create_jobs_by_controller_version():
     jobs_by_controller_version = []
     versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
     for i, version in enumerate(versions):
-        jobs_by_controller_version.append({
-            'controller_version': version,
-            'jobs_total': 30 + (i * 5),
-            'jobs_successful_total': 25 + (i * 4),
-            'jobs_failed_total': 5 + i,
-            'dark_total': i * 3,
-            'failures_total': i * 2,
-            'ok_total': 120 + (i * 15),
-            'skipped_total': i * 3,
-            'ignored_total': i,
-            'rescued_total': 0,
-            'unique_hosts_total': 60 + (i * 8),
-            'successful_hosts_total': 55 + (i * 7),
-            'failed_hosts_total': 5 + i,
-            'unreachable_hosts_total': i * 2,
-        })
+        jobs_by_controller_version.append(
+            {
+                'controller_version': version,
+                'jobs_total': 30 + (i * 5),
+                'jobs_successful_total': 25 + (i * 4),
+                'jobs_failed_total': 5 + i,
+                'dark_total': i * 3,
+                'failures_total': i * 2,
+                'ok_total': 120 + (i * 15),
+                'skipped_total': i * 3,
+                'ignored_total': i,
+                'rescued_total': 0,
+                'unique_hosts_total': 60 + (i * 8),
+                'successful_hosts_total': 55 + (i * 7),
+                'failed_hosts_total': 5 + i,
+                'unreachable_hosts_total': i * 2,
+            }
+        )
     return jobs_by_controller_version
 
 
@@ -213,17 +223,19 @@ def _create_collections_versions():
     """Create collections_versions array."""
     collections_versions = []
     for i in range(20):
-        collections_versions.append({
-            'name': f'ansible.collection_{i:03d}',
-            'version': f'1.{i}.0',
-            'job_count': 10 + (i % 20),
-        })
+        collections_versions.append(
+            {
+                'name': f'ansible.collection_{i:03d}',
+                'version': f'1.{i}.0',
+                'job_count': 10 + (i % 20),
+            }
+        )
     return collections_versions
 
 
 def _create_controller_versions():
     """Create large controller_versions array that will need to be split.
-    
+
     Generate many version strings to exceed the 24KB limit.
     Each version string is ~10-12 bytes with JSON formatting.
     To exceed 24KB, we need ~2000+ items, but let's use 3000 to ensure splitting.

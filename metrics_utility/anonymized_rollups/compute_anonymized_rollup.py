@@ -54,6 +54,6 @@ def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: b
     }
 
     # load data for each collector
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, ship_path, save_rollups, save_rollups_packed)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
 
     return json_data

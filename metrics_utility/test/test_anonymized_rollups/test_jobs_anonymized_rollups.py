@@ -717,9 +717,7 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
         'credentials': [cred_csv] if cred_csv else [],
     }
 
-    result = compute_anonymized_rollup_from_raw_data(
-        input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
-    )
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
 
     # Validate result has controller_versions at top level
     assert 'statistics' in result, 'Should have statistics in result'
