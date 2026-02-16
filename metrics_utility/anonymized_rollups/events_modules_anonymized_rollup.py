@@ -87,27 +87,33 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def merge(self, data_all, data_new):
         """
         Override merge to aggregate module_stats, collection_stats, role_stats from batches.
-        Sums numeric columns and unions sets for proper deduplication.
+        Works with JSON structures (lists of dicts), sums numeric columns and unions lists for proper deduplication.
         """
         # Handle initial None case (first iteration from load_anonymized_rollup_data)
         if data_all is None:
             return data_new
 
-        def merge_stats_df(df_all, df_new, groupby_cols):
-            """Merge two stats dataframes by summing numeric columns and unioning sets."""
-            if df_all.empty:
-                return df_new.copy() if not df_new.empty else pd.DataFrame()
-            if df_new.empty:
-                return df_all.copy() if not df_all.empty else pd.DataFrame()
+        def merge_stats_json(stats_all, stats_new, groupby_cols):
+            """Merge two stats JSON lists by summing numeric columns and unioning lists."""
+            if not stats_all:
+                return stats_new if stats_new else []
+            if not stats_new:
+                return stats_all if stats_all else []
 
-            # Merge on grouping columns
-            merged = pd.merge(
-                df_all,
-                df_new,
-                on=groupby_cols,
-                how='outer',
-                suffixes=('_all', '_new')
-            )
+            # Create lookup dictionaries keyed by grouping columns
+            all_dict = {}
+            for item in stats_all:
+                key = tuple(item.get(col) for col in groupby_cols)
+                all_dict[key] = item.copy()
+
+            new_dict = {}
+            for item in stats_new:
+                key = tuple(item.get(col) for col in groupby_cols)
+                new_dict[key] = item.copy()
+
+            # Merge items
+            merged_list = []
+            all_keys = set(all_dict.keys()) | set(new_dict.keys())
 
             # Numeric columns to sum
             numeric_cols = [
@@ -118,95 +124,91 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 'task_failed_and_ignored_total', 'jobs_failed_because_of_module_failure_total',
                 'jobs_successful_duration_total_seconds', 'jobs_failed_duration_total_seconds',
                 'warnings_total', 'deprecations_total', 'processed_events_total', 'tasks_total',
+                'unique_hosts_total',
             ]
 
-            # Sum numeric columns
-            for col in numeric_cols:
-                if f'{col}_all' in merged.columns and f'{col}_new' in merged.columns:
-                    merged[col] = merged[f'{col}_all'].fillna(0) + merged[f'{col}_new'].fillna(0)
-                elif f'{col}_all' in merged.columns:
-                    merged[col] = merged[f'{col}_all'].fillna(0)
-                elif f'{col}_new' in merged.columns:
-                    merged[col] = merged[f'{col}_new'].fillna(0)
+            # List columns to union (convert to sets, union, convert back to sorted lists)
+            list_cols = ['host_ids', 'controller_versions']
 
-            # Set columns to union
-            set_cols = ['host_ids', 'controller_versions']
-            for col in set_cols:
-                if f'{col}_all' in merged.columns and f'{col}_new' in merged.columns:
-                    def union_sets(row):
-                        set_all = row[f'{col}_all'] if pd.notna(row[f'{col}_all']) else set()
-                        set_new = row[f'{col}_new'] if pd.notna(row[f'{col}_new']) else set()
-                        if isinstance(set_all, set) and isinstance(set_new, set):
-                            return set_all.union(set_new)
-                        elif isinstance(set_all, set):
-                            return set_all
-                        elif isinstance(set_new, set):
-                            return set_new
-                        else:
-                            return set()
-                    merged[col] = merged.apply(union_sets, axis=1)
-                elif f'{col}_all' in merged.columns:
-                    merged[col] = merged[f'{col}_all']
-                elif f'{col}_new' in merged.columns:
-                    merged[col] = merged[f'{col}_new']
+            for key in all_keys:
+                item_all = all_dict.get(key, {})
+                item_new = new_dict.get(key, {})
 
-            # Recompute unique_hosts_total from host_ids set
-            if 'host_ids' in merged.columns:
-                merged['unique_hosts_total'] = merged['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
+                # Start with item_all or item_new (prefer item_all for structure)
+                if item_all:
+                    merged_item = item_all.copy()
+                elif item_new:
+                    merged_item = item_new.copy()
+                else:
+                    continue  # Skip if both are empty (shouldn't happen)
 
-            # Drop intermediate columns
-            cols_to_drop = [c for c in merged.columns if c.endswith('_all') or c.endswith('_new')]
-            merged = merged.drop(columns=cols_to_drop)
+                # If both exist, merge them
+                if item_all and item_new:
+                    # Sum numeric columns
+                    for col in numeric_cols:
+                        val_all = item_all.get(col) if item_all.get(col) is not None else 0
+                        val_new = item_new.get(col) if item_new.get(col) is not None else 0
+                        merged_item[col] = val_all + val_new
 
-            return merged
+                    # Union list columns
+                    for col in list_cols:
+                        list_all = item_all.get(col) if item_all.get(col) is not None else []
+                        list_new = item_new.get(col) if item_new.get(col) is not None else []
+                        # Convert to sets, union, convert back to sorted list
+                        set_all = set(list_all) if isinstance(list_all, list) else set()
+                        set_new = set(list_new) if isinstance(list_new, list) else set()
+                        merged_item[col] = sorted(list(set_all.union(set_new)))
+
+                # Recompute unique_hosts_total from host_ids list
+                if 'host_ids' in merged_item:
+                    merged_item['unique_hosts_total'] = len(merged_item['host_ids'])
+
+                merged_list.append(merged_item)
+
+            return merged_list
 
         # Merge module_stats
-        module_stats = merge_stats_df(
-            data_all.get('module_stats', pd.DataFrame()),
-            data_new.get('module_stats', pd.DataFrame()),
+        module_stats = merge_stats_json(
+            data_all.get('module_stats', []),
+            data_new.get('module_stats', []),
             ['module_name', 'collection_source', 'collection_name']
         )
 
         # Merge collection_stats
-        collection_stats = merge_stats_df(
-            data_all.get('collection_stats', pd.DataFrame()),
-            data_new.get('collection_stats', pd.DataFrame()),
+        collection_stats = merge_stats_json(
+            data_all.get('collection_stats', []),
+            data_new.get('collection_stats', []),
             ['collection_name', 'collection_source']
         )
 
         # Merge role_stats
-        role_stats = merge_stats_df(
-            data_all.get('role_stats', pd.DataFrame()),
-            data_new.get('role_stats', pd.DataFrame()),
+        role_stats = merge_stats_json(
+            data_all.get('role_stats', []),
+            data_new.get('role_stats', []),
             ['role', 'collection_name', 'collection_source']
         )
 
-        # Merge unique_modules sets
-        unique_modules_all = data_all.get('unique_modules', set())
-        unique_modules_new = data_new.get('unique_modules', set())
-        unique_modules = unique_modules_all.union(unique_modules_new) if isinstance(unique_modules_all, set) and isinstance(unique_modules_new, set) else (unique_modules_all if isinstance(unique_modules_all, set) else unique_modules_new)
+        # Merge unique_modules lists (union and sort)
+        unique_modules_all = set(data_all.get('unique_modules', []))
+        unique_modules_new = set(data_new.get('unique_modules', []))
+        unique_modules = sorted(list(unique_modules_all.union(unique_modules_new)))
 
-        # Merge modules_per_playbook dicts (union sets per playbook)
+        # Merge modules_per_playbook dicts (union lists per playbook)
         modules_per_playbook_all = data_all.get('modules_per_playbook', {})
         modules_per_playbook_new = data_new.get('modules_per_playbook', {})
         modules_per_playbook = {}
         all_playbooks = set(modules_per_playbook_all.keys()) | set(modules_per_playbook_new.keys())
         for playbook in all_playbooks:
-            set_all = modules_per_playbook_all.get(playbook, set())
-            set_new = modules_per_playbook_new.get(playbook, set())
-            if isinstance(set_all, set) and isinstance(set_new, set):
-                modules_per_playbook[playbook] = set_all.union(set_new)
-            elif isinstance(set_all, set):
-                modules_per_playbook[playbook] = set_all
-            elif isinstance(set_new, set):
-                modules_per_playbook[playbook] = set_new
-            else:
-                modules_per_playbook[playbook] = set()
+            list_all = modules_per_playbook_all.get(playbook, []) or []
+            list_new = modules_per_playbook_new.get(playbook, []) or []
+            set_all = set(list_all) if isinstance(list_all, list) else set()
+            set_new = set(list_new) if isinstance(list_new, list) else set()
+            modules_per_playbook[playbook] = sorted(list(set_all.union(set_new)))
 
-        # Merge unique_hosts sets
-        unique_hosts_all = data_all.get('unique_hosts', set())
-        unique_hosts_new = data_new.get('unique_hosts', set())
-        unique_hosts = unique_hosts_all.union(unique_hosts_new) if isinstance(unique_hosts_all, set) and isinstance(unique_hosts_new, set) else (unique_hosts_all if isinstance(unique_hosts_all, set) else unique_hosts_new)
+        # Merge unique_hosts lists (union and sort)
+        unique_hosts_all = set(data_all.get('unique_hosts', []))
+        unique_hosts_new = set(data_new.get('unique_hosts', []))
+        unique_hosts = sorted(list(unique_hosts_all.union(unique_hosts_new)))
 
         return {
             'collected_events_total': data_all['collected_events_total'] + data_new['collected_events_total'],
@@ -446,12 +448,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 'collected_events_total': collected_events_total,
                 'warnings_total': warnings_total,
                 'deprecations_total': deprecations_total,
-                'module_stats': pd.DataFrame(),
-                'collection_stats': pd.DataFrame(),
-                'role_stats': pd.DataFrame(),
-                'unique_modules': set(),
+                'module_stats': [],
+                'collection_stats': [],
+                'role_stats': [],
+                'unique_modules': [],
                 'modules_per_playbook': {},
-                'unique_hosts': set(),
+                'unique_hosts': [],
             }
 
         # Compute duration columns before aggregation
@@ -534,26 +536,47 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
         role_stats['unique_hosts_total'] = role_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
-        # Compute unique_modules set
-        unique_modules = set(task_summary['module_name'].dropna().unique())
+        # Convert sets to lists for JSON serialization
+        # Convert host_ids sets to lists (we'll drop them in base, but need them for merge)
+        for df in [module_stats, collection_stats, role_stats]:
+            if not df.empty and 'host_ids' in df.columns:
+                df['host_ids'] = df['host_ids'].apply(lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else []))
+            if not df.empty and 'controller_versions' in df.columns:
+                df['controller_versions'] = df['controller_versions'].apply(lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else []))
 
-        # Compute modules_per_playbook dict (playbook -> set of module names)
+        # Convert categorical columns to strings before JSON conversion
+        categorical_columns = ['module_name', 'collection_name', 'collection_source', 'role']
+        for df in [module_stats, collection_stats, role_stats]:
+            if not df.empty:
+                for col in categorical_columns:
+                    if col in df.columns and df[col].dtype.name == 'category':
+                        df[col] = df[col].astype(str)
+
+        # Convert DataFrames to JSON (list of dicts)
+        module_stats_json = module_stats.to_dict(orient='records') if not module_stats.empty else []
+        collection_stats_json = collection_stats.to_dict(orient='records') if not collection_stats.empty else []
+        role_stats_json = role_stats.to_dict(orient='records') if not role_stats.empty else []
+
+        # Compute unique_modules set and convert to list
+        unique_modules = sorted(list(set(task_summary['module_name'].dropna().unique())))
+
+        # Compute modules_per_playbook dict (playbook -> list of module names)
         modules_per_playbook = {}
         for playbook in task_summary['playbook'].dropna().unique():
-            modules_in_playbook = set(task_summary[task_summary['playbook'] == playbook]['module_name'].dropna().unique())
+            modules_in_playbook = sorted(list(set(task_summary[task_summary['playbook'] == playbook]['module_name'].dropna().unique())))
             modules_per_playbook[playbook] = modules_in_playbook
 
-        # Compute unique_hosts set from all host_ids
+        # Compute unique_hosts set from all host_ids and convert to list
         host_sets = [s for s in task_summary['host_ids'].dropna() if isinstance(s, set)]
-        unique_hosts = set().union(*host_sets) if host_sets else set()
+        unique_hosts = sorted(list(set().union(*host_sets))) if host_sets else []
 
         return {
             'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
             'deprecations_total': deprecations_total,
-            'module_stats': module_stats,
-            'collection_stats': collection_stats,
-            'role_stats': role_stats,
+            'module_stats': module_stats_json,
+            'collection_stats': collection_stats_json,
+            'role_stats': role_stats_json,
             'unique_modules': unique_modules,
             'modules_per_playbook': modules_per_playbook,
             'unique_hosts': unique_hosts,
@@ -573,7 +596,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         * Success/failure rate of jobs per collection source (number of jobs that have failed / number of jobs).
         * Number of jobs executed that use a specific partner collection - TODO - not implemented yet, must be communicated
 
-        data is a dict with already-aggregated module_stats, collection_stats, role_stats from prepare() and merge()
+        data is a dict with already-aggregated JSON structures (lists of dicts) from prepare() and merge()
         """
 
         # Handle None input (no data files)
@@ -583,19 +606,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 'rollup': {'aggregated': pd.DataFrame(), 'collected_events_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
             }
 
-        # Extract data from the structure
+        # Extract data from the structure (already JSON)
         collected_events_total = data.get('collected_events_total', 0)
         warnings_total = data.get('warnings_total', 0)
         deprecations_total = data.get('deprecations_total', 0)
-        module_stats = data.get('module_stats', pd.DataFrame())
-        collection_stats = data.get('collection_stats', pd.DataFrame())
-        role_stats = data.get('role_stats', pd.DataFrame())
-        unique_modules = data.get('unique_modules', set())
+        module_stats = data.get('module_stats', [])
+        collection_stats = data.get('collection_stats', [])
+        role_stats = data.get('role_stats', [])
+        unique_modules = data.get('unique_modules', [])
         modules_per_playbook = data.get('modules_per_playbook', {})
-        unique_hosts = data.get('unique_hosts', set())
+        unique_hosts = data.get('unique_hosts', [])
 
         # Handle empty data
-        if module_stats.empty and collection_stats.empty and role_stats.empty:
+        if not module_stats and not collection_stats and not role_stats:
             return {
                 'json': {
                     'collected_events_total': collected_events_total,
@@ -610,52 +633,31 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 },
             }
 
-        # Convert controller_versions sets to sorted lists for JSON serialization
-        for df in [module_stats, collection_stats, role_stats]:
-            if not df.empty and 'controller_versions' in df.columns:
-                df['controller_versions'] = df['controller_versions'].apply(
-                    lambda x: sorted(list(x)) if isinstance(x, set) else (x if isinstance(x, list) else [])
-                )
+        # Drop host_ids from stats (we only need unique_hosts_total, not the raw host_ids list)
+        for stats_list in [module_stats, collection_stats, role_stats]:
+            for item in stats_list:
+                if 'host_ids' in item:
+                    del item['host_ids']
 
-        # Compute modules_used_to_automate_total from unique_modules set
-        modules_used_to_automate_total = len(unique_modules) if isinstance(unique_modules, set) else 0
+        # Compute modules_used_to_automate_total from unique_modules list
+        modules_used_to_automate_total = len(unique_modules)
 
-        # Convert modules_per_playbook dict (sets) to counts for JSON
+        # Convert modules_per_playbook dict (lists) to counts for JSON
         modules_used_per_playbook_total = {
-            playbook: len(module_set) if isinstance(module_set, set) else module_set
-            for playbook, module_set in modules_per_playbook.items()
+            playbook: len(module_list) if isinstance(module_list, list) else module_list
+            for playbook, module_list in modules_per_playbook.items()
         }
 
-        # Compute hosts_automated_total from unique_hosts set
-        hosts_automated_total = len(unique_hosts) if isinstance(unique_hosts, set) else 0
+        # Compute hosts_automated_total from unique_hosts list
+        hosts_automated_total = len(unique_hosts)
 
-        # Convert categorical columns back to strings before JSON serialization
-        # This ensures JSON output contains strings, not categorical codes
-        categorical_columns = [
-            'module_name',
-            'collection_name',
-            'collection_source',
-            'role',
-        ]
-        for df in [module_stats, collection_stats, role_stats]:
-            if not df.empty:
-                for col in categorical_columns:
-                    if col in df.columns and df[col].dtype.name == 'category':
-                        df[col] = df[col].astype(str)
-
-        # Drop set columns before JSON serialization (they're not JSON serializable)
-        # We only need the computed totals, not the raw sets
-        for df in [module_stats, collection_stats, role_stats]:
-            if not df.empty and 'host_ids' in df.columns:
-                df.drop(columns=['host_ids'], inplace=True)
-
-        # Prepare JSON data (converted to dicts/lists)
+        # Prepare JSON data (already in JSON format)
         json_data = {
             'modules_used_to_automate_total': modules_used_to_automate_total,
             'modules_used_per_playbook_total': modules_used_per_playbook_total,
-            'module_stats': module_stats.to_dict(orient='records') if not module_stats.empty else [],
-            'collection_stats': collection_stats.to_dict(orient='records') if not collection_stats.empty else [],
-            'role_stats': role_stats.to_dict(orient='records') if not role_stats.empty else [],
+            'module_stats': module_stats,
+            'collection_stats': collection_stats,
+            'role_stats': role_stats,
             'hosts_automated_total': hosts_automated_total,
             'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
