@@ -610,6 +610,66 @@ def test_jobs_anonymized_rollups_installed_collections():
         assert collection['job_count'] > 0
 
 
+def _extract_controller_versions_from_jobs(jobs_by_job_type):
+    """Extract and merge controller versions from jobs_by_job_type."""
+    expected_versions_set = set()
+    for job in jobs_by_job_type:
+        controller_versions = job.get('controller_versions', [])
+        if isinstance(controller_versions, list):
+            expected_versions_set.update(controller_versions)
+    return sorted(list(expected_versions_set))
+
+
+def _validate_controller_versions(result, expected_versions):
+    """Validate controller versions at top level."""
+    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
+    assert result['rollup_period_controller_versions'] == expected_versions, (
+        f'Expected controller_versions {expected_versions} at top level, got {result["rollup_period_controller_versions"]}'
+    )
+    assert len(result['rollup_period_controller_versions']) == 5, (
+        f'Expected 5 unique controller versions, got {len(result["rollup_period_controller_versions"])}'
+    )
+    for version in ['2.9.0', '2.10.0', '2.11.0', '2.12.0', '2.14.0']:
+        assert version in result['rollup_period_controller_versions']
+
+
+def _validate_job_statistics(statistics, jobs_by_job_type):
+    """Validate job statistics match sum from jobs_by_job_type."""
+    if not jobs_by_job_type:
+        return
+
+    expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in jobs_by_job_type)
+    expected_jobs_failed = sum(j.get('jobs_failed_total', 0) for j in jobs_by_job_type)
+    expected_duration_all = sum(j.get('jobs_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
+    expected_duration_successful = sum(j.get('jobs_successful_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
+    expected_duration_failed = sum(j.get('jobs_failed_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
+
+    if statistics['rollup_period_jobs_successful'] is not None:
+        assert statistics['rollup_period_jobs_successful'] == expected_jobs_successful, (
+            f'jobs_successful should match sum from jobs_by_job_type: expected={expected_jobs_successful}, '
+            f'got={statistics["rollup_period_jobs_successful"]}'
+        )
+    if statistics['rollup_period_jobs_failed'] is not None:
+        assert statistics['rollup_period_jobs_failed'] == expected_jobs_failed, (
+            f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, got={statistics["rollup_period_jobs_failed"]}'
+        )
+    if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
+        assert abs(statistics['rollup_period_jobs_duration_all_statuses_seconds'] - expected_duration_all) < 0.001, (
+            f'jobs_duration_all_statuses_seconds should match sum from jobs_by_job_type: expected={expected_duration_all}, '
+            f'got={statistics["rollup_period_jobs_duration_all_statuses_seconds"]}'
+        )
+    if statistics['rollup_period_jobs_successful_duration_total_seconds'] is not None:
+        assert abs(statistics['rollup_period_jobs_successful_duration_total_seconds'] - expected_duration_successful) < 0.001, (
+            f'jobs_successful_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_successful}, '
+            f'got={statistics["rollup_period_jobs_successful_duration_total_seconds"]}'
+        )
+    if statistics['rollup_period_jobs_failed_duration_total_seconds'] is not None:
+        assert abs(statistics['rollup_period_jobs_failed_duration_total_seconds'] - expected_duration_failed) < 0.001, (
+            f'jobs_failed_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_failed}, '
+            f'got={statistics["rollup_period_jobs_failed_duration_total_seconds"]}'
+        )
+
+
 def test_jobs_anonymized_rollups_statistics_controller_versions():
     """Test that controller_versions in statistics is correctly merged from jobs_by_job_type."""
     import os
@@ -664,9 +724,6 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
     # Validate result has controller_versions at top level
     assert 'statistics' in result, 'Should have statistics in result'
     statistics = result['statistics']
-    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
-
-    # Validate new job statistics fields exist
     assert 'rollup_period_jobs_successful' in statistics, 'Should have jobs_successful in statistics'
     assert 'rollup_period_jobs_failed' in statistics, 'Should have jobs_failed in statistics'
     assert 'rollup_period_jobs_duration_all_statuses_seconds' in statistics, 'Should have jobs_duration_all_statuses_seconds in statistics'
@@ -675,61 +732,13 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
 
     # Get controller_versions from jobs_by_job_type
     jobs_by_job_type = result.get('jobs_by_job_type', [])
-    expected_versions_set = set()
-    for job in jobs_by_job_type:
-        controller_versions = job.get('controller_versions', [])
-        if isinstance(controller_versions, list):
-            expected_versions_set.update(controller_versions)
-    expected_versions = sorted(list(expected_versions_set))
+    expected_versions = _extract_controller_versions_from_jobs(jobs_by_job_type)
 
     # Validate controller_versions at top level matches merged values from jobs_by_job_type
-    assert result['rollup_period_controller_versions'] == expected_versions, (
-        f'Expected controller_versions {expected_versions} at top level, got {result["rollup_period_controller_versions"]}'
-    )
-
-    # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
-    # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
-    assert len(result['rollup_period_controller_versions']) == 5, (
-        f'Expected 5 unique controller versions, got {len(result["rollup_period_controller_versions"])}'
-    )
-    assert '2.9.0' in result['rollup_period_controller_versions']
-    assert '2.10.0' in result['rollup_period_controller_versions']
-    assert '2.11.0' in result['rollup_period_controller_versions']
-    assert '2.12.0' in result['rollup_period_controller_versions']
-    assert '2.14.0' in result['rollup_period_controller_versions']
+    _validate_controller_versions(result, expected_versions)
 
     # Validate new job statistics match sum from jobs_by_job_type
-    if jobs_by_job_type:
-        expected_jobs_successful = sum(j.get('jobs_successful_total', 0) for j in jobs_by_job_type)
-        expected_jobs_failed = sum(j.get('jobs_failed_total', 0) for j in jobs_by_job_type)
-        expected_duration_all = sum(j.get('jobs_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
-        expected_duration_successful = sum(j.get('jobs_successful_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
-        expected_duration_failed = sum(j.get('jobs_failed_duration_total_seconds', 0) or 0 for j in jobs_by_job_type)
-
-        if statistics['rollup_period_jobs_successful'] is not None:
-            assert statistics['rollup_period_jobs_successful'] == expected_jobs_successful, (
-                f'jobs_successful should match sum from jobs_by_job_type: expected={expected_jobs_successful}, '
-                f'got={statistics["rollup_period_jobs_successful"]}'
-            )
-        if statistics['rollup_period_jobs_failed'] is not None:
-            assert statistics['rollup_period_jobs_failed'] == expected_jobs_failed, (
-                f'jobs_failed should match sum from jobs_by_job_type: expected={expected_jobs_failed}, got={statistics["rollup_period_jobs_failed"]}'
-            )
-        if statistics['rollup_period_jobs_duration_all_statuses_seconds'] is not None:
-            assert abs(statistics['rollup_period_jobs_duration_all_statuses_seconds'] - expected_duration_all) < 0.001, (
-                f'jobs_duration_all_statuses_seconds should match sum from jobs_by_job_type: expected={expected_duration_all}, '
-                f'got={statistics["rollup_period_jobs_duration_all_statuses_seconds"]}'
-            )
-        if statistics['rollup_period_jobs_successful_duration_total_seconds'] is not None:
-            assert abs(statistics['rollup_period_jobs_successful_duration_total_seconds'] - expected_duration_successful) < 0.001, (
-                f'jobs_successful_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_successful}, '
-                f'got={statistics["rollup_period_jobs_successful_duration_total_seconds"]}'
-            )
-        if statistics['rollup_period_jobs_failed_duration_total_seconds'] is not None:
-            assert abs(statistics['rollup_period_jobs_failed_duration_total_seconds'] - expected_duration_failed) < 0.001, (
-                f'jobs_failed_duration_total_seconds should match sum from jobs_by_job_type: expected={expected_duration_failed}, '
-                f'got={statistics["rollup_period_jobs_failed_duration_total_seconds"]}'
-            )
+    _validate_job_statistics(statistics, jobs_by_job_type)
 
     # Validate scm_types at top level
     assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'

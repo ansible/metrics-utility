@@ -245,21 +245,8 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
     return anonymized_rollup
 
 
-def test_anonymized_rollup_splitting(cleanup_test_data):
-    """
-    Test that anonymized rollup reports are correctly split into multiple chunks
-    when arrays exceed the Segment message size limit.
-    """
-    # Create mock anonymized rollup data with large arrays
-    # Using 200 modules and 150 jobs should create arrays that exceed 24KB limit
-    anonymized_rollup = create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50)
-
-    # Initialize StorageSegment
-    storage_segment = StorageSegment()
-    max_size = storage_segment.REGULAR_MESSAGE_LIMIT  # 24KB
-
-    # Calculate total size of the data
-    total_size = storage_segment._calculate_size(anonymized_rollup)
+def _print_splitting_info(anonymized_rollup, total_size, max_size):
+    """Print information about the splitting test."""
     print(f'\n{"=" * 80}')
     print('=== TESTING ANONYMIZED ROLLUP SPLITTING ===')
     print(f'{"=" * 80}')
@@ -270,28 +257,9 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     print(f'Number of jobs: {len(anonymized_rollup["jobs_by_job_type"])}')
     print(f'Number of collections: {len(anonymized_rollup["collection_stats"])}')
 
-    # Split the data into chunks
-    chunks = storage_segment._split_into_chunks(anonymized_rollup, max_size)
 
-    print(f'\nTotal chunks created: {len(chunks)}')
-
-    # Validate that multiple chunks were created
-    assert len(chunks) > 1, (
-        f'Expected multiple chunks to be created, but got only {len(chunks)} chunk. '
-        f'Total data size is {total_size} bytes, which exceeds the {max_size} byte limit.'
-    )
-
-    # Create output directory
-    output_dir = './out/test_report_splitting'
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Save the original data
-    original_path = os.path.join(output_dir, 'original_anonymized_rollup.json')
-    with open(original_path, 'w') as f:
-        json.dump(anonymized_rollup, f, indent=4)
-    print(f'\nSaved original data to: {original_path}')
-
-    # Save each chunk and validate
+def _save_and_validate_chunks(chunks, storage_segment, max_size, output_dir, anonymized_rollup):
+    """Save chunks to files and validate them."""
     chunk_sizes = []
     chunk_keys = []
     total_items_in_chunks = {}
@@ -299,83 +267,71 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     for i, chunk in enumerate(chunks, 1):
         chunk_size = storage_segment._calculate_size(chunk)
         chunk_sizes.append(chunk_size)
-
-        # Validate chunk size is within limit
         assert chunk_size <= max_size, f'Chunk {i} size ({chunk_size} bytes) exceeds the limit ({max_size} bytes)'
 
-        # Get the top-level key
         chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
         chunk_keys.append(chunk_key)
 
-        # Save chunk to file
         chunk_path = os.path.join(output_dir, f'chunk_{i:03d}_of_{len(chunks):03d}_{chunk_key}.json')
         with open(chunk_path, 'w') as f:
             json.dump(chunk, f, indent=4)
 
         print(f'Chunk {i}/{len(chunks)}: {chunk_key} - {chunk_size} bytes ({chunk_size / 1024:.1f} KB) - saved to {chunk_path}')
 
-        # If it's a list, count items and track them
         if isinstance(chunk[chunk_key], list):
             num_items = len(chunk[chunk_key])
             print(f'  └─ Contains {num_items} items in {chunk_key}')
-
-            # Track items for validation
             if chunk_key not in total_items_in_chunks:
                 total_items_in_chunks[chunk_key] = 0
             total_items_in_chunks[chunk_key] += num_items
 
-    # Validate that arrays were split correctly
-    # Check if rollup_period_controller_versions was split
+    return chunk_sizes, chunk_keys, total_items_in_chunks
+
+
+def _validate_split_arrays(chunk_keys, total_items_in_chunks, anonymized_rollup):
+    """Validate that arrays were split correctly."""
     controller_versions_chunks = [i for i, key in enumerate(chunk_keys) if key == 'rollup_period_controller_versions']
     if len(controller_versions_chunks) > 1:
         print(f'\n✓ rollup_period_controller_versions was split into {len(controller_versions_chunks)} chunks')
         assert len(controller_versions_chunks) > 1, 'rollup_period_controller_versions should be split into multiple chunks'
-
-        # Validate total items match
         total_version_items = total_items_in_chunks.get('rollup_period_controller_versions', 0)
         original_version_count = len(anonymized_rollup['rollup_period_controller_versions'])
         assert total_version_items == original_version_count, (
             f'Total controller version items in chunks ({total_version_items}) should match original ({original_version_count})'
         )
 
-    # Check if module_stats was split
     module_stats_chunks = [i for i, key in enumerate(chunk_keys) if key == 'module_stats']
     if len(module_stats_chunks) > 1:
         print(f'✓ module_stats was split into {len(module_stats_chunks)} chunks')
         assert len(module_stats_chunks) > 1, 'module_stats should be split into multiple chunks'
-
-        # Validate total items match
         total_module_items = total_items_in_chunks.get('module_stats', 0)
         assert total_module_items == len(anonymized_rollup['module_stats']), (
             f'Total module items in chunks ({total_module_items}) should match original ({len(anonymized_rollup["module_stats"])})'
         )
 
-    # Check if jobs_by_job_type was split
     jobs_chunks = [i for i, key in enumerate(chunk_keys) if key == 'jobs_by_job_type']
     if len(jobs_chunks) > 1:
         print(f'✓ jobs_by_job_type was split into {len(jobs_chunks)} chunks')
         assert len(jobs_chunks) > 1, 'jobs_by_job_type should be split into multiple chunks'
-
-        # Validate total items match
         total_job_items = total_items_in_chunks.get('jobs_by_job_type', 0)
         assert total_job_items == len(anonymized_rollup['jobs_by_job_type']), (
             f'Total job items in chunks ({total_job_items}) should match original ({len(anonymized_rollup["jobs_by_job_type"])})'
         )
 
-    # Validate that each top-level key appears in at least one chunk
-    original_keys = set(anonymized_rollup.keys())
 
-    # For keys that were split, they'll appear multiple times, but we just need to check they appear
-    # For keys that weren't split, they should appear exactly once
+def _validate_all_keys_present(chunk_keys, anonymized_rollup):
+    """Validate that each top-level key appears in at least one chunk."""
+    original_keys = set(anonymized_rollup.keys())
     for key in original_keys:
         key_chunks = [i for i, k in enumerate(chunk_keys) if k == key]
         assert len(key_chunks) >= 1, f'Key {key} should appear in at least one chunk'
 
-    # Validate chunk size statistics
+
+def _print_chunk_statistics(chunk_sizes):
+    """Print chunk size statistics."""
     avg_chunk_size = sum(chunk_sizes) / len(chunk_sizes)
     max_chunk_size = max(chunk_sizes)
     min_chunk_size = min(chunk_sizes)
-
     print(f'\n{"=" * 80}')
     print('Chunk size statistics:')
     print(f'  Average: {avg_chunk_size:.0f} bytes ({avg_chunk_size / 1024:.1f} KB)')
@@ -383,9 +339,44 @@ def test_anonymized_rollup_splitting(cleanup_test_data):
     print(f'  Minimum: {min_chunk_size:.0f} bytes ({min_chunk_size / 1024:.1f} KB)')
     print(f'{"=" * 80}')
 
-    # Final validation: ensure we have multiple chunks
-    assert len(chunks) > 1, 'Test should create multiple chunks to validate splitting functionality'
 
+def test_anonymized_rollup_splitting(cleanup_test_data):
+    """
+    Test that anonymized rollup reports are correctly split into multiple chunks
+    when arrays exceed the Segment message size limit.
+    """
+    anonymized_rollup = create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50)
+    storage_segment = StorageSegment()
+    max_size = storage_segment.REGULAR_MESSAGE_LIMIT
+
+    total_size = storage_segment._calculate_size(anonymized_rollup)
+    _print_splitting_info(anonymized_rollup, total_size, max_size)
+
+    chunks = storage_segment._split_into_chunks(anonymized_rollup, max_size)
+    print(f'\nTotal chunks created: {len(chunks)}')
+
+    assert len(chunks) > 1, (
+        f'Expected multiple chunks to be created, but got only {len(chunks)} chunk. '
+        f'Total data size is {total_size} bytes, which exceeds the {max_size} byte limit.'
+    )
+
+    output_dir = './out/test_report_splitting'
+    os.makedirs(output_dir, exist_ok=True)
+
+    original_path = os.path.join(output_dir, 'original_anonymized_rollup.json')
+    with open(original_path, 'w') as f:
+        json.dump(anonymized_rollup, f, indent=4)
+    print(f'\nSaved original data to: {original_path}')
+
+    chunk_sizes, chunk_keys, total_items_in_chunks = _save_and_validate_chunks(
+        chunks, storage_segment, max_size, output_dir, anonymized_rollup
+    )
+
+    _validate_split_arrays(chunk_keys, total_items_in_chunks, anonymized_rollup)
+    _validate_all_keys_present(chunk_keys, anonymized_rollup)
+    _print_chunk_statistics(chunk_sizes)
+
+    assert len(chunks) > 1, 'Test should create multiple chunks to validate splitting functionality'
     print(f'\n✓ Test passed: Successfully split anonymized rollup into {len(chunks)} chunks')
     print(f'✓ All chunks are within size limit ({max_size} bytes)')
     print('✓ All data preserved correctly')

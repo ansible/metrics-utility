@@ -52,6 +52,436 @@ def cleanup_test_data():
     #     shutil.rmtree(out_dir)
 
 
+def _create_csv_files_from_split_data(data_dir, jobs, events, execution_environments, jobhostsummary, credentials):
+    """Create CSV files from split test data."""
+    jobs_part1 = jobs[:3]
+    jobs_part2 = jobs[3:]
+    jobs_csv_files = []
+    csv1 = create_csv_file(jobs_part1, f'{data_dir}/part1_unified_jobs.csv')
+    if csv1:
+        jobs_csv_files.append(csv1)
+    csv2 = create_csv_file(jobs_part2, f'{data_dir}/part2_unified_jobs.csv')
+    if csv2:
+        jobs_csv_files.append(csv2)
+
+    events_part1 = events[:8]
+    events_part2 = events[8:16]
+    events_part3 = events[16:]
+    events_csv_files = []
+    csv1 = create_csv_file(events_part1, f'{data_dir}/part1_main_jobevent.csv')
+    if csv1:
+        events_csv_files.append(csv1)
+    csv2 = create_csv_file(events_part2, f'{data_dir}/part2_main_jobevent.csv')
+    if csv2:
+        events_csv_files.append(csv2)
+    csv3 = create_csv_file(events_part3, f'{data_dir}/part3_main_jobevent.csv')
+    if csv3:
+        events_csv_files.append(csv3)
+
+    ee_part1 = execution_environments[:2]
+    ee_part2 = execution_environments[2:]
+    ee_csv_files = []
+    csv1 = create_csv_file(ee_part1, f'{data_dir}/part1_execution_environments.csv')
+    if csv1:
+        ee_csv_files.append(csv1)
+    csv2 = create_csv_file(ee_part2, f'{data_dir}/part2_execution_environments.csv')
+    if csv2:
+        ee_csv_files.append(csv2)
+
+    jhs_part1 = jobhostsummary[:8]
+    jhs_part2 = jobhostsummary[8:]
+    jhs_csv_files = []
+    csv1 = create_csv_file(jhs_part1, f'{data_dir}/part1_job_host_summary.csv')
+    if csv1:
+        jhs_csv_files.append(csv1)
+    csv2 = create_csv_file(jhs_part2, f'{data_dir}/part2_job_host_summary.csv')
+    if csv2:
+        jhs_csv_files.append(csv2)
+
+    cred_part1 = credentials[:5]
+    cred_part2 = credentials[5:]
+    cred_csv_files = []
+    csv1 = create_csv_file(cred_part1, f'{data_dir}/part1_credentials.csv')
+    if csv1:
+        cred_csv_files.append(csv1)
+    csv2 = create_csv_file(cred_part2, f'{data_dir}/part2_credentials.csv')
+    if csv2:
+        cred_csv_files.append(csv2)
+
+    return {
+        'unified_jobs': jobs_csv_files,
+        'job_host_summary': jhs_csv_files,
+        'main_jobevent': events_csv_files,
+        'execution_environments': ee_csv_files,
+        'credentials': cred_csv_files,
+    }
+
+
+def _validate_jobs_by_job_type(jobs_list, result):
+    """Validate jobs_by_job_type section."""
+    assert isinstance(jobs_list, list)
+    assert len(jobs_list) == 3
+    assert result['statistics']['rollup_period_jobs_total'] == 5
+    assert result['statistics']['rollup_period_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
+
+    job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job' and j['jobs_total'] == 3]
+    assert len(job_type_jobs) == 1
+    job_type = job_type_jobs[0]
+    assert job_type['jobs_total'] == 3
+    assert job_type['jobs_failed_total'] == 1
+    assert job_type['jobs_never_started_total'] == 0
+    assert job_type['jobs_duration_total_seconds'] == pytest.approx(10.0)
+    assert job_type['job_duration_minimum_seconds'] == pytest.approx(2.0)
+    assert job_type['job_duration_maximum_seconds'] == pytest.approx(5.0)
+    assert job_type['job_waiting_time_total_seconds'] == pytest.approx(3.0)
+    assert job_type['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
+    assert job_type['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
+    assert job_type['job_type'] == 'job'
+    assert 'controller_versions' in job_type, 'Should have controller_versions field in by_job_type'
+    assert job_type['controller_versions'] == ['2.10.0', '2.12.0', '2.9.0'], (
+        f"Expected ['2.10.0', '2.12.0', '2.9.0'] for job type, got {job_type['controller_versions']}"
+    )
+
+    workflowjob_type_jobs = [j for j in jobs_list if j['job_type'] == 'workflowjob' and j['jobs_never_started_total'] == 0]
+    assert len(workflowjob_type_jobs) == 1
+    workflowjob_type = workflowjob_type_jobs[0]
+    assert workflowjob_type['jobs_total'] == 1
+    assert workflowjob_type['jobs_failed_total'] == 0
+    assert workflowjob_type['jobs_duration_total_seconds'] == pytest.approx(7.0)
+    assert workflowjob_type['job_waiting_time_total_seconds'] == pytest.approx(4.0)
+    assert workflowjob_type['job_type'] == 'workflowjob'
+    assert 'controller_versions' in workflowjob_type, 'Should have controller_versions field in by_job_type'
+    assert workflowjob_type['controller_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['controller_versions']}"
+    )
+
+    adhoccommand_type_jobs = [j for j in jobs_list if j['job_type'] == 'adhoccommand' and j['jobs_never_started_total'] == 1]
+    assert len(adhoccommand_type_jobs) == 1
+    adhoccommand_type = adhoccommand_type_jobs[0]
+    assert adhoccommand_type['jobs_total'] == 1
+    assert adhoccommand_type['jobs_failed_total'] == 1
+    assert adhoccommand_type['jobs_duration_total_seconds'] == pytest.approx(0.0)
+    assert adhoccommand_type['job_waiting_time_total_seconds'] == pytest.approx(0.0)
+    assert adhoccommand_type['job_type'] == 'adhoccommand'
+    assert 'controller_versions' in adhoccommand_type, 'Should have controller_versions field in by_job_type'
+    assert adhoccommand_type['controller_versions'] == ['2.14.0'], (
+        f"Expected ['2.14.0'] for adhoccommand type, got {adhoccommand_type['controller_versions']}"
+    )
+
+
+def _validate_controller_versions_top_level(result):
+    """Validate controller_versions at top level."""
+    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
+    statistics_controller_versions = result['rollup_period_controller_versions']
+    assert isinstance(statistics_controller_versions, list), 'controller_versions should be a list'
+    jobs_by_job_type = result.get('jobs_by_job_type', [])
+    expected_versions_set = set()
+    for job in jobs_by_job_type:
+        controller_versions = job.get('controller_versions', [])
+        if isinstance(controller_versions, list):
+            expected_versions_set.update(controller_versions)
+    expected_versions = sorted(list(expected_versions_set))
+    assert statistics_controller_versions == expected_versions, (
+        f'Expected controller_versions {expected_versions} in statistics, got {statistics_controller_versions}'
+    )
+    assert len(statistics_controller_versions) == 5, f'Expected 5 unique controller versions, got {len(statistics_controller_versions)}'
+    for version in ['2.9.0', '2.10.0', '2.11.0', '2.12.0', '2.14.0']:
+        assert version in statistics_controller_versions
+
+
+def _validate_job_host_summary(jobs_list, result):
+    """Validate job host summary section."""
+    assert result['statistics']['rollup_period_unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
+    assert result['statistics']['rollup_period_job_host_pairs_total'] == 16, (
+        f'Should have 16 total job host summary records, got {result["statistics"]["rollup_period_job_host_pairs_total"]}'
+    )
+
+    job_type_entry = next((j for j in jobs_list if j['job_type'] == 'job'), None)
+    assert job_type_entry is not None, 'Should have job_type job'
+    assert job_type_entry['unique_hosts_total'] == 5, 'Should have 5 unique hosts for job type'
+    assert job_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for job type'
+    assert job_type_entry['failures_total'] == 2, 'Should have 2 failures for job type'
+    assert job_type_entry['skipped_total'] == 2, 'Should have 2 skipped for job type'
+    assert job_type_entry['dark_total'] == 0, 'Should have 0 dark for job type'
+    assert job_type_entry['ignored_total'] == 0, 'Should have 0 ignored for job type'
+    assert job_type_entry['rescued_total'] == 0, 'Should have 0 rescued for job type'
+
+    workflowjob_type_entry = next((j for j in jobs_list if j['job_type'] == 'workflowjob'), None)
+    assert workflowjob_type_entry is not None, 'Should have job_type workflowjob'
+    assert workflowjob_type_entry['unique_hosts_total'] == 3, 'Should have 3 unique hosts for workflowjob type'
+    assert workflowjob_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for workflowjob type'
+    assert workflowjob_type_entry['failures_total'] == 4, 'Should have 4 failures for workflowjob type'
+    assert workflowjob_type_entry['skipped_total'] == 0, 'Should have 0 skipped for workflowjob type'
+    assert workflowjob_type_entry['dark_total'] == 0, 'Should have 0 dark for workflowjob type'
+    assert workflowjob_type_entry['ignored_total'] == 0, 'Should have 0 ignored for workflowjob type'
+    assert workflowjob_type_entry['rescued_total'] == 0, 'Should have 0 rescued for workflowjob type'
+
+    adhoccommand_type_entry = next((j for j in jobs_list if j['job_type'] == 'adhoccommand'), None)
+    assert adhoccommand_type_entry is not None, 'Should have job_type adhoccommand'
+    assert adhoccommand_type_entry['unique_hosts_total'] == 0, 'Should have 0 unique hosts (no job_host_summary match)'
+    assert adhoccommand_type_entry['ok_total'] == 0, 'Should have 0 ok tasks (no job_host_summary match)'
+    assert adhoccommand_type_entry['failures_total'] == 0, 'Should have 0 failures (no job_host_summary match)'
+    assert adhoccommand_type_entry['skipped_total'] == 0, 'Should have 0 skipped (no job_host_summary match)'
+
+    total_ok = sum(j.get('ok_total', 0) for j in jobs_list)
+    total_failures = sum(j.get('failures_total', 0) for j in jobs_list)
+    total_skipped = sum(j.get('skipped_total', 0) for j in jobs_list)
+    total_dark = sum(j.get('dark_total', 0) for j in jobs_list)
+    total_ignored = sum(j.get('ignored_total', 0) for j in jobs_list)
+    assert total_ok == 52, 'Should have 52 ok tasks total (26 from job + 26 from workflowjob)'
+    assert total_failures == 6, 'Should have 6 failures total (2 from job + 4 from workflowjob)'
+    assert total_skipped == 2, 'Should have 2 skipped total (2 from job + 0 from workflowjob)'
+    assert total_dark == 0, 'Should have 0 dark (unreachable) tasks total'
+    assert total_ignored == 0, 'Should have 0 ignored tasks total'
+
+    assert 'rollup_period_tasks_total' in result['statistics'], 'Should have rollup_period_tasks_total in statistics'
+    assert 'rollup_period_task_ok_total' in result['statistics'], 'Should have rollup_period_task_ok_total in statistics'
+    assert 'rollup_period_task_failed_total' in result['statistics'], 'Should have rollup_period_task_failed_total in statistics'
+    assert 'rollup_period_task_skipped_total' in result['statistics'], 'Should have rollup_period_task_skipped_total in statistics'
+    assert 'rollup_period_task_unreachable_total' in result['statistics'], 'Should have rollup_period_task_unreachable_total in statistics'
+    assert 'rollup_period_task_ignored_total' in result['statistics'], 'Should have rollup_period_task_ignored_total in statistics'
+
+    expected_tasks_total = total_ok + total_failures + total_skipped + total_dark + total_ignored
+    assert result['statistics']['rollup_period_tasks_total'] == expected_tasks_total, (
+        f'rollup_period_tasks_total should be {expected_tasks_total}, got {result["statistics"]["rollup_period_tasks_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_ok_total'] == total_ok, (
+        f'rollup_period_task_ok_total should be {total_ok}, got {result["statistics"]["rollup_period_task_ok_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_failed_total'] == total_failures, (
+        f'rollup_period_task_failed_total should be {total_failures}, got {result["statistics"]["rollup_period_task_failed_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_skipped_total'] == total_skipped, (
+        f'rollup_period_task_skipped_total should be {total_skipped}, got {result["statistics"]["rollup_period_task_skipped_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_unreachable_total'] == total_dark, (
+        f'rollup_period_task_unreachable_total should be {total_dark}, got {result["statistics"]["rollup_period_task_unreachable_total"]}'
+    )
+    assert result['statistics']['rollup_period_task_ignored_total'] == total_ignored, (
+        f'rollup_period_task_ignored_total should be {total_ignored}, got {result["statistics"]["rollup_period_task_ignored_total"]}'
+    )
+
+
+def _validate_events_modules(result):
+    """Validate events modules section."""
+    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
+    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
+    assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
+    assert result['statistics']['rollup_period_warnings_total'] == 2, (
+        f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'
+    )
+    assert 'rollup_period_deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
+    assert result['statistics']['rollup_period_deprecations_total'] == 1, (
+        f'Expected 1 deprecated event, got {result["statistics"]["rollup_period_deprecations_total"]}'
+    )
+
+    module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
+    for module_name in ['ansible.netcommon.cli_config', 'ansible.posix.firewalld', 'ansible.windows.win_copy',
+                        'community.aws.ec2', 'community.general.yum', 'community.mongodb.insert']:
+        assert module_name in module_names
+
+    module_stats = result['module_stats']
+    assert isinstance(module_stats, list), 'module_stats should be a list'
+    assert len(module_stats) == 7, 'Should have stats for all 7 modules'
+
+    win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
+    assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
+    win_copy = win_copy_stats[0]
+    assert win_copy['collection_source'] == 'certified'
+    assert win_copy['collection_name'] == 'ansible.windows'
+    assert win_copy['jobs_total'] == 3
+    assert win_copy['unique_hosts_total'] == 3
+    assert win_copy['task_ok_total'] == 1
+    assert win_copy['task_ok_with_retries_total'] == 2
+    assert win_copy['task_failed_total'] == 0
+    assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
+    assert win_copy['processed_events_total'] == 5
+
+    yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
+    assert len(yum_stats) == 1, 'Should have exactly one entry for community.general.yum'
+    yum = yum_stats[0]
+    assert yum['collection_source'] == 'community'
+    assert yum['jobs_total'] == 3
+    assert yum['jobs_never_started_total'] == 1
+    assert yum['task_failed_total'] == 3
+    assert yum['jobs_failed_because_of_module_failure_total'] == 3
+    assert yum['processed_events_total'] == 3
+
+    collection_stats = result['collection_stats']
+    assert isinstance(collection_stats, list), 'collection_stats should be a list'
+    assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
+
+    windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
+    assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
+    windows_coll = windows_collection[0]
+    assert windows_coll['collection_source'] == 'certified'
+    assert windows_coll['jobs_total'] == 3
+    assert windows_coll['unique_hosts_total'] == 3
+    assert windows_coll['task_ok_total'] == 1
+    assert windows_coll['task_ok_with_retries_total'] == 2
+    assert windows_coll['processed_events_total'] == 5
+
+    assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
+
+
+def _validate_collections_versions(result):
+    """Validate collections versions section."""
+    collections_versions = result['collections_versions']
+    assert isinstance(collections_versions, list), 'collections_versions should be a list'
+    collections_dict = {(c['name'], c['version']): c['job_count'] for c in collections_versions}
+
+    assert collections_dict.get(('Unknown', 'Unknown')) == 5, (
+        f'Expected Unknown Unknown (ansible.builtin) in 5 jobs, got {collections_dict.get(("Unknown", "Unknown"))}'
+    )
+    assert collections_dict.get(('community.general', '1.0.0')) == 2, (
+        f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'
+    )
+    assert collections_dict.get(('community.general', '2.0.0')) == 2, (
+        f'Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(("community.general", "2.0.0"))}'
+    )
+    assert collections_dict.get(('community.general', '3.0.0')) == 1, (
+        f'Expected community.general 3.0.0 in 1 job, got {collections_dict.get(("community.general", "3.0.0"))}'
+    )
+    assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
+        f'Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(("ansible.windows", "1.0.0"))}'
+    )
+    assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
+        f'Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(("community.aws", "1.5.0"))}'
+    )
+
+    assert len(collections_versions) == 6, f'Expected 6 unique collection-version pairs, got {len(collections_versions)}'
+    for collection in collections_versions:
+        assert 'name' in collection, 'Each collection should have name field'
+        assert 'version' in collection, 'Each collection should have version field'
+        assert 'job_count' in collection, 'Each collection should have job_count field'
+        assert isinstance(collection['job_count'], int), 'job_count should be an integer'
+        assert collection['job_count'] > 0, 'job_count should be greater than 0'
+
+
+def _validate_jobs_by_launch_type(result):
+    """Validate jobs_by_launch_type section."""
+    jobs_by_launch_type_list = result['jobs_by_launch_type']
+    assert isinstance(jobs_by_launch_type_list, list), 'jobs_by_launch_type should be a list'
+    assert len(jobs_by_launch_type_list) == 4, f'Should have 4 launch types, got {len(jobs_by_launch_type_list)}'
+
+    manual_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'manual'), None)
+    scheduled_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'scheduled'), None)
+    workflow_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'workflow'), None)
+    callback_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'callback'), None)
+
+    assert manual_entry is not None, 'Should have manual launch_type'
+    assert scheduled_entry is not None, 'Should have scheduled launch_type'
+    assert workflow_entry is not None, 'Should have workflow launch_type'
+    assert callback_entry is not None, 'Should have callback launch_type'
+
+    assert manual_entry['jobs_total'] == 1, 'manual should have 1 job'
+    assert manual_entry['jobs_failed_total'] == 0, 'manual should have 0 failed jobs'
+    assert manual_entry['job_type_total'] == 1, 'manual should have 1 job type (job)'
+    assert manual_entry['jobs_duration_total_seconds'] == pytest.approx(3.0), 'manual should have 3s total duration'
+    assert 'unique_hosts_total' in manual_entry, 'Should have unique_hosts_total field from job_host_summary merge'
+    assert 'ok_total' in manual_entry, 'Should have ok_total field from job_host_summary merge'
+    assert 'failures_total' in manual_entry, 'Should have failures_total field from job_host_summary merge'
+
+    assert scheduled_entry['jobs_total'] == 2, 'scheduled should have 2 jobs'
+    assert scheduled_entry['jobs_failed_total'] == 2, 'scheduled should have 2 failed jobs (both job 2 and job 6 have failed=1)'
+    assert scheduled_entry['jobs_never_started_total'] == 1, 'scheduled should have 1 never started job'
+    assert scheduled_entry['job_type_total'] == 2, 'scheduled should have 2 job types (job and adhoccommand)'
+    assert scheduled_entry['jobs_duration_total_seconds'] == pytest.approx(5.0), 'scheduled should have 5s total duration'
+    assert 'unique_hosts_total' in scheduled_entry, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    assert workflow_entry['jobs_total'] == 1, 'workflow should have 1 job'
+    assert workflow_entry['jobs_failed_total'] == 0, 'workflow should have 0 failed jobs'
+    assert workflow_entry['job_type_total'] == 1, 'workflow should have 1 job type (workflowjob)'
+    assert workflow_entry['jobs_duration_total_seconds'] == pytest.approx(7.0), 'workflow should have 7s total duration'
+    assert 'unique_hosts_total' in workflow_entry, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    assert callback_entry['jobs_total'] == 1, 'callback should have 1 job'
+    assert callback_entry['jobs_failed_total'] == 0, 'callback should have 0 failed jobs'
+    assert callback_entry['job_type_total'] == 1, 'callback should have 1 job type (job)'
+    assert callback_entry['jobs_duration_total_seconds'] == pytest.approx(2.0), 'callback should have 2s total duration'
+    assert 'unique_hosts_total' in callback_entry, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    for entry in [manual_entry, scheduled_entry, workflow_entry, callback_entry]:
+        assert 'launch_type_manual_total' not in entry, 'Should not have launch_type_*_total when grouped by launch_type'
+        assert 'job_type_total' in entry, 'Should have job_type_total field'
+
+    assert manual_entry['controller_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {manual_entry['controller_versions']}"
+    assert scheduled_entry['controller_versions'] == ['2.10.0', '2.14.0'], (
+        f"Expected ['2.10.0', '2.14.0'] for scheduled launch_type, got {scheduled_entry['controller_versions']}"
+    )
+    assert workflow_entry['controller_versions'] == ['2.11.0'], (
+        f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['controller_versions']}"
+    )
+    assert callback_entry['controller_versions'] == ['2.12.0'], (
+        f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['controller_versions']}"
+    )
+
+
+def _validate_jobs_by_controller_version(result):
+    """Validate jobs_by_controller_version section."""
+    jobs_by_controller_version_list = result['jobs_by_controller_version']
+    assert isinstance(jobs_by_controller_version_list, list), 'jobs_by_controller_version should be a list'
+    assert len(jobs_by_controller_version_list) == 5, f'Should have 5 controller versions, got {len(jobs_by_controller_version_list)}'
+
+    version_2_9_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.9.0'), None)
+    version_2_10_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.10.0'), None)
+    version_2_11_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.11.0'), None)
+    version_2_12_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.12.0'), None)
+    version_2_14_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.14.0'), None)
+
+    assert version_2_9_0 is not None, 'Should have controller_version 2.9.0'
+    assert version_2_10_0 is not None, 'Should have controller_version 2.10.0'
+    assert version_2_11_0 is not None, 'Should have controller_version 2.11.0'
+    assert version_2_12_0 is not None, 'Should have controller_version 2.12.0'
+    assert version_2_14_0 is not None, 'Should have controller_version 2.14.0'
+
+    assert version_2_9_0['jobs_total'] == 1, '2.9.0 should have 1 job'
+    assert version_2_9_0['jobs_failed_total'] == 0, '2.9.0 should have 0 failed jobs'
+    assert version_2_9_0['job_type_total'] == 1, '2.9.0 should have 1 job type (job)'
+    assert version_2_9_0['jobs_duration_total_seconds'] == pytest.approx(3.0), '2.9.0 should have 3s total duration'
+    assert 'unique_hosts_total' in version_2_9_0, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    assert version_2_10_0['jobs_total'] == 1, '2.10.0 should have 1 job'
+    assert version_2_10_0['jobs_failed_total'] == 1, '2.10.0 should have 1 failed job'
+    assert version_2_10_0['job_type_total'] == 1, '2.10.0 should have 1 job type (job)'
+    assert version_2_10_0['jobs_duration_total_seconds'] == pytest.approx(5.0), '2.10.0 should have 5s total duration'
+    assert 'unique_hosts_total' in version_2_10_0, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    assert version_2_11_0['jobs_total'] == 1, '2.11.0 should have 1 job'
+    assert version_2_11_0['jobs_failed_total'] == 0, '2.11.0 should have 0 failed jobs'
+    assert version_2_11_0['job_type_total'] == 1, '2.11.0 should have 1 job type (workflowjob)'
+    assert version_2_11_0['jobs_duration_total_seconds'] == pytest.approx(7.0), '2.11.0 should have 7s total duration'
+    assert 'unique_hosts_total' in version_2_11_0, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    assert version_2_12_0['jobs_total'] == 1, '2.12.0 should have 1 job'
+    assert version_2_12_0['jobs_failed_total'] == 0, '2.12.0 should have 0 failed jobs'
+    assert version_2_12_0['job_type_total'] == 1, '2.12.0 should have 1 job type (job)'
+    assert version_2_12_0['jobs_duration_total_seconds'] == pytest.approx(2.0), '2.12.0 should have 2s total duration'
+    assert 'unique_hosts_total' in version_2_12_0, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    assert version_2_14_0['jobs_total'] == 1, '2.14.0 should have 1 job'
+    assert version_2_14_0['jobs_failed_total'] == 1, '2.14.0 should have 1 failed job'
+    assert version_2_14_0['jobs_never_started_total'] == 1, '2.14.0 should have 1 never started job'
+    assert version_2_14_0['job_type_total'] == 1, '2.14.0 should have 1 job type (adhoccommand)'
+    assert version_2_14_0['jobs_duration_total_seconds'] == pytest.approx(0.0), '2.14.0 should have 0s total duration'
+    assert 'unique_hosts_total' in version_2_14_0, 'Should have unique_hosts_total field from job_host_summary merge'
+
+    for version_entry in [version_2_9_0, version_2_10_0, version_2_11_0, version_2_12_0, version_2_14_0]:
+        assert 'job_type_total' in version_entry, 'Should have job_type_total field'
+        assert 'launch_type_manual_total' not in version_entry, 'Should not have launch_type_*_total field'
+
+    total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
+    total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_launch_type'])
+    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
+    assert (
+        total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total']
+    ), (
+        f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
+        f'statistics={result["statistics"]["rollup_period_jobs_total"]}'
+    )
+
+
 def create_csv_file(data_list, csv_path):
     """
     Create a CSV file from a list of dictionaries.
@@ -107,88 +537,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
 
     # ========== Split and create CSV files for each collector ==========
-
-    # 1. Jobs data - split into 2 CSV files
-    # Note: There are 6 jobs in the test data, split evenly: part1: 3 jobs, part2: 3 jobs
-    jobs_part1 = jobs[:3]  # First 3 jobs
-    jobs_part2 = jobs[3:]  # Remaining 3 jobs
-
-    jobs_csv_files = []
-    csv1 = create_csv_file(jobs_part1, f'{data_dir}/part1_unified_jobs.csv')
-    if csv1:
-        jobs_csv_files.append(csv1)
-    csv2 = create_csv_file(jobs_part2, f'{data_dir}/part2_unified_jobs.csv')
-    if csv2:
-        jobs_csv_files.append(csv2)
-
-    # 2. Events data - split into 3 CSV files
-    # Note: There are 23 events in the test data (20 task events + 2 warnings + 1 deprecated),
-    # so we split them into 3 parts: part1: 8 events, part2: 8 events, part3: 7 events
-    # This ensures all three batches are tested for proper batch processing
-    events_part1 = events[:8]  # First 8 events
-    events_part2 = events[8:16]  # Middle 8 events
-    events_part3 = events[16:]  # Remaining 7 events
-
-    events_csv_files = []
-    csv1 = create_csv_file(events_part1, f'{data_dir}/part1_main_jobevent.csv')
-    if csv1:
-        events_csv_files.append(csv1)
-    csv2 = create_csv_file(events_part2, f'{data_dir}/part2_main_jobevent.csv')
-    if csv2:
-        events_csv_files.append(csv2)
-    csv3 = create_csv_file(events_part3, f'{data_dir}/part3_main_jobevent.csv')
-    if csv3:
-        events_csv_files.append(csv3)
-
-    # 3. Execution environments - split into 2 CSV files
-    # Note: There are 5 entries in the test data, split as: part1: 2 entries, part2: 3 entries
-    ee_part1 = execution_environments[:2]
-    ee_part2 = execution_environments[2:]
-
-    ee_csv_files = []
-    csv1 = create_csv_file(ee_part1, f'{data_dir}/part1_execution_environments.csv')
-    if csv1:
-        ee_csv_files.append(csv1)
-    csv2 = create_csv_file(ee_part2, f'{data_dir}/part2_execution_environments.csv')
-    if csv2:
-        ee_csv_files.append(csv2)
-
-    # 4. Job host summary - split into 2 CSV files
-    # Note: There are 16 entries in the test data, split evenly: part1: 8 entries, part2: 8 entries
-    jhs_part1 = jobhostsummary[:8]  # First 8 entries
-    jhs_part2 = jobhostsummary[8:]  # Remaining 8 entries
-
-    jhs_csv_files = []
-    csv1 = create_csv_file(jhs_part1, f'{data_dir}/part1_job_host_summary.csv')
-    if csv1:
-        jhs_csv_files.append(csv1)
-    csv2 = create_csv_file(jhs_part2, f'{data_dir}/part2_job_host_summary.csv')
-    if csv2:
-        jhs_csv_files.append(csv2)
-
-    # 5. Credentials - split into 2 CSV files
-    # Note: There are 10 entries in the test data, split evenly: part1: 5 entries, part2: 5 entries
-    cred_part1 = credentials[:5]  # First 5 entries
-    cred_part2 = credentials[5:]  # Remaining 5 entries
-
-    cred_csv_files = []
-    csv1 = create_csv_file(cred_part1, f'{data_dir}/part1_credentials.csv')
-    if csv1:
-        cred_csv_files.append(csv1)
-    csv2 = create_csv_file(cred_part2, f'{data_dir}/part2_credentials.csv')
-    if csv2:
-        cred_csv_files.append(csv2)
-
-    # ========== Run the anonymized rollup computation ==========
-
-    # Create input_data dict with lists of CSV file paths
-    input_data = {
-        'unified_jobs': jobs_csv_files,
-        'job_host_summary': jhs_csv_files,
-        'main_jobevent': events_csv_files,
-        'execution_environments': ee_csv_files,
-        'credentials': cred_csv_files,
-    }
+    input_data = _create_csv_files_from_split_data(data_dir, jobs, events, execution_environments, jobhostsummary, credentials)
 
     result = compute_anonymized_rollup_from_raw_data(
         input_data=input_data, salt='test_salt', since=since, until=until, base_path=base_path, save_rollups=False
@@ -229,35 +578,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
 
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_job_type']
-    assert isinstance(jobs_list, list)
-    assert len(jobs_list) == 3  # job, workflowjob, adhoccommand
-    assert result['statistics']['rollup_period_jobs_total'] == 5  # Total jobs across all job types
-    # templates_total should be sum of templates_total from all job_type groups (1 + 1 + 1 = 3)
-    assert result['statistics']['rollup_period_templates_total'] == 3, 'Should have 3 total job templates (sum from all job_type groups)'
-
-    # Validate controller_versions at top level is merged from jobs_by_job_type
-    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
-    statistics_controller_versions = result['rollup_period_controller_versions']
-    assert isinstance(statistics_controller_versions, list), 'controller_versions should be a list'
-    # Get controller_versions from jobs_by_job_type and merge them
-    jobs_by_job_type = result.get('jobs_by_job_type', [])
-    expected_versions_set = set()
-    for job in jobs_by_job_type:
-        controller_versions = job.get('controller_versions', [])
-        if isinstance(controller_versions, list):
-            expected_versions_set.update(controller_versions)
-    expected_versions = sorted(list(expected_versions_set))
-    assert statistics_controller_versions == expected_versions, (
-        f'Expected controller_versions {expected_versions} in statistics, got {statistics_controller_versions}'
-    )
-    # Based on test data, we should have: 2.9.0, 2.10.0, 2.11.0, 2.12.0, 2.14.0
-    # Sorted: ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
-    assert len(statistics_controller_versions) == 5, f'Expected 5 unique controller versions, got {len(statistics_controller_versions)}'
-    assert '2.9.0' in statistics_controller_versions
-    assert '2.10.0' in statistics_controller_versions
-    assert '2.11.0' in statistics_controller_versions
-    assert '2.12.0' in statistics_controller_versions
-    assert '2.14.0' in statistics_controller_versions
+    _validate_jobs_by_job_type(jobs_list, result)
+    _validate_controller_versions_top_level(result)
 
     # Validate scm_types at top level
     assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
@@ -265,486 +587,36 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {result['rollup_period_scm_types']}"
     )
 
-    # 'job' type should have data from both tarballs (jobs 1, 2, 4)
-    job_type_jobs = [j for j in jobs_list if j['job_type'] == 'job' and j['jobs_total'] == 3]
-    assert len(job_type_jobs) == 1
-    job_type = job_type_jobs[0]
-    assert job_type['jobs_total'] == 3
-    assert job_type['jobs_failed_total'] == 1
-    assert job_type['jobs_never_started_total'] == 0
-    # Check timing statistics
-    assert job_type['jobs_duration_total_seconds'] == pytest.approx(10.0)
-    assert job_type['job_duration_minimum_seconds'] == pytest.approx(2.0)
-    assert job_type['job_duration_maximum_seconds'] == pytest.approx(5.0)
-    assert job_type['job_waiting_time_total_seconds'] == pytest.approx(3.0)
-    assert job_type['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
-    assert job_type['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
-    # Check job_type field
-    assert job_type['job_type'] == 'job'
-    # Validate controller_versions in by_job_type
-    # 'job' type has jobs 1, 2, 4 with versions: 2.9.0, 2.10.0, 2.12.0
-    assert 'controller_versions' in job_type, 'Should have controller_versions field in by_job_type'
-    assert job_type['controller_versions'] == ['2.10.0', '2.12.0', '2.9.0'], (
-        f"Expected ['2.10.0', '2.12.0', '2.9.0'] for job type, got {job_type['controller_versions']}"
-    )
-
-    # 'workflowjob' type should have 1 job executed
-    workflowjob_type_jobs = [j for j in jobs_list if j['job_type'] == 'workflowjob' and j['jobs_never_started_total'] == 0]
-    assert len(workflowjob_type_jobs) == 1
-    workflowjob_type = workflowjob_type_jobs[0]
-    assert workflowjob_type['jobs_total'] == 1
-    assert workflowjob_type['jobs_failed_total'] == 0
-    assert workflowjob_type['jobs_duration_total_seconds'] == pytest.approx(7.0)
-    assert workflowjob_type['job_waiting_time_total_seconds'] == pytest.approx(4.0)
-    # Check job_type field
-    assert workflowjob_type['job_type'] == 'workflowjob'
-    # Validate controller_versions in by_job_type
-    # 'workflowjob' type has job 3 with version: 2.11.0
-    assert 'controller_versions' in workflowjob_type, 'Should have controller_versions field in by_job_type'
-    assert workflowjob_type['controller_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflowjob type, got {workflowjob_type['controller_versions']}"
-    )
-
-    # 'adhoccommand' type should have never started job
-    adhoccommand_type_jobs = [j for j in jobs_list if j['job_type'] == 'adhoccommand' and j['jobs_never_started_total'] == 1]
-    assert len(adhoccommand_type_jobs) == 1
-    adhoccommand_type = adhoccommand_type_jobs[0]
-    assert adhoccommand_type['jobs_total'] == 1
-    assert adhoccommand_type['jobs_failed_total'] == 1
-    assert adhoccommand_type['jobs_duration_total_seconds'] == pytest.approx(0.0)
-    assert adhoccommand_type['job_waiting_time_total_seconds'] == pytest.approx(0.0)
-    # Check job_type field
-    assert adhoccommand_type['job_type'] == 'adhoccommand'
-    # Validate controller_versions in by_job_type
-    # 'adhoccommand' type has job 6 with version: 2.14.0
-    assert 'controller_versions' in adhoccommand_type, 'Should have controller_versions field in by_job_type'
-    assert adhoccommand_type['controller_versions'] == ['2.14.0'], (
-        f"Expected ['2.14.0'] for adhoccommand type, got {adhoccommand_type['controller_versions']}"
-    )
-
     # ========== Validate Execution Environments ==========
     assert result['statistics']['rollup_period_execution_environments_total'] == 5
     assert result['statistics']['rollup_period_EE_default_total'] == 2
     assert result['statistics']['rollup_period_EE_custom_total'] == 3
 
-    # ========== Validate Job Host Summary (merged into jobs_by_job_type) ==========
-    # unique_hosts_total is now summed across all job_type groups
-    # job type has 5 unique hosts (h1-h5), workflowjob type has 3 unique hosts (h1-h3)
-    # Total = 5 + 3 = 8 (some hosts appear in both types)
-    assert result['statistics']['rollup_period_unique_hosts_total'] == 8, 'Should have 8 unique hosts total (5 for job + 3 for workflowjob)'
-    # job_host_pairs_total should be 16 (10 for job type + 6 for workflowjob type)
-    assert result['statistics']['rollup_period_job_host_pairs_total'] == 16, (
-        f'Should have 16 total job host summary records, got {result["statistics"]["rollup_period_job_host_pairs_total"]}'
-    )
-
-    # Find the 'job' type group in jobs_by_job_type
-    job_type_entry = next((j for j in jobs_list if j['job_type'] == 'job'), None)
-    assert job_type_entry is not None, 'Should have job_type job'
-    # Validate merged host summary fields
-    assert job_type_entry['unique_hosts_total'] == 5, 'Should have 5 unique hosts for job type'
-    assert job_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for job type'
-    assert job_type_entry['failures_total'] == 2, 'Should have 2 failures for job type'
-    assert job_type_entry['skipped_total'] == 2, 'Should have 2 skipped for job type'
-    assert job_type_entry['dark_total'] == 0, 'Should have 0 dark for job type'
-    assert job_type_entry['ignored_total'] == 0, 'Should have 0 ignored for job type'
-    assert job_type_entry['rescued_total'] == 0, 'Should have 0 rescued for job type'
-
-    # Find the 'workflowjob' type group in jobs_by_job_type
-    workflowjob_type_entry = next((j for j in jobs_list if j['job_type'] == 'workflowjob'), None)
-    assert workflowjob_type_entry is not None, 'Should have job_type workflowjob'
-    # Validate merged host summary fields
-    assert workflowjob_type_entry['unique_hosts_total'] == 3, 'Should have 3 unique hosts for workflowjob type'
-    assert workflowjob_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for workflowjob type'
-    assert workflowjob_type_entry['failures_total'] == 4, 'Should have 4 failures for workflowjob type'
-    assert workflowjob_type_entry['skipped_total'] == 0, 'Should have 0 skipped for workflowjob type'
-    assert workflowjob_type_entry['dark_total'] == 0, 'Should have 0 dark for workflowjob type'
-    assert workflowjob_type_entry['ignored_total'] == 0, 'Should have 0 ignored for workflowjob type'
-    assert workflowjob_type_entry['rescued_total'] == 0, 'Should have 0 rescued for workflowjob type'
-
-    # 'adhoccommand' type should have default values (0) for host summary fields since no match
-    adhoccommand_type_entry = next((j for j in jobs_list if j['job_type'] == 'adhoccommand'), None)
-    assert adhoccommand_type_entry is not None, 'Should have job_type adhoccommand'
-    assert adhoccommand_type_entry['unique_hosts_total'] == 0, 'Should have 0 unique hosts (no job_host_summary match)'
-    assert adhoccommand_type_entry['ok_total'] == 0, 'Should have 0 ok tasks (no job_host_summary match)'
-    assert adhoccommand_type_entry['failures_total'] == 0, 'Should have 0 failures (no job_host_summary match)'
-    assert adhoccommand_type_entry['skipped_total'] == 0, 'Should have 0 skipped (no job_host_summary match)'
-
-    # Verify totals across all job types
-    total_ok = sum(j.get('ok_total', 0) for j in jobs_list)
-    total_failures = sum(j.get('failures_total', 0) for j in jobs_list)
-    total_skipped = sum(j.get('skipped_total', 0) for j in jobs_list)
-    total_dark = sum(j.get('dark_total', 0) for j in jobs_list)
-    total_ignored = sum(j.get('ignored_total', 0) for j in jobs_list)
-    assert total_ok == 52, 'Should have 52 ok tasks total (26 from job + 26 from workflowjob)'
-    assert total_failures == 6, 'Should have 6 failures total (2 from job + 4 from workflowjob)'
-    assert total_skipped == 2, 'Should have 2 skipped total (2 from job + 0 from workflowjob)'
-    assert total_dark == 0, 'Should have 0 dark (unreachable) tasks total'
-    assert total_ignored == 0, 'Should have 0 ignored tasks total'
-
-    # Verify task statistics in statistics dictionary match the totals
-    assert 'rollup_period_tasks_total' in result['statistics'], 'Should have rollup_period_tasks_total in statistics'
-    assert 'rollup_period_task_ok_total' in result['statistics'], 'Should have rollup_period_task_ok_total in statistics'
-    assert 'rollup_period_task_failed_total' in result['statistics'], 'Should have rollup_period_task_failed_total in statistics'
-    assert 'rollup_period_task_skipped_total' in result['statistics'], 'Should have rollup_period_task_skipped_total in statistics'
-    assert 'rollup_period_task_unreachable_total' in result['statistics'], 'Should have rollup_period_task_unreachable_total in statistics'
-    assert 'rollup_period_task_ignored_total' in result['statistics'], 'Should have rollup_period_task_ignored_total in statistics'
-
-    # Verify the statistics match the calculated totals
-    expected_tasks_total = total_ok + total_failures + total_skipped + total_dark + total_ignored
-    assert result['statistics']['rollup_period_tasks_total'] == expected_tasks_total, (
-        f'rollup_period_tasks_total should be {expected_tasks_total}, got {result["statistics"]["rollup_period_tasks_total"]}'
-    )
-    assert result['statistics']['rollup_period_task_ok_total'] == total_ok, (
-        f'rollup_period_task_ok_total should be {total_ok}, got {result["statistics"]["rollup_period_task_ok_total"]}'
-    )
-    assert result['statistics']['rollup_period_task_failed_total'] == total_failures, (
-        f'rollup_period_task_failed_total should be {total_failures}, got {result["statistics"]["rollup_period_task_failed_total"]}'
-    )
-    assert result['statistics']['rollup_period_task_skipped_total'] == total_skipped, (
-        f'rollup_period_task_skipped_total should be {total_skipped}, got {result["statistics"]["rollup_period_task_skipped_total"]}'
-    )
-    assert result['statistics']['rollup_period_task_unreachable_total'] == total_dark, (
-        f'rollup_period_task_unreachable_total should be {total_dark}, got {result["statistics"]["rollup_period_task_unreachable_total"]}'
-    )
-    assert result['statistics']['rollup_period_task_ignored_total'] == total_ignored, (
-        f'rollup_period_task_ignored_total should be {total_ignored}, got {result["statistics"]["rollup_period_task_ignored_total"]}'
-    )
+    # ========== Validate Job Host Summary ==========
+    _validate_job_host_summary(jobs_list, result)
 
     # ========== Validate Events Modules ==========
-    # In flattened structure, events_modules data is now in statistics and direct arrays
-
-    # Verify values from concatenated data across 3 tarballs
-    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
-
-    # Verify warnings_total and deprecations_total
-    # Test data has 2 warnings (job 1 and job 2) and 1 deprecated (job 3)
-    assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
-    assert result['statistics']['rollup_period_warnings_total'] == 2, (
-        f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'
-    )
-    assert 'rollup_period_deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
-    assert result['statistics']['rollup_period_deprecations_total'] == 1, (
-        f'Expected 1 deprecated event, got {result["statistics"]["rollup_period_deprecations_total"]}'
-    )
-
-    # Check specific known modules are present in module_stats
-    module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
-    assert 'ansible.netcommon.cli_config' in module_names
-    assert 'ansible.posix.firewalld' in module_names
-    assert 'ansible.windows.win_copy' in module_names
-    assert 'community.aws.ec2' in module_names
-    assert 'community.general.yum' in module_names
-    assert 'community.mongodb.insert' in module_names
-
-    # Verify module stats have data from all tarballs
-    module_stats = result['module_stats']
-    assert isinstance(module_stats, list), 'module_stats should be a list'
-    assert len(module_stats) == 7, 'Should have stats for all 7 modules'
-
-    # Verify specific module stats (ansible.windows.win_copy as an example)
-    win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
-    assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
-    win_copy = win_copy_stats[0]
-    assert win_copy['collection_source'] == 'certified'
-    assert win_copy['collection_name'] == 'ansible.windows'
-    assert win_copy['jobs_total'] == 3
-    assert win_copy['unique_hosts_total'] == 3
-    assert win_copy['task_ok_total'] == 1
-    assert win_copy['task_ok_with_retries_total'] == 2
-    assert win_copy['task_failed_total'] == 0
-    assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
-    assert win_copy['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic
-
-    # Verify another module (community.general.yum)
-    yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
-    assert len(yum_stats) == 1, 'Should have exactly one entry for community.general.yum'
-    yum = yum_stats[0]
-    assert yum['collection_source'] == 'community'
-    assert yum['jobs_total'] == 3
-    assert yum['jobs_never_started_total'] == 1
-    assert yum['task_failed_total'] == 3
-    assert yum['jobs_failed_because_of_module_failure_total'] == 3
-    assert yum['processed_events_total'] == 3  # Same as test_events_modules_aggregations_basic
-
-    # Verify collection stats
-    collection_stats = result['collection_stats']
-    assert isinstance(collection_stats, list), 'collection_stats should be a list'
-    assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
-
-    # Verify specific collection stats (ansible.windows)
-    windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
-    assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
-    windows_coll = windows_collection[0]
-    assert windows_coll['collection_source'] == 'certified'
-    assert windows_coll['jobs_total'] == 3
-    assert windows_coll['unique_hosts_total'] == 3
-    assert windows_coll['task_ok_total'] == 1
-    assert windows_coll['task_ok_with_retries_total'] == 2
-    assert windows_coll['processed_events_total'] == 5  # Same as test_events_modules_aggregations_basic
-
-    # Verify playbooks_total in statistics (modules_used_per_playbook is computed but not in final output)
-    assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
+    _validate_events_modules(result)
 
     # ========== Validate Credentials ==========
     print('--- Validating credentials data values ---')
-    # Credentials are added at top level as a list of unique credential types
-    # Expected credential types from credentials test data (from test_credentials_anonymized_rollup.py):
-    # Amazon Web Services, Container Registry, Machine, Network, Source Control, Vault
     assert 'rollup_period_credential_types' in result, 'Should have rollup_period_credential_types at top level'
     credential_types = result['rollup_period_credential_types']
     assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
-    assert 'Amazon Web Services' in credential_types
-    assert 'Container Registry' in credential_types
-    assert 'Machine' in credential_types
-    assert 'Network' in credential_types
-    assert 'Source Control' in credential_types
-    assert 'Vault' in credential_types
+    for cred_type in ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault']:
+        assert cred_type in credential_types
     assert len(credential_types) == 6, f'Should have 6 unique credential types, got {len(credential_types)}'
     assert credential_types == sorted(credential_types), 'credential_types should be sorted'
 
     # ========== Validate Collections Versions ==========
     print('--- Validating collections_versions data values ---')
-    collections_versions = result['collections_versions']
-    assert isinstance(collections_versions, list), 'collections_versions should be a list'
-
-    # Expected collections from jobs (jobs 1-4 and 6, job 5 is filtered out):
-    # Job 1: ansible.builtin 2.9.10, community.general 1.0.0
-    # Job 2: ansible.builtin 2.9.10, community.general 2.0.0, ansible.windows 1.0.0
-    # Job 3: ansible.builtin 2.9.10, community.general 2.0.0, community.aws 1.5.0
-    # Job 4: ansible.builtin 2.9.10, community.general 1.0.0
-    # Job 6: ansible.builtin 2.9.10, community.general 3.0.0
-
-    # Expected counts (after anonymization - unknown collections are replaced with "Unknown" for both name and version):
-    # Unknown Unknown (ansible.builtin): 5 jobs (1, 2, 3, 4, 6)
-    # community.general 1.0.0: 2 jobs (1, 4)
-    # community.general 2.0.0: 2 jobs (2, 3)
-    # community.general 3.0.0: 1 job (6)
-    # ansible.windows 1.0.0: 1 job (2)
-    # community.aws 1.5.0: 1 job (3) - community.aws is in collections.json, so it's not anonymized
-
-    # Convert to dict for easier lookup
-    collections_dict = {(c['name'], c['version']): c['job_count'] for c in collections_versions}
-
-    # Verify Unknown Unknown (ansible.builtin) appears in 5 jobs
-    # ansible.builtin is not in collections.json, so it's anonymized to "Unknown" for both name and version
-    assert collections_dict.get(('Unknown', 'Unknown')) == 5, (
-        f'Expected Unknown Unknown (ansible.builtin) in 5 jobs, got {collections_dict.get(("Unknown", "Unknown"))}'
-    )
-
-    # Verify community.general appears with different versions (testing same collection with different versions)
-    assert collections_dict.get(('community.general', '1.0.0')) == 2, (
-        f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'
-    )
-    assert collections_dict.get(('community.general', '2.0.0')) == 2, (
-        f'Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(("community.general", "2.0.0"))}'
-    )
-    assert collections_dict.get(('community.general', '3.0.0')) == 1, (
-        f'Expected community.general 3.0.0 in 1 job, got {collections_dict.get(("community.general", "3.0.0"))}'
-    )
-
-    # Verify other collections
-    assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
-        f'Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(("ansible.windows", "1.0.0"))}'
-    )
-    assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
-        f'Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(("community.aws", "1.5.0"))}'
-    )
-
-    # Verify total number of unique collection-version pairs
-    assert len(collections_versions) == 6, f'Expected 6 unique collection-version pairs, got {len(collections_versions)}'
-
-    # Verify all entries have required fields (name, version, job_count)
-    for collection in collections_versions:
-        assert 'name' in collection, 'Each collection should have name field'
-        assert 'version' in collection, 'Each collection should have version field'
-        assert 'job_count' in collection, 'Each collection should have job_count field'
-        assert isinstance(collection['job_count'], int), 'job_count should be an integer'
-        assert collection['job_count'] > 0, 'job_count should be greater than 0'
+    _validate_collections_versions(result)
 
     # ========== Validate Jobs by Launch Type ==========
-    jobs_by_launch_type_list = result['jobs_by_launch_type']
-    assert isinstance(jobs_by_launch_type_list, list), 'jobs_by_launch_type should be a list'
-
-    # Expected launch types from test data (jobs 1-4 and 6, job 5 is filtered out):
-    # Job 1: manual
-    # Job 2: scheduled
-    # Job 3: workflow
-    # Job 4: callback
-    # Job 6: scheduled
-    # So we should have: manual, scheduled, workflow, callback (4 launch types)
-    assert len(jobs_by_launch_type_list) == 4, f'Should have 4 launch types, got {len(jobs_by_launch_type_list)}'
-
-    # Find launch type entries
-    manual_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'manual'), None)
-    scheduled_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'scheduled'), None)
-    workflow_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'workflow'), None)
-    callback_entry = next((j for j in jobs_by_launch_type_list if j.get('launch_type') == 'callback'), None)
-
-    assert manual_entry is not None, 'Should have manual launch_type'
-    assert scheduled_entry is not None, 'Should have scheduled launch_type'
-    assert workflow_entry is not None, 'Should have workflow launch_type'
-    assert callback_entry is not None, 'Should have callback launch_type'
-
-    # Validate 'manual' launch_type (job 1)
-    assert manual_entry['jobs_total'] == 1, 'manual should have 1 job'
-    assert manual_entry['jobs_failed_total'] == 0, 'manual should have 0 failed jobs'
-    assert manual_entry['job_type_total'] == 1, 'manual should have 1 job type (job)'
-    assert manual_entry['jobs_duration_total_seconds'] == pytest.approx(3.0), 'manual should have 3s total duration'
-    # job_host_summary is now properly merged by launch_type, so we should have actual values if data exists
-    assert 'unique_hosts_total' in manual_entry, 'Should have unique_hosts_total field from job_host_summary merge'
-    assert 'ok_total' in manual_entry, 'Should have ok_total field from job_host_summary merge'
-    assert 'failures_total' in manual_entry, 'Should have failures_total field from job_host_summary merge'
-
-    # Validate 'scheduled' launch_type (jobs 2 and 6)
-    assert scheduled_entry['jobs_total'] == 2, 'scheduled should have 2 jobs'
-    assert scheduled_entry['jobs_failed_total'] == 2, 'scheduled should have 2 failed jobs (both job 2 and job 6 have failed=1)'
-    assert scheduled_entry['jobs_never_started_total'] == 1, 'scheduled should have 1 never started job'
-    assert scheduled_entry['job_type_total'] == 2, 'scheduled should have 2 job types (job and adhoccommand)'
-    assert scheduled_entry['jobs_duration_total_seconds'] == pytest.approx(5.0), 'scheduled should have 5s total duration'
-    # job_host_summary is now properly merged by launch_type
-    assert 'unique_hosts_total' in scheduled_entry, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Validate 'workflow' launch_type (job 3)
-    assert workflow_entry['jobs_total'] == 1, 'workflow should have 1 job'
-    assert workflow_entry['jobs_failed_total'] == 0, 'workflow should have 0 failed jobs'
-    assert workflow_entry['job_type_total'] == 1, 'workflow should have 1 job type (workflowjob)'
-    assert workflow_entry['jobs_duration_total_seconds'] == pytest.approx(7.0), 'workflow should have 7s total duration'
-    # job_host_summary is now properly merged by launch_type
-    assert 'unique_hosts_total' in workflow_entry, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Validate 'callback' launch_type (job 4)
-    assert callback_entry['jobs_total'] == 1, 'callback should have 1 job'
-    assert callback_entry['jobs_failed_total'] == 0, 'callback should have 0 failed jobs'
-    assert callback_entry['job_type_total'] == 1, 'callback should have 1 job type (job)'
-    assert callback_entry['jobs_duration_total_seconds'] == pytest.approx(2.0), 'callback should have 2s total duration'
-    # job_host_summary is now properly merged by launch_type
-    assert 'unique_hosts_total' in callback_entry, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Verify that launch_type_*_total fields are NOT present (since we're grouping by launch_type)
-    assert 'launch_type_manual_total' not in manual_entry, 'Should not have launch_type_manual_total when grouped by launch_type'
-    assert 'launch_type_scheduled_total' not in scheduled_entry, 'Should not have launch_type_scheduled_total when grouped by launch_type'
-    assert 'launch_type_workflow_total' not in workflow_entry, 'Should not have launch_type_workflow_total when grouped by launch_type'
-    assert 'launch_type_callback_total' not in callback_entry, 'Should not have launch_type_callback_total when grouped by launch_type'
-
-    # Verify that job_type_total is present (instead of launch_type counts)
-    assert 'job_type_total' in manual_entry, 'Should have job_type_total field'
-    assert 'job_type_total' in scheduled_entry, 'Should have job_type_total field'
-    assert 'job_type_total' in workflow_entry, 'Should have job_type_total field'
-    assert 'job_type_total' in callback_entry, 'Should have job_type_total field'
-
-    # Validate controller_versions in by_launch_type
-    # 'manual' launch_type has job 1 with version: 2.9.0
-    assert 'controller_versions' in manual_entry, 'Should have controller_versions field in by_launch_type'
-    assert manual_entry['controller_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {manual_entry['controller_versions']}"
-    # 'scheduled' launch_type has jobs 2, 6 with versions: 2.10.0, 2.14.0
-    assert 'controller_versions' in scheduled_entry, 'Should have controller_versions field in by_launch_type'
-    assert scheduled_entry['controller_versions'] == ['2.10.0', '2.14.0'], (
-        f"Expected ['2.10.0', '2.14.0'] for scheduled launch_type, got {scheduled_entry['controller_versions']}"
-    )
-    # 'workflow' launch_type has job 3 with version: 2.11.0
-    assert 'controller_versions' in workflow_entry, 'Should have controller_versions field in by_launch_type'
-    assert workflow_entry['controller_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflow launch_type, got {workflow_entry['controller_versions']}"
-    )
-    # 'callback' launch_type has job 4 with version: 2.12.0
-    assert 'controller_versions' in callback_entry, 'Should have controller_versions field in by_launch_type'
-    assert callback_entry['controller_versions'] == ['2.12.0'], (
-        f"Expected ['2.12.0'] for callback launch_type, got {callback_entry['controller_versions']}"
-    )
+    _validate_jobs_by_launch_type(result)
 
     # ========== Validate Jobs by Controller Version ==========
-    jobs_by_controller_version_list = result['jobs_by_controller_version']
-    assert isinstance(jobs_by_controller_version_list, list), 'jobs_by_controller_version should be a list'
-
-    # Expected controller versions from test data (jobs 1-4 and 6, job 5 is filtered out):
-    # Job 1: 2.9.0
-    # Job 2: 2.10.0
-    # Job 3: 2.11.0
-    # Job 4: 2.12.0
-    # Job 6: 2.14.0
-    # So we should have 5 controller versions
-    assert len(jobs_by_controller_version_list) == 5, f'Should have 5 controller versions, got {len(jobs_by_controller_version_list)}'
-
-    # Find controller version entries
-    version_2_9_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.9.0'), None)
-    version_2_10_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.10.0'), None)
-    version_2_11_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.11.0'), None)
-    version_2_12_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.12.0'), None)
-    version_2_14_0 = next((j for j in jobs_by_controller_version_list if j.get('controller_version') == '2.14.0'), None)
-
-    assert version_2_9_0 is not None, 'Should have controller_version 2.9.0'
-    assert version_2_10_0 is not None, 'Should have controller_version 2.10.0'
-    assert version_2_11_0 is not None, 'Should have controller_version 2.11.0'
-    assert version_2_12_0 is not None, 'Should have controller_version 2.12.0'
-    assert version_2_14_0 is not None, 'Should have controller_version 2.14.0'
-
-    # Validate '2.9.0' controller_version (job 1)
-    assert version_2_9_0['jobs_total'] == 1, '2.9.0 should have 1 job'
-    assert version_2_9_0['jobs_failed_total'] == 0, '2.9.0 should have 0 failed jobs'
-    assert version_2_9_0['job_type_total'] == 1, '2.9.0 should have 1 job type (job)'
-    assert version_2_9_0['jobs_duration_total_seconds'] == pytest.approx(3.0), '2.9.0 should have 3s total duration'
-    # job_host_summary is now properly merged by controller_version
-    assert 'unique_hosts_total' in version_2_9_0, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Validate '2.10.0' controller_version (job 2)
-    assert version_2_10_0['jobs_total'] == 1, '2.10.0 should have 1 job'
-    assert version_2_10_0['jobs_failed_total'] == 1, '2.10.0 should have 1 failed job'
-    assert version_2_10_0['job_type_total'] == 1, '2.10.0 should have 1 job type (job)'
-    assert version_2_10_0['jobs_duration_total_seconds'] == pytest.approx(5.0), '2.10.0 should have 5s total duration'
-    # job_host_summary is now properly merged by controller_version
-    assert 'unique_hosts_total' in version_2_10_0, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Validate '2.11.0' controller_version (job 3)
-    assert version_2_11_0['jobs_total'] == 1, '2.11.0 should have 1 job'
-    assert version_2_11_0['jobs_failed_total'] == 0, '2.11.0 should have 0 failed jobs'
-    assert version_2_11_0['job_type_total'] == 1, '2.11.0 should have 1 job type (workflowjob)'
-    assert version_2_11_0['jobs_duration_total_seconds'] == pytest.approx(7.0), '2.11.0 should have 7s total duration'
-    # job_host_summary is now properly merged by controller_version
-    assert 'unique_hosts_total' in version_2_11_0, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Validate '2.12.0' controller_version (job 4)
-    assert version_2_12_0['jobs_total'] == 1, '2.12.0 should have 1 job'
-    assert version_2_12_0['jobs_failed_total'] == 0, '2.12.0 should have 0 failed jobs'
-    assert version_2_12_0['job_type_total'] == 1, '2.12.0 should have 1 job type (job)'
-    assert version_2_12_0['jobs_duration_total_seconds'] == pytest.approx(2.0), '2.12.0 should have 2s total duration'
-    # job_host_summary is now properly merged by controller_version
-    assert 'unique_hosts_total' in version_2_12_0, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Validate '2.14.0' controller_version (job 6)
-    assert version_2_14_0['jobs_total'] == 1, '2.14.0 should have 1 job'
-    assert version_2_14_0['jobs_failed_total'] == 1, '2.14.0 should have 1 failed job'
-    assert version_2_14_0['jobs_never_started_total'] == 1, '2.14.0 should have 1 never started job'
-    assert version_2_14_0['job_type_total'] == 1, '2.14.0 should have 1 job type (adhoccommand)'
-    assert version_2_14_0['jobs_duration_total_seconds'] == pytest.approx(0.0), '2.14.0 should have 0s total duration'
-    # job_host_summary is now properly merged by controller_version
-    assert 'unique_hosts_total' in version_2_14_0, 'Should have unique_hosts_total field from job_host_summary merge'
-
-    # Verify that job_type_total is present (counts distinct job types per controller_version)
-    assert 'job_type_total' in version_2_9_0, 'Should have job_type_total field'
-    assert 'job_type_total' in version_2_10_0, 'Should have job_type_total field'
-    assert 'job_type_total' in version_2_11_0, 'Should have job_type_total field'
-    assert 'job_type_total' in version_2_12_0, 'Should have job_type_total field'
-    assert 'job_type_total' in version_2_14_0, 'Should have job_type_total field'
-
-    # Verify that launch_type_*_total fields are NOT present (removed from all groupings)
-    assert 'launch_type_manual_total' not in version_2_9_0, 'Should not have launch_type_manual_total field'
-    assert 'launch_type_scheduled_total' not in version_2_10_0, 'Should not have launch_type_scheduled_total field'
-    assert 'launch_type_workflow_total' not in version_2_11_0, 'Should not have launch_type_workflow_total field'
-    assert 'launch_type_callback_total' not in version_2_12_0, 'Should not have launch_type_callback_total field'
-    assert 'launch_type_scheduled_total' not in version_2_14_0, 'Should not have launch_type_scheduled_total field'
-
-    # Verify totals match between all groupings
-    total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
-    total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
-    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
-    assert (
-        total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == result['statistics']['rollup_period_jobs_total']
-    ), (
-        f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
-        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
-        f'statistics={result["statistics"]["rollup_period_jobs_total"]}'
-    )
+    _validate_jobs_by_controller_version(result)
 
 
 def test_empty_csv_files_handling(cleanup_test_data):
