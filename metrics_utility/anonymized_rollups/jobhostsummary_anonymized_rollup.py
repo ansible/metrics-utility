@@ -12,6 +12,88 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('job_host_summary')
         self.collector_names = ['job_host_summary_service']
 
+    def _merge_stats_json(self, stats_all, stats_new, groupby_col):
+        """Merge two stats JSON lists by summing numeric columns and unioning lists."""
+        if not stats_all:
+            return stats_new if stats_new else []
+        if not stats_new:
+            return stats_all if stats_all else []
+
+        # Create lookup dictionaries keyed by grouping column
+        all_dict = {item.get(groupby_col): item.copy() for item in stats_all}
+        new_dict = {item.get(groupby_col): item.copy() for item in stats_new}
+
+        # Merge items
+        merged_list = []
+        all_keys = set(all_dict.keys()) | set(new_dict.keys())
+
+        # Numeric columns to sum
+        numeric_cols = [
+            'dark_total',
+            'failures_total',
+            'ok_total',
+            'skipped_total',
+            'ignored_total',
+            'rescued_total',
+            'successful_hosts_total',
+            'failed_hosts_total',
+            'unreachable_hosts_total',
+            'unique_hosts_total',
+            'job_type_total',
+            'launch_type_total',
+        ]
+
+        # List columns to union
+        list_cols = ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']
+
+        for key in all_keys:
+            item_all = all_dict.get(key, {})
+            item_new = new_dict.get(key, {})
+            merged_item = self._create_merged_item(item_all, item_new, numeric_cols, list_cols)
+            if merged_item:
+                merged_list.append(merged_item)
+
+        return merged_list
+
+    def _create_merged_item(self, item_all, item_new, numeric_cols, list_cols):
+        """Create a merged item from two items, handling None/empty cases."""
+        if not item_all and not item_new:
+            return None
+
+        merged_item = item_all.copy() if item_all else item_new.copy()
+
+        if item_all and item_new:
+            self._merge_numeric_columns(merged_item, item_all, item_new, numeric_cols)
+            self._merge_list_columns(merged_item, item_all, item_new, list_cols)
+            self._recompute_totals(merged_item)
+
+        return merged_item
+
+    def _merge_numeric_columns(self, merged_item, item_all, item_new, numeric_cols):
+        """Sum numeric columns from both items."""
+        for col in numeric_cols:
+            val_all = item_all.get(col) if item_all.get(col) is not None else 0
+            val_new = item_new.get(col) if item_new.get(col) is not None else 0
+            merged_item[col] = val_all + val_new
+
+    def _merge_list_columns(self, merged_item, item_all, item_new, list_cols):
+        """Union list columns from both items."""
+        for col in list_cols:
+            list_all = item_all.get(col) if item_all.get(col) is not None else []
+            list_new = item_new.get(col) if item_new.get(col) is not None else []
+            set_all = set(list_all) if isinstance(list_all, list) else set()
+            set_new = set(list_new) if isinstance(list_new, list) else set()
+            merged_item[col] = sorted(list(set_all.union(set_new)))
+
+    def _recompute_totals(self, merged_item):
+        """Recompute totals from list columns."""
+        if 'unique_hosts' in merged_item:
+            merged_item['unique_hosts_total'] = len(merged_item['unique_hosts'])
+        if 'job_types' in merged_item:
+            merged_item['job_type_total'] = len(merged_item['job_types'])
+        if 'launch_types' in merged_item:
+            merged_item['launch_type_total'] = len(merged_item['launch_types'])
+
     def merge(self, data_all, data_new):
         """
         Merge JSON structures from batches by summing numeric columns and unioning lists.
@@ -20,94 +102,10 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if data_all is None:
             return data_new
 
-        def merge_stats_json(stats_all, stats_new, groupby_col):
-            """Merge two stats JSON lists by summing numeric columns and unioning lists."""
-            if not stats_all:
-                return stats_new if stats_new else []
-            if not stats_new:
-                return stats_all if stats_all else []
-
-            # Create lookup dictionaries keyed by grouping column
-            all_dict = {}
-            for item in stats_all:
-                key = item.get(groupby_col)
-                all_dict[key] = item.copy()
-
-            new_dict = {}
-            for item in stats_new:
-                key = item.get(groupby_col)
-                new_dict[key] = item.copy()
-
-            # Merge items
-            merged_list = []
-            all_keys = set(all_dict.keys()) | set(new_dict.keys())
-
-            # Numeric columns to sum
-            numeric_cols = [
-                'dark_total',
-                'failures_total',
-                'ok_total',
-                'skipped_total',
-                'ignored_total',
-                'rescued_total',
-                'successful_hosts_total',
-                'failed_hosts_total',
-                'unreachable_hosts_total',
-                'unique_hosts_total',
-                'job_type_total',
-                'launch_type_total',
-            ]
-
-            # List columns to union
-            list_cols = ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']
-
-            for key in all_keys:
-                item_all = all_dict.get(key, {})
-                item_new = new_dict.get(key, {})
-
-                # Start with item_all or item_new
-                if item_all:
-                    merged_item = item_all.copy()
-                elif item_new:
-                    merged_item = item_new.copy()
-                else:
-                    continue
-
-                # If both exist, merge them
-                if item_all and item_new:
-                    # Sum numeric columns
-                    for col in numeric_cols:
-                        val_all = item_all.get(col) if item_all.get(col) is not None else 0
-                        val_new = item_new.get(col) if item_new.get(col) is not None else 0
-                        merged_item[col] = val_all + val_new
-
-                    # Union list columns
-                    for col in list_cols:
-                        list_all = item_all.get(col) if item_all.get(col) is not None else []
-                        list_new = item_new.get(col) if item_new.get(col) is not None else []
-                        # Convert to sets, union, convert back to sorted list
-                        set_all = set(list_all) if isinstance(list_all, list) else set()
-                        set_new = set(list_new) if isinstance(list_new, list) else set()
-                        merged_item[col] = sorted(list(set_all.union(set_new)))
-
-                    # Recompute totals from lists
-                    if 'unique_hosts' in merged_item:
-                        merged_item['unique_hosts_total'] = len(merged_item['unique_hosts'])
-                    if 'job_types' in merged_item:
-                        merged_item['job_type_total'] = len(merged_item['job_types'])
-                    if 'launch_types' in merged_item:
-                        merged_item['launch_type_total'] = len(merged_item['launch_types'])
-
-                merged_list.append(merged_item)
-
-            return merged_list
-
         # Merge by_job_type, by_launch_type, by_controller_version
-        by_job_type = merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
-
-        by_launch_type = merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
-
-        by_controller_version = merge_stats_json(
+        by_job_type = self._merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
+        by_launch_type = self._merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
+        by_controller_version = self._merge_stats_json(
             data_all.get('by_controller_version', []), data_new.get('by_controller_version', []), 'controller_version'
         )
 
@@ -138,31 +136,17 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     # controller_version
     # launch_type
 
-    def prepare(self, dataframe):
-        # Count all records before processing
-        job_host_pairs_total = len(dataframe)
-
-        # Handle empty dataframe
-        if dataframe.empty:
-            return {
-                'by_job_type': [],
-                'by_launch_type': [],
-                'by_controller_version': [],
-                'job_host_pairs_total': job_host_pairs_total,
-            }
-
+    def _normalize_dataframe(self, dataframe):
+        """Normalize dataframe columns, handling missing columns and data types."""
         # Check if job_remote_id column exists
         if 'job_remote_id' not in dataframe.columns:
-            # If job_remote_id is missing, create a default value
             dataframe['job_remote_id'] = None
 
         # Check if model column exists (for backward compatibility)
         if 'model' not in dataframe.columns:
-            # If model is missing, create a default 'unknown' value
             dataframe['model'] = 'unknown'
 
         # Normalize ansible_version: treat empty strings as NaN for consistent grouping
-        # Note: We keep ansible_version in the dataframe (as collected from SQL), but rename it to controller_version in output
         if 'ansible_version' in dataframe.columns:
             dataframe['ansible_version'] = dataframe['ansible_version'].replace('', pd.NA)
         else:
@@ -172,79 +156,73 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if 'launch_type' not in dataframe.columns:
             dataframe['launch_type'] = 'unknown'
 
-        # rename column ansible_version to controller_version
+        # Rename column ansible_version to controller_version
         dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
 
+        # Compute host_outcome
         dataframe['host_outcome'] = 'successful'
         dataframe.loc[dataframe['failures'] > 0, 'host_outcome'] = 'failed'
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
 
-        # Union unique_hosts sets for aggregation
-        def union_hosts(series):
-            """Union all sets in the series"""
-            result = set()
-            for hosts_set in series:
-                if isinstance(hosts_set, set):
-                    result.update(hosts_set)
-                elif hosts_set is not None:
-                    result.update(hosts_set)
-            return result
-
-        # First aggregate by job_remote_id to merge hosts for the same job
-        # This ensures each job is properly aggregated even if hosts are split across batches
+    def _aggregate_by_job(self, dataframe):
+        """Aggregate dataframe by job_remote_id or by job_type/launch_type/controller_version."""
         if 'job_remote_id' in dataframe.columns:
-            aggregated_by_job = (
-                dataframe.groupby('job_remote_id')
-                .agg(
-                    dark_total=('dark', 'sum'),
-                    failures_total=('failures', 'sum'),
-                    ok_total=('ok', 'sum'),
-                    skipped_total=('skipped', 'sum'),
-                    ignored_total=('ignored', 'sum'),
-                    rescued_total=('rescued', 'sum'),
-                    unique_hosts=('host_name', lambda x: sorted(list(set(x.dropna())))),
-                    successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                    failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                    unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
-                    # Preserve constant fields per job_remote_id
-                    job_type=('model', 'first'),
-                    launch_type=('launch_type', 'first'),
-                    controller_version=('controller_version', 'first'),
-                )
-                .reset_index()
-            )
-        else:
-            # If no job_remote_id, aggregate directly by job_type, launch_type, controller_version
-            aggregated_by_job = (
-                dataframe.groupby(['model', 'launch_type', 'controller_version'])
-                .agg(
-                    dark_total=('dark', 'sum'),
-                    failures_total=('failures', 'sum'),
-                    ok_total=('ok', 'sum'),
-                    skipped_total=('skipped', 'sum'),
-                    ignored_total=('ignored', 'sum'),
-                    rescued_total=('rescued', 'sum'),
-                    unique_hosts=('host_name', lambda x: sorted(list(set(x.dropna())))),
-                    successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
-                    failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
-                    unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
-                )
-                .reset_index()
-                .rename(columns={'model': 'job_type'})
-            )
+            return self._aggregate_by_job_remote_id(dataframe)
+        return self._aggregate_by_job_type_directly(dataframe)
 
-        # Common aggregation dictionary
+    def _aggregate_by_job_remote_id(self, dataframe):
+        """Aggregate by job_remote_id to merge hosts for the same job."""
+        return (
+            dataframe.groupby('job_remote_id')
+            .agg(
+                dark_total=('dark', 'sum'),
+                failures_total=('failures', 'sum'),
+                ok_total=('ok', 'sum'),
+                skipped_total=('skipped', 'sum'),
+                ignored_total=('ignored', 'sum'),
+                rescued_total=('rescued', 'sum'),
+                unique_hosts=('host_name', lambda x: sorted(list(set(x.dropna())))),
+                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
+                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
+                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+                job_type=('model', 'first'),
+                launch_type=('launch_type', 'first'),
+                controller_version=('controller_version', 'first'),
+            )
+            .reset_index()
+        )
+
+    def _aggregate_by_job_type_directly(self, dataframe):
+        """Aggregate directly by job_type, launch_type, controller_version when no job_remote_id."""
+        return (
+            dataframe.groupby(['model', 'launch_type', 'controller_version'])
+            .agg(
+                dark_total=('dark', 'sum'),
+                failures_total=('failures', 'sum'),
+                ok_total=('ok', 'sum'),
+                skipped_total=('skipped', 'sum'),
+                ignored_total=('ignored', 'sum'),
+                rescued_total=('rescued', 'sum'),
+                unique_hosts=('host_name', lambda x: sorted(list(set(x.dropna())))),
+                successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
+                failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
+                unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
+            )
+            .reset_index()
+            .rename(columns={'model': 'job_type'})
+        )
+
+    def _get_common_aggregations(self):
+        """Get common aggregation dictionary for grouping operations."""
         def union_host_lists(series):
             """Union all host lists in the series"""
             result = set()
             for host_list in series:
-                if isinstance(host_list, list):
-                    result.update(host_list)
-                elif isinstance(host_list, set):
+                if isinstance(host_list, (list, set)):
                     result.update(host_list)
             return sorted(list(result))
 
-        common_aggregations = {
+        return {
             'dark_total': ('dark_total', 'sum'),
             'failures_total': ('failures_total', 'sum'),
             'ok_total': ('ok_total', 'sum'),
@@ -258,23 +236,28 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'job_remote_ids': ('job_remote_id', lambda x: sorted(list(set(x.dropna())))),
         }
 
-        # Aggregations grouped by job_type
-        aggregations_by_job_type = aggregated_by_job.groupby('job_type').agg(**common_aggregations).reset_index()
-        aggregations_by_job_type['unique_hosts_total'] = aggregations_by_job_type['unique_hosts'].apply(
-            lambda x: len(x) if isinstance(x, list) else 0
-        )
+    def _compute_list_length(self, x):
+        """Compute length of list, returning 0 if not a list."""
+        return len(x) if isinstance(x, list) else 0
 
-        # Aggregations grouped by launch_type
+    def _aggregate_by_job_type(self, aggregated_by_job, common_aggregations):
+        """Aggregate by job_type."""
+        aggregations_by_job_type = aggregated_by_job.groupby('job_type').agg(**common_aggregations).reset_index()
+        aggregations_by_job_type['unique_hosts_total'] = aggregations_by_job_type['unique_hosts'].apply(self._compute_list_length)
+        return aggregations_by_job_type
+
+    def _aggregate_by_launch_type(self, aggregated_by_job, common_aggregations):
+        """Aggregate by launch_type."""
         aggregations_by_launch_type_dict = common_aggregations.copy()
         aggregations_by_launch_type_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
 
         aggregations_by_launch_type = aggregated_by_job.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
-        aggregations_by_launch_type['unique_hosts_total'] = aggregations_by_launch_type['unique_hosts'].apply(
-            lambda x: len(x) if isinstance(x, list) else 0
-        )
-        aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(lambda x: len(x) if isinstance(x, list) else 0)
+        aggregations_by_launch_type['unique_hosts_total'] = aggregations_by_launch_type['unique_hosts'].apply(self._compute_list_length)
+        aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(self._compute_list_length)
+        return aggregations_by_launch_type
 
-        # Aggregations grouped by controller_version
+    def _aggregate_by_controller_version(self, aggregated_by_job, common_aggregations):
+        """Aggregate by controller_version."""
         aggregations_by_controller_version_dict = common_aggregations.copy()
         aggregations_by_controller_version_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
         aggregations_by_controller_version_dict['launch_types'] = ('launch_type', lambda x: sorted(list(set(x.dropna()))))
@@ -282,15 +265,37 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_controller_version = (
             aggregated_by_job.groupby('controller_version').agg(**aggregations_by_controller_version_dict).reset_index()
         )
-        aggregations_by_controller_version['unique_hosts_total'] = aggregations_by_controller_version['unique_hosts'].apply(
-            lambda x: len(x) if isinstance(x, list) else 0
-        )
-        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(
-            lambda x: len(x) if isinstance(x, list) else 0
-        )
-        aggregations_by_controller_version['launch_type_total'] = aggregations_by_controller_version['launch_types'].apply(
-            lambda x: len(x) if isinstance(x, list) else 0
-        )
+        aggregations_by_controller_version['unique_hosts_total'] = aggregations_by_controller_version['unique_hosts'].apply(self._compute_list_length)
+        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(self._compute_list_length)
+        aggregations_by_controller_version['launch_type_total'] = aggregations_by_controller_version['launch_types'].apply(self._compute_list_length)
+        return aggregations_by_controller_version
+
+    def prepare(self, dataframe):
+        # Count all records before processing
+        job_host_pairs_total = len(dataframe)
+
+        # Handle empty dataframe
+        if dataframe.empty:
+            return {
+                'by_job_type': [],
+                'by_launch_type': [],
+                'by_controller_version': [],
+                'job_host_pairs_total': job_host_pairs_total,
+            }
+
+        # Normalize dataframe columns
+        self._normalize_dataframe(dataframe)
+
+        # Aggregate by job
+        aggregated_by_job = self._aggregate_by_job(dataframe)
+
+        # Get common aggregations
+        common_aggregations = self._get_common_aggregations()
+
+        # Perform aggregations by different dimensions
+        aggregations_by_job_type = self._aggregate_by_job_type(aggregated_by_job, common_aggregations)
+        aggregations_by_launch_type = self._aggregate_by_launch_type(aggregated_by_job, common_aggregations)
+        aggregations_by_controller_version = self._aggregate_by_controller_version(aggregated_by_job, common_aggregations)
 
         # Convert DataFrames to JSON (list of dicts)
         by_job_type = aggregations_by_job_type.to_dict(orient='records')
