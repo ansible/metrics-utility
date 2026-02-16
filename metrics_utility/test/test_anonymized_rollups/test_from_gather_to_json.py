@@ -469,7 +469,7 @@ def test_from_gather_to_json(cleanup_glob):
     # runher
     # here what the connection should be? The postgres is in docker compose
     db = connection
-    json_data = compute_anonymized_rollup(db, 'salt', since, until, './out', save_rollups=False)
+    json_data = compute_anonymized_rollup(db, 'salt', since, until)
 
     print(json_data)
 
@@ -540,7 +540,7 @@ def test_half_day_rollup(cleanup_glob):
 
     # Get the data from the database
     db = connection
-    json_data = compute_anonymized_rollup(db, 'salt', since, until, './out', save_rollups=False)
+    json_data = compute_anonymized_rollup(db, 'salt', since, until)
 
     print('\n========== Half-Day Rollup JSON Data ==========')
     print(json.dumps(json_data, indent=4))

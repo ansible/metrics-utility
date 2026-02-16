@@ -13,7 +13,7 @@ from metrics_utility.library.collectors.controller import (
 from metrics_utility.logger import logger
 
 
-def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: bool = True, save_rollups_packed: bool = True):
+def compute_anonymized_rollup(db, salt, since, until):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = []
     try:
