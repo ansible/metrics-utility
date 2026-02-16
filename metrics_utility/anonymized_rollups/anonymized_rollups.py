@@ -450,7 +450,7 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
     return data
 
 
-def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base_path, save_rollups: bool = True, save_rollups_packed: bool = True):
+def compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, base_path, save_rollups: bool = True):
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
     jobs_result = JobsAnonymizedRollup().base(jobs)
 

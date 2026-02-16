@@ -25,33 +25,14 @@ def cleanup_test_data():
     Note: Cleanup is disabled to allow data persistence for validation.
     Uncomment the cleanup code below if you want to clean up test data.
     """
-    # out_dir = './out/test_report_splitting'  # Uncomment if enabling cleanup
-
-    # Cleanup before test (commented out to persist data for validation)
-    # if os.path.exists(out_dir):
-    #     shutil.rmtree(out_dir)
-
     yield  # Run test
 
-    # Cleanup after test (commented out to persist data for validation)
-    # if os.path.exists(out_dir):
-    #     shutil.rmtree(out_dir)
 
 
-def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50):
-    """
-    Create mock anonymized rollup data with the same structure as real reports.
 
-    Args:
-        num_modules: Number of module_stats entries (default 200 to exceed size limit)
-        num_jobs: Number of jobs_by_job_type entries (default 150 to exceed size limit)
-        num_collections: Number of collection_stats entries (default 50)
-
-    Returns:
-        Dictionary with anonymized rollup structure
-    """
-    # Create statistics dict
-    statistics = {
+def _create_statistics_dict(num_modules, num_jobs):
+    """Create statistics dictionary for anonymized rollup."""
+    return {
         'rollup_period_modules_total': num_modules,
         'rollup_period_unique_hosts_automated_total': 1000,
         'rollup_period_collected_events_total': 5000,
@@ -84,150 +65,201 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         'rollup_period_task_ignored_total': 50,
     }
 
-    # Create large module_stats array
+
+def _create_module_stats(num_modules):
+    """Create module_stats array."""
     module_stats = []
     for i in range(num_modules):
-        module_stats.append(
-            {
-                'module_name': f'ansible.builtin.module_{i:04d}',
-                'collection_source': 'certified' if i % 2 == 0 else 'community',
-                'collection_name': 'ansible.builtin' if i % 2 == 0 else f'community.module_{i % 10}',
-                'jobs_total': 10 + (i % 20),
-                'unique_hosts_total': 5 + (i % 15),
-                'processed_events_total': 50 + (i % 100),
-                'controller_versions': ['2.15.0', '2.16.0', '2.17.0'] if i % 3 == 0 else ['2.18.0', '2.19.0'],
-                'tasks_ok_total': 100 + (i % 50),
-                'tasks_failed_total': i % 10,
-                'tasks_skipped_total': i % 5,
-            }
-        )
+        is_even = i % 2 == 0
+        is_divisible_by_3 = i % 3 == 0
+        collection_source = 'certified' if is_even else 'community'
+        collection_name = 'ansible.builtin' if is_even else f'community.module_{i % 10}'
+        controller_versions = ['2.15.0', '2.16.0', '2.17.0'] if is_divisible_by_3 else ['2.18.0', '2.19.0']
+        
+        module_stats.append({
+            'module_name': f'ansible.builtin.module_{i:04d}',
+            'collection_source': collection_source,
+            'collection_name': collection_name,
+            'jobs_total': 10 + (i % 20),
+            'unique_hosts_total': 5 + (i % 15),
+            'processed_events_total': 50 + (i % 100),
+            'controller_versions': controller_versions,
+            'tasks_ok_total': 100 + (i % 50),
+            'tasks_failed_total': i % 10,
+            'tasks_skipped_total': i % 5,
+        })
+    return module_stats
 
-    # Create collection_stats array
+
+def _create_collection_stats(num_collections):
+    """Create collection_stats array."""
     collection_stats = []
+    sources = ['certified', 'community', 'validated', 'partner']
     for i in range(num_collections):
-        collection_stats.append(
-            {
-                'collection_name': f'ansible.collection_{i:03d}',
-                'collection_source': ['certified', 'community', 'validated', 'partner'][i % 4],
-                'jobs_total': 20 + (i % 30),
-                'processed_events_total': 200 + (i % 200),
-                'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
-                'unique_hosts_total': 10 + (i % 20),
-            }
-        )
+        collection_stats.append({
+            'collection_name': f'ansible.collection_{i:03d}',
+            'collection_source': sources[i % 4],
+            'jobs_total': 20 + (i % 30),
+            'processed_events_total': 200 + (i % 200),
+            'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+            'unique_hosts_total': 10 + (i % 20),
+        })
+    return collection_stats
 
-    # Create role_stats array
+
+def _create_role_stats():
+    """Create role_stats array."""
     role_stats = []
-    for i in range(30):  # Smaller array
-        role_stats.append(
-            {
-                'role': f'example_role_{i:03d}',
-                'collection_name': f'ansible.collection_{i % 10:03d}',
-                'collection_source': ['certified', 'community'][i % 2],
-                'jobs_total': 5 + (i % 15),
-                'tasks_total': 20 + (i % 30),
-                'processed_events_total': 100 + (i % 100),
-            }
-        )
+    sources = ['certified', 'community']
+    for i in range(30):
+        role_stats.append({
+            'role': f'example_role_{i:03d}',
+            'collection_name': f'ansible.collection_{i % 10:03d}',
+            'collection_source': sources[i % 2],
+            'jobs_total': 5 + (i % 15),
+            'tasks_total': 20 + (i % 30),
+            'processed_events_total': 100 + (i % 100),
+        })
+    return role_stats
 
-    # Create large jobs_by_job_type array
+
+def _create_jobs_by_job_type(num_jobs):
+    """Create jobs_by_job_type array."""
     jobs_by_job_type = []
     for i in range(num_jobs):
-        jobs_by_job_type.append(
-            {
-                'job_type': 'job' if i % 2 == 0 else 'workflowjob',
-                'jobs_total': 1,
-                'jobs_successful_total': 1 if i % 10 != 0 else 0,
-                'jobs_failed_total': 1 if i % 10 == 0 else 0,
-                'jobs_duration_total_seconds': 100 + (i % 500),
-                'jobs_successful_duration_total_seconds': 90 + (i % 450) if i % 10 != 0 else 0,
-                'jobs_failed_duration_total_seconds': 50 + (i % 200) if i % 10 == 0 else 0,
-                'templates_total': 1,
-                'inventories_total': 1,
-                'controller_versions': ['2.15.0', '2.16.0'] if i % 2 == 0 else ['2.17.0', '2.18.0'],
-                'dark_total': i % 5,
-                'failures_total': i % 3,
-                'ok_total': 10 + (i % 20),
-                'skipped_total': i % 4,
-                'ignored_total': i % 2,
-                'rescued_total': 0,
-                'unique_hosts_total': 5 + (i % 15),
-                'successful_hosts_total': 4 + (i % 12),
-                'failed_hosts_total': i % 3,
-                'unreachable_hosts_total': i % 2,
-            }
-        )
+        is_even = i % 2 == 0
+        is_successful = i % 10 != 0
+        job_type = 'job' if is_even else 'workflowjob'
+        controller_versions = ['2.15.0', '2.16.0'] if is_even else ['2.17.0', '2.18.0']
+        jobs_successful_total = 1 if is_successful else 0
+        jobs_failed_total = 1 if not is_successful else 0
+        jobs_successful_duration = 90 + (i % 450) if is_successful else 0
+        jobs_failed_duration = 50 + (i % 200) if not is_successful else 0
+        
+        jobs_by_job_type.append({
+            'job_type': job_type,
+            'jobs_total': 1,
+            'jobs_successful_total': jobs_successful_total,
+            'jobs_failed_total': jobs_failed_total,
+            'jobs_duration_total_seconds': 100 + (i % 500),
+            'jobs_successful_duration_total_seconds': jobs_successful_duration,
+            'jobs_failed_duration_total_seconds': jobs_failed_duration,
+            'templates_total': 1,
+            'inventories_total': 1,
+            'controller_versions': controller_versions,
+            'dark_total': i % 5,
+            'failures_total': i % 3,
+            'ok_total': 10 + (i % 20),
+            'skipped_total': i % 4,
+            'ignored_total': i % 2,
+            'rescued_total': 0,
+            'unique_hosts_total': 5 + (i % 15),
+            'successful_hosts_total': 4 + (i % 12),
+            'failed_hosts_total': i % 3,
+            'unreachable_hosts_total': i % 2,
+        })
+    return jobs_by_job_type
 
-    # Create jobs_by_launch_type array
+
+def _create_jobs_by_launch_type():
+    """Create jobs_by_launch_type array."""
     jobs_by_launch_type = []
     launch_types = ['manual', 'scheduled', 'workflow', 'callback']
     for i, launch_type in enumerate(launch_types):
-        jobs_by_launch_type.append(
-            {
-                'launch_type': launch_type,
-                'jobs_total': 25 + (i * 10),
-                'jobs_successful_total': 20 + (i * 8),
-                'jobs_failed_total': 5 + (i * 2),
-                'dark_total': i * 5,
-                'failures_total': i * 3,
-                'ok_total': 100 + (i * 20),
-                'skipped_total': i * 4,
-                'ignored_total': i * 2,
-                'rescued_total': 0,
-                'unique_hosts_total': 50 + (i * 10),
-                'successful_hosts_total': 45 + (i * 8),
-                'failed_hosts_total': 5 + (i * 2),
-                'unreachable_hosts_total': i * 2,
-            }
-        )
+        jobs_by_launch_type.append({
+            'launch_type': launch_type,
+            'jobs_total': 25 + (i * 10),
+            'jobs_successful_total': 20 + (i * 8),
+            'jobs_failed_total': 5 + (i * 2),
+            'dark_total': i * 5,
+            'failures_total': i * 3,
+            'ok_total': 100 + (i * 20),
+            'skipped_total': i * 4,
+            'ignored_total': i * 2,
+            'rescued_total': 0,
+            'unique_hosts_total': 50 + (i * 10),
+            'successful_hosts_total': 45 + (i * 8),
+            'failed_hosts_total': 5 + (i * 2),
+            'unreachable_hosts_total': i * 2,
+        })
+    return jobs_by_launch_type
 
-    # Create jobs_by_controller_version array
+
+def _create_jobs_by_controller_version():
+    """Create jobs_by_controller_version array."""
     jobs_by_controller_version = []
     versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
     for i, version in enumerate(versions):
-        jobs_by_controller_version.append(
-            {
-                'controller_version': version,
-                'jobs_total': 30 + (i * 5),
-                'jobs_successful_total': 25 + (i * 4),
-                'jobs_failed_total': 5 + i,
-                'dark_total': i * 3,
-                'failures_total': i * 2,
-                'ok_total': 120 + (i * 15),
-                'skipped_total': i * 3,
-                'ignored_total': i,
-                'rescued_total': 0,
-                'unique_hosts_total': 60 + (i * 8),
-                'successful_hosts_total': 55 + (i * 7),
-                'failed_hosts_total': 5 + i,
-                'unreachable_hosts_total': i * 2,
-            }
-        )
+        jobs_by_controller_version.append({
+            'controller_version': version,
+            'jobs_total': 30 + (i * 5),
+            'jobs_successful_total': 25 + (i * 4),
+            'jobs_failed_total': 5 + i,
+            'dark_total': i * 3,
+            'failures_total': i * 2,
+            'ok_total': 120 + (i * 15),
+            'skipped_total': i * 3,
+            'ignored_total': i,
+            'rescued_total': 0,
+            'unique_hosts_total': 60 + (i * 8),
+            'successful_hosts_total': 55 + (i * 7),
+            'failed_hosts_total': 5 + i,
+            'unreachable_hosts_total': i * 2,
+        })
+    return jobs_by_controller_version
 
-    # Create collections_versions array
+
+def _create_collections_versions():
+    """Create collections_versions array."""
     collections_versions = []
     for i in range(20):
-        collections_versions.append(
-            {
-                'name': f'ansible.collection_{i:03d}',
-                'version': f'1.{i}.0',
-                'job_count': 10 + (i % 20),
-            }
-        )
+        collections_versions.append({
+            'name': f'ansible.collection_{i:03d}',
+            'version': f'1.{i}.0',
+            'job_count': 10 + (i % 20),
+        })
+    return collections_versions
 
-    # Create large controller_versions array that will need to be split
-    # Generate many version strings to exceed the 24KB limit
-    # Each version string is ~10-12 bytes with JSON formatting
-    # To exceed 24KB, we need ~2000+ items, but let's use 3000 to ensure splitting
+
+def _create_controller_versions():
+    """Create large controller_versions array that will need to be split.
+    
+    Generate many version strings to exceed the 24KB limit.
+    Each version string is ~10-12 bytes with JSON formatting.
+    To exceed 24KB, we need ~2000+ items, but let's use 3000 to ensure splitting.
+    This creates 3 * 100 * 10 = 3000 versions, which should exceed 24KB.
+    """
     controller_versions = []
     for major in range(2, 5):  # Major versions 2, 3, 4
         for minor in range(0, 100):  # Minor versions 0-99
             for patch in range(0, 10):  # Patch versions 0-9
                 version = f'{major}.{minor}.{patch}'
                 controller_versions.append(version)
-    # This creates 3 * 100 * 10 = 3000 versions, which should exceed 24KB
+    return controller_versions
 
-    # Assemble the anonymized rollup structure
+
+def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50):
+    """
+    Create mock anonymized rollup data with the same structure as real reports.
+
+    Args:
+        num_modules: Number of module_stats entries (default 200 to exceed size limit)
+        num_jobs: Number of jobs_by_job_type entries (default 150 to exceed size limit)
+        num_collections: Number of collection_stats entries (default 50)
+
+    Returns:
+        Dictionary with anonymized rollup structure
+    """
+    statistics = _create_statistics_dict(num_modules, num_jobs)
+    module_stats = _create_module_stats(num_modules)
+    collection_stats = _create_collection_stats(num_collections)
+    role_stats = _create_role_stats()
+    jobs_by_job_type = _create_jobs_by_job_type(num_jobs)
+    jobs_by_launch_type = _create_jobs_by_launch_type()
+    jobs_by_controller_version = _create_jobs_by_controller_version()
+    collections_versions = _create_collections_versions()
+    controller_versions = _create_controller_versions()
+
     anonymized_rollup = {
         'statistics': statistics,
         'rollup_period_controller_versions': controller_versions,
