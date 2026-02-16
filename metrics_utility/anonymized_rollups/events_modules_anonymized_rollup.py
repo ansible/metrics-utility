@@ -325,12 +325,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _parse_warnings_deprecations(self, dataframe):
         """Parse warnings and deprecations columns."""
         if 'warnings' not in dataframe.columns:
-            dataframe['warnings'] = None
+            dataframe['warnings'] = pd.Series([None] * len(dataframe), dtype=object, index=dataframe.index)
         if 'deprecations' not in dataframe.columns:
-            dataframe['deprecations'] = None
+            dataframe['deprecations'] = pd.Series([None] * len(dataframe), dtype=object, index=dataframe.index)
 
-        dataframe['is_warning'] = dataframe['warnings'].apply(self._parse_and_check_json_array).astype(bool)
-        dataframe['is_deprecation'] = dataframe['deprecations'].apply(self._parse_and_check_json_array).astype(bool)
+        # Ensure columns are Series (not None) before applying
+        warnings_series = dataframe['warnings']
+        deprecations_series = dataframe['deprecations']
+        
+        dataframe['is_warning'] = warnings_series.apply(self._parse_and_check_json_array).astype(bool)
+        dataframe['is_deprecation'] = deprecations_series.apply(self._parse_and_check_json_array).astype(bool)
         return dataframe
 
     def _filter_and_select_columns(self, dataframe):
