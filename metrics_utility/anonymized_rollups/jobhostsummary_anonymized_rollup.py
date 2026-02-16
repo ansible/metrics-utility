@@ -214,6 +214,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _get_common_aggregations(self):
         """Get common aggregation dictionary for grouping operations."""
+
         def union_host_lists(series):
             """Union all host lists in the series"""
             result = set()

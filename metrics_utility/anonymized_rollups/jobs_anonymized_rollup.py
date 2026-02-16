@@ -63,6 +63,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
     def _get_controller_versions_aggregation(self):
         """Get controller versions aggregation helper."""
+
         def get_controller_versions(grouped_series):
             """Helper function to extract sorted unique controller versions from a group"""
             unique_versions = grouped_series.dropna().unique()
@@ -85,17 +86,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type_dict = common_aggregations.copy()
         aggregations_by_job_type_dict.update(controller_versions_aggregation)
 
-        aggregations_by_job_type = (
-            dataframe.groupby('model')
-            .agg(**aggregations_by_job_type_dict)
-            .reset_index()
-            .rename(columns={'model': 'job_type'})
-        )
+        aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
 
         aggregations_by_job_type['is_automation'] = aggregations_by_job_type['job_type'] == 'job'
         self._add_totals_to_aggregation(
-            aggregations_by_job_type,
-            [('job_ids', 'jobs_total'), ('templates', 'templates_total'), ('inventories', 'inventories_total')]
+            aggregations_by_job_type, [('job_ids', 'jobs_total'), ('templates', 'templates_total'), ('inventories', 'inventories_total')]
         )
 
         return aggregations_by_job_type
@@ -114,7 +109,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 ('job_types', 'job_type_total'),
                 ('templates', 'templates_total'),
                 ('inventories', 'inventories_total'),
-            ]
+            ],
         )
 
         return aggregations_by_launch_type
@@ -138,7 +133,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 ('job_types', 'job_type_total'),
                 ('templates', 'templates_total'),
                 ('inventories', 'inventories_total'),
-            ]
+            ],
         )
 
         return aggregations_by_controller_version
@@ -328,12 +323,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def _merge_collections(self, data_all, data_new):
         """Merge installed_collections by summing job_count for same collection+version."""
         collections_all = {
-            (item['collection_name'], item['collection_version']): item['job_count']
-            for item in data_all.get('installed_collections', [])
+            (item['collection_name'], item['collection_version']): item['job_count'] for item in data_all.get('installed_collections', [])
         }
         collections_new = {
-            (item['collection_name'], item['collection_version']): item['job_count']
-            for item in data_new.get('installed_collections', [])
+            (item['collection_name'], item['collection_version']): item['job_count'] for item in data_new.get('installed_collections', [])
         }
 
         merged_collections = {}

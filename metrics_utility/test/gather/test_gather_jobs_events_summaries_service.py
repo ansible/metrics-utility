@@ -128,31 +128,27 @@ def _get_sort_key(row, header_row):
     """Create sort key from available columns: job_id, host_id, event, or first column."""
     key_parts = []
     sort_columns = ['job_id', 'host_id', 'event']
-    
+
     for col_name in sort_columns:
         if col_name in header_row:
             idx = header_row.index(col_name)
             key_parts.append(row[idx] if idx < len(row) else '')
-    
+
     # Fallback: use first column if no standard columns found
     if not key_parts and row:
         key_parts.append(row[0])
-    
+
     return tuple(key_parts or ('',))
 
 
 def _validate_header(actual_header, expected_header):
     """Validate that CSV headers match."""
-    assert actual_header == expected_header, (
-        f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {actual_header}'
-    )
+    assert actual_header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {actual_header}'
 
 
 def _validate_row_count(actual_data, expected_data):
     """Validate that row counts match."""
-    assert len(actual_data) == len(expected_data), (
-        f'\nRow count mismatch: expected {len(expected_data)}, got {len(actual_data)}'
-    )
+    assert len(actual_data) == len(expected_data), f'\nRow count mismatch: expected {len(expected_data)}, got {len(actual_data)}'
 
 
 def _validate_rows(actual_data_sorted, expected_data_sorted, header, skip_columns_names):
@@ -164,8 +160,7 @@ def _validate_rows(actual_data_sorted, expected_data_sorted, header, skip_column
             if col_name in skip_columns:
                 continue
             assert exp_cell == act_cell, (
-                f'\nData mismatch on row {i + 1}, column {col_name!r} (index {idx}):\n'
-                f'Expected: {exp_cell!r}\nActual:   {act_cell!r}'
+                f'\nData mismatch on row {i + 1}, column {col_name!r} (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
             )
 
 
@@ -177,7 +172,7 @@ def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
     """
     expected_header, expected_data = _parse_expected_csv(expected_lines)
     header, actual_data, text = _read_actual_csv(csv_file_path)
-    
+
     _print_comparison(text, expected_lines)
     _validate_header(header, expected_header)
     _validate_row_count(actual_data, expected_data)

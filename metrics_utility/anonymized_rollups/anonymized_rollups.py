@@ -173,21 +173,21 @@ def _merge_jobs_with_host_summary(
     """Merge job_host_summary data into jobs list using a lookup dictionary."""
     default_fields = _get_default_host_summary_fields()
     merged_jobs = []
-    
+
     for job in jobs_list:
         merged_job = job.copy()
         lookup_key = key_extractor(job)
-        
+
         if normalize_key:
             lookup_key = normalize_key(lookup_key)
-        
+
         if lookup_key in jhs_lookup:
             merged_job.update(_extract_host_summary_fields(jhs_lookup[lookup_key]))
         else:
             merged_job.update(default_fields)
-        
+
         merged_jobs.append(merged_job)
-    
+
     return merged_jobs
 
 
@@ -247,7 +247,7 @@ def _calculate_task_statistics(jobs_by_job_type_merged: List[Dict[str, Any]]) ->
     task_skipped = sum(job.get('skipped_total', 0) for job in jobs_by_job_type_merged)
     task_unreachable = sum(job.get('dark_total', 0) for job in jobs_by_job_type_merged)
     task_ignored = sum(job.get('ignored_total', 0) for job in jobs_by_job_type_merged)
-    
+
     return {
         'rollup_period_tasks_total': task_ok + task_failed + task_skipped + task_unreachable + task_ignored,
         'rollup_period_task_ok_total': task_ok,

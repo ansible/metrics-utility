@@ -350,10 +350,27 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             dataframe['controller_version'] = None
 
         columns_to_keep = [
-            'job_id', 'host_id', 'task_uuid', 'module_name', 'playbook', 'collection_name', 'collection_source', 'role',
-            'job_failed', 'job_started', 'job_duration_seconds', 'job_waiting_time_seconds',
-            'task_success_event', 'task_failed_event', 'task_failed_and_ignored_event',
-            'task_unreachable_event', 'task_skipped_event', 'event', 'is_warning', 'is_deprecation', 'controller_version',
+            'job_id',
+            'host_id',
+            'task_uuid',
+            'module_name',
+            'playbook',
+            'collection_name',
+            'collection_source',
+            'role',
+            'job_failed',
+            'job_started',
+            'job_duration_seconds',
+            'job_waiting_time_seconds',
+            'task_success_event',
+            'task_failed_event',
+            'task_failed_and_ignored_event',
+            'task_unreachable_event',
+            'task_skipped_event',
+            'event',
+            'is_warning',
+            'is_deprecation',
+            'controller_version',
         ]
         return dataframe[columns_to_keep]
 
