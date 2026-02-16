@@ -25,12 +25,12 @@ def test_credentials_anonymized_rollup_prepare():
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.prepare(df)
 
-    # Result should be a DataFrame with credential_type column only
-    assert isinstance(result, pd.DataFrame)
-    assert 'credential_type' in result.columns
+    # Result should be a dictionary with credential_types key
+    assert isinstance(result, dict)
+    assert 'credential_types' in result
 
     # Check unique credential types
-    credential_types = set(result['credential_type'].dropna().unique())
+    credential_types = set(result['credential_types'])
     assert 'Machine' in credential_types
     assert 'Vault' in credential_types
     assert 'Source Control' in credential_types
@@ -38,23 +38,18 @@ def test_credentials_anonymized_rollup_prepare():
     assert 'Amazon Web Services' in credential_types
     assert 'Container Registry' in credential_types
 
-    # Total rows should be 6 (one per unique credential type)
-    assert len(result) == 6
+    # Should be a sorted list with 6 unique credential types
+    assert isinstance(result['credential_types'], list)
+    assert len(result['credential_types']) == 6
+    assert result['credential_types'] == sorted(result['credential_types'])
 
 
 def test_credentials_anonymized_rollup_base():
     """Test base() method gets unique credential types across batches and converts to JSON format."""
-    # Simulate data from prepare() - unique credential types
-    prepared_data = pd.DataFrame(
-        [
-            {'credential_type': 'Machine'},
-            {'credential_type': 'Vault'},
-            {'credential_type': 'Source Control'},
-            {'credential_type': 'Network'},
-            {'credential_type': 'Amazon Web Services'},
-            {'credential_type': 'Container Registry'},
-        ]
-    )
+    # Simulate data from prepare() and merge() - dictionary with credential_types list
+    prepared_data = {
+        'credential_types': ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault']
+    }
 
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.base(prepared_data)
@@ -104,27 +99,33 @@ def test_credentials_anonymized_rollup_prepare_and_base():
 
 
 def test_credentials_anonymized_rollup_multiple_batches():
-    """Test that base() correctly gets unique credential types from multiple batches."""
+    """Test that merge() correctly merges credential types from multiple batches."""
     # Simulate multiple batches from prepare()
-    batch1 = pd.DataFrame(
+    batch1_df = pd.DataFrame(
         [
             {'credential_type': 'Machine'},
             {'credential_type': 'Vault'},
         ]
     )
 
-    batch2 = pd.DataFrame(
+    batch2_df = pd.DataFrame(
         [
             {'credential_type': 'Machine'},  # Same type, different batch (should be deduplicated)
             {'credential_type': 'Network'},
         ]
     )
 
-    # Concatenate batches (as would happen in real processing)
-    combined = pd.concat([batch1, batch2], ignore_index=True)
-
     credentials_rollup = CredentialsAnonymizedRollup()
-    result = credentials_rollup.base(combined)
+    
+    # Prepare each batch (returns dict)
+    batch1 = credentials_rollup.prepare(batch1_df)
+    batch2 = credentials_rollup.prepare(batch2_df)
+    
+    # Merge batches
+    merged = credentials_rollup.merge(batch1, batch2)
+    
+    # Base aggregation
+    result = credentials_rollup.base(merged)
     json_data = result['json']
 
     # Should be a sorted list with unique credential types
@@ -142,9 +143,9 @@ def test_credentials_anonymized_rollup_prepare_empty_dataframe():
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.prepare(df)
 
-    assert isinstance(result, pd.DataFrame)
-    assert result.empty
-    assert list(result.columns) == ['credential_type']
+    assert isinstance(result, dict)
+    assert 'credential_types' in result
+    assert result['credential_types'] == []
 
 
 def test_credentials_anonymized_rollup_prepare_missing_column():
@@ -153,9 +154,23 @@ def test_credentials_anonymized_rollup_prepare_missing_column():
     credentials_rollup = CredentialsAnonymizedRollup()
     result = credentials_rollup.prepare(df)
 
-    assert isinstance(result, pd.DataFrame)
-    assert result.empty
-    assert list(result.columns) == ['credential_type']
+    assert isinstance(result, dict)
+    assert 'credential_types' in result
+    assert result['credential_types'] == []
+
+
+def test_credentials_anonymized_rollup_merge_none():
+    """Test merge() with None (first batch)."""
+    credentials_rollup = CredentialsAnonymizedRollup()
+    batch1_df = pd.DataFrame([{'credential_type': 'Machine'}])
+    batch1 = credentials_rollup.prepare(batch1_df)
+    
+    # First merge should handle None
+    merged = credentials_rollup.merge(None, batch1)
+    
+    assert isinstance(merged, dict)
+    assert 'credential_types' in merged
+    assert 'Machine' in merged['credential_types']
 
 
 def test_credentials_anonymized_rollup_base_none():
@@ -168,20 +183,20 @@ def test_credentials_anonymized_rollup_base_none():
 
 
 def test_credentials_anonymized_rollup_base_empty_dataframe():
-    """Test base() with empty dataframe."""
-    df = pd.DataFrame()
+    """Test base() with empty dictionary."""
+    data = {'credential_types': []}
     credentials_rollup = CredentialsAnonymizedRollup()
-    result = credentials_rollup.base(df)
+    result = credentials_rollup.base(data)
 
     assert 'json' in result
     assert result['json'] == []
 
 
 def test_credentials_anonymized_rollup_base_missing_columns():
-    """Test base() with missing required columns."""
-    df = pd.DataFrame([{'some_column': 'value'}])  # Missing credential_type
+    """Test base() with missing credential_types key."""
+    data = {}  # Missing credential_types key
     credentials_rollup = CredentialsAnonymizedRollup()
-    result = credentials_rollup.base(df)
+    result = credentials_rollup.base(data)
 
     assert 'json' in result
     assert result['json'] == []
@@ -190,7 +205,7 @@ def test_credentials_anonymized_rollup_base_missing_columns():
 def test_credentials_anonymized_rollup_field_name_conversion():
     """Test that credential type names are preserved correctly."""
     # Test various name formats
-    test_data = pd.DataFrame(
+    test_data_df = pd.DataFrame(
         [
             {'credential_type': 'Machine'},
             {'credential_type': 'Source Control'},  # Space
@@ -202,7 +217,10 @@ def test_credentials_anonymized_rollup_field_name_conversion():
     )
 
     credentials_rollup = CredentialsAnonymizedRollup()
-    result = credentials_rollup.base(test_data)
+    # Prepare the data (returns dict)
+    prepared = credentials_rollup.prepare(test_data_df)
+    # Base aggregation
+    result = credentials_rollup.base(prepared)
     json_data = result['json']
 
     # Should be a sorted list with all credential types preserved
