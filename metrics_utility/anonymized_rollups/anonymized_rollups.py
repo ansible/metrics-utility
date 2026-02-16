@@ -2,7 +2,7 @@ import hashlib
 import json
 import os
 
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import pandas as pd
 
@@ -125,6 +125,196 @@ def anonymize_data(data, salt):
     # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
 
 
+def _normalize_controller_version_key(controller_version: Any) -> str:
+    """Normalize controller version key for consistent lookup, handling None/NaN values."""
+    if controller_version is None or (isinstance(controller_version, float) and pd.isna(controller_version)):
+        return 'None'
+    return str(controller_version)
+
+
+def _get_default_host_summary_fields() -> Dict[str, int]:
+    """Get default values for host summary fields when no match is found."""
+    return {
+        'dark_total': 0,
+        'failures_total': 0,
+        'ok_total': 0,
+        'skipped_total': 0,
+        'ignored_total': 0,
+        'rescued_total': 0,
+        'unique_hosts_total': 0,
+        'successful_hosts_total': 0,
+        'failed_hosts_total': 0,
+        'unreachable_hosts_total': 0,
+    }
+
+
+def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract host summary fields from job_host_summary data."""
+    return {
+        'dark_total': jhs_data.get('dark_total', 0),
+        'failures_total': jhs_data.get('failures_total', 0),
+        'ok_total': jhs_data.get('ok_total', 0),
+        'skipped_total': jhs_data.get('skipped_total', 0),
+        'ignored_total': jhs_data.get('ignored_total', 0),
+        'rescued_total': jhs_data.get('rescued_total', 0),
+        'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
+        'successful_hosts_total': jhs_data.get('successful_hosts_total', 0),
+        'failed_hosts_total': jhs_data.get('failed_hosts_total', 0),
+        'unreachable_hosts_total': jhs_data.get('unreachable_hosts_total', 0),
+    }
+
+
+def _merge_jobs_with_host_summary(
+    jobs_list: List[Dict[str, Any]],
+    jhs_lookup: Dict[str, Dict[str, Any]],
+    key_extractor: Callable[[Dict[str, Any]], Any],
+    normalize_key: Callable[[Any], str] = None,
+) -> List[Dict[str, Any]]:
+    """Merge job_host_summary data into jobs list using a lookup dictionary."""
+    default_fields = _get_default_host_summary_fields()
+    merged_jobs = []
+    
+    for job in jobs_list:
+        merged_job = job.copy()
+        lookup_key = key_extractor(job)
+        
+        if normalize_key:
+            lookup_key = normalize_key(lookup_key)
+        
+        if lookup_key in jhs_lookup:
+            merged_job.update(_extract_host_summary_fields(jhs_lookup[lookup_key]))
+        else:
+            merged_job.update(default_fields)
+        
+        merged_jobs.append(merged_job)
+    
+    return merged_jobs
+
+
+def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
+    """Calculate sum of a field from a list of dictionaries, returning None if list is empty."""
+    if not items:
+        return None
+    return sum(item.get(field, 0) for item in items)
+
+
+def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Calculate host summary totals from job_type groups."""
+    return {
+        'unique_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'unique_hosts_total'),
+        'successful_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'successful_hosts_total'),
+        'failed_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'failed_hosts_total'),
+        'unreachable_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'unreachable_hosts_total'),
+    }
+
+
+def _calculate_job_statistics(jobs_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Calculate job statistics by summing from all job_type groups."""
+    return {
+        'job_templates_total': _calculate_sum_from_list(jobs_by_job_type, 'templates_total'),
+        'inventories_total': _calculate_sum_from_list(jobs_by_job_type, 'inventories_total'),
+        'rollup_period_jobs_successful': _calculate_sum_from_list(jobs_by_job_type, 'jobs_successful_total'),
+        'rollup_period_jobs_failed': _calculate_sum_from_list(jobs_by_job_type, 'jobs_failed_total'),
+        'rollup_period_jobs_duration_all_statuses_seconds': _calculate_sum_from_list(jobs_by_job_type, 'jobs_duration_total_seconds'),
+        'rollup_period_jobs_successful_duration_total_seconds': _calculate_sum_from_list(jobs_by_job_type, 'jobs_successful_duration_total_seconds'),
+        'rollup_period_jobs_failed_duration_total_seconds': _calculate_sum_from_list(jobs_by_job_type, 'jobs_failed_duration_total_seconds'),
+    }
+
+
+def _merge_controller_versions(jobs_by_job_type: List[Dict[str, Any]]) -> List[str]:
+    """Merge controller_versions from all job_type groups (unique values, sorted)."""
+    controller_versions_set = set()
+    for job in jobs_by_job_type:
+        controller_versions = job.get('controller_versions', [])
+        if isinstance(controller_versions, list):
+            controller_versions_set.update(controller_versions)
+    return sorted(list(controller_versions_set)) if controller_versions_set else []
+
+
+def _calculate_execution_environments_total(execution_environments: Dict[str, Any]) -> Any:
+    """Calculate execution_environments_total as sum of default and custom."""
+    default_total = execution_environments.get('execution_environments_default_total')
+    custom_total = execution_environments.get('execution_environments_custom_total')
+    if default_total is None and custom_total is None:
+        return None
+    return (default_total or 0) + (custom_total or 0)
+
+
+def _calculate_task_statistics(jobs_by_job_type_merged: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Calculate task statistics from merged jobs_by_job_type."""
+    task_ok = sum(job.get('ok_total', 0) for job in jobs_by_job_type_merged)
+    task_failed = sum(job.get('failures_total', 0) for job in jobs_by_job_type_merged)
+    task_skipped = sum(job.get('skipped_total', 0) for job in jobs_by_job_type_merged)
+    task_unreachable = sum(job.get('dark_total', 0) for job in jobs_by_job_type_merged)
+    task_ignored = sum(job.get('ignored_total', 0) for job in jobs_by_job_type_merged)
+    
+    return {
+        'rollup_period_tasks_total': task_ok + task_failed + task_skipped + task_unreachable + task_ignored,
+        'rollup_period_task_ok_total': task_ok,
+        'rollup_period_task_failed_total': task_failed,
+        'rollup_period_task_skipped_total': task_skipped,
+        'rollup_period_task_unreachable_total': task_unreachable,
+        'rollup_period_task_ignored_total': task_ignored,
+    }
+
+
+def _build_statistics(
+    events_modules: Dict[str, Any],
+    execution_environments: Dict[str, Any],
+    jobs: Dict[str, Any],
+    job_statistics: Dict[str, Any],
+    host_summary_totals: Dict[str, Any],
+    job_host_pairs_total: Any,
+    playbooks_total: int,
+    execution_environments_total: Any,
+) -> Dict[str, Any]:
+    """Build statistics dictionary with rollup_period_ prefix for all fields."""
+    return {
+        # from events_modules
+        'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
+        'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
+        'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
+        'rollup_period_warnings_total': events_modules.get('warnings_total'),
+        'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
+        'rollup_period_playbooks_total': playbooks_total,
+        # from execution_environments
+        'rollup_period_execution_environments_total': execution_environments_total,
+        'rollup_period_EE_default_total': execution_environments.get('execution_environments_default_total'),
+        'rollup_period_EE_custom_total': execution_environments.get('execution_environments_custom_total'),
+        # from jobs (top-level fields)
+        'rollup_period_jobs_total': jobs.get('jobs_total'),
+        'rollup_period_jobs_successful': job_statistics['rollup_period_jobs_successful'],
+        'rollup_period_jobs_failed': job_statistics['rollup_period_jobs_failed'],
+        'rollup_period_jobs_duration_all_statuses_seconds': job_statistics['rollup_period_jobs_duration_all_statuses_seconds'],
+        'rollup_period_jobs_successful_duration_total_seconds': job_statistics['rollup_period_jobs_successful_duration_total_seconds'],
+        'rollup_period_jobs_failed_duration_total_seconds': job_statistics['rollup_period_jobs_failed_duration_total_seconds'],
+        'rollup_period_organizations_total': jobs.get('organizations_total'),
+        'rollup_period_forks_total': jobs.get('forks_total'),
+        'rollup_period_templates_total': job_statistics['job_templates_total'],
+        'rollup_period_inventories_total': job_statistics['inventories_total'],
+        # from job_host_summary (sum of all job_type groups)
+        'rollup_period_unique_hosts_total': host_summary_totals['unique_hosts_total'],
+        'rollup_period_job_host_pairs_total': job_host_pairs_total,
+        'rollup_period_successful_hosts_total': host_summary_totals['successful_hosts_total'],
+        'rollup_period_failed_hosts_total': host_summary_totals['failed_hosts_total'],
+        'rollup_period_unreachable_hosts_total': host_summary_totals['unreachable_hosts_total'],
+    }
+
+
+def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract and transform installed collections from jobs data."""
+    installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
+    return [
+        {
+            'name': item.get('collection_name', ''),
+            'version': item.get('collection_version', ''),
+            'job_count': item.get('job_count', 0),
+        }
+        for item in installed_collections
+        if item and 'collection_name' in item and 'collection_version' in item
+    ]
+
+
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
@@ -145,292 +335,77 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
 
-    # credentials_root is now a list of unique credential types (from the 'json' field)
+    # Extract data structures
     credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
-
-    # 1) statistics (collect only primitive totals)
-    # Get jobs_total directly from jobs data, or calculate by summing jobs_total from all job_type groups as fallback
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
-    jobs_total = jobs.get('jobs_total')  # Use direct value from jobs data
-
-    # Calculate unique_hosts_total by summing unique_hosts_total from all job_type groups
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
     job_host_summary_by_controller_version: List[Dict[str, Any]] = job_host_summary_root.get('by_controller_version', []) or []
-    unique_hosts_total = sum(jhs.get('unique_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
-    job_host_pairs_total = job_host_summary_root.get('job_host_pairs_total')
-    # Calculate host outcome totals by summing from all job_type groups
-    successful_hosts_total = (
-        sum(jhs.get('successful_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
-    )
-    failed_hosts_total = sum(jhs.get('failed_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
-    unreachable_hosts_total = (
-        sum(jhs.get('unreachable_hosts_total', 0) for jhs in job_host_summary_by_job_type) if job_host_summary_by_job_type else None
-    )
 
-    # Calculate playbooks_total from modules_used_per_playbook_total dict
-    modules_used_per_playbook_total: Dict[str, int] = events_modules.get('modules_used_per_playbook_total', {}) or {}
-    playbooks_total = len(modules_used_per_playbook_total)
+    # Calculate statistics using helper functions
+    host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type)
+    job_statistics = _calculate_job_statistics(jobs_by_job_type)
+    playbooks_total = len(events_modules.get('modules_used_per_playbook_total', {}) or {})
+    execution_environments_total = _calculate_execution_environments_total(execution_environments)
+    controller_versions_merged = _merge_controller_versions(jobs_by_job_type)
 
-    # Calculate job_templates_total by summing templates_total from all job_type groups
-    job_templates_total = sum(job.get('templates_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-
-    # Calculate inventories_total by summing inventories_total from all job_type groups
-    inventories_total = sum(job.get('inventories_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-
-    # Calculate job statistics by summing from all job_type groups (jobs_by_job_type contains all jobs)
-    rollup_period_jobs_successful = sum(job.get('jobs_successful_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    rollup_period_jobs_failed = sum(job.get('jobs_failed_total', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    rollup_period_jobs_duration_all_statuses_seconds = (
-        sum(job.get('jobs_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    )
-    rollup_period_jobs_successful_duration_total_seconds = (
-        sum(job.get('jobs_successful_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
-    )
-    rollup_period_jobs_failed_duration_total_seconds = (
-        sum(job.get('jobs_failed_duration_total_seconds', 0) for job in jobs_by_job_type) if jobs_by_job_type else None
+    # Build statistics dictionary
+    statistics = _build_statistics(
+        events_modules,
+        execution_environments,
+        jobs,
+        job_statistics,
+        host_summary_totals,
+        job_host_summary_root.get('job_host_pairs_total'),
+        playbooks_total,
+        execution_environments_total,
     )
 
-    # Merge controller_versions from all job_type groups (unique values, sorted)
-    controller_versions_set = set()
-    for job in jobs_by_job_type:
-        controller_versions = job.get('controller_versions', [])
-        if isinstance(controller_versions, list):
-            controller_versions_set.update(controller_versions)
-    controller_versions_merged = sorted(list(controller_versions_set)) if controller_versions_set else []
-
-    # Extract SCM types directly from jobs data (computed in jobs_anonymized_rollup.base)
-    scm_types_merged = jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else []
-
-    # Extract credential types from credentials_list (already sorted list from credentials rollup)
-    credential_types_merged = credentials_list if isinstance(credentials_list, list) else []
-
-    # Calculate execution_environments_total as sum of default and custom
-    rollup_period_EE_default_total = execution_environments.get('execution_environments_default_total')
-    rollup_period_EE_custom_total = execution_environments.get('execution_environments_custom_total')
-    # If both are None, total is None; otherwise sum them (treating None as 0 for calculation)
-    if rollup_period_EE_default_total is None and rollup_period_EE_custom_total is None:
-        rollup_period_execution_environments_total = None
-    else:
-        rollup_period_execution_environments_total = (rollup_period_EE_default_total or 0) + (rollup_period_EE_custom_total or 0)
-
-    # Build statistics with rollup_period_ prefix for all fields
-    statistics = {
-        # from events_modules
-        'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-        'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
-        'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
-        'rollup_period_warnings_total': events_modules.get('warnings_total'),
-        'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
-        'rollup_period_playbooks_total': playbooks_total,
-        # from execution_environments
-        'rollup_period_execution_environments_total': rollup_period_execution_environments_total,
-        'rollup_period_EE_default_total': rollup_period_EE_default_total,
-        'rollup_period_EE_custom_total': rollup_period_EE_custom_total,
-        # from jobs (top-level fields)
-        'rollup_period_jobs_total': jobs_total,
-        'rollup_period_jobs_successful': rollup_period_jobs_successful,
-        'rollup_period_jobs_failed': rollup_period_jobs_failed,
-        'rollup_period_jobs_duration_all_statuses_seconds': rollup_period_jobs_duration_all_statuses_seconds,
-        'rollup_period_jobs_successful_duration_total_seconds': rollup_period_jobs_successful_duration_total_seconds,
-        'rollup_period_jobs_failed_duration_total_seconds': rollup_period_jobs_failed_duration_total_seconds,
-        'rollup_period_organizations_total': jobs.get('organizations_total'),
-        'rollup_period_forks_total': jobs.get('forks_total'),
-        'rollup_period_templates_total': job_templates_total,
-        'rollup_period_inventories_total': inventories_total,
-        # from job_host_summary (sum of all job_type groups)
-        'rollup_period_unique_hosts_total': unique_hosts_total,
-        'rollup_period_job_host_pairs_total': job_host_pairs_total,
-        'rollup_period_successful_hosts_total': successful_hosts_total,
-        'rollup_period_failed_hosts_total': failed_hosts_total,
-        'rollup_period_unreachable_hosts_total': unreachable_hosts_total,
-    }
-
-    # 2) modules_used_per_playbook (convert map -> array)
-    # Note: modules_used_per_playbook is computed but not included in final output
-    # modules_used_per_playbook: List[Dict[str, Any]] = [
-    #     {'playbook_id': playbook_id, 'modules_used': modules_used} for playbook_id, modules_used in modules_used_per_playbook_total.items()
-    # ]
-
-    # 3) arrays copied as-is from their respective parents
+    # Extract arrays and collections
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
     role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
+    collections_versions = _extract_collections_versions(jobs)
 
-    # 4) Extract and transform installed collections from jobs data
-    installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
-    collections_versions: List[Dict[str, Any]] = [
-        {
-            'name': item.get('collection_name', ''),
-            'version': item.get('collection_version', ''),
-            'job_count': item.get('job_count', 0),
-        }
-        for item in installed_collections
-        if item and 'collection_name' in item and 'collection_version' in item
-    ]
+    # Merge job_host_summary into jobs groupings
+    jhs_lookup_by_job_type: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
+    jobs_by_job_type_merged = _merge_jobs_with_host_summary(
+        jobs_by_job_type,
+        jhs_lookup_by_job_type,
+        lambda job: job.get('job_type'),
+    )
 
-    # 5) Merge job_host_summary into jobs groupings (by_job_type, by_launch_type, by_controller_version)
-    # Create a lookup dict for job_host_summary by job_type
-    jhs_lookup: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
-
-    # Default values for host summary fields when no match is found
-    default_host_summary_fields = {
-        'dark_total': 0,
-        'failures_total': 0,
-        'ok_total': 0,
-        'skipped_total': 0,
-        'ignored_total': 0,
-        'rescued_total': 0,
-        'unique_hosts_total': 0,
-        'successful_hosts_total': 0,
-        'failed_hosts_total': 0,
-        'unreachable_hosts_total': 0,
-    }
-
-    # Merge job_host_summary data into jobs_by_job_type
-    jobs_by_job_type_merged: List[Dict[str, Any]] = []
-    for job in jobs_by_job_type:
-        job_type = job.get('job_type')
-        merged_job = job.copy()
-
-        # Add host summary fields from matching job_host_summary entry, or use defaults
-        if job_type in jhs_lookup:
-            jhs_data = jhs_lookup[job_type]
-            merged_job.update(
-                {
-                    'dark_total': jhs_data.get('dark_total', 0),
-                    'failures_total': jhs_data.get('failures_total', 0),
-                    'ok_total': jhs_data.get('ok_total', 0),
-                    'skipped_total': jhs_data.get('skipped_total', 0),
-                    'ignored_total': jhs_data.get('ignored_total', 0),
-                    'rescued_total': jhs_data.get('rescued_total', 0),
-                    'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
-                    'successful_hosts_total': jhs_data.get('successful_hosts_total', 0),
-                    'failed_hosts_total': jhs_data.get('failed_hosts_total', 0),
-                    'unreachable_hosts_total': jhs_data.get('unreachable_hosts_total', 0),
-                }
-            )
-        else:
-            # No match found, use default values
-            merged_job.update(default_host_summary_fields)
-
-        jobs_by_job_type_merged.append(merged_job)
-
-    # 5b) Merge job_host_summary into jobs_by_launch_type (grouped by launch_type)
-    # Create a lookup dict for job_host_summary by launch_type
-    jhs_launch_type_lookup: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
-
+    jhs_lookup_by_launch_type: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
     jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
-    jobs_by_launch_type_merged: List[Dict[str, Any]] = []
-    for job in jobs_by_launch_type:
-        launch_type = job.get('launch_type')
-        merged_job = job.copy()
+    jobs_by_launch_type_merged = _merge_jobs_with_host_summary(
+        jobs_by_launch_type,
+        jhs_lookup_by_launch_type,
+        lambda job: job.get('launch_type'),
+    )
 
-        # Add host summary fields from matching job_host_summary entry, or use defaults
-        if launch_type in jhs_launch_type_lookup:
-            jhs_data = jhs_launch_type_lookup[launch_type]
-            merged_job.update(
-                {
-                    'dark_total': jhs_data.get('dark_total', 0),
-                    'failures_total': jhs_data.get('failures_total', 0),
-                    'ok_total': jhs_data.get('ok_total', 0),
-                    'skipped_total': jhs_data.get('skipped_total', 0),
-                    'ignored_total': jhs_data.get('ignored_total', 0),
-                    'rescued_total': jhs_data.get('rescued_total', 0),
-                    'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
-                    'successful_hosts_total': jhs_data.get('successful_hosts_total', 0),
-                    'failed_hosts_total': jhs_data.get('failed_hosts_total', 0),
-                    'unreachable_hosts_total': jhs_data.get('unreachable_hosts_total', 0),
-                }
-            )
-        else:
-            # No match found, use default values
-            merged_job.update(default_host_summary_fields)
-
-        jobs_by_launch_type_merged.append(merged_job)
-
-    # 5c) Merge job_host_summary into jobs_by_controller_version (grouped by controller_version)
-    # Create a lookup dict for job_host_summary by controller_version
-    # Handle None/NaN values by converting to string for consistent lookup
-    jhs_controller_version_lookup: Dict[str, Dict[str, Any]] = {}
+    jhs_lookup_by_controller_version: Dict[str, Dict[str, Any]] = {}
     for jhs in job_host_summary_by_controller_version:
-        controller_version_key = jhs.get('controller_version')
-        # Convert None/NaN to string for consistent lookup
-        if controller_version_key is None or (isinstance(controller_version_key, float) and pd.isna(controller_version_key)):
-            controller_version_key = 'None'
-        else:
-            controller_version_key = str(controller_version_key)
-        jhs_controller_version_lookup[controller_version_key] = jhs
+        key = _normalize_controller_version_key(jhs.get('controller_version'))
+        jhs_lookup_by_controller_version[key] = jhs
 
     jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('by_controller_version', []) or []
-    jobs_by_controller_version_merged: List[Dict[str, Any]] = []
-    for job in jobs_by_controller_version:
-        controller_version = job.get('controller_version')
-        merged_job = job.copy()
-
-        # Convert None/NaN to string for consistent lookup
-        if controller_version is None or (isinstance(controller_version, float) and pd.isna(controller_version)):
-            controller_version_key = 'None'
-        else:
-            controller_version_key = str(controller_version)
-
-        # Add host summary fields from matching job_host_summary entry, or use defaults
-        if controller_version_key in jhs_controller_version_lookup:
-            jhs_data = jhs_controller_version_lookup[controller_version_key]
-            merged_job.update(
-                {
-                    'dark_total': jhs_data.get('dark_total', 0),
-                    'failures_total': jhs_data.get('failures_total', 0),
-                    'ok_total': jhs_data.get('ok_total', 0),
-                    'skipped_total': jhs_data.get('skipped_total', 0),
-                    'ignored_total': jhs_data.get('ignored_total', 0),
-                    'rescued_total': jhs_data.get('rescued_total', 0),
-                    'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
-                    'successful_hosts_total': jhs_data.get('successful_hosts_total', 0),
-                    'failed_hosts_total': jhs_data.get('failed_hosts_total', 0),
-                    'unreachable_hosts_total': jhs_data.get('unreachable_hosts_total', 0),
-                }
-            )
-        else:
-            # No match found, use default values
-            merged_job.update(default_host_summary_fields)
-
-        jobs_by_controller_version_merged.append(merged_job)
-
-    # Calculate task statistics from jobs_by_job_type_merged
-    # Sum all task fields from all jobs in jobs_by_job_type
-    rollup_period_task_ok_total = sum(job.get('ok_total', 0) for job in jobs_by_job_type_merged)
-    rollup_period_task_failed_total = sum(job.get('failures_total', 0) for job in jobs_by_job_type_merged)
-    rollup_period_task_skipped_total = sum(job.get('skipped_total', 0) for job in jobs_by_job_type_merged)
-    rollup_period_task_unreachable_total = sum(job.get('dark_total', 0) for job in jobs_by_job_type_merged)
-    rollup_period_task_ignored_total = sum(job.get('ignored_total', 0) for job in jobs_by_job_type_merged)
-    rollup_period_tasks_total = (
-        rollup_period_task_ok_total
-        + rollup_period_task_failed_total
-        + rollup_period_task_skipped_total
-        + rollup_period_task_unreachable_total
-        + rollup_period_task_ignored_total
+    jobs_by_controller_version_merged = _merge_jobs_with_host_summary(
+        jobs_by_controller_version,
+        jhs_lookup_by_controller_version,
+        lambda job: job.get('controller_version'),
+        normalize_key=_normalize_controller_version_key,
     )
 
-    # Add task statistics to the statistics dictionary
-    statistics.update(
-        {
-            'rollup_period_tasks_total': rollup_period_tasks_total,
-            'rollup_period_task_ok_total': rollup_period_task_ok_total,
-            'rollup_period_task_failed_total': rollup_period_task_failed_total,
-            'rollup_period_task_skipped_total': rollup_period_task_skipped_total,
-            'rollup_period_task_unreachable_total': rollup_period_task_unreachable_total,
-            'rollup_period_task_ignored_total': rollup_period_task_ignored_total,
-        }
-    )
+    # Calculate task statistics and update statistics dictionary
+    task_statistics = _calculate_task_statistics(jobs_by_job_type_merged)
+    statistics.update(task_statistics)
 
-    # 6) assemble the flattened object
-    # Note: modules_used_per_playbook is computed but not included in final output
+    # Assemble the flattened object
     flattened: Dict[str, Any] = {
         'statistics': statistics,
         'rollup_period_controller_versions': controller_versions_merged,
-        'rollup_period_scm_types': scm_types_merged,
-        'rollup_period_credential_types': credential_types_merged,
+        'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
+        'rollup_period_credential_types': credentials_list if isinstance(credentials_list, list) else [],
         'module_stats': module_stats,
         'collection_stats': collection_stats,
         'role_stats': role_stats,
