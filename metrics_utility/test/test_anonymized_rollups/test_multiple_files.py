@@ -630,7 +630,6 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     base_path = './out'
     since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
     year, month, day = since.year, since.month, since.day
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'
 

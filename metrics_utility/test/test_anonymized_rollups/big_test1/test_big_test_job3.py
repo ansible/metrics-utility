@@ -20,8 +20,6 @@ import json
 import os
 import tempfile
 
-from datetime import datetime
-
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
@@ -57,10 +55,6 @@ def test_big_test3():
             'execution_environments': [execution_environments_csv],
             'credentials': [credentials_csv],
         }
-
-        # Set up date range for the test (using job dates)
-        since = datetime(2024, 1, 15, 0, 0, 0)
-        until = datetime(2024, 1, 16, 0, 0, 0)
 
         # Compute anonymized rollups
         result = compute_anonymized_rollup_from_raw_data(

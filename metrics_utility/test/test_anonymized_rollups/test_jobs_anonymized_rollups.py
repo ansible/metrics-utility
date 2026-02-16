@@ -689,7 +689,6 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
         shutil.rmtree(out_dir)
 
     since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
     base_path = './out'
     year, month, day = since.year, since.month, since.day
     data_dir = f'{base_path}/data/{year}/{month:02d}/{day:02d}'

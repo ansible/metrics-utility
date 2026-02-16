@@ -443,11 +443,6 @@ def cleanup_glob():
 
 
 def test_empty_data(cleanup_glob):
-    # since = begining of the day
-    # until = begining of the next day
-    since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
-
     compute_anonymized_rollup_from_raw_data(
         {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': [], 'credentials': []},
         'salt',
