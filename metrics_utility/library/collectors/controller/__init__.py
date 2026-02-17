@@ -1,4 +1,5 @@
 from .config import config
+from .credentials_service import credentials_service
 from .execution_environments import execution_environments
 from .job_host_summary import job_host_summary
 from .job_host_summary_service import job_host_summary_service
@@ -11,6 +12,7 @@ from .unified_jobs import unified_jobs
 
 __all__ = [
     'config',
+    'credentials_service',
     'execution_environments',
     'job_host_summary',
     'job_host_summary_service',

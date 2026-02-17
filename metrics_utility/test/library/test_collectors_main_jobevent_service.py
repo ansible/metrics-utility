@@ -130,6 +130,9 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
     assert 'warnings' in query
     assert 'deprecations' in query
 
+    # Should have ansible_version from unified_job
+    assert 'uj.ansible_version' in query or 'ansible_version' in query
+
 
 @patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
 def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_table):

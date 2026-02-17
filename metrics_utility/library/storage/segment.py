@@ -42,6 +42,10 @@ class StorageSegment:
         """
         Split data into chunks based on max_size.
 
+        Always splits by top-level keys - each top-level key gets its own chunk(s).
+        If a top-level key's value is a list, that list may be split into multiple chunks
+        if it exceeds max_size.
+
         Args:
             data: Dictionary to split, dictionary contains key : value pairs
             Those key value pairs are either dicts or list
@@ -53,10 +57,6 @@ class StorageSegment:
             List of data chunks
         """
         chunks = []
-
-        size_of_data = self._calculate_size(data)
-        if size_of_data < max_size:
-            return [data]
 
         if data is not None and not isinstance(data, dict):
             msg = f'Data is not a dictionary, got {type(data).__name__}'

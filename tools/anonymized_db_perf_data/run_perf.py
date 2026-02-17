@@ -129,19 +129,12 @@ def main():
         process = psutil.Process()
         memory_before = process.memory_info().rss / (1024 * 1024)  # Convert to MB
 
-    # Configuration
-    save_rollups = True
-    save_rollups_packed = False  # False = CSV files only, True = tarball
-
     try:
         json_data = compute_anonymized_rollup(
             db=connection,
             salt='',
             since=since,
             until=until,
-            ship_path=str(output_dir),
-            save_rollups=save_rollups,
-            save_rollups_packed=save_rollups_packed,
         )
 
         # Get memory usage after computation

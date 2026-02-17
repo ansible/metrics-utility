@@ -4,6 +4,7 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import (
 
 # from metrics_utility.test.util import run_gather_int
 from metrics_utility.library.collectors.controller import (
+    credentials_service,
     execution_environments,
     job_host_summary_service,
     main_jobevent_service,
@@ -12,7 +13,7 @@ from metrics_utility.library.collectors.controller import (
 from metrics_utility.logger import logger
 
 
-def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: bool = True, save_rollups_packed: bool = True):
+def compute_anonymized_rollup(db, salt, since, until):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = []
     try:
@@ -38,14 +39,21 @@ def compute_anonymized_rollup(db, salt, since, until, ship_path, save_rollups: b
     except Exception as e:
         logger.error(f'Failed to gather main_jobevent data: {e}')
 
+    credentials_data = []
+    try:
+        credentials_data = credentials_service(db=db, since=since, until=until).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather credentials data: {e}')
+
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
         'job_host_summary': job_host_summary_data,
         'main_jobevent': main_jobevent_data,
+        'credentials': credentials_data,
     }
 
     # load data for each collector
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt, since, until, ship_path, save_rollups, save_rollups_packed)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
 
     return json_data

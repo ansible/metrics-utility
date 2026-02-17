@@ -1,5 +1,8 @@
 DO $$
 DECLARE
+  --
+  job_content_type_id INTEGER;
+  --
   i_text text;
   task_uuid_1 text;
   task_uuid_2 text;
@@ -36,7 +39,26 @@ DECLARE
   unified_jobs      INTEGER[] := ARRAY[]::INTEGER[];
   unified_job_id    INTEGER;
   --
+  -- credentials
+  machine_credential_type_id INTEGER;
+  cloud_credential_type_id INTEGER;
+  vault_credential_type_id INTEGER;
+  network_credential_type_id INTEGER;
+  machine_credential_id INTEGER;
+  cloud_credential_id INTEGER;
+  vault_credential_id INTEGER;
+  network_credential_id INTEGER;
+  --
 BEGIN
+  --
+  -- Insert django_content_type entry for 'job' model
+  --
+  INSERT INTO public.django_content_type (app_label, model)
+  VALUES ('main', 'job')
+  RETURNING id INTO job_content_type_id;
+  
+  RAISE NOTICE 'Inserted django_content_type for job model with id = %', job_content_type_id;
+  --
   --
   -- ORGANIZATION
   --
@@ -255,21 +277,21 @@ $yaml$,
       scm_track_submodules
   ) VALUES (
       default_unified_job_template_id,
-      'LOCAL_PATH',
-      'SCM_TYPE',
-      'SCM_URL',
-      'SCM_BRANCH',
-      TRUE,
-      FALSE,
-      TRUE,
-      0,
-      0,
-      'SCM_REVISION',
-      '{}'::jsonb,
-      '{}'::jsonb,
-      'SCM_REFSPEC',
-      TRUE,
-      FALSE
+      'LOCAL_PATH',                    
+      'git',                      -- scm_type: git for testing
+      'SCM_URL',                       
+      'SCM_BRANCH',                   
+      TRUE,                           
+      FALSE,                           
+      TRUE,                            
+      0,                               
+      0,                               
+      'SCM_REVISION',                  
+      '{}'::jsonb,                   
+      '{}'::jsonb,   
+      'SCM_REFSPEC',                   
+      TRUE,                            
+      FALSE                            
   );
   --
   -- Job Template
@@ -394,7 +416,8 @@ $yaml$,
       installed_collections,
       ansible_version,
       task_impact,
-      job_env
+      job_env,
+      polymorphic_ctype_id
     )
     VALUES (
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created
@@ -403,7 +426,12 @@ $yaml$,
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- modified
       ''::text,                               -- description
       'default_unified_job_' || random_suffix, -- name
-      'manual',                               -- launch_type
+      CASE (i % 4)
+        WHEN 1 THEN 'manual'
+        WHEN 2 THEN 'scheduled'
+        WHEN 3 THEN 'workflow'
+        WHEN 0 THEN 'callback'
+      END,                                    -- launch_type (cycles through: manual, scheduled, workflow, callback)
       false,                                  -- cancel_flag
       'pending',                              -- status
       false,                                  -- failed
@@ -420,10 +448,11 @@ $yaml$,
       0,                                      -- emitted_events
       'controller1',                          -- controller_node
       false,                                  -- dependencies_processed
-      '{}'::jsonb,                            -- installed_collections
+      '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb,  -- installed_collections (matches modules in event data: ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
-      '{}'::jsonb                             -- job_env
+      '{}'::jsonb,                            -- job_env
+      job_content_type_id                     -- polymorphic_ctype_id
     )
     RETURNING id
     INTO unified_job_id;
@@ -467,7 +496,11 @@ $yaml$,
       unified_job_id,                  -- unifiedjob_ptr_id
       'manual',                        -- job_type
       '',                              -- playbook
-      0,                               -- forks
+      CASE (i % 3)
+        WHEN 1 THEN 5
+        WHEN 2 THEN 10
+        WHEN 0 THEN 20
+      END,                             -- forks (varied: 5, 10, or 20)
       '',                              -- limit
       0,                               -- verbosity
       '{}'::text,                      -- extra_vars
@@ -603,7 +636,7 @@ $yaml$,
       ) VALUES (
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-        'runner_on_start',
+        'runner_on_ok',
         event_data_1,
         false,
         false,
@@ -673,6 +706,127 @@ $yaml$,
     END LOOP;
   END LOOP;
   --
+  -- Add warning and deprecated events (job-level annotation events)
+  -- These don't have task_uuid, host_id, etc. - they're job-level annotations
+  -- Note: host_name, play, role, task, playbook are NOT NULL in schema, so we use empty strings
+  --
+  -- Add 2 warning events (one for job 1, one for job 2)
+  INSERT INTO public.main_jobevent (
+    created,
+    modified,
+    event,
+    event_data,
+    failed,
+    changed,
+    host_name,
+    play,
+    role,
+    task,
+    counter,
+    host_id,
+    job_id,
+    uuid,
+    parent_uuid,
+    end_line,
+    playbook,
+    start_line,
+    stdout,
+    verbosity,
+    job_created
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'warning',
+    '{"warning": "This playbook uses deprecated features"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events (host_name is NOT NULL)
+    '',  -- Empty string for play (NOT NULL constraint)
+    '',  -- Empty string for role (NOT NULL constraint)
+    '',  -- Empty string for task (NOT NULL constraint)
+    100,
+    NULL,  -- host_id is nullable
+    unified_jobs[1],
+    gen_random_uuid()::text,
+    '',  -- Empty string for parent_uuid (NOT NULL constraint)
+    0,
+    '',  -- Empty string for playbook (NOT NULL constraint)
+    0,
+    'Warning: This playbook uses deprecated features',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+  ),
+  (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'warning',
+    '{"warning": "Module XYZ will be removed in future version"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events
+    '',
+    '',
+    '',
+    101,
+    NULL,  -- host_id is nullable
+    unified_jobs[2],
+    gen_random_uuid()::text,
+    '',
+    0,
+    '',
+    0,
+    'Warning: Module XYZ will be removed in future version',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+  );
+  --
+  -- Add 1 deprecated event (for job 3)
+  INSERT INTO public.main_jobevent (
+    created,
+    modified,
+    event,
+    event_data,
+    failed,
+    changed,
+    host_name,
+    play,
+    role,
+    task,
+    counter,
+    host_id,
+    job_id,
+    uuid,
+    parent_uuid,
+    end_line,
+    playbook,
+    start_line,
+    stdout,
+    verbosity,
+    job_created
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'deprecated',
+    '{"deprecated": "The old_module is deprecated, use new_module instead"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events
+    '',
+    '',
+    '',
+    102,
+    NULL,  -- host_id is nullable
+    unified_jobs[3],
+    gen_random_uuid()::text,
+    '',
+    0,
+    '',
+    0,
+    'Deprecated: The old_module is deprecated, use new_module instead',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+  );
+  --
   -- Execution Environments
   --
   INSERT INTO public.main_executionenvironment (
@@ -702,5 +856,263 @@ $yaml$,
     'Node Backend Environment',
     'missing'
 );
+  --
+  -- Credential Types
+  --
+  -- Insert Machine credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Machine credential type for SSH connections',
+      'Machine',
+      'ssh',
+      TRUE,
+      '{"fields": [{"id": "username", "label": "Username", "type": "string"}, {"id": "password", "label": "Password", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'credential_type'
+    )
+    RETURNING id INTO machine_credential_type_id;
+  
+  -- Insert Cloud credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Cloud credential type for AWS',
+      'Amazon Web Services',
+      'cloud',
+      TRUE,
+      '{"fields": [{"id": "username", "label": "Access Key", "type": "string"}, {"id": "password", "label": "Secret Key", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'aws'
+    )
+    RETURNING id INTO cloud_credential_type_id;
+  
+  -- Insert Vault credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Vault credential type for Ansible Vault',
+      'Vault',
+      'vault',
+      TRUE,
+      '{"fields": [{"id": "vault_password", "label": "Vault Password", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'credential_type'
+    )
+    RETURNING id INTO vault_credential_type_id;
+  
+  -- Insert Network credential type
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Network credential type for network devices',
+      'Network',
+      'net',
+      TRUE,
+      '{"fields": [{"id": "username", "label": "Username", "type": "string"}, {"id": "password", "label": "Password", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      'credential_type'
+    )
+    RETURNING id INTO network_credential_type_id;
+  
+  RAISE NOTICE 'Inserted credential types: Machine=%, Cloud=%, Vault=%, Network=%',
+               machine_credential_type_id,
+               cloud_credential_type_id,
+               vault_credential_type_id,
+               network_credential_type_id;
+  --
+  -- Credentials
+  --
+  -- Machine credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Default machine credential for SSH',
+      'default_machine_credential_' || random_suffix,
+      default_organization_id,
+      machine_credential_type_id,
+      FALSE,
+      '{"username": "ansible", "password": "encrypted_password"}'::jsonb
+    )
+    RETURNING id INTO machine_credential_id;
+  
+  -- Cloud credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'AWS cloud credential',
+      'default_cloud_credential_' || random_suffix,
+      default_organization_id,
+      cloud_credential_type_id,
+      FALSE,
+      '{"username": "AKIAIOSFODNN7EXAMPLE", "password": "encrypted_secret"}'::jsonb
+    )
+    RETURNING id INTO cloud_credential_id;
+  
+  -- Vault credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Ansible Vault credential',
+      'default_vault_credential_' || random_suffix,
+      default_organization_id,
+      vault_credential_type_id,
+      FALSE,
+      '{"vault_password": "encrypted_vault_password"}'::jsonb
+    )
+    RETURNING id INTO vault_credential_id;
+  
+  -- Network credential
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Network device credential',
+      'default_network_credential_' || random_suffix,
+      default_organization_id,
+      network_credential_type_id,
+      FALSE,
+      '{"username": "admin", "password": "encrypted_network_password"}'::jsonb
+    )
+    RETURNING id INTO network_credential_id;
+  
+  RAISE NOTICE 'Inserted credentials: Machine=%, Cloud=%, Vault=%, Network=%',
+               machine_credential_id,
+               cloud_credential_id,
+               vault_credential_id,
+               network_credential_id;
+  --
+  -- Link credentials to unified jobs
+  -- Assign different combinations of credentials to different jobs
+  --
+  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
+    unified_job_id := unified_jobs[i];
+    
+    -- Every job gets machine credential
+    INSERT INTO public.main_unifiedjob_credentials (
+      unifiedjob_id,
+      credential_id
+    ) VALUES (
+      unified_job_id,
+      machine_credential_id
+    );
+    
+    -- Job 1: Machine + Cloud
+    IF i = 1 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        cloud_credential_id
+      );
+    END IF;
+    
+    -- Job 2: Machine + Vault
+    IF i = 2 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        vault_credential_id
+      );
+    END IF;
+    
+    -- Job 3: Machine + Cloud + Network
+    IF i = 3 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        cloud_credential_id
+      );
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        network_credential_id
+      );
+    END IF;
+  END LOOP;
+  
+  RAISE NOTICE 'Linked credentials to unified jobs';
 END
 $$;

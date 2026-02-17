@@ -54,7 +54,7 @@ def test_unified_jobs_calls_copy_table(mock_copy_table):
 
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
 def test_unified_jobs_query_contains_time_range(mock_copy_table):
-    """Test that the query includes the time range with OR logic."""
+    """Test that the query includes the time range for finished timestamp."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 6, 1, 12, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 6, 2, 14, 30, tzinfo=datetime.timezone.utc)
@@ -66,18 +66,16 @@ def test_unified_jobs_query_contains_time_range(mock_copy_table):
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
 
-    # Query should contain time boundaries for both created and finished
+    # Query should contain time boundaries for finished timestamp
     assert '2024-06-01' in query
     assert '2024-06-02' in query
-    assert 'main_unifiedjob.created >=' in query
-    assert 'main_unifiedjob.created <' in query
     assert 'main_unifiedjob.finished >=' in query
     assert 'main_unifiedjob.finished <' in query
 
 
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
-def test_unified_jobs_uses_or_logic(mock_copy_table):
-    """Test that query uses OR logic for created/finished timestamps."""
+def test_unified_jobs_uses_finished_filter(mock_copy_table):
+    """Test that query filters by finished timestamp only."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -89,8 +87,9 @@ def test_unified_jobs_uses_or_logic(mock_copy_table):
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
 
-    # Should use OR to capture jobs created OR finished in the time window
-    assert ' OR ' in query
+    # Should filter by finished timestamp only (no OR logic)
+    assert 'main_unifiedjob.finished >=' in query
+    assert 'main_unifiedjob.finished <' in query
 
 
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
@@ -118,8 +117,8 @@ def test_unified_jobs_query_structure(mock_copy_table):
 
 
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')
-def test_unified_jobs_excludes_sync_jobs(mock_copy_table):
-    """Test that query excludes sync launch type."""
+def test_unified_jobs_includes_all_jobs(mock_copy_table):
+    """Test that query includes all jobs including sync jobs."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -131,8 +130,9 @@ def test_unified_jobs_excludes_sync_jobs(mock_copy_table):
     call_args = mock_copy_table.call_args
     query = call_args[1]['query']
 
-    # Should exclude sync jobs
-    assert "launch_type != 'sync'" in query or "launch_type <> 'sync'" in query
+    # Should include all jobs (no sync exclusion)
+    assert "launch_type != 'sync'" not in query
+    assert "launch_type <> 'sync'" not in query
 
 
 @patch('metrics_utility.library.collectors.controller.unified_jobs.copy_table')

@@ -52,6 +52,7 @@ VALID_SHEETS = {
 }
 
 VALID_COLLECTORS = {
+    'credentials_service',
     'execution_environments',
     'job_host_summary_service',
     'main_host',
