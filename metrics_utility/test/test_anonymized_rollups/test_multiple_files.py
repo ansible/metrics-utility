@@ -661,17 +661,19 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'jobs_by_job_type' in result
     assert 'jobs_by_launch_type' in result
     # job_host_summary is now merged into jobs_by_job_type
-    assert 'module_stats' in result
-    assert 'collection_stats' in result
+    # Event-related fields should be missing when there are no events
+    assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
+    assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
     assert 'collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
     statistics = result['statistics']
     assert isinstance(statistics, dict), 'statistics should be a dict'
-    assert 'rollup_period_modules_total' in statistics
-    assert 'rollup_period_unique_hosts_automated_total' in statistics
-    assert 'rollup_period_warnings_total' in statistics
-    assert 'rollup_period_deprecations_total' in statistics
+    # Event-related fields should be missing when there are no events
+    assert 'rollup_period_modules_total' not in statistics, 'rollup_period_modules_total should be missing when there are no events'
+    assert 'rollup_period_unique_hosts_automated_total' not in statistics, 'rollup_period_unique_hosts_automated_total should be missing when there are no events'
+    assert 'rollup_period_warnings_total' not in statistics, 'rollup_period_warnings_total should be missing when there are no events'
+    assert 'rollup_period_deprecations_total' not in statistics, 'rollup_period_deprecations_total should be missing when there are no events'
     assert 'rollup_period_execution_environments_total' in statistics
     assert 'rollup_period_EE_default_total' in statistics
     assert 'rollup_period_EE_custom_total' in statistics
@@ -693,7 +695,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_successful_hosts_total' in statistics
     assert 'rollup_period_failed_hosts_total' in statistics
     assert 'rollup_period_unreachable_hosts_total' in statistics
-    assert 'rollup_period_playbooks_total' in statistics
+    # Event-related fields should be missing when there are no events
+    assert 'rollup_period_playbooks_total' not in statistics, 'rollup_period_playbooks_total should be missing when there are no events'
     assert 'rollup_period_templates_total' in statistics
     assert 'rollup_period_tasks_total' in statistics
     assert 'rollup_period_task_ok_total' in statistics
@@ -703,14 +706,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_task_ignored_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
-    assert statistics['rollup_period_modules_total'] is None
-    assert statistics['rollup_period_unique_hosts_automated_total'] is None
-    assert statistics['rollup_period_warnings_total'] == 0, (
-        f'warnings_total should be 0 for empty data, got {statistics["rollup_period_warnings_total"]}'
-    )
-    assert statistics['rollup_period_deprecations_total'] == 0, (
-        f'deprecations_total should be 0 for empty data, got {statistics["rollup_period_deprecations_total"]}'
-    )
+    # Event-related fields are missing when there are no events, so we don't check them here
     assert statistics['rollup_period_execution_environments_total'] is None
     assert statistics['rollup_period_EE_default_total'] is None
     assert statistics['rollup_period_EE_custom_total'] is None
@@ -735,10 +731,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert statistics['rollup_period_successful_hosts_total'] is None, 'successful_hosts_total should be None for empty data'
     assert statistics['rollup_period_failed_hosts_total'] is None, 'failed_hosts_total should be None for empty data'
     assert statistics['rollup_period_unreachable_hosts_total'] is None, 'unreachable_hosts_total should be None for empty data'
-    # playbooks_total should be 0 (not None) when there's no data, as it represents a count
-    assert statistics['rollup_period_playbooks_total'] == 0, (
-        f'playbooks_total should be 0 for empty data, got {statistics["rollup_period_playbooks_total"]}'
-    )
+    # playbooks_total should be missing when there are no events
     # templates_total should be None when there's no data (no job_type groups)
     assert statistics['rollup_period_templates_total'] is None, (
         f'templates_total should be None for empty data, got {statistics["rollup_period_templates_total"]}'
@@ -770,11 +763,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert len(result['jobs_by_launch_type']) == 0, 'jobs_by_launch_type should be empty with no data'
     # job_host_summary is now merged into jobs_by_job_type
 
-    assert isinstance(result['module_stats'], list), 'module_stats should be a list'
-    assert len(result['module_stats']) == 0, 'module_stats should be empty with no data'
-
-    assert isinstance(result['collection_stats'], list), 'collection_stats should be a list'
-    assert len(result['collection_stats']) == 0, 'collection_stats should be empty with no data'
+    # Event-related arrays should be missing when there are no events
+    assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
+    assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
 
     # modules_used_per_playbook is computed but not included in final output
 
