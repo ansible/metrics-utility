@@ -671,7 +671,9 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     # Event-related fields should be missing when there are no events
     assert 'rollup_period_modules_total' not in statistics, 'rollup_period_modules_total should be missing when there are no events'
-    assert 'rollup_period_unique_hosts_automated_total' not in statistics, 'rollup_period_unique_hosts_automated_total should be missing when there are no events'
+    assert 'rollup_period_unique_hosts_automated_total' not in statistics, (
+        'rollup_period_unique_hosts_automated_total should be missing when there are no events'
+    )
     assert 'rollup_period_warnings_total' not in statistics, 'rollup_period_warnings_total should be missing when there are no events'
     assert 'rollup_period_deprecations_total' not in statistics, 'rollup_period_deprecations_total should be missing when there are no events'
     assert 'rollup_period_execution_environments_total' in statistics
