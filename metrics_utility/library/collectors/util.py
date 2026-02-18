@@ -1,10 +1,3 @@
-import os
-import pathlib
-import tempfile
-
-from ..csv_file_splitter import CsvFileSplitter
-
-
 # FIXME: psycopg.sql
 def date_where(field, since, until):
     if since and until:
@@ -38,57 +31,41 @@ def collector(func):
     return constructor
 
 
-# FIXME: cleanup
-def init_tmp_dir():
-    tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix='awx_analytics-'))
-    gather_dir = tmp_dir.joinpath('stage')
-    gather_dir.mkdir(mode=0o700)
-    return gather_dir
+def copy_table(db, query, params=None, prepend_query=False):
+    """
+    Execute SQL query and return data as pandas DataFrame.
 
+    Args:
+        db: psycopg db connection
+        query: SQL query to execute
+        params: (Optional) query params
+        prepend_query: (bool) Use when parse_yaml_field or is_valid_json are required by the query
 
-def copy_table(db, table, query, params=None, prepend_query=False, output_file=None, output_dir='.'):
-    file = output_file
-    if not output_file:
-        path = output_dir or init_tmp_dir()
-        file_path = os.path.join(path, table + '_table.csv')
-        file = CsvFileSplitter(filespec=file_path)
+    Returns:
+        pandas DataFrame with query results
+    """
+    import pandas as pd
 
-    with db.cursor() as cursor:
-        if prepend_query:
+    # Execute prepend_query if needed (custom PostgreSQL functions)
+    if prepend_query:
+        with db.cursor() as cursor:
             cursor.execute(_yaml_json_functions())
 
-        copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
+    # Execute query and create DataFrame from results
+    # Using cursor approach since pd.read_sql doesn't work well with psycopg3
+    with db.cursor() as cursor:
+        cursor.execute(query, params)
 
-        # FIXME: remove once 2.4 is no longer supported
-        if hasattr(cursor, 'copy_expert') and callable(cursor.copy_expert):
-            _copy_table_aap_2_4_and_below(cursor, copy_query, params, file)
-        else:
-            _copy_table_aap_2_5_and_above(cursor, copy_query, params, file)
+        # Get column names from cursor description
+        columns = [desc[0] for desc in cursor.description]
 
-    if output_file:
-        return [output_file.name]
-    return file.file_list(keep_empty=True)
+        # Fetch all rows
+        rows = cursor.fetchall()
 
+        # Create DataFrame
+        df = pd.DataFrame(rows, columns=columns)
 
-def _copy_table_aap_2_4_and_below(cursor, query, params, file):
-    if params:
-        # copy_expert doesn't support params, make do (but no escaping)
-        for p in params:
-            if f'%({p})s' in query:
-                query = query.replace(f'%({p})s', f'"{params[p]}"')
-            if f'%({p})d' in query:
-                query = query.replace(f'%({p})d', str(int(params[p])))
-
-    # Automation Controller 4.4 and below use psycopg2 with .copy_expert() method
-    cursor.copy_expert(query, file)
-
-
-def _copy_table_aap_2_5_and_above(cursor, query, params, file):
-    # Automation Controller 4.5 and above use psycopg3 with .copy() method
-    with cursor.copy(query, params) as copy:
-        while data := copy.read():
-            byte_data = bytes(data)
-            file.write(byte_data.decode())
+    return df
 
 
 def _yaml_json_functions():

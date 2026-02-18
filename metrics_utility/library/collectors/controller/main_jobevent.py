@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
+def main_jobevent(*, db=None, since=None, until=None):
     where = ' AND '.join(
         [
             f"main_jobhostsummary.modified >= '{since.isoformat()}'",
@@ -65,4 +65,4 @@ def main_jobevent(*, db=None, since=None, until=None, output_dir=None):
         )
         """
 
-    return copy_table(db=db, table='main_jobevent', query=query, output_dir=output_dir)
+    return copy_table(db=db, query=query)

@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
+
 from metrics_utility.library.collectors.controller.main_host import main_host
 
 
@@ -14,21 +16,11 @@ def test_main_host_basic():
     assert instance.kwargs['db'] == mock_db
 
 
-def test_main_host_with_output_dir():
-    """Test main_host with custom output_dir."""
-    mock_db = MagicMock()
-    output_dir = '/tmp/test_output'
-
-    instance = main_host(db=mock_db, output_dir=output_dir)
-
-    assert instance.kwargs['output_dir'] == output_dir
-
-
 @patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_calls_copy_table(mock_copy_table):
     """Test that main_host calls copy_table with correct parameters."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = ['/tmp/main_host_table.csv']
+    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2, 3], 'name': ['host1', 'host2', 'host3']})
 
     instance = main_host(db=mock_db)
     result = instance.gather()
@@ -37,17 +29,16 @@ def test_main_host_calls_copy_table(mock_copy_table):
     call_args = mock_copy_table.call_args
 
     assert call_args[1]['db'] == mock_db
-    assert call_args[1]['table'] == 'main_host'
     assert call_args[1]['prepend_query'] is True
     assert 'query' in call_args[1]
-    assert result == ['/tmp/main_host_table.csv']
+    assert isinstance(result, pd.DataFrame)
 
 
 @patch('metrics_utility.library.collectors.controller.main_host.copy_table')
 def test_main_host_query_structure(mock_copy_table):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
     instance.gather()
@@ -71,7 +62,7 @@ def test_main_host_query_structure(mock_copy_table):
 def test_main_host_filters_enabled_hosts(mock_copy_table):
     """Test that query filters for enabled hosts."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
     instance.gather()
@@ -87,7 +78,7 @@ def test_main_host_filters_enabled_hosts(mock_copy_table):
 def test_main_host_uses_yaml_json_functions(mock_copy_table):
     """Test that query uses metrics_utility helper functions."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = []
+    mock_copy_table.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
     instance.gather()

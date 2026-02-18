@@ -479,18 +479,23 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     return anonymized_rollup
 
 
-# loads data from tarballs located in base_path/data/year/month/day/*{collector_name}*.tar.gz
-# inside tarball is file named {collector_name}.csv
-# this goes to dataframe, then filter_function is applied to the dataframe
+# loads data from a list of dataframes
+# then filter_function is applied to the dataframe
 # all result dataframes are concatenated into one dataframe
-def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, file_list: []):
-    # file_list - list of csv files that needs to be read
+def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_list):
+    # compat for one dataframe
+    if isinstance(dataframe_list, pd.DataFrame):
+        prepared_data = rollup_object.prepare(dataframe_list)
+        return rollup_object.merge(None, prepared_data)
 
     concat_data = None
 
-    for file in file_list:
-        df = pd.read_csv(file, encoding='utf-8')
-        prepared_data = rollup_object.prepare(df)
+    for dataframe in dataframe_list:
+        # compat for CSVs
+        if isinstance(dataframe, str):
+            dataframe = pd.read_csv(dataframe, encoding='utf-8')
+
+        prepared_data = rollup_object.prepare(dataframe)
         concat_data = rollup_object.merge(concat_data, prepared_data)
 
     return concat_data

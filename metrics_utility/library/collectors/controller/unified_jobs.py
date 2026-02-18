@@ -2,7 +2,7 @@ from ..util import collector, copy_table
 
 
 @collector
-def unified_jobs(*, db=None, since=None, until=None, output_dir=None):
+def unified_jobs(*, db=None, since=None, until=None):
     query = f"""
         SELECT
             main_unifiedjob.id,
@@ -48,4 +48,4 @@ def unified_jobs(*, db=None, since=None, until=None, output_dir=None):
         ORDER BY main_unifiedjob.id ASC
     """
 
-    return copy_table(db=db, table='unified_jobs', query=query, output_dir=output_dir)
+    return copy_table(db=db, query=query)

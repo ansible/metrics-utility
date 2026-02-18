@@ -1,7 +1,6 @@
 import csv
 import glob
 import os
-import tempfile
 
 from datetime import datetime, timezone
 
@@ -102,10 +101,20 @@ def _parse_expected_csv(expected_lines):
     return expected_rows[0], expected_rows[1:]
 
 
-def _read_actual_csv(csv_file_path):
-    """Read and parse actual CSV file."""
-    with open(csv_file_path, 'r') as f:
-        text = f.read().splitlines()
+def _read_dataframe(df):
+    # Convert boolean columns from True/False to t/f
+    # Convert float columns that are actually integers to Int64
+    df_copy = df.copy()
+    for col in df_copy.columns:
+        if df_copy[col].dtype == 'bool':
+            df_copy[col] = df_copy[col].map({True: 't', False: 'f'})
+        elif df_copy[col].dtype in ['float64', 'float32']:
+            # If all non-null values are whole numbers, convert to nullable int
+            non_null_values = df_copy[col].dropna()
+            if len(non_null_values) > 0 and (non_null_values == non_null_values.astype(int)).all():
+                df_copy[col] = df_copy[col].astype('Int64')
+
+    text = df_copy.to_csv(index=False).splitlines()
     reader = csv.reader(text)
     rows = list(reader)
     return rows[0], rows[1:], text
@@ -164,14 +173,15 @@ def _validate_rows(actual_data_sorted, expected_data_sorted, header, skip_column
             )
 
 
-def validate_csv_file(csv_file_path, expected_lines, skip_columns_names):
-    """Validate CSV file directly.
+def validate_dataframe(df, expected_lines, skip_columns_names):
+    """Validate DataFrame
 
+    df: pandas DataFrame to validate
     expected_lines: list of strings where first is header, rest rows
     skip_columns_names: iterable of column names to skip comparison
     """
     expected_header, expected_data = _parse_expected_csv(expected_lines)
-    header, actual_data, text = _read_actual_csv(csv_file_path)
+    header, actual_data, text = _read_dataframe(df)
 
     _print_comparison(text, expected_lines)
     _validate_header(header, expected_header)
@@ -204,24 +214,24 @@ jobs_lines = [
     ),
     (
         '1,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
-        '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,manual,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,'
+        '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,manual,,auto,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,0.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
         '2,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
-        '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,scheduled,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,'
+        '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,scheduled,,auto,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,0.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
         '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
-        '2025-06-13 10:00:00+00,default_unified_job_2025-06-13,1,workflow,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,0.000,,,'
+        '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,workflow,,auto,'
+        'controller1,f,pending,f,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,0.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,20,'
         'default_unified_job_template_2025-06-13,git'
@@ -247,21 +257,13 @@ def test_unified_jobs_command(cleanup_glob):
     until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
     # Run the new collector directly
-    with tempfile.TemporaryDirectory() as tmpdir:
-        collector_instance = unified_jobs(db=connection, since=since, until=until, output_dir=tmpdir)
-        csv_files = collector_instance.gather()
+    collector_instance = unified_jobs(db=connection, since=since, until=until)
+    df = collector_instance.gather()
 
-        # Find the unified_jobs CSV file (generated as unified_jobs_table.csv)
-        csv_file = None
-        for f in csv_files:
-            if 'unified_jobs_table.csv' in f or f.endswith('unified_jobs_table.csv'):
-                csv_file = f
-                break
+    assert df is not None, 'unified_jobs returned None'
 
-        assert csv_file is not None, f'unified_jobs CSV not found in {csv_files}'
-
-        # Validate CSV content
-        validate_csv_file(csv_file, jobs_lines, json_lines_skip_ids_columns)
+    # Validate DataFrame content
+    validate_dataframe(df, jobs_lines, json_lines_skip_ids_columns)
 
 
 jobs_host_summary_service_lines = [
@@ -273,44 +275,44 @@ jobs_host_summary_service_lines = [
         'organization_name,project_remote_id,project_name,model'
     ),
     (
-        '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
+        '1,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
         '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00,1,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
+        '2025-06-13 10:00:00+00:00,1,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
     (
-        '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
+        '2,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
         '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00,1,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
+        '2025-06-13 10:00:00+00:00,1,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
     (
-        '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
+        '3,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
         '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00,2,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
+        '2025-06-13 10:00:00+00:00,2,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
     (
-        '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
+        '4,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
         '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00,2,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
+        '2025-06-13 10:00:00+00:00,2,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
     (
-        '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,'
+        '5,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
         '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
+        '2025-06-13 10:00:00+00:00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
     (
-        '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,'
+        '6,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
         '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
+        '2025-06-13 10:00:00+00:00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
@@ -335,21 +337,13 @@ def test_job_host_summary_service_command(cleanup_glob):
     until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
     # Run the new collector directly
-    with tempfile.TemporaryDirectory() as tmpdir:
-        collector_instance = job_host_summary_service(db=connection, since=since, until=until, output_dir=tmpdir)
-        csv_files = collector_instance.gather()
+    collector_instance = job_host_summary_service(db=connection, since=since, until=until)
+    df = collector_instance.gather()
 
-        # Find the job_host_summary_service CSV file (generated as main_jobhostsummary_table.csv)
-        csv_file = None
-        for f in csv_files:
-            if 'main_jobhostsummary_table.csv' in f or f.endswith('main_jobhostsummary_table.csv'):
-                csv_file = f
-                break
+    assert df is not None, 'job_host_summary_service returned None'
 
-        assert csv_file is not None, f'job_host_summary_service CSV not found in {csv_files}'
-
-        # Validate CSV content
-        validate_csv_file(csv_file, jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
+    # Validate DataFrame content
+    validate_dataframe(df, jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
 
 
 main_jobevent_service_lines = [
@@ -357,78 +351,78 @@ main_jobevent_service_lines = [
     'task_action,resolved_action,resolved_role,duration,start,end,task_uuid,ignore_errors,failed,'
     'changed,playbook,play,task,role,job_remote_id,job_id,host_remote_id,host_id,'
     'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
-    '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    '1,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '2,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '3,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '4,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '5,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '6,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '7,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '7,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '8,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '8,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '9,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '9,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '10,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '10,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '11,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '11,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '12,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '12,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00',
-    '13,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:00+00:00',
+    '13,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     '13aac8b6-038d-4cbe-af99-67276d80d01b,,warning,,,,,,,,f,f,f,,,'
-    ',,1,1,,,,,,,f,2025-06-13 10:00:00+00',
-    '14,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    ',,1,1,,,,,,,f,2025-06-13 10:00:00+00:00',
+    '14,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     '8cdfc02a-8b52-4fe9-883a-1d6608f68c3f,,warning,,,,,,,,f,f,f,,,'
-    ',,2,2,,,,,,,f,2025-06-13 10:00:00+00',
-    '15,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    '2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,2.9.10,'
+    ',,2,2,,,,,,,f,2025-06-13 10:00:00+00:00',
+    '15,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,2.9.10,'
     '150d1d0c-dccb-4940-83ee-4d75c2f22493,,deprecated,,,,,,,,f,f,f,,,'
-    ',,3,3,,,,,,,f,2025-06-13 10:00:00+00',
+    ',,3,3,,,,,,,f,2025-06-13 10:00:00+00:00',
 ]
 
 
@@ -449,21 +443,13 @@ def test_main_jobevent_service_command(cleanup_glob):
     until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
     # Run the new collector directly
-    with tempfile.TemporaryDirectory() as tmpdir:
-        collector_instance = main_jobevent_service(db=connection, since=since, until=until, output_dir=tmpdir)
-        csv_files = collector_instance.gather()
+    collector_instance = main_jobevent_service(db=connection, since=since, until=until)
+    df = collector_instance.gather()
 
-        # Find the main_jobevent_service CSV file (generated as main_jobevent_table.csv)
-        csv_file = None
-        for f in csv_files:
-            if 'main_jobevent_table.csv' in f or f.endswith('main_jobevent_table.csv'):
-                csv_file = f
-                break
+    assert df is not None, 'main_jobevent_service returned None'
 
-        assert csv_file is not None, f'main_jobevent_service CSV not found in {csv_files}'
-
-        # Validate CSV content
-        validate_csv_file(csv_file, main_jobevent_service_lines, main_jobevent_service_skip_columns)
+    # Validate DataFrame content
+    validate_dataframe(df, main_jobevent_service_lines, main_jobevent_service_skip_columns)
 
 
 execution_environments_lines = [
@@ -525,18 +511,10 @@ def test_credentials_service_command(cleanup_glob):
     until = datetime(2025, 6, 14, tzinfo=timezone.utc)
 
     # Run the new collector directly
-    with tempfile.TemporaryDirectory() as tmpdir:
-        collector_instance = credentials_service(db=connection, since=since, until=until, output_dir=tmpdir)
-        csv_files = collector_instance.gather()
+    collector_instance = credentials_service(db=connection, since=since, until=until)
+    df = collector_instance.gather()
 
-        # Find the credentials_service CSV file (generated as credentials_table.csv)
-        csv_file = None
-        for f in csv_files:
-            if 'credentials_table.csv' in f or f.endswith('credentials_table.csv'):
-                csv_file = f
-                break
+    assert df is not None, 'credentials_service returned None'
 
-        assert csv_file is not None, f'credentials_service CSV not found in {csv_files}'
-
-        # Validate CSV content
-        validate_csv_file(csv_file, credentials_service_lines, credentials_service_skip_columns)
+    # Validate DataFrame content
+    validate_dataframe(df, credentials_service_lines, credentials_service_skip_columns)
