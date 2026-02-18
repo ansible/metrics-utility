@@ -267,16 +267,10 @@ def _build_statistics(
     job_host_pairs_total: Any,
     playbooks_total: int,
     execution_environments_total: Any,
+    has_events: bool = True,
 ) -> Dict[str, Any]:
     """Build statistics dictionary with rollup_period_ prefix for all fields."""
-    return {
-        # from events_modules
-        'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-        'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
-        'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
-        'rollup_period_warnings_total': events_modules.get('warnings_total'),
-        'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
-        'rollup_period_playbooks_total': playbooks_total,
+    statistics = {
         # from execution_environments
         'rollup_period_execution_environments_total': execution_environments_total,
         'rollup_period_EE_default_total': execution_environments.get('execution_environments_default_total'),
@@ -299,6 +293,22 @@ def _build_statistics(
         'rollup_period_failed_hosts_total': host_summary_totals['failed_hosts_total'],
         'rollup_period_unreachable_hosts_total': host_summary_totals['unreachable_hosts_total'],
     }
+
+    # Only include event-related fields if there are events
+    if has_events:
+        statistics.update(
+            {
+                # from events_modules
+                'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
+                'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
+                'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
+                'rollup_period_warnings_total': events_modules.get('warnings_total'),
+                'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
+                'rollup_period_playbooks_total': playbooks_total,
+            }
+        )
+
+    return statistics
 
 
 def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -349,6 +359,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     execution_environments_total = _calculate_execution_environments_total(execution_environments)
     controller_versions_merged = _merge_controller_versions(jobs_by_job_type)
 
+    # Check if there are any events
+    collected_events_total = events_modules.get('collected_events_total', 0) or 0
+    has_events = collected_events_total > 0
+
     # Build statistics dictionary
     statistics = _build_statistics(
         events_modules,
@@ -359,9 +373,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         job_host_summary_root.get('job_host_pairs_total'),
         playbooks_total,
         execution_environments_total,
+        has_events,
     )
 
     # Extract arrays and collections
+    # Only include event-related arrays if there are events
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
     role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
@@ -406,14 +422,17 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'rollup_period_controller_versions': controller_versions_merged,
         'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
         'rollup_period_credential_types': credentials_list if isinstance(credentials_list, list) else [],
-        'module_stats': module_stats,
-        'collection_stats': collection_stats,
-        'role_stats': role_stats,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_controller_version': jobs_by_controller_version_merged,
         'collections_versions': collections_versions,
     }
+
+    # Only include event-related arrays if there are events
+    if has_events:
+        flattened['module_stats'] = module_stats
+        flattened['collection_stats'] = collection_stats
+        flattened['role_stats'] = role_stats
 
     return flattened
 

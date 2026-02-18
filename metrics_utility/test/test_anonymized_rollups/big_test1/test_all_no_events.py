@@ -265,9 +265,12 @@ def validate_result_structure(result):
     assert 'jobs_by_job_type' in result
     assert 'jobs_by_launch_type' in result
     assert 'jobs_by_controller_version' in result
-    assert 'module_stats' in result
-    assert 'collection_stats' in result
     assert 'collections_versions' in result
+
+    # Event-related fields should be missing when there are no events
+    assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
+    assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
+    assert 'role_stats' not in result, 'role_stats should be missing when there are no events'
 
 
 def validate_task_statistics(statistics):
@@ -303,10 +306,15 @@ def validate_task_statistics(statistics):
 
 
 def validate_events_statistics_no_events(statistics):
-    """Validate events statistics - should be 0 since there are no events."""
-    assert statistics['rollup_period_collected_events_total'] == 0
-    assert statistics['rollup_period_warnings_total'] == 0
-    assert statistics['rollup_period_deprecations_total'] == 0
+    """Validate events statistics - should be missing since there are no events."""
+    assert 'rollup_period_collected_events_total' not in statistics, 'rollup_period_collected_events_total should be missing when there are no events'
+    assert 'rollup_period_warnings_total' not in statistics, 'rollup_period_warnings_total should be missing when there are no events'
+    assert 'rollup_period_deprecations_total' not in statistics, 'rollup_period_deprecations_total should be missing when there are no events'
+    assert 'rollup_period_modules_total' not in statistics, 'rollup_period_modules_total should be missing when there are no events'
+    assert 'rollup_period_unique_hosts_automated_total' not in statistics, (
+        'rollup_period_unique_hosts_automated_total should be missing when there are no events'
+    )
+    assert 'rollup_period_playbooks_total' not in statistics, 'rollup_period_playbooks_total should be missing when there are no events'
 
 
 def validate_jobs(result):
@@ -420,38 +428,23 @@ def validate_job_host_summary(result, job_type, workflowjob_type):
 
 
 def validate_module_stats_no_events(result):
-    """Validate module statistics - should be empty or have 0 processed events."""
-    module_stats = result['module_stats']
-    assert isinstance(module_stats, list)
-    
-    # With no events, module stats should be empty
-    assert len(module_stats) == 0
-    assert result['statistics']['rollup_period_modules_total'] == 0
+    """Validate module statistics - should be missing when there are no events."""
+    assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
 
 
 def validate_collection_stats_no_events(result):
-    """Validate collection statistics - should be empty or have 0 processed events."""
-    collection_stats = result['collection_stats']
-    assert isinstance(collection_stats, list)
-    
-    # With no events, collection stats should be empty
-    assert len(collection_stats) == 0
+    """Validate collection statistics - should be missing when there are no events."""
+    assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
 
 
 def validate_role_stats_no_events(result):
-    """Validate role statistics - should be empty or have 0 processed events."""
-    assert 'role_stats' in result
-    role_stats = result['role_stats']
-    assert isinstance(role_stats, list)
-    
-    # With no events, role stats should be empty
-    assert len(role_stats) == 0
+    """Validate role statistics - should be missing when there are no events."""
+    assert 'role_stats' not in result, 'role_stats should be missing when there are no events'
 
 
 def validate_playbooks(result):
-    """Validate playbook statistics."""
-    assert 'rollup_period_playbooks_total' in result['statistics']
-    assert result['statistics']['rollup_period_playbooks_total'] >= 2
+    """Validate playbook statistics - should be missing when there are no events."""
+    assert 'rollup_period_playbooks_total' not in result['statistics'], 'rollup_period_playbooks_total should be missing when there are no events'
 
 
 def validate_execution_environments(result):
