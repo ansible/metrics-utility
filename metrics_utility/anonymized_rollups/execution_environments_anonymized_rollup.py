@@ -10,6 +10,13 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('execution_environments')
         self.collector_names = ['execution_environments']
 
+    # Prepare and merge just simply pick the latest value, its snapshot collector
+    def prepare(self, dataframe):
+        return dataframe
+
+    def merge(self, dataframe_all, dataframe_new):
+        return dataframe_new
+
     def base(self, dataframe):
         """
         Number of execution enviornment configured in the controller

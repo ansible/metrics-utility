@@ -78,15 +78,9 @@ def _create_csv_files_from_split_data(data_dir, jobs, events, execution_environm
     if csv3:
         events_csv_files.append(csv3)
 
-    ee_part1 = execution_environments[:2]
-    ee_part2 = execution_environments[2:]
-    ee_csv_files = []
-    csv1 = create_csv_file(ee_part1, f'{data_dir}/part1_execution_environments.csv')
-    if csv1:
-        ee_csv_files.append(csv1)
-    csv2 = create_csv_file(ee_part2, f'{data_dir}/part2_execution_environments.csv')
-    if csv2:
-        ee_csv_files.append(csv2)
+    # Execution environments: snapshot collector - keep all data in single batch (no splitting)
+    ee_csv_file = create_csv_file(execution_environments, f'{data_dir}/execution_environments.csv')
+    ee_csv_files = [ee_csv_file] if ee_csv_file else []
 
     jhs_part1 = jobhostsummary[:8]
     jhs_part2 = jobhostsummary[8:]

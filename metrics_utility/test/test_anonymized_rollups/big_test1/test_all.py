@@ -147,9 +147,9 @@ def create_all_csv_files(data_dir, all_jobs, all_events, all_jobhostsummary):
     jhs_parts = split_data_into_parts(all_jobhostsummary, 3)
     jhs_csv_files = create_csv_files_from_parts(jhs_parts, data_dir, 'part{part_num}_job_host_summary.csv')
 
-    # Execution environments: split into 2 parts
-    ee_parts = [execution_environments[:4], execution_environments[4:]]
-    ee_csv_files = create_csv_files_from_parts(ee_parts, data_dir, 'part{part_num}_execution_environments.csv')
+    # Execution environments: snapshot collector - keep all data in single batch (no splitting)
+    ee_csv_file = create_csv_file(execution_environments, f'{data_dir}/execution_environments.csv')
+    ee_csv_files = [ee_csv_file] if ee_csv_file else []
 
     # Credentials: split into 2 parts
     cred_parts = [credentials[:8], credentials[8:]]
