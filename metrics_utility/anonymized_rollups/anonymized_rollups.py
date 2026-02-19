@@ -325,6 +325,48 @@ def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def _merge_all_jobs_groupings(
+    jobs: Dict[str, Any],
+    job_host_summary_by_job_type: List[Dict[str, Any]],
+    job_host_summary_by_launch_type: List[Dict[str, Any]],
+    job_host_summary_by_controller_version: List[Dict[str, Any]],
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Merge job_host_summary data into all jobs groupings."""
+    # Merge by job_type
+    jhs_lookup_by_job_type: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
+    jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
+    jobs_by_job_type_merged = _merge_jobs_with_host_summary(
+        jobs_by_job_type,
+        jhs_lookup_by_job_type,
+        lambda job: job.get('job_type'),
+    )
+
+    # Merge by launch_type
+    jhs_lookup_by_launch_type: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
+    jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
+    jobs_by_launch_type_merged = _merge_jobs_with_host_summary(
+        jobs_by_launch_type,
+        jhs_lookup_by_launch_type,
+        lambda job: job.get('launch_type'),
+    )
+
+    # Merge by controller_version
+    jhs_lookup_by_controller_version: Dict[str, Dict[str, Any]] = {}
+    for jhs in job_host_summary_by_controller_version:
+        key = _normalize_controller_version_key(jhs.get('controller_version'))
+        jhs_lookup_by_controller_version[key] = jhs
+
+    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('by_controller_version', []) or []
+    jobs_by_controller_version_merged = _merge_jobs_with_host_summary(
+        jobs_by_controller_version,
+        jhs_lookup_by_controller_version,
+        lambda job: job.get('controller_version'),
+        normalize_key=_normalize_controller_version_key,
+    )
+
+    return jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_controller_version_merged
+
+
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
@@ -384,32 +426,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     collections_versions = _extract_collections_versions(jobs)
 
     # Merge job_host_summary into jobs groupings
-    jhs_lookup_by_job_type: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
-    jobs_by_job_type_merged = _merge_jobs_with_host_summary(
-        jobs_by_job_type,
-        jhs_lookup_by_job_type,
-        lambda job: job.get('job_type'),
-    )
-
-    jhs_lookup_by_launch_type: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
-    jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
-    jobs_by_launch_type_merged = _merge_jobs_with_host_summary(
-        jobs_by_launch_type,
-        jhs_lookup_by_launch_type,
-        lambda job: job.get('launch_type'),
-    )
-
-    jhs_lookup_by_controller_version: Dict[str, Dict[str, Any]] = {}
-    for jhs in job_host_summary_by_controller_version:
-        key = _normalize_controller_version_key(jhs.get('controller_version'))
-        jhs_lookup_by_controller_version[key] = jhs
-
-    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('by_controller_version', []) or []
-    jobs_by_controller_version_merged = _merge_jobs_with_host_summary(
-        jobs_by_controller_version,
-        jhs_lookup_by_controller_version,
-        lambda job: job.get('controller_version'),
-        normalize_key=_normalize_controller_version_key,
+    jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_controller_version_merged = _merge_all_jobs_groupings(
+        jobs,
+        job_host_summary_by_job_type,
+        job_host_summary_by_launch_type,
+        job_host_summary_by_controller_version,
     )
 
     # Calculate task statistics and update statistics dictionary
