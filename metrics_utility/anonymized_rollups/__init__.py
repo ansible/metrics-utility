@@ -15,6 +15,7 @@ from .execution_environments_anonymized_rollup import ExecutionEnvironmentsAnony
 from .helpers import sanitize_json
 from .jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from .jobs_anonymized_rollup import JobsAnonymizedRollup
+from .table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     'ExecutionEnvironmentsAnonymizedRollup',
     'JobHostSummaryAnonymizedRollup',
     'JobsAnonymizedRollup',
+    'TableMetadataAnonymizedRollup',
     'anonymize_data',
     'anonymize_rollups',
     'compute_anonymized_rollup',

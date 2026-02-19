@@ -13,6 +13,7 @@ from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
+from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 
 
 def hash(value, salt):
@@ -33,6 +34,8 @@ def create_anonymized_object(rollup_name: str):
         return ExecutionEnvironmentsAnonymizedRollup()
     elif rollup_name == 'credentials':
         return CredentialsAnonymizedRollup()
+    elif rollup_name == 'table_metadata':
+        return TableMetadataAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
@@ -378,6 +381,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_controller_version: array (grouped by controller_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
+      - table_metadata: object with table metadata statistics
 
     Note: modules_used_per_playbook is computed but not included in final output.
     """
@@ -386,6 +390,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     jobs = data.get('jobs', {})
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
+    table_metadata_root = data.get('table_metadata', {})
 
     # Extract data structures
     credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
@@ -447,6 +452,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_controller_version': jobs_by_controller_version_merged,
         'collections_versions': collections_versions,
+        'table_metadata': table_metadata_root,
     }
 
     # Only include event-related arrays if there are events
@@ -458,7 +464,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     return flattened
 
 
-def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, salt):
+def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, table_metadata_rollup, salt):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
 
@@ -468,6 +474,7 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         jobs_rollup: Jobs statistics
         job_host_summary_rollup: Job host summary statistics
         credentials_rollup: Credentials statistics
+        table_metadata_rollup: Table metadata statistics
         salt: Salt string for hashing sensitive data
 
     Returns:
@@ -479,6 +486,7 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         'jobs': jobs_rollup,
         'job_host_summary': job_host_summary_rollup,
         'credentials': credentials_rollup,
+        'table_metadata': table_metadata_rollup,
     }
 
     # First flatten the nested structure
@@ -506,12 +514,16 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     credentials = load_anonymized_rollup_data(CredentialsAnonymizedRollup(), input_data['credentials'])
     credentials_result = CredentialsAnonymizedRollup().base(credentials)
 
+    table_metadata = load_anonymized_rollup_data(TableMetadataAnonymizedRollup(), input_data.get('table_metadata', []))
+    table_metadata_result = TableMetadataAnonymizedRollup().base(table_metadata)
+
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'],
         execution_environments_result['json'],
         jobs_result['json'],
         job_host_summary_result['json'],
         credentials_result['json'],
+        table_metadata_result['json'],
         salt,
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
