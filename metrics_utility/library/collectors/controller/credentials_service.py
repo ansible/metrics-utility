@@ -16,6 +16,7 @@ def credentials_service(*, db=None, since=None, until=None):
         WHERE
             main_unifiedjob.finished >= '{since.isoformat()}'
             AND main_unifiedjob.finished < '{until.isoformat()}'
+            AND main_credentialtype.managed = true
         ORDER BY main_unifiedjob.id ASC, main_credentialtype.name ASC
     """
 
