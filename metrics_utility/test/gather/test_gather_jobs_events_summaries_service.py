@@ -489,19 +489,14 @@ def test_execution_environments_command(cleanup_glob):
 
 
 credentials_service_lines = [
-    'credential_type,job_id,model',
-    'Amazon Web Services,1,job',
-    'Machine,1,job',
-    'Machine,2,job',
-    'Vault,2,job',
-    'Amazon Web Services,3,job',
-    'Machine,3,job',
-    'Network,3,job',
+    'credential_type',
+    'Amazon Web Services',
+    'Machine',
+    'Network',
+    'Vault',
 ]
 
-credentials_service_skip_columns = [
-    'job_id',
-]
+credentials_service_skip_columns = []
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -518,3 +513,9 @@ def test_credentials_service_command(cleanup_glob):
 
     # Validate DataFrame content
     validate_dataframe(df, credentials_service_lines, credentials_service_skip_columns)
+    
+    # Verify that custom credential types (managed=false) are NOT included
+    assert 'My Custom Credential Type' not in df['credential_type'].values, (
+        'Custom credential type "My Custom Credential Type" should be filtered out '
+        'by managed=true filter, but it was found in the output'
+    )

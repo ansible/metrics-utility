@@ -44,10 +44,12 @@ DECLARE
   cloud_credential_type_id INTEGER;
   vault_credential_type_id INTEGER;
   network_credential_type_id INTEGER;
+  custom_credential_type_id INTEGER;
   machine_credential_id INTEGER;
   cloud_credential_id INTEGER;
   vault_credential_id INTEGER;
   network_credential_id INTEGER;
+  custom_credential_id INTEGER;
   --
 BEGIN
   --
@@ -955,11 +957,36 @@ $yaml$,
     )
     RETURNING id INTO network_credential_type_id;
   
-  RAISE NOTICE 'Inserted credential types: Machine=%, Cloud=%, Vault=%, Network=%',
+  -- Insert Custom credential type (managed=false to test filtering)
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Custom credential type for testing filtering',
+      'My Custom Credential Type',
+      'cloud',
+      FALSE,
+      '{"fields": [{"id": "api_key", "label": "API Key", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      NULL
+    )
+    RETURNING id INTO custom_credential_type_id;
+  
+  RAISE NOTICE 'Inserted credential types: Machine=%, Cloud=%, Vault=%, Network=%, Custom=%',
                machine_credential_type_id,
                cloud_credential_type_id,
                vault_credential_type_id,
-               network_credential_type_id;
+               network_credential_type_id,
+               custom_credential_type_id;
   --
   -- Credentials
   --
@@ -1051,11 +1078,34 @@ $yaml$,
     )
     RETURNING id INTO network_credential_id;
   
-  RAISE NOTICE 'Inserted credentials: Machine=%, Cloud=%, Vault=%, Network=%',
+  -- Custom credential (should be filtered out by managed=true filter)
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Custom credential for testing filtering',
+      'default_custom_credential_' || random_suffix,
+      default_organization_id,
+      custom_credential_type_id,
+      FALSE,
+      '{"api_key": "encrypted_custom_api_key"}'::jsonb
+    )
+    RETURNING id INTO custom_credential_id;
+  
+  RAISE NOTICE 'Inserted credentials: Machine=%, Cloud=%, Vault=%, Network=%, Custom=%',
                machine_credential_id,
                cloud_credential_id,
                vault_credential_id,
-               network_credential_id;
+               network_credential_id,
+               custom_credential_id;
   --
   -- Link credentials to unified jobs
   -- Assign different combinations of credentials to different jobs
@@ -1072,7 +1122,7 @@ $yaml$,
       machine_credential_id
     );
     
-    -- Job 1: Machine + Cloud
+    -- Job 1: Machine + Cloud + Custom (custom should be filtered out)
     IF i = 1 THEN
       INSERT INTO public.main_unifiedjob_credentials (
         unifiedjob_id,
@@ -1080,6 +1130,14 @@ $yaml$,
       ) VALUES (
         unified_job_id,
         cloud_credential_id
+      );
+      -- Add custom credential to job 1 (should be filtered out by managed=true)
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        custom_credential_id
       );
     END IF;
     
