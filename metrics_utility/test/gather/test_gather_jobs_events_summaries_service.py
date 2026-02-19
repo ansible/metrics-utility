@@ -513,9 +513,8 @@ def test_credentials_service_command(cleanup_glob):
 
     # Validate DataFrame content
     validate_dataframe(df, credentials_service_lines, credentials_service_skip_columns)
-    
+
     # Verify that custom credential types (managed=false) are NOT included
     assert 'My Custom Credential Type' not in df['credential_type'].values, (
-        'Custom credential type "My Custom Credential Type" should be filtered out '
-        'by managed=true filter, but it was found in the output'
+        'Custom credential type "My Custom Credential Type" should be filtered out by managed=true filter, but it was found in the output'
     )
