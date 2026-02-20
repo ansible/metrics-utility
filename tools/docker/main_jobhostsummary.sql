@@ -160,7 +160,7 @@ BEGIN
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- created
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- modified
     0,                                          -- capacity
-    '1.0',                                      -- version
+    '1.0',                                   -- version
     1.00,                                       -- capacity_adjustment
     1.0,                                        -- cpu
     1073741824,                                 -- memory (1 GiB)
@@ -182,6 +182,125 @@ BEGIN
   RAISE NOTICE 'Inserted Main Instance % with id = %',
                'default_host_instance_' || random_suffix,
                default_instance_id;
+  --
+  -- Additional instances with different versions for controller_version_service testing
+  --
+  INSERT INTO public.main_instance (
+    uuid,
+    hostname,
+    created,
+    modified,
+    capacity,
+    version,
+    capacity_adjustment,
+    cpu,
+    memory,
+    cpu_capacity,
+    mem_capacity,
+    enabled,
+    managed_by_policy,
+    ip_address,
+    node_type,
+    last_seen,
+    errors,
+    last_health_check,
+    node_state,
+    health_check_started,
+    managed
+  ) VALUES (
+    gen_random_uuid(),
+    'instance_24_1_0_' || random_suffix,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    0,
+    '24.1.0',
+    1.00,
+    1.0,
+    1073741824,
+    100,
+    1024,
+    true,
+    false,
+    (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text,
+    'execution',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    '',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'running',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    true
+  ),
+  (
+    gen_random_uuid(),
+    'instance_24_2_0_' || random_suffix,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    0,
+    '24.2.0',
+    1.00,
+    1.0,
+    1073741824,
+    100,
+    1024,
+    true,
+    false,
+    (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text,
+    'execution',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    '',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'running',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    true
+  ),
+  (
+    gen_random_uuid(),
+    'instance_23_5_0_' || random_suffix,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    0,
+    '23.5.0',
+    1.00,
+    1.0,
+    1073741824,
+    100,
+    1024,
+    true,
+    false,
+    (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text,
+    'execution',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    '',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'running',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    true
+  ),
+  (
+    gen_random_uuid(),
+    'instance_disabled_' || random_suffix,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    0,
+    '24.3.0',
+    1.00,
+    1.0,
+    1073741824,
+    100,
+    1024,
+    false,
+    false,
+    (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text || '.' || (floor(random()*256)::int)::text,
+    'execution',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    '',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'running',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    true
+  );
+  --
+  RAISE NOTICE 'Inserted additional instances with versions 24.1.0, 24.2.0, 23.5.0, and one disabled instance';
   --
   -- Fill hosts in loop
   --
