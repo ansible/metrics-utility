@@ -119,11 +119,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_ansible_version_dict = common_aggregations.copy()
         aggregations_by_ansible_version_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
 
-        aggregations_by_ansible_version = (
-            dataframe.groupby('ansible_version')
-            .agg(**aggregations_by_ansible_version_dict)
-            .reset_index()
-        )
+        aggregations_by_ansible_version = dataframe.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
 
         self._add_totals_to_aggregation(
             aggregations_by_ansible_version,
@@ -355,9 +351,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Merge by_job_type, by_launch_type, by_ansible_version
         by_job_type = self._merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
         by_launch_type = self._merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
-        by_ansible_version = self._merge_stats_json(
-            data_all.get('by_ansible_version', []), data_new.get('by_ansible_version', []), 'ansible_version'
-        )
+        by_ansible_version = self._merge_stats_json(data_all.get('by_ansible_version', []), data_new.get('by_ansible_version', []), 'ansible_version')
 
         # Merge list fields
         organizations = self._merge_list_fields(data_all, data_new, 'organizations')

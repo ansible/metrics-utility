@@ -253,13 +253,13 @@ def test_jobhostsummary_anonymized():
 
     print(result)
 
-    # result should be a dict with 'by_job_type', 'by_launch_type', 'by_controller_version' (lists) and 'job_host_pairs_total'
+    # result should be a dict with 'by_job_type', 'by_launch_type', 'by_ansible_version' (lists) and 'job_host_pairs_total'
     assert 'by_job_type' in result, 'result should have by_job_type key'
     assert isinstance(result['by_job_type'], list), 'by_job_type should be a list'
     assert 'by_launch_type' in result, 'result should have by_launch_type key'
     assert isinstance(result['by_launch_type'], list), 'by_launch_type should be a list'
-    assert 'by_controller_version' in result, 'result should have by_controller_version key'
-    assert isinstance(result['by_controller_version'], list), 'by_controller_version should be a list'
+    assert 'by_ansible_version' in result, 'result should have by_ansible_version key'
+    assert isinstance(result['by_ansible_version'], list), 'by_ansible_version should be a list'
     assert 'job_host_pairs_total' in result, 'result should have job_host_pairs_total key'
     assert isinstance(result['job_host_pairs_total'], int), 'job_host_pairs_total should be an integer'
 
@@ -317,20 +317,20 @@ def test_jobhostsummary_anonymized():
     assert workflow_launch_type_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts for workflow'
     assert workflow_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for workflow'
 
-    # Verify by_controller_version groupings
-    # Should have 2 controller_version groups: '2.9.10' and '2.10.0'
-    assert len(result['by_controller_version']) == 2, 'Should have 2 controller_version groups'
+    # Verify by_ansible_version groupings
+    # Should have 2 ansible_version groups: '2.9.10' and '2.10.0'
+    assert len(result['by_ansible_version']) == 2, 'Should have 2 ansible_version groups'
 
-    # Find the '2.9.10' controller_version group
-    version_2910_data = next((j for j in result['by_controller_version'] if j['controller_version'] == '2.9.10'), None)
-    assert version_2910_data is not None, 'Should have controller_version 2.9.10'
+    # Find the '2.9.10' ansible_version group
+    version_2910_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.9.10'), None)
+    assert version_2910_data is not None, 'Should have ansible_version 2.9.10'
     assert version_2910_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for 2.9.10'
     assert version_2910_data['job_type_total'] == 1, 'Should have 1 job type (job) for 2.9.10'
     assert version_2910_data['launch_type_total'] == 2, 'Should have 2 launch types (manual, scheduled) for 2.9.10'
 
-    # Find the '2.10.0' controller_version group
-    version_2100_data = next((j for j in result['by_controller_version'] if j['controller_version'] == '2.10.0'), None)
-    assert version_2100_data is not None, 'Should have controller_version 2.10.0'
+    # Find the '2.10.0' ansible_version group
+    version_2100_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.10.0'), None)
+    assert version_2100_data is not None, 'Should have ansible_version 2.10.0'
     assert version_2100_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts for 2.10.0'
     assert version_2100_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for 2.10.0'
     assert version_2100_data['launch_type_total'] == 1, 'Should have 1 launch type (workflow) for 2.10.0'

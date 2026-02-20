@@ -241,11 +241,11 @@ def test_all_jobs_combined_no_events(cleanup_test_data):
     validate_events_statistics_no_events(result['statistics'])
 
     job_type, workflowjob_type = validate_jobs(result)
-    validate_controller_versions(result)
+    validate_ansible_versions(result)
     validate_scm_types(result)
 
     jobs_by_launch_type_list = validate_jobs_by_launch_type(result)
-    jobs_by_controller_version_list = validate_jobs_by_controller_version(result)
+    jobs_by_ansible_version_list = validate_jobs_by_ansible_version(result)
 
     validate_job_host_summary(result, job_type, workflowjob_type)
     validate_module_stats_no_events(result)
@@ -254,7 +254,7 @@ def test_all_jobs_combined_no_events(cleanup_test_data):
     validate_playbooks(result)
     validate_execution_environments(result)
     validate_credentials(result)
-    validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_controller_version_list)
+    validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_ansible_version_list)
 
     print('\n=== All validations passed! ===')
 
@@ -264,7 +264,7 @@ def validate_result_structure(result):
     assert 'statistics' in result
     assert 'jobs_by_job_type' in result
     assert 'jobs_by_launch_type' in result
-    assert 'jobs_by_controller_version' in result
+    assert 'jobs_by_ansible_version' in result
     assert 'collections_versions' in result
 
     # Event-related fields should be missing when there are no events
@@ -341,16 +341,16 @@ def validate_jobs(result):
     return job_type, workflowjob_type
 
 
-def validate_controller_versions(result):
-    """Validate controller versions at top level."""
-    assert 'rollup_period_controller_versions' in result
-    statistics_controller_versions = result['rollup_period_controller_versions']
-    assert isinstance(statistics_controller_versions, list)
+def validate_ansible_versions(result):
+    """Validate ansible versions at top level."""
+    assert 'rollup_period_ansible_versions' in result
+    statistics_ansible_versions = result['rollup_period_ansible_versions']
+    assert isinstance(statistics_ansible_versions, list)
 
     expected_versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
-    assert len(statistics_controller_versions) == 5
+    assert len(statistics_ansible_versions) == 5
     for version in expected_versions:
-        assert version in statistics_controller_versions
+        assert version in statistics_ansible_versions
 
 
 def validate_scm_types(result):
@@ -385,11 +385,11 @@ def validate_jobs_by_launch_type(result):
     return jobs_by_launch_type_list
 
 
-def validate_jobs_by_controller_version(result):
-    """Validate jobs grouped by controller version."""
-    jobs_by_controller_version_list = result['jobs_by_controller_version']
-    assert isinstance(jobs_by_controller_version_list, list)
-    assert len(jobs_by_controller_version_list) == 5
+def validate_jobs_by_ansible_version(result):
+    """Validate jobs grouped by ansible version."""
+    jobs_by_ansible_version_list = result['jobs_by_ansible_version']
+    assert isinstance(jobs_by_ansible_version_list, list)
+    assert len(jobs_by_ansible_version_list) == 5
 
     expected_versions = {
         '2.15.0': 3,
@@ -400,11 +400,11 @@ def validate_jobs_by_controller_version(result):
     }
 
     for version, expected_count in expected_versions.items():
-        entry = find_entry_by_key(jobs_by_controller_version_list, 'controller_version', version)
-        assert entry is not None, f'Should have controller_version {version}'
+        entry = find_entry_by_key(jobs_by_ansible_version_list, 'ansible_version', version)
+        assert entry is not None, f'Should have ansible_version {version}'
         assert entry['jobs_total'] == expected_count
 
-    return jobs_by_controller_version_list
+    return jobs_by_ansible_version_list
 
 
 def validate_job_host_summary(result, job_type, workflowjob_type):
@@ -479,13 +479,13 @@ def validate_credentials(result):
     assert credential_types == sorted(credential_types)
 
 
-def validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_controller_version_list):
+def validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_ansible_version_list):
     """Verify that job totals match across all groupings."""
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in jobs_by_launch_type_list)
-    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in jobs_by_controller_version_list)
+    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in jobs_by_ansible_version_list)
     expected_total = result['statistics']['rollup_period_jobs_total']
 
     assert total_jobs_by_job_type == expected_total
     assert total_jobs_by_launch_type == expected_total
-    assert total_jobs_by_controller_version == expected_total
+    assert total_jobs_by_ansible_version == expected_total

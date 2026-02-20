@@ -105,9 +105,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Merge by_job_type, by_launch_type, by_ansible_version
         by_job_type = self._merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
         by_launch_type = self._merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
-        by_ansible_version = self._merge_stats_json(
-            data_all.get('by_ansible_version', []), data_new.get('by_ansible_version', []), 'ansible_version'
-        )
+        by_ansible_version = self._merge_stats_json(data_all.get('by_ansible_version', []), data_new.get('by_ansible_version', []), 'ansible_version')
 
         # Sum job_host_pairs_total
         job_host_pairs_total = data_all.get('job_host_pairs_total', 0) + data_new.get('job_host_pairs_total', 0)
@@ -262,9 +260,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_ansible_version_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
         aggregations_by_ansible_version_dict['launch_types'] = ('launch_type', lambda x: sorted(list(set(x.dropna()))))
 
-        aggregations_by_ansible_version = (
-            aggregated_by_job.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
-        )
+        aggregations_by_ansible_version = aggregated_by_job.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
         aggregations_by_ansible_version['unique_hosts_total'] = aggregations_by_ansible_version['unique_hosts'].apply(self._compute_list_length)
         aggregations_by_ansible_version['job_type_total'] = aggregations_by_ansible_version['job_types'].apply(self._compute_list_length)
         aggregations_by_ansible_version['launch_type_total'] = aggregations_by_ansible_version['launch_types'].apply(self._compute_list_length)

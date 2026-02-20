@@ -498,8 +498,8 @@ def test_events_modules_aggregations_basic():
     assert (
         copy_stats['processed_events_total'] == 5
     )  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
-    assert 'controller_versions' in copy_stats, 'Should have controller_versions field'
-    assert isinstance(copy_stats['controller_versions'], list), 'controller_versions should be a list'
+    assert 'ansible_versions' in copy_stats, 'Should have ansible_versions field'
+    assert isinstance(copy_stats['ansible_versions'], list), 'ansible_versions should be a list'
 
     # ansible.netcommon.cli_config (certified)
     template_stats = stats_by_module['ansible.netcommon.cli_config']
@@ -516,8 +516,8 @@ def test_events_modules_aggregations_basic():
     assert template_stats['unique_hosts_total'] == 2
     assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert template_stats['processed_events_total'] == 2  # Job 1 Host 4: 1 event (unreachable), Job 3 Host 3: 1 event (item_ok)
-    assert 'controller_versions' in template_stats, 'Should have controller_versions field'
-    assert isinstance(template_stats['controller_versions'], list), 'controller_versions should be a list'
+    assert 'ansible_versions' in template_stats, 'Should have ansible_versions field'
+    assert isinstance(template_stats['ansible_versions'], list), 'ansible_versions should be a list'
 
     # ansible.posix.firewalld (certified)
     firewalld_stats = stats_by_module['ansible.posix.firewalld']
@@ -623,8 +623,8 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['task_unreachable_total'] == 1
     assert netcommon_coll['tasks_total'] == 2
     assert netcommon_coll['processed_events_total'] == 2  # Same as cli_config module (2 events)
-    assert 'controller_versions' in netcommon_coll, 'Should have controller_versions field'
-    assert isinstance(netcommon_coll['controller_versions'], list), 'controller_versions should be a list'
+    assert 'ansible_versions' in netcommon_coll, 'Should have ansible_versions field'
+    assert isinstance(netcommon_coll['ansible_versions'], list), 'ansible_versions should be a list'
 
     # ansible.posix
     posix_coll = coll_by_name['ansible.posix']
