@@ -453,7 +453,7 @@ def _validate_table_metadata_structure(json_data):
     # where field_name is one of: estimated_row_count, total_size_bytes, table_size_bytes, indexes_size_bytes
     if table_metadata:
         expected_field_suffixes = ['estimated_row_count', 'total_size_bytes', 'table_size_bytes', 'indexes_size_bytes']
-        
+
         # Group keys by table name (extract table name from key)
         table_names = set()
         for key in table_metadata.keys():
@@ -465,7 +465,7 @@ def _validate_table_metadata_structure(json_data):
                 field_suffix = parts[1]
                 if field_suffix in expected_field_suffixes:
                     table_names.add(table_name)
-        
+
         # For each table, verify all expected fields exist
         for table_name in table_names:
             for field_suffix in expected_field_suffixes:
