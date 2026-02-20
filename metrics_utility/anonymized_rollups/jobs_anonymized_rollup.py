@@ -61,15 +61,15 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'inventories': ('inventory_name', lambda x: sorted(list(set(x.dropna())))),
         }
 
-    def _get_controller_versions_aggregation(self):
-        """Get controller versions aggregation helper."""
+    def _get_ansible_versions_aggregation(self):
+        """Get ansible versions aggregation helper."""
 
-        def get_controller_versions(grouped_series):
-            """Helper function to extract sorted unique controller versions from a group"""
+        def get_ansible_versions(grouped_series):
+            """Helper function to extract sorted unique ansible versions from a group"""
             unique_versions = grouped_series.dropna().unique()
             return sorted([str(v) for v in unique_versions if pd.notna(v)])
 
-        return {'controller_versions': ('ansible_version', get_controller_versions)}
+        return {'ansible_versions': ('ansible_version', get_ansible_versions)}
 
     def _compute_list_length(self, x):
         """Compute length of list, returning 0 if not a list."""
@@ -81,10 +81,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             if col in aggregation_df.columns:
                 aggregation_df[total_col] = aggregation_df[col].apply(self._compute_list_length)
 
-    def _aggregate_by_job_type(self, dataframe, common_aggregations, controller_versions_aggregation):
+    def _aggregate_by_job_type(self, dataframe, common_aggregations, ansible_versions_aggregation):
         """Aggregate by job_type (model)."""
         aggregations_by_job_type_dict = common_aggregations.copy()
-        aggregations_by_job_type_dict.update(controller_versions_aggregation)
+        aggregations_by_job_type_dict.update(ansible_versions_aggregation)
 
         aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
 
@@ -95,11 +95,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         return aggregations_by_job_type
 
-    def _aggregate_by_launch_type(self, dataframe, common_aggregations, controller_versions_aggregation):
+    def _aggregate_by_launch_type(self, dataframe, common_aggregations, ansible_versions_aggregation):
         """Aggregate by launch_type."""
         aggregations_by_launch_type_dict = common_aggregations.copy()
         aggregations_by_launch_type_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
-        aggregations_by_launch_type_dict.update(controller_versions_aggregation)
+        aggregations_by_launch_type_dict.update(ansible_versions_aggregation)
 
         aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
         self._add_totals_to_aggregation(
@@ -114,20 +114,19 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         return aggregations_by_launch_type
 
-    def _aggregate_by_controller_version(self, dataframe, common_aggregations):
-        """Aggregate by controller_version."""
-        aggregations_by_controller_version_dict = common_aggregations.copy()
-        aggregations_by_controller_version_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
+    def _aggregate_by_ansible_version(self, dataframe, common_aggregations):
+        """Aggregate by ansible_version."""
+        aggregations_by_ansible_version_dict = common_aggregations.copy()
+        aggregations_by_ansible_version_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
 
-        aggregations_by_controller_version = (
+        aggregations_by_ansible_version = (
             dataframe.groupby('ansible_version')
-            .agg(**aggregations_by_controller_version_dict)
+            .agg(**aggregations_by_ansible_version_dict)
             .reset_index()
-            .rename(columns={'ansible_version': 'controller_version'})
         )
 
         self._add_totals_to_aggregation(
-            aggregations_by_controller_version,
+            aggregations_by_ansible_version,
             [
                 ('job_ids', 'jobs_total'),
                 ('job_types', 'job_type_total'),
@@ -136,7 +135,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             ],
         )
 
-        return aggregations_by_controller_version
+        return aggregations_by_ansible_version
 
     def _extract_metadata(self, dataframe):
         """Extract metadata fields from dataframe."""
@@ -159,7 +158,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'by_job_type': [],
                 'by_launch_type': [],
-                'by_controller_version': [],
+                'by_ansible_version': [],
                 'organizations': [],
                 'forks_total': 0,
                 'job_ids': [],
@@ -172,17 +171,17 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         # Get aggregation dictionaries
         common_aggregations = self._get_common_aggregations()
-        controller_versions_aggregation = self._get_controller_versions_aggregation()
+        ansible_versions_aggregation = self._get_ansible_versions_aggregation()
 
         # Perform aggregations by different dimensions
-        aggregations_by_job_type = self._aggregate_by_job_type(dataframe, common_aggregations, controller_versions_aggregation)
-        aggregations_by_launch_type = self._aggregate_by_launch_type(dataframe, common_aggregations, controller_versions_aggregation)
-        aggregations_by_controller_version = self._aggregate_by_controller_version(dataframe, common_aggregations)
+        aggregations_by_job_type = self._aggregate_by_job_type(dataframe, common_aggregations, ansible_versions_aggregation)
+        aggregations_by_launch_type = self._aggregate_by_launch_type(dataframe, common_aggregations, ansible_versions_aggregation)
+        aggregations_by_ansible_version = self._aggregate_by_ansible_version(dataframe, common_aggregations)
 
         # Convert DataFrames to JSON (list of dicts)
         by_job_type = aggregations_by_job_type.to_dict(orient='records')
         by_launch_type = aggregations_by_launch_type.to_dict(orient='records')
-        by_controller_version = aggregations_by_controller_version.to_dict(orient='records')
+        by_ansible_version = aggregations_by_ansible_version.to_dict(orient='records')
 
         # Extract metadata
         organizations, job_ids, forks_total, scm_types = self._extract_metadata(dataframe)
@@ -193,7 +192,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
-            'by_controller_version': by_controller_version,
+            'by_ansible_version': by_ansible_version,
             'organizations': organizations,
             'forks_total': forks_total,
             'job_ids': job_ids,
@@ -232,7 +231,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         ]
 
         # List columns to union
-        list_cols = ['job_ids', 'templates', 'inventories', 'controller_versions', 'job_types']
+        list_cols = ['job_ids', 'templates', 'inventories', 'ansible_versions', 'job_types']
 
         for key in all_keys:
             item_all = all_dict.get(key, {})
@@ -353,11 +352,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         if data_all is None:
             return data_new
 
-        # Merge by_job_type, by_launch_type, by_controller_version
+        # Merge by_job_type, by_launch_type, by_ansible_version
         by_job_type = self._merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
         by_launch_type = self._merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
-        by_controller_version = self._merge_stats_json(
-            data_all.get('by_controller_version', []), data_new.get('by_controller_version', []), 'controller_version'
+        by_ansible_version = self._merge_stats_json(
+            data_all.get('by_ansible_version', []), data_new.get('by_ansible_version', []), 'ansible_version'
         )
 
         # Merge list fields
@@ -374,7 +373,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
-            'by_controller_version': by_controller_version,
+            'by_ansible_version': by_ansible_version,
             'organizations': organizations,
             'forks_total': forks_total,
             'job_ids': job_ids,
@@ -400,7 +399,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 'json': {
                     'by_job_type': [],
                     'by_launch_type': [],
-                    'by_controller_version': [],
+                    'by_ansible_version': [],
                     'organizations_total': None,
                     'forks_total': None,
                     'jobs_total': None,
@@ -412,7 +411,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Extract data from the structure (already JSON)
         by_job_type = data.get('by_job_type', [])
         by_launch_type = data.get('by_launch_type', [])
-        by_controller_version = data.get('by_controller_version', [])
+        by_ansible_version = data.get('by_ansible_version', [])
         organizations = data.get('organizations', [])
         forks_total = data.get('forks_total', 0)
         job_ids = data.get('job_ids', [])
@@ -420,12 +419,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         installed_collections = data.get('installed_collections', [])
 
         # Handle empty data
-        if not by_job_type and not by_launch_type and not by_controller_version:
+        if not by_job_type and not by_launch_type and not by_ansible_version:
             return {
                 'json': {
                     'by_job_type': [],
                     'by_launch_type': [],
-                    'by_controller_version': [],
+                    'by_ansible_version': [],
                     'organizations_total': 0,
                     'forks_total': 0,
                     'jobs_total': 0,
@@ -435,7 +434,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             }
 
         # Drop list columns from stats (we only need the computed totals, not the raw lists)
-        for stats_list in [by_job_type, by_launch_type, by_controller_version]:
+        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
             for item in stats_list:
                 # Drop list columns that were used for deduplication
                 for col in ['job_ids', 'templates', 'inventories', 'job_types']:
@@ -450,7 +449,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         json_data = {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
-            'by_controller_version': by_controller_version,
+            'by_ansible_version': by_ansible_version,
             'organizations_total': organizations_total,
             'forks_total': forks_total,
             'jobs_total': jobs_total,

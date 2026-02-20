@@ -97,7 +97,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'tasks_total',
         'unique_hosts_total',
     ]
-    _LIST_COLS = ['host_ids', 'controller_versions']
+    _LIST_COLS = ['host_ids', 'ansible_versions']
 
     def __init__(self):
         super().__init__('events_modules')
@@ -348,10 +348,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             & (dataframe['playbook'].str.strip() != '')
         ]
 
-        if 'ansible_version' in dataframe.columns:
-            dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
-        else:
-            dataframe['controller_version'] = None
+        if 'ansible_version' not in dataframe.columns:
+            dataframe['ansible_version'] = None
 
         columns_to_keep = [
             'job_id',
@@ -374,7 +372,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'event',
             'is_warning',
             'is_deprecation',
-            'controller_version',
+            'ansible_version',
         ]
         return dataframe[columns_to_keep]
 
@@ -398,7 +396,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 warnings_total=('is_warning', 'sum'),
                 deprecations_total=('is_deprecation', 'sum'),
                 processed_events_total=('event', 'size'),
-                controller_version=('controller_version', 'first'),
+                ansible_version=('ansible_version', 'first'),
                 role=('role', 'first'),
             )
             .assign(
@@ -436,7 +434,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             warnings_total=('warnings_total', 'sum'),
             deprecations_total=('deprecations_total', 'sum'),
             processed_events_total=('processed_events_total', 'sum'),
-            controller_version=('controller_version', 'first'),
+            ansible_version=('ansible_version', 'first'),
             role=('role', 'first'),
         )
 
@@ -462,7 +460,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'warnings_total': ('warnings_total', 'sum'),
             'deprecations_total': ('deprecations_total', 'sum'),
             'processed_events_total': ('processed_events_total', 'sum'),
-            'controller_versions': ('controller_version', lambda x: set(x.dropna())),
+            'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
         }
 
     def _compute_tasks_total(self, stats_df):
@@ -541,7 +539,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
             self._convert_list_columns_to_json_format(df, 'host_ids')
-            self._convert_list_columns_to_json_format(df, 'controller_versions')
+            self._convert_list_columns_to_json_format(df, 'ansible_versions')
             self._convert_categorical_columns_to_string(df)
 
         module_stats_json = self._convert_dataframe_to_json_records(module_stats)

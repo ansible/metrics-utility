@@ -102,11 +102,11 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if data_all is None:
             return data_new
 
-        # Merge by_job_type, by_launch_type, by_controller_version
+        # Merge by_job_type, by_launch_type, by_ansible_version
         by_job_type = self._merge_stats_json(data_all.get('by_job_type', []), data_new.get('by_job_type', []), 'job_type')
         by_launch_type = self._merge_stats_json(data_all.get('by_launch_type', []), data_new.get('by_launch_type', []), 'launch_type')
-        by_controller_version = self._merge_stats_json(
-            data_all.get('by_controller_version', []), data_new.get('by_controller_version', []), 'controller_version'
+        by_ansible_version = self._merge_stats_json(
+            data_all.get('by_ansible_version', []), data_new.get('by_ansible_version', []), 'ansible_version'
         )
 
         # Sum job_host_pairs_total
@@ -115,7 +115,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
-            'by_controller_version': by_controller_version,
+            'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
         }
 
@@ -133,7 +133,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     # ignored
     # rescued
     # model (job_type)
-    # controller_version
+    # ansible_version
     # launch_type
 
     def _normalize_dataframe(self, dataframe):
@@ -156,8 +156,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if 'launch_type' not in dataframe.columns:
             dataframe['launch_type'] = 'unknown'
 
-        # Rename column ansible_version to controller_version
-        dataframe.rename(columns={'ansible_version': 'controller_version'}, inplace=True)
+        # Keep ansible_version column name (no rename needed)
 
         # Compute host_outcome
         dataframe['host_outcome'] = 'successful'
@@ -165,7 +164,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         dataframe.loc[dataframe['dark'] > 0, 'host_outcome'] = 'unreachable'
 
     def _aggregate_by_job(self, dataframe):
-        """Aggregate dataframe by job_remote_id or by job_type/launch_type/controller_version."""
+        """Aggregate dataframe by job_remote_id or by job_type/launch_type/ansible_version."""
         if 'job_remote_id' in dataframe.columns:
             return self._aggregate_by_job_remote_id(dataframe)
         return self._aggregate_by_job_type_directly(dataframe)
@@ -187,15 +186,15 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
                 job_type=('model', 'first'),
                 launch_type=('launch_type', 'first'),
-                controller_version=('controller_version', 'first'),
+                ansible_version=('ansible_version', 'first'),
             )
             .reset_index()
         )
 
     def _aggregate_by_job_type_directly(self, dataframe):
-        """Aggregate directly by job_type, launch_type, controller_version when no job_remote_id."""
+        """Aggregate directly by job_type, launch_type, ansible_version when no job_remote_id."""
         return (
-            dataframe.groupby(['model', 'launch_type', 'controller_version'])
+            dataframe.groupby(['model', 'launch_type', 'ansible_version'])
             .agg(
                 dark_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
@@ -257,19 +256,19 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(self._compute_list_length)
         return aggregations_by_launch_type
 
-    def _aggregate_by_controller_version(self, aggregated_by_job, common_aggregations):
-        """Aggregate by controller_version."""
-        aggregations_by_controller_version_dict = common_aggregations.copy()
-        aggregations_by_controller_version_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
-        aggregations_by_controller_version_dict['launch_types'] = ('launch_type', lambda x: sorted(list(set(x.dropna()))))
+    def _aggregate_by_ansible_version(self, aggregated_by_job, common_aggregations):
+        """Aggregate by ansible_version."""
+        aggregations_by_ansible_version_dict = common_aggregations.copy()
+        aggregations_by_ansible_version_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
+        aggregations_by_ansible_version_dict['launch_types'] = ('launch_type', lambda x: sorted(list(set(x.dropna()))))
 
-        aggregations_by_controller_version = (
-            aggregated_by_job.groupby('controller_version').agg(**aggregations_by_controller_version_dict).reset_index()
+        aggregations_by_ansible_version = (
+            aggregated_by_job.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
         )
-        aggregations_by_controller_version['unique_hosts_total'] = aggregations_by_controller_version['unique_hosts'].apply(self._compute_list_length)
-        aggregations_by_controller_version['job_type_total'] = aggregations_by_controller_version['job_types'].apply(self._compute_list_length)
-        aggregations_by_controller_version['launch_type_total'] = aggregations_by_controller_version['launch_types'].apply(self._compute_list_length)
-        return aggregations_by_controller_version
+        aggregations_by_ansible_version['unique_hosts_total'] = aggregations_by_ansible_version['unique_hosts'].apply(self._compute_list_length)
+        aggregations_by_ansible_version['job_type_total'] = aggregations_by_ansible_version['job_types'].apply(self._compute_list_length)
+        aggregations_by_ansible_version['launch_type_total'] = aggregations_by_ansible_version['launch_types'].apply(self._compute_list_length)
+        return aggregations_by_ansible_version
 
     def prepare(self, dataframe):
         # Count all records before processing
@@ -280,7 +279,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             return {
                 'by_job_type': [],
                 'by_launch_type': [],
-                'by_controller_version': [],
+                'by_ansible_version': [],
                 'job_host_pairs_total': job_host_pairs_total,
             }
 
@@ -296,17 +295,17 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Perform aggregations by different dimensions
         aggregations_by_job_type = self._aggregate_by_job_type(aggregated_by_job, common_aggregations)
         aggregations_by_launch_type = self._aggregate_by_launch_type(aggregated_by_job, common_aggregations)
-        aggregations_by_controller_version = self._aggregate_by_controller_version(aggregated_by_job, common_aggregations)
+        aggregations_by_ansible_version = self._aggregate_by_ansible_version(aggregated_by_job, common_aggregations)
 
         # Convert DataFrames to JSON (list of dicts)
         by_job_type = aggregations_by_job_type.to_dict(orient='records')
         by_launch_type = aggregations_by_launch_type.to_dict(orient='records')
-        by_controller_version = aggregations_by_controller_version.to_dict(orient='records')
+        by_ansible_version = aggregations_by_ansible_version.to_dict(orient='records')
 
         return {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
-            'by_controller_version': by_controller_version,
+            'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
         }
 
@@ -323,7 +322,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 'json': {
                     'by_job_type': [],
                     'by_launch_type': [],
-                    'by_controller_version': [],
+                    'by_ansible_version': [],
                     'job_host_pairs_total': 0,
                 },
             }
@@ -331,22 +330,22 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Extract data from the structure (already JSON)
         by_job_type = data.get('by_job_type', [])
         by_launch_type = data.get('by_launch_type', [])
-        by_controller_version = data.get('by_controller_version', [])
+        by_ansible_version = data.get('by_ansible_version', [])
         job_host_pairs_total = data.get('job_host_pairs_total', 0)
 
         # Handle empty data
-        if not by_job_type and not by_launch_type and not by_controller_version:
+        if not by_job_type and not by_launch_type and not by_ansible_version:
             return {
                 'json': {
                     'by_job_type': [],
                     'by_launch_type': [],
-                    'by_controller_version': [],
+                    'by_ansible_version': [],
                     'job_host_pairs_total': job_host_pairs_total,
                 },
             }
 
         # Drop list columns from stats (we only need the computed totals, not the raw lists)
-        for stats_list in [by_job_type, by_launch_type, by_controller_version]:
+        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
             for item in stats_list:
                 # Drop list columns that were used for deduplication
                 for col in ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']:
@@ -357,7 +356,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         json_data = {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
-            'by_controller_version': by_controller_version,
+            'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
         }
 
