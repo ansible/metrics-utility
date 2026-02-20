@@ -674,6 +674,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_EE_default_total' in statistics
     assert 'rollup_period_EE_custom_total' in statistics
     # Validate execution_environments_total is sum of default and custom
+    # This works for both None and 0 cases (0 is not None, so it will be validated)
     if statistics['rollup_period_execution_environments_total'] is not None:
         assert statistics['rollup_period_execution_environments_total'] == (
             (statistics['rollup_period_EE_default_total'] or 0) + (statistics['rollup_period_EE_custom_total'] or 0)
@@ -702,10 +703,11 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_task_ignored_total' in statistics
 
     # All statistics should be None for empty data (except counts which should be 0)
+    # Execution environments return 0 for empty data (not None)
     # Event-related fields are missing when there are no events, so we don't check them here
-    assert statistics['rollup_period_execution_environments_total'] is None
-    assert statistics['rollup_period_EE_default_total'] is None
-    assert statistics['rollup_period_EE_custom_total'] is None
+    assert statistics['rollup_period_execution_environments_total'] == 0, 'execution_environments_total should be 0 for empty data'
+    assert statistics['rollup_period_EE_default_total'] == 0, 'EE_default_total should be 0 for empty data'
+    assert statistics['rollup_period_EE_custom_total'] == 0, 'EE_custom_total should be 0 for empty data'
     assert statistics['rollup_period_jobs_total'] is None
     assert statistics['rollup_period_jobs_successful'] is None, 'jobs_successful should be None for empty data'
     assert statistics['rollup_period_jobs_failed'] is None, 'jobs_failed should be None for empty data'

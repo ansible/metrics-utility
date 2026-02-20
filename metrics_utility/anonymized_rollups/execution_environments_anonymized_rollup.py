@@ -47,11 +47,13 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         Safeguard: if data is a dataframe, call prepare on it first.
         """
         if data is None:
-            return {'json': {
-                'execution_environments_total': 0,
-                'execution_environments_default_total': 0,
-                'execution_environments_custom_total': 0,
-            }}
+            return {
+                'json': {
+                    'execution_environments_total': 0,
+                    'execution_environments_default_total': 0,
+                    'execution_environments_custom_total': 0,
+                }
+            }
         if isinstance(data, pd.DataFrame):
             data = self.prepare(data)
         return {'json': data}

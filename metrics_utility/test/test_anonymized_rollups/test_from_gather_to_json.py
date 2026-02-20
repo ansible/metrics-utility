@@ -444,11 +444,11 @@ def _validate_table_metadata_structure(json_data):
     print('--- Validating table_metadata structure ---')
     assert 'table_metadata' in json_data, 'Should have table_metadata at top level'
     table_metadata = json_data['table_metadata']
-    
+
     # table_metadata can be empty dict if no data, or contain the structure
     if table_metadata:
         assert isinstance(table_metadata, dict), 'table_metadata should be a dictionary'
-        
+
         # Check for expected fields if data exists
         if 'total_estimated_row_count' in table_metadata:
             assert isinstance(table_metadata['total_estimated_row_count'], int), 'total_estimated_row_count should be an integer'
@@ -477,18 +477,18 @@ def _validate_table_metadata_values(json_data):
     """Validate table_metadata actual values."""
     print('--- Validating table_metadata data values ---')
     table_metadata = json_data.get('table_metadata', {})
-    
+
     if not table_metadata:
         return
-    
+
     # If table_metadata exists, validate expected tables are present
     if 'tables' in table_metadata and table_metadata['tables']:
         table_names = [t['tablename'] for t in table_metadata['tables']]
         expected_tables = ['main_jobevent', 'main_unifiedjob', 'main_jobhostsummary']
-        
+
         for expected_table in expected_tables:
             assert expected_table in table_names, f'Should have {expected_table} in table_metadata'
-        
+
         # Validate totals match sum of individual tables
         if 'total_estimated_row_count' in table_metadata and 'tables' in table_metadata:
             sum_row_count = sum(t.get('estimated_row_count', 0) for t in table_metadata['tables'])
@@ -496,12 +496,11 @@ def _validate_table_metadata_values(json_data):
                 f'total_estimated_row_count should equal sum of table row counts: '
                 f'expected={sum_row_count}, got={table_metadata["total_estimated_row_count"]}'
             )
-        
+
         if 'total_size_bytes' in table_metadata and 'tables' in table_metadata:
             sum_total_size = sum(t.get('total_size_bytes', 0) for t in table_metadata['tables'])
             assert table_metadata['total_size_bytes'] == sum_total_size, (
-                f'total_size_bytes should equal sum of table sizes: '
-                f'expected={sum_total_size}, got={table_metadata["total_size_bytes"]}'
+                f'total_size_bytes should equal sum of table sizes: expected={sum_total_size}, got={table_metadata["total_size_bytes"]}'
             )
 
 

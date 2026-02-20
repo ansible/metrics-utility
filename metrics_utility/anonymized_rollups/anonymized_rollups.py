@@ -464,7 +464,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     return flattened
 
 
-def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, table_metadata_rollup, salt):
+def anonymize_rollups(
+    events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, table_metadata_rollup, salt
+):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
 

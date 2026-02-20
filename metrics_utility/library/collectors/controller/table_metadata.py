@@ -22,9 +22,9 @@ def table_metadata(*, db=None):
         WHERE c.relname = 'main_jobevent'
           AND c.relkind = 'p'
         GROUP BY c.oid, c.relname
-        
+        --
         UNION ALL
-        
+        --
         -- Regular table: direct reltuples and sizes
         SELECT
             'public'::text AS schemaname,
@@ -37,9 +37,9 @@ def table_metadata(*, db=None):
         JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
         WHERE c.relname = 'main_unifiedjob'
           AND c.relkind = 'r'
-        
+        --
         UNION ALL
-        
+        --
         -- Regular table: direct reltuples and sizes
         SELECT
             'public'::text AS schemaname,
@@ -53,5 +53,5 @@ def table_metadata(*, db=None):
         WHERE c.relname = 'main_jobhostsummary'
           AND c.relkind = 'r'
     """
-    
+
     return copy_table(db=db, query=query)

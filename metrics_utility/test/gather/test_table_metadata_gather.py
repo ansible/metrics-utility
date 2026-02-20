@@ -21,7 +21,7 @@ def test_table_metadata_gather():
     print('\n' + '-' * 80)
     print('Summary:')
     print('-' * 80)
-    
+
     # Helper function to format bytes
     def format_bytes(bytes_val):
         if bytes_val is None or pd.isna(bytes_val):
@@ -32,7 +32,7 @@ def test_table_metadata_gather():
                 return f'{bytes_val:.2f} {unit}'
             bytes_val /= 1024.0
         return f'{bytes_val:.2f} PB'
-    
+
     # Print formatted summary
     for _, row in df.iterrows():
         table_name = row['tablename']
@@ -40,20 +40,20 @@ def test_table_metadata_gather():
         total_size = row.get('total_size_bytes')
         table_size = row.get('table_size_bytes')
         indexes_size = row.get('indexes_size_bytes')
-        
+
         print(f'\nTable: {table_name}')
         if pd.isna(estimated_rows):
-            print(f'  Estimated Rows:  N/A')
+            print('  Estimated Rows:  N/A')
         elif estimated_rows < 0:
             print(f'  Estimated Rows:  {int(estimated_rows)} (no statistics collected)')
         else:
             print(f'  Estimated Rows:  {int(estimated_rows):,}')
-        
+
         if total_size is not None and not pd.isna(total_size):
             print(f'  Total Size:      {format_bytes(total_size)} ({int(total_size):,} bytes)')
         if table_size is not None and not pd.isna(table_size):
             print(f'  Table Size:       {format_bytes(table_size)} ({int(table_size):,} bytes)')
         if indexes_size is not None and not pd.isna(indexes_size):
             print(f'  Indexes Size:    {format_bytes(indexes_size)} ({int(indexes_size):,} bytes)')
-    
+
     print('=' * 80 + '\n')
