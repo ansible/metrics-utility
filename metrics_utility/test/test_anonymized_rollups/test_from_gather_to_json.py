@@ -521,15 +521,15 @@ def _validate_controller_versions(json_data):
     assert 'controller_versions' in json_data, 'Should have controller_versions at top level'
     controller_versions = json_data['controller_versions']
     assert isinstance(controller_versions, list), 'controller_versions should be a list'
-    
+
     # Validate that all versions are valid version strings
     for version in controller_versions:
         assert isinstance(version, str), f'Each controller version should be a string, got {type(version)}'
         assert _is_valid_version(version), f'Controller version should contain numbers and dots, got {version}'
-    
+
     # Validate that versions are sorted (as per controller_version_service collector)
     assert controller_versions == sorted(controller_versions), 'controller_versions should be sorted in ascending order'
-    
+
     # Based on test data, we expect specific versions
     expected_versions = ['1.0', '23.5.0', '24.1.0', '24.2.0', '4.7.2']
     assert len(controller_versions) == len(expected_versions), (
@@ -557,7 +557,15 @@ def cleanup_glob():
 
 def test_empty_data(cleanup_glob):
     compute_anonymized_rollup_from_raw_data(
-        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': [], 'credentials': [], 'table_metadata': [], 'controller_version': []},
+        {
+            'unified_jobs': [],
+            'job_host_summary': [],
+            'main_jobevent': [],
+            'execution_environments': [],
+            'credentials': [],
+            'table_metadata': [],
+            'controller_version': [],
+        },
         'salt',
     )
 

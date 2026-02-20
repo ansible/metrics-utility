@@ -5,7 +5,7 @@ from ..util import collector, copy_table
 def controller_version_service(*, db=None):
     """
     Collect distinct controller versions from enabled instances.
-    
+
     Returns a list of controller versions found in main_instance table
     where enabled = true and version is not null/empty.
     """
