@@ -1,3 +1,5 @@
+import pandas as pd
+
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 
 
@@ -10,26 +12,16 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('execution_environments')
         self.collector_names = ['execution_environments']
 
-    # Prepare and merge just simply pick the latest value, its snapshot collector
     def prepare(self, dataframe):
-        return dataframe
-
-    def merge(self, dataframe_all, dataframe_new):
-        return dataframe_new
-
-    def base(self, dataframe):
         """
-        Number of execution enviornment configured in the controller
-        Ratio of Default EE vs Custom EE
+        Transform dataframe to JSON structure with totals for managed, unmanaged and all EE.
         """
-
-        # default vs custom EE - field Managed in table (true for default).
-        # simple count of rows that has managed = true
-
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
             return {
-                'json': {},
+                'execution_environments_total': 0,
+                'execution_environments_default_total': 0,
+                'execution_environments_custom_total': 0,
             }
 
         execution_environments_total = int(len(dataframe))
@@ -37,13 +29,29 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         execution_environments_default_total = int(dataframe['managed'].sum())
         execution_environments_custom_total = execution_environments_total - execution_environments_default_total
 
-        # Prepare JSON data (same as rollup for scalar values)
-        json_data = {
+        return {
             'execution_environments_total': execution_environments_total,
             'execution_environments_default_total': execution_environments_default_total,
             'execution_environments_custom_total': execution_environments_custom_total,
         }
 
-        return {
-            'json': json_data,
-        }
+    def merge(self, data_all, data_new):
+        """
+        For snapshot collectors, always pick new data (no merging needed).
+        """
+        return data_new
+
+    def base(self, data):
+        """
+        Returns the data as-is (data is already computed by prepare).
+        Safeguard: if data is a dataframe, call prepare on it first.
+        """
+        if data is None:
+            return {'json': {
+                'execution_environments_total': 0,
+                'execution_environments_default_total': 0,
+                'execution_environments_custom_total': 0,
+            }}
+        if isinstance(data, pd.DataFrame):
+            data = self.prepare(data)
+        return {'json': data}

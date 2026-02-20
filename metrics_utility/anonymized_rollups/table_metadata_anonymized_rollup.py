@@ -1,3 +1,5 @@
+import pandas as pd
+
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 
 
@@ -10,53 +12,38 @@ class TableMetadataAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('table_metadata')
         self.collector_names = ['table_metadata']
 
-    # Prepare and merge just simply pick the latest value, its snapshot collector
     def prepare(self, dataframe):
-        return dataframe
-
-    def merge(self, dataframe_all, dataframe_new):
-        return dataframe_new
-
-    def base(self, dataframe):
         """
-        Table metadata statistics:
-        - Total estimated row count across all tables
-        - Total size bytes across all tables
-        - Per-table statistics (row count, sizes)
+        Transform dataframe to JSON structure with dictionary of statistics prefixed by table name.
         """
-
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
-            return {
-                'json': {},
-            }
+            return {}
 
-        # Compute totals across all tables
-        total_estimated_row_count = int(dataframe['estimated_row_count'].sum())
-        total_size_bytes = int(dataframe['total_size_bytes'].sum())
-        total_table_size_bytes = int(dataframe['table_size_bytes'].sum())
-        total_indexes_size_bytes = int(dataframe['indexes_size_bytes'].sum())
-
-        # Per-table statistics
-        tables_data = []
+        # Transform dataframe into dict with table-name-prefixed keys
+        tables_data = {}
         for _, row in dataframe.iterrows():
-            tables_data.append({
-                'tablename': row['tablename'],
-                'estimated_row_count': int(row['estimated_row_count']),
-                'total_size_bytes': int(row['total_size_bytes']),
-                'table_size_bytes': int(row['table_size_bytes']),
-                'indexes_size_bytes': int(row['indexes_size_bytes']),
-            })
+            table_name = row['tablename']
+            tables_data[f'{table_name}_estimated_row_count'] = int(row['estimated_row_count'])
+            tables_data[f'{table_name}_total_size_bytes'] = int(row['total_size_bytes'])
+            tables_data[f'{table_name}_table_size_bytes'] = int(row['table_size_bytes'])
+            tables_data[f'{table_name}_indexes_size_bytes'] = int(row['indexes_size_bytes'])
 
-        # Prepare JSON data
-        json_data = {
-            'total_estimated_row_count': total_estimated_row_count,
-            'total_size_bytes': total_size_bytes,
-            'total_table_size_bytes': total_table_size_bytes,
-            'total_indexes_size_bytes': total_indexes_size_bytes,
-            'tables': tables_data,
-        }
+        return tables_data
 
-        return {
-            'json': json_data,
-        }
+    def merge(self, data_all, data_new):
+        """
+        For snapshot collectors, always pick new data (no merging needed).
+        """
+        return data_new
+
+    def base(self, data):
+        """
+        Returns the data as-is (data is already computed by prepare).
+        Safeguard: if data is a dataframe, call prepare on it first.
+        """
+        if data is None:
+            return {'json': {}}
+        if isinstance(data, pd.DataFrame):
+            data = self.prepare(data)
+        return {'json': data}
