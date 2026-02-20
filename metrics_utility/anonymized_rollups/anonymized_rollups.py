@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.controller_version_anonymized_rollup import ControllerVersionAnonymizedRollup
 from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
@@ -36,6 +37,8 @@ def create_anonymized_object(rollup_name: str):
         return CredentialsAnonymizedRollup()
     elif rollup_name == 'table_metadata':
         return TableMetadataAnonymizedRollup()
+    elif rollup_name == 'controller_version':
+        return ControllerVersionAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
@@ -382,6 +385,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
       - table_metadata: object with table metadata statistics
+      - controller_versions: array of controller versions
 
     Note: modules_used_per_playbook is computed but not included in final output.
     """
@@ -391,6 +395,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
     table_metadata_root = data.get('table_metadata', {})
+    controller_version_root = data.get('controller_version', [])
 
     # Extract data structures
     credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
@@ -453,6 +458,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_ansible_version': jobs_by_ansible_version_merged,
         'collections_versions': collections_versions,
         'table_metadata': table_metadata_root,
+        'controller_versions': controller_version_root if isinstance(controller_version_root, list) else [],
     }
 
     # Only include event-related arrays if there are events
@@ -465,7 +471,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def anonymize_rollups(
-    events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, table_metadata_rollup, salt
+    events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, table_metadata_rollup, controller_version_rollup, salt
 ):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
@@ -477,6 +483,7 @@ def anonymize_rollups(
         job_host_summary_rollup: Job host summary statistics
         credentials_rollup: Credentials statistics
         table_metadata_rollup: Table metadata statistics
+        controller_version_rollup: Controller version statistics
         salt: Salt string for hashing sensitive data
 
     Returns:
@@ -489,6 +496,7 @@ def anonymize_rollups(
         'job_host_summary': job_host_summary_rollup,
         'credentials': credentials_rollup,
         'table_metadata': table_metadata_rollup,
+        'controller_version': controller_version_rollup,
     }
 
     # First flatten the nested structure
@@ -519,6 +527,9 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     table_metadata = load_anonymized_rollup_data(TableMetadataAnonymizedRollup(), input_data.get('table_metadata', []))
     table_metadata_result = TableMetadataAnonymizedRollup().base(table_metadata)
 
+    controller_version = load_anonymized_rollup_data(ControllerVersionAnonymizedRollup(), input_data.get('controller_version', []))
+    controller_version_result = ControllerVersionAnonymizedRollup().base(controller_version)
+
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'],
         execution_environments_result['json'],
@@ -526,6 +537,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
         job_host_summary_result['json'],
         credentials_result['json'],
         table_metadata_result['json'],
+        controller_version_result['json'],
         salt,
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)

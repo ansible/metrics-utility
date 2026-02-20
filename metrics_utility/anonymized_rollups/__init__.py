@@ -9,6 +9,7 @@ from .anonymized_rollups import (
 )
 from .base_anonymized_rollup import BaseAnonymizedRollup
 from .compute_anonymized_rollup import compute_anonymized_rollup
+from .controller_version_anonymized_rollup import ControllerVersionAnonymizedRollup
 from .credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from .events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from .execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
@@ -20,6 +21,7 @@ from .table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 
 __all__ = [
     'BaseAnonymizedRollup',
+    'ControllerVersionAnonymizedRollup',
     'CredentialsAnonymizedRollup',
     'EventModulesAnonymizedRollup',
     'ExecutionEnvironmentsAnonymizedRollup',
