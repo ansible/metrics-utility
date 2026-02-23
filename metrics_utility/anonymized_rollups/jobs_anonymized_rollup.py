@@ -147,6 +147,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return organizations, job_ids, forks_total, scm_types
 
     def prepare(self, dataframe):
+        # Convert ID columns to strings at the beginning
+        dataframe = self._convert_id_columns_to_strings(dataframe)
+        
         # Filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
 

@@ -24,6 +24,9 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
         Batch processing that extracts unique credential types in this batch.
         Returns a dictionary with a list of unique credential types.
         """
+        # Convert ID columns to strings at the beginning
+        dataframe = self._convert_id_columns_to_strings(dataframe)
+        
         if dataframe.empty:
             return sanitize_json({
                 'credential_types': [],

@@ -568,6 +568,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
         """Prepare dataframe for aggregation by filtering, transforming, and computing statistics."""
+        # Convert ID columns to strings at the beginning
+        dataframe = self._convert_id_columns_to_strings(dataframe)
+        
         collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
 
         event_lists = self._get_event_lists()

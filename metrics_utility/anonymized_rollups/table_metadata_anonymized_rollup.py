@@ -17,6 +17,10 @@ class TableMetadataAnonymizedRollup(BaseAnonymizedRollup):
         """
         Transform dataframe to JSON structure with dictionary of statistics prefixed by table name.
         """
+        # Convert ID columns to strings at the beginning
+        if dataframe is not None and not dataframe.empty:
+            dataframe = self._convert_id_columns_to_strings(dataframe)
+        
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
             return sanitize_json({})
