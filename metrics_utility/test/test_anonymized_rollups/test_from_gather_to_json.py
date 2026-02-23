@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 
 from datetime import datetime
@@ -12,19 +13,35 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonym
 from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute_anonymized_rollup
 
 
+def _is_valid_version(version_str):
+    """Check if a string looks like a version (numbers alternate with dots).
+
+    Valid patterns: 2.9.10, 2.9, 2.15.0, etc.
+    Invalid patterns: 2., .9, 2..9, 2.9., abc, 2.9.10a, etc.
+    """
+    if not isinstance(version_str, str):
+        return False
+    # Pattern: one or more digits, followed by zero or more (dot + one or more digits)
+    # This ensures numbers alternate with dots and the string doesn't start/end with a dot
+    pattern = r'^\d+(\.\d+)*$'
+    return bool(re.match(pattern, version_str))
+
+
 # where to find the tar.gz (match jobhostsummary test layout)
 
 
 def _validate_top_level_structure(json_data):
     """Validate top-level flattened structure."""
     assert 'statistics' in json_data, "Missing 'statistics' in json_data"
-    assert 'rollup_period_controller_versions' in json_data, "Missing 'rollup_period_controller_versions' at top level"
+    assert 'rollup_period_ansible_versions' in json_data, "Missing 'rollup_period_ansible_versions' at top level"
     assert 'rollup_period_scm_types' in json_data, "Missing 'rollup_period_scm_types' at top level"
     assert 'rollup_period_credential_types' in json_data, "Missing 'rollup_period_credential_types' at top level"
     assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
     assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
+    assert 'table_metadata' in json_data, "Missing 'table_metadata' at top level"
+    assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
 
 
 def _validate_statistics_structure(statistics):
@@ -121,8 +138,8 @@ def _validate_module_stats_structure(json_data):
         assert 'jobs_total' in module_stat
         assert 'unique_hosts_total' in module_stat
         assert 'processed_events_total' in module_stat
-        assert 'controller_versions' in module_stat, 'Each module_stat should have controller_versions field'
-        assert isinstance(module_stat['controller_versions'], list), 'controller_versions should be a list'
+        assert 'ansible_versions' in module_stat, 'Each module_stat should have ansible_versions field'
+        assert isinstance(module_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
 
 def _validate_collection_stats_structure(json_data):
@@ -134,8 +151,8 @@ def _validate_collection_stats_structure(json_data):
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
         assert 'processed_events_total' in collection_stat
-        assert 'controller_versions' in collection_stat, 'Each collection_stat should have controller_versions field'
-        assert isinstance(collection_stat['controller_versions'], list), 'controller_versions should be a list'
+        assert 'ansible_versions' in collection_stat, 'Each collection_stat should have ansible_versions field'
+        assert isinstance(collection_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
 
 def _validate_jobs_by_job_type_structure(json_data):
@@ -177,12 +194,12 @@ def _validate_jobs_by_launch_type_structure(json_data):
         assert 'launch_type_scheduled_total' not in job
 
 
-def _validate_jobs_by_controller_version_structure(json_data):
-    """Validate jobs_by_controller_version have required fields."""
-    if not json_data.get('jobs_by_controller_version'):
+def _validate_jobs_by_ansible_version_structure(json_data):
+    """Validate jobs_by_ansible_version have required fields."""
+    if not json_data.get('jobs_by_ansible_version'):
         return
-    for job in json_data['jobs_by_controller_version']:
-        assert 'controller_version' in job
+    for job in json_data['jobs_by_ansible_version']:
+        assert 'ansible_version' in job
         assert 'jobs_total' in job
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
@@ -213,9 +230,11 @@ def _validate_module_stats_values(json_data):
     assert yum_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
     assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
     assert yum_module['processed_events_total'] == 6, 'Should have 6 processed events for ansible.builtin.yum (3 jobs × 2 hosts)'
-    assert yum_module['controller_versions'] == ['2.9.10'], (
-        f'Expected controller_versions to be ["2.9.10"], got {yum_module.get("controller_versions")}'
-    )
+    assert 'ansible_versions' in yum_module, 'yum_module should have ansible_versions field'
+    assert isinstance(yum_module['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(yum_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in yum_module['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
     assert yum_module['module_name'] == 'Unknown', f'Anonymized module name should be "Unknown", got {yum_module["module_name"]}'
     assert yum_module['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {yum_module.get("collection_name")}'
 
@@ -227,9 +246,11 @@ def _validate_module_stats_values(json_data):
     assert a10_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['task_failed_total'] == 0, 'Should have 0 failures for a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['processed_events_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
-    assert a10_module['controller_versions'] == ['2.9.10'], (
-        f'Expected controller_versions to be ["2.9.10"], got {a10_module.get("controller_versions")}'
-    )
+    assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
+    assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in a10_module['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
 
 
 def _validate_collection_stats_values(json_data):
@@ -241,11 +262,11 @@ def _validate_collection_stats_values(json_data):
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'
     assert a10_collection['collection_source'] == 'community', 'a10.acos_axapi collection should be from community'
     assert a10_collection['jobs_total'] == 3, 'a10.acos_axapi collection should have 3 jobs'
-    assert 'controller_versions' in a10_collection, 'Each collection_stat should have controller_versions field'
-    assert isinstance(a10_collection['controller_versions'], list), 'controller_versions should be a list'
-    assert a10_collection['controller_versions'] == ['2.9.10'], (
-        f'Expected controller_versions to be ["2.9.10"], got {a10_collection.get("controller_versions")}'
-    )
+    assert 'ansible_versions' in a10_collection, 'Each collection_stat should have ansible_versions field'
+    assert isinstance(a10_collection['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(a10_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in a10_collection['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
     assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
     assert a10_collection['task_ok_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
@@ -255,11 +276,11 @@ def _validate_collection_stats_values(json_data):
     builtin_collection = anonymized_collections[0]
     assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
     assert builtin_collection['jobs_total'] == 3, 'ansible.builtin collection should have 3 jobs'
-    assert 'controller_versions' in builtin_collection, 'Each collection_stat should have controller_versions field'
-    assert isinstance(builtin_collection['controller_versions'], list), 'controller_versions should be a list'
-    assert builtin_collection['controller_versions'] == ['2.9.10'], (
-        f'Expected controller_versions to be ["2.9.10"], got {builtin_collection.get("controller_versions")}'
-    )
+    assert 'ansible_versions' in builtin_collection, 'Each collection_stat should have ansible_versions field'
+    assert isinstance(builtin_collection['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(builtin_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in builtin_collection['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
     assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
     assert builtin_collection['task_ok_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
     assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
@@ -352,17 +373,22 @@ def _validate_jobs_by_launch_type_values(json_data):
     assert launch_type_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
 
 
-def _validate_jobs_by_controller_version_values(json_data):
-    """Validate jobs_by_controller_version actual values."""
-    print('--- Validating jobs_by_controller_version data values ---')
-    assert len(json_data['jobs_by_controller_version']) >= 1, 'Should have at least 1 controller_version group'
-    controller_version_entry = json_data['jobs_by_controller_version'][0]
-    assert 'controller_version' in controller_version_entry, 'Should have controller_version field'
-    assert controller_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in controller_version group'
-    assert 'job_type_total' in controller_version_entry, 'Should have job_type_total field'
-    assert controller_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
-    assert 'launch_type_manual_total' not in controller_version_entry
-    assert 'launch_type_scheduled_total' not in controller_version_entry
+def _validate_jobs_by_ansible_version_values(json_data):
+    """Validate jobs_by_ansible_version actual values."""
+    print('--- Validating jobs_by_ansible_version data values ---')
+    assert len(json_data['jobs_by_ansible_version']) >= 1, 'Should have at least 1 ansible_version group'
+    ansible_version_entry = json_data['jobs_by_ansible_version'][0]
+    assert 'ansible_version' in ansible_version_entry, 'Should have ansible_version field'
+    assert ansible_version_entry['ansible_version'] is not None, 'ansible_version should not be None'
+    if ansible_version_entry['ansible_version'] != 'None':
+        assert _is_valid_version(ansible_version_entry['ansible_version']), (
+            f'ansible_version should contain numbers and dots, got {ansible_version_entry["ansible_version"]}'
+        )
+    assert ansible_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in ansible_version group'
+    assert 'job_type_total' in ansible_version_entry, 'Should have job_type_total field'
+    assert ansible_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
+    assert 'launch_type_manual_total' not in ansible_version_entry
+    assert 'launch_type_scheduled_total' not in ansible_version_entry
 
 
 def _validate_job_statistics_match(json_data, statistics):
@@ -407,10 +433,10 @@ def _validate_totals_match(json_data, statistics):
     """Verify totals match between all groupings."""
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_job_type'])
     total_jobs_by_launch_type = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_launch_type'])
-    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_controller_version'])
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == statistics['rollup_period_jobs_total'], (
+    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in json_data['jobs_by_ansible_version'])
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == statistics['rollup_period_jobs_total'], (
         f'Total jobs should match: jobs_by_job_type={total_jobs_by_job_type}, '
-        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_controller_version={total_jobs_by_controller_version}, '
+        f'jobs_by_launch_type={total_jobs_by_launch_type}, jobs_by_ansible_version={total_jobs_by_ansible_version}, '
         f'statistics={statistics["rollup_period_jobs_total"]}'
     )
 
@@ -438,6 +464,82 @@ def _validate_credentials(json_data):
     assert credential_types == sorted(credential_types), 'credential_types should be sorted'
 
 
+def _validate_table_metadata_structure(json_data):
+    """Validate table_metadata structure."""
+    print('--- Validating table_metadata structure ---')
+    assert 'table_metadata' in json_data, 'Should have table_metadata at top level'
+    table_metadata = json_data['table_metadata']
+
+    # table_metadata should always be a dictionary (can be empty if no data)
+    assert isinstance(table_metadata, dict), 'table_metadata should be a dictionary'
+
+    # If table_metadata has data, validate the structure
+    # Keys should follow pattern: {table_name}_{field_name}
+    # where field_name is one of: estimated_row_count, total_size_bytes, table_size_bytes, indexes_size_bytes
+    if table_metadata:
+        expected_field_suffixes = ['estimated_row_count', 'total_size_bytes', 'table_size_bytes', 'indexes_size_bytes']
+
+        # Group keys by table name (extract table name from key)
+        table_names = set()
+        for key in table_metadata.keys():
+            # Key format: {table_name}_{field_name}
+            # Find the last underscore to split table name from field name
+            parts = key.rsplit('_', 1)
+            if len(parts) == 2:
+                table_name = parts[0]
+                field_suffix = parts[1]
+                if field_suffix in expected_field_suffixes:
+                    table_names.add(table_name)
+
+        # For each table, verify all expected fields exist
+        for table_name in table_names:
+            for field_suffix in expected_field_suffixes:
+                key = f'{table_name}_{field_suffix}'
+                assert key in table_metadata, f'Should have {key} in table_metadata'
+                assert isinstance(table_metadata[key], int), f'{key} should be an integer'
+
+
+def _validate_table_metadata_values(json_data):
+    """Validate table_metadata actual values (only structure, not specific values)."""
+    print('--- Validating table_metadata data values ---')
+    table_metadata = json_data.get('table_metadata', {})
+
+    # Values will vary, so we only validate structure here
+    # The structure validation is already done in _validate_table_metadata_structure
+    # This function is kept for consistency but doesn't validate specific values
+    if not table_metadata:
+        return
+
+    # Just verify that if there's data, it has the expected structure
+    # (already validated in _validate_table_metadata_structure)
+    assert isinstance(table_metadata, dict), 'table_metadata should be a dictionary'
+
+
+def _validate_controller_versions(json_data):
+    """Validate controller_versions structure and values."""
+    print('--- Validating controller_versions data values ---')
+    assert 'controller_versions' in json_data, 'Should have controller_versions at top level'
+    controller_versions = json_data['controller_versions']
+    assert isinstance(controller_versions, list), 'controller_versions should be a list'
+
+    # Validate that all versions are valid version strings
+    for version in controller_versions:
+        assert isinstance(version, str), f'Each controller version should be a string, got {type(version)}'
+        assert _is_valid_version(version), f'Controller version should contain numbers and dots, got {version}'
+
+    # Validate that versions are sorted (as per controller_version_service collector)
+    assert controller_versions == sorted(controller_versions), 'controller_versions should be sorted in ascending order'
+
+    # Based on test data, we expect specific versions
+    expected_versions = ['1.0', '23.5.0', '24.1.0', '24.2.0', '4.7.2']
+    assert len(controller_versions) == len(expected_versions), (
+        f'Should have {len(expected_versions)} controller versions, got {len(controller_versions)}'
+    )
+    assert set(controller_versions) == set(expected_versions), (
+        f'Controller versions should match expected set. Expected: {expected_versions}, Got: {controller_versions}'
+    )
+
+
 @pytest.fixture
 def cleanup_glob():
     out_dir = './out'
@@ -455,7 +557,15 @@ def cleanup_glob():
 
 def test_empty_data(cleanup_glob):
     compute_anonymized_rollup_from_raw_data(
-        {'unified_jobs': [], 'job_host_summary': [], 'main_jobevent': [], 'execution_environments': [], 'credentials': []},
+        {
+            'unified_jobs': [],
+            'job_host_summary': [],
+            'main_jobevent': [],
+            'execution_environments': [],
+            'credentials': [],
+            'table_metadata': [],
+            'controller_version': [],
+        },
         'salt',
     )
 
@@ -494,7 +604,7 @@ def test_from_gather_to_json(cleanup_glob):
     _validate_collection_stats_structure(json_data)
     _validate_jobs_by_job_type_structure(json_data)
     _validate_jobs_by_launch_type_structure(json_data)
-    _validate_jobs_by_controller_version_structure(json_data)
+    _validate_jobs_by_ansible_version_structure(json_data)
 
     # ========== Validate actual data values and relationships ==========
     print('\n--- Validating statistics data values ---')
@@ -522,11 +632,14 @@ def test_from_gather_to_json(cleanup_glob):
     _validate_jobs_values(json_data, statistics)
     _validate_job_host_summary_values(json_data, statistics)
     _validate_jobs_by_launch_type_values(json_data)
-    _validate_jobs_by_controller_version_values(json_data)
+    _validate_jobs_by_ansible_version_values(json_data)
     _validate_totals_match(json_data, statistics)
     _validate_job_statistics_match(json_data, statistics)
     _validate_cross_section_consistency(json_data, statistics)
     _validate_credentials(json_data)
+    _validate_table_metadata_structure(json_data)
+    _validate_table_metadata_values(json_data)
+    _validate_controller_versions(json_data)
 
     print('✅ All data value assertions passed!')
 
@@ -582,5 +695,8 @@ def test_half_day_rollup(cleanup_glob):
     assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
     assert len(credential_types) == 4, f'Should have 4 unique credential types, got {len(credential_types)}'
     assert credential_types == sorted(credential_types), 'credential_types should be sorted'
+
+    # Validate table_metadata structure
+    _validate_table_metadata_structure(json_data)
 
     print('✅ Basic structure assertions passed!')

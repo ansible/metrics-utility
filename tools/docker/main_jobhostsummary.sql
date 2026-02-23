@@ -11,8 +11,7 @@ DECLARE
   --
   default_organization_id                           INTEGER;
   default_inventory_id                              INTEGER;
-  default_instance_id                               INTEGER;
-  default_instance_uuid UUID := gen_random_uuid();
+  default_instance_uuid UUID;
   default_unified_job_template_id                   INTEGER;
   -- enable for testing purposes for being able to repeatedly insert data
   --random_suffix    TEXT := substring(md5(random()::text), 1, 5);
@@ -44,10 +43,12 @@ DECLARE
   cloud_credential_type_id INTEGER;
   vault_credential_type_id INTEGER;
   network_credential_type_id INTEGER;
+  custom_credential_type_id INTEGER;
   machine_credential_id INTEGER;
   cloud_credential_id INTEGER;
   vault_credential_id INTEGER;
   network_credential_id INTEGER;
+  custom_credential_id INTEGER;
   --
 BEGIN
   --
@@ -128,58 +129,19 @@ BEGIN
                'default_inventory_' || random_suffix,
                default_inventory_id;
   --
-  -- MAIN_INSTANCE
+  -- Get the instance UUID for the default instance (created in main_instance.sql)
+  -- This instance is used for linking hosts
   --
-  INSERT INTO public.main_instance (
-    uuid,
-    hostname,
-    created,
-    modified,
-    capacity,
-    version,
-    capacity_adjustment,
-    cpu,
-    memory,
-    cpu_capacity,
-    mem_capacity,
-    enabled,
-    managed_by_policy,
-    ip_address,
-    node_type,
-    last_seen,
-    errors,
-    last_health_check,
-    node_state,
-    health_check_started,
-    managed
-  ) VALUES (
-    default_instance_uuid,                      -- generate UUID here
-    'default_host_instance_' || random_suffix,  -- hostname
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- created
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- modified
-    0,                                          -- capacity
-    '1.0',                                      -- version
-    1.00,                                       -- capacity_adjustment
-    1.0,                                        -- cpu
-    1073741824,                                 -- memory (1 GiB)
-    100,                                        -- cpu_capacity
-    1024,                                       -- mem_capacity (MiB)
-    true,                                       -- enabled
-    false,                                      -- managed_by_policy
-    random_ip,                                  -- ip_address
-    'default',                                  -- node_type
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- last_seen
-    '',                                         -- errors
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- last_health_check
-    'running',                                  -- node_state
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- health_check_started
-    true                                        -- managed
-  )
-  RETURNING id INTO default_instance_id;
+  SELECT uuid INTO default_instance_uuid
+  FROM public.main_instance
+  WHERE hostname = 'default_host_instance_' || random_suffix
+  LIMIT 1;
   --
-  RAISE NOTICE 'Inserted Main Instance % with id = %',
-               'default_host_instance_' || random_suffix,
-               default_instance_id;
+  IF default_instance_uuid IS NULL THEN
+    RAISE EXCEPTION 'Default instance with hostname default_host_instance_% not found. Ensure main_instance.sql is loaded before main_jobhostsummary.sql', random_suffix;
+  END IF;
+  --
+  RAISE NOTICE 'Using existing Main Instance with UUID = %', default_instance_uuid;
   --
   -- Fill hosts in loop
   --
@@ -955,11 +917,36 @@ $yaml$,
     )
     RETURNING id INTO network_credential_type_id;
   
-  RAISE NOTICE 'Inserted credential types: Machine=%, Cloud=%, Vault=%, Network=%',
+  -- Insert Custom credential type (managed=false to test filtering)
+  INSERT INTO public.main_credentialtype (
+      created,
+      modified,
+      description,
+      name,
+      kind,
+      managed,
+      inputs,
+      injectors,
+      namespace
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Custom credential type for testing filtering',
+      'My Custom Credential Type',
+      'cloud',
+      FALSE,
+      '{"fields": [{"id": "api_key", "label": "API Key", "type": "string", "secret": true}]}'::jsonb,
+      '{}'::jsonb,
+      NULL
+    )
+    RETURNING id INTO custom_credential_type_id;
+  
+  RAISE NOTICE 'Inserted credential types: Machine=%, Cloud=%, Vault=%, Network=%, Custom=%',
                machine_credential_type_id,
                cloud_credential_type_id,
                vault_credential_type_id,
-               network_credential_type_id;
+               network_credential_type_id,
+               custom_credential_type_id;
   --
   -- Credentials
   --
@@ -1051,11 +1038,34 @@ $yaml$,
     )
     RETURNING id INTO network_credential_id;
   
-  RAISE NOTICE 'Inserted credentials: Machine=%, Cloud=%, Vault=%, Network=%',
+  -- Custom credential (should be filtered out by managed=true filter)
+  INSERT INTO public.main_credential (
+      created,
+      modified,
+      description,
+      name,
+      organization_id,
+      credential_type_id,
+      managed,
+      inputs
+    ) VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+      'Custom credential for testing filtering',
+      'default_custom_credential_' || random_suffix,
+      default_organization_id,
+      custom_credential_type_id,
+      FALSE,
+      '{"api_key": "encrypted_custom_api_key"}'::jsonb
+    )
+    RETURNING id INTO custom_credential_id;
+  
+  RAISE NOTICE 'Inserted credentials: Machine=%, Cloud=%, Vault=%, Network=%, Custom=%',
                machine_credential_id,
                cloud_credential_id,
                vault_credential_id,
-               network_credential_id;
+               network_credential_id,
+               custom_credential_id;
   --
   -- Link credentials to unified jobs
   -- Assign different combinations of credentials to different jobs
@@ -1072,7 +1082,7 @@ $yaml$,
       machine_credential_id
     );
     
-    -- Job 1: Machine + Cloud
+    -- Job 1: Machine + Cloud + Custom (custom should be filtered out)
     IF i = 1 THEN
       INSERT INTO public.main_unifiedjob_credentials (
         unifiedjob_id,
@@ -1080,6 +1090,14 @@ $yaml$,
       ) VALUES (
         unified_job_id,
         cloud_credential_id
+      );
+      -- Add custom credential to job 1 (should be filtered out by managed=true)
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        custom_credential_id
       );
     END IF;
     

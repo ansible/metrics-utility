@@ -239,21 +239,19 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert pd.isna(rec_adhoccommand['job_waiting_time_minimum_seconds'])
     assert rec_adhoccommand['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
-    # Validate controller_versions in by_job_type
+    # Validate ansible_versions in by_job_type
     # 'job' type has jobs 1, 2, 4 with versions: 2.9.0, 2.10.0, 2.12.0
-    assert 'controller_versions' in rec_job, 'Should have controller_versions field in by_job_type'
-    assert rec_job['controller_versions'] == ['2.10.0', '2.12.0', '2.9.0'], (
-        f"Expected ['2.10.0', '2.12.0', '2.9.0'] for job type, got {rec_job['controller_versions']}"
+    assert 'ansible_versions' in rec_job, 'Should have ansible_versions field in by_job_type'
+    assert rec_job['ansible_versions'] == ['2.10.0', '2.12.0', '2.9.0'], (
+        f"Expected ['2.10.0', '2.12.0', '2.9.0'] for job type, got {rec_job['ansible_versions']}"
     )
     # 'workflowjob' type has job 3 with version: 2.11.0
-    assert 'controller_versions' in rec_workflowjob, 'Should have controller_versions field in by_job_type'
-    assert rec_workflowjob['controller_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['controller_versions']}"
-    )
+    assert 'ansible_versions' in rec_workflowjob, 'Should have ansible_versions field in by_job_type'
+    assert rec_workflowjob['ansible_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflowjob type, got {rec_workflowjob['ansible_versions']}"
     # 'adhoccommand' type has job 6 with version: 2.14.0
-    assert 'controller_versions' in rec_adhoccommand, 'Should have controller_versions field in by_job_type'
-    assert rec_adhoccommand['controller_versions'] == ['2.14.0'], (
-        f"Expected ['2.14.0'] for adhoccommand type, got {rec_adhoccommand['controller_versions']}"
+    assert 'ansible_versions' in rec_adhoccommand, 'Should have ansible_versions field in by_job_type'
+    assert rec_adhoccommand['ansible_versions'] == ['2.14.0'], (
+        f"Expected ['2.14.0'] for adhoccommand type, got {rec_adhoccommand['ansible_versions']}"
     )
 
     # ========== Validate by_launch_type aggregations ==========
@@ -333,25 +331,21 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert 'job_type_total' in rec_workflow
     assert 'job_type_total' in rec_callback
 
-    # Validate controller_versions in by_launch_type
+    # Validate ansible_versions in by_launch_type
     # 'manual' launch_type has job 1 with version: 2.9.0
-    assert 'controller_versions' in rec_manual, 'Should have controller_versions field in by_launch_type'
-    assert rec_manual['controller_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {rec_manual['controller_versions']}"
+    assert 'ansible_versions' in rec_manual, 'Should have ansible_versions field in by_launch_type'
+    assert rec_manual['ansible_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {rec_manual['ansible_versions']}"
     # 'scheduled' launch_type has jobs 2, 6 with versions: 2.10.0, 2.14.0
-    assert 'controller_versions' in rec_scheduled, 'Should have controller_versions field in by_launch_type'
-    assert rec_scheduled['controller_versions'] == ['2.10.0', '2.14.0'], (
-        f"Expected ['2.10.0', '2.14.0'] for scheduled launch_type, got {rec_scheduled['controller_versions']}"
+    assert 'ansible_versions' in rec_scheduled, 'Should have ansible_versions field in by_launch_type'
+    assert rec_scheduled['ansible_versions'] == ['2.10.0', '2.14.0'], (
+        f"Expected ['2.10.0', '2.14.0'] for scheduled launch_type, got {rec_scheduled['ansible_versions']}"
     )
     # 'workflow' launch_type has job 3 with version: 2.11.0
-    assert 'controller_versions' in rec_workflow, 'Should have controller_versions field in by_launch_type'
-    assert rec_workflow['controller_versions'] == ['2.11.0'], (
-        f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['controller_versions']}"
-    )
+    assert 'ansible_versions' in rec_workflow, 'Should have ansible_versions field in by_launch_type'
+    assert rec_workflow['ansible_versions'] == ['2.11.0'], f"Expected ['2.11.0'] for workflow launch_type, got {rec_workflow['ansible_versions']}"
     # 'callback' launch_type has job 4 with version: 2.12.0
-    assert 'controller_versions' in rec_callback, 'Should have controller_versions field in by_launch_type'
-    assert rec_callback['controller_versions'] == ['2.12.0'], (
-        f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['controller_versions']}"
-    )
+    assert 'ansible_versions' in rec_callback, 'Should have ansible_versions field in by_launch_type'
+    assert rec_callback['ansible_versions'] == ['2.12.0'], f"Expected ['2.12.0'] for callback launch_type, got {rec_callback['ansible_versions']}"
 
     # Verify totals match between by_job_type and by_launch_type
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in by_job_type)
@@ -360,13 +354,13 @@ def test_jobs_anonymized_rollups_base_aggregation():
         f'Total jobs should match: by_job_type={total_jobs_by_job_type}, by_launch_type={total_jobs_by_launch_type}'
     )
 
-    # ========== Validate by_controller_version aggregations ==========
-    # Result should have 'by_controller_version' list
-    assert 'by_controller_version' in result
+    # ========== Validate by_ansible_version aggregations ==========
+    # Result should have 'by_ansible_version' list
+    assert 'by_ansible_version' in result
 
-    # Extract the by_controller_version list
-    by_controller_version = result['by_controller_version']
-    assert isinstance(by_controller_version, list)
+    # Extract the by_ansible_version list
+    by_ansible_version = result['by_ansible_version']
+    assert isinstance(by_ansible_version, list)
 
     # Expected controller versions from test data (jobs 1-4 and 6, job 5 is filtered out):
     # Job 1: 2.9.0
@@ -375,22 +369,22 @@ def test_jobs_anonymized_rollups_base_aggregation():
     # Job 4: 2.12.0
     # Job 6: 2.14.0
     # So we should have 5 controller versions
-    assert len(by_controller_version) == 5
+    assert len(by_ansible_version) == 5
 
-    # Identify records by controller_version
-    rec_2_9_0 = next((r for r in by_controller_version if r['controller_version'] == '2.9.0'), None)
-    rec_2_10_0 = next((r for r in by_controller_version if r['controller_version'] == '2.10.0'), None)
-    rec_2_11_0 = next((r for r in by_controller_version if r['controller_version'] == '2.11.0'), None)
-    rec_2_12_0 = next((r for r in by_controller_version if r['controller_version'] == '2.12.0'), None)
-    rec_2_14_0 = next((r for r in by_controller_version if r['controller_version'] == '2.14.0'), None)
+    # Identify records by ansible_version
+    rec_2_9_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.9.0'), None)
+    rec_2_10_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.10.0'), None)
+    rec_2_11_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.11.0'), None)
+    rec_2_12_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.12.0'), None)
+    rec_2_14_0 = next((r for r in by_ansible_version if r['ansible_version'] == '2.14.0'), None)
 
-    assert rec_2_9_0 is not None, 'Should have controller_version 2.9.0'
-    assert rec_2_10_0 is not None, 'Should have controller_version 2.10.0'
-    assert rec_2_11_0 is not None, 'Should have controller_version 2.11.0'
-    assert rec_2_12_0 is not None, 'Should have controller_version 2.12.0'
-    assert rec_2_14_0 is not None, 'Should have controller_version 2.14.0'
+    assert rec_2_9_0 is not None, 'Should have ansible_version 2.9.0'
+    assert rec_2_10_0 is not None, 'Should have ansible_version 2.10.0'
+    assert rec_2_11_0 is not None, 'Should have ansible_version 2.11.0'
+    assert rec_2_12_0 is not None, 'Should have ansible_version 2.12.0'
+    assert rec_2_14_0 is not None, 'Should have ansible_version 2.14.0'
 
-    # '2.9.0' controller_version (job 1)
+    # '2.9.0' ansible_version (job 1)
     assert rec_2_9_0['jobs_total'] == 1
     assert rec_2_9_0['jobs_failed_total'] == 0
     assert rec_2_9_0['jobs_never_started_total'] == 0
@@ -399,7 +393,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_9_0['jobs_duration_total_seconds'] == pytest.approx(3.0, rel=1e-6)
     assert rec_2_9_0['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
-    # '2.10.0' controller_version (job 2)
+    # '2.10.0' ansible_version (job 2)
     assert rec_2_10_0['jobs_total'] == 1
     assert rec_2_10_0['jobs_failed_total'] == 1
     assert rec_2_10_0['jobs_never_started_total'] == 0
@@ -408,7 +402,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_10_0['jobs_duration_total_seconds'] == pytest.approx(5.0, rel=1e-6)
     assert rec_2_10_0['job_waiting_time_total_seconds'] == pytest.approx(2.0, rel=1e-6)
 
-    # '2.11.0' controller_version (job 3)
+    # '2.11.0' ansible_version (job 3)
     assert rec_2_11_0['jobs_total'] == 1
     assert rec_2_11_0['jobs_failed_total'] == 0
     assert rec_2_11_0['jobs_never_started_total'] == 0
@@ -417,7 +411,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_11_0['jobs_duration_total_seconds'] == pytest.approx(7.0, rel=1e-6)
     assert rec_2_11_0['job_waiting_time_total_seconds'] == pytest.approx(4.0, rel=1e-6)
 
-    # '2.12.0' controller_version (job 4)
+    # '2.12.0' ansible_version (job 4)
     assert rec_2_12_0['jobs_total'] == 1
     assert rec_2_12_0['jobs_failed_total'] == 0
     assert rec_2_12_0['jobs_never_started_total'] == 0
@@ -426,7 +420,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_12_0['jobs_duration_total_seconds'] == pytest.approx(2.0, rel=1e-6)
     assert rec_2_12_0['job_waiting_time_total_seconds'] == pytest.approx(1.0, rel=1e-6)
 
-    # '2.14.0' controller_version (job 6)
+    # '2.14.0' ansible_version (job 6)
     assert rec_2_14_0['jobs_total'] == 1
     assert rec_2_14_0['jobs_failed_total'] == 1
     assert rec_2_14_0['jobs_never_started_total'] == 1  # Job 6 never started
@@ -435,7 +429,7 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert rec_2_14_0['jobs_duration_total_seconds'] == pytest.approx(0.0, rel=1e-6)
     assert rec_2_14_0['job_waiting_time_total_seconds'] == pytest.approx(0.0, rel=1e-6)
 
-    # Verify that job_type_total is present (counts distinct job types per controller_version)
+    # Verify that job_type_total is present (counts distinct job types per ansible_version)
     assert 'job_type_total' in rec_2_9_0
     assert 'job_type_total' in rec_2_10_0
     assert 'job_type_total' in rec_2_11_0
@@ -450,10 +444,10 @@ def test_jobs_anonymized_rollups_base_aggregation():
     assert 'launch_type_scheduled_total' not in rec_2_14_0
 
     # Verify totals match across all groupings
-    total_jobs_by_controller_version = sum(j.get('jobs_total', 0) for j in by_controller_version)
-    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_controller_version == 5, (
+    total_jobs_by_ansible_version = sum(j.get('jobs_total', 0) for j in by_ansible_version)
+    assert total_jobs_by_job_type == total_jobs_by_launch_type == total_jobs_by_ansible_version == 5, (
         f'Total jobs should match: by_job_type={total_jobs_by_job_type}, '
-        f'by_launch_type={total_jobs_by_launch_type}, by_controller_version={total_jobs_by_controller_version}'
+        f'by_launch_type={total_jobs_by_launch_type}, by_ansible_version={total_jobs_by_ansible_version}'
     )
 
 
@@ -610,27 +604,27 @@ def test_jobs_anonymized_rollups_installed_collections():
         assert collection['job_count'] > 0
 
 
-def _extract_controller_versions_from_jobs(jobs_by_job_type):
+def _extract_ansible_versions_from_jobs(jobs_by_job_type):
     """Extract and merge controller versions from jobs_by_job_type."""
     expected_versions_set = set()
     for job in jobs_by_job_type:
-        controller_versions = job.get('controller_versions', [])
-        if isinstance(controller_versions, list):
-            expected_versions_set.update(controller_versions)
+        ansible_versions = job.get('ansible_versions', [])
+        if isinstance(ansible_versions, list):
+            expected_versions_set.update(ansible_versions)
     return sorted(list(expected_versions_set))
 
 
-def _validate_controller_versions(result, expected_versions):
+def _validate_ansible_versions(result, expected_versions):
     """Validate controller versions at top level."""
-    assert 'rollup_period_controller_versions' in result, 'Should have controller_versions at top level'
-    assert result['rollup_period_controller_versions'] == expected_versions, (
-        f'Expected controller_versions {expected_versions} at top level, got {result["rollup_period_controller_versions"]}'
+    assert 'rollup_period_ansible_versions' in result, 'Should have ansible_versions at top level'
+    assert result['rollup_period_ansible_versions'] == expected_versions, (
+        f'Expected ansible_versions {expected_versions} at top level, got {result["rollup_period_ansible_versions"]}'
     )
-    assert len(result['rollup_period_controller_versions']) == 5, (
-        f'Expected 5 unique controller versions, got {len(result["rollup_period_controller_versions"])}'
+    assert len(result['rollup_period_ansible_versions']) == 5, (
+        f'Expected 5 unique controller versions, got {len(result["rollup_period_ansible_versions"])}'
     )
     for version in ['2.9.0', '2.10.0', '2.11.0', '2.12.0', '2.14.0']:
-        assert version in result['rollup_period_controller_versions']
+        assert version in result['rollup_period_ansible_versions']
 
 
 def _validate_job_statistics(statistics, jobs_by_job_type):
@@ -670,8 +664,8 @@ def _validate_job_statistics(statistics, jobs_by_job_type):
         )
 
 
-def test_jobs_anonymized_rollups_statistics_controller_versions():
-    """Test that controller_versions in statistics is correctly merged from jobs_by_job_type."""
+def test_jobs_anonymized_rollups_statistics_ansible_versions():
+    """Test that ansible_versions in statistics is correctly merged from jobs_by_job_type."""
     import os
     import shutil
 
@@ -718,7 +712,7 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
 
     result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
 
-    # Validate result has controller_versions at top level
+    # Validate result has ansible_versions at top level
     assert 'statistics' in result, 'Should have statistics in result'
     statistics = result['statistics']
     assert 'rollup_period_jobs_successful' in statistics, 'Should have jobs_successful in statistics'
@@ -727,12 +721,12 @@ def test_jobs_anonymized_rollups_statistics_controller_versions():
     assert 'rollup_period_jobs_successful_duration_total_seconds' in statistics, 'Should have jobs_successful_duration_total_seconds in statistics'
     assert 'rollup_period_jobs_failed_duration_total_seconds' in statistics, 'Should have jobs_failed_duration_total_seconds in statistics'
 
-    # Get controller_versions from jobs_by_job_type
+    # Get ansible_versions from jobs_by_job_type
     jobs_by_job_type = result.get('jobs_by_job_type', [])
-    expected_versions = _extract_controller_versions_from_jobs(jobs_by_job_type)
+    expected_versions = _extract_ansible_versions_from_jobs(jobs_by_job_type)
 
-    # Validate controller_versions at top level matches merged values from jobs_by_job_type
-    _validate_controller_versions(result, expected_versions)
+    # Validate ansible_versions at top level matches merged values from jobs_by_job_type
+    _validate_ansible_versions(result, expected_versions)
 
     # Validate new job statistics match sum from jobs_by_job_type
     _validate_job_statistics(statistics, jobs_by_job_type)

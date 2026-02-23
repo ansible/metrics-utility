@@ -94,14 +94,14 @@ def test_big_test2():
         assert launch_type_data['launch_type'] == 'manual', 'launch_type should be "manual"'
         assert launch_type_data['job_type_total'] == 1, f'Should have 1 job type, got {launch_type_data["job_type_total"]}'
 
-        # Verify by_controller_version aggregation (in jobs_by_controller_version)
-        assert 'jobs_by_controller_version' in result, 'result should have jobs_by_controller_version'
-        assert isinstance(result['jobs_by_controller_version'], list), 'jobs_by_controller_version should be a list'
-        assert len(result['jobs_by_controller_version']) == 1, 'Should have 1 controller_version group'
+        # Verify by_ansible_version aggregation (in jobs_by_ansible_version)
+        assert 'jobs_by_ansible_version' in result, 'result should have jobs_by_ansible_version'
+        assert isinstance(result['jobs_by_ansible_version'], list), 'jobs_by_ansible_version should be a list'
+        assert len(result['jobs_by_ansible_version']) == 1, 'Should have 1 ansible_version group'
 
-        controller_version_data = result['jobs_by_controller_version'][0]
-        assert controller_version_data['controller_version'] == '2.15.0', 'controller_version should be "2.15.0"'
-        assert controller_version_data['job_type_total'] == 1, f'Should have 1 job type, got {controller_version_data["job_type_total"]}'
+        ansible_version_data = result['jobs_by_ansible_version'][0]
+        assert ansible_version_data['ansible_version'] == '2.15.0', 'ansible_version should be "2.15.0"'
+        assert ansible_version_data['job_type_total'] == 1, f'Should have 1 job type, got {ansible_version_data["job_type_total"]}'
 
         # Verify execution environments
         assert 'rollup_period_execution_environments_total' in statistics

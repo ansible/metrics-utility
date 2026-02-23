@@ -7,12 +7,14 @@ from typing import Any, Callable, Dict, List
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.controller_version_anonymized_rollup import ControllerVersionAnonymizedRollup
 from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
+from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 
 
 def hash(value, salt):
@@ -33,6 +35,10 @@ def create_anonymized_object(rollup_name: str):
         return ExecutionEnvironmentsAnonymizedRollup()
     elif rollup_name == 'credentials':
         return CredentialsAnonymizedRollup()
+    elif rollup_name == 'table_metadata':
+        return TableMetadataAnonymizedRollup()
+    elif rollup_name == 'controller_version':
+        return ControllerVersionAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
@@ -49,7 +55,7 @@ def anonymize_data(data, salt):
         data: Flattened data structure with keys:
             - jobs_by_job_type: array of job stats (grouped by job_type, merged with job_host_summary and credentials data)
             - jobs_by_launch_type: array of job stats (grouped by launch_type, with default host summary fields)
-            - jobs_by_controller_version: array of job stats (grouped by controller_version, with default host summary fields)
+            - jobs_by_ansible_version: array of job stats (grouped by ansible_version, with default host summary fields)
             - module_stats: array of module statistics
             - collection_stats: array of collection statistics
             - role_stats: array of role statistics
@@ -72,9 +78,9 @@ def anonymize_data(data, salt):
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
-    # anonymize jobs_by_controller_version job template name (if present)
-    if 'jobs_by_controller_version' in data and data['jobs_by_controller_version']:
-        for job in data['jobs_by_controller_version']:
+    # anonymize jobs_by_ansible_version job template name (if present)
+    if 'jobs_by_ansible_version' in data and data['jobs_by_ansible_version']:
+        for job in data['jobs_by_ansible_version']:
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
@@ -125,11 +131,11 @@ def anonymize_data(data, salt):
     # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
 
 
-def _normalize_controller_version_key(controller_version: Any) -> str:
-    """Normalize controller version key for consistent lookup, handling None/NaN values."""
-    if controller_version is None or (isinstance(controller_version, float) and pd.isna(controller_version)):
+def _normalize_ansible_version_key(ansible_version: Any) -> str:
+    """Normalize ansible version key for consistent lookup, handling None/NaN values."""
+    if ansible_version is None or (isinstance(ansible_version, float) and pd.isna(ansible_version)):
         return 'None'
-    return str(controller_version)
+    return str(ansible_version)
 
 
 def _get_default_host_summary_fields() -> Dict[str, int]:
@@ -221,14 +227,14 @@ def _calculate_job_statistics(jobs_by_job_type: List[Dict[str, Any]]) -> Dict[st
     }
 
 
-def _merge_controller_versions(jobs_by_job_type: List[Dict[str, Any]]) -> List[str]:
-    """Merge controller_versions from all job_type groups (unique values, sorted)."""
-    controller_versions_set = set()
+def _merge_ansible_versions(jobs_by_job_type: List[Dict[str, Any]]) -> List[str]:
+    """Merge ansible_versions from all job_type groups (unique values, sorted)."""
+    ansible_versions_set = set()
     for job in jobs_by_job_type:
-        controller_versions = job.get('controller_versions', [])
-        if isinstance(controller_versions, list):
-            controller_versions_set.update(controller_versions)
-    return sorted(list(controller_versions_set)) if controller_versions_set else []
+        ansible_versions = job.get('ansible_versions', [])
+        if isinstance(ansible_versions, list):
+            ansible_versions_set.update(ansible_versions)
+    return sorted(list(ansible_versions_set)) if ansible_versions_set else []
 
 
 def _calculate_execution_environments_total(execution_environments: Dict[str, Any]) -> Any:
@@ -267,16 +273,10 @@ def _build_statistics(
     job_host_pairs_total: Any,
     playbooks_total: int,
     execution_environments_total: Any,
+    has_events: bool = True,
 ) -> Dict[str, Any]:
     """Build statistics dictionary with rollup_period_ prefix for all fields."""
-    return {
-        # from events_modules
-        'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-        'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
-        'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
-        'rollup_period_warnings_total': events_modules.get('warnings_total'),
-        'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
-        'rollup_period_playbooks_total': playbooks_total,
+    statistics = {
         # from execution_environments
         'rollup_period_execution_environments_total': execution_environments_total,
         'rollup_period_EE_default_total': execution_environments.get('execution_environments_default_total'),
@@ -300,6 +300,22 @@ def _build_statistics(
         'rollup_period_unreachable_hosts_total': host_summary_totals['unreachable_hosts_total'],
     }
 
+    # Only include event-related fields if there are events
+    if has_events:
+        statistics.update(
+            {
+                # from events_modules
+                'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
+                'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
+                'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
+                'rollup_period_warnings_total': events_modules.get('warnings_total'),
+                'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
+                'rollup_period_playbooks_total': playbooks_total,
+            }
+        )
+
+    return statistics
+
 
 def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract and transform installed collections from jobs data."""
@@ -315,6 +331,48 @@ def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     ]
 
 
+def _merge_all_jobs_groupings(
+    jobs: Dict[str, Any],
+    job_host_summary_by_job_type: List[Dict[str, Any]],
+    job_host_summary_by_launch_type: List[Dict[str, Any]],
+    job_host_summary_by_ansible_version: List[Dict[str, Any]],
+) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Merge job_host_summary data into all jobs groupings."""
+    # Merge by job_type
+    jhs_lookup_by_job_type: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
+    jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
+    jobs_by_job_type_merged = _merge_jobs_with_host_summary(
+        jobs_by_job_type,
+        jhs_lookup_by_job_type,
+        lambda job: job.get('job_type'),
+    )
+
+    # Merge by launch_type
+    jhs_lookup_by_launch_type: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
+    jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
+    jobs_by_launch_type_merged = _merge_jobs_with_host_summary(
+        jobs_by_launch_type,
+        jhs_lookup_by_launch_type,
+        lambda job: job.get('launch_type'),
+    )
+
+    # Merge by ansible_version
+    jhs_lookup_by_ansible_version: Dict[str, Dict[str, Any]] = {}
+    for jhs in job_host_summary_by_ansible_version:
+        key = _normalize_ansible_version_key(jhs.get('ansible_version'))
+        jhs_lookup_by_ansible_version[key] = jhs
+
+    jobs_by_ansible_version: List[Dict[str, Any]] = jobs.get('by_ansible_version', []) or []
+    jobs_by_ansible_version_merged = _merge_jobs_with_host_summary(
+        jobs_by_ansible_version,
+        jhs_lookup_by_ansible_version,
+        lambda job: job.get('ansible_version'),
+        normalize_key=_normalize_ansible_version_key,
+    )
+
+    return jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged
+
+
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
@@ -324,8 +382,10 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - role_stats: array (copied as-is)
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
-      - jobs_by_controller_version: array (grouped by controller_version, merged with job_host_summary data)
+      - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
       - collections_versions: array of {name, version, job_count} from installed collections
+      - table_metadata: object with table metadata statistics
+      - controller_versions: array of controller versions
 
     Note: modules_used_per_playbook is computed but not included in final output.
     """
@@ -334,20 +394,26 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     jobs = data.get('jobs', {})
     job_host_summary_root = data.get('job_host_summary', {})
     credentials_root = data.get('credentials', {})
+    table_metadata_root = data.get('table_metadata', {})
+    controller_version_root = data.get('controller_version', [])
 
     # Extract data structures
     credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
-    job_host_summary_by_controller_version: List[Dict[str, Any]] = job_host_summary_root.get('by_controller_version', []) or []
+    job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
 
     # Calculate statistics using helper functions
     host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type)
     job_statistics = _calculate_job_statistics(jobs_by_job_type)
     playbooks_total = len(events_modules.get('modules_used_per_playbook_total', {}) or {})
     execution_environments_total = _calculate_execution_environments_total(execution_environments)
-    controller_versions_merged = _merge_controller_versions(jobs_by_job_type)
+    ansible_versions_merged = _merge_ansible_versions(jobs_by_job_type)
+
+    # Check if there are any events
+    collected_events_total = events_modules.get('collected_events_total', 0) or 0
+    has_events = collected_events_total > 0
 
     # Build statistics dictionary
     statistics = _build_statistics(
@@ -359,41 +425,22 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         job_host_summary_root.get('job_host_pairs_total'),
         playbooks_total,
         execution_environments_total,
+        has_events,
     )
 
     # Extract arrays and collections
+    # Only include event-related arrays if there are events
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
     role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
     collections_versions = _extract_collections_versions(jobs)
 
     # Merge job_host_summary into jobs groupings
-    jhs_lookup_by_job_type: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
-    jobs_by_job_type_merged = _merge_jobs_with_host_summary(
-        jobs_by_job_type,
-        jhs_lookup_by_job_type,
-        lambda job: job.get('job_type'),
-    )
-
-    jhs_lookup_by_launch_type: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
-    jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
-    jobs_by_launch_type_merged = _merge_jobs_with_host_summary(
-        jobs_by_launch_type,
-        jhs_lookup_by_launch_type,
-        lambda job: job.get('launch_type'),
-    )
-
-    jhs_lookup_by_controller_version: Dict[str, Dict[str, Any]] = {}
-    for jhs in job_host_summary_by_controller_version:
-        key = _normalize_controller_version_key(jhs.get('controller_version'))
-        jhs_lookup_by_controller_version[key] = jhs
-
-    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('by_controller_version', []) or []
-    jobs_by_controller_version_merged = _merge_jobs_with_host_summary(
-        jobs_by_controller_version,
-        jhs_lookup_by_controller_version,
-        lambda job: job.get('controller_version'),
-        normalize_key=_normalize_controller_version_key,
+    jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged = _merge_all_jobs_groupings(
+        jobs,
+        job_host_summary_by_job_type,
+        job_host_summary_by_launch_type,
+        job_host_summary_by_ansible_version,
     )
 
     # Calculate task statistics and update statistics dictionary
@@ -403,22 +450,36 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     # Assemble the flattened object
     flattened: Dict[str, Any] = {
         'statistics': statistics,
-        'rollup_period_controller_versions': controller_versions_merged,
+        'rollup_period_ansible_versions': ansible_versions_merged,
         'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
         'rollup_period_credential_types': credentials_list if isinstance(credentials_list, list) else [],
-        'module_stats': module_stats,
-        'collection_stats': collection_stats,
-        'role_stats': role_stats,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
-        'jobs_by_controller_version': jobs_by_controller_version_merged,
+        'jobs_by_ansible_version': jobs_by_ansible_version_merged,
         'collections_versions': collections_versions,
+        'table_metadata': table_metadata_root,
+        'controller_versions': controller_version_root if isinstance(controller_version_root, list) else [],
     }
+
+    # Only include event-related arrays if there are events
+    if has_events:
+        flattened['module_stats'] = module_stats
+        flattened['collection_stats'] = collection_stats
+        flattened['role_stats'] = role_stats
 
     return flattened
 
 
-def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs_rollup, job_host_summary_rollup, credentials_rollup, salt):
+def anonymize_rollups(
+    events_modules_rollup,
+    execution_environments_rollup,
+    jobs_rollup,
+    job_host_summary_rollup,
+    credentials_rollup,
+    table_metadata_rollup,
+    controller_version_rollup,
+    salt,
+):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
 
@@ -428,6 +489,8 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         jobs_rollup: Jobs statistics
         job_host_summary_rollup: Job host summary statistics
         credentials_rollup: Credentials statistics
+        table_metadata_rollup: Table metadata statistics
+        controller_version_rollup: Controller version statistics
         salt: Salt string for hashing sensitive data
 
     Returns:
@@ -439,6 +502,8 @@ def anonymize_rollups(events_modules_rollup, execution_environments_rollup, jobs
         'jobs': jobs_rollup,
         'job_host_summary': job_host_summary_rollup,
         'credentials': credentials_rollup,
+        'table_metadata': table_metadata_rollup,
+        'controller_version': controller_version_rollup,
     }
 
     # First flatten the nested structure
@@ -466,12 +531,20 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     credentials = load_anonymized_rollup_data(CredentialsAnonymizedRollup(), input_data['credentials'])
     credentials_result = CredentialsAnonymizedRollup().base(credentials)
 
+    table_metadata = load_anonymized_rollup_data(TableMetadataAnonymizedRollup(), input_data.get('table_metadata', []))
+    table_metadata_result = TableMetadataAnonymizedRollup().base(table_metadata)
+
+    controller_version = load_anonymized_rollup_data(ControllerVersionAnonymizedRollup(), input_data.get('controller_version', []))
+    controller_version_result = ControllerVersionAnonymizedRollup().base(controller_version)
+
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'],
         execution_environments_result['json'],
         jobs_result['json'],
         job_host_summary_result['json'],
         credentials_result['json'],
+        table_metadata_result['json'],
+        controller_version_result['json'],
         salt,
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)

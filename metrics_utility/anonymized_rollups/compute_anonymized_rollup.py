@@ -4,10 +4,12 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import (
 
 # from metrics_utility.test.util import run_gather_int
 from metrics_utility.library.collectors.controller import (
+    controller_version_service,
     credentials_service,
     execution_environments,
     job_host_summary_service,
     main_jobevent_service,
+    table_metadata,
     unified_jobs,
 )
 from metrics_utility.logger import logger
@@ -45,12 +47,26 @@ def compute_anonymized_rollup(db, salt, since, until):
     except Exception as e:
         logger.error(f'Failed to gather credentials data: {e}')
 
+    table_metadata_data = []
+    try:
+        table_metadata_data = table_metadata(db=db).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather table_metadata data: {e}')
+
+    controller_version_data = []
+    try:
+        controller_version_data = controller_version_service(db=db).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather controller_version data: {e}')
+
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
         'job_host_summary': job_host_summary_data,
         'main_jobevent': main_jobevent_data,
         'credentials': credentials_data,
+        'table_metadata': table_metadata_data,
+        'controller_version': controller_version_data,
     }
 
     # load data for each collector

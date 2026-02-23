@@ -108,6 +108,33 @@ def delete_jobs():
     return run(sql)
 
 
+def delete_unified_job_credentials():
+    """Delete all unified job credentials (many-to-many relationship table)."""
+    sql = """
+    DELETE FROM main_unifiedjob_credentials;
+    """
+    print('Deleting main_unifiedjob_credentials...')
+    return run(sql)
+
+
+def delete_unified_job_template_credentials():
+    """Delete all unified job template credentials (many-to-many relationship table)."""
+    sql = """
+    DELETE FROM main_unifiedjobtemplate_credentials;
+    """
+    print('Deleting main_unifiedjobtemplate_credentials...')
+    return run(sql)
+
+
+def delete_credentials():
+    """Delete all credentials."""
+    sql = """
+    DELETE FROM main_credential;
+    """
+    print('Deleting main_credential...')
+    return run(sql)
+
+
 def delete_unified_jobs():
     """Delete all unified jobs."""
     sql = """
@@ -193,9 +220,11 @@ def delete_all():
     """
     Delete all data from tables in correct order (respecting foreign key constraints).
 
-    Order: job_events -> job_host_summaries -> jobs -> unified_jobs ->
+    Order: job_events -> job_host_summaries -> jobs ->
+           unified_job_credentials (many-to-many) -> unified_jobs ->
+           unified_job_template_credentials (many-to-many) ->
            job_templates -> projects -> unified_job_templates ->
-           hosts -> instances -> inventories -> organizations ->
+           credentials -> hosts -> instances -> inventories -> organizations ->
            execution_environments
     """
     print('=== Deleting all performance test data ===')
@@ -203,10 +232,13 @@ def delete_all():
     delete_job_events()
     delete_job_host_summaries()
     delete_jobs()
+    delete_unified_job_credentials()  # Delete many-to-many table before unified_jobs
     delete_unified_jobs()
+    delete_unified_job_template_credentials()  # Delete many-to-many table before unified_job_templates
     delete_job_templates()
     delete_projects()
     delete_unified_job_templates()
+    delete_credentials()  # Delete credentials before organizations
     delete_hosts()
     delete_instances()
     delete_inventories()

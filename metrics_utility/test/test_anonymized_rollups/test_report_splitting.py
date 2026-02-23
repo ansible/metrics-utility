@@ -72,7 +72,7 @@ def _create_module_stats(num_modules):
         is_divisible_by_3 = i % 3 == 0
         collection_source = 'certified' if is_even else 'community'
         collection_name = 'ansible.builtin' if is_even else f'community.module_{i % 10}'
-        controller_versions = ['2.15.0', '2.16.0', '2.17.0'] if is_divisible_by_3 else ['2.18.0', '2.19.0']
+        ansible_versions = ['2.15.0', '2.16.0', '2.17.0'] if is_divisible_by_3 else ['2.18.0', '2.19.0']
 
         module_stats.append(
             {
@@ -82,7 +82,7 @@ def _create_module_stats(num_modules):
                 'jobs_total': 10 + (i % 20),
                 'unique_hosts_total': 5 + (i % 15),
                 'processed_events_total': 50 + (i % 100),
-                'controller_versions': controller_versions,
+                'ansible_versions': ansible_versions,
                 'tasks_ok_total': 100 + (i % 50),
                 'tasks_failed_total': i % 10,
                 'tasks_skipped_total': i % 5,
@@ -102,7 +102,7 @@ def _create_collection_stats(num_collections):
                 'collection_source': sources[i % 4],
                 'jobs_total': 20 + (i % 30),
                 'processed_events_total': 200 + (i % 200),
-                'controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+                'ansible_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
                 'unique_hosts_total': 10 + (i % 20),
             }
         )
@@ -134,7 +134,7 @@ def _create_jobs_by_job_type(num_jobs):
         is_even = i % 2 == 0
         is_successful = i % 10 != 0
         job_type = 'job' if is_even else 'workflowjob'
-        controller_versions = ['2.15.0', '2.16.0'] if is_even else ['2.17.0', '2.18.0']
+        ansible_versions = ['2.15.0', '2.16.0'] if is_even else ['2.17.0', '2.18.0']
         jobs_successful_total = 1 if is_successful else 0
         jobs_failed_total = 1 if not is_successful else 0
         jobs_successful_duration = 90 + (i % 450) if is_successful else 0
@@ -151,7 +151,7 @@ def _create_jobs_by_job_type(num_jobs):
                 'jobs_failed_duration_total_seconds': jobs_failed_duration,
                 'templates_total': 1,
                 'inventories_total': 1,
-                'controller_versions': controller_versions,
+                'ansible_versions': ansible_versions,
                 'dark_total': i % 5,
                 'failures_total': i % 3,
                 'ok_total': 10 + (i % 20),
@@ -193,14 +193,14 @@ def _create_jobs_by_launch_type():
     return jobs_by_launch_type
 
 
-def _create_jobs_by_controller_version():
-    """Create jobs_by_controller_version array."""
-    jobs_by_controller_version = []
+def _create_jobs_by_ansible_version():
+    """Create jobs_by_ansible_version array."""
+    jobs_by_ansible_version = []
     versions = ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
     for i, version in enumerate(versions):
-        jobs_by_controller_version.append(
+        jobs_by_ansible_version.append(
             {
-                'controller_version': version,
+                'ansible_version': version,
                 'jobs_total': 30 + (i * 5),
                 'jobs_successful_total': 25 + (i * 4),
                 'jobs_failed_total': 5 + i,
@@ -216,7 +216,7 @@ def _create_jobs_by_controller_version():
                 'unreachable_hosts_total': i * 2,
             }
         )
-    return jobs_by_controller_version
+    return jobs_by_ansible_version
 
 
 def _create_collections_versions():
@@ -233,21 +233,21 @@ def _create_collections_versions():
     return collections_versions
 
 
-def _create_controller_versions():
-    """Create large controller_versions array that will need to be split.
+def _create_ansible_versions():
+    """Create large ansible_versions array that will need to be split.
 
     Generate many version strings to exceed the 24KB limit.
     Each version string is ~10-12 bytes with JSON formatting.
     To exceed 24KB, we need ~2000+ items, but let's use 3000 to ensure splitting.
     This creates 3 * 100 * 10 = 3000 versions, which should exceed 24KB.
     """
-    controller_versions = []
+    ansible_versions = []
     for major in range(2, 5):  # Major versions 2, 3, 4
         for minor in range(0, 100):  # Minor versions 0-99
             for patch in range(0, 10):  # Patch versions 0-9
                 version = f'{major}.{minor}.{patch}'
-                controller_versions.append(version)
-    return controller_versions
+                ansible_versions.append(version)
+    return ansible_versions
 
 
 def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50):
@@ -268,13 +268,13 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
     role_stats = _create_role_stats()
     jobs_by_job_type = _create_jobs_by_job_type(num_jobs)
     jobs_by_launch_type = _create_jobs_by_launch_type()
-    jobs_by_controller_version = _create_jobs_by_controller_version()
+    jobs_by_ansible_version = _create_jobs_by_ansible_version()
     collections_versions = _create_collections_versions()
-    controller_versions = _create_controller_versions()
+    ansible_versions = _create_ansible_versions()
 
     anonymized_rollup = {
         'statistics': statistics,
-        'rollup_period_controller_versions': controller_versions,
+        'rollup_period_ansible_versions': ansible_versions,
         'rollup_period_scm_types': ['git', 'manual', 'svn'],
         'rollup_period_credential_types': ['Amazon Web Services', 'Container Registry', 'Machine', 'Network', 'Source Control', 'Vault'],
         'module_stats': module_stats,
@@ -282,7 +282,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         'role_stats': role_stats,
         'jobs_by_job_type': jobs_by_job_type,
         'jobs_by_launch_type': jobs_by_launch_type,
-        'jobs_by_controller_version': jobs_by_controller_version,
+        'jobs_by_ansible_version': jobs_by_ansible_version,
         'collections_versions': collections_versions,
     }
 
@@ -296,7 +296,7 @@ def _print_splitting_info(anonymized_rollup, total_size, max_size):
     print(f'{"=" * 80}')
     print(f'Total data size: {total_size} bytes ({total_size / 1024:.1f} KB)')
     print(f'Message size limit: {max_size} bytes ({max_size / 1024:.1f} KB)')
-    print(f'Number of controller versions: {len(anonymized_rollup["rollup_period_controller_versions"])}')
+    print(f'Number of controller versions: {len(anonymized_rollup["rollup_period_ansible_versions"])}')
     print(f'Number of modules: {len(anonymized_rollup["module_stats"])}')
     print(f'Number of jobs: {len(anonymized_rollup["jobs_by_job_type"])}')
     print(f'Number of collections: {len(anonymized_rollup["collection_stats"])}')
@@ -334,12 +334,12 @@ def _save_and_validate_chunks(chunks, storage_segment, max_size, output_dir, ano
 
 def _validate_split_arrays(chunk_keys, total_items_in_chunks, anonymized_rollup):
     """Validate that arrays were split correctly."""
-    controller_versions_chunks = [i for i, key in enumerate(chunk_keys) if key == 'rollup_period_controller_versions']
-    if len(controller_versions_chunks) > 1:
-        print(f'\n✓ rollup_period_controller_versions was split into {len(controller_versions_chunks)} chunks')
-        assert len(controller_versions_chunks) > 1, 'rollup_period_controller_versions should be split into multiple chunks'
-        total_version_items = total_items_in_chunks.get('rollup_period_controller_versions', 0)
-        original_version_count = len(anonymized_rollup['rollup_period_controller_versions'])
+    ansible_versions_chunks = [i for i, key in enumerate(chunk_keys) if key == 'rollup_period_ansible_versions']
+    if len(ansible_versions_chunks) > 1:
+        print(f'\n✓ rollup_period_ansible_versions was split into {len(ansible_versions_chunks)} chunks')
+        assert len(ansible_versions_chunks) > 1, 'rollup_period_ansible_versions should be split into multiple chunks'
+        total_version_items = total_items_in_chunks.get('rollup_period_ansible_versions', 0)
+        original_version_count = len(anonymized_rollup['rollup_period_ansible_versions'])
         assert total_version_items == original_version_count, (
             f'Total controller version items in chunks ({total_version_items}) should match original ({original_version_count})'
         )
