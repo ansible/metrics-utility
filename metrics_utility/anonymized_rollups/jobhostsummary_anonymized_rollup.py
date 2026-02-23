@@ -1,6 +1,7 @@
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
 class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
@@ -272,12 +273,12 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Handle empty dataframe
         if dataframe.empty:
-            return {
+            return sanitize_json({
                 'by_job_type': [],
                 'by_launch_type': [],
                 'by_ansible_version': [],
                 'job_host_pairs_total': job_host_pairs_total,
-            }
+            })
 
         # Normalize dataframe columns
         self._normalize_dataframe(dataframe)
@@ -298,12 +299,15 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         by_launch_type = aggregations_by_launch_type.to_dict(orient='records')
         by_ansible_version = aggregations_by_ansible_version.to_dict(orient='records')
 
-        return {
+        result = {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
             'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
         }
+
+        # Sanitize to convert NumPy types to native Python types for JSON serialization
+        return sanitize_json(result)
 
     def base(self, data):
         """

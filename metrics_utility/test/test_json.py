@@ -141,19 +141,17 @@ def test_json_serialization_roundtrip(cleanup_glob):
             rollup = rollup_class()
             prepared_data = rollup.prepare(collected_data)
 
+            # pretty print prepared_data
+            print(json.dumps(prepared_data, indent=2))
+
             # Verify prepare returned a dict or list
             assert isinstance(prepared_data, (dict, list)), (
                 f'{collector_name}: prepare() should return dict or list, got {type(prepared_data).__name__}'
             )
 
-            # Sanitize data before JSON serialization (replace NaN, infinity with None)
-            #prepared_data_sanitized = sanitize_json(prepared_data)
-
+            # prepared_data is already sanitized by prepare() method
             # Serialize to JSON
-            print(collector_name)
-            # pretty print prepared_data
-            print(json.dumps(prepared_data, indent=2))
-            json_str = json.dumps(prepared_data, indent=2)
+            json_str = json.dumps(prepared_data, default=str, indent=2)
 
             # Parse JSON back
             parsed_data = json.loads(json_str)

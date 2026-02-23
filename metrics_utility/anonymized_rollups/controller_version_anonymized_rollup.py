@@ -1,6 +1,7 @@
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
 class ControllerVersionAnonymizedRollup(BaseAnonymizedRollup):
@@ -18,11 +19,12 @@ class ControllerVersionAnonymizedRollup(BaseAnonymizedRollup):
         """
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
-            return []
+            return sanitize_json([])
 
         controller_versions = dataframe['controller_version'].tolist() if 'controller_version' in dataframe.columns else []
 
-        return controller_versions
+        # Sanitize to convert NumPy types to native Python types for JSON serialization
+        return sanitize_json(controller_versions)
 
     def merge(self, data_all, data_new):
         """
