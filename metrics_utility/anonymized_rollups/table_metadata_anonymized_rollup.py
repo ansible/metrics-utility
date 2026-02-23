@@ -1,6 +1,7 @@
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
 class TableMetadataAnonymizedRollup(BaseAnonymizedRollup):
@@ -16,9 +17,13 @@ class TableMetadataAnonymizedRollup(BaseAnonymizedRollup):
         """
         Transform dataframe to JSON structure with dictionary of statistics prefixed by table name.
         """
+        # Convert ID columns to strings at the beginning
+        if dataframe is not None and not dataframe.empty:
+            dataframe = self._convert_id_columns_to_strings(dataframe)
+
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
-            return {}
+            return sanitize_json({})
 
         # Transform dataframe into dict with table-name-prefixed keys
         tables_data = {}
@@ -29,7 +34,8 @@ class TableMetadataAnonymizedRollup(BaseAnonymizedRollup):
             tables_data[f'{table_name}_table_size_bytes'] = int(row['table_size_bytes'])
             tables_data[f'{table_name}_indexes_size_bytes'] = int(row['indexes_size_bytes'])
 
-        return tables_data
+        # Sanitize to convert NumPy types to native Python types for JSON serialization
+        return sanitize_json(tables_data)
 
     def merge(self, data_all, data_new):
         """

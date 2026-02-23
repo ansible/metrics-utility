@@ -1,4 +1,5 @@
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
 class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
@@ -23,25 +24,35 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
         Batch processing that extracts unique credential types in this batch.
         Returns a dictionary with a list of unique credential types.
         """
+        # Convert ID columns to strings at the beginning
+        dataframe = self._convert_id_columns_to_strings(dataframe)
+
         if dataframe.empty:
-            return {
-                'credential_types': [],
-            }
+            return sanitize_json(
+                {
+                    'credential_types': [],
+                }
+            )
 
         # Check if credential_type column exists (required for processing)
         if 'credential_type' not in dataframe.columns:
-            return {
-                'credential_types': [],
-            }
+            return sanitize_json(
+                {
+                    'credential_types': [],
+                }
+            )
 
         # Get unique credential types in this batch
         unique_credential_types = dataframe['credential_type'].dropna().unique()
         # Convert to sorted list of strings
         credential_types_list = sorted([str(ct) for ct in unique_credential_types])
 
-        return {
+        result = {
             'credential_types': credential_types_list,
         }
+
+        # Sanitize to convert NumPy types to native Python types for JSON serialization
+        return sanitize_json(result)
 
     def merge(self, data_all, data_new):
         """

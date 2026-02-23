@@ -5,6 +5,7 @@ from collections import Counter
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
 class JobsAnonymizedRollup(BaseAnonymizedRollup):
@@ -146,21 +147,26 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return organizations, job_ids, forks_total, scm_types
 
     def prepare(self, dataframe):
+        # Convert ID columns to strings at the beginning
+        dataframe = self._convert_id_columns_to_strings(dataframe)
+
         # Filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
 
         # Handle empty dataframe
         if dataframe.empty:
-            return {
-                'by_job_type': [],
-                'by_launch_type': [],
-                'by_ansible_version': [],
-                'organizations': [],
-                'forks_total': 0,
-                'job_ids': [],
-                'scm_types': [],
-                'installed_collections': [],
-            }
+            return sanitize_json(
+                {
+                    'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_ansible_version': [],
+                    'organizations': [],
+                    'forks_total': 0,
+                    'job_ids': [],
+                    'scm_types': [],
+                    'installed_collections': [],
+                }
+            )
 
         # Preprocess dataframe
         dataframe = self._preprocess_dataframe(dataframe)
@@ -185,7 +191,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Process collections statistics
         collections_stats = self._process_collections_from_jobs(dataframe)
 
-        return {
+        result = {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
             'by_ansible_version': by_ansible_version,
@@ -195,6 +201,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'scm_types': scm_types,
             'installed_collections': collections_stats,
         }
+
+        # Sanitize to convert NumPy types to native Python types for JSON serialization
+        return sanitize_json(result)
 
     def _merge_stats_json(self, stats_all, stats_new, groupby_col):
         """Merge two stats JSON lists by summing numeric columns and unioning lists."""

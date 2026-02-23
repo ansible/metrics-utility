@@ -5,6 +5,7 @@ import re
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
@@ -567,6 +568,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # as default, merging is done by concatenating dataframes (defined in base class)
     def prepare(self, dataframe):
         """Prepare dataframe for aggregation by filtering, transforming, and computing statistics."""
+        # Convert ID columns to strings at the beginning
+        dataframe = self._convert_id_columns_to_strings(dataframe)
+
         collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
 
         event_lists = self._get_event_lists()
@@ -582,17 +586,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         task_summary = self._aggregate_task_summary(task_summary)
 
         if task_summary.empty:
-            return {
-                'collected_events_total': collected_events_total,
-                'warnings_total': warnings_total,
-                'deprecations_total': deprecations_total,
-                'module_stats': [],
-                'collection_stats': [],
-                'role_stats': [],
-                'unique_modules': [],
-                'modules_per_playbook': {},
-                'unique_hosts': [],
-            }
+            return sanitize_json(
+                {
+                    'collected_events_total': collected_events_total,
+                    'warnings_total': warnings_total,
+                    'deprecations_total': deprecations_total,
+                    'module_stats': [],
+                    'collection_stats': [],
+                    'role_stats': [],
+                    'unique_modules': [],
+                    'modules_per_playbook': {},
+                    'unique_hosts': [],
+                }
+            )
 
         task_summary = task_summary.assign(
             jobs_successful_duration_total_seconds=lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),
@@ -603,7 +609,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats_json, collection_stats_json, role_stats_json = self._convert_stats_to_json(module_stats, collection_stats, role_stats)
         unique_modules, modules_per_playbook, unique_hosts = self._compute_unique_metadata(task_summary)
 
-        return {
+        result = {
             'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
             'deprecations_total': deprecations_total,
@@ -614,6 +620,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'modules_per_playbook': modules_per_playbook,
             'unique_hosts': unique_hosts,
         }
+
+        # Sanitize to convert NumPy types to native Python types for JSON serialization
+        return sanitize_json(result)
 
     def base(self, data):
         """
