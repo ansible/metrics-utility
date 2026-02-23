@@ -20,7 +20,7 @@ class TableMetadataAnonymizedRollup(BaseAnonymizedRollup):
         # Convert ID columns to strings at the beginning
         if dataframe is not None and not dataframe.empty:
             dataframe = self._convert_id_columns_to_strings(dataframe)
-        
+
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
             return sanitize_json({})

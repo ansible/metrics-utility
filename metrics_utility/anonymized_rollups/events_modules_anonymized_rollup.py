@@ -570,7 +570,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Prepare dataframe for aggregation by filtering, transforming, and computing statistics."""
         # Convert ID columns to strings at the beginning
         dataframe = self._convert_id_columns_to_strings(dataframe)
-        
+
         collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
 
         event_lists = self._get_event_lists()
@@ -586,17 +586,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         task_summary = self._aggregate_task_summary(task_summary)
 
         if task_summary.empty:
-            return sanitize_json({
-                'collected_events_total': collected_events_total,
-                'warnings_total': warnings_total,
-                'deprecations_total': deprecations_total,
-                'module_stats': [],
-                'collection_stats': [],
-                'role_stats': [],
-                'unique_modules': [],
-                'modules_per_playbook': {},
-                'unique_hosts': [],
-            })
+            return sanitize_json(
+                {
+                    'collected_events_total': collected_events_total,
+                    'warnings_total': warnings_total,
+                    'deprecations_total': deprecations_total,
+                    'module_stats': [],
+                    'collection_stats': [],
+                    'role_stats': [],
+                    'unique_modules': [],
+                    'modules_per_playbook': {},
+                    'unique_hosts': [],
+                }
+            )
 
         task_summary = task_summary.assign(
             jobs_successful_duration_total_seconds=lambda x: x['job_duration_seconds'].where(~x['job_failed'], 0),

@@ -26,17 +26,21 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
         """
         # Convert ID columns to strings at the beginning
         dataframe = self._convert_id_columns_to_strings(dataframe)
-        
+
         if dataframe.empty:
-            return sanitize_json({
-                'credential_types': [],
-            })
+            return sanitize_json(
+                {
+                    'credential_types': [],
+                }
+            )
 
         # Check if credential_type column exists (required for processing)
         if 'credential_type' not in dataframe.columns:
-            return sanitize_json({
-                'credential_types': [],
-            })
+            return sanitize_json(
+                {
+                    'credential_types': [],
+                }
+            )
 
         # Get unique credential types in this batch
         unique_credential_types = dataframe['credential_type'].dropna().unique()

@@ -26,21 +26,19 @@ class BaseAnonymizedRollup:
 
     def _convert_id_columns_to_strings(self, dataframe):
         """Convert ID columns to strings at the beginning of prepare().
-        
+
         Converts numeric ID columns (id, job_id, host_id, job_remote_id) to strings
         to ensure consistent JSON serialization.
         """
         if dataframe.empty:
             return dataframe
-        
+
         id_columns = ['id', 'job_id', 'host_id', 'job_remote_id']
         for col in id_columns:
             if col in dataframe.columns:
                 # Convert numeric IDs to strings, preserving NaN values
-                dataframe[col] = dataframe[col].apply(
-                    lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x
-                )
-        
+                dataframe[col] = dataframe[col].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x)
+
         return dataframe
 
     # takes raw data and computes aggregation

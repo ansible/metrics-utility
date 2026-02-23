@@ -149,22 +149,24 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         # Convert ID columns to strings at the beginning
         dataframe = self._convert_id_columns_to_strings(dataframe)
-        
+
         # Filter out jobs that are not finished
         dataframe = dataframe[dataframe['finished'].notna()]
 
         # Handle empty dataframe
         if dataframe.empty:
-            return sanitize_json({
-                'by_job_type': [],
-                'by_launch_type': [],
-                'by_ansible_version': [],
-                'organizations': [],
-                'forks_total': 0,
-                'job_ids': [],
-                'scm_types': [],
-                'installed_collections': [],
-            })
+            return sanitize_json(
+                {
+                    'by_job_type': [],
+                    'by_launch_type': [],
+                    'by_ansible_version': [],
+                    'organizations': [],
+                    'forks_total': 0,
+                    'job_ids': [],
+                    'scm_types': [],
+                    'installed_collections': [],
+                }
+            )
 
         # Preprocess dataframe
         dataframe = self._preprocess_dataframe(dataframe)

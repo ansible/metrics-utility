@@ -20,14 +20,16 @@ class ExecutionEnvironmentsAnonymizedRollup(BaseAnonymizedRollup):
         # Convert ID columns to strings at the beginning
         if dataframe is not None and not dataframe.empty:
             dataframe = self._convert_id_columns_to_strings(dataframe)
-        
+
         # Handle None or empty dataframe
         if dataframe is None or dataframe.empty:
-            return sanitize_json({
-                'execution_environments_total': 0,
-                'execution_environments_default_total': 0,
-                'execution_environments_custom_total': 0,
-            })
+            return sanitize_json(
+                {
+                    'execution_environments_total': 0,
+                    'execution_environments_default_total': 0,
+                    'execution_environments_custom_total': 0,
+                }
+            )
 
         execution_environments_total = int(len(dataframe))
         dataframe['managed'] = dataframe['managed'].map({'t': True, 'f': False, True: True, False: False})
