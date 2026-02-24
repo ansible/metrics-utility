@@ -558,6 +558,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     anonymized_rollup = sanitize_json(anonymized_rollup)
 
     # save anonymized rollup to file
+    os.makedirs(f'./out/batches', exist_ok=True)
     file_name = f'./out/batches/anonymized_rollup.json'
     with open(file_name, 'w') as f:
         f.write(json.dumps(anonymized_rollup, indent=2))

@@ -45,7 +45,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         ]
 
         # List columns to union
-        list_cols = ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']
+        list_cols = ['unique_hosts', 'job_types', 'launch_types']
 
         for key in all_keys:
             item_all = all_dict.get(key, {})
@@ -232,7 +232,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'successful_hosts_total': ('successful_hosts_total', 'sum'),
             'failed_hosts_total': ('failed_hosts_total', 'sum'),
             'unreachable_hosts_total': ('unreachable_hosts_total', 'sum'),
-            'job_remote_ids': ('job_remote_id', lambda x: sorted(list(set(x.dropna())))),
         }
 
     def _compute_list_length(self, x):
@@ -353,7 +352,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
             for item in stats_list:
                 # Drop list columns that were used for deduplication
-                for col in ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']:
+                for col in ['unique_hosts', 'job_types', 'launch_types']:
                     if col in item:
                         del item[col]
 
