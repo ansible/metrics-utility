@@ -518,7 +518,7 @@ def anonymize_rollups(
 
 def compute_anonymized_rollup_from_raw_data(input_data, salt):
 
-        # delete everything in the directory ./out/batches
+    # delete everything in the directory ./out/batches
     if os.path.exists('./out/batches'):
         for file in os.listdir('./out/batches'):
             os.remove(os.path.join('./out/batches', file))
@@ -558,8 +558,8 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     anonymized_rollup = sanitize_json(anonymized_rollup)
 
     # save anonymized rollup to file
-    os.makedirs(f'./out/batches', exist_ok=True)
-    file_name = f'./out/batches/anonymized_rollup.json'
+    os.makedirs('./out/batches', exist_ok=True)
+    file_name = './out/batches/anonymized_rollup.json'
     with open(file_name, 'w') as f:
         f.write(json.dumps(anonymized_rollup, indent=2))
     return anonymized_rollup
@@ -596,7 +596,7 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_l
         concat_data = json.loads(concat_data)
 
         # mkdir
-        os.makedirs(f'./out/batches', exist_ok=True)
+        os.makedirs('./out/batches', exist_ok=True)
         # save prepare data and concat data to separate files (as json pretty printed)
         # print files into ./out/rollups/year/month/day
         file1_name = f'./out/batches/{rollup_object_name}_{counter}_prepare.json'

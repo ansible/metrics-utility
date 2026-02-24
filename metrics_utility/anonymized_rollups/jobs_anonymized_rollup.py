@@ -90,9 +90,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
 
         aggregations_by_job_type['is_automation'] = aggregations_by_job_type['job_type'] == 'job'
-        self._add_totals_to_aggregation(
-            aggregations_by_job_type, [('templates', 'templates_total'), ('inventories', 'inventories_total')]
-        )
+        self._add_totals_to_aggregation(aggregations_by_job_type, [('templates', 'templates_total'), ('inventories', 'inventories_total')])
 
         return aggregations_by_job_type
 
