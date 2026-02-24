@@ -516,6 +516,12 @@ def anonymize_rollups(
 
 
 def compute_anonymized_rollup_from_raw_data(input_data, salt):
+
+        # delete everything in the directory ./out/batches
+    if os.path.exists('./out/batches'):
+        for file in os.listdir('./out/batches'):
+            os.remove(os.path.join('./out/batches', file))
+
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
     jobs_result = JobsAnonymizedRollup().base(jobs)
 
@@ -549,6 +555,11 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
     anonymized_rollup = sanitize_json(anonymized_rollup)
+
+    # save anonymized rollup to file
+    file_name = f'./out/batches/anonymized_rollup.json'
+    with open(file_name, 'w') as f:
+        f.write(json.dumps(anonymized_rollup, indent=2))
     return anonymized_rollup
 
 
@@ -563,12 +574,34 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_l
 
     concat_data = None
 
+    rollup_object_name = rollup_object.rollup_name
+
+    counter = -1
     for dataframe in dataframe_list:
+        counter += 1
         # compat for CSVs
         if isinstance(dataframe, str):
             dataframe = pd.read_csv(dataframe, encoding='utf-8')
 
         prepared_data = rollup_object.prepare(dataframe)
+        # serialize prepared data to json
+        prepared_data = json.dumps(prepared_data, indent=2)
+        # back to dict/list
+        prepared_data = json.loads(prepared_data)
         concat_data = rollup_object.merge(concat_data, prepared_data)
+        # concat data to json and then back
+        concat_data = json.dumps(concat_data, indent=2)
+        concat_data = json.loads(concat_data)
+
+        # mkdir
+        os.makedirs(f'./out/batches', exist_ok=True)
+        # save prepare data and concat data to separate files (as json pretty printed)
+        # print files into ./out/rollups/year/month/day
+        file1_name = f'./out/batches/{rollup_object_name}_{counter}_prepare.json'
+        file2_name = f'./out/batches/{rollup_object_name}_{counter}_xconcat.json'
+        with open(file1_name, 'w') as f:
+            f.write(json.dumps(prepared_data, indent=2))
+        with open(file2_name, 'w') as f:
+            f.write(json.dumps(concat_data, indent=2))
 
     return concat_data
