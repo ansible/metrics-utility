@@ -217,6 +217,7 @@ def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, 
 def _calculate_job_statistics(jobs_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Calculate job statistics by summing from all job_type groups."""
     return {
+        'rollup_period_jobs_total': _calculate_sum_from_list(jobs_by_job_type, 'jobs_total'),
         'job_templates_total': _calculate_sum_from_list(jobs_by_job_type, 'templates_total'),
         'inventories_total': _calculate_sum_from_list(jobs_by_job_type, 'inventories_total'),
         'rollup_period_jobs_successful': _calculate_sum_from_list(jobs_by_job_type, 'jobs_successful_total'),
@@ -281,8 +282,8 @@ def _build_statistics(
         'rollup_period_execution_environments_total': execution_environments_total,
         'rollup_period_EE_default_total': execution_environments.get('execution_environments_default_total'),
         'rollup_period_EE_custom_total': execution_environments.get('execution_environments_custom_total'),
-        # from jobs (top-level fields)
-        'rollup_period_jobs_total': jobs.get('jobs_total'),
+        # from jobs (computed from jobs_by_job_type aggregation)
+        'rollup_period_jobs_total': job_statistics['rollup_period_jobs_total'],
         'rollup_period_jobs_successful': job_statistics['rollup_period_jobs_successful'],
         'rollup_period_jobs_failed': job_statistics['rollup_period_jobs_failed'],
         'rollup_period_jobs_duration_all_statuses_seconds': job_statistics['rollup_period_jobs_duration_all_statuses_seconds'],
