@@ -277,7 +277,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         # Convert ID columns to strings at the beginning
         dataframe = self._convert_id_columns_to_strings(dataframe)
-        
+
         # Count all records before processing
         job_host_pairs_total = len(dataframe)
 

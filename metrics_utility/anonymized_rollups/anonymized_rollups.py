@@ -155,7 +155,7 @@ def _get_default_host_summary_fields() -> Dict[str, int]:
 
 def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
     """Extract host summary fields from job_host_summary data.
-    
+
     Note: unique_hosts_total is not included here as it's only computed at the top level,
     not per grouping.
     """
@@ -208,7 +208,7 @@ def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
 
 def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]], host_ids: List[Any] = None) -> Dict[str, Any]:
     """Calculate host summary totals from job_type groups.
-    
+
     Args:
         job_host_summary_by_job_type: List of job_type group dictionaries
         host_ids: Top-level list of host IDs to compute unique_hosts_total from
@@ -218,7 +218,7 @@ def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, 
         unique_hosts_total = len(set(host_ids))
     else:
         unique_hosts_total = 0
-    
+
     return {
         'unique_hosts_total': unique_hosts_total,
         'successful_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'successful_hosts_total'),
@@ -417,7 +417,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
     job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
-    
+
     # Extract top-level host_ids list to compute unique_hosts_total
     host_ids: List[Any] = job_host_summary_root.get('host_ids', []) or []
 
