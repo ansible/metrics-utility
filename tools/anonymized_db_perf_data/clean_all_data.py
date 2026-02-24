@@ -16,9 +16,9 @@ sys.path.insert(0, str(current_dir))
 metrics_utility_path = current_dir.parent.parent
 sys.path.insert(0, str(metrics_utility_path))
 
-# Check for virtual environment and use it
+# Check for virtual environment and use it.. unless already using it
 venv_path = metrics_utility_path / '.venv'
-if venv_path.exists():
+if not os.getenv('VIRTUAL_ENV') and venv_path.exists():
     # Activate venv by updating PATH and VIRTUAL_ENV
     os.environ['VIRTUAL_ENV'] = str(venv_path)
     os.environ['PATH'] = f'{venv_path / "bin"}:{os.environ.get("PATH", "")}'
@@ -60,7 +60,7 @@ def main():
         print('  - Execution environments')
         print()
         response = input('Are you sure you want to continue? (yes/no): ')
-        if response.lower() != 'yes':
+        if response.lower() not in {'y', 'yes'}:
             print('Aborted.')
             return
 
