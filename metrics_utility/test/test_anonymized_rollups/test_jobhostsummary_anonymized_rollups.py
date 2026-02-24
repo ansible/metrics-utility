@@ -292,7 +292,7 @@ def test_jobhostsummary_anonymized():
     # Find the 'job' type group
     job_type_data = next((j for j in result['by_job_type'] if j['job_type'] == 'job'), None)
     assert job_type_data is not None, 'Should have job_type job'
-    assert job_type_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts (h1, h2, h3, h4, h5)'
+    # Note: unique_hosts_total is only at top level, not in groupings
 
     # Verify totals for 'job' type (T1: 10 hosts × 3 tasks = 30 tasks, but we have 26 ok + 2 failures + 2 skipped = 30)
     assert job_type_data['dark_total'] == 0
@@ -305,7 +305,7 @@ def test_jobhostsummary_anonymized():
     # Find the 'workflowjob' type group
     workflowjob_type_data = next((j for j in result['by_job_type'] if j['job_type'] == 'workflowjob'), None)
     assert workflowjob_type_data is not None, 'Should have job_type workflowjob'
-    assert workflowjob_type_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts (h1, h2, h3)'
+    # Note: unique_hosts_total is only at top level, not in groupings
 
     # Verify totals for 'workflowjob' type (T2: 6 hosts × 5 tasks = 30 tasks, but we have 26 ok + 4 failures = 30)
     assert workflowjob_type_data['dark_total'] == 0
@@ -322,19 +322,19 @@ def test_jobhostsummary_anonymized():
     # Find the 'manual' launch_type group
     manual_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'manual'), None)
     assert manual_launch_type_data is not None, 'Should have launch_type manual'
-    assert manual_launch_type_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for manual'
+    # Note: unique_hosts_total is only at top level, not in groupings
     assert manual_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (job) for manual'
 
     # Find the 'scheduled' launch_type group
     scheduled_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'scheduled'), None)
     assert scheduled_launch_type_data is not None, 'Should have launch_type scheduled'
-    assert scheduled_launch_type_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for scheduled'
+    # Note: unique_hosts_total is only at top level, not in groupings
     assert scheduled_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (job) for scheduled'
 
     # Find the 'workflow' launch_type group
     workflow_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'workflow'), None)
     assert workflow_launch_type_data is not None, 'Should have launch_type workflow'
-    assert workflow_launch_type_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts for workflow'
+    # Note: unique_hosts_total is only at top level, not in groupings
     assert workflow_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for workflow'
 
     # Verify by_ansible_version groupings
@@ -344,13 +344,13 @@ def test_jobhostsummary_anonymized():
     # Find the '2.9.10' ansible_version group
     version_2910_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.9.10'), None)
     assert version_2910_data is not None, 'Should have ansible_version 2.9.10'
-    assert version_2910_data['unique_hosts_total'] == 5, 'Should have 5 unique hosts for 2.9.10'
+    # Note: unique_hosts_total is only at top level, not in groupings
     assert version_2910_data['job_type_total'] == 1, 'Should have 1 job type (job) for 2.9.10'
     assert version_2910_data['launch_type_total'] == 2, 'Should have 2 launch types (manual, scheduled) for 2.9.10'
 
     # Find the '2.10.0' ansible_version group
     version_2100_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.10.0'), None)
     assert version_2100_data is not None, 'Should have ansible_version 2.10.0'
-    assert version_2100_data['unique_hosts_total'] == 3, 'Should have 3 unique hosts for 2.10.0'
+    # Note: unique_hosts_total is only at top level, not in groupings
     assert version_2100_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for 2.10.0'
     assert version_2100_data['launch_type_total'] == 1, 'Should have 1 launch type (workflow) for 2.10.0'

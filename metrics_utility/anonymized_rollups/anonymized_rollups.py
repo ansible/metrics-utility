@@ -147,7 +147,6 @@ def _get_default_host_summary_fields() -> Dict[str, int]:
         'skipped_total': 0,
         'ignored_total': 0,
         'rescued_total': 0,
-        'unique_hosts_total': 0,
         'successful_hosts_total': 0,
         'failed_hosts_total': 0,
         'unreachable_hosts_total': 0,
@@ -155,7 +154,11 @@ def _get_default_host_summary_fields() -> Dict[str, int]:
 
 
 def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract host summary fields from job_host_summary data."""
+    """Extract host summary fields from job_host_summary data.
+    
+    Note: unique_hosts_total is not included here as it's only computed at the top level,
+    not per grouping.
+    """
     return {
         'dark_total': jhs_data.get('dark_total', 0),
         'failures_total': jhs_data.get('failures_total', 0),
@@ -163,7 +166,6 @@ def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
         'skipped_total': jhs_data.get('skipped_total', 0),
         'ignored_total': jhs_data.get('ignored_total', 0),
         'rescued_total': jhs_data.get('rescued_total', 0),
-        'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
         'successful_hosts_total': jhs_data.get('successful_hosts_total', 0),
         'failed_hosts_total': jhs_data.get('failed_hosts_total', 0),
         'unreachable_hosts_total': jhs_data.get('unreachable_hosts_total', 0),
@@ -204,10 +206,21 @@ def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
     return sum(item.get(field, 0) for item in items)
 
 
-def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Calculate host summary totals from job_type groups."""
+def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]], host_ids: List[Any] = None) -> Dict[str, Any]:
+    """Calculate host summary totals from job_type groups.
+    
+    Args:
+        job_host_summary_by_job_type: List of job_type group dictionaries
+        host_ids: Top-level list of host IDs to compute unique_hosts_total from
+    """
+    # Compute unique_hosts_total from top-level host_ids list, not from groupings
+    if host_ids is not None and isinstance(host_ids, list) and len(host_ids) > 0:
+        unique_hosts_total = len(set(host_ids))
+    else:
+        unique_hosts_total = 0
+    
     return {
-        'unique_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'unique_hosts_total'),
+        'unique_hosts_total': unique_hosts_total,
         'successful_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'successful_hosts_total'),
         'failed_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'failed_hosts_total'),
         'unreachable_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'unreachable_hosts_total'),
@@ -404,9 +417,12 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
     job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
+    
+    # Extract top-level host_ids list to compute unique_hosts_total
+    host_ids: List[Any] = job_host_summary_root.get('host_ids', []) or []
 
     # Calculate statistics using helper functions
-    host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type)
+    host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type, host_ids)
     job_statistics = _calculate_job_statistics(jobs_by_job_type)
     playbooks_total = len(events_modules.get('modules_used_per_playbook_total', {}) or {})
     execution_environments_total = _calculate_execution_environments_total(execution_environments)

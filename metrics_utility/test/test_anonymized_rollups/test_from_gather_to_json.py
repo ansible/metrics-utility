@@ -170,7 +170,8 @@ def _validate_jobs_by_job_type_structure(json_data):
         assert 'skipped_total' in job
         assert 'ignored_total' in job
         assert 'rescued_total' in job
-        assert 'unique_hosts_total' in job
+        # Note: unique_hosts_total is only at top level (rollup_period_unique_hosts_total),
+        # not in groupings
 
 
 def _validate_jobs_by_launch_type_structure(json_data):
@@ -189,7 +190,8 @@ def _validate_jobs_by_launch_type_structure(json_data):
         assert 'skipped_total' in job
         assert 'ignored_total' in job
         assert 'rescued_total' in job
-        assert 'unique_hosts_total' in job
+        # Note: unique_hosts_total is only at top level (rollup_period_unique_hosts_total),
+        # not in groupings
         assert 'launch_type_manual_total' not in job
         assert 'launch_type_scheduled_total' not in job
 
@@ -210,7 +212,8 @@ def _validate_jobs_by_ansible_version_structure(json_data):
         assert 'skipped_total' in job
         assert 'ignored_total' in job
         assert 'rescued_total' in job
-        assert 'unique_hosts_total' in job
+        # Note: unique_hosts_total is only at top level (rollup_period_unique_hosts_total),
+        # not in groupings
         assert 'launch_type_manual_total' not in job
         assert 'launch_type_scheduled_total' not in job
         assert 'launch_type_workflow_total' not in job
@@ -359,7 +362,8 @@ def _validate_job_host_summary_values(json_data, statistics):
     assert job_entry['failures_total'] == 0, 'Should have 0 failures'
     assert job_entry['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
-    assert job_entry['unique_hosts_total'] == 2, 'Should have 2 unique hosts'
+    # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
+    # not per job_type group, as host_ids are not tracked in groupings
 
 
 def _validate_jobs_by_launch_type_values(json_data):
