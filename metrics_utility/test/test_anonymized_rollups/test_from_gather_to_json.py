@@ -343,9 +343,22 @@ def _validate_jobs_values(json_data, statistics):
     assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
     assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
-    assert job['jobs_duration_total_seconds'] >= 0, 'Job duration total should be non-negative'
+    # Job durations: 120s + 180s + 90s = 390s total
+    assert job['jobs_duration_total_seconds'] == pytest.approx(390.0, rel=1e-6), (
+        f'Job duration total should be 390 seconds (120+180+90), got {job["jobs_duration_total_seconds"]}'
+    )
+    assert job['job_duration_minimum_seconds'] == pytest.approx(90.0, rel=1e-6), (
+        f'Job duration minimum should be 90 seconds, got {job["job_duration_minimum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6), (
+        f'Job duration maximum should be 180 seconds, got {job["job_duration_maximum_seconds"]}'
+    )
     assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
-    assert job['job_waiting_time_total_seconds'] >= 0, 'Job waiting time total should be non-negative'
+    # Waiting time: all jobs created at 10:00:00, started at 10:00:10, 10:00:20, 10:00:30
+    # Job 1: 10s wait, Job 2: 20s wait, Job 3: 30s wait = 60s total
+    assert job['job_waiting_time_total_seconds'] == pytest.approx(60.0, rel=1e-6), (
+        f'Job waiting time total should be 60 seconds (10+20+30), got {job["job_waiting_time_total_seconds"]}'
+    )
 
 
 def _validate_job_host_summary_values(json_data, statistics):

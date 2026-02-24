@@ -382,10 +382,20 @@ $yaml$,
       polymorphic_ctype_id
     )
     VALUES (
-      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created
-      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- started
-      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- finished
-      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- modified
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created (same for all jobs)
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00' + (i * INTERVAL '10 seconds'),  -- started (varies by job, 10s apart for waiting time)
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00' + (i * INTERVAL '10 seconds') + 
+        CASE i
+          WHEN 1 THEN INTERVAL '120 seconds'  -- Job 1: 120 seconds (2 minutes)
+          WHEN 2 THEN INTERVAL '180 seconds'  -- Job 2: 180 seconds (3 minutes)
+          WHEN 3 THEN INTERVAL '90 seconds'   -- Job 3: 90 seconds (1.5 minutes)
+        END,                                  -- finished (varies by job with different durations)
+      TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00' + (i * INTERVAL '10 seconds') + 
+        CASE i
+          WHEN 1 THEN INTERVAL '120 seconds'
+          WHEN 2 THEN INTERVAL '180 seconds'
+          WHEN 3 THEN INTERVAL '90 seconds'
+        END,                                  -- modified (same as finished)
       ''::text,                               -- description
       'default_unified_job_' || random_suffix, -- name
       CASE (i % 4)
@@ -397,7 +407,11 @@ $yaml$,
       false,                                  -- cancel_flag
       'pending',                              -- status
       false,                                  -- failed
-      0.000,                                  -- elapsed
+      CASE i
+        WHEN 1 THEN 120.000  -- Job 1: 120 seconds
+        WHEN 2 THEN 180.000  -- Job 2: 180 seconds
+        WHEN 3 THEN 90.000   -- Job 3: 90 seconds
+      END,                                    -- elapsed (matches finished - started)
       '{}'::text,                             -- job_args
       '/tmp',                                 -- job_cwd
       ''::text,                               -- job_explanation
