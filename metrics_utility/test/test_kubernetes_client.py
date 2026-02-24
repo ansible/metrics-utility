@@ -10,6 +10,7 @@ from unittest.mock import mock_open, patch
 import pytest
 
 from metrics_utility.automation_controller_billing.kubernetes_client import CA_CERT_PATH, KubernetesClient
+
 from metrics_utility.exceptions import MetricsException
 
 

@@ -52,15 +52,23 @@ VALID_SHEETS = {
 }
 
 VALID_COLLECTORS = {
-    'credentials_service',
-    'execution_environments',
-    'job_host_summary_service',
+    ## shared
+    # config, manifest, data_collection_status are always on
+    ## ccsp
+    # job_host_summary is on by default
     'main_host',
     'main_host_daily',
     'main_indirectmanagednodeaudit',
     'main_jobevent',
-    'main_jobevent_service',
+    ## vcpu
     'total_workers_vcpu',
+    ## anonymized
+    'controller_version_service',
+    'credentials_service',
+    'execution_environments',
+    'job_host_summary_service',
+    'main_jobevent_service',
+    'table_metadata',
     'unified_jobs',
 }
 

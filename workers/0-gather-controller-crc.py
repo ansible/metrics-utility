@@ -26,5 +26,4 @@ with library.lock(db=metrics_db, key=worker_key):
     data = collector.gather()
 
     # send data to CRC
-    # storage can handle json -> protobuf too, or we can add a format=protobuf for @register
     crc_storage.put(None, dict=data)

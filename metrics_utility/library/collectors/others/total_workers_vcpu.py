@@ -1,12 +1,9 @@
-import json
-
 from datetime import datetime, timezone
-from typing import Tuple
+from typing import Optional, Tuple
 
-from metrics_utility.logger import logger
+import requests
 
 from ..util import collector
-from .prometheus_client import PrometheusClient
 
 
 @collector
@@ -17,9 +14,9 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
 
     info = {
         'cluster_name': cluster_name,
-        'collection_timestamp': datetime.fromtimestamp(current_ts).isoformat(),
-        'start_timestamp': datetime.fromtimestamp(prev_hour_start).isoformat(),
-        'end_timestamp': datetime.fromtimestamp(prev_hour_end).isoformat(),
+        'collection_timestamp': timestamp_format(current_ts),
+        'start_timestamp': timestamp_format(prev_hour_start),
+        'end_timestamp': timestamp_format(prev_hour_end),
         'usage_based_billing_enabled': metering_enabled,
         # total_workers_vcpu
         # promql_query
@@ -28,14 +25,7 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
 
     if not metering_enabled:
         info['total_workers_vcpu'] = 1
-
-        # This message must always appear in the log regardless of the log level.
-        logger.info(json.dumps(info, indent=2))
-        return {
-            'timestamp': info['end_timestamp'],
-            'cluster_name': info['cluster_name'],
-            'total_workers_vcpu': info['total_workers_vcpu'],
-        }
+        return info
 
     prom = PrometheusClient(url=prometheus_url, ca_cert_path=ca_cert_path, token=token)
 
@@ -45,39 +35,29 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
     info['promql_query'] = promql_query
     info['timeline'] = timeline
 
-    logger.debug(f'total_workers_vcpu: {total_workers_vcpu_val}')
-
-    # This can happen when the prev_hour_start doesn't have data, it could be when the cluster just started or
-    # if for some reasons prometheus loss some data.
-    if total_workers_vcpu_val is None:
-        logger.warning('No data available yet, the cluster is probably running for less than an hour')
-        return None
-
-    info['total_workers_vcpu'] = int(total_workers_vcpu_val)
-
-    # This message must always appear in the log regardless of the log level.
-    logger.info(json.dumps(info, indent=2))
-    return {
-        'timestamp': info['end_timestamp'],
-        'cluster_name': info['cluster_name'],
-        'total_workers_vcpu': info['total_workers_vcpu'],
-    }
+    # None can happen when the prev_hour_start doesn't have data, could be the cluster just started
+    info['total_workers_vcpu'] = int(total_workers_vcpu_val) if total_workers_vcpu_val is None else None
+    return info
 
 
 def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
     current_hour_start = (current_timestamp // 3600) * 3600
 
     previous_hour_start = current_hour_start - 3600
-    previous_hour_end = current_hour_start - 1
+    previous_hour_end = current_hour_start - 0.001  # End at .999 milliseconds
 
     return (previous_hour_start, previous_hour_end)
 
 
 def get_total_workers_cpu(prom, base_timestamp: float) -> Tuple[float, str]:
-    promql_query = f'max_over_time(sum(machine_cpu_cores)[59m59s:5m] @ {base_timestamp})'
+    promql_query = f'max_over_time(sum(machine_cpu_cores)[59m59s999ms:5m] @ {base_timestamp})'
     total_workers_vcpu = prom.get_current_value(promql_query)
 
     return (total_workers_vcpu, promql_query)
+
+
+def timestamp_format(timestamp_val):
+    return datetime.fromtimestamp(timestamp_val, timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
 def get_cpu_timeline(prom, previous_hour_start, previous_hour_end: float) -> list:
@@ -98,7 +78,7 @@ def get_cpu_timeline(prom, previous_hour_start, previous_hour_end: float) -> lis
                 for timestamp_val, cpu_val in series['values']:
                     result.append(
                         {
-                            'timestamp': datetime.fromtimestamp(float(timestamp_val), timezone.utc).isoformat(),
+                            'timestamp': timestamp_format(float(timestamp_val)),
                             'cpu_sum': float(cpu_val),
                         }
                     )
@@ -106,3 +86,83 @@ def get_cpu_timeline(prom, previous_hour_start, previous_hour_end: float) -> lis
     # Sort by timestamp
     result.sort(key=lambda x: x['timestamp'])
     return result
+
+
+class PrometheusClient:
+    """
+    Prometheus client with Kubernetes service account authentication support.
+    """
+
+    def __init__(self, url: str, timeout: int = 30, token=None, ca_cert_path=None):
+        self.url = url.rstrip('/')  # no trailing slash
+        self.timeout = timeout
+
+        self.session = requests.Session()
+        self.session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
+
+        if token:
+            self.session.headers.update({'Authorization': f'Bearer {token}'})
+
+        if ca_cert_path:
+            # Use service CA certificate for SSL verification
+            self.session.verify = ca_cert_path
+
+    def _get(self, url, params):
+        response = self.session.get(url, params=params, timeout=self.timeout)
+        if response.status_code != 200:
+            raise Exception(f'HTTP error {response.status_code}: {response.text}')
+
+        data = response.json()
+        if data.get('status') != 'success':
+            raise Exception(f'Prometheus API error: {data.get("error", "Unknown error")}')
+
+        return data
+
+    def query(self, query: str, time_param: Optional[float] = None) -> Optional[list]:
+        """
+        Execute instant PromQL query.
+
+        Args:
+            query: PromQL query string
+            time_param: Optional timestamp for the query
+
+        Returns:
+            Query results as list, or raise exception if failed
+        """
+        url = f'{self.url}/api/v1/query'
+        params = {'query': query}
+
+        if time_param:
+            params['time'] = time_param
+
+        return self._get(url, params).get('data', {}).get('result', [])
+
+    def query_range(self, query: str, start_time: float, end_time: float, step: str = '5m') -> Optional[dict]:
+        """
+        Execute a range query against Prometheus.
+        Args:
+            query: PromQL instant query (not range query)
+            start_time: Start time (Unix timestamp)
+            end_time: End time (Unix timestamp)
+            step: Query resolution step (e.g., '1m', '5m')
+        """
+        url = f'{self.url}/api/v1/query_range'
+        params = {'query': query, 'start': start_time, 'end': end_time, 'step': step}
+
+        return self._get(url, params)
+
+    def get_current_value(self, query: str) -> Optional[float]:
+        """
+        Get current value from an instant query.
+
+        Args:
+            query: PromQL query string
+
+        Returns:
+            Current value as float, or None if result is empty
+        """
+        result = self.query(query)
+        if not result:
+            return None
+
+        return float(result[0]['value'][1])

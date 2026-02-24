@@ -6,7 +6,7 @@ class CsvFileSplitter(io.StringIO):
     """Helper for writing big data into multiple files splitted by size.
     Expects data written in CSV format (first line is header)
     Could be called from function decorated by @register (see Collector).
-    :param max_file_size: determined by decorated function's attribute "max_data_size"
+    :param max_file_size: only passed by the library, could come from package max_data_size
     """
 
     def __init__(self, filespec=None, max_file_size=200 * 1048576, *args, **kwargs):

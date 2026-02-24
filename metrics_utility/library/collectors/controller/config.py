@@ -69,7 +69,7 @@ def config(*, db=None, billing_provider_params={}):
         # versions & config
         'billing_provider_params': billing_provider_params,
         'controller_version': _get_controller_version(db) or _version('awx'),
-        'metrics_utility_version': version('metrics-utility'),  # version from setup.cfg
+        'metrics_utility_version': _version('metrics-utility'),  # version from setup.cfg
         'platform': {
             'dist': distro.linux_distribution(),
             'release': platform.release(),

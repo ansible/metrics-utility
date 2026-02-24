@@ -28,6 +28,7 @@ class Collector(base.Collector):
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
     # TODO: extract to superclass ability to push extra params into config.json
+    # FIXME: subset is only used for tests, mock registered collectors instead?
     def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 

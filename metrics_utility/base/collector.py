@@ -70,7 +70,6 @@ class Collector:
             func.__insights_analytics_key__: {
                 'name': func.__insights_analytics_key__,
                 'version': func.__insights_analytics_version__,
-                'description': func.__insights_analytics_description__ or '',
             }
             for name, func in inspect.getmembers(module)
             if inspect.isfunction(func) and hasattr(func, '__insights_analytics_key__')
@@ -244,13 +243,13 @@ class Collector:
             logger.log(self.log_level, "'config' collector data is missing")
             return False
         else:
-            self.collections['config'].gather(self._package_class().max_data_size())
+            self.collections['config'].gather()
             return True
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
         for collection in self.collections[Collection.COLLECTION_TYPE_JSON]:
-            collection.gather(self._package_class().max_data_size())
+            collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
                 continue
@@ -288,7 +287,7 @@ class Collector:
 
                 last_key = collection.key
 
-            collection.gather(self._package_class().max_data_size())
+            collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
                 continue
@@ -303,7 +302,7 @@ class Collector:
 
     def _add_collection_to_package(self, collection):
         """Adds collection to package and ships it if collection has slicing"""
-        package = self._find_available_package(collection.shipping_group, collection.key, collection.data_size())
+        package = self._find_available_package('default', collection.key, collection.data_size())
         package.add_collection(collection)
         if collection.ship_immediately():
             self._process_package(package)

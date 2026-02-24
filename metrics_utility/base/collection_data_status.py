@@ -11,14 +11,9 @@ class CollectionDataStatus(CollectionCSV):
 
         self.package = package
 
-    @register(
-        'data_collection_status',
-        '1.0',
-        format='csv',
-        description='Data collection status',
-    )
-    def data_collection_status(self, full_path, **kwargs):
-        file_path = os.path.join(full_path, self.filename)
+    @register('data_collection_status', '1.0', format='csv')
+    def data_collection_status(self, _since, _until, output):
+        file_path = os.path.join(output.full_path, self.filename)
         with open(file_path, 'w', newline='') as csvfile:
             fieldnames = [
                 'collection_start_timestamp',
@@ -47,4 +42,5 @@ class CollectionDataStatus(CollectionCSV):
                         'elapsed': elapsed,
                     }
                 )
-        return [file_path]
+
+        return output.csv([file_path])

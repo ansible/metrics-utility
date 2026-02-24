@@ -42,7 +42,7 @@ class TestTotalWorkersVcpu:
         """Test that the function returns hardcoded value when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is not set or false (default behavior)."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -55,9 +55,9 @@ class TestTotalWorkersVcpu:
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False and all required fields
                 # The logger now logs twice: once for info, once for data
-                assert mock_logger_info.info.call_count == 2
+                assert mock_logger.info.call_count == 2
                 # First call is info with log prefix
-                first_call_args = mock_logger_info.info.call_args_list[0][0]
+                first_call_args = mock_logger.info.call_args_list[0][0]
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert not logged_json['usage_based_billing_enabled']
@@ -74,7 +74,7 @@ class TestTotalWorkersVcpu:
                 assert result['total_workers_vcpu'] == 1
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
-                first_call_args = mock_logger_info.info.call_args_list[0][0]
+                first_call_args = mock_logger.info.call_args_list[0][0]
                 logged_json = json.loads(first_call_args[2])
                 assert not logged_json['usage_based_billing_enabled']
 
@@ -111,7 +111,6 @@ class TestTotalWorkersVcpu:
             patch('metrics_utility.automation_controller_billing.collectors.get_total_workers_cpu') as mock_get_cpu,
             patch('metrics_utility.automation_controller_billing.collectors.get_cpu_timeline') as mock_get_timeline,
             patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -159,8 +158,8 @@ class TestTotalWorkersVcpu:
 
                 # Verify that the logged info contains all expected fields
                 # The logger now logs twice: once for info, once for data
-                assert mock_logger_info.info.call_count == 2
-                first_call_args = mock_logger_info.info.call_args_list[0][0]
+                assert mock_logger.info.call_count == 2
+                first_call_args = mock_logger.info.call_args_list[0][0]
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert 'cluster_name' in logged_json
@@ -261,7 +260,7 @@ class TestTotalWorkersVcpu:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -293,8 +292,8 @@ class TestTotalWorkersVcpu:
                 assert '@' in query_call  # Should contain timestamp
 
                 # Verify logging - logger now logs twice: once for info, once for data
-                assert mock_logger_info.info.call_count == 2
-                first_call_args = mock_logger_info.info.call_args_list[0][0]
+                assert mock_logger.info.call_count == 2
+                first_call_args = mock_logger.info.call_args_list[0][0]
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert logged_json['cluster_name'] == 'my-cluster'
@@ -402,7 +401,7 @@ class TestTotalWorkersVcpu:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.PrometheusClient') as mock_prom_client_class,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -432,8 +431,8 @@ class TestTotalWorkersVcpu:
                 assert result['timestamp'].endswith('.999Z'), 'Timestamp should end with .999Z for hour boundary'
 
                 # Check logged JSON - logger now logs twice: once for info, once for data
-                assert mock_logger_info.info.call_count == 2
-                first_call_args = mock_logger_info.info.call_args_list[0][0]
+                assert mock_logger.info.call_count == 2
+                first_call_args = mock_logger.info.call_args_list[0][0]
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert logged_json['end_timestamp'] == expected_timestamp
@@ -447,7 +446,7 @@ class TestTotalWorkersVcpu:
         """Test that when METRICS_UTILITY_USAGE_BASED_METERING_ENABLED is unset, it returns hardcoded value."""
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.logger_info_level') as mock_logger_info,
+            patch('metrics_utility.automation_controller_billing.collectors.logger') as mock_logger,
         ):
             mock_get.return_value = ['total_workers_vcpu']
 
@@ -458,8 +457,8 @@ class TestTotalWorkersVcpu:
 
                 # Verify the logged JSON contains usage_based_billing_enabled = False
                 # The logger now logs twice: once for info, once for data
-                assert mock_logger_info.info.call_count == 2
-                first_call_args = mock_logger_info.info.call_args_list[0][0]
+                assert mock_logger.info.call_count == 2
+                first_call_args = mock_logger.info.call_args_list[0][0]
                 assert first_call_args[0] == '%s info: %s'
                 logged_json = json.loads(first_call_args[2])
                 assert not logged_json['usage_based_billing_enabled']

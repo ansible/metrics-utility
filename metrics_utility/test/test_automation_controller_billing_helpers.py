@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from django.db import DatabaseError
 
 from metrics_utility.automation_controller_billing.helpers import (
-    datetime_hook,
+    _datetime_hook,
     get_config_and_settings_from_db,
     get_last_entries_from_db,
 )
@@ -75,7 +75,7 @@ class TestGetLastEntriesFromDb:
         # Execute
         result = get_last_entries_from_db()
 
-        # Assert - datetime_hook parses datetime strings to datetime objects
+        # Assert - _datetime_hook parses datetime strings to datetime objects
         expected_result = {
             'config': datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
             'hosts': datetime(2024, 1, 3, 0, 0, tzinfo=timezone.utc),
@@ -118,12 +118,12 @@ class TestGetLastEntriesFromDb:
 
 
 class TestDatetimeHook:
-    """Test cases for datetime_hook function"""
+    """Test cases for _datetime_hook function"""
 
     def test_empty_dict_handling(self):
         """Test handling of empty dictionary"""
         # Execute
-        result = datetime_hook({})
+        result = _datetime_hook({})
 
         # Assert
         assert result == {}
@@ -138,7 +138,7 @@ class TestDatetimeHook:
         }
 
         # Execute
-        result = datetime_hook(test_data)
+        result = _datetime_hook(test_data)
 
         # Assert
         assert 'config' in result
@@ -180,7 +180,7 @@ class TestIntegration:
             'license_type': 'enterprise',
         }
         assert settings_info.get('abc') == '1.2.3'
-        # datetime_hook parses datetime strings to datetime objects
+        # _datetime_hook parses datetime strings to datetime objects
         expected_entries = {
             'config': datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
             'jobs': datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc),
