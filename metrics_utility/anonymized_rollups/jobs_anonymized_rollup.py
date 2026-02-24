@@ -75,8 +75,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'job_waiting_time_maximum_seconds': ('job_waiting_time_seconds', 'max'),
             'job_waiting_time_minimum_seconds': ('job_waiting_time_seconds', 'min'),
             'job_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
-            'templates': ('unified_job_template_id', lambda x: sorted(list(set(x.dropna())))),
-            'inventories': ('inventory_id', lambda x: sorted(list(set(x.dropna())))),
+            'templates': ('unified_job_template_id', lambda x: sorted(set(x.dropna()))),
+            'inventories': ('inventory_id', lambda x: sorted(set(x.dropna()))),
         }
 
     def _get_ansible_versions_aggregation(self):
@@ -114,7 +114,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def _aggregate_by_launch_type(self, dataframe, common_aggregations, ansible_versions_aggregation):
         """Aggregate by launch_type."""
         aggregations_by_launch_type_dict = common_aggregations.copy()
-        aggregations_by_launch_type_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
+        aggregations_by_launch_type_dict.update({'job_types': ('model', lambda x: sorted(set(x.dropna())))})
         aggregations_by_launch_type_dict.update(ansible_versions_aggregation)
 
         aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
@@ -132,7 +132,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def _aggregate_by_ansible_version(self, dataframe, common_aggregations):
         """Aggregate by ansible_version."""
         aggregations_by_ansible_version_dict = common_aggregations.copy()
-        aggregations_by_ansible_version_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
+        aggregations_by_ansible_version_dict.update({'job_types': ('model', lambda x: sorted(set(x.dropna())))})
 
         aggregations_by_ansible_version = dataframe.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
 
@@ -149,7 +149,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
     def _extract_metadata(self, dataframe):
         """Extract metadata fields from dataframe."""
-        organizations = sorted(list(set(dataframe['organization_name'].dropna().unique())))
+        organizations = sorted(set(dataframe['organization_name'].dropna().unique()))
         forks_total = int(dataframe['forks'].sum()) if 'forks' in dataframe.columns else 0
 
         scm_types = []
@@ -315,7 +315,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            merged_item[col] = sorted(list(set_all.union(set_new)))
+            merged_item[col] = sorted(set_all.union(set_new))
 
     def _recompute_totals(self, merged_item):
         """Recompute totals from list columns."""
@@ -330,7 +330,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         """Merge list fields by union and sort."""
         all_set = set(data_all.get(field_name, []))
         new_set = set(data_new.get(field_name, []))
-        return sorted(list(all_set.union(new_set)))
+        return sorted(all_set.union(new_set))
 
     def _merge_collections(self, data_all, data_new):
         """Merge installed_collections by summing job_count for same collection+version."""
