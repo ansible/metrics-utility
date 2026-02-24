@@ -108,6 +108,33 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         if 'launch_types' in merged_item:
             merged_item['launch_type_total'] = len(merged_item['launch_types'])
 
+    def _drop_list_columns_from_stats(self, by_job_type, by_launch_type, by_ansible_version):
+        """Drop list columns from stats lists (we only need computed totals, not raw lists)."""
+        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
+            for item in stats_list:
+                for col in ['job_types', 'launch_types']:
+                    if col in item:
+                        del item[col]
+
+    def _compute_unique_hosts_total(self, host_ids):
+        """Compute unique_hosts_total from host_ids list."""
+        if isinstance(host_ids, list):
+            return len(set(host_ids))
+        return 0
+
+    def _get_empty_json_result(self, job_host_pairs_total=0, host_ids=None):
+        """Get empty JSON result structure."""
+        return {
+            'json': {
+                'by_job_type': [],
+                'by_launch_type': [],
+                'by_ansible_version': [],
+                'job_host_pairs_total': job_host_pairs_total,
+                'unique_hosts_total': 0,
+                'host_ids': host_ids if isinstance(host_ids, list) else [],
+            },
+        }
+
     def merge(self, data_all, data_new):
         """
         Merge JSON structures from batches by summing numeric columns and unioning lists.
@@ -338,16 +365,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Handle None input (no data files)
         if data is None:
-            return {
-                'json': {
-                    'by_job_type': [],
-                    'by_launch_type': [],
-                    'by_ansible_version': [],
-                    'job_host_pairs_total': 0,
-                    'unique_hosts_total': 0,
-                    'host_ids': [],
-                },
-            }
+            return self._get_empty_json_result()
 
         # Extract data from the structure (already JSON)
         by_job_type = data.get('by_job_type', [])
@@ -358,30 +376,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Handle empty data
         if not by_job_type and not by_launch_type and not by_ansible_version:
-            return {
-                'json': {
-                    'by_job_type': [],
-                    'by_launch_type': [],
-                    'by_ansible_version': [],
-                    'job_host_pairs_total': job_host_pairs_total,
-                    'unique_hosts_total': 0,
-                    'host_ids': host_ids if isinstance(host_ids, list) else [],
-                },
-            }
+            return self._get_empty_json_result(job_host_pairs_total, host_ids)
 
         # Compute unique_hosts_total from top-level host_ids list
-        if isinstance(host_ids, list):
-            unique_hosts_total = len(set(host_ids))
-        else:
-            unique_hosts_total = 0
+        unique_hosts_total = self._compute_unique_hosts_total(host_ids)
 
         # Drop list columns from stats (we only need the computed totals, not the raw lists)
-        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
-            for item in stats_list:
-                # Drop list columns that were used for deduplication
-                for col in ['job_types', 'launch_types']:
-                    if col in item:
-                        del item[col]
+        self._drop_list_columns_from_stats(by_job_type, by_launch_type, by_ansible_version)
 
         # Prepare JSON data (already in JSON format)
         json_data = {
