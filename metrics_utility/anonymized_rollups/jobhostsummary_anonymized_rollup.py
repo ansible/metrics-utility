@@ -17,13 +17,13 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         """Convert ID columns to strings, including host_remote_id."""
         # Call parent method first
         dataframe = super()._convert_id_columns_to_strings(dataframe)
-        
+
         # Also convert host_remote_id if it exists
         if not dataframe.empty and 'host_remote_id' in dataframe.columns:
             dataframe['host_remote_id'] = dataframe['host_remote_id'].apply(
                 lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x
             )
-        
+
         return dataframe
 
     def _merge_stats_json(self, stats_all, stats_new, groupby_col):
@@ -374,6 +374,20 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     'job_host_pairs_total': job_host_pairs_total,
                 },
             }
+
+        # Compute unique_hosts_total from unique_hosts lists before dropping them
+        # This ensures the total is available for statistics calculation
+        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
+            for item in stats_list:
+                if 'unique_hosts' in item:
+                    # Compute total from set size to ensure no duplicates
+                    unique_hosts_list = item.get('unique_hosts', [])
+                    if isinstance(unique_hosts_list, list):
+                        item['unique_hosts_total'] = len(set(unique_hosts_list))
+                    elif isinstance(unique_hosts_list, set):
+                        item['unique_hosts_total'] = len(unique_hosts_list)
+                    else:
+                        item['unique_hosts_total'] = 0
 
         # Drop list columns from stats (we only need the computed totals, not the raw lists)
         for stats_list in [by_job_type, by_launch_type, by_ansible_version]:

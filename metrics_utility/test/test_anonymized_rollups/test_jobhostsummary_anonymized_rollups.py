@@ -7,6 +7,7 @@ jobhostsummary = [
     # job_template T1, job_id 1001, 3 tasks per job, 5 hosts
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
+    # Host IDs: h1=1, h2=2, h3=3, h4=4, h5=5
     {
         'dark': 0,
         'failures': 0,
@@ -15,6 +16,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h1',
+        'host_remote_id': 1,
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
@@ -29,6 +31,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
+        'host_remote_id': 2,
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
@@ -43,6 +46,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h3',
+        'host_remote_id': 3,
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
@@ -57,6 +61,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h4',
+        'host_remote_id': 4,
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
@@ -71,6 +76,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h5',
+        'host_remote_id': 5,
         'job_remote_id': 1001,
         'job_template_name': 'T1',
         'model': 'job',
@@ -80,6 +86,7 @@ jobhostsummary = [
     # job_template T1, job_id 1002, one host skips a task, another fails
     # number of tasks = 3
     # total tasks = 3 * 5 = 15
+    # Same hosts as job 1001 (h1=1, h2=2, h3=3, h4=4, h5=5)
     {
         'dark': 0,
         'failures': 0,
@@ -88,6 +95,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h1',
+        'host_remote_id': 1,
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
@@ -102,6 +110,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
+        'host_remote_id': 2,
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
@@ -116,6 +125,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h3',
+        'host_remote_id': 3,
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
@@ -130,6 +140,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h4',
+        'host_remote_id': 4,
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
@@ -144,6 +155,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h5',
+        'host_remote_id': 5,
         'job_remote_id': 1002,
         'job_template_name': 'T1',
         'model': 'job',
@@ -153,6 +165,7 @@ jobhostsummary = [
     # job_template T2, job_id 2001, 5 tasks per job, 3 hosts
     # number of tasks = 5
     # total tasks = 5 * 3 = 15
+    # Host IDs: h1=1, h2=2, h3=3 (same hosts as before, but different job type)
     {
         'dark': 0,
         'failures': 0,
@@ -161,6 +174,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h1',
+        'host_remote_id': 1,
         'job_remote_id': 2001,
         'job_template_name': 'T2',
         'model': 'workflowjob',
@@ -175,6 +189,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
+        'host_remote_id': 2,
         'job_remote_id': 2001,
         'job_template_name': 'T2',
         'model': 'workflowjob',
@@ -189,6 +204,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h3',
+        'host_remote_id': 3,
         'job_remote_id': 2001,
         'job_template_name': 'T2',
         'model': 'workflowjob',
@@ -198,6 +214,7 @@ jobhostsummary = [
     # job_template T2, job_id 2002, one host executes only 4 tasks, another fails
     # number of tasks = 5
     # total tasks = 5 * 3 = 15
+    # Same hosts as job 2001 (h1=1, h2=2, h3=3)
     {
         'dark': 0,
         'failures': 0,
@@ -206,6 +223,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h1',
+        'host_remote_id': 1,
         'job_remote_id': 2002,
         'job_template_name': 'T2',
         'model': 'workflowjob',
@@ -220,6 +238,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h2',
+        'host_remote_id': 2,
         'job_remote_id': 2002,
         'job_template_name': 'T2',
         'model': 'workflowjob',
@@ -234,6 +253,7 @@ jobhostsummary = [
         'ignored': 0,
         'rescued': 0,
         'host_name': 'h3',
+        'host_remote_id': 3,
         'job_remote_id': 2002,
         'job_template_name': 'T2',
         'model': 'workflowjob',
