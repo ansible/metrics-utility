@@ -5,12 +5,22 @@ import shutil
 
 from datetime import datetime
 
+import pandas as pd
 import pytest
 
 from django.db import connection
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
 from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute_anonymized_rollup
+from metrics_utility.library.collectors.controller import (
+    controller_version_service,
+    credentials_service,
+    execution_environments,
+    job_host_summary_service,
+    main_jobevent_service,
+    table_metadata,
+    unified_jobs,
+)
 
 
 def _is_valid_version(version_str):
@@ -361,6 +371,40 @@ def _validate_jobs_values(json_data, statistics):
     )
 
 
+def _validate_jobs_values_multi_hour(json_data, statistics):
+    """Validate jobs actual values for multi-hour data (10:00-12:00)."""
+    print('--- Validating jobs data values (multi-hour) ---')
+    # 3 jobs from 10:00 hour + 3 jobs from 11:00 hour = 6 total
+    assert statistics['rollup_period_jobs_total'] == 6, 'Should have 6 total jobs (3 from 10:00 + 3 from 11:00)'
+    # Forks: (5 + 10 + 20) from 10:00 + (8 + 15 + 25) from 11:00 = 35 + 48 = 83
+    assert statistics['rollup_period_forks_total'] == 83, 'Should have 83 total forks (35 + 48)'
+    assert len(json_data['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
+    job = json_data['jobs_by_job_type'][0]
+    assert job['jobs_total'] == 6, 'Job type should have 6 jobs'
+    assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
+    assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
+    assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
+    # Job durations: 10:00 hour: 120s + 180s + 90s = 390s
+    #                11:00 hour: 100s + 150s + 80s = 330s
+    #                Total: 720s
+    assert job['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
+        f'Job duration total should be 720 seconds (390+330), got {job["jobs_duration_total_seconds"]}'
+    )
+    assert job['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6), (
+        f'Job duration minimum should be 80 seconds, got {job["job_duration_minimum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6), (
+        f'Job duration maximum should be 180 seconds, got {job["job_duration_maximum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
+    # Waiting time: 10:00 hour: 10s + 20s + 30s = 60s
+    #              11:00 hour: 10s + 20s + 30s = 60s
+    #              Total: 120s
+    assert job['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6), (
+        f'Job waiting time total should be 120 seconds (60+60), got {job["job_waiting_time_total_seconds"]}'
+    )
+
+
 def _validate_job_host_summary_values(json_data, statistics):
     """Validate job_host_summary data merged into jobs_by_job_type."""
     print('--- Validating job_host_summary data values (merged into jobs_by_job_type) ---')
@@ -377,6 +421,111 @@ def _validate_job_host_summary_values(json_data, statistics):
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
     # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
     # not per job_type group, as host_ids are not tracked in groupings
+
+
+def _validate_job_host_summary_values_multi_hour(json_data, statistics):
+    """Validate job_host_summary data merged into jobs_by_job_type for multi-hour data."""
+    print('--- Validating job_host_summary data values (merged into jobs_by_job_type, multi-hour) ---')
+    assert statistics['rollup_period_unique_hosts_total'] == 2, 'Should have 2 unique hosts'
+    # 6 jobs from 10:00 + 6 jobs from 11:00 = 12 total job-host pairs (6 jobs × 2 hosts)
+    assert statistics['rollup_period_job_host_pairs_total'] == 12, (
+        f'Should have 12 total job host summary records (6 jobs × 2 hosts), got {statistics["rollup_period_job_host_pairs_total"]}'
+    )
+
+    job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
+    assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
+    # 6 jobs × 2 hosts = 12 ok tasks
+    assert job_entry['ok_total'] == 12, 'Should have 12 ok tasks'
+    assert job_entry['failures_total'] == 0, 'Should have 0 failures'
+    assert job_entry['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
+    # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
+    # not per job_type group, as host_ids are not tracked in groupings
+
+
+def _validate_module_stats_values_multi_hour(json_data):
+    """Validate module_stats actual values for multi-hour data (6 jobs total)."""
+    print('--- Validating module_stats data values (multi-hour) ---')
+    module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
+
+    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Unknown']
+    assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
+    yum_module = anonymized_modules[0]
+    # 6 jobs total (3 from 10:00 + 3 from 11:00)
+    assert yum_module['jobs_total'] == 6, 'Should have 6 jobs using ansible.builtin.yum (anonymized)'
+    assert yum_module['unique_hosts_total'] == 2, 'Should have 2 hosts for ansible.builtin.yum (anonymized)'
+    # 6 jobs × 2 hosts = 12 successful tasks
+    assert yum_module['task_ok_total'] == 12, 'Should have 12 successful tasks for ansible.builtin.yum (6 jobs × 2 hosts)'
+    assert yum_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
+    assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
+    # 6 jobs × 2 hosts = 12 processed events
+    assert yum_module['processed_events_total'] == 12, 'Should have 12 processed events for ansible.builtin.yum (6 jobs × 2 hosts)'
+    assert 'ansible_versions' in yum_module, 'yum_module should have ansible_versions field'
+    assert isinstance(yum_module['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(yum_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in yum_module['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
+    assert yum_module['module_name'] == 'Unknown', f'Anonymized module name should be "Unknown", got {yum_module["module_name"]}'
+    assert yum_module['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {yum_module.get("collection_name")}'
+
+    a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
+    assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
+    # 6 jobs total
+    assert a10_module['jobs_total'] == 6, 'Should have 6 jobs using a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['unique_hosts_total'] == 2, 'Should have 2 hosts for a10.acos_axapi.a10_slb_virtual_server'
+    # 6 jobs × 2 hosts = 12 successful tasks
+    assert a10_module['task_ok_total'] == 12, 'Should have 12 successful tasks for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
+    assert a10_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['task_failed_total'] == 0, 'Should have 0 failures for a10.acos_axapi.a10_slb_virtual_server'
+    # 6 jobs × 2 hosts = 12 processed events
+    assert a10_module['processed_events_total'] == 12, 'Should have 12 processed events for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
+    assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
+    assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in a10_module['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
+
+
+def _validate_collection_stats_values_multi_hour(json_data):
+    """Validate collection_stats actual values for multi-hour data (6 jobs total)."""
+    print('--- Validating collection_stats data values (multi-hour) ---')
+    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
+
+    a10_collection = collection_stats_dict.get('a10.acos_axapi')
+    assert a10_collection is not None, 'Should have a10.acos_axapi collection'
+    assert a10_collection['collection_source'] == 'community', 'a10.acos_axapi collection should be from community'
+    # 6 jobs total
+    assert a10_collection['jobs_total'] == 6, 'a10.acos_axapi collection should have 6 jobs'
+    assert 'ansible_versions' in a10_collection, 'Each collection_stat should have ansible_versions field'
+    assert isinstance(a10_collection['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(a10_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in a10_collection['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
+    assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
+    # 6 jobs × 2 hosts = 12 successful tasks
+    assert a10_collection['task_ok_total'] == 12, 'a10.acos_axapi collection should have 12 successful tasks'
+    # 6 jobs × 2 hosts = 12 processed events
+    assert a10_collection['processed_events_total'] == 12, 'a10.acos_axapi collection should have 12 processed events (6 jobs × 2 hosts)'
+
+    anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Unknown']
+    assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
+    builtin_collection = anonymized_collections[0]
+    assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
+    # 6 jobs total
+    assert builtin_collection['jobs_total'] == 6, 'ansible.builtin collection should have 6 jobs'
+    assert 'ansible_versions' in builtin_collection, 'Each collection_stat should have ansible_versions field'
+    assert isinstance(builtin_collection['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(builtin_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
+    for version in builtin_collection['ansible_versions']:
+        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
+    assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
+    # 6 jobs × 2 hosts = 12 successful tasks
+    assert builtin_collection['task_ok_total'] == 12, 'ansible.builtin collection should have 12 successful tasks'
+    # 6 jobs × 2 hosts = 12 processed events
+    assert builtin_collection['processed_events_total'] == 12, 'ansible.builtin collection should have 12 processed events (6 jobs × 2 hosts)'
+    assert builtin_collection['collection_name'] == 'Unknown', (
+        f'Anonymized collection name should be "Unknown", got {builtin_collection["collection_name"]}'
+    )
 
 
 def _validate_jobs_by_launch_type_values(json_data):
@@ -572,35 +721,120 @@ def cleanup_glob():
     #    shutil.rmtree(out_dir)
 
 
-def test_empty_data(cleanup_glob):
-    compute_anonymized_rollup_from_raw_data(
-        {
-            'unified_jobs': [],
-            'job_host_summary': [],
-            'main_jobevent': [],
-            'execution_environments': [],
-            'credentials': [],
-            'table_metadata': [],
-            'controller_version': [],
-        },
-        'salt',
-    )
-
-
 def test_from_gather_to_json(cleanup_glob):
-    # since = begining of the day
-    # until = begining of the next day
-    since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
+    """
+    Test collecting data from collectors for two hourly intervals (10:00-11:00 and 11:00-12:00)
+    and computing anonymized rollup from raw data.
+    """
+    # Define collectors similar to run_no_events.py
+    COLLECTORS = {
+        'unified_jobs': {
+            'func': unified_jobs,
+            'needs_since_until': True,
+        },
+        'job_host_summary_service': {
+            'func': job_host_summary_service,
+            'needs_since_until': True,
+        },
+        'credentials_service': {
+            'func': credentials_service,
+            'needs_since_until': True,
+        },
+        'main_jobevent_service': {
+            'func': main_jobevent_service,
+            'needs_since_until': True,
+        },
+        'execution_environments': {
+            'func': execution_environments,
+            'needs_since_until': False,  # snapshot collector
+        },
+        'table_metadata': {
+            'func': table_metadata,
+            'needs_since_until': False,  # snapshot collector
+        },
+        'controller_version_service': {
+            'func': controller_version_service,
+            'needs_since_until': False,  # snapshot collector
+        },
+    }
 
-    # runher
-    # here what the connection should be? The postgres is in docker compose
+    # Define two hourly intervals: 10:00-11:00 and 11:00-12:00
+    time_intervals = [
+        (datetime(2025, 6, 13, 10, 0, 0), datetime(2025, 6, 13, 11, 0, 0)),
+        (datetime(2025, 6, 13, 11, 0, 0), datetime(2025, 6, 13, 12, 0, 0)),
+    ]
+
     db = connection
-    json_data = compute_anonymized_rollup(db, 'salt', since, until)
 
-    print(json_data)
+    # Collect data for each collector
+    results: dict[str, list[pd.DataFrame]] = {}
+
+    for collector_name, collector_info in COLLECTORS.items():
+        print(f'Collecting {collector_name}...')
+
+        if collector_info['needs_since_until']:
+            # Time-series collector: run for each interval
+            dataframes = []
+            for since, until in time_intervals:
+                try:
+                    df = collector_info['func'](db=db, since=since, until=until).gather()
+                    if df is not None:
+                        dataframes.append(df)
+                    else:
+                        dataframes.append(pd.DataFrame())
+                except Exception as e:
+                    print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
+                    dataframes.append(pd.DataFrame())
+        else:
+            # Snapshot collector: run once
+            try:
+                df = collector_info['func'](db=db).gather()
+                if df is not None:
+                    dataframes = [df]
+                else:
+                    dataframes = [pd.DataFrame()]
+            except Exception as e:
+                print(f'  Error collecting {collector_name}: {e}')
+                dataframes = [pd.DataFrame()]
+
+        results[collector_name] = dataframes
+        print(f'  Collected {len(dataframes)} dataframe(s)')
+
+    # Map collector names to input_data keys expected by compute_anonymized_rollup_from_raw_data
+    collector_to_input_key = {
+        'unified_jobs': 'unified_jobs',
+        'job_host_summary_service': 'job_host_summary',
+        'credentials_service': 'credentials',
+        'main_jobevent_service': 'main_jobevent',
+        'execution_environments': 'execution_environments',
+        'table_metadata': 'table_metadata',
+        'controller_version_service': 'controller_version',
+    }
+
+    # Prepare input_data dict
+    input_data = {}
+
+    # Add collected dataframes to input_data
+    for collector_name, dataframes in results.items():
+        input_key = collector_to_input_key.get(collector_name)
+        if input_key:
+            # Filter out None dataframes, but keep empty dataframes (they're valid)
+            valid_dataframes = [df for df in dataframes if df is not None]
+            if valid_dataframes:
+                input_data[input_key] = valid_dataframes
+            else:
+                # If no valid dataframes, pass a single empty dataframe
+                input_data[input_key] = [pd.DataFrame()]
+
+    # Compute anonymized rollup from raw data
+    salt = 'salt'
+    print('Computing anonymized rollup from collected data...')
+    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+    print('✓ Anonymized rollup computed successfully')
 
     # save as json inside rollups/2025/06/13/anonymized.json
+    since = datetime(2025, 6, 13, 10, 0, 0)
+    until = datetime(2025, 6, 13, 12, 0, 0)
     json_path = f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
 
     # create the dir
@@ -630,8 +864,10 @@ def test_from_gather_to_json(cleanup_glob):
     assert len(json_data['module_stats']) == 2, 'Should have 2 module stats'
     assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
 
-    _validate_module_stats_values(json_data)
-    _validate_collection_stats_values(json_data)
+    # Note: module_stats and collection_stats validations will need updates for 6 jobs total
+    # (3 from 10:00 hour + 3 from 11:00 hour)
+    _validate_module_stats_values_multi_hour(json_data)
+    _validate_collection_stats_values_multi_hour(json_data)
     _validate_role_stats_and_collections_versions(json_data)
 
     print('--- Validating playbooks_total ---')
@@ -646,8 +882,8 @@ def test_from_gather_to_json(cleanup_glob):
         == statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
     ), 'Total EE should equal default + custom'
 
-    _validate_jobs_values(json_data, statistics)
-    _validate_job_host_summary_values(json_data, statistics)
+    _validate_jobs_values_multi_hour(json_data, statistics)
+    _validate_job_host_summary_values_multi_hour(json_data, statistics)
     _validate_jobs_by_launch_type_values(json_data)
     _validate_jobs_by_ansible_version_values(json_data)
     _validate_totals_match(json_data, statistics)
@@ -659,61 +895,3 @@ def test_from_gather_to_json(cleanup_glob):
     _validate_controller_versions(json_data)
 
     print('✅ All data value assertions passed!')
-
-
-def test_half_day_rollup(cleanup_glob):
-    """Test with half-day time range: from midnight to noon"""
-    # since = beginning of the day
-    # until = half of the day (noon)
-    since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 13, 12, 0, 0)
-
-    # Get the data from the database
-    db = connection
-    json_data = compute_anonymized_rollup(db, 'salt', since, until)
-
-    print('\n========== Half-Day Rollup JSON Data ==========')
-    print(json.dumps(json_data, indent=4))
-    print('================================================\n')
-
-    # Save as json for inspection
-    json_path = (
-        f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d-%H-%M")}.json'
-    )
-
-    # Create the directory
-    os.makedirs(os.path.dirname(json_path), exist_ok=True)
-
-    with open(json_path, 'w') as f:
-        json.dump(json_data, f, indent=4)
-
-    print(f'JSON saved to: {json_path}')
-
-    # Basic assertions - just validate structure
-    assert 'statistics' in json_data, "Missing 'statistics' in json_data"
-    assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
-    assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
-    assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
-    assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
-    # job_host_summary is now merged into jobs_by_job_type
-
-    # Validate basic types
-    assert isinstance(json_data['statistics'], dict), 'statistics should be a dictionary'
-    assert isinstance(json_data['module_stats'], list), 'module_stats should be a list'
-    assert isinstance(json_data['collection_stats'], list), 'collection_stats should be a list'
-    assert isinstance(json_data['jobs_by_job_type'], list), 'jobs_by_job_type should be a list'
-    assert isinstance(json_data['jobs_by_launch_type'], list), 'jobs_by_launch_type should be a list'
-    # job_host_summary is now merged into jobs_by_job_type
-
-    # Validate credentials structure (if present)
-    # Based on main_jobhostsummary.sql, we expect 4 credential types
-    assert 'rollup_period_credential_types' in json_data, 'Should have rollup_period_credential_types at top level'
-    credential_types = json_data['rollup_period_credential_types']
-    assert isinstance(credential_types, list), 'rollup_period_credential_types should be a list'
-    assert len(credential_types) == 4, f'Should have 4 unique credential types, got {len(credential_types)}'
-    assert credential_types == sorted(credential_types), 'credential_types should be sorted'
-
-    # Validate table_metadata structure
-    _validate_table_metadata_structure(json_data)
-
-    print('✅ Basic structure assertions passed!')
