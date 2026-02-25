@@ -720,6 +720,126 @@ def cleanup_glob():
     #    shutil.rmtree(out_dir)
 
 
+def _collect_data_from_collectors(collectors, time_intervals, db):
+    """Collect data from all collectors for the given time intervals."""
+    results: dict[str, list[pd.DataFrame]] = {}
+
+    for collector_name, collector_info in collectors.items():
+        print(f'Collecting {collector_name}...')
+
+        if collector_info['needs_since_until']:
+            # Time-series collector: run for each interval
+            dataframes = []
+            for since, until in time_intervals:
+                try:
+                    df = collector_info['func'](db=db, since=since, until=until).gather()
+                    if df is not None:
+                        dataframes.append(df)
+                    else:
+                        dataframes.append(pd.DataFrame())
+                except Exception as e:
+                    print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
+                    dataframes.append(pd.DataFrame())
+        else:
+            # Snapshot collector: run once
+            try:
+                df = collector_info['func'](db=db).gather()
+                if df is not None:
+                    dataframes = [df]
+                else:
+                    dataframes = [pd.DataFrame()]
+            except Exception as e:
+                print(f'  Error collecting {collector_name}: {e}')
+                dataframes = [pd.DataFrame()]
+
+        results[collector_name] = dataframes
+        print(f'  Collected {len(dataframes)} dataframe(s)')
+
+    return results
+
+
+def _prepare_input_data(results, collector_to_input_key):
+    """Prepare input_data dict from collected results."""
+    input_data = {}
+
+    for collector_name, dataframes in results.items():
+        input_key = collector_to_input_key.get(collector_name)
+        if input_key:
+            # Filter out None dataframes, but keep empty dataframes (they're valid)
+            valid_dataframes = [df for df in dataframes if df is not None]
+            if valid_dataframes:
+                input_data[input_key] = valid_dataframes
+            else:
+                # If no valid dataframes, pass a single empty dataframe
+                input_data[input_key] = [pd.DataFrame()]
+
+    return input_data
+
+
+def _save_json_output(json_data, since, until):
+    """Save JSON data to the expected output path."""
+    json_path = f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
+
+    # create the dir
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+
+    with open(json_path, 'w') as f:
+        json.dump(json_data, f, indent=4)
+
+
+def _validate_all_data(json_data, statistics):
+    """Run all validation checks on the json_data."""
+    # Validate structure
+    _validate_top_level_structure(json_data)
+    _validate_statistics_structure(statistics)
+    _validate_statistics_data_types(statistics)
+    _validate_arrays_structure(json_data)
+    _validate_module_stats_structure(json_data)
+    _validate_collection_stats_structure(json_data)
+    _validate_jobs_by_job_type_structure(json_data)
+    _validate_jobs_by_launch_type_structure(json_data)
+    _validate_jobs_by_ansible_version_structure(json_data)
+
+    # Validate actual data values and relationships
+    print('\n--- Validating statistics data values ---')
+    assert statistics['rollup_period_modules_total'] == 2, 'Should have 2 modules (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
+    assert statistics['rollup_period_unique_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
+    assert len(json_data['module_stats']) == 2, 'Should have 2 module stats'
+    assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
+
+    # Note: module_stats and collection_stats validations will need updates for 6 jobs total
+    # (3 from 10:00 hour + 3 from 11:00 hour)
+    _validate_module_stats_values_multi_hour(json_data)
+    _validate_collection_stats_values_multi_hour(json_data)
+    _validate_role_stats_and_collections_versions(json_data)
+
+    print('--- Validating playbooks_total ---')
+    assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'
+
+    print('--- Validating execution_environments data values ---')
+    assert statistics['rollup_period_execution_environments_total'] == 2, 'Should have 2 total execution environments'
+    assert statistics['rollup_period_EE_default_total'] == 1, 'Should have 1 default execution environment'
+    assert statistics['rollup_period_EE_custom_total'] == 1, 'Should have 1 custom execution environment'
+    assert (
+        statistics['rollup_period_execution_environments_total']
+        == statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
+    ), 'Total EE should equal default + custom'
+
+    _validate_jobs_values_multi_hour(json_data, statistics)
+    _validate_job_host_summary_values_multi_hour(json_data, statistics)
+    _validate_jobs_by_launch_type_values(json_data)
+    _validate_jobs_by_ansible_version_values(json_data)
+    _validate_totals_match(json_data, statistics)
+    _validate_job_statistics_match(json_data, statistics)
+    _validate_cross_section_consistency(json_data, statistics)
+    _validate_credentials(json_data)
+    _validate_table_metadata_structure(json_data)
+    _validate_table_metadata_values(json_data)
+    _validate_controller_versions(json_data)
+
+    print('✅ All data value assertions passed!')
+
+
 def test_from_gather_to_json(cleanup_glob):
     """
     Test collecting data from collectors for two hourly intervals (10:00-11:00 and 11:00-12:00)
@@ -763,42 +883,6 @@ def test_from_gather_to_json(cleanup_glob):
         (datetime(2025, 6, 13, 11, 0, 0), datetime(2025, 6, 13, 12, 0, 0)),
     ]
 
-    db = connection
-
-    # Collect data for each collector
-    results: dict[str, list[pd.DataFrame]] = {}
-
-    for collector_name, collector_info in COLLECTORS.items():
-        print(f'Collecting {collector_name}...')
-
-        if collector_info['needs_since_until']:
-            # Time-series collector: run for each interval
-            dataframes = []
-            for since, until in time_intervals:
-                try:
-                    df = collector_info['func'](db=db, since=since, until=until).gather()
-                    if df is not None:
-                        dataframes.append(df)
-                    else:
-                        dataframes.append(pd.DataFrame())
-                except Exception as e:
-                    print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
-                    dataframes.append(pd.DataFrame())
-        else:
-            # Snapshot collector: run once
-            try:
-                df = collector_info['func'](db=db).gather()
-                if df is not None:
-                    dataframes = [df]
-                else:
-                    dataframes = [pd.DataFrame()]
-            except Exception as e:
-                print(f'  Error collecting {collector_name}: {e}')
-                dataframes = [pd.DataFrame()]
-
-        results[collector_name] = dataframes
-        print(f'  Collected {len(dataframes)} dataframe(s)')
-
     # Map collector names to input_data keys expected by compute_anonymized_rollup_from_raw_data
     collector_to_input_key = {
         'unified_jobs': 'unified_jobs',
@@ -810,20 +894,11 @@ def test_from_gather_to_json(cleanup_glob):
         'controller_version_service': 'controller_version',
     }
 
-    # Prepare input_data dict
-    input_data = {}
+    # Collect data from all collectors
+    results = _collect_data_from_collectors(COLLECTORS, time_intervals, connection)
 
-    # Add collected dataframes to input_data
-    for collector_name, dataframes in results.items():
-        input_key = collector_to_input_key.get(collector_name)
-        if input_key:
-            # Filter out None dataframes, but keep empty dataframes (they're valid)
-            valid_dataframes = [df for df in dataframes if df is not None]
-            if valid_dataframes:
-                input_data[input_key] = valid_dataframes
-            else:
-                # If no valid dataframes, pass a single empty dataframe
-                input_data[input_key] = [pd.DataFrame()]
+    # Prepare input_data dict
+    input_data = _prepare_input_data(results, collector_to_input_key)
 
     # Compute anonymized rollup from raw data
     salt = 'salt'
@@ -831,66 +906,11 @@ def test_from_gather_to_json(cleanup_glob):
     json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
     print('✓ Anonymized rollup computed successfully')
 
-    # save as json inside rollups/2025/06/13/anonymized.json
+    # Save JSON output
     since = datetime(2025, 6, 13, 10, 0, 0)
     until = datetime(2025, 6, 13, 12, 0, 0)
-    json_path = f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
+    _save_json_output(json_data, since, until)
 
-    # create the dir
-    os.makedirs(os.path.dirname(json_path), exist_ok=True)
-
-    with open(json_path, 'w') as f:
-        json.dump(json_data, f, indent=4)
-
-    # ========== Validate the json_data that are containing what they should ==========
+    # Validate all data
     statistics = json_data['statistics']
-
-    # Validate structure
-    _validate_top_level_structure(json_data)
-    _validate_statistics_structure(statistics)
-    _validate_statistics_data_types(statistics)
-    _validate_arrays_structure(json_data)
-    _validate_module_stats_structure(json_data)
-    _validate_collection_stats_structure(json_data)
-    _validate_jobs_by_job_type_structure(json_data)
-    _validate_jobs_by_launch_type_structure(json_data)
-    _validate_jobs_by_ansible_version_structure(json_data)
-
-    # ========== Validate actual data values and relationships ==========
-    print('\n--- Validating statistics data values ---')
-    assert statistics['rollup_period_modules_total'] == 2, 'Should have 2 modules (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
-    assert statistics['rollup_period_unique_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
-    assert len(json_data['module_stats']) == 2, 'Should have 2 module stats'
-    assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
-
-    # Note: module_stats and collection_stats validations will need updates for 6 jobs total
-    # (3 from 10:00 hour + 3 from 11:00 hour)
-    _validate_module_stats_values_multi_hour(json_data)
-    _validate_collection_stats_values_multi_hour(json_data)
-    _validate_role_stats_and_collections_versions(json_data)
-
-    print('--- Validating playbooks_total ---')
-    assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'
-
-    print('--- Validating execution_environments data values ---')
-    assert statistics['rollup_period_execution_environments_total'] == 2, 'Should have 2 total execution environments'
-    assert statistics['rollup_period_EE_default_total'] == 1, 'Should have 1 default execution environment'
-    assert statistics['rollup_period_EE_custom_total'] == 1, 'Should have 1 custom execution environment'
-    assert (
-        statistics['rollup_period_execution_environments_total']
-        == statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
-    ), 'Total EE should equal default + custom'
-
-    _validate_jobs_values_multi_hour(json_data, statistics)
-    _validate_job_host_summary_values_multi_hour(json_data, statistics)
-    _validate_jobs_by_launch_type_values(json_data)
-    _validate_jobs_by_ansible_version_values(json_data)
-    _validate_totals_match(json_data, statistics)
-    _validate_job_statistics_match(json_data, statistics)
-    _validate_cross_section_consistency(json_data, statistics)
-    _validate_credentials(json_data)
-    _validate_table_metadata_structure(json_data)
-    _validate_table_metadata_values(json_data)
-    _validate_controller_versions(json_data)
-
-    print('✅ All data value assertions passed!')
+    _validate_all_data(json_data, statistics)
