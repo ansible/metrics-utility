@@ -14,6 +14,12 @@ If batches is not provided, splits since-until by hourly collections.
 
 Snapshot collectors (execution_environments, table_metadata, controller_version_service)
 do not need since-until parameter and will run once.
+
+Output files:
+
+- Final report in ./out/anonymized_rollup_no_events.json
+- Segment chunks in ./out/segment/
+- Rollup batches in ./out/batches/
 """
 
 import argparse
@@ -45,6 +51,7 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
 
 
 # Collectors to run (excluding events/main_jobevent_service)
@@ -377,6 +384,40 @@ Examples:
         json.dump(json_data, f, indent=4)
 
     print(f'✓ Final JSON saved to: {json_path}')
+    print()
+
+    # Split data into Segment chunks
+    print('=' * 70)
+    print('SPLITTING DATA INTO SEGMENT CHUNKS')
+    print('=' * 70)
+    print()
+
+    storage_segment = StorageSegment()
+    chunks = storage_segment._split_into_chunks(json_data, storage_segment.REGULAR_MESSAGE_LIMIT)
+
+    print(f'Total chunks created: {len(chunks)}')
+    print(f'Message size limit: {storage_segment.REGULAR_MESSAGE_LIMIT} bytes ({storage_segment.REGULAR_MESSAGE_LIMIT / 1024:.1f} KB)')
+    print()
+
+    segment_dir = './out/segment'
+    os.makedirs(segment_dir, exist_ok=True)
+
+    for i, chunk in enumerate(chunks, 1):
+        chunk_size = storage_segment._calculate_size(chunk)
+        chunk_json = json.dumps(chunk, indent=4)
+        chunk_path = f'{segment_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
+        chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
+
+        with open(chunk_path, 'w') as f:
+            f.write(chunk_json)
+
+        print(f'Chunk {i}/{len(chunks)}: {chunk_key} - {chunk_size} bytes ({chunk_size / 1024:.1f} KB) - saved to {chunk_path}')
+
+        if isinstance(chunk[chunk_key], list):
+            print(f'  └─ Contains {len(chunk[chunk_key])} items in {chunk_key}')
+
+    print()
+    print('=' * 70)
     print()
 
     return results
