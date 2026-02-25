@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shutil
 
 from typing import Any, Callable, Dict, List
 
@@ -537,10 +538,9 @@ def anonymize_rollups(
 
 def compute_anonymized_rollup_from_raw_data(input_data, salt):
 
-    # delete everything in the directory ./out/batches
+    # delete everything in the directory ./out/batches (including subdirectories)
     if os.path.exists(OUT_BATCHES_DIR):
-        for file in os.listdir(OUT_BATCHES_DIR):
-            os.remove(os.path.join(OUT_BATCHES_DIR, file))
+        shutil.rmtree(OUT_BATCHES_DIR, ignore_errors=True)
 
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
     jobs_result = JobsAnonymizedRollup().base(jobs)
@@ -614,12 +614,13 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_l
         concat_data = json.dumps(concat_data, indent=2)
         concat_data = json.loads(concat_data)
 
-        # mkdir
-        os.makedirs(OUT_BATCHES_DIR, exist_ok=True)
+        # Create a subdirectory for this rollup
+        rollup_batch_dir = os.path.join(OUT_BATCHES_DIR, rollup_object_name)
+        os.makedirs(rollup_batch_dir, exist_ok=True)
         # save prepare data and concat data to separate files (as json pretty printed)
-        # print files into ./out/rollups/year/month/day
-        file1_name = os.path.join(OUT_BATCHES_DIR, f'{rollup_object_name}_{counter}_prepare.json')
-        file2_name = os.path.join(OUT_BATCHES_DIR, f'{rollup_object_name}_{counter}_xconcat.json')
+        # Each rollup has its own folder
+        file1_name = os.path.join(rollup_batch_dir, f'{counter}_prepare.json')
+        file2_name = os.path.join(rollup_batch_dir, f'{counter}_xconcat.json')
         with open(file1_name, 'w') as f:
             f.write(json.dumps(prepared_data, indent=2))
         with open(file2_name, 'w') as f:
