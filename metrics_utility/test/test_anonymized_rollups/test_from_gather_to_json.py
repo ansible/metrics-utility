@@ -720,6 +720,29 @@ def cleanup_glob():
     #    shutil.rmtree(out_dir)
 
 
+def _collect_time_series_data(collector_func, collector_name, time_intervals, db):
+    """Collect data from a time-series collector for multiple intervals."""
+    dataframes = []
+    for since, until in time_intervals:
+        try:
+            df = collector_func(db=db, since=since, until=until).gather()
+            dataframes.append(df if df is not None else pd.DataFrame())
+        except Exception as e:
+            print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
+            dataframes.append(pd.DataFrame())
+    return dataframes
+
+
+def _collect_snapshot_data(collector_func, collector_name, db):
+    """Collect data from a snapshot collector."""
+    try:
+        df = collector_func(db=db).gather()
+        return [df] if df is not None else [pd.DataFrame()]
+    except Exception as e:
+        print(f'  Error collecting {collector_name}: {e}')
+        return [pd.DataFrame()]
+
+
 def _collect_data_from_collectors(collectors, time_intervals, db):
     """Collect data from all collectors for the given time intervals."""
     results: dict[str, list[pd.DataFrame]] = {}
@@ -728,29 +751,11 @@ def _collect_data_from_collectors(collectors, time_intervals, db):
         print(f'Collecting {collector_name}...')
 
         if collector_info['needs_since_until']:
-            # Time-series collector: run for each interval
-            dataframes = []
-            for since, until in time_intervals:
-                try:
-                    df = collector_info['func'](db=db, since=since, until=until).gather()
-                    if df is not None:
-                        dataframes.append(df)
-                    else:
-                        dataframes.append(pd.DataFrame())
-                except Exception as e:
-                    print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
-                    dataframes.append(pd.DataFrame())
+            dataframes = _collect_time_series_data(
+                collector_info['func'], collector_name, time_intervals, db
+            )
         else:
-            # Snapshot collector: run once
-            try:
-                df = collector_info['func'](db=db).gather()
-                if df is not None:
-                    dataframes = [df]
-                else:
-                    dataframes = [pd.DataFrame()]
-            except Exception as e:
-                print(f'  Error collecting {collector_name}: {e}')
-                dataframes = [pd.DataFrame()]
+            dataframes = _collect_snapshot_data(collector_info['func'], collector_name, db)
 
         results[collector_name] = dataframes
         print(f'  Collected {len(dataframes)} dataframe(s)')
