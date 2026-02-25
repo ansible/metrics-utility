@@ -35,7 +35,8 @@ DECLARE
   job_count INTEGER := 3;
   --
   -- unified jobs
-  unified_jobs      INTEGER[] := ARRAY[]::INTEGER[];
+  unified_jobs_10   INTEGER[] := ARRAY[]::INTEGER[];  -- Jobs for 10:00 hour
+  unified_jobs_11   INTEGER[] := ARRAY[]::INTEGER[];  -- Jobs for 11:00 hour
   unified_job_id    INTEGER;
   --
   -- credentials
@@ -434,7 +435,7 @@ $yaml$,
     INTO unified_job_id;
 
     -- Append to our array
-    unified_jobs := array_append(unified_jobs, unified_job_id);
+    unified_jobs_10 := array_append(unified_jobs_10, unified_job_id);
     --
     -- Create Main Job and connect it with unified job using its id
     --
@@ -505,16 +506,16 @@ $yaml$,
   END LOOP;
   --
   RAISE NOTICE 'Inserted % unified jobs and jobs with IDs: %',
-               array_length(unified_jobs,1),
-               unified_jobs;
+               array_length(unified_jobs_10,1),
+               unified_jobs_10;
   --
   -- Job Host Summaries
   --
-  -- For each job in unified_jobs and each host in host_ids,
+  -- For each job in unified_jobs_10 and each host in host_ids,
   -- insert a zeroed-out summary row dated 2025-06-13 00:00:00.
   --
-  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
-    unified_job_id := unified_jobs[i];
+  FOR i IN array_lower(unified_jobs_10,1)..array_upper(unified_jobs_10,1) LOOP
+    unified_job_id := unified_jobs_10[i];
     FOREACH host_id IN ARRAY host_ids LOOP
       -- fetch the host's name
       SELECT name
@@ -557,7 +558,7 @@ $yaml$,
   END LOOP;
   --
   RAISE NOTICE 'Inserted %×% job-host summary rows',
-               array_length(unified_jobs,1),
+               array_length(unified_jobs_10,1),
                array_length(host_ids,1);
 
   -- Ensure hourly partition exists for 2025-06-13 10:00
@@ -570,8 +571,8 @@ $yaml$,
   END IF;
 
   -- Job Events (two per job-host), timestamps use fixed literal
-  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
-    unified_job_id := unified_jobs[i];
+  FOR i IN array_lower(unified_jobs_10,1)..array_upper(unified_jobs_10,1) LOOP
+    unified_job_id := unified_jobs_10[i];
 
     FOREACH host_id IN ARRAY host_ids LOOP
       -- get host name
@@ -722,7 +723,7 @@ $yaml$,
     '',  -- Empty string for task (NOT NULL constraint)
     100,
     NULL,  -- host_id is nullable
-    unified_jobs[1],
+    unified_jobs_10[1],
     gen_random_uuid()::text,
     '',  -- Empty string for parent_uuid (NOT NULL constraint)
     0,
@@ -745,7 +746,7 @@ $yaml$,
     '',
     101,
     NULL,  -- host_id is nullable
-    unified_jobs[2],
+    unified_jobs_10[2],
     gen_random_uuid()::text,
     '',
     0,
@@ -792,7 +793,7 @@ $yaml$,
     '',
     102,
     NULL,  -- host_id is nullable
-    unified_jobs[3],
+    unified_jobs_10[3],
     gen_random_uuid()::text,
     '',
     0,
@@ -1084,8 +1085,8 @@ $yaml$,
   -- Link credentials to unified jobs
   -- Assign different combinations of credentials to different jobs
   --
-  FOR i IN array_lower(unified_jobs,1)..array_upper(unified_jobs,1) LOOP
-    unified_job_id := unified_jobs[i];
+  FOR i IN array_lower(unified_jobs_10,1)..array_upper(unified_jobs_10,1) LOOP
+    unified_job_id := unified_jobs_10[i];
     
     -- Every job gets machine credential
     INSERT INTO public.main_unifiedjob_credentials (
@@ -1146,5 +1147,527 @@ $yaml$,
   END LOOP;
   
   RAISE NOTICE 'Linked credentials to unified jobs';
+  --
+  -- ============================================================
+  -- Data for 11:00 hour (same day, different hour)
+  -- ============================================================
+  --
+  -- Unified Jobs for 11:00 hour
+  -- Loop to create unified jobs at 11:00:00
+  FOR i IN 1..job_count LOOP
+    INSERT INTO public.main_unifiedjob (
+      created,
+      started,
+      finished,
+      modified,
+      description,
+      name,
+      launch_type,
+      cancel_flag,
+      status,
+      failed,
+      elapsed,
+      job_args,
+      job_cwd,
+      job_explanation,
+      start_args,
+      result_traceback,
+      celery_task_id,
+      unified_job_template_id,
+      organization_id,
+      execution_node,
+      emitted_events,
+      controller_node,
+      dependencies_processed,
+      installed_collections,
+      ansible_version,
+      task_impact,
+      job_env,
+      polymorphic_ctype_id
+    )
+    VALUES (
+      TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',                                  -- created (same for all jobs)
+      TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00' + (i * INTERVAL '10 seconds'),  -- started (varies by job, 10s apart for waiting time)
+      TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00' + (i * INTERVAL '10 seconds') + 
+        CASE i
+          WHEN 1 THEN INTERVAL '100 seconds'  -- Job 1: 100 seconds
+          WHEN 2 THEN INTERVAL '150 seconds'  -- Job 2: 150 seconds
+          WHEN 3 THEN INTERVAL '80 seconds'    -- Job 3: 80 seconds
+        END,                                  -- finished (varies by job with different durations)
+      TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00' + (i * INTERVAL '10 seconds') + 
+        CASE i
+          WHEN 1 THEN INTERVAL '100 seconds'
+          WHEN 2 THEN INTERVAL '150 seconds'
+          WHEN 3 THEN INTERVAL '80 seconds'
+        END,                                  -- modified (same as finished)
+      ''::text,                               -- description
+      'default_unified_job_11_' || random_suffix, -- name (different from 10:00 jobs)
+      CASE (i % 4)
+        WHEN 1 THEN 'manual'
+        WHEN 2 THEN 'scheduled'
+        WHEN 3 THEN 'workflow'
+        WHEN 0 THEN 'callback'
+      END,                                    -- launch_type (cycles through: manual, scheduled, workflow, callback)
+      false,                                  -- cancel_flag
+      'pending',                              -- status
+      false,                                  -- failed
+      CASE i
+        WHEN 1 THEN 100.000  -- Job 1: 100 seconds
+        WHEN 2 THEN 150.000  -- Job 2: 150 seconds
+        WHEN 3 THEN 80.000   -- Job 3: 80 seconds
+      END,                                    -- elapsed (matches finished - started)
+      '{}'::text,                             -- job_args
+      '/tmp',                                 -- job_cwd
+      ''::text,                               -- job_explanation
+      '{}'::text,                             -- start_args
+      ''::text,                               -- result_traceback
+      gen_random_uuid()::text,                -- celery_task_id
+      default_unified_job_template_id,        -- FK to your template
+      default_organization_id,
+      'auto',                                 -- execution_node
+      0,                                      -- emitted_events
+      'controller1',                          -- controller_node
+      false,                                  -- dependencies_processed
+      '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb,  -- installed_collections
+      '2.9.10',                               -- ansible_version
+      0,                                      -- task_impact
+      '{}'::jsonb,                            -- job_env
+      job_content_type_id                     -- polymorphic_ctype_id
+    )
+    RETURNING id
+    INTO unified_job_id;
+
+    -- Append to our array
+    unified_jobs_11 := array_append(unified_jobs_11, unified_job_id);
+    --
+    -- Create Main Job and connect it with unified job using its id
+    --
+    INSERT INTO public.main_job (
+      unifiedjob_ptr_id,
+      job_type,
+      playbook,
+      forks,
+      "limit",
+      verbosity,
+      extra_vars,
+      job_tags,
+      force_handlers,
+      skip_tags,
+      start_at_task,
+      become_enabled,
+      inventory_id,
+      job_template_id,
+      project_id,
+      allow_simultaneous,
+      artifacts,
+      timeout,
+      scm_revision,
+      use_fact_cache,
+      diff_mode,
+      job_slice_count,
+      job_slice_number,
+      scm_branch,
+      webhook_guid,
+      webhook_service,
+      survey_passwords,
+      event_queries_processed
+    )
+    VALUES (
+      unified_job_id,                  -- unifiedjob_ptr_id
+      'manual',                        -- job_type
+      '',                              -- playbook
+      CASE (i % 3)
+        WHEN 1 THEN 8
+        WHEN 2 THEN 15
+        WHEN 0 THEN 25
+      END,                             -- forks (varied: 8, 15, or 25)
+      '',                              -- limit
+      0,                               -- verbosity
+      '{}'::text,                      -- extra_vars
+      '{}'::text,                      -- job_tags
+      false,                           -- force_handlers
+      '',                              -- skip_tags
+      '',                              -- start_at_task
+      false,                           -- become_enabled
+      default_inventory_id,            -- inventory_id
+      default_unified_job_template_id, -- job_template_id
+      default_unified_job_template_id, -- project_id
+      false,                           -- allow_simultaneous
+      '{}'::text,                      -- artifacts
+      0,                               -- timeout
+      '',                              -- scm_revision
+      false,                           -- use_fact_cache
+      false,                           -- diff_mode
+      0,                               -- job_slice_count
+      0,                               -- job_slice_number
+      '',                              -- scm_branch
+      gen_random_uuid()::text,         -- webhook_guid
+      'github',                        -- webhook_service
+      '{}'::jsonb,                     -- survey_passwords
+      false                            -- event_queries_processed
+    );
+  END LOOP;
+  --
+  RAISE NOTICE 'Inserted % unified jobs for 11:00 hour with IDs: %',
+               array_length(unified_jobs_11,1),
+               unified_jobs_11;
+  --
+  -- Job Host Summaries for 11:00 hour
+  --
+  -- For each job in unified_jobs_11 and each host in host_ids,
+  -- insert a summary row dated 2025-06-13 11:00:00.
+  --
+  FOR i IN array_lower(unified_jobs_11,1)..array_upper(unified_jobs_11,1) LOOP
+    unified_job_id := unified_jobs_11[i];
+    FOREACH host_id IN ARRAY host_ids LOOP
+      -- fetch the host's name
+      SELECT name
+        INTO host_name
+      FROM public.main_host
+      WHERE id = host_id;
+      --
+      INSERT INTO public.main_jobhostsummary (
+        created,
+        modified,
+        host_name,
+        changed,
+        dark,
+        failures,
+        ok,
+        processed,
+        skipped,
+        failed,
+        host_id,
+        job_id,
+        ignored,
+        rescued
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        host_name,
+        0,-- changed
+        0,-- dark
+        0,-- failures
+        1,-- ok
+        0,-- processed
+        0,-- skipped
+        false,-- failed
+        host_id,
+        unified_job_id,
+        0,-- ignored
+        0-- rescued
+      );
+    END LOOP;
+  END LOOP;
+  --
+  RAISE NOTICE 'Inserted %×% job-host summary rows for 11:00 hour',
+               array_length(unified_jobs_11,1),
+               array_length(host_ids,1);
+
+  -- Ensure hourly partition exists for 2025-06-13 11:00
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'main_jobevent_20250613_11'
+  ) THEN
+    EXECUTE 'CREATE TABLE public.main_jobevent_20250613_11 (LIKE public.main_jobevent INCLUDING DEFAULTS INCLUDING CONSTRAINTS)';
+    EXECUTE 'ALTER TABLE public.main_jobevent ATTACH PARTITION public.main_jobevent_20250613_11 FOR VALUES FROM (''2025-06-13 11:00:00+00'') TO (''2025-06-13 12:00:00+00'')';
+  END IF;
+
+  -- Job Events for 11:00 hour (two per job-host), timestamps use 11:00:00
+  FOR i IN array_lower(unified_jobs_11,1)..array_upper(unified_jobs_11,1) LOOP
+    unified_job_id := unified_jobs_11[i];
+
+    FOREACH host_id IN ARRAY host_ids LOOP
+      -- get host name
+      SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
+
+      -- task_uuid should be i + host_name + 1, second task should be i + host_name + 2
+      -- convert i to text, add 10 to distinguish from 10:00 hour jobs
+      i_text := (i + 10)::text;
+      task_uuid_1 := i_text || '_' || host_name || '_1';
+      task_uuid_2 := i_text || '_' || host_name || '_2';
+
+      event_data_1 := '{"task_action": "ansible.builtin.yum", "task_uuid": "' || task_uuid_1 || '"}';
+      event_data_2 := '{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || task_uuid_2 || '"}';
+
+      -- event 1
+      INSERT INTO public.main_jobevent (
+        created,
+        modified,
+        event,
+        event_data,
+        failed,
+        changed,
+        host_name,
+        play,
+        role,
+        task,
+        counter,
+        host_id,
+        job_id,
+        uuid,
+        parent_uuid,
+        end_line,
+        playbook,
+        start_line,
+        stdout,
+        verbosity,
+        job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        'runner_on_ok',
+        event_data_1,
+        false,
+        false,
+        host_name,
+        'default_play',
+        'default_role',
+        'default_task',
+        1,
+        host_id,
+        unified_job_id,
+        'UUID',
+        '',
+        1,
+        'default_playbook.yml',
+        1,
+        ''::text,
+        0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
+      );
+
+      -- event 2
+      INSERT INTO public.main_jobevent (
+        created,
+        modified,
+        event,
+        event_data,
+        failed,
+        changed,
+        host_name,
+        play,
+        role,
+        task,
+        counter,
+        host_id,
+        job_id,
+        uuid,
+        parent_uuid,
+        end_line,
+        playbook,
+        start_line,
+        stdout,
+        verbosity,
+        job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        'runner_on_ok',
+        event_data_2,
+        false,
+        false,
+        host_name,
+        'default_play',
+        'default_role',
+        'default_task',
+        2,
+        host_id,
+        unified_job_id,
+        'UUID',
+        '',
+        2,
+        'default_playbook.yml',
+        2,
+        'ok: ' || host_name,
+        0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
+      );
+    END LOOP;
+  END LOOP;
+  --
+  -- Add warning and deprecated events for 11:00 hour (job-level annotation events)
+  -- Add 2 warning events (one for job 1, one for job 2)
+  INSERT INTO public.main_jobevent (
+    created,
+    modified,
+    event,
+    event_data,
+    failed,
+    changed,
+    host_name,
+    play,
+    role,
+    task,
+    counter,
+    host_id,
+    job_id,
+    uuid,
+    parent_uuid,
+    end_line,
+    playbook,
+    start_line,
+    stdout,
+    verbosity,
+    job_created
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+    'warning',
+    '{"warning": "This playbook uses deprecated features (11:00 hour)"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events (host_name is NOT NULL)
+    '',  -- Empty string for play (NOT NULL constraint)
+    '',  -- Empty string for role (NOT NULL constraint)
+    '',  -- Empty string for task (NOT NULL constraint)
+    100,
+    NULL,  -- host_id is nullable
+    unified_jobs_11[1],
+    gen_random_uuid()::text,
+    '',  -- Empty string for parent_uuid (NOT NULL constraint)
+    0,
+    '',  -- Empty string for playbook (NOT NULL constraint)
+    0,
+    'Warning: This playbook uses deprecated features (11:00 hour)',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
+  ),
+  (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+    'warning',
+    '{"warning": "Module XYZ will be removed in future version (11:00 hour)"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events
+    '',
+    '',
+    '',
+    101,
+    NULL,  -- host_id is nullable
+    unified_jobs_11[2],
+    gen_random_uuid()::text,
+    '',
+    0,
+    '',
+    0,
+    'Warning: Module XYZ will be removed in future version (11:00 hour)',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
+  );
+  --
+  -- Add 1 deprecated event (for job 3)
+  INSERT INTO public.main_jobevent (
+    created,
+    modified,
+    event,
+    event_data,
+    failed,
+    changed,
+    host_name,
+    play,
+    role,
+    task,
+    counter,
+    host_id,
+    job_id,
+    uuid,
+    parent_uuid,
+    end_line,
+    playbook,
+    start_line,
+    stdout,
+    verbosity,
+    job_created
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+    'deprecated',
+    '{"deprecated": "The old_module is deprecated, use new_module instead (11:00 hour)"}',
+    false,
+    false,
+    '',  -- Empty string for job-level events
+    '',
+    '',
+    '',
+    102,
+    NULL,  -- host_id is nullable
+    unified_jobs_11[3],
+    gen_random_uuid()::text,
+    '',
+    0,
+    '',
+    0,
+    'Deprecated: The old_module is deprecated, use new_module instead (11:00 hour)',
+    0,
+    TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
+  );
+  --
+  -- Link credentials to unified jobs for 11:00 hour
+  -- Assign different combinations of credentials to different jobs
+  --
+  FOR i IN array_lower(unified_jobs_11,1)..array_upper(unified_jobs_11,1) LOOP
+    unified_job_id := unified_jobs_11[i];
+    
+    -- Every job gets machine credential
+    INSERT INTO public.main_unifiedjob_credentials (
+      unifiedjob_id,
+      credential_id
+    ) VALUES (
+      unified_job_id,
+      machine_credential_id
+    );
+    
+    -- Job 1: Machine + Cloud + Custom (custom should be filtered out)
+    IF i = 1 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        cloud_credential_id
+      );
+      -- Add custom credential to job 1 (should be filtered out by managed=true)
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        custom_credential_id
+      );
+    END IF;
+    
+    -- Job 2: Machine + Vault
+    IF i = 2 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        vault_credential_id
+      );
+    END IF;
+    
+    -- Job 3: Machine + Cloud + Network
+    IF i = 3 THEN
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        cloud_credential_id
+      );
+      INSERT INTO public.main_unifiedjob_credentials (
+        unifiedjob_id,
+        credential_id
+      ) VALUES (
+        unified_job_id,
+        network_credential_id
+      );
+    END IF;
+  END LOOP;
+  
+  RAISE NOTICE 'Linked credentials to unified jobs for 11:00 hour';
 END
 $$;
