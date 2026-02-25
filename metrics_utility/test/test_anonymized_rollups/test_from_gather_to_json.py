@@ -751,9 +751,7 @@ def _collect_data_from_collectors(collectors, time_intervals, db):
         print(f'Collecting {collector_name}...')
 
         if collector_info['needs_since_until']:
-            dataframes = _collect_time_series_data(
-                collector_info['func'], collector_name, time_intervals, db
-            )
+            dataframes = _collect_time_series_data(collector_info['func'], collector_name, time_intervals, db)
         else:
             dataframes = _collect_snapshot_data(collector_info['func'], collector_name, db)
 
