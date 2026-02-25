@@ -114,6 +114,36 @@ test_lines = [
     '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
     'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
     'default_unified_job_template_2025-06-13',
+    '7,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
+    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    '2025-06-13 11:00:00+00,4,1,default_unified_job_11_2025-06-13,1,'
+    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+    'default_unified_job_template_2025-06-13',
+    '8,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
+    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    '2025-06-13 11:00:00+00,4,1,default_unified_job_11_2025-06-13,1,'
+    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+    'default_unified_job_template_2025-06-13',
+    '9,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
+    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    '2025-06-13 11:00:00+00,5,1,default_unified_job_11_2025-06-13,1,'
+    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+    'default_unified_job_template_2025-06-13',
+    '10,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
+    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    '2025-06-13 11:00:00+00,5,1,default_unified_job_11_2025-06-13,1,'
+    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+    'default_unified_job_template_2025-06-13',
+    '11,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
+    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    '2025-06-13 11:00:00+00,6,1,default_unified_job_11_2025-06-13,1,'
+    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+    'default_unified_job_template_2025-06-13',
+    '12,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
+    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    '2025-06-13 11:00:00+00,6,1,default_unified_job_11_2025-06-13,1,'
+    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+    'default_unified_job_template_2025-06-13',
 ]
 
 # derive expected header and rows
