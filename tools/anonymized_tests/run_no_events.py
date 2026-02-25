@@ -17,6 +17,9 @@ do not need since-until parameter and will run once.
 """
 
 import argparse
+import json
+import os
+import shutil
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
@@ -29,6 +32,9 @@ prepare()
 
 from django.db import connection  # noqa: E402
 
+from metrics_utility.anonymized_rollups.anonymized_rollups import (  # noqa: E402
+    compute_anonymized_rollup_from_raw_data,
+)
 from metrics_utility.library.collectors.controller import (  # noqa: E402
     controller_version_service,
     credentials_service,
@@ -221,6 +227,14 @@ Examples:
     
     args = parser.parse_args()
     
+    # Clean up ./out directory at the start (recursively remove all files and folders)
+    out_dir = './out'
+    if os.path.exists(out_dir):
+        print(f"Cleaning up {out_dir} directory (removing all files and folders recursively)...")
+        shutil.rmtree(out_dir, ignore_errors=True)
+        print(f"✓ Removed {out_dir} and all its contents")
+    print()
+    
     # Parse since/until or use defaults
     if args.since:
         since = parse_datetime(args.since)
@@ -302,6 +316,64 @@ Examples:
             print(f"  Rows: {rows:,}")
         
         print()
+    
+    # Compute anonymized rollups from collected dataframes
+    print()
+    print("=" * 70)
+    print("COMPUTING ANONYMIZED ROLLUPS")
+    print("=" * 70)
+    print()
+    
+    # Map collector names to input_data keys expected by compute_anonymized_rollup_from_raw_data
+    collector_to_input_key = {
+        'unified_jobs': 'unified_jobs',
+        'job_host_summary_service': 'job_host_summary',
+        'credentials_service': 'credentials',
+        'execution_environments': 'execution_environments',
+        'table_metadata': 'table_metadata',
+        'controller_version_service': 'controller_version',
+    }
+    
+    # Prepare input_data dict
+    input_data = {
+        'main_jobevent': [],  # Empty since we're not collecting events
+    }
+    
+    # Add collected dataframes to input_data
+    for collector_name, dataframes in results.items():
+        input_key = collector_to_input_key.get(collector_name)
+        if input_key:
+            # Filter out None dataframes, but keep empty dataframes (they're valid)
+            valid_dataframes = [df for df in dataframes if df is not None]
+            if valid_dataframes:
+                input_data[input_key] = valid_dataframes
+            else:
+                # If no valid dataframes, pass a single empty dataframe
+                input_data[input_key] = [pd.DataFrame()]
+    
+    # Compute anonymized rollup
+    salt = 'salt'  # Default salt, could be made configurable
+    print("Computing anonymized rollup from collected data...")
+    try:
+        json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+        print("✓ Anonymized rollup computed successfully")
+    except Exception as e:
+        print(f"✗ Error computing anonymized rollup: {e}")
+        import traceback
+        traceback.print_exc()
+        return results
+    
+    # Save final JSON
+    json_path = f'./out/anonymized_rollup_no_events.json'
+    
+    # Create the directory
+    os.makedirs(os.path.dirname(json_path), exist_ok=True)
+    
+    with open(json_path, 'w') as f:
+        json.dump(json_data, f, indent=4)
+    
+    print(f"✓ Final JSON saved to: {json_path}")
+    print()
     
     return results
 
