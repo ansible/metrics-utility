@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import shutil
+
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
 
@@ -27,6 +28,7 @@ import pandas as pd
 
 # Initialize Django before importing Django components
 from metrics_utility import prepare
+
 
 prepare()
 
@@ -43,6 +45,7 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     table_metadata,
     unified_jobs,
 )
+
 
 # Collectors to run (excluding events/main_jobevent_service)
 COLLECTORS = {
@@ -89,15 +92,15 @@ def parse_datetime(dt_str: str) -> datetime:
 def split_time_range(since: datetime, until: datetime, batches: int = None) -> List[Tuple[datetime, datetime]]:
     """
     Split time range into subintervals.
-    
+
     If batches is provided, divides since-until into N equal subintervals.
     If batches is not provided, splits by hourly collections.
-    
+
     Args:
         since: Start datetime
         until: End datetime
         batches: Number of batches (optional)
-    
+
     Returns:
         List of (since, until) tuples
     """
@@ -105,7 +108,7 @@ def split_time_range(since: datetime, until: datetime, batches: int = None) -> L
         # Divide into N equal subintervals
         total_duration = until - since
         interval_duration = total_duration / batches
-        
+
         intervals = []
         current_since = since
         for i in range(batches):
@@ -115,7 +118,7 @@ def split_time_range(since: datetime, until: datetime, batches: int = None) -> L
                 current_until = until
             intervals.append((current_since, current_until))
             current_since = current_until
-        
+
         return intervals
     else:
         # Split by hourly collections
@@ -125,7 +128,7 @@ def split_time_range(since: datetime, until: datetime, batches: int = None) -> L
             current_until = min(current_since + timedelta(hours=1), until)
             intervals.append((current_since, current_until))
             current_since = current_until
-        
+
         return intervals
 
 
@@ -137,26 +140,26 @@ def collect_data_for_collector(
 ) -> List[pd.DataFrame]:
     """
     Collect data for a single collector.
-    
+
     Args:
         collector_name: Name of the collector
         collector_info: Dict with 'func' and 'needs_since_until' keys
         db: Database connection
         time_intervals: List of (since, until) tuples (only for time-series collectors)
-    
+
     Returns:
         List of dataframes (one per batch/interval, or one for snapshot collectors)
     """
     collector_func = collector_info['func']
     needs_since_until = collector_info['needs_since_until']
-    
+
     dataframes = []
-    
+
     if needs_since_until:
         # Time-series collector: run for each interval
         if not time_intervals:
-            raise ValueError(f"Time intervals required for collector {collector_name}")
-        
+            raise ValueError(f'Time intervals required for collector {collector_name}')
+
         for since, until in time_intervals:
             try:
                 df = collector_func(db=db, since=since, until=until).gather()
@@ -166,7 +169,7 @@ def collect_data_for_collector(
                     # Return empty dataframe if None
                     dataframes.append(pd.DataFrame())
             except Exception as e:
-                print(f"  Error collecting {collector_name} for interval {since} to {until}: {e}")
+                print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
                 dataframes.append(pd.DataFrame())
     else:
         # Snapshot collector: run once
@@ -177,9 +180,9 @@ def collect_data_for_collector(
             else:
                 dataframes.append(pd.DataFrame())
         except Exception as e:
-            print(f"  Error collecting {collector_name}: {e}")
+            print(f'  Error collecting {collector_name}: {e}')
             dataframes.append(pd.DataFrame())
-    
+
     return dataframes
 
 
@@ -198,16 +201,16 @@ def main():
 Examples:
   # Use default time range
   python run_no_events.py
-  
+
   # Custom time range
   python run_no_events.py --since "2025-06-13 00:00:00" --until "2025-06-14 00:00:00"
-  
+
   # Split into 4 batches
   python run_no_events.py --since "2025-06-13 00:00:00" --until "2025-06-14 00:00:00" --batches 4
-  
+
   # Hourly split (default when batches not provided)
   python run_no_events.py --since "2025-06-13 00:00:00" --until "2025-06-14 00:00:00"
-        """
+        """,
     )
     parser.add_argument(
         '--since',
@@ -224,50 +227,50 @@ Examples:
         type=int,
         help='Number of batches to divide the time range into',
     )
-    
+
     args = parser.parse_args()
-    
+
     # Clean up ./out directory at the start (recursively remove all files and folders)
     out_dir = './out'
     if os.path.exists(out_dir):
-        print(f"Cleaning up {out_dir} directory (removing all files and folders recursively)...")
+        print(f'Cleaning up {out_dir} directory (removing all files and folders recursively)...')
         shutil.rmtree(out_dir, ignore_errors=True)
-        print(f"✓ Removed {out_dir} and all its contents")
+        print(f'✓ Removed {out_dir} and all its contents')
     print()
-    
+
     # Parse since/until or use defaults
     if args.since:
         since = parse_datetime(args.since)
     else:
         since = DEFAULT_SINCE
-    
+
     if args.until:
         until = parse_datetime(args.until)
     else:
         until = DEFAULT_UNTIL
-    
+
     if since >= until:
-        raise ValueError(f"since ({since}) must be before until ({until})")
-    
+        raise ValueError(f'since ({since}) must be before until ({until})')
+
     # Split time range
     time_intervals = split_time_range(since, until, args.batches)
-    
-    print(f"Collecting data from {since} to {until}")
+
+    print(f'Collecting data from {since} to {until}')
     if args.batches:
-        print(f"Split into {args.batches} batches")
+        print(f'Split into {args.batches} batches')
     else:
-        print(f"Split into {len(time_intervals)} hourly intervals")
+        print(f'Split into {len(time_intervals)} hourly intervals')
     print()
-    
+
     # Get database connection
     db = connection
-    
+
     # Collect data for each collector
     results: Dict[str, List[pd.DataFrame]] = {}
-    
+
     for collector_name, collector_info in COLLECTORS.items():
-        print(f"Collecting {collector_name}...")
-        
+        print(f'Collecting {collector_name}...')
+
         if collector_info['needs_since_until']:
             # Time-series collector
             dataframes = collect_data_for_collector(
@@ -283,20 +286,20 @@ Examples:
                 collector_info,
                 db,
             )
-        
+
         results[collector_name] = dataframes
-        print(f"  Collected {len(dataframes)} dataframe(s)")
-    
+        print(f'  Collected {len(dataframes)} dataframe(s)')
+
     print()
-    print("=" * 70)
-    print("COLLECTION RESULTS")
-    print("=" * 70)
+    print('=' * 70)
+    print('COLLECTION RESULTS')
+    print('=' * 70)
     print()
-    
+
     # Print row counts for each collector and batch
     for collector_name, dataframes in results.items():
-        print(f"{collector_name}:")
-        
+        print(f'{collector_name}:')
+
         if COLLECTORS[collector_name]['needs_since_until']:
             # Time-series collector: show per batch
             total_rows = 0
@@ -304,26 +307,26 @@ Examples:
                 rows = count_rows(df)
                 total_rows += rows
                 if args.batches:
-                    print(f"  Batch {i + 1}/{len(dataframes)}: {rows:,} rows")
+                    print(f'  Batch {i + 1}/{len(dataframes)}: {rows:,} rows')
                 else:
                     # Show time interval for hourly splits
                     since_interval, until_interval = time_intervals[i]
-                    print(f"  Hour {i + 1} ({since_interval.strftime('%Y-%m-%d %H:%M')} - {until_interval.strftime('%H:%M')}): {rows:,} rows")
-            print(f"  Total: {total_rows:,} rows")
+                    print(f'  Hour {i + 1} ({since_interval.strftime("%Y-%m-%d %H:%M")} - {until_interval.strftime("%H:%M")}): {rows:,} rows')
+            print(f'  Total: {total_rows:,} rows')
         else:
             # Snapshot collector: show single result
             rows = count_rows(dataframes[0]) if dataframes else 0
-            print(f"  Rows: {rows:,}")
-        
+            print(f'  Rows: {rows:,}')
+
         print()
-    
+
     # Compute anonymized rollups from collected dataframes
     print()
-    print("=" * 70)
-    print("COMPUTING ANONYMIZED ROLLUPS")
-    print("=" * 70)
+    print('=' * 70)
+    print('COMPUTING ANONYMIZED ROLLUPS')
+    print('=' * 70)
     print()
-    
+
     # Map collector names to input_data keys expected by compute_anonymized_rollup_from_raw_data
     collector_to_input_key = {
         'unified_jobs': 'unified_jobs',
@@ -333,12 +336,12 @@ Examples:
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
     }
-    
+
     # Prepare input_data dict
     input_data = {
         'main_jobevent': [],  # Empty since we're not collecting events
     }
-    
+
     # Add collected dataframes to input_data
     for collector_name, dataframes in results.items():
         input_key = collector_to_input_key.get(collector_name)
@@ -350,31 +353,32 @@ Examples:
             else:
                 # If no valid dataframes, pass a single empty dataframe
                 input_data[input_key] = [pd.DataFrame()]
-    
+
     # Compute anonymized rollup
     salt = 'salt'  # Default salt, could be made configurable
-    print("Computing anonymized rollup from collected data...")
+    print('Computing anonymized rollup from collected data...')
     try:
         json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
-        print("✓ Anonymized rollup computed successfully")
+        print('✓ Anonymized rollup computed successfully')
     except Exception as e:
-        print(f"✗ Error computing anonymized rollup: {e}")
+        print(f'✗ Error computing anonymized rollup: {e}')
         import traceback
+
         traceback.print_exc()
         return results
-    
+
     # Save final JSON
-    json_path = f'./out/anonymized_rollup_no_events.json'
-    
+    json_path = './out/anonymized_rollup_no_events.json'
+
     # Create the directory
     os.makedirs(os.path.dirname(json_path), exist_ok=True)
-    
+
     with open(json_path, 'w') as f:
         json.dump(json_data, f, indent=4)
-    
-    print(f"✓ Final JSON saved to: {json_path}")
+
+    print(f'✓ Final JSON saved to: {json_path}')
     print()
-    
+
     return results
 
 
