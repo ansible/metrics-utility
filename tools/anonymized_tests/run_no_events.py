@@ -176,8 +176,7 @@ def collect_data_for_collector(
                     # Return empty dataframe if None
                     dataframes.append(pd.DataFrame())
             except Exception as e:
-                print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
-                dataframes.append(pd.DataFrame())
+                raise RuntimeError(f'Error collecting {collector_name} for interval {since} to {until}') from e
     else:
         # Snapshot collector: run once
         try:
@@ -187,8 +186,7 @@ def collect_data_for_collector(
             else:
                 dataframes.append(pd.DataFrame())
         except Exception as e:
-            print(f'  Error collecting {collector_name}: {e}')
-            dataframes.append(pd.DataFrame())
+            raise RuntimeError(f'Error collecting {collector_name}') from e
 
     return dataframes
 
