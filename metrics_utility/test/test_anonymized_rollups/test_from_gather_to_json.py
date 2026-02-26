@@ -728,8 +728,7 @@ def _collect_time_series_data(collector_func, collector_name, time_intervals, db
             df = collector_func(db=db, since=since, until=until).gather()
             dataframes.append(df if df is not None else pd.DataFrame())
         except Exception as e:
-            print(f'  Error collecting {collector_name} for interval {since} to {until}: {e}')
-            dataframes.append(pd.DataFrame())
+            raise RuntimeError(f'Error collecting {collector_name} for interval {since} to {until}') from e
     return dataframes
 
 
@@ -739,8 +738,7 @@ def _collect_snapshot_data(collector_func, collector_name, db):
         df = collector_func(db=db).gather()
         return [df] if df is not None else [pd.DataFrame()]
     except Exception as e:
-        print(f'  Error collecting {collector_name}: {e}')
-        return [pd.DataFrame()]
+        raise RuntimeError(f'Error collecting {collector_name}') from e
 
 
 def _collect_data_from_collectors(collectors, time_intervals, db):
