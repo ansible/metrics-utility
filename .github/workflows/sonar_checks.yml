@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch Code Coverage Report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
           path: coverage-artifact
@@ -30,7 +30,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
 
       - name: Fetch PR Number
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: pr_number
           path: pr-artifact
