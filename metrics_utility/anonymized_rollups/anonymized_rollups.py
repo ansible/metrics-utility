@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shutil
 
 from typing import Any, Callable, Dict, List
 
@@ -15,6 +16,9 @@ from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
+
+
+OUT_BATCHES_DIR = './out/batches'
 
 
 def hash(value, salt):
@@ -147,7 +151,6 @@ def _get_default_host_summary_fields() -> Dict[str, int]:
         'skipped_total': 0,
         'ignored_total': 0,
         'rescued_total': 0,
-        'unique_hosts_total': 0,
         'successful_hosts_total': 0,
         'failed_hosts_total': 0,
         'unreachable_hosts_total': 0,
@@ -155,7 +158,11 @@ def _get_default_host_summary_fields() -> Dict[str, int]:
 
 
 def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract host summary fields from job_host_summary data."""
+    """Extract host summary fields from job_host_summary data.
+
+    Note: unique_hosts_total is not included here as it's only computed at the top level,
+    not per grouping.
+    """
     return {
         'dark_total': jhs_data.get('dark_total', 0),
         'failures_total': jhs_data.get('failures_total', 0),
@@ -163,7 +170,6 @@ def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
         'skipped_total': jhs_data.get('skipped_total', 0),
         'ignored_total': jhs_data.get('ignored_total', 0),
         'rescued_total': jhs_data.get('rescued_total', 0),
-        'unique_hosts_total': jhs_data.get('unique_hosts_total', 0),
         'successful_hosts_total': jhs_data.get('successful_hosts_total', 0),
         'failed_hosts_total': jhs_data.get('failed_hosts_total', 0),
         'unreachable_hosts_total': jhs_data.get('unreachable_hosts_total', 0),
@@ -204,10 +210,21 @@ def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
     return sum(item.get(field, 0) for item in items)
 
 
-def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Calculate host summary totals from job_type groups."""
+def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]], host_ids: List[Any] = None) -> Dict[str, Any]:
+    """Calculate host summary totals from job_type groups.
+
+    Args:
+        job_host_summary_by_job_type: List of job_type group dictionaries
+        host_ids: Top-level list of host IDs to compute unique_hosts_total from
+    """
+    # Compute unique_hosts_total from top-level host_ids list, not from groupings
+    if host_ids is not None and isinstance(host_ids, list) and len(host_ids) > 0:
+        unique_hosts_total = len(set(host_ids))
+    else:
+        unique_hosts_total = 0
+
     return {
-        'unique_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'unique_hosts_total'),
+        'unique_hosts_total': unique_hosts_total,
         'successful_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'successful_hosts_total'),
         'failed_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'failed_hosts_total'),
         'unreachable_hosts_total': _calculate_sum_from_list(job_host_summary_by_job_type, 'unreachable_hosts_total'),
@@ -217,6 +234,7 @@ def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, 
 def _calculate_job_statistics(jobs_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Calculate job statistics by summing from all job_type groups."""
     return {
+        'rollup_period_jobs_total': _calculate_sum_from_list(jobs_by_job_type, 'jobs_total'),
         'job_templates_total': _calculate_sum_from_list(jobs_by_job_type, 'templates_total'),
         'inventories_total': _calculate_sum_from_list(jobs_by_job_type, 'inventories_total'),
         'rollup_period_jobs_successful': _calculate_sum_from_list(jobs_by_job_type, 'jobs_successful_total'),
@@ -281,8 +299,8 @@ def _build_statistics(
         'rollup_period_execution_environments_total': execution_environments_total,
         'rollup_period_EE_default_total': execution_environments.get('execution_environments_default_total'),
         'rollup_period_EE_custom_total': execution_environments.get('execution_environments_custom_total'),
-        # from jobs (top-level fields)
-        'rollup_period_jobs_total': jobs.get('jobs_total'),
+        # from jobs (computed from jobs_by_job_type aggregation)
+        'rollup_period_jobs_total': job_statistics['rollup_period_jobs_total'],
         'rollup_period_jobs_successful': job_statistics['rollup_period_jobs_successful'],
         'rollup_period_jobs_failed': job_statistics['rollup_period_jobs_failed'],
         'rollup_period_jobs_duration_all_statuses_seconds': job_statistics['rollup_period_jobs_duration_all_statuses_seconds'],
@@ -404,8 +422,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
     job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
 
+    # Extract top-level host_ids list to compute unique_hosts_total
+    host_ids: List[Any] = job_host_summary_root.get('host_ids', []) or []
+
     # Calculate statistics using helper functions
-    host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type)
+    host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type, host_ids)
     job_statistics = _calculate_job_statistics(jobs_by_job_type)
     playbooks_total = len(events_modules.get('modules_used_per_playbook_total', {}) or {})
     execution_environments_total = _calculate_execution_environments_total(execution_environments)
@@ -516,6 +537,11 @@ def anonymize_rollups(
 
 
 def compute_anonymized_rollup_from_raw_data(input_data, salt):
+
+    # delete everything in the directory ./out/batches (including subdirectories)
+    if os.path.exists(OUT_BATCHES_DIR):
+        shutil.rmtree(OUT_BATCHES_DIR, ignore_errors=True)
+
     jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
     jobs_result = JobsAnonymizedRollup().base(jobs)
 
@@ -549,6 +575,12 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
     anonymized_rollup = sanitize_json(anonymized_rollup)
+
+    # save anonymized rollup to file
+    os.makedirs(OUT_BATCHES_DIR, exist_ok=True)
+    file_name = os.path.join(OUT_BATCHES_DIR, 'anonymized_rollup.json')
+    with open(file_name, 'w') as f:
+        f.write(json.dumps(anonymized_rollup, indent=2))
     return anonymized_rollup
 
 
@@ -563,12 +595,35 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_l
 
     concat_data = None
 
+    rollup_object_name = rollup_object.rollup_name
+
+    counter = -1
     for dataframe in dataframe_list:
+        counter += 1
         # compat for CSVs
         if isinstance(dataframe, str):
             dataframe = pd.read_csv(dataframe, encoding='utf-8')
 
         prepared_data = rollup_object.prepare(dataframe)
+        # serialize prepared data to json
+        prepared_data = json.dumps(prepared_data, indent=2)
+        # back to dict/list
+        prepared_data = json.loads(prepared_data)
         concat_data = rollup_object.merge(concat_data, prepared_data)
+        # concat data to json and then back
+        concat_data = json.dumps(concat_data, indent=2)
+        concat_data = json.loads(concat_data)
+
+        # Create a subdirectory for this rollup
+        rollup_batch_dir = os.path.join(OUT_BATCHES_DIR, rollup_object_name)
+        os.makedirs(rollup_batch_dir, exist_ok=True)
+        # save prepare data and concat data to separate files (as json pretty printed)
+        # Each rollup has its own folder
+        file1_name = os.path.join(rollup_batch_dir, f'{counter}_prepare.json')
+        file2_name = os.path.join(rollup_batch_dir, f'{counter}_xconcat.json')
+        with open(file1_name, 'w') as f:
+            f.write(json.dumps(prepared_data, indent=2))
+        with open(file2_name, 'w') as f:
+            f.write(json.dumps(concat_data, indent=2))
 
     return concat_data

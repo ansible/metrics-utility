@@ -68,6 +68,7 @@ jobs = [
         'finished': '2024-01-15 16:08:00.000000+00',  # 8 minutes
         'failed': 1,  # Failed because Host4 had failures
         'job_template_name': 'T3',
+        'unified_job_template_id': 3,
         'controller_node': 'controller-01',
         'ansible_version': '2.18.0',
         'organization_name': 'Organization1',
@@ -76,6 +77,7 @@ jobs = [
         'launch_type': 'workflow',
         'forks': 10,
         'inventory_name': 'test-inventory',
+        'inventory_id': 1,
         'scm_type': 'manual',
         'installed_collections': json.dumps(
             {

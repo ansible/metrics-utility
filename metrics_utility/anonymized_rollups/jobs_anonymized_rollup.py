@@ -13,6 +13,23 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     Collector - unified_jobs collector data
     """
 
+    def _convert_id_columns_to_strings(self, dataframe):
+        """Convert ID columns to strings at the beginning of prepare().
+
+        Converts numeric ID columns (id, job_id, host_id, job_remote_id, unified_job_template_id, inventory_id) to strings
+        to ensure consistent JSON serialization.
+        """
+        if dataframe.empty:
+            return dataframe
+
+        id_columns = ['id', 'job_id', 'host_id', 'job_remote_id', 'unified_job_template_id', 'inventory_id']
+        for col in id_columns:
+            if col in dataframe.columns:
+                # Convert numeric IDs to strings, preserving NaN values
+                dataframe[col] = dataframe[col].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x)
+
+        return dataframe
+
     def _preprocess_dataframe(self, dataframe):
         """Preprocess dataframe: filter, normalize columns, and compute derived fields."""
         # Filter out jobs that are not finished
@@ -46,7 +63,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def _get_common_aggregations(self):
         """Get common aggregation dictionary shared by all groupings."""
         return {
-            'job_ids': ('id', lambda x: sorted(list(set(x.dropna())))),
+            'jobs_total': ('id', 'nunique'),
             'jobs_failed_total': ('failed', 'sum'),
             'jobs_successful_total': ('jobs_successful', 'sum'),
             'jobs_never_started_total': ('jobs_never_started', 'sum'),
@@ -58,8 +75,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'job_waiting_time_maximum_seconds': ('job_waiting_time_seconds', 'max'),
             'job_waiting_time_minimum_seconds': ('job_waiting_time_seconds', 'min'),
             'job_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
-            'templates': ('job_template_name', lambda x: sorted(list(set(x.dropna())))),
-            'inventories': ('inventory_name', lambda x: sorted(list(set(x.dropna())))),
+            'templates': ('unified_job_template_id', lambda x: sorted(set(x.dropna()))),
+            'inventories': ('inventory_id', lambda x: sorted(set(x.dropna()))),
         }
 
     def _get_ansible_versions_aggregation(self):
@@ -90,23 +107,20 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_job_type = dataframe.groupby('model').agg(**aggregations_by_job_type_dict).reset_index().rename(columns={'model': 'job_type'})
 
         aggregations_by_job_type['is_automation'] = aggregations_by_job_type['job_type'] == 'job'
-        self._add_totals_to_aggregation(
-            aggregations_by_job_type, [('job_ids', 'jobs_total'), ('templates', 'templates_total'), ('inventories', 'inventories_total')]
-        )
+        self._add_totals_to_aggregation(aggregations_by_job_type, [('templates', 'templates_total'), ('inventories', 'inventories_total')])
 
         return aggregations_by_job_type
 
     def _aggregate_by_launch_type(self, dataframe, common_aggregations, ansible_versions_aggregation):
         """Aggregate by launch_type."""
         aggregations_by_launch_type_dict = common_aggregations.copy()
-        aggregations_by_launch_type_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
+        aggregations_by_launch_type_dict.update({'job_types': ('model', lambda x: sorted(set(x.dropna())))})
         aggregations_by_launch_type_dict.update(ansible_versions_aggregation)
 
         aggregations_by_launch_type = dataframe.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
         self._add_totals_to_aggregation(
             aggregations_by_launch_type,
             [
-                ('job_ids', 'jobs_total'),
                 ('job_types', 'job_type_total'),
                 ('templates', 'templates_total'),
                 ('inventories', 'inventories_total'),
@@ -118,14 +132,13 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def _aggregate_by_ansible_version(self, dataframe, common_aggregations):
         """Aggregate by ansible_version."""
         aggregations_by_ansible_version_dict = common_aggregations.copy()
-        aggregations_by_ansible_version_dict.update({'job_types': ('model', lambda x: sorted(list(set(x.dropna()))))})
+        aggregations_by_ansible_version_dict.update({'job_types': ('model', lambda x: sorted(set(x.dropna())))})
 
         aggregations_by_ansible_version = dataframe.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
 
         self._add_totals_to_aggregation(
             aggregations_by_ansible_version,
             [
-                ('job_ids', 'jobs_total'),
                 ('job_types', 'job_type_total'),
                 ('templates', 'templates_total'),
                 ('inventories', 'inventories_total'),
@@ -136,15 +149,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
     def _extract_metadata(self, dataframe):
         """Extract metadata fields from dataframe."""
-        organizations = sorted(list(set(dataframe['organization_name'].dropna().unique())))
-        job_ids = sorted(list(set(dataframe['id'].dropna().unique())))
+        organizations = sorted(set(dataframe['organization_name'].dropna().unique()))
         forks_total = int(dataframe['forks'].sum()) if 'forks' in dataframe.columns else 0
 
         scm_types = []
         if 'scm_type' in dataframe.columns:
             scm_types = sorted([str(v) for v in dataframe['scm_type'].dropna().unique() if pd.notna(v) and str(v).strip()])
 
-        return organizations, job_ids, forks_total, scm_types
+        return organizations, forks_total, scm_types
 
     def prepare(self, dataframe):
         # Convert ID columns to strings at the beginning
@@ -162,7 +174,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                     'by_ansible_version': [],
                     'organizations': [],
                     'forks_total': 0,
-                    'job_ids': [],
                     'scm_types': [],
                     'installed_collections': [],
                 }
@@ -186,7 +197,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         by_ansible_version = aggregations_by_ansible_version.to_dict(orient='records')
 
         # Extract metadata
-        organizations, job_ids, forks_total, scm_types = self._extract_metadata(dataframe)
+        organizations, forks_total, scm_types = self._extract_metadata(dataframe)
 
         # Process collections statistics
         collections_stats = self._process_collections_from_jobs(dataframe)
@@ -197,7 +208,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'by_ansible_version': by_ansible_version,
             'organizations': organizations,
             'forks_total': forks_total,
-            'job_ids': job_ids,
             'scm_types': scm_types,
             'installed_collections': collections_stats,
         }
@@ -236,7 +246,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         ]
 
         # List columns to union
-        list_cols = ['job_ids', 'templates', 'inventories', 'ansible_versions', 'job_types']
+        list_cols = ['templates', 'inventories', 'ansible_versions', 'job_types']
 
         for key in all_keys:
             item_all = all_dict.get(key, {})
@@ -305,12 +315,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            merged_item[col] = sorted(list(set_all.union(set_new)))
+            merged_item[col] = sorted(set_all.union(set_new))
 
     def _recompute_totals(self, merged_item):
         """Recompute totals from list columns."""
-        if 'job_ids' in merged_item:
-            merged_item['jobs_total'] = len(merged_item['job_ids'])
         if 'templates' in merged_item:
             merged_item['templates_total'] = len(merged_item['templates'])
         if 'inventories' in merged_item:
@@ -322,7 +330,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         """Merge list fields by union and sort."""
         all_set = set(data_all.get(field_name, []))
         new_set = set(data_new.get(field_name, []))
-        return sorted(list(all_set.union(new_set)))
+        return sorted(all_set.union(new_set))
 
     def _merge_collections(self, data_all, data_new):
         """Merge installed_collections by summing job_count for same collection+version."""
@@ -364,7 +372,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         # Merge list fields
         organizations = self._merge_list_fields(data_all, data_new, 'organizations')
-        job_ids = self._merge_list_fields(data_all, data_new, 'job_ids')
         scm_types = self._merge_list_fields(data_all, data_new, 'scm_types')
 
         # Sum forks_total
@@ -379,7 +386,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'by_ansible_version': by_ansible_version,
             'organizations': organizations,
             'forks_total': forks_total,
-            'job_ids': job_ids,
             'scm_types': scm_types,
             'installed_collections': installed_collections,
         }
@@ -417,7 +423,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         by_ansible_version = data.get('by_ansible_version', [])
         organizations = data.get('organizations', [])
         forks_total = data.get('forks_total', 0)
-        job_ids = data.get('job_ids', [])
         scm_types = data.get('scm_types', [])
         installed_collections = data.get('installed_collections', [])
 
@@ -440,13 +445,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
             for item in stats_list:
                 # Drop list columns that were used for deduplication
-                for col in ['job_ids', 'templates', 'inventories', 'job_types']:
+                for col in ['templates', 'inventories', 'job_types']:
                     if col in item:
                         del item[col]
 
-        # Compute final totals from lists
+        # Compute final totals
         organizations_total = len(organizations)
-        jobs_total = len(job_ids)
+        # Compute jobs_total by summing jobs_total from all job_type groups
+        jobs_total = sum(item.get('jobs_total', 0) for item in by_job_type)
 
         # Prepare JSON data (already in JSON format)
         json_data = {

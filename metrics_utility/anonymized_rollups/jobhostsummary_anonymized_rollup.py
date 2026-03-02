@@ -13,6 +13,19 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('job_host_summary')
         self.collector_names = ['job_host_summary_service']
 
+    def _convert_id_columns_to_strings(self, dataframe):
+        """Convert ID columns to strings, including host_remote_id."""
+        # Call parent method first
+        dataframe = super()._convert_id_columns_to_strings(dataframe)
+
+        # Also convert host_remote_id if it exists
+        if not dataframe.empty and 'host_remote_id' in dataframe.columns:
+            dataframe['host_remote_id'] = dataframe['host_remote_id'].apply(
+                lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x
+            )
+
+        return dataframe
+
     def _merge_stats_json(self, stats_all, stats_new, groupby_col):
         """Merge two stats JSON lists by summing numeric columns and unioning lists."""
         if not stats_all:
@@ -39,13 +52,12 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'successful_hosts_total',
             'failed_hosts_total',
             'unreachable_hosts_total',
-            'unique_hosts_total',
             'job_type_total',
             'launch_type_total',
         ]
 
-        # List columns to union
-        list_cols = ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']
+        # List columns to union (no longer includes unique_hosts - that's now top-level)
+        list_cols = ['job_types', 'launch_types']
 
         for key in all_keys:
             item_all = all_dict.get(key, {})
@@ -67,6 +79,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             self._merge_numeric_columns(merged_item, item_all, item_new, numeric_cols)
             self._merge_list_columns(merged_item, item_all, item_new, list_cols)
             self._recompute_totals(merged_item)
+        else:
+            # Even with a single item, ensure totals are computed from set sizes
+            self._recompute_totals(merged_item)
 
         return merged_item
 
@@ -84,16 +99,41 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            merged_item[col] = sorted(list(set_all.union(set_new)))
+            merged_item[col] = sorted(set_all.union(set_new))
 
     def _recompute_totals(self, merged_item):
         """Recompute totals from list columns."""
-        if 'unique_hosts' in merged_item:
-            merged_item['unique_hosts_total'] = len(merged_item['unique_hosts'])
         if 'job_types' in merged_item:
             merged_item['job_type_total'] = len(merged_item['job_types'])
         if 'launch_types' in merged_item:
             merged_item['launch_type_total'] = len(merged_item['launch_types'])
+
+    def _drop_list_columns_from_stats(self, by_job_type, by_launch_type, by_ansible_version):
+        """Drop list columns from stats lists (we only need computed totals, not raw lists)."""
+        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
+            for item in stats_list:
+                for col in ['job_types', 'launch_types']:
+                    if col in item:
+                        del item[col]
+
+    def _compute_unique_hosts_total(self, host_ids):
+        """Compute unique_hosts_total from host_ids list."""
+        if isinstance(host_ids, list):
+            return len(set(host_ids))
+        return 0
+
+    def _get_empty_json_result(self, job_host_pairs_total=0, host_ids=None):
+        """Get empty JSON result structure."""
+        return {
+            'json': {
+                'by_job_type': [],
+                'by_launch_type': [],
+                'by_ansible_version': [],
+                'job_host_pairs_total': job_host_pairs_total,
+                'unique_hosts_total': 0,
+                'host_ids': host_ids if isinstance(host_ids, list) else [],
+            },
+        }
 
     def merge(self, data_all, data_new):
         """
@@ -111,11 +151,17 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Sum job_host_pairs_total
         job_host_pairs_total = data_all.get('job_host_pairs_total', 0) + data_new.get('job_host_pairs_total', 0)
 
+        # Merge top-level host_ids lists (union and maintain uniqueness)
+        host_ids_all = set(data_all.get('host_ids', []))
+        host_ids_new = set(data_new.get('host_ids', []))
+        host_ids = sorted(host_ids_all.union(host_ids_new))
+
         return {
             'by_job_type': by_job_type,
             'by_launch_type': by_launch_type,
             'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
+            'host_ids': host_ids,
         }
 
     # prepare is called for each batch of data
@@ -140,6 +186,10 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         # Check if job_remote_id column exists
         if 'job_remote_id' not in dataframe.columns:
             dataframe['job_remote_id'] = None
+
+        # Check if host_remote_id column exists (host ID, not host name)
+        if 'host_remote_id' not in dataframe.columns:
+            dataframe['host_remote_id'] = None
 
         # Check if model column exists (for backward compatibility)
         if 'model' not in dataframe.columns:
@@ -179,7 +229,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                unique_hosts=('host_name', lambda x: sorted(list(set(x.dropna())))),
                 successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
                 failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
                 unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
@@ -201,7 +250,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
                 rescued_total=('rescued', 'sum'),
-                unique_hosts=('host_name', lambda x: sorted(list(set(x.dropna())))),
                 successful_hosts_total=('host_outcome', lambda x: (x == 'successful').sum()),
                 failed_hosts_total=('host_outcome', lambda x: (x == 'failed').sum()),
                 unreachable_hosts_total=('host_outcome', lambda x: (x == 'unreachable').sum()),
@@ -212,15 +260,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _get_common_aggregations(self):
         """Get common aggregation dictionary for grouping operations."""
-
-        def union_host_lists(series):
-            """Union all host lists in the series"""
-            result = set()
-            for host_list in series:
-                if isinstance(host_list, (list, set)):
-                    result.update(host_list)
-            return sorted(list(result))
-
         return {
             'dark_total': ('dark_total', 'sum'),
             'failures_total': ('failures_total', 'sum'),
@@ -228,11 +267,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'skipped_total': ('skipped_total', 'sum'),
             'ignored_total': ('ignored_total', 'sum'),
             'rescued_total': ('rescued_total', 'sum'),
-            'unique_hosts': ('unique_hosts', union_host_lists),
             'successful_hosts_total': ('successful_hosts_total', 'sum'),
             'failed_hosts_total': ('failed_hosts_total', 'sum'),
             'unreachable_hosts_total': ('unreachable_hosts_total', 'sum'),
-            'job_remote_ids': ('job_remote_id', lambda x: sorted(list(set(x.dropna())))),
         }
 
     def _compute_list_length(self, x):
@@ -242,27 +279,24 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     def _aggregate_by_job_type(self, aggregated_by_job, common_aggregations):
         """Aggregate by job_type."""
         aggregations_by_job_type = aggregated_by_job.groupby('job_type').agg(**common_aggregations).reset_index()
-        aggregations_by_job_type['unique_hosts_total'] = aggregations_by_job_type['unique_hosts'].apply(self._compute_list_length)
         return aggregations_by_job_type
 
     def _aggregate_by_launch_type(self, aggregated_by_job, common_aggregations):
         """Aggregate by launch_type."""
         aggregations_by_launch_type_dict = common_aggregations.copy()
-        aggregations_by_launch_type_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
+        aggregations_by_launch_type_dict['job_types'] = ('job_type', lambda x: sorted(set(x.dropna())))
 
         aggregations_by_launch_type = aggregated_by_job.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
-        aggregations_by_launch_type['unique_hosts_total'] = aggregations_by_launch_type['unique_hosts'].apply(self._compute_list_length)
         aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(self._compute_list_length)
         return aggregations_by_launch_type
 
     def _aggregate_by_ansible_version(self, aggregated_by_job, common_aggregations):
         """Aggregate by ansible_version."""
         aggregations_by_ansible_version_dict = common_aggregations.copy()
-        aggregations_by_ansible_version_dict['job_types'] = ('job_type', lambda x: sorted(list(set(x.dropna()))))
-        aggregations_by_ansible_version_dict['launch_types'] = ('launch_type', lambda x: sorted(list(set(x.dropna()))))
+        aggregations_by_ansible_version_dict['job_types'] = ('job_type', lambda x: sorted(set(x.dropna())))
+        aggregations_by_ansible_version_dict['launch_types'] = ('launch_type', lambda x: sorted(set(x.dropna())))
 
         aggregations_by_ansible_version = aggregated_by_job.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
-        aggregations_by_ansible_version['unique_hosts_total'] = aggregations_by_ansible_version['unique_hosts'].apply(self._compute_list_length)
         aggregations_by_ansible_version['job_type_total'] = aggregations_by_ansible_version['job_types'].apply(self._compute_list_length)
         aggregations_by_ansible_version['launch_type_total'] = aggregations_by_ansible_version['launch_types'].apply(self._compute_list_length)
         return aggregations_by_ansible_version
@@ -282,11 +316,18 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
                     'by_launch_type': [],
                     'by_ansible_version': [],
                     'job_host_pairs_total': job_host_pairs_total,
+                    'host_ids': [],
                 }
             )
 
         # Normalize dataframe columns
         self._normalize_dataframe(dataframe)
+
+        # Collect all unique host_ids from the dataframe (top-level, not per-grouping)
+        if 'host_remote_id' in dataframe.columns:
+            host_ids = sorted(set(dataframe['host_remote_id'].dropna()))
+        else:
+            host_ids = []
 
         # Aggregate by job
         aggregated_by_job = self._aggregate_by_job(dataframe)
@@ -309,6 +350,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'by_launch_type': by_launch_type,
             'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
+            'host_ids': host_ids,
         }
 
         # Sanitize to convert NumPy types to native Python types for JSON serialization
@@ -323,39 +365,24 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Handle None input (no data files)
         if data is None:
-            return {
-                'json': {
-                    'by_job_type': [],
-                    'by_launch_type': [],
-                    'by_ansible_version': [],
-                    'job_host_pairs_total': 0,
-                },
-            }
+            return self._get_empty_json_result()
 
         # Extract data from the structure (already JSON)
         by_job_type = data.get('by_job_type', [])
         by_launch_type = data.get('by_launch_type', [])
         by_ansible_version = data.get('by_ansible_version', [])
         job_host_pairs_total = data.get('job_host_pairs_total', 0)
+        host_ids = data.get('host_ids', [])
 
         # Handle empty data
         if not by_job_type and not by_launch_type and not by_ansible_version:
-            return {
-                'json': {
-                    'by_job_type': [],
-                    'by_launch_type': [],
-                    'by_ansible_version': [],
-                    'job_host_pairs_total': job_host_pairs_total,
-                },
-            }
+            return self._get_empty_json_result(job_host_pairs_total, host_ids)
+
+        # Compute unique_hosts_total from top-level host_ids list
+        unique_hosts_total = self._compute_unique_hosts_total(host_ids)
 
         # Drop list columns from stats (we only need the computed totals, not the raw lists)
-        for stats_list in [by_job_type, by_launch_type, by_ansible_version]:
-            for item in stats_list:
-                # Drop list columns that were used for deduplication
-                for col in ['unique_hosts', 'job_remote_ids', 'job_types', 'launch_types']:
-                    if col in item:
-                        del item[col]
+        self._drop_list_columns_from_stats(by_job_type, by_launch_type, by_ansible_version)
 
         # Prepare JSON data (already in JSON format)
         json_data = {
@@ -363,6 +390,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'by_launch_type': by_launch_type,
             'by_ansible_version': by_ansible_version,
             'job_host_pairs_total': job_host_pairs_total,
+            'unique_hosts_total': unique_hosts_total,
+            'host_ids': host_ids,
         }
 
         return {

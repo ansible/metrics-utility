@@ -14,6 +14,7 @@ jobs = [
         'finished': '2024-01-01 00:00:03.000000+00',  # +3s
         'failed': 0,
         'job_template_name': 'T1',
+        'unified_job_template_id': 1,
         'controller_node': 'ctrl-A',
         'ansible_version': '2.9.0',
         'organization_name': 'Org1',
@@ -22,6 +23,7 @@ jobs = [
         'launch_type': 'manual',
         'forks': 5,
         'inventory_name': 'inventory1',
+        'inventory_id': 1,
         'scm_type': 'git',
         'installed_collections': json.dumps(
             {
@@ -36,6 +38,7 @@ jobs = [
         'finished': '2024-01-01 00:00:15.000000+00',  # +5s
         'failed': 1,
         'job_template_name': 'T1',
+        'unified_job_template_id': 1,
         'controller_node': 'ctrl-A',
         'ansible_version': '2.10.0',
         'organization_name': 'Org1',
@@ -44,6 +47,7 @@ jobs = [
         'launch_type': 'scheduled',
         'forks': 10,
         'inventory_name': 'inventory1',
+        'inventory_id': 1,
         'scm_type': 'svn',
         'installed_collections': json.dumps(
             {
@@ -60,6 +64,7 @@ jobs = [
         'finished': '2024-01-01 00:01:47.000000+00',  # +7s
         'failed': 0,
         'job_template_name': 'T2',
+        'unified_job_template_id': 2,
         'controller_node': 'ctrl-A',
         'ansible_version': '2.11.0',
         'organization_name': 'Org2',
@@ -68,6 +73,7 @@ jobs = [
         'launch_type': 'workflow',
         'forks': 20,
         'inventory_name': 'inventory2',
+        'inventory_id': 2,
         'scm_type': 'git',
         'installed_collections': json.dumps(
             {
@@ -84,6 +90,7 @@ jobs = [
         'finished': '2024-01-01 00:03:22.000000+00',  # +2s
         'failed': 0,
         'job_template_name': 'T1',
+        'unified_job_template_id': 1,
         'controller_node': 'ctrl-B',
         'ansible_version': '2.12.0',
         'organization_name': 'Org1',
@@ -92,6 +99,7 @@ jobs = [
         'launch_type': 'callback',
         'forks': 15,
         'inventory_name': 'inventory1',
+        'inventory_id': 1,
         'scm_type': 'git',
         'installed_collections': json.dumps(
             {
@@ -107,6 +115,7 @@ jobs = [
         'finished': None,
         'failed': 0,
         'job_template_name': 'T3',
+        'unified_job_template_id': 3,
         'controller_node': 'ctrl-C',
         'ansible_version': '2.13.0',
         'organization_name': 'Org3',
@@ -114,6 +123,7 @@ jobs = [
         'launch_type': 'manual',
         'forks': 0,
         'inventory_name': 'inventory3',
+        'inventory_id': 3,
         'scm_type': 'manual',
         'installed_collections': json.dumps(
             {
@@ -127,6 +137,7 @@ jobs = [
         'finished': '2024-01-01 00:08:20.000000+00',
         'failed': 1,
         'job_template_name': 'T3',
+        'unified_job_template_id': 3,
         'controller_node': 'ctrl-C',
         'ansible_version': '2.14.0',
         'organization_name': 'Org3',
@@ -134,6 +145,7 @@ jobs = [
         'launch_type': 'scheduled',
         'forks': 0,
         'inventory_name': 'inventory3',
+        'inventory_id': 3,
         'scm_type': 'unknown',
         'installed_collections': json.dumps(
             {
@@ -476,6 +488,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'finished': '2024-01-01 00:00:03.000000+00',
             'failed': 0,
             'job_template_name': 'T1',
+            'unified_job_template_id': 1,
             'controller_node': 'ctrl-A',
             'ansible_version': '2.9.0',
             'organization_name': 'Org1',
@@ -484,6 +497,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'launch_type': 'manual',
             'forks': 5,
             'inventory_name': 'inventory1',
+            'inventory_id': 1,
             'scm_type': 'git',
         },
         {
@@ -492,6 +506,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'finished': '2024-01-01 00:00:15.000000+00',
             'failed': 0,
             'job_template_name': 'T2',
+            'unified_job_template_id': 2,
             'controller_node': 'ctrl-B',
             'ansible_version': '2.10.0',
             'organization_name': 'Org2',
@@ -500,6 +515,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'launch_type': 'scheduled',
             'forks': 10,
             'inventory_name': 'inventory2',
+            'inventory_id': 2,
             'scm_type': 'svn',
         },
         {
@@ -508,6 +524,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'finished': '2024-01-01 00:01:05.000000+00',
             'failed': 0,
             'job_template_name': 'T3',
+            'unified_job_template_id': 3,
             'controller_node': 'ctrl-C',
             'ansible_version': '2.11.0',
             'organization_name': 'Org3',
@@ -516,6 +533,7 @@ def test_jobs_anonymized_rollups_ansible_version_multiple_per_type():
             'launch_type': 'callback',
             'forks': 15,
             'inventory_name': 'inventory3',
+            'inventory_id': 3,
             'scm_type': 'git',
         },
     ]
