@@ -36,7 +36,7 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
     info['timeline'] = timeline
 
     # None can happen when the prev_hour_start doesn't have data, could be the cluster just started
-    info['total_workers_vcpu'] = int(total_workers_vcpu_val) if total_workers_vcpu_val is None else None
+    info['total_workers_vcpu'] = int(total_workers_vcpu_val) if total_workers_vcpu_val is not None else None
     return output.dict(info)
 
 

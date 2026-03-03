@@ -12,7 +12,7 @@ class CollectionDataStatus(CollectionCSV):
         self.package = package
 
     @register('data_collection_status', '1.0', format='csv')
-    def data_collection_status(self, _since, _until, output):
+    def data_collection_status(self, since, until, output):
         file_path = os.path.join(output.full_path, self.filename)
         with open(file_path, 'w', newline='') as csvfile:
             fieldnames = [

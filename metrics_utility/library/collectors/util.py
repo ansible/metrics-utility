@@ -42,11 +42,11 @@ class CollectionOutput(DictOutput):
 
     # takes a collector, returns a dict
     def as_dict(self, collector):
-        return self.dict(collector.gather(self))
+        return self.dict(collector.gather(output=self))
 
     # takes a collector, returns a list of filenames
     def as_files(self, collector):
-        return self.files(collector.gather(self))
+        return self.files(collector.gather(output=self))
 
     def sql(self, db, query):
         filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created

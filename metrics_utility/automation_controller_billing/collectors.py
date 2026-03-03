@@ -81,7 +81,7 @@ def daily_slicing(key, last_gather, **kwargs):
         start = end
 
 
-def until_slicing(**kwargs):
+def until_slicing(_key, _last_gather, **kwargs):
     # For tables where we always need to do a table full scan, ignoring since & until
     # Always store the inventory snapshot into the last daily partition (until - 1 day)
     until = kwargs.get('until', now())
@@ -103,7 +103,7 @@ def bool_from_env(name, default=None):
 
 # FIXME: move this one to caller?
 @register('config', '1.0', format='json', config=True)
-def cli_config(_since, _until, output):
+def cli_config(since, until, output):
     # runs once, used in all the tarballs
     # FIXME: , billing_provider_params={dict} rather than {} getting overwritten in collector.gather
     collector = config(db=connection)
@@ -124,7 +124,7 @@ def cli_job_host_summary(since, until, output):
 
 
 @register('main_host', '1.0', format='csv', fnc_slicing=until_slicing)
-def cli_main_host(_since, _until, output):
+def cli_main_host(since, until, output):
     if 'main_host' not in get_optional_collectors():
         return None
 
@@ -221,7 +221,7 @@ def cli_total_workers_vcpu(since, until, output):
         if not token:
             raise MetricsException(f'Unable to retrieve the token for the current service account from {token_path}')
 
-    def log_info_data(info, data):
+    def log_info_data(info):
         # This message must always appear in the log regardless of the log level.
         log_info('info: %s', json.dumps(info))
         data = {
@@ -254,7 +254,7 @@ def cli_total_workers_vcpu(since, until, output):
 
 
 @register('controller_version_service', '1.4', format='csv', fnc_slicing=until_slicing)
-def cli_controller_version_service(_since, _until, output):
+def cli_controller_version_service(since, until, output):
     if 'controller_version_service' not in get_optional_collectors():
         return None
 
@@ -272,7 +272,7 @@ def cli_credentials_service(since, until, output):
 
 
 @register('execution_environments', '1.4', format='csv', fnc_slicing=until_slicing)
-def cli_execution_environments(_since, _until, output):
+def cli_execution_environments(since, until, output):
     if 'execution_environments' not in get_optional_collectors():
         return None
 
@@ -299,7 +299,7 @@ def cli_main_jobevent_service(since, until, output):
 
 
 @register('table_metadata', '1.4', format='csv', fnc_slicing=until_slicing)
-def cli_table_metadata(_since, _until, output):
+def cli_table_metadata(since, until, output):
     if 'table_metadata' not in get_optional_collectors():
         return None
 
