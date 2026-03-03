@@ -150,9 +150,7 @@ class TestGetCpuTimeline:
 
         get_cpu_timeline(mock_prom, start_ts, end_ts)
 
-        mock_prom.query_range.assert_called_once_with(
-            query='sum(machine_cpu_cores)', start_time=start_ts, end_time=end_ts, step='5m'
-        )
+        mock_prom.query_range.assert_called_once_with(query='sum(machine_cpu_cores)', start_time=start_ts, end_time=end_ts, step='5m')
 
     def test_get_cpu_timeline_empty_result(self):
         """Test handling of empty result."""

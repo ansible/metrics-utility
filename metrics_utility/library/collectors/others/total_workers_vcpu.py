@@ -25,7 +25,7 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
 
     if not metering_enabled:
         info['total_workers_vcpu'] = 1
-        return info
+        return output.dict(info)
 
     prom = PrometheusClient(url=prometheus_url, ca_cert_path=ca_cert_path, token=token)
 

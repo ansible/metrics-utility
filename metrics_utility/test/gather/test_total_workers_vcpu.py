@@ -1,6 +1,5 @@
-
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -64,11 +63,10 @@ class TestTotalWorkersVcpu:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.total_workers_vcpu') as mock_tw_vcpu,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
-            patch('builtins.open', MagicMock(return_value=MagicMock(__enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value='test-token\n')))))),
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='test-token\n')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
-            mock_exists.return_value = True  # token and ca_cert files exist
 
             # Mock the collector to return None for total_workers_vcpu
             mock_collector = MagicMock()
@@ -91,11 +89,10 @@ class TestTotalWorkersVcpu:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.total_workers_vcpu') as mock_tw_vcpu,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
-            patch('builtins.open', MagicMock(return_value=MagicMock(__enter__=MagicMock(return_value=MagicMock(read=MagicMock(return_value='test-token\n')))))),
+            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists', return_value=True),
+            patch('builtins.open', mock_open(read_data='test-token\n')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
-            mock_exists.return_value = True  # token and ca_cert files exist
 
             # Mock the collector
             mock_collector = MagicMock()

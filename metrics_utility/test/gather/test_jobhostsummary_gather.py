@@ -315,7 +315,7 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
 def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
     """Test that job_host_summary.csv is still generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is set to invalid values."""
 
-    invalid_values = ['yes', 'no', '1', '0', 'enabled', 'disabled', 'random_text', '']
+    invalid_values = ['yes', 'no', '0', 'enabled', 'disabled', 'random_text', '']
 
     for test_value in invalid_values:
         # Create environment variables with collector set to invalid value

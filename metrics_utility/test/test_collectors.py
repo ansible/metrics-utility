@@ -53,7 +53,13 @@ class TestMainIndirectManagedNodeAuditTable:
     @patch('metrics_utility.automation_controller_billing.collectors.main_indirectmanagednodeaudit')
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     @patch('metrics_utility.automation_controller_billing.collectors.connection')
-    def test_main_indirectmanagednodeaudit_table_programming_error(self, mock_connection, mock_get_optional_collectors, mock_main_indirectmanagednodeaudit, mock_logger):
+    def test_main_indirectmanagednodeaudit_table_programming_error(
+        self,
+        mock_connection,
+        mock_get_optional_collectors,
+        mock_main_indirectmanagednodeaudit,
+        mock_logger,
+    ):
         """Test graceful handling when table doesn't exist (ProgrammingError)"""
         # Setup
         mock_get_optional_collectors.return_value = {'main_indirectmanagednodeaudit'}
@@ -80,7 +86,13 @@ class TestMainIndirectManagedNodeAuditTable:
     @patch('metrics_utility.automation_controller_billing.collectors.main_indirectmanagednodeaudit')
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
     @patch('metrics_utility.automation_controller_billing.collectors.connection')
-    def test_main_indirectmanagednodeaudit_table_logs_specific_error(self, mock_connection, mock_get_optional_collectors, mock_main_indirectmanagednodeaudit, mock_logger):
+    def test_main_indirectmanagednodeaudit_table_logs_specific_error(
+        self,
+        mock_connection,
+        mock_get_optional_collectors,
+        mock_main_indirectmanagednodeaudit,
+        mock_logger,
+    ):
         """Test that the specific error message is logged correctly"""
         # Setup
         mock_get_optional_collectors.return_value = {'main_indirectmanagednodeaudit'}
