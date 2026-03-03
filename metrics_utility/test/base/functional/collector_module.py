@@ -8,8 +8,8 @@ def config(since, **kwargs):
 
 
 @register('big_table', '1.0', format='csv')
-def big_table(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'big_table', 10, max_data_size)
+def big_table(*, output, **kwargs):
+    return simple_csv(output.full_path, 'big_table', 10, 1000)
 
 
 @register(
@@ -17,23 +17,23 @@ def big_table(full_path, max_data_size, **kwargs):
     '1.0',
     format='csv',
 )
-def big_table_2(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'big_table', 3, 800)
+def big_table_2(*, output, **kwargs):
+    return simple_csv(output.full_path, 'big_table', 3, 800)
 
 
 @register('csv_collection_1', '1.0', format='csv')
-def csv_collection_1(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'csv_collection_1', 1, max_data_size=100)
+def csv_collection_1(*, output, **kwargs):
+    return simple_csv(output.full_path, 'csv_collection_1', 1, 100)
 
 
 @register('csv_collection_2', '1.0', format='csv')
-def csv_collection_2(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'csv_collection_2', 1, max_data_size=200)
+def csv_collection_2(*, output, **kwargs):
+    return simple_csv(output.full_path, 'csv_collection_2', 1, 200)
 
 
 @register('csv_collection_3', '1.0', format='csv')
-def csv_collection_3(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'csv_collection_3', 1, max_data_size=300)
+def csv_collection_3(*, output, **kwargs):
+    return simple_csv(output.full_path, 'csv_collection_3', 1, 300)
 
 
 @register(
@@ -42,8 +42,8 @@ def csv_collection_3(full_path, max_data_size, **kwargs):
     format='csv',
     fnc_slicing=trivial_slicing,
 )
-def csv_slicing_1(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'csv_slicing_1', 1, max_data_size=100)
+def csv_slicing_1(*, output, **kwargs):
+    return simple_csv(output.full_path, 'csv_slicing_1', 1, 100)
 
 
 @register(
@@ -52,8 +52,8 @@ def csv_slicing_1(full_path, max_data_size, **kwargs):
     format='csv',
     fnc_slicing=trivial_slicing,
 )
-def csv_slicing_2(full_path, max_data_size, **kwargs):
-    return simple_csv(full_path, 'csv_slicing_2', 2, max_data_size=100)
+def csv_slicing_2(*, output, **kwargs):
+    return simple_csv(output.full_path, 'csv_slicing_2', 2, 100)
 
 
 @register('json_collection_1', '1.0', format='json')

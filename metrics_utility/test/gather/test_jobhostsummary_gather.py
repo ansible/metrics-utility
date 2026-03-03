@@ -375,10 +375,10 @@ def main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', tra
     # Mock the Collection.gather method to capture success/failure status
     original_collection_gather = Collection.gather
 
-    def mock_collection_gather(self, path):
+    def mock_collection_gather(self):
         """Mock collection gather to capture statuses."""
         # Call the original method
-        result = original_collection_gather(self, path)
+        result = original_collection_gather(self)
 
         # Capture the status
         collection_name = getattr(self, 'filename', 'unknown')

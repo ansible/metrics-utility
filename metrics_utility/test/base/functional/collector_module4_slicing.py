@@ -17,9 +17,9 @@ def config(since, **kwargs):
     format='csv',
     fnc_slicing=one_day_slicing,
 )
-def csv_one_day_slicing_1(since, full_path, until, **kwargs):
+def csv_one_day_slicing_1(since, *, output, until, **kwargs):
     return timestamp_csv(
-        full_path,
+        output.full_path,
         'csv_one_day_slicing_1',
         1,
         2 * TIMESTAMP_CSV_LINE_LENGTH,
@@ -34,9 +34,9 @@ def csv_one_day_slicing_1(since, full_path, until, **kwargs):
     format='csv',
     fnc_slicing=one_day_slicing,
 )
-def csv_one_day_slicing_2(since, full_path, until, **kwargs):
+def csv_one_day_slicing_2(since, *, output, until, **kwargs):
     return timestamp_csv(
-        full_path,
+        output.full_path,
         'csv_one_day_slicing_2',
         2,
         2 * TIMESTAMP_CSV_LINE_LENGTH,

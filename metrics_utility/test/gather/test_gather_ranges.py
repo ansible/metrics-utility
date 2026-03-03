@@ -67,10 +67,13 @@ def test_only_host_scope(cleanup_glob):
     assert 'End of the collection interval is greater than 0 days from start, setting end to 2024-01-01 00:00:00+00:00.' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-01 00:00:00+00:00' in text
 
-    today = datetime.now()
-    year = today.year
-    month = today.month
-    day = today.day
+    # Tarballs use until_slicing which stores at (until - 1 day)
+    # Test uses --since=2024-01-01, --until=2024-01-03, MAX_GATHER_PERIOD_DAYS=0
+    # This sets until to 2024-01-01, then until_slicing uses 2024-01-01 - 1 day = 2023-12-31
+    collection_date = datetime(2023, 12, 31)
+    year = collection_date.year
+    month = collection_date.month
+    day = collection_date.day
 
     # ensure month and day is 2 digits
     month = f'{month:02d}'

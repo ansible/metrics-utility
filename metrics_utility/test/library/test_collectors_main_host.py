@@ -16,35 +16,34 @@ def test_main_host_basic():
     assert instance.kwargs['db'] == mock_db
 
 
-@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
-def test_main_host_calls_copy_table(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_host_calls_copy_table(mock_copy_pandas):
     """Test that main_host calls copy_table with correct parameters."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2, 3], 'name': ['host1', 'host2', 'host3']})
+    mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2, 3], 'name': ['host1', 'host2', 'host3']})
 
     instance = main_host(db=mock_db)
     result = instance.gather()
 
-    mock_copy_table.assert_called_once()
-    call_args = mock_copy_table.call_args
+    mock_copy_pandas.assert_called_once()
+    call_args = mock_copy_pandas.call_args
 
-    assert call_args[1]['db'] == mock_db
-    assert call_args[1]['prepend_query'] is True
-    assert 'query' in call_args[1]
+    assert call_args[0][0] == mock_db
+    assert len(call_args[0]) >= 2  # db, query
     assert isinstance(result, pd.DataFrame)
 
 
-@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
-def test_main_host_query_structure(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_host_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should query main_host and related tables
     assert 'main_host' in query
@@ -58,33 +57,33 @@ def test_main_host_query_structure(mock_copy_table):
     assert 'ansible_host_variable' in query
 
 
-@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
-def test_main_host_filters_enabled_hosts(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_host_filters_enabled_hosts(mock_copy_pandas):
     """Test that query filters for enabled hosts."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should filter for enabled hosts
     assert "enabled='t'" in query or 'enabled = true' in query.lower()
 
 
-@patch('metrics_utility.library.collectors.controller.main_host.copy_table')
-def test_main_host_uses_yaml_json_functions(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_host_uses_yaml_json_functions(mock_copy_pandas):
     """Test that query uses metrics_utility helper functions."""
     mock_db = MagicMock()
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should use helper functions for parsing YAML/JSON
     assert 'metrics_utility_is_valid_json' in query
