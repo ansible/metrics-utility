@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def execution_environments(*, db=None):
+def execution_environments(*, db=None, output=DataframeOutput()):
     query = """
         SELECT
             id,
@@ -20,4 +20,4 @@ def execution_environments(*, db=None):
         FROM main_executionenvironment
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

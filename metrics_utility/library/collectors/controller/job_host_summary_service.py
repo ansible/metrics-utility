@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector, ensure_functions
 
 
 @collector
-def job_host_summary_service(*, db=None, since=None, until=None):
+def job_host_summary_service(*, db=None, since=None, until=None, output=DataframeOutput()):
     where = ' AND '.join(
         [
             f"mu.finished >= '{since.isoformat()}'",
@@ -85,4 +85,5 @@ def job_host_summary_service(*, db=None, since=None, until=None):
         ORDER BY mu.finished ASC
     """
 
-    return copy_table(db=db, query=query, prepend_query=True)
+    ensure_functions(db)
+    return output.sql(db, query)

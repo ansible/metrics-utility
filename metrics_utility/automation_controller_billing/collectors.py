@@ -44,9 +44,9 @@ or a list of CSV filenames.
     @register('something', '1.0')
     def cli_something(since, until, output):
         # either: the generated archive will contain a `something.json` w/ this JSON
-        return output.json({'some': 'json'})
+        return output.dict({'some': 'json'}))
         # or: the generated archive(s) will contain a `something.csv` (numbered when more than one)
-        return output.csv(['tempfile.csv', 'tempfile2.csv'])
+        return output.files(['tempfile.csv', 'tempfile2.csv']))
 
 The since/until arguments are datetimes with timezone,
 representing the start (included) and end (excluded) of the desired collection interval.
@@ -102,12 +102,12 @@ def bool_from_env(name, default=None):
 
 
 # FIXME: move this one to caller?
-@register('config', '1.0', config=True)
+@register('config', '1.0', format='json', config=True)
 def cli_config(_since, _until, output):
     # runs once, used in all the tarballs
     # FIXME: , billing_provider_params={dict} rather than {} getting overwritten in collector.gather
     collector = config(db=connection)
-    return output.json(collector.gather())
+    return output.as_dict(collector)
 
 
 ### CCSP & CCSPv2 collectors
@@ -120,7 +120,7 @@ def cli_job_host_summary(since, until, output):
         return None
 
     collector = job_host_summary(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('main_host', '1.0', format='csv', fnc_slicing=until_slicing)
@@ -129,7 +129,7 @@ def cli_main_host(_since, _until, output):
         return None
 
     collector = main_host(db=connection)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('main_host_daily', '1.0', format='csv', fnc_slicing=daily_slicing)
@@ -138,7 +138,7 @@ def cli_main_host_daily(since, until, output):
         return None
 
     collector = main_host_daily(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('main_indirectmanagednodeaudit', '1.0', format='csv', fnc_slicing=daily_slicing)
@@ -149,7 +149,7 @@ def cli_main_indirectmanagednodeaudit(since, until, output):
     # the table does not exist in 2.4, may be 2.6+
     try:
         collector = main_indirectmanagednodeaudit(db=connection, since=since, until=until)
-        return output.csv(collector.gather())
+        return output.as_files(collector)
     except (ProgrammingError, UndefinedTable) as e:
         logger.warning(
             'main_indirectmanagednodeaudit table missing in the database schema: %s. '
@@ -165,7 +165,7 @@ def cli_main_jobevent(since, until, output):
         return None
 
     collector = main_jobevent(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 ### vcpu prometheus collector
@@ -247,7 +247,7 @@ def cli_total_workers_vcpu(since, until, output):
         log_warning('No data available yet, the cluster is probably running for less than an hour')
         raise MetricsException('No data available yet, the cluster is probably running for less than an hour')
 
-    return output.json(log_info_data(info))
+    return output.dict(log_info_data(info))
 
 
 ### anonymized collectors
@@ -259,7 +259,7 @@ def cli_controller_version_service(_since, _until, output):
         return None
 
     collector = controller_version_service(db=connection)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('credentials_service', '1.4', format='csv', fnc_slicing=daily_slicing)
@@ -268,7 +268,7 @@ def cli_credentials_service(since, until, output):
         return None
 
     collector = credentials_service(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('execution_environments', '1.4', format='csv', fnc_slicing=until_slicing)
@@ -277,7 +277,7 @@ def cli_execution_environments(_since, _until, output):
         return None
 
     collector = execution_environments(db=connection)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('job_host_summary_service', '1.4', format='csv', fnc_slicing=daily_slicing)
@@ -286,7 +286,7 @@ def cli_job_host_summary_service(since, until, output):
         return None
 
     collector = job_host_summary_service(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('main_jobevent_service', '1.4', format='csv', fnc_slicing=daily_slicing)
@@ -295,7 +295,7 @@ def cli_main_jobevent_service(since, until, output):
         return None
 
     collector = main_jobevent_service(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('table_metadata', '1.4', format='csv', fnc_slicing=until_slicing)
@@ -304,7 +304,7 @@ def cli_table_metadata(_since, _until, output):
         return None
 
     collector = table_metadata(db=connection)
-    return output.csv(collector.gather())
+    return output.as_files(collector)
 
 
 @register('unified_jobs', '1.4', format='csv', fnc_slicing=daily_slicing)
@@ -313,4 +313,4 @@ def cli_unified_jobs(since, until, output):
         return None
 
     collector = unified_jobs(db=connection, since=since, until=until)
-    return output.csv(collector.gather())
+    return output.as_files(collector)

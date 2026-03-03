@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def main_indirectmanagednodeaudit(*, db=None, since=None, until=None):
+def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=DataframeOutput()):
     where = ' AND '.join(
         [
             f"main_indirectmanagednodeaudit.created >= '{since.isoformat()}'",
@@ -40,4 +40,4 @@ def main_indirectmanagednodeaudit(*, db=None, since=None, until=None):
         ORDER BY main_indirectmanagednodeaudit.created ASC
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

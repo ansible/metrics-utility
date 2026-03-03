@@ -3,6 +3,7 @@ from abc import abstractmethod
 from django.utils.timezone import now, timedelta
 
 from metrics_utility.base.utils import get_max_gather_period_days
+from metrics_utility.library.collectors.util import CollectionOutput
 from metrics_utility.logger import logger
 
 
@@ -50,13 +51,14 @@ class Collection:
     def gather(self):
         self.gathering_started_at = now()
 
+        output = CollectionOutput(self.collector.gather_dir)
+
         try:
             # This runs a collector function registered with `@register`
             result = self.fnc_collecting(
                 since=self.since,
                 until=self.until,
-                # TODO output=
-                full_path=self.collector.gather_dir,
+                output=output,
             )
             self._save_gathering(result)
 

@@ -1,4 +1,4 @@
-from ..util import collector, copy_table, date_where
+from ..util import DataframeOutput, collector, date_where, ensure_functions
 
 
 def _main_host_query(where):
@@ -87,13 +87,15 @@ def _main_host_query(where):
 
 
 @collector
-def main_host(*, db=None):
+def main_host(*, db=None, output=DataframeOutput()):
     query = _main_host_query("enabled='t'")
-    return copy_table(db=db, query=query, prepend_query=True)
+
+    ensure_functions(db)
+    return output.sql(db, query)
 
 
 @collector
-def main_host_daily(*, db=None, since=None, until=None):
+def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()):
     # prefer running with until=False, to not skip hosts that keep being modified
 
     where = f"""
@@ -102,4 +104,6 @@ def main_host_daily(*, db=None, since=None, until=None):
         OR {date_where('main_host.modified', since, until)})
     """
     query = _main_host_query(where)
-    return copy_table(db=db, query=query, prepend_query=True)
+
+    ensure_functions(db)
+    return output.sql(db, query)

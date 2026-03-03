@@ -3,11 +3,11 @@ from typing import Optional, Tuple
 
 import requests
 
-from ..util import collector
+from ..util import DictOutput, collector
 
 
 @collector
-def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_url=None, ca_cert_path=None, token=None):
+def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_url=None, ca_cert_path=None, token=None, output=DictOutput()):
     now = datetime.now(timezone.utc)
     current_ts = now.timestamp()
     prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
@@ -37,7 +37,7 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
 
     # None can happen when the prev_hour_start doesn't have data, could be the cluster just started
     info['total_workers_vcpu'] = int(total_workers_vcpu_val) if total_workers_vcpu_val is None else None
-    return info
+    return output.dict(info)
 
 
 def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:

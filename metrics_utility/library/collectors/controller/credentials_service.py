@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def credentials_service(*, db=None, since=None, until=None):
+def credentials_service(*, db=None, since=None, until=None, output=DataframeOutput()):
     query = f"""
         SELECT DISTINCT
             main_credentialtype.name as credential_type
@@ -16,4 +16,4 @@ def credentials_service(*, db=None, since=None, until=None):
             AND main_credentialtype.managed = true
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

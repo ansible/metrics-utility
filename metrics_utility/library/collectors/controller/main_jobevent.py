@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def main_jobevent(*, db=None, since=None, until=None):
+def main_jobevent(*, db=None, since=None, until=None, output=DataframeOutput()):
     where = ' AND '.join(
         [
             f"main_jobhostsummary.modified >= '{since.isoformat()}'",
@@ -65,4 +65,4 @@ def main_jobevent(*, db=None, since=None, until=None):
         )
         """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

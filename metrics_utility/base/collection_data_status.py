@@ -43,4 +43,4 @@ class CollectionDataStatus(CollectionCSV):
                     }
                 )
 
-        return output.csv([file_path])
+        return output.files([file_path])

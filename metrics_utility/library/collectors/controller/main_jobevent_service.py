@@ -1,10 +1,10 @@
 from datetime import timedelta
 
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def main_jobevent_service(*, db=None, since=None, until=None):
+def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOutput()):
     """
     Collects job events for jobs that finished in the given time window.
 
@@ -160,4 +160,4 @@ def main_jobevent_service(*, db=None, since=None, until=None):
         WHERE {where_clause}
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

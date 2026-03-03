@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def controller_version_service(*, db=None):
+def controller_version_service(*, db=None, output=DataframeOutput()):
     """
     Collect distinct controller versions from enabled instances.
 
@@ -19,4 +19,4 @@ def controller_version_service(*, db=None):
         ORDER BY version ASC
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)
