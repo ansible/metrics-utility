@@ -230,11 +230,9 @@ def cli_total_workers_vcpu(since, until, output):
         ca_cert_path=ca_cert_path,
         token=token,
     )
-    info = collector.gather()
 
-    total = info['total_workers_vcpu']
-    log_debug('total_workers_vcpu: %s', total)
-    if total is None:
+    info = collector.gather()
+    if info is None:
         log_warning('No data available yet, the cluster is probably running for less than an hour')
         raise MetricsException('No data available yet, the cluster is probably running for less than an hour')
 
