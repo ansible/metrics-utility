@@ -67,7 +67,7 @@ class TestGetTotalWorkersCpu:
 
         cpu_val, query = get_total_workers_cpu(mock_prom, base_ts)
 
-        assert cpu_val == 16.0
+        assert cpu_val == pytest.approx(16.0)
         assert 'max_over_time' in query
         assert 'sum(machine_cpu_cores)' in query
         assert '[59m59s999ms:5m]' in query
@@ -94,7 +94,7 @@ class TestGetTotalWorkersCpu:
         cpu_val, _ = get_total_workers_cpu(mock_prom, base_ts)
 
         assert isinstance(cpu_val, float)
-        assert cpu_val == 24.5
+        assert cpu_val == pytest.approx(24.5)
 
     def test_get_total_workers_cpu_none_result(self):
         """Test handling of None result from Prometheus."""
@@ -136,9 +136,9 @@ class TestGetCpuTimeline:
 
         assert len(result) == 3
         assert result[0]['timestamp'] == '2024-01-01T00:00:00.000Z'
-        assert result[0]['cpu_sum'] == 16.0
-        assert result[1]['cpu_sum'] == 16.0
-        assert result[2]['cpu_sum'] == 18.0
+        assert result[0]['cpu_sum'] == pytest.approx(16.0)
+        assert result[1]['cpu_sum'] == pytest.approx(16.0)
+        assert result[2]['cpu_sum'] == pytest.approx(18.0)
 
     def test_get_cpu_timeline_query_parameters(self):
         """Test that query_range is called with correct parameters."""
@@ -204,9 +204,9 @@ class TestGetCpuTimeline:
         assert len(result) == 3
         assert result[0]['timestamp'] < result[1]['timestamp']
         assert result[1]['timestamp'] < result[2]['timestamp']
-        assert result[0]['cpu_sum'] == 16.0
-        assert result[1]['cpu_sum'] == 17.0
-        assert result[2]['cpu_sum'] == 18.0
+        assert result[0]['cpu_sum'] == pytest.approx(16.0)
+        assert result[1]['cpu_sum'] == pytest.approx(17.0)
+        assert result[2]['cpu_sum'] == pytest.approx(18.0)
 
     def test_get_cpu_timeline_multiple_series(self):
         """Test handling of multiple result series (though we typically get one)."""

@@ -70,11 +70,7 @@ class TestTotalWorkersVcpu:
 
             # Mock the collector to return None for total_workers_vcpu
             mock_collector = MagicMock()
-            mock_info = {
-                'cluster_name': 'test-cluster',
-                'total_workers_vcpu': None,
-                'end_timestamp': '2024-01-01T00:59:59.999Z',
-            }
+            mock_info = None
             mock_collector.gather.return_value = mock_info
             mock_tw_vcpu.return_value = mock_collector
 
@@ -136,8 +132,8 @@ class TestGetHourBoundaries:
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
         expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
 
-        assert prev_hour_start == expected_prev_hour_start
-        assert prev_hour_end == pytest.approx(expected_prev_hour_end)
+        assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
+        assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)
 
     def test_get_hour_boundaries_at_hour_boundary(self):
         """Test get_hour_boundaries when current time is exactly at hour boundary."""
@@ -151,8 +147,8 @@ class TestGetHourBoundaries:
         expected_prev_hour_start = datetime(2023, 12, 25, 14, 0, 0, tzinfo=timezone.utc).timestamp()
         expected_prev_hour_end = datetime(2023, 12, 25, 14, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
 
-        assert prev_hour_start == expected_prev_hour_start
-        assert prev_hour_end == pytest.approx(expected_prev_hour_end)
+        assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
+        assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)
 
     def test_get_hour_boundaries_different_times(self):
         """Test get_hour_boundaries with different times throughout the day."""
@@ -172,5 +168,5 @@ class TestGetHourBoundaries:
             expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
             expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
 
-            assert prev_hour_start == expected_prev_hour_start
-            assert prev_hour_end == pytest.approx(expected_prev_hour_end)
+            assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
+            assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)

@@ -183,9 +183,6 @@ def cli_total_workers_vcpu(since, until, output):
     def log_info(fmt, *data):
         logger.info(f'%s, {fmt}', log_prefix, *data)
 
-    def log_debug(fmt, *data):
-        logger.debug(f'%s, {fmt}', log_prefix, *data)
-
     if not cluster_name:
         log_error('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
         raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')

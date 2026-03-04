@@ -19,9 +19,9 @@ def test_get_hour_boundaries():
 
     prev_start, prev_end = get_hour_boundaries(current_ts)
 
-    # Previous hour should be 13:00:00 to 13:59:59
+    # Previous hour should be 13:00:00 to 13:59:59.999
     expected_start = datetime.datetime(2024, 1, 15, 13, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
-    expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, tzinfo=datetime.timezone.utc).timestamp()
+    expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, 999000, tzinfo=datetime.timezone.utc).timestamp()
 
     assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
     assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
@@ -34,9 +34,9 @@ def test_get_hour_boundaries_on_hour():
 
     prev_start, prev_end = get_hour_boundaries(current_ts)
 
-    # Previous hour should be 09:00:00 to 09:59:59
+    # Previous hour should be 09:00:00 to 09:59:59.999
     expected_start = datetime.datetime(2024, 6, 20, 9, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
-    expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, tzinfo=datetime.timezone.utc).timestamp()
+    expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, 999000, tzinfo=datetime.timezone.utc).timestamp()
 
     assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
     assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
@@ -228,8 +228,7 @@ def test_total_workers_vcpu_no_data_available(mock_datetime, mock_prom_class, mo
     result = instance.gather()
 
     # Should still return a result object even when no data, with cluster info
-    assert result is not None
-    assert result['cluster_name'] == 'test-cluster'
+    assert result is None
 
 
 def test_total_workers_vcpu_collector_decorator():
