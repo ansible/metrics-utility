@@ -83,10 +83,10 @@ def daily_slicing(key, last_gather, **kwargs):
 
 def until_slicing(_key, _last_gather, **kwargs):
     # For tables where we always need to do a table full scan, ignoring since & until
-    # Always store the inventory snapshot into the last daily partition (until - 1 day)
+    # Always store the inventory snapshot into the last daily partition (until - 1 second)
     until = kwargs.get('until', now())
-    last_day = until - timedelta(days=1)
-    yield (last_day, last_day)
+    last_sec = until - timedelta(seconds=1)
+    yield (last_sec, last_sec)
 
 
 ### shared collectors
