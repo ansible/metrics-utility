@@ -7,7 +7,7 @@ from django.utils.timezone import now, timedelta
 
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.base import register
-from metrics_utility.base.utils import get_max_gather_period_days, get_optional_collectors
+from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.library.collectors.controller import (
     config,
@@ -87,15 +87,6 @@ def until_slicing(_key, _last_gather, **kwargs):
     until = kwargs.get('until', now())
     last_day = until - timedelta(days=1)
     yield (last_day, last_day)
-
-
-def bool_from_env(name, default=None):
-    s = os.getenv(name, None)
-    if s is None:
-        return default
-
-    b = s.lower() in {'1', 'true'}
-    return b
 
 
 ### shared collectors
@@ -179,7 +170,7 @@ def cli_total_workers_vcpu(since, until, output):
     cluster_name = os.getenv('METRICS_UTILITY_CLUSTER_NAME')
     prometheus_url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
     red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')  # only used for log messages
-    metering_enabled = bool_from_env('METRICS_UTILITY_USAGE_BASED_METERING_ENABLED')
+    metering_enabled = bool_from_env('METRICS_UTILITY_USAGE_BASED_METERING_ENABLED', False)
 
     log_prefix = f'[METRICS_UTILITY_VCPU]: cluster_name: {cluster_name}, red_hat_org_id: {red_hat_org_id}'
 

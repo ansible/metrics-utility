@@ -132,7 +132,7 @@ class PrometheusClient:
         url = f'{self.url}/api/v1/query'
         params = {'query': query}
 
-        if time_param:
+        if time_param is not None:
             params['time'] = time_param
 
         return self._get(url, params).get('data', {}).get('result', [])

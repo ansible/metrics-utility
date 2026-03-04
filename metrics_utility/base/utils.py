@@ -24,3 +24,17 @@ def get_optional_collectors():
     Defaults to 'main_jobevent' if not set.
     """
     return list(filter(bool, os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t').split(',')))
+
+
+def bool_from_env(name, default=None):
+    """
+    Convert environment variable to boolean.
+    Returns True if value is '1' or 'true' (case-insensitive).
+    Returns default if environment variable is not set.
+    """
+    s = os.getenv(name, None)
+    if s is None:
+        return default
+
+    b = s.lower() in {'1', 'true'}
+    return b

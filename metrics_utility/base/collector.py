@@ -17,7 +17,7 @@ from .collection import Collection
 from .collection_csv import CollectionCSV
 from .collection_json import CollectionJSON
 from .package import Package
-from .utils import get_max_gather_period_days, get_optional_collectors
+from .utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 
 
 class Collector:
@@ -265,8 +265,7 @@ class Collector:
 
         last_key = None
 
-        disable_job_host_summary_str = os.getenv('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR', 'false')
-        disable_job_host_summary = disable_job_host_summary_str.lower() == 'true'
+        disable_job_host_summary = bool_from_env('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR')
 
         optional_collectors = get_optional_collectors()
 
