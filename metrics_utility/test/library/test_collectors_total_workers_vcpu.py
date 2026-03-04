@@ -23,8 +23,8 @@ def test_get_hour_boundaries():
     expected_start = datetime.datetime(2024, 1, 15, 13, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
     expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, tzinfo=datetime.timezone.utc).timestamp()
 
-    assert prev_start == pytest.approx(expected_start)
-    assert prev_end == pytest.approx(expected_end)
+    assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
+    assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
 
 
 def test_get_hour_boundaries_on_hour():
@@ -38,8 +38,8 @@ def test_get_hour_boundaries_on_hour():
     expected_start = datetime.datetime(2024, 6, 20, 9, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
     expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, tzinfo=datetime.timezone.utc).timestamp()
 
-    assert prev_start == pytest.approx(expected_start)
-    assert prev_end == pytest.approx(expected_end)
+    assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
+    assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
 
 
 def test_get_total_workers_cpu():
@@ -93,8 +93,8 @@ def test_get_cpu_timeline():
     call_args = mock_prom.query_range.call_args
 
     assert call_args[1]['query'] == 'sum(machine_cpu_cores)'
-    assert call_args[1]['start_time'] == pytest.approx(start_ts)
-    assert call_args[1]['end_time'] == pytest.approx(end_ts)
+    assert call_args[1]['start_time'] == pytest.approx(start_ts, rel=0, abs=1e-6)
+    assert call_args[1]['end_time'] == pytest.approx(end_ts, rel=0, abs=1e-6)
     assert call_args[1]['step'] == '5m'
 
     # Should return list of timestamp/cpu_sum dicts
