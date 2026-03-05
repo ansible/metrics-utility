@@ -57,20 +57,21 @@ def test_smaller_range(cleanup_glob):
 def test_only_host_scope(cleanup_glob):
     new_env_vars = env_vars.copy()
     new_env_vars['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_host'
-    new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '0'
+    new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '1'
 
     result = run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
 
     text = result.stderr + '\n' + result.stdout
 
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
-    assert 'End of the collection interval is greater than 0 days from start, setting end to 2024-01-01 00:00:00+00:00.' in text
-    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-01 00:00:00+00:00' in text
+    assert 'End of the collection interval is greater than 1 days from start, setting end to 2024-01-02 00:00:00+00:00.' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-02 00:00:00+00:00' in text
 
-    # Tarballs use until_slicing which stores at (until - 1 day)
-    # Test uses --since=2024-01-01, --until=2024-01-03, MAX_GATHER_PERIOD_DAYS=0
-    # This sets until to 2024-01-01, then until_slicing uses 2024-01-01 - 1 day = 2023-12-31
-    collection_date = datetime(2023, 12, 31)
+    # Tarballs use until_slicing which stores at (until - 1s)
+    # Test uses --since=2024-01-01, --until=2024-01-03,
+    # MAX_GATHER_PERIOD_DAYS=1 sets until to 2024-01-02,
+    # then until_slicing uses 2024-01-02 - 1s
+    collection_date = datetime(2024, 1, 1, 23, 59, 59)
     year = collection_date.year
     month = collection_date.month
     day = collection_date.day
@@ -85,8 +86,8 @@ def test_only_host_scope(cleanup_glob):
     tarball = (
         f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/'
         f'00000000-0000-0000-0000-000000000000-'
-        f'{year}-{month}-{day}-000000+0000-'
-        f'{year}-{month}-{day}-000000+0000-0-main_host.tar.gz'
+        f'{year}-{month}-{day}-235959+0000-'
+        f'{year}-{month}-{day}-235959+0000-0-main_host.tar.gz'
     )
 
     # ensure no other tarballs are present in the directory for current date
