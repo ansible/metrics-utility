@@ -3,7 +3,9 @@ import re
 from metrics_utility.library.dataframes.base_traditional import BaseTraditional
 
 
-COLLECTION_REGEXP = r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
+# Regex pattern to match collection names (e.g., namespace.collection.role or namespace.collection.role.task)
+# Fixed to avoid catastrophic backtracking (reDOS vulnerability)
+COLLECTION_REGEXP = r'^(\w+)\.(\w+)\.(\w+)(?:\.\w+)*$'
 
 
 class DataframeMainJobevent(BaseTraditional):
