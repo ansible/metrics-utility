@@ -9,7 +9,10 @@ from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
+# Regex pattern to match collection names (e.g., namespace.collection.role or namespace.collection.role.task)
+# Pattern is safe from reDOS: uses non-capturing groups and non-nested quantifiers
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
+_COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
 
 
 def extract_collection_name(x: str | None) -> str | None:
@@ -286,9 +289,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _extract_collection_info(self, dataframe):
         """Extract collection_name and collection_source from module_name."""
-        dataframe['collection_name'] = dataframe['module_name'].str.extract(
-            r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$', expand=False
-        )
+        # Use consistent regex pattern for collection name extraction
+        dataframe['collection_name'] = dataframe['module_name'].str.extract(_COLLECTION_PATTERN, expand=False)
         dataframe['collection_source'] = dataframe['collection_name'].map(self.collections).fillna('Unknown')
         return dataframe
 

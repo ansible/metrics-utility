@@ -98,12 +98,13 @@ def _get_install_type():
     return 'traditional'
 
 
-# FIXME: psycopg.sql
 def _get_controller_settings(db, keys):
+    """Get controller settings from database using parameterized queries to prevent SQL injection."""
     settings = {}
     with db.cursor() as cursor:
-        in_sql = "'" + "', '".join(keys) + "'"
-        cursor.execute(f'SELECT key, value FROM conf_setting WHERE key IN ({in_sql})')
+        # Use parameterized query to prevent SQL injection
+        placeholders = ', '.join(['%s'] * len(keys))
+        cursor.execute(f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})', keys)
         for key, value in cursor.fetchall():
             if value:
                 settings[key] = json.loads(value, object_hook=_datetime_hook)
