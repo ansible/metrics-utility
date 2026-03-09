@@ -695,37 +695,37 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert 'rollup_period_task_unreachable_total' in statistics
     assert 'rollup_period_task_ignored_total' in statistics
 
-    # All statistics should be None for empty data (except counts which should be 0)
+    # All statistics should be 0 for empty data (not None)
     # Execution environments return 0 for empty data (not None)
     # Event-related fields are missing when there are no events, so we don't check them here
     assert statistics['rollup_period_execution_environments_total'] == 0, 'execution_environments_total should be 0 for empty data'
     assert statistics['rollup_period_EE_default_total'] == 0, 'EE_default_total should be 0 for empty data'
     assert statistics['rollup_period_EE_custom_total'] == 0, 'EE_custom_total should be 0 for empty data'
-    assert statistics['rollup_period_jobs_total'] is None
-    assert statistics['rollup_period_jobs_successful'] is None, 'jobs_successful should be None for empty data'
-    assert statistics['rollup_period_jobs_failed'] is None, 'jobs_failed should be None for empty data'
-    assert statistics['rollup_period_jobs_duration_all_statuses_seconds'] is None, 'jobs_duration_all_statuses_seconds should be None for empty data'
-    assert statistics['rollup_period_jobs_successful_duration_total_seconds'] is None, (
-        'jobs_successful_duration_total_seconds should be None for empty data'
+    assert statistics['rollup_period_jobs_total'] == 0, 'jobs_total should be 0 for empty data'
+    assert statistics['rollup_period_jobs_successful'] == 0, 'jobs_successful should be 0 for empty data'
+    assert statistics['rollup_period_jobs_failed'] == 0, 'jobs_failed should be 0 for empty data'
+    assert statistics['rollup_period_jobs_duration_all_statuses_seconds'] == 0, 'jobs_duration_all_statuses_seconds should be 0 for empty data'
+    assert statistics['rollup_period_jobs_successful_duration_total_seconds'] == 0, (
+        'jobs_successful_duration_total_seconds should be 0 for empty data'
     )
-    assert statistics['rollup_period_jobs_failed_duration_total_seconds'] is None, 'jobs_failed_duration_total_seconds should be None for empty data'
-    assert statistics['rollup_period_organizations_total'] is None
+    assert statistics['rollup_period_jobs_failed_duration_total_seconds'] == 0, 'jobs_failed_duration_total_seconds should be 0 for empty data'
+    assert statistics['rollup_period_organizations_total'] == 0, 'organizations_total should be 0 for empty data'
     assert 'rollup_period_ansible_versions' in result, 'Should have ansible_versions field at top level'
     assert result['rollup_period_ansible_versions'] == [], 'ansible_versions should be empty list for empty data'
-    assert statistics['rollup_period_forks_total'] is None
+    assert statistics['rollup_period_forks_total'] == 0, 'forks_total should be 0 for empty data'
     assert statistics['rollup_period_unique_hosts_total'] == 0, 'unique_hosts_total should be 0 for empty data'
     # job_host_pairs_total should be 0 (not None) when there's no data, as it represents a count
     assert statistics['rollup_period_job_host_pairs_total'] == 0, (
         f'job_host_pairs_total should be 0 for empty data, got {statistics["rollup_period_job_host_pairs_total"]}'
     )
-    # Host outcome totals should be None for empty data
-    assert statistics['rollup_period_successful_hosts_total'] is None, 'successful_hosts_total should be None for empty data'
-    assert statistics['rollup_period_failed_hosts_total'] is None, 'failed_hosts_total should be None for empty data'
-    assert statistics['rollup_period_unreachable_hosts_total'] is None, 'unreachable_hosts_total should be None for empty data'
+    # Host outcome totals should be 0 for empty data
+    assert statistics['rollup_period_successful_hosts_total'] == 0, 'successful_hosts_total should be 0 for empty data'
+    assert statistics['rollup_period_failed_hosts_total'] == 0, 'failed_hosts_total should be 0 for empty data'
+    assert statistics['rollup_period_unreachable_hosts_total'] == 0, 'unreachable_hosts_total should be 0 for empty data'
     # playbooks_total should be missing when there are no events
-    # templates_total should be None when there's no data (no job_type groups)
-    assert statistics['rollup_period_templates_total'] is None, (
-        f'templates_total should be None for empty data, got {statistics["rollup_period_templates_total"]}'
+    # templates_total should be 0 when there's no data (no job_type groups)
+    assert statistics['rollup_period_templates_total'] == 0, (
+        f'templates_total should be 0 for empty data, got {statistics["rollup_period_templates_total"]}'
     )
     # Task statistics should be 0 (not None) when there's no data, as they're calculated from empty jobs_by_job_type list
     assert statistics['rollup_period_tasks_total'] == 0, (

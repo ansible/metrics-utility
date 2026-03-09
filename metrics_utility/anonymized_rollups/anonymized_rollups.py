@@ -204,9 +204,9 @@ def _merge_jobs_with_host_summary(
 
 
 def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
-    """Calculate sum of a field from a list of dictionaries, returning None if list is empty."""
+    """Calculate sum of a field from a list of dictionaries, returning 0 if list is empty."""
     if not items:
-        return None
+        return 0
     return sum(item.get(field, 0) for item in items)
 
 
@@ -306,8 +306,8 @@ def _build_statistics(
         'rollup_period_jobs_duration_all_statuses_seconds': job_statistics['rollup_period_jobs_duration_all_statuses_seconds'],
         'rollup_period_jobs_successful_duration_total_seconds': job_statistics['rollup_period_jobs_successful_duration_total_seconds'],
         'rollup_period_jobs_failed_duration_total_seconds': job_statistics['rollup_period_jobs_failed_duration_total_seconds'],
-        'rollup_period_organizations_total': jobs.get('organizations_total'),
-        'rollup_period_forks_total': jobs.get('forks_total'),
+        'rollup_period_organizations_total': jobs.get('organizations_total') or 0,
+        'rollup_period_forks_total': jobs.get('forks_total') or 0,
         'rollup_period_templates_total': job_statistics['job_templates_total'],
         'rollup_period_inventories_total': job_statistics['inventories_total'],
         # from job_host_summary (sum of all job_type groups)
