@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector, ensure_functions
 
 
 @collector
-def job_host_summary(*, db=None, since=None, until=None):
+def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput()):
     where = ' AND '.join(
         [
             f"main_jobhostsummary.modified >= '{since.isoformat()}'",
@@ -78,4 +78,5 @@ def job_host_summary(*, db=None, since=None, until=None):
         ORDER BY main_jobhostsummary.modified ASC
     """
 
-    return copy_table(db=db, query=query, prepend_query=True)
+    ensure_functions(db)
+    return output.sql(db, query)

@@ -22,38 +22,38 @@ def test_main_indirectmanagednodeaudit_basic():
     assert instance.kwargs['until'] == until
 
 
-@patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
-def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_pandas):
     """Test that main_indirectmanagednodeaudit calls copy_table."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2], 'canonical_facts': ['{}', '{}']})
+    mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2], 'canonical_facts': ['{}', '{}']})
 
     instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
     result = instance.gather()
 
-    mock_copy_table.assert_called_once()
-    call_args = mock_copy_table.call_args
+    mock_copy_pandas.assert_called_once()
+    call_args = mock_copy_pandas.call_args
 
-    assert call_args[1]['db'] == mock_db
-    assert 'query' in call_args[1]
+    assert call_args[0][0] == mock_db
+    assert len(call_args[0]) >= 2  # db, query
     assert isinstance(result, pd.DataFrame)
 
 
-@patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
-def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_pandas):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 3, 15, 10, 30, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 3, 16, 18, 45, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Query should contain time boundaries using created field
     assert '2024-03-15' in query
@@ -62,19 +62,19 @@ def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_table
     assert 'main_indirectmanagednodeaudit.created <' in query
 
 
-@patch('metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit.copy_table')
-def test_main_indirectmanagednodeaudit_query_structure(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_indirectmanagednodeaudit_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should query expected tables
     assert 'main_indirectmanagednodeaudit' in query

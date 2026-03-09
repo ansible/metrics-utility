@@ -22,8 +22,8 @@ def test_main_jobevent_service_basic():
     assert instance.kwargs['until'] == until
 
 
-@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_no_jobs_returns_none(mock_copy_pandas):
     """Test that collector returns empty CSV with headers when no jobs are found."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
@@ -32,7 +32,7 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
 
     # No jobs found
     mock_cursor.fetchall.return_value = []
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -41,19 +41,19 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_table):
     result = instance.gather()
 
     # Should still call copy_table to generate DataFrame (even if 0 rows)
-    mock_copy_table.assert_called_once()
+    mock_copy_pandas.assert_called_once()
 
     # Verify the query has FALSE conditions (returns 0 rows but maintains schema)
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
     assert 'FALSE' in query  # Should have FALSE for empty job set
 
     # Should return DataFrame
     assert isinstance(result, pd.DataFrame)
 
 
-@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_pandas):
     """Test that collector calls copy_table when jobs are found."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
@@ -65,7 +65,7 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     job_created2 = datetime.datetime(2024, 1, 16, 14, 45, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created1), (101, job_created2)]
 
-    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2, 3], 'job_id': [100, 100, 101]})
+    mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2, 3], 'job_id': [100, 100, 101]})
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -74,16 +74,16 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_table):
     result = instance.gather()
 
     # Should call copy_table
-    mock_copy_table.assert_called_once()
-    call_args = mock_copy_table.call_args
+    mock_copy_pandas.assert_called_once()
+    call_args = mock_copy_pandas.call_args
 
-    assert call_args[1]['db'] == mock_db
-    assert 'query' in call_args[1]
+    assert call_args[0][0] == mock_db
+    assert len(call_args[0]) >= 2  # db, query
     assert isinstance(result, pd.DataFrame)
 
 
-@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_query_structure(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
@@ -92,7 +92,7 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
 
     job_created = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created)]
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -100,8 +100,8 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should query expected tables
     assert 'main_jobevent' in query
@@ -119,8 +119,8 @@ def test_main_jobevent_service_query_structure(mock_copy_table):
     assert 'uj.ansible_version' in query or 'ansible_version' in query
 
 
-@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pandas):
     """Test that query uses job_id IN clause and builds hourly timestamp ranges."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
@@ -130,7 +130,7 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
     job_created1 = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=datetime.timezone.utc)
     job_created2 = datetime.datetime(2024, 1, 16, 14, 45, 30, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created1), (200, job_created2)]
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -138,8 +138,8 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should use direct job_id IN clause (no temp table for read-only replica compatibility)
     assert 'e.job_id IN (' in query
@@ -165,8 +165,8 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_tab
     assert not any('temp_jobevent_service_jobs' in call for call in execute_calls)
 
 
-@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_initial_query_parameters(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
     """Test that initial jobs query uses correct parameters."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
@@ -191,8 +191,8 @@ def test_main_jobevent_service_initial_query_parameters(mock_copy_table):
     assert params['until'] == until
 
 
-@patch('metrics_utility.library.collectors.controller.main_jobevent_service.copy_table')
-def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
     """Test that query handles playbook_on_stats event specially."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
@@ -201,7 +201,7 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
 
     job_created = datetime.datetime(2024, 1, 15, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created)]
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -209,8 +209,8 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_table):
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should have CASE statement for playbook_on_stats
     assert 'playbook_on_stats' in query

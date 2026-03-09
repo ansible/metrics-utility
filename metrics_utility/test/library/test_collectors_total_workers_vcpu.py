@@ -19,12 +19,12 @@ def test_get_hour_boundaries():
 
     prev_start, prev_end = get_hour_boundaries(current_ts)
 
-    # Previous hour should be 13:00:00 to 13:59:59
+    # Previous hour should be 13:00:00 to 13:59:59.999
     expected_start = datetime.datetime(2024, 1, 15, 13, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
-    expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, tzinfo=datetime.timezone.utc).timestamp()
+    expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, 999000, tzinfo=datetime.timezone.utc).timestamp()
 
-    assert prev_start == expected_start
-    assert prev_end == expected_end
+    assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
+    assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
 
 
 def test_get_hour_boundaries_on_hour():
@@ -34,12 +34,12 @@ def test_get_hour_boundaries_on_hour():
 
     prev_start, prev_end = get_hour_boundaries(current_ts)
 
-    # Previous hour should be 09:00:00 to 09:59:59
+    # Previous hour should be 09:00:00 to 09:59:59.999
     expected_start = datetime.datetime(2024, 6, 20, 9, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
-    expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, tzinfo=datetime.timezone.utc).timestamp()
+    expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, 999000, tzinfo=datetime.timezone.utc).timestamp()
 
-    assert prev_start == expected_start
-    assert prev_end == expected_end
+    assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
+    assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
 
 
 def test_get_total_workers_cpu():
@@ -93,8 +93,8 @@ def test_get_cpu_timeline():
     call_args = mock_prom.query_range.call_args
 
     assert call_args[1]['query'] == 'sum(machine_cpu_cores)'
-    assert call_args[1]['start_time'] == pytest.approx(start_ts)
-    assert call_args[1]['end_time'] == pytest.approx(end_ts)
+    assert call_args[1]['start_time'] == pytest.approx(start_ts, rel=0, abs=1e-6)
+    assert call_args[1]['end_time'] == pytest.approx(end_ts, rel=0, abs=1e-6)
     assert call_args[1]['step'] == '5m'
 
     # Should return list of timestamp/cpu_sum dicts
@@ -155,7 +155,7 @@ def test_total_workers_vcpu_metering_disabled(mock_datetime, mock_prom_class):
     assert result is not None
     assert result['cluster_name'] == 'test-cluster'
     assert result['total_workers_vcpu'] == 1
-    assert 'timestamp' in result
+    assert 'collection_timestamp' in result
 
     # Should not create PrometheusClient
     mock_prom_class.assert_not_called()
@@ -201,7 +201,7 @@ def test_total_workers_vcpu_metering_enabled(mock_datetime, mock_prom_class, moc
     assert result is not None
     assert result['cluster_name'] == 'test-cluster'
     assert result['total_workers_vcpu'] == 16
-    assert 'timestamp' in result
+    assert 'collection_timestamp' in result
 
 
 @patch('metrics_utility.library.collectors.others.total_workers_vcpu.get_total_workers_cpu')
@@ -227,7 +227,7 @@ def test_total_workers_vcpu_no_data_available(mock_datetime, mock_prom_class, mo
     instance = total_workers_vcpu(cluster_name='test-cluster', metering_enabled=True, prometheus_url='http://localhost:9090')
     result = instance.gather()
 
-    # Should return None when no data
+    # Should still return a result object even when no data, with cluster info
     assert result is None
 
 

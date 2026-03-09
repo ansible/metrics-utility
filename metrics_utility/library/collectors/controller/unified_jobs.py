@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def unified_jobs(*, db=None, since=None, until=None):
+def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
     query = f"""
         SELECT
             main_unifiedjob.id,
@@ -48,4 +48,4 @@ def unified_jobs(*, db=None, since=None, until=None):
         ORDER BY main_unifiedjob.id ASC
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

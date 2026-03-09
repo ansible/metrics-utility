@@ -22,39 +22,38 @@ def test_job_host_summary_basic():
     assert instance.kwargs['until'] == until
 
 
-@patch('metrics_utility.library.collectors.controller.job_host_summary.copy_table')
-def test_job_host_summary_calls_copy_table(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_job_host_summary_calls_copy_table(mock_copy_pandas):
     """Test that job_host_summary calls copy_table with correct parameters."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame({'id': [1, 2], 'host_id': [10, 20]})
+    mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2], 'host_id': [10, 20]})
 
     instance = job_host_summary(db=mock_db, since=since, until=until)
     result = instance.gather()
 
-    mock_copy_table.assert_called_once()
-    call_args = mock_copy_table.call_args
+    mock_copy_pandas.assert_called_once()
+    call_args = mock_copy_pandas.call_args
 
-    assert call_args[1]['db'] == mock_db
-    assert call_args[1]['prepend_query'] is True
-    assert 'query' in call_args[1]
+    assert call_args[0][0] == mock_db
+    assert len(call_args[0]) >= 2  # db, query
     assert isinstance(result, pd.DataFrame)
 
 
-@patch('metrics_utility.library.collectors.controller.job_host_summary.copy_table')
-def test_job_host_summary_query_contains_time_range(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_job_host_summary_query_contains_time_range(mock_copy_pandas):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Query should contain time boundaries
     assert '2024-01-01' in query
@@ -63,19 +62,19 @@ def test_job_host_summary_query_contains_time_range(mock_copy_table):
     assert 'main_jobhostsummary.modified <' in query
 
 
-@patch('metrics_utility.library.collectors.controller.job_host_summary.copy_table')
-def test_job_host_summary_query_structure(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_job_host_summary_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should have CTE and expected tables
     assert 'WITH' in query
@@ -87,19 +86,19 @@ def test_job_host_summary_query_structure(mock_copy_table):
     assert 'main_organization' in query
 
 
-@patch('metrics_utility.library.collectors.controller.job_host_summary.copy_table')
-def test_job_host_summary_isoformat(mock_copy_table):
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_job_host_summary_isoformat(mock_copy_pandas):
     """Test that datetime objects are converted to isoformat in query."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 6, 15, 12, 30, 45, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 6, 16, 14, 45, 30, tzinfo=datetime.timezone.utc)
-    mock_copy_table.return_value = pd.DataFrame()
+    mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary(db=mock_db, since=since, until=until)
     instance.gather()
 
-    call_args = mock_copy_table.call_args
-    query = call_args[1]['query']
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
 
     # Should contain isoformat timestamps
     assert '2024-06-15T12:30:45+00:00' in query

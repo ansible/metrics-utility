@@ -52,15 +52,23 @@ VALID_SHEETS = {
 }
 
 VALID_COLLECTORS = {
-    'credentials_service',
-    'execution_environments',
-    'job_host_summary_service',
+    ## shared
+    # config, manifest, data_collection_status are always on
+    ## ccsp
+    # job_host_summary is on by default
     'main_host',
     'main_host_daily',
     'main_indirectmanagednodeaudit',
     'main_jobevent',
-    'main_jobevent_service',
+    ## vcpu
     'total_workers_vcpu',
+    ## anonymized
+    'controller_version_service',
+    'credentials_service',
+    'execution_environments',
+    'job_host_summary_service',
+    'main_jobevent_service',
+    'table_metadata',
     'unified_jobs',
 }
 
@@ -314,7 +322,7 @@ def validate_max_gather_period_days(errors):
     """
     Validates the 'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS' environment variable.
 
-    Checks that the value is a positive integer within a reasonable range (1-3650 days).
+    Checks that the value is an integer within 0..MAX_GATHER_PERIOD_DAYS (10 years).
     If the environment variable is set and its value is not valid, an error message
     is appended to the provided errors list.
 
@@ -325,7 +333,6 @@ def validate_max_gather_period_days(errors):
         int or None: The validated value as an integer if set and valid, otherwise None.
     """
     max_gather_days_str = os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS')
-
     if max_gather_days_str is None:
         return None
 

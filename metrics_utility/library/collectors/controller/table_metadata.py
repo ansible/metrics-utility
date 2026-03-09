@@ -1,8 +1,8 @@
-from ..util import collector, copy_table
+from ..util import DataframeOutput, collector
 
 
 @collector
-def table_metadata(*, db=None):
+def table_metadata(*, db=None, output=DataframeOutput()):
     """
     Collect row count and size information for main_jobevent (partitioned), main_unifiedjob (regular), and main_jobhostsummary (regular) tables.
     """
@@ -57,4 +57,4 @@ def table_metadata(*, db=None):
           AND c.relkind = 'r'
     """
 
-    return copy_table(db=db, query=query)
+    return output.sql(db, query)

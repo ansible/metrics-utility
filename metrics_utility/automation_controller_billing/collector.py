@@ -9,6 +9,7 @@ import metrics_utility.base as base
 
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+from metrics_utility.base.utils import bool_from_env
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
@@ -28,6 +29,7 @@ class Collector(base.Collector):
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass
     # TODO: extract to superclass ability to push extra params into config.json
+    # FIXME: subset is only used for tests, mock registered collectors instead?
     def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
@@ -95,21 +97,20 @@ class Collector(base.Collector):
 
     def _gather_finalize(self):
         """Persisting timestamps (manual/schedule mode only)"""
+        if not self.ship:
+            return
 
-        disabled_str = os.getenv('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES', 'false')
-        disabled = False
-        if disabled_str and (disabled_str.lower() == 'true'):
-            disabled = True
+        if bool_from_env('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES'):
+            return
 
-        if self.ship and not disabled:
-            # We need to wait on analytics lock, to update the last collected timestamp settings
-            # so we don't clash with analytics job collection.
-            with lock('gather_analytics_lock', wait=True, db=connection):
-                # We need to load fresh settings again as we're obtaning the lock, since
-                # Analytics job could have changed this on the background and we'd be resetting
-                # the Analytics values here.
-                self._load_last_gathered_entries()
-                self._update_last_gathered_entries()
+        # We need to wait on analytics lock, to update the last collected timestamp settings
+        # so we don't clash with analytics job collection.
+        with lock('gather_analytics_lock', wait=True, db=connection):
+            # We need to load fresh settings again as we're obtaning the lock, since
+            # Analytics job could have changed this on the background and we'd be resetting
+            # the Analytics values here.
+            self._load_last_gathered_entries()
+            self._update_last_gathered_entries()
 
     def _save_last_gathered_entries(self, last_gathered_entries):
         settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)

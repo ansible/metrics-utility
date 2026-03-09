@@ -1,6 +1,6 @@
 import os
 
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import timedelta
 
 from metrics_utility.library import CsvFileSplitter
 
@@ -18,25 +18,6 @@ def one_day_slicing(key, last_gather, since, until, **kwargs):
     start, end = since, None
     while start < until:
         end = min(start + timedelta(days=1), until)
-        yield (start, end)
-        start = end
-
-
-def full_sync_slicing(key, last_gather, full_sync_enabled=False, since=None, **kwargs):
-    """
-    If full_sync_enabled is:
-        - True: Yields 10 time slices in 1-day intervals
-        - False: Yields slices since 'since' in 1-day intervals
-    """
-    current_time = now().replace(hour=0, minute=0, second=0, microsecond=0)
-    if full_sync_enabled:
-        start = current_time - timedelta(days=10)
-        start = start.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        start = since.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    while start < current_time:
-        end = start + timedelta(days=1)
         yield (start, end)
         start = end
 
