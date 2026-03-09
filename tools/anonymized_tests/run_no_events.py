@@ -350,15 +350,6 @@ Examples:
 
         print()
 
-    # Print elapsed time for each collector
-    print('=' * 70)
-    print('COLLECTOR ELAPSED TIMES')
-    print('=' * 70)
-    print()
-    for collector_name, elapsed_time in collector_times.items():
-        print(f'{collector_name}: {format_elapsed_time(elapsed_time)}')
-    print()
-
     # Compute anonymized rollups from collected dataframes
     print()
     print('=' * 70)
@@ -397,18 +388,34 @@ Examples:
     salt = 'salt'  # Default salt, could be made configurable
     print('Computing anonymized rollup from collected data...')
     rollup_start_time = time.time()
+    rollup_elapsed_time = None
     try:
         json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
         rollup_elapsed_time = time.time() - rollup_start_time
         print('✓ Anonymized rollup computed successfully')
-        print(f'  Elapsed time: {format_elapsed_time(rollup_elapsed_time)}')
     except Exception as e:
         rollup_elapsed_time = time.time() - rollup_start_time
         print(f'✗ Error computing anonymized rollup: {e}')
-        print(f'  Elapsed time before error: {format_elapsed_time(rollup_elapsed_time)}')
         import traceback
 
         traceback.print_exc()
+        # Print time summary even on error, then return
+        elapsed_time = time.time() - start_time
+        print()
+        print('=' * 70)
+        print('TIME SUMMARY')
+        print('=' * 70)
+        print()
+        print('Collectors:')
+        for collector_name, elapsed_time_collector in collector_times.items():
+            print(f'\t{collector_name}: {format_elapsed_time(elapsed_time_collector)}')
+        print()
+        if rollup_elapsed_time is not None:
+            print(f'\tcompute_anonymized_rollup_from_raw_data: {format_elapsed_time(rollup_elapsed_time)}')
+        print()
+        print(f'\tTotal elapsed time: {format_elapsed_time(elapsed_time)}')
+        print('=' * 70)
+        print()
         return results
 
     # Save final JSON
@@ -457,13 +464,21 @@ Examples:
     print('=' * 70)
     print()
 
-    # Calculate and print total elapsed time
+    # Calculate and print time summary
     elapsed_time = time.time() - start_time
 
     print('=' * 70)
-    print('TOTAL ELAPSED TIME')
+    print('TIME SUMMARY')
     print('=' * 70)
-    print(f'Total elapsed time: {format_elapsed_time(elapsed_time)}')
+    print()
+    print('Collectors:')
+    for collector_name, elapsed_time_collector in collector_times.items():
+        print(f'{collector_name}:\n {format_elapsed_time(elapsed_time_collector)}\n')
+    print()
+    if rollup_elapsed_time is not None:
+        print(f'compute_anonymized_rollup_from_raw_data:\n {format_elapsed_time(rollup_elapsed_time)}\n')
+    print()
+    print(f'Total elapsed time:\n {format_elapsed_time(elapsed_time)}\n')
     print('=' * 70)
     print()
 
