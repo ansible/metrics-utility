@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import shutil
+import time
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple
@@ -198,6 +199,20 @@ def count_rows(df: pd.DataFrame) -> int:
     return len(df)
 
 
+def format_elapsed_time(elapsed_time: float) -> str:
+    """Format elapsed time in a human-readable format."""
+    hours = int(elapsed_time // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = elapsed_time % 60
+
+    if hours > 0:
+        return f'{hours}h {minutes}m {seconds:.2f}s ({elapsed_time:.2f} seconds)'
+    elif minutes > 0:
+        return f'{minutes}m {seconds:.2f}s ({elapsed_time:.2f} seconds)'
+    else:
+        return f'{seconds:.2f} seconds'
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Collect data from anonymized collectors (except events)',
@@ -234,6 +249,9 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # Record start time
+    start_time = time.time()
 
     # Clean up ./out directory at the start (recursively remove all files and folders)
     out_dir = './out'
@@ -272,9 +290,11 @@ Examples:
 
     # Collect data for each collector
     results: Dict[str, List[pd.DataFrame]] = {}
+    collector_times: Dict[str, float] = {}
 
     for collector_name, collector_info in COLLECTORS.items():
         print(f'Collecting {collector_name}...')
+        collector_start_time = time.time()
 
         if collector_info['needs_since_until']:
             # Time-series collector
@@ -291,6 +311,9 @@ Examples:
                 collector_info,
                 db,
             )
+
+        collector_elapsed_time = time.time() - collector_start_time
+        collector_times[collector_name] = collector_elapsed_time
 
         results[collector_name] = dataframes
         print(f'  Collected {len(dataframes)} dataframe(s)')
@@ -326,6 +349,15 @@ Examples:
                 print(f'  Rows: {rows:,}')
 
         print()
+
+    # Print elapsed time for each collector
+    print('=' * 70)
+    print('COLLECTOR ELAPSED TIMES')
+    print('=' * 70)
+    print()
+    for collector_name, elapsed_time in collector_times.items():
+        print(f'{collector_name}: {format_elapsed_time(elapsed_time)}')
+    print()
 
     # Compute anonymized rollups from collected dataframes
     print()
@@ -364,11 +396,16 @@ Examples:
     # Compute anonymized rollup
     salt = 'salt'  # Default salt, could be made configurable
     print('Computing anonymized rollup from collected data...')
+    rollup_start_time = time.time()
     try:
         json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+        rollup_elapsed_time = time.time() - rollup_start_time
         print('✓ Anonymized rollup computed successfully')
+        print(f'  Elapsed time: {format_elapsed_time(rollup_elapsed_time)}')
     except Exception as e:
+        rollup_elapsed_time = time.time() - rollup_start_time
         print(f'✗ Error computing anonymized rollup: {e}')
+        print(f'  Elapsed time before error: {format_elapsed_time(rollup_elapsed_time)}')
         import traceback
 
         traceback.print_exc()
@@ -417,6 +454,16 @@ Examples:
             print(f'  └─ Contains {len(chunk[chunk_key])} items in {chunk_key}')
 
     print()
+    print('=' * 70)
+    print()
+
+    # Calculate and print total elapsed time
+    elapsed_time = time.time() - start_time
+
+    print('=' * 70)
+    print('TOTAL ELAPSED TIME')
+    print('=' * 70)
+    print(f'Total elapsed time: {format_elapsed_time(elapsed_time)}')
     print('=' * 70)
     print()
 
