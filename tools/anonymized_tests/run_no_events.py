@@ -311,17 +311,19 @@ Examples:
             for i, df in enumerate(dataframes):
                 rows = count_rows(df)
                 total_rows += rows
-                if args.batches:
-                    print(f'  Batch {i + 1}/{len(dataframes)}: {rows:,} rows')
-                else:
-                    # Show time interval for hourly splits
-                    since_interval, until_interval = time_intervals[i]
-                    print(f'  Hour {i + 1} ({since_interval.strftime("%Y-%m-%d %H:%M")} - {until_interval.strftime("%H:%M")}): {rows:,} rows')
+                if rows > 0:
+                    if args.batches:
+                        print(f'  Batch {i + 1}/{len(dataframes)}: {rows:,} rows')
+                    else:
+                        # Show time interval for hourly splits
+                        since_interval, until_interval = time_intervals[i]
+                        print(f'  Hour {i + 1} ({since_interval.strftime("%Y-%m-%d %H:%M")} - {until_interval.strftime("%H:%M")}): {rows:,} rows')
             print(f'  Total: {total_rows:,} rows')
         else:
             # Snapshot collector: show single result
             rows = count_rows(dataframes[0]) if dataframes else 0
-            print(f'  Rows: {rows:,}')
+            if rows > 0:
+                print(f'  Rows: {rows:,}')
 
         print()
 
