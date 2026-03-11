@@ -102,7 +102,6 @@ def test_big_test4():
 
         launch_type_data = result['jobs_by_launch_type'][0]
         assert launch_type_data['launch_type'] == 'manual', 'launch_type should be "manual"'
-        assert launch_type_data['job_type_total'] == 1, f'Should have 1 job type, got {launch_type_data["job_type_total"]}'
 
         # Verify by_ansible_version aggregation (in jobs_by_ansible_version)
         assert 'jobs_by_ansible_version' in result, 'result should have jobs_by_ansible_version'
@@ -111,7 +110,6 @@ def test_big_test4():
 
         ansible_version_data = result['jobs_by_ansible_version'][0]
         assert ansible_version_data['ansible_version'] == '2.16.0', 'ansible_version should be "2.16.0"'
-        assert ansible_version_data['job_type_total'] == 1, f'Should have 1 job type, got {ansible_version_data["job_type_total"]}'
 
         # Verify execution environments
         assert 'rollup_period_execution_environments_total' in statistics

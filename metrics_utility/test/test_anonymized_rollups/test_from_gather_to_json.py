@@ -192,7 +192,6 @@ def _validate_jobs_by_launch_type_structure(json_data):
         assert 'jobs_total' in job
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
-        assert 'job_type_total' in job
         assert 'dark_total' in job
         assert 'failures_total' in job
         assert 'ok_total' in job
@@ -214,7 +213,6 @@ def _validate_jobs_by_ansible_version_structure(json_data):
         assert 'jobs_total' in job
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
-        assert 'job_type_total' in job
         assert 'dark_total' in job
         assert 'failures_total' in job
         assert 'ok_total' in job
@@ -534,8 +532,6 @@ def _validate_jobs_by_launch_type_values(json_data):
     launch_type_entry = json_data['jobs_by_launch_type'][0]
     assert 'launch_type' in launch_type_entry, 'Should have launch_type field'
     assert launch_type_entry['jobs_total'] >= 1, 'Should have at least 1 job in launch_type group'
-    assert 'job_type_total' in launch_type_entry, 'Should have job_type_total field'
-    assert launch_type_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
 
 
 def _validate_jobs_by_ansible_version_values(json_data):
@@ -550,8 +546,6 @@ def _validate_jobs_by_ansible_version_values(json_data):
             f'ansible_version should contain numbers and dots, got {ansible_version_entry["ansible_version"]}'
         )
     assert ansible_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in ansible_version group'
-    assert 'job_type_total' in ansible_version_entry, 'Should have job_type_total field'
-    assert ansible_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
     assert 'launch_type_manual_total' not in ansible_version_entry
     assert 'launch_type_scheduled_total' not in ansible_version_entry
 

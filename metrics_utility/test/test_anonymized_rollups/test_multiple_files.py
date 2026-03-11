@@ -375,7 +375,6 @@ def _validate_jobs_by_launch_type(result):
 
     assert manual_entry['jobs_total'] == 1, 'manual should have 1 job'
     assert manual_entry['jobs_failed_total'] == 0, 'manual should have 0 failed jobs'
-    assert manual_entry['job_type_total'] == 1, 'manual should have 1 job type (job)'
     assert manual_entry['jobs_duration_total_seconds'] == pytest.approx(3.0), 'manual should have 3s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
     assert 'ok_total' in manual_entry, 'Should have ok_total field from job_host_summary merge'
@@ -384,25 +383,21 @@ def _validate_jobs_by_launch_type(result):
     assert scheduled_entry['jobs_total'] == 2, 'scheduled should have 2 jobs'
     assert scheduled_entry['jobs_failed_total'] == 2, 'scheduled should have 2 failed jobs (both job 2 and job 6 have failed=1)'
     assert scheduled_entry['jobs_never_started_total'] == 1, 'scheduled should have 1 never started job'
-    assert scheduled_entry['job_type_total'] == 2, 'scheduled should have 2 job types (job and adhoccommand)'
     assert scheduled_entry['jobs_duration_total_seconds'] == pytest.approx(5.0), 'scheduled should have 5s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     assert workflow_entry['jobs_total'] == 1, 'workflow should have 1 job'
     assert workflow_entry['jobs_failed_total'] == 0, 'workflow should have 0 failed jobs'
-    assert workflow_entry['job_type_total'] == 1, 'workflow should have 1 job type (workflowjob)'
     assert workflow_entry['jobs_duration_total_seconds'] == pytest.approx(7.0), 'workflow should have 7s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     assert callback_entry['jobs_total'] == 1, 'callback should have 1 job'
     assert callback_entry['jobs_failed_total'] == 0, 'callback should have 0 failed jobs'
-    assert callback_entry['job_type_total'] == 1, 'callback should have 1 job type (job)'
     assert callback_entry['jobs_duration_total_seconds'] == pytest.approx(2.0), 'callback should have 2s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     for entry in [manual_entry, scheduled_entry, workflow_entry, callback_entry]:
         assert 'launch_type_manual_total' not in entry, 'Should not have launch_type_*_total when grouped by launch_type'
-        assert 'job_type_total' in entry, 'Should have job_type_total field'
 
     assert manual_entry['ansible_versions'] == ['2.9.0'], f"Expected ['2.9.0'] for manual launch_type, got {manual_entry['ansible_versions']}"
     assert scheduled_entry['ansible_versions'] == ['2.10.0', '2.14.0'], (
@@ -432,37 +427,31 @@ def _validate_jobs_by_ansible_version(result):
 
     assert version_2_9_0['jobs_total'] == 1, '2.9.0 should have 1 job'
     assert version_2_9_0['jobs_failed_total'] == 0, '2.9.0 should have 0 failed jobs'
-    assert version_2_9_0['job_type_total'] == 1, '2.9.0 should have 1 job type (job)'
     assert version_2_9_0['jobs_duration_total_seconds'] == pytest.approx(3.0), '2.9.0 should have 3s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     assert version_2_10_0['jobs_total'] == 1, '2.10.0 should have 1 job'
     assert version_2_10_0['jobs_failed_total'] == 1, '2.10.0 should have 1 failed job'
-    assert version_2_10_0['job_type_total'] == 1, '2.10.0 should have 1 job type (job)'
     assert version_2_10_0['jobs_duration_total_seconds'] == pytest.approx(5.0), '2.10.0 should have 5s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     assert version_2_11_0['jobs_total'] == 1, '2.11.0 should have 1 job'
     assert version_2_11_0['jobs_failed_total'] == 0, '2.11.0 should have 0 failed jobs'
-    assert version_2_11_0['job_type_total'] == 1, '2.11.0 should have 1 job type (workflowjob)'
     assert version_2_11_0['jobs_duration_total_seconds'] == pytest.approx(7.0), '2.11.0 should have 7s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     assert version_2_12_0['jobs_total'] == 1, '2.12.0 should have 1 job'
     assert version_2_12_0['jobs_failed_total'] == 0, '2.12.0 should have 0 failed jobs'
-    assert version_2_12_0['job_type_total'] == 1, '2.12.0 should have 1 job type (job)'
     assert version_2_12_0['jobs_duration_total_seconds'] == pytest.approx(2.0), '2.12.0 should have 2s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     assert version_2_14_0['jobs_total'] == 1, '2.14.0 should have 1 job'
     assert version_2_14_0['jobs_failed_total'] == 1, '2.14.0 should have 1 failed job'
     assert version_2_14_0['jobs_never_started_total'] == 1, '2.14.0 should have 1 never started job'
-    assert version_2_14_0['job_type_total'] == 1, '2.14.0 should have 1 job type (adhoccommand)'
     assert version_2_14_0['jobs_duration_total_seconds'] == pytest.approx(0.0), '2.14.0 should have 0s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
 
     for version_entry in [version_2_9_0, version_2_10_0, version_2_11_0, version_2_12_0, version_2_14_0]:
-        assert 'job_type_total' in version_entry, 'Should have job_type_total field'
         assert 'launch_type_manual_total' not in version_entry, 'Should not have launch_type_*_total field'
 
     total_jobs_by_job_type = sum(j.get('jobs_total', 0) for j in result['jobs_by_job_type'])

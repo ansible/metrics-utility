@@ -322,20 +322,14 @@ def test_jobhostsummary_anonymized():
     # Find the 'manual' launch_type group
     manual_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'manual'), None)
     assert manual_launch_type_data is not None, 'Should have launch_type manual'
-    # Note: unique_hosts_total is only at top level, not in groupings
-    assert manual_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (job) for manual'
 
     # Find the 'scheduled' launch_type group
     scheduled_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'scheduled'), None)
     assert scheduled_launch_type_data is not None, 'Should have launch_type scheduled'
-    # Note: unique_hosts_total is only at top level, not in groupings
-    assert scheduled_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (job) for scheduled'
 
     # Find the 'workflow' launch_type group
     workflow_launch_type_data = next((j for j in result['by_launch_type'] if j['launch_type'] == 'workflow'), None)
     assert workflow_launch_type_data is not None, 'Should have launch_type workflow'
-    # Note: unique_hosts_total is only at top level, not in groupings
-    assert workflow_launch_type_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for workflow'
 
     # Verify by_ansible_version groupings
     # Should have 2 ansible_version groups: '2.9.10' and '2.10.0'
@@ -344,13 +338,9 @@ def test_jobhostsummary_anonymized():
     # Find the '2.9.10' ansible_version group
     version_2910_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.9.10'), None)
     assert version_2910_data is not None, 'Should have ansible_version 2.9.10'
-    # Note: unique_hosts_total is only at top level, not in groupings
-    assert version_2910_data['job_type_total'] == 1, 'Should have 1 job type (job) for 2.9.10'
     assert version_2910_data['launch_type_total'] == 2, 'Should have 2 launch types (manual, scheduled) for 2.9.10'
 
     # Find the '2.10.0' ansible_version group
     version_2100_data = next((j for j in result['by_ansible_version'] if j['ansible_version'] == '2.10.0'), None)
     assert version_2100_data is not None, 'Should have ansible_version 2.10.0'
-    # Note: unique_hosts_total is only at top level, not in groupings
-    assert version_2100_data['job_type_total'] == 1, 'Should have 1 job type (workflowjob) for 2.10.0'
     assert version_2100_data['launch_type_total'] == 1, 'Should have 1 launch type (workflow) for 2.10.0'

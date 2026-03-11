@@ -121,7 +121,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         self._add_totals_to_aggregation(
             aggregations_by_launch_type,
             [
-                ('job_types', 'job_type_total'),
                 ('templates', 'templates_total'),
                 ('inventories', 'inventories_total'),
             ],
@@ -139,7 +138,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         self._add_totals_to_aggregation(
             aggregations_by_ansible_version,
             [
-                ('job_types', 'job_type_total'),
                 ('templates', 'templates_total'),
                 ('inventories', 'inventories_total'),
             ],
@@ -242,7 +240,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'job_waiting_time_total_seconds',
             'templates_total',
             'inventories_total',
-            'job_type_total',
         ]
 
         # List columns to union
@@ -323,9 +320,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             merged_item['templates_total'] = len(merged_item['templates'])
         if 'inventories' in merged_item:
             merged_item['inventories_total'] = len(merged_item['inventories'])
-        if 'job_types' in merged_item:
-            merged_item['job_type_total'] = len(merged_item['job_types'])
-
     def _merge_list_fields(self, data_all, data_new, field_name):
         """Merge list fields by union and sort."""
         all_set = set(data_all.get(field_name, []))
