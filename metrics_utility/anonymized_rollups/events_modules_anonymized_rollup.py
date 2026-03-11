@@ -291,7 +291,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Extract collection_name and collection_source from module_name."""
         # Use consistent regex pattern for collection name extraction
         dataframe['collection_name'] = dataframe['module_name'].str.extract(_COLLECTION_PATTERN, expand=False)
-        dataframe['collection_source'] = dataframe['collection_name'].map(self.collections).fillna('Unknown')
+        dataframe['collection_source'] = dataframe['collection_name'].map(self.collections).fillna('Custom')
+
         return dataframe
 
     def _compute_job_metrics(self, dataframe):
@@ -496,7 +497,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             task_summary['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         )
         role_collection_source_str = task_summary['role_collection_name'].astype(str).map(self.collections)
-        task_summary['role_collection_source'] = role_collection_source_str.fillna('Unknown')
+        task_summary['role_collection_source'] = role_collection_source_str.fillna('Custom')
 
         role_stats = task_summary.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
             **common_aggregation

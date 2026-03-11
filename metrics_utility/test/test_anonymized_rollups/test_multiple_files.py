@@ -329,8 +329,8 @@ def _validate_collections_versions(result):
     assert isinstance(collections_versions, list), 'collections_versions should be a list'
     collections_dict = {(c['name'], c['version']): c['job_count'] for c in collections_versions}
 
-    assert collections_dict.get(('Unknown', 'Unknown')) == 5, (
-        f'Expected Unknown Unknown (ansible.builtin) in 5 jobs, got {collections_dict.get(("Unknown", "Unknown"))}'
+    assert collections_dict.get(('Custom', 'Custom')) == 5, (
+        f'Expected Custom Custom (ansible.builtin) in 5 jobs, got {collections_dict.get(("Custom", "Custom"))}'
     )
     assert collections_dict.get(('community.general', '1.0.0')) == 2, (
         f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'

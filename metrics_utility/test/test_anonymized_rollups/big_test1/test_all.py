@@ -506,7 +506,7 @@ def validate_role_stats(result):
         assert role_stat['processed_events_total'] > 0
 
     # Verify that at least one role has a known collection_source
-    known_collection_roles = [r for r in role_stats if r.get('collection_source') != 'Unknown']
+    known_collection_roles = [r for r in role_stats if r.get('collection_source') != 'Custom']
     assert len(known_collection_roles) > 0
 
     valid_sources = {'certified', 'community', 'validated', 'partner'}

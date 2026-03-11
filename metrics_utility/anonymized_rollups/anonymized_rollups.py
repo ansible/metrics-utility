@@ -52,8 +52,8 @@ def anonymize_data(data, salt):
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
 
-    For items with collection_source == 'Unknown', replaces module names, collection names,
-    and role names with the string "Unknown" instead of hashing them.
+    For items with collection_source == 'Custom', replaces module names, collection names,
+    and role names with the string "Custom" instead of hashing them.
 
     Args:
         data: Flattened data structure with keys:
@@ -88,30 +88,30 @@ def anonymize_data(data, salt):
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
-    # anonymize module_stats - replace module name and collection name with 'Unknown' for 'Unknown' sources
+    # anonymize module_stats - replace module name and collection name with 'Custom' for 'Custom' sources
     if 'module_stats' in data and data['module_stats']:
         for module in data['module_stats']:
-            if module and module.get('collection_source') == 'Unknown':
+            if module and module.get('collection_source') == 'Custom':
                 if 'module_name' in module and module['module_name']:
-                    module['module_name'] = 'Unknown'
+                    module['module_name'] = 'Custom'
                 if 'collection_name' in module and module['collection_name']:
-                    module['collection_name'] = 'Unknown'
+                    module['collection_name'] = 'Custom'
 
-    # anonymize collection_stats - replace collection name with 'Unknown' for 'Unknown' sources
+    # anonymize collection_stats - replace collection name with 'Custom' for 'Custom' sources
     if 'collection_stats' in data and data['collection_stats']:
         for collection in data['collection_stats']:
-            if collection and collection.get('collection_source') == 'Unknown':
+            if collection and collection.get('collection_source') == 'Custom':
                 if 'collection_name' in collection and collection['collection_name']:
-                    collection['collection_name'] = 'Unknown'
+                    collection['collection_name'] = 'Custom'
 
-    # anonymize role_stats - replace role name and collection name with 'Unknown' for 'Unknown' sources
+    # anonymize role_stats - replace role name and collection name with 'Custom' for 'Custom' sources
     if 'role_stats' in data and data['role_stats']:
         for role in data['role_stats']:
-            if role and role.get('collection_source') == 'Unknown':
+            if role and role.get('collection_source') == 'Custom':
                 if 'role' in role and role['role']:
-                    role['role'] = 'Unknown'
+                    role['role'] = 'Custom'
                 if 'collection_name' in role and role['collection_name']:
-                    role['collection_name'] = 'Unknown'
+                    role['collection_name'] = 'Custom'
 
     # anonymize collections_versions - replace collection name and version with 'Unknown' for unknown collections
     # Load collections.json to check if collection is known
@@ -126,10 +126,10 @@ def anonymize_data(data, salt):
         for collection_version in data['collections_versions']:
             if collection_version and 'name' in collection_version:
                 collection_name = collection_version.get('name', '')
-                # If collection is not in the known collections mapping, replace name and version with 'Unknown'
+                # If collection is not in the known collections mapping, replace name and version with 'Custom'
                 if collection_name and collection_name not in collections:
-                    collection_version['name'] = 'Unknown'
-                    collection_version['version'] = 'Unknown'
+                    collection_version['name'] = 'Custom'
+                    collection_version['version'] = 'Custom'
 
     # Note: modules_used_per_playbook anonymization removed since it's not in final output
     # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output

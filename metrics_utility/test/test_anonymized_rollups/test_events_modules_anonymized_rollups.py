@@ -470,15 +470,15 @@ def test_events_modules_aggregations_basic():
             f"Expected collection_source 'certified', got {win_copy_role_stats['collection_source']}"
         )
 
-    # Verify standalone role (custom.standalone_role) has Unknown collection_source
+    # Verify standalone role (custom.standalone_role) has Custom collection_source
     if 'custom.standalone_role' in stats_by_role:
         standalone_role_stats = stats_by_role['custom.standalone_role']
-        # Standalone roles should have None collection_name and Unknown collection_source
+        # Standalone roles should have None collection_name and Custom collection_source
         assert standalone_role_stats.get('collection_name') is None or standalone_role_stats.get('collection_name') == '', (
             f'Standalone role should have None collection_name, got {standalone_role_stats.get("collection_name")}'
         )
-        assert standalone_role_stats['collection_source'] == 'Unknown', (
-            f"Standalone role should have 'Unknown' collection_source, got {standalone_role_stats['collection_source']}"
+        assert standalone_role_stats['collection_source'] == 'Custom', (
+            f"Standalone role should have 'Custom' collection_source, got {standalone_role_stats['collection_source']}"
         )
 
     # ansible.windows.win_copy (certified)
@@ -587,9 +587,9 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['jobs_failed_because_of_module_failure_total'] == 0
     assert mongo_stats['processed_events_total'] == 3  # Job 1 Host 3: 1 event (async_ok), Job 2 Host 1: 2 events (failed, ok)
 
-    # custom.user.collection (Unknown)
+    # custom.user.collection (Custom)
     custom_stats = stats_by_module['custom.user.collection']
-    assert custom_stats['collection_source'] == 'Unknown'
+    assert custom_stats['collection_source'] == 'Custom'
     assert custom_stats['task_ok_total'] == 1
     assert custom_stats['task_ok_with_retries_total'] == 0
     assert custom_stats['task_failed_total'] == 0
@@ -723,7 +723,7 @@ def test_events_modules_aggregations_basic():
 
     # custom.user
     custom_coll = coll_by_name['custom.user']
-    assert custom_coll['collection_source'] == 'Unknown'
+    assert custom_coll['collection_source'] == 'Custom'
     assert custom_coll['jobs_total'] == 1
     assert custom_coll['jobs_never_started_total'] == 0
     assert custom_coll['unique_hosts_total'] == 1
