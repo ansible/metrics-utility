@@ -330,7 +330,15 @@ def _validate_collections_versions(json_data):
         assert collection['name'] != 'Custom', f'Known collection should not have name "Custom", got {collection.get("name")}'
         assert collection['version'] != 'Custom', f'Known collection should not have version "Custom", got {collection.get("version")}'
         assert 'version' in collection, 'Each collection should have version field'
-        assert 'job_count' in collection, 'Each collection should have job_count field'
+        assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
+        assert 'jobs_failed_total' in collection, 'Each collection should have jobs_failed_total field'
+        assert 'jobs_successful_total' in collection, 'Each collection should have jobs_successful_total field'
+        assert isinstance(collection.get('jobs_total'), int), 'jobs_total should be an integer'
+        assert isinstance(collection.get('jobs_failed_total'), int), 'jobs_failed_total should be an integer'
+        assert isinstance(collection.get('jobs_successful_total'), int), 'jobs_successful_total should be an integer'
+        assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['jobs_total'], (
+            f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
+        )
 
 
 def _validate_role_stats_and_collections_versions(json_data):

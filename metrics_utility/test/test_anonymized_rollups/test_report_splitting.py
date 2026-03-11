@@ -227,7 +227,7 @@ def _create_collections_versions():
             {
                 'name': f'ansible.collection_{i:03d}',
                 'version': f'1.{i}.0',
-                'job_count': 10 + (i % 20),
+                'jobs_total': 10 + (i % 20),
             }
         )
     return collections_versions

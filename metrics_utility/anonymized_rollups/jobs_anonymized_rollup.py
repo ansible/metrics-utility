@@ -1,7 +1,5 @@
 import json
 
-from collections import Counter
-
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
@@ -327,26 +325,37 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return sorted(all_set.union(new_set))
 
     def _merge_collections(self, data_all, data_new):
-        """Merge installed_collections by summing job_count for same collection+version."""
+        """Merge installed_collections by summing job_count, jobs_failed_total, and
+        jobs_successful_total for the same collection+version."""
         collections_all = {
-            (item['collection_name'], item['collection_version']): item['job_count'] for item in data_all.get('installed_collections', [])
+            (item['collection_name'], item['collection_version']): item
+            for item in data_all.get('installed_collections', [])
         }
         collections_new = {
-            (item['collection_name'], item['collection_version']): item['job_count'] for item in data_new.get('installed_collections', [])
+            (item['collection_name'], item['collection_version']): item
+            for item in data_new.get('installed_collections', [])
         }
 
         merged_collections = {}
         all_collection_keys = set(collections_all.keys()) | set(collections_new.keys())
         for key in all_collection_keys:
-            merged_collections[key] = collections_all.get(key, 0) + collections_new.get(key, 0)
+            item_all = collections_all.get(key, {})
+            item_new = collections_new.get(key, {})
+            merged_collections[key] = {
+                'job_count': item_all.get('job_count', 0) + item_new.get('job_count', 0),
+                'jobs_failed_total': item_all.get('jobs_failed_total', 0) + item_new.get('jobs_failed_total', 0),
+                'jobs_successful_total': item_all.get('jobs_successful_total', 0) + item_new.get('jobs_successful_total', 0),
+            }
 
         installed_collections = [
             {
                 'collection_name': collection_name,
                 'collection_version': collection_version,
-                'job_count': job_count,
+                'job_count': stats['job_count'],
+                'jobs_failed_total': stats['jobs_failed_total'],
+                'jobs_successful_total': stats['jobs_successful_total'],
             }
-            for (collection_name, collection_version), job_count in merged_collections.items()
+            for (collection_name, collection_version), stats in merged_collections.items()
         ]
         installed_collections.sort(key=lambda x: (x['collection_name'], x['collection_version']))
         return installed_collections
@@ -482,9 +491,10 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         return None
 
-    def _process_collections_dict(self, collections_data, collections_counter):
+    def _process_collections_dict(self, collections_data, collections_stats, failed):
         """
-        Process a collections dict and update the counter with collection name/version pairs.
+        Process a collections dict and update the stats dict with collection name/version pairs,
+        tracking job_count, jobs_failed_total, and jobs_successful_total.
         """
         if not isinstance(collections_data, dict):
             return
@@ -495,25 +505,39 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
             version = collection_info.get('version', '')
             if version:
-                collections_counter[(collection_name, str(version))] += 1
+                key = (collection_name, str(version))
+                if key not in collections_stats:
+                    collections_stats[key] = {
+                        'job_count': 0,
+                        'jobs_failed_total': 0,
+                        'jobs_successful_total': 0,
+                    }
+                collections_stats[key]['job_count'] += 1
+                if failed:
+                    collections_stats[key]['jobs_failed_total'] += 1
+                else:
+                    collections_stats[key]['jobs_successful_total'] += 1
 
     def _process_collections_from_jobs(self, dataframe):
         """
         Extract unique collection name and version pairs from jobs dataframe.
-        Count how many jobs use each unique collection+version combination.
+        Count how many jobs use each unique collection+version combination,
+        including failed and successful job counts.
 
-        Optimized version using itertuples() and Counter for better performance.
+        Optimized version using itertuples() for better performance.
 
         Returns a list of dicts with:
         - collection_name: str
         - collection_version: str
         - job_count: int
+        - jobs_failed_total: int
+        - jobs_successful_total: int
         """
         if 'installed_collections' not in dataframe.columns:
             return []
 
-        # Use Counter for efficient counting
-        collections_counter = Counter()
+        # Use dict for tracking job_count, jobs_failed_total, jobs_successful_total per collection+version
+        collections_stats = {}
 
         # Use itertuples() for fastest row iteration (10-100x faster than iterrows)
         # itertuples() creates namedtuples with column names as attributes
@@ -522,19 +546,22 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             installed_collections_data = getattr(row, 'installed_collections', None)
             collections_data = self._parse_collections_data(installed_collections_data)
             if collections_data:
-                self._process_collections_dict(collections_data, collections_counter)
+                failed = bool(getattr(row, 'failed', False))
+                self._process_collections_dict(collections_data, collections_stats, failed)
 
-        # Convert Counter to list of dicts
-        collections_stats = [
+        # Convert dict to list of dicts
+        result = [
             {
                 'collection_name': collection_name,
                 'collection_version': collection_version,
-                'job_count': job_count,
+                'job_count': stats['job_count'],
+                'jobs_failed_total': stats['jobs_failed_total'],
+                'jobs_successful_total': stats['jobs_successful_total'],
             }
-            for (collection_name, collection_version), job_count in collections_counter.items()
+            for (collection_name, collection_version), stats in collections_stats.items()
         ]
 
         # Sort by collection_name, then by collection_version for consistent output
-        collections_stats.sort(key=lambda x: (x['collection_name'], x['collection_version']))
+        result.sort(key=lambda x: (x['collection_name'], x['collection_version']))
 
-        return collections_stats
+        return result

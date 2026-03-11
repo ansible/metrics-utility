@@ -327,7 +327,7 @@ def _validate_collections_versions(result):
     """Validate collections versions section."""
     collections_versions = result['collections_versions']
     assert isinstance(collections_versions, list), 'collections_versions should be a list'
-    collections_dict = {(c['name'], c['version']): c['job_count'] for c in collections_versions}
+    collections_dict = {(c['name'], c['version']): c['jobs_total'] for c in collections_versions}
 
     assert collections_dict.get(('Custom', 'Custom')) == 5, (
         f'Expected Custom Custom (ansible.builtin) in 5 jobs, got {collections_dict.get(("Custom", "Custom"))}'
@@ -352,9 +352,16 @@ def _validate_collections_versions(result):
     for collection in collections_versions:
         assert 'name' in collection, 'Each collection should have name field'
         assert 'version' in collection, 'Each collection should have version field'
-        assert 'job_count' in collection, 'Each collection should have job_count field'
-        assert isinstance(collection['job_count'], int), 'job_count should be an integer'
-        assert collection['job_count'] > 0, 'job_count should be greater than 0'
+        assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
+        assert 'jobs_failed_total' in collection, 'Each collection should have jobs_failed_total field'
+        assert 'jobs_successful_total' in collection, 'Each collection should have jobs_successful_total field'
+        assert isinstance(collection['jobs_total'], int), 'jobs_total should be an integer'
+        assert isinstance(collection['jobs_failed_total'], int), 'jobs_failed_total should be an integer'
+        assert isinstance(collection['jobs_successful_total'], int), 'jobs_successful_total should be an integer'
+        assert collection['jobs_total'] > 0, 'jobs_total should be greater than 0'
+        assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['jobs_total'], (
+            f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
+        )
 
 
 def _validate_jobs_by_launch_type(result):

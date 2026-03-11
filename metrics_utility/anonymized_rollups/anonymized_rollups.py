@@ -63,7 +63,7 @@ def anonymize_data(data, salt):
             - module_stats: array of module statistics
             - collection_stats: array of collection statistics
             - role_stats: array of role statistics
-            - collections_versions: array of {name, version, job_count} from installed collections
+            - collections_versions: array of {name, version, jobs_total, jobs_failed_total, jobs_successful_total} from installed collections
         salt: Salt string for hashing (used for job_template_name hashing)
     """
     if not data or not isinstance(data, dict):
@@ -342,7 +342,9 @@ def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
         {
             'name': item.get('collection_name', ''),
             'version': item.get('collection_version', ''),
-            'job_count': item.get('job_count', 0),
+            'jobs_total': item.get('job_count', 0),
+            'jobs_failed_total': item.get('jobs_failed_total', 0),
+            'jobs_successful_total': item.get('jobs_successful_total', 0),
         }
         for item in installed_collections
         if item and 'collection_name' in item and 'collection_version' in item
@@ -401,7 +403,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
-      - collections_versions: array of {name, version, job_count} from installed collections
+      - collections_versions: array of {name, version, jobs_total, jobs_failed_total, jobs_successful_total} from installed collections
       - table_metadata: object with table metadata statistics
       - controller_versions: array of controller versions
 

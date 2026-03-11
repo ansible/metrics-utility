@@ -561,31 +561,55 @@ def test_jobs_anonymized_rollups_installed_collections():
     # community.aws 1.5.0: 1 job (3)
 
     # Convert to dict for easier lookup
-    collections_dict = {(c['collection_name'], c['collection_version']): c['job_count'] for c in installed_collections}
+    collections_dict = {(c['collection_name'], c['collection_version']): c for c in installed_collections}
+
+    # Expected failed/successful counts per collection (jobs 1-4 and 6 are included, 5 is filtered):
+    # Job 1: failed=0, Job 2: failed=1, Job 3: failed=0, Job 4: failed=0, Job 6: failed=1
+    # ansible.builtin 2.9.10: jobs 1(s),2(f),3(s),4(s),6(f) → 2 failed, 3 successful
+    # community.general 1.0.0: jobs 1(s),4(s) → 0 failed, 2 successful
+    # community.general 2.0.0: jobs 2(f),3(s) → 1 failed, 1 successful
+    # community.general 3.0.0: job 6(f) → 1 failed, 0 successful
+    # ansible.windows 1.0.0: job 2(f) → 1 failed, 0 successful
+    # community.aws 1.5.0: job 3(s) → 0 failed, 1 successful
 
     # Verify ansible.builtin 2.9.10 appears in 5 jobs
-    assert collections_dict.get(('ansible.builtin', '2.9.10')) == 5, (
+    assert collections_dict.get(('ansible.builtin', '2.9.10'))['job_count'] == 5, (
         f'Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(("ansible.builtin", "2.9.10"))}'
     )
+    assert collections_dict.get(('ansible.builtin', '2.9.10'))['jobs_failed_total'] == 2
+    assert collections_dict.get(('ansible.builtin', '2.9.10'))['jobs_successful_total'] == 3
 
     # Verify community.general appears with different versions
-    assert collections_dict.get(('community.general', '1.0.0')) == 2, (
+    assert collections_dict.get(('community.general', '1.0.0'))['job_count'] == 2, (
         f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'
     )
-    assert collections_dict.get(('community.general', '2.0.0')) == 2, (
+    assert collections_dict.get(('community.general', '1.0.0'))['jobs_failed_total'] == 0
+    assert collections_dict.get(('community.general', '1.0.0'))['jobs_successful_total'] == 2
+
+    assert collections_dict.get(('community.general', '2.0.0'))['job_count'] == 2, (
         f'Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(("community.general", "2.0.0"))}'
     )
-    assert collections_dict.get(('community.general', '3.0.0')) == 1, (
+    assert collections_dict.get(('community.general', '2.0.0'))['jobs_failed_total'] == 1
+    assert collections_dict.get(('community.general', '2.0.0'))['jobs_successful_total'] == 1
+
+    assert collections_dict.get(('community.general', '3.0.0'))['job_count'] == 1, (
         f'Expected community.general 3.0.0 in 1 job, got {collections_dict.get(("community.general", "3.0.0"))}'
     )
+    assert collections_dict.get(('community.general', '3.0.0'))['jobs_failed_total'] == 1
+    assert collections_dict.get(('community.general', '3.0.0'))['jobs_successful_total'] == 0
 
     # Verify other collections
-    assert collections_dict.get(('ansible.windows', '1.0.0')) == 1, (
+    assert collections_dict.get(('ansible.windows', '1.0.0'))['job_count'] == 1, (
         f'Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(("ansible.windows", "1.0.0"))}'
     )
-    assert collections_dict.get(('community.aws', '1.5.0')) == 1, (
+    assert collections_dict.get(('ansible.windows', '1.0.0'))['jobs_failed_total'] == 1
+    assert collections_dict.get(('ansible.windows', '1.0.0'))['jobs_successful_total'] == 0
+
+    assert collections_dict.get(('community.aws', '1.5.0'))['job_count'] == 1, (
         f'Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(("community.aws", "1.5.0"))}'
     )
+    assert collections_dict.get(('community.aws', '1.5.0'))['jobs_failed_total'] == 0
+    assert collections_dict.get(('community.aws', '1.5.0'))['jobs_successful_total'] == 1
 
     # Verify total number of unique collection-version pairs
     # Should have 6 unique pairs: ansible.builtin 2.9.10, community.general (3 versions), ansible.windows 1.0.0, community.aws 1.5.0
@@ -596,8 +620,13 @@ def test_jobs_anonymized_rollups_installed_collections():
         assert 'collection_name' in collection
         assert 'collection_version' in collection
         assert 'job_count' in collection
+        assert 'jobs_failed_total' in collection
+        assert 'jobs_successful_total' in collection
         assert isinstance(collection['job_count'], int)
+        assert isinstance(collection['jobs_failed_total'], int)
+        assert isinstance(collection['jobs_successful_total'], int)
         assert collection['job_count'] > 0
+        assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['job_count']
 
 
 def _extract_ansible_versions_from_jobs(jobs_by_job_type):
