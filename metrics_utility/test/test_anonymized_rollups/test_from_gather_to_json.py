@@ -314,15 +314,15 @@ def _validate_role_stats(json_data):
             )
 
 
-def _validate_collections_versions(json_data):
-    """Validate collections_versions."""
-    if not ('collections_versions' in json_data and json_data['collections_versions']):
+def _validate_jobs_by_collections_versions(json_data):
+    """Validate jobs_by_collections_versions."""
+    if not ('jobs_by_collections_versions' in json_data and json_data['jobs_by_collections_versions']):
         return
-    print('--- Validating collections_versions data values ---')
-    collections_versions = json_data['collections_versions']
-    assert isinstance(collections_versions, list), 'collections_versions should be a list'
-    unknown_collections = [c for c in collections_versions if c.get('name') == 'Custom']
-    known_collections = [c for c in collections_versions if c.get('name') != 'Custom']
+    print('--- Validating jobs_by_collections_versions data values ---')
+    jobs_by_collections_versions = json_data['jobs_by_collections_versions']
+    assert isinstance(jobs_by_collections_versions, list), 'jobs_by_collections_versions should be a list'
+    unknown_collections = [c for c in jobs_by_collections_versions if c.get('name') == 'Custom']
+    known_collections = [c for c in jobs_by_collections_versions if c.get('name') != 'Custom']
     assert len(unknown_collections) > 0, 'Should have at least one collection with "Custom" name (ansible.builtin)'
     for collection in unknown_collections:
         assert collection['name'] == 'Custom', f'Custom collection should have name "Custom", got {collection.get("name")}'
@@ -355,7 +355,7 @@ def _validate_collections_versions(json_data):
             f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
         )
         for field in new_fields:
-            assert field in collection, f'Missing new field {field!r} in collections_versions entry {collection["name"]} {collection["version"]}'
+            assert field in collection, f'Missing new field {field!r} in jobs_by_collections_versions entry {collection["name"]} {collection["version"]}'
         assert isinstance(collection['jobs_never_started_total'], int), 'jobs_never_started_total should be an int'
         assert isinstance(collection['templates_total'], int), 'templates_total should be an int'
         assert isinstance(collection['inventories_total'], int), 'inventories_total should be an int'
@@ -374,17 +374,17 @@ def _validate_collections_versions(json_data):
     # same structural checks for unknown (Custom) collections
     for collection in unknown_collections:
         for field in new_fields:
-            assert field in collection, f'Missing new field {field!r} in Custom collections_versions entry'
+            assert field in collection, f'Missing new field {field!r} in Custom jobs_by_collections_versions entry'
         assert isinstance(collection['jobs_never_started_total'], int)
         assert isinstance(collection['templates_total'], int)
         assert isinstance(collection['inventories_total'], int)
         assert isinstance(collection['ansible_versions'], list)
 
 
-def _validate_role_stats_and_collections_versions(json_data):
-    """Validate anonymized role_stats and collections_versions."""
+def _validate_role_stats_and_jobs_by_collections_versions(json_data):
+    """Validate anonymized role_stats and jobs_by_collections_versions."""
     _validate_role_stats(json_data)
-    _validate_collections_versions(json_data)
+    _validate_jobs_by_collections_versions(json_data)
 
 
 def _validate_jobs_values(json_data, statistics):
@@ -916,7 +916,7 @@ def _validate_all_data(json_data, statistics):
     # (3 from 10:00 hour + 3 from 11:00 hour)
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
-    _validate_role_stats_and_collections_versions(json_data)
+    _validate_role_stats_and_jobs_by_collections_versions(json_data)
 
     print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'

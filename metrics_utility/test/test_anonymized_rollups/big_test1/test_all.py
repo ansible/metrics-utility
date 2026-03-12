@@ -272,7 +272,7 @@ def validate_result_structure(result):
     assert 'jobs_by_controller_version' in result
     assert 'module_stats' in result
     assert 'collection_stats' in result
-    assert 'collections_versions' in result
+    assert 'jobs_by_collections_versions' in result
 
 
 def validate_task_statistics(statistics):

@@ -219,18 +219,18 @@ def _create_jobs_by_ansible_version():
     return jobs_by_ansible_version
 
 
-def _create_collections_versions():
-    """Create collections_versions array."""
-    collections_versions = []
+def _create_jobs_by_collections_versions():
+    """Create jobs_by_collections_versions array."""
+    jobs_by_collections_versions = []
     for i in range(20):
-        collections_versions.append(
+        jobs_by_collections_versions.append(
             {
                 'name': f'ansible.collection_{i:03d}',
                 'version': f'1.{i}.0',
                 'jobs_total': 10 + (i % 20),
             }
         )
-    return collections_versions
+    return jobs_by_collections_versions
 
 
 def _create_ansible_versions():
@@ -269,7 +269,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
     jobs_by_job_type = _create_jobs_by_job_type(num_jobs)
     jobs_by_launch_type = _create_jobs_by_launch_type()
     jobs_by_ansible_version = _create_jobs_by_ansible_version()
-    collections_versions = _create_collections_versions()
+    jobs_by_collections_versions = _create_jobs_by_collections_versions()
     ansible_versions = _create_ansible_versions()
 
     anonymized_rollup = {
@@ -283,7 +283,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         'jobs_by_job_type': jobs_by_job_type,
         'jobs_by_launch_type': jobs_by_launch_type,
         'jobs_by_ansible_version': jobs_by_ansible_version,
-        'collections_versions': collections_versions,
+        'jobs_by_collections_versions': jobs_by_collections_versions,
     }
 
     return anonymized_rollup

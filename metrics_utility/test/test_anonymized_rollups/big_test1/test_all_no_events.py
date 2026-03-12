@@ -267,7 +267,7 @@ def validate_result_structure(result):
     assert 'jobs_by_launch_type' in result
     assert 'jobs_by_ansible_version' in result
     assert 'jobs_by_controller_version' in result
-    assert 'collections_versions' in result
+    assert 'jobs_by_collections_versions' in result
 
     # Event-related fields should be missing when there are no events
     assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
