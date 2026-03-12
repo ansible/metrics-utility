@@ -602,50 +602,140 @@ def test_jobs_anonymized_rollups_installed_collections():
     # ansible.windows 1.0.0: job 2(f) → 1 failed, 0 successful
     # community.aws 1.5.0: job 3(s) → 0 failed, 1 successful
 
-    # Verify ansible.builtin 2.9.10 appears in 5 jobs
-    assert collections_dict.get(('ansible.builtin', '2.9.10'))['job_count'] == 5, (
-        f'Expected ansible.builtin 2.9.10 in 5 jobs, got {collections_dict.get(("ansible.builtin", "2.9.10"))}'
-    )
-    assert collections_dict.get(('ansible.builtin', '2.9.10'))['jobs_failed_total'] == 2
-    assert collections_dict.get(('ansible.builtin', '2.9.10'))['jobs_successful_total'] == 3
+    # Verify ansible.builtin 2.9.10 appears in 5 jobs (1s, 2f, 3s, 4s, 6f-never-started)
+    # durations: 3+5+7+2=17s total; job6 NaN skipped; successful: 3+7+2=12s; failed: 5s
+    # waiting:   0+2+4+1=7s total; job6 NaN skipped; min=0s(job1), max=4s(job3)
+    # templates: {1,2,3}; inventories: {1,2,3}; ansible_versions: all 5 versions
+    ab = collections_dict.get(('ansible.builtin', '2.9.10'))
+    assert ab['job_count'] == 5, f'Expected ansible.builtin 2.9.10 in 5 jobs, got {ab}'
+    assert ab['jobs_failed_total'] == 2
+    assert ab['jobs_successful_total'] == 3
+    assert ab['jobs_never_started_total'] == 1, 'job6 has started=None → never started'
+    assert ab['jobs_duration_total_seconds'] == pytest.approx(17.0)
+    assert ab['jobs_successful_duration_total_seconds'] == pytest.approx(12.0)
+    assert ab['jobs_failed_duration_total_seconds'] == pytest.approx(5.0)
+    assert ab['job_duration_maximum_seconds'] == pytest.approx(7.0)
+    assert ab['job_duration_minimum_seconds'] == pytest.approx(2.0)
+    assert ab['job_waiting_time_total_seconds'] == pytest.approx(7.0)
+    assert ab['job_waiting_time_maximum_seconds'] == pytest.approx(4.0)
+    assert ab['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
+    assert ab['templates_total'] == 3, 'templates 1,2,3 → 3 unique'
+    assert ab['inventories_total'] == 3, 'inventories 1,2,3 → 3 unique'
+    assert ab['ansible_versions'] == ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
 
     # Verify community.general appears with different versions
-    assert collections_dict.get(('community.general', '1.0.0'))['job_count'] == 2, (
-        f'Expected community.general 1.0.0 in 2 jobs, got {collections_dict.get(("community.general", "1.0.0"))}'
-    )
-    assert collections_dict.get(('community.general', '1.0.0'))['jobs_failed_total'] == 0
-    assert collections_dict.get(('community.general', '1.0.0'))['jobs_successful_total'] == 2
+    # community.general 1.0.0 → jobs 1(s,3s,0s,T1,I1,v2.9.0) and 4(s,2s,1s,T1,I1,v2.12.0)
+    cg1 = collections_dict.get(('community.general', '1.0.0'))
+    assert cg1['job_count'] == 2, f'Expected community.general 1.0.0 in 2 jobs, got {cg1}'
+    assert cg1['jobs_failed_total'] == 0
+    assert cg1['jobs_successful_total'] == 2
+    assert cg1['jobs_never_started_total'] == 0
+    assert cg1['jobs_duration_total_seconds'] == pytest.approx(5.0)  # 3+2
+    assert cg1['jobs_successful_duration_total_seconds'] == pytest.approx(5.0)
+    assert cg1['jobs_failed_duration_total_seconds'] == pytest.approx(0.0)
+    assert cg1['job_duration_maximum_seconds'] == pytest.approx(3.0)
+    assert cg1['job_duration_minimum_seconds'] == pytest.approx(2.0)
+    assert cg1['job_waiting_time_total_seconds'] == pytest.approx(1.0)  # 0+1
+    assert cg1['job_waiting_time_maximum_seconds'] == pytest.approx(1.0)
+    assert cg1['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
+    assert cg1['templates_total'] == 1
+    assert cg1['inventories_total'] == 1
+    assert cg1['ansible_versions'] == ['2.12.0', '2.9.0']
 
-    assert collections_dict.get(('community.general', '2.0.0'))['job_count'] == 2, (
-        f'Expected community.general 2.0.0 in 2 jobs, got {collections_dict.get(("community.general", "2.0.0"))}'
-    )
-    assert collections_dict.get(('community.general', '2.0.0'))['jobs_failed_total'] == 1
-    assert collections_dict.get(('community.general', '2.0.0'))['jobs_successful_total'] == 1
+    # community.general 2.0.0 → jobs 2(f,5s,2s,T1,I1,v2.10.0) and 3(s,7s,4s,T2,I2,v2.11.0)
+    cg2 = collections_dict.get(('community.general', '2.0.0'))
+    assert cg2['job_count'] == 2, f'Expected community.general 2.0.0 in 2 jobs, got {cg2}'
+    assert cg2['jobs_failed_total'] == 1
+    assert cg2['jobs_successful_total'] == 1
+    assert cg2['jobs_never_started_total'] == 0
+    assert cg2['jobs_duration_total_seconds'] == pytest.approx(12.0)  # 5+7
+    assert cg2['jobs_successful_duration_total_seconds'] == pytest.approx(7.0)
+    assert cg2['jobs_failed_duration_total_seconds'] == pytest.approx(5.0)
+    assert cg2['job_duration_maximum_seconds'] == pytest.approx(7.0)
+    assert cg2['job_duration_minimum_seconds'] == pytest.approx(5.0)
+    assert cg2['job_waiting_time_total_seconds'] == pytest.approx(6.0)  # 2+4
+    assert cg2['job_waiting_time_maximum_seconds'] == pytest.approx(4.0)
+    assert cg2['job_waiting_time_minimum_seconds'] == pytest.approx(2.0)
+    assert cg2['templates_total'] == 2
+    assert cg2['inventories_total'] == 2
+    assert cg2['ansible_versions'] == ['2.10.0', '2.11.0']
 
-    assert collections_dict.get(('community.general', '3.0.0'))['job_count'] == 1, (
-        f'Expected community.general 3.0.0 in 1 job, got {collections_dict.get(("community.general", "3.0.0"))}'
-    )
-    assert collections_dict.get(('community.general', '3.0.0'))['jobs_failed_total'] == 1
-    assert collections_dict.get(('community.general', '3.0.0'))['jobs_successful_total'] == 0
+    # community.general 3.0.0 → job 6 only (failed, never started → NaN durations/waits)
+    cg3 = collections_dict.get(('community.general', '3.0.0'))
+    assert cg3['job_count'] == 1, f'Expected community.general 3.0.0 in 1 job, got {cg3}'
+    assert cg3['jobs_failed_total'] == 1
+    assert cg3['jobs_successful_total'] == 0
+    assert cg3['jobs_never_started_total'] == 1
+    assert cg3['jobs_duration_total_seconds'] == pytest.approx(0.0)  # NaN → skipped
+    assert cg3['jobs_successful_duration_total_seconds'] == pytest.approx(0.0)
+    assert cg3['jobs_failed_duration_total_seconds'] == pytest.approx(0.0)
+    assert cg3['job_duration_maximum_seconds'] is None
+    assert cg3['job_duration_minimum_seconds'] is None
+    assert cg3['job_waiting_time_total_seconds'] == pytest.approx(0.0)
+    assert cg3['job_waiting_time_maximum_seconds'] is None
+    assert cg3['job_waiting_time_minimum_seconds'] is None
+    assert cg3['templates_total'] == 1
+    assert cg3['inventories_total'] == 1
+    assert cg3['ansible_versions'] == ['2.14.0']
 
     # Verify other collections
-    assert collections_dict.get(('ansible.windows', '1.0.0'))['job_count'] == 1, (
-        f'Expected ansible.windows 1.0.0 in 1 job, got {collections_dict.get(("ansible.windows", "1.0.0"))}'
-    )
-    assert collections_dict.get(('ansible.windows', '1.0.0'))['jobs_failed_total'] == 1
-    assert collections_dict.get(('ansible.windows', '1.0.0'))['jobs_successful_total'] == 0
+    # ansible.windows 1.0.0 → job 2 only (failed, 5s duration, 2s wait, T1, I1, v2.10.0)
+    aw = collections_dict.get(('ansible.windows', '1.0.0'))
+    assert aw['job_count'] == 1, f'Expected ansible.windows 1.0.0 in 1 job, got {aw}'
+    assert aw['jobs_failed_total'] == 1
+    assert aw['jobs_successful_total'] == 0
+    assert aw['jobs_never_started_total'] == 0
+    assert aw['jobs_duration_total_seconds'] == pytest.approx(5.0)
+    assert aw['jobs_successful_duration_total_seconds'] == pytest.approx(0.0)
+    assert aw['jobs_failed_duration_total_seconds'] == pytest.approx(5.0)
+    assert aw['job_duration_maximum_seconds'] == pytest.approx(5.0)
+    assert aw['job_duration_minimum_seconds'] == pytest.approx(5.0)
+    assert aw['job_waiting_time_total_seconds'] == pytest.approx(2.0)
+    assert aw['job_waiting_time_maximum_seconds'] == pytest.approx(2.0)
+    assert aw['job_waiting_time_minimum_seconds'] == pytest.approx(2.0)
+    assert aw['templates_total'] == 1
+    assert aw['inventories_total'] == 1
+    assert aw['ansible_versions'] == ['2.10.0']
 
-    assert collections_dict.get(('community.aws', '1.5.0'))['job_count'] == 1, (
-        f'Expected community.aws 1.5.0 in 1 job, got {collections_dict.get(("community.aws", "1.5.0"))}'
-    )
-    assert collections_dict.get(('community.aws', '1.5.0'))['jobs_failed_total'] == 0
-    assert collections_dict.get(('community.aws', '1.5.0'))['jobs_successful_total'] == 1
+    # community.aws 1.5.0 → job 3 only (successful, 7s duration, 4s wait, T2, I2, v2.11.0)
+    ca = collections_dict.get(('community.aws', '1.5.0'))
+    assert ca['job_count'] == 1, f'Expected community.aws 1.5.0 in 1 job, got {ca}'
+    assert ca['jobs_failed_total'] == 0
+    assert ca['jobs_successful_total'] == 1
+    assert ca['jobs_never_started_total'] == 0
+    assert ca['jobs_duration_total_seconds'] == pytest.approx(7.0)
+    assert ca['jobs_successful_duration_total_seconds'] == pytest.approx(7.0)
+    assert ca['jobs_failed_duration_total_seconds'] == pytest.approx(0.0)
+    assert ca['job_duration_maximum_seconds'] == pytest.approx(7.0)
+    assert ca['job_duration_minimum_seconds'] == pytest.approx(7.0)
+    assert ca['job_waiting_time_total_seconds'] == pytest.approx(4.0)
+    assert ca['job_waiting_time_maximum_seconds'] == pytest.approx(4.0)
+    assert ca['job_waiting_time_minimum_seconds'] == pytest.approx(4.0)
+    assert ca['templates_total'] == 1
+    assert ca['inventories_total'] == 1
+    assert ca['ansible_versions'] == ['2.11.0']
 
     # Verify total number of unique collection-version pairs
     # Should have 6 unique pairs: ansible.builtin 2.9.10, community.general (3 versions), ansible.windows 1.0.0, community.aws 1.5.0
     assert len(installed_collections) == 6, f'Expected 6 unique collection-version pairs, got {len(installed_collections)}'
 
-    # Verify all entries have required fields
+    # Verify all entries have required fields and invariants
+    new_fields = [
+        'jobs_never_started_total',
+        'jobs_duration_total_seconds',
+        'jobs_successful_duration_total_seconds',
+        'jobs_failed_duration_total_seconds',
+        'job_duration_maximum_seconds',
+        'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds',
+        'job_waiting_time_maximum_seconds',
+        'job_waiting_time_minimum_seconds',
+        'templates',
+        'templates_total',
+        'inventories',
+        'inventories_total',
+        'ansible_versions',
+    ]
     for collection in installed_collections:
         assert 'collection_name' in collection
         assert 'collection_version' in collection
@@ -657,6 +747,20 @@ def test_jobs_anonymized_rollups_installed_collections():
         assert isinstance(collection['jobs_successful_total'], int)
         assert collection['job_count'] > 0
         assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['job_count']
+        for field in new_fields:
+            assert field in collection, f'Missing field {field!r} in {collection["collection_name"]} {collection["collection_version"]}'
+        assert isinstance(collection['jobs_never_started_total'], int)
+        assert isinstance(collection['templates_total'], int)
+        assert isinstance(collection['inventories_total'], int)
+        assert isinstance(collection['ansible_versions'], list)
+        assert isinstance(collection['templates'], list)
+        assert isinstance(collection['inventories'], list)
+        assert collection['templates_total'] == len(collection['templates'])
+        assert collection['inventories_total'] == len(collection['inventories'])
+        # max/min durations: if there are no valid durations both must be None
+        if collection['jobs_duration_total_seconds'] == 0 and collection['job_count'] == collection['jobs_never_started_total']:
+            assert collection['job_duration_maximum_seconds'] is None
+            assert collection['job_duration_minimum_seconds'] is None
 
 
 def _extract_ansible_versions_from_jobs(jobs_by_job_type):

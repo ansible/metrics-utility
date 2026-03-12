@@ -327,6 +327,20 @@ def _validate_collections_versions(json_data):
     for collection in unknown_collections:
         assert collection['name'] == 'Custom', f'Custom collection should have name "Custom", got {collection.get("name")}'
         assert collection['version'] == 'Custom', f'Custom collection should have version "Custom", got {collection.get("version")}'
+    new_fields = [
+        'jobs_never_started_total',
+        'jobs_duration_total_seconds',
+        'jobs_successful_duration_total_seconds',
+        'jobs_failed_duration_total_seconds',
+        'job_duration_maximum_seconds',
+        'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds',
+        'job_waiting_time_maximum_seconds',
+        'job_waiting_time_minimum_seconds',
+        'templates_total',
+        'inventories_total',
+        'ansible_versions',
+    ]
     for collection in known_collections:
         assert collection['name'] != 'Custom', f'Known collection should not have name "Custom", got {collection.get("name")}'
         assert collection['version'] != 'Custom', f'Known collection should not have version "Custom", got {collection.get("version")}'
@@ -340,6 +354,31 @@ def _validate_collections_versions(json_data):
         assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['jobs_total'], (
             f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
         )
+        for field in new_fields:
+            assert field in collection, f'Missing new field {field!r} in collections_versions entry {collection["name"]} {collection["version"]}'
+        assert isinstance(collection['jobs_never_started_total'], int), 'jobs_never_started_total should be an int'
+        assert isinstance(collection['templates_total'], int), 'templates_total should be an int'
+        assert isinstance(collection['inventories_total'], int), 'inventories_total should be an int'
+        assert isinstance(collection['ansible_versions'], list), 'ansible_versions should be a list'
+        assert collection['jobs_duration_total_seconds'] >= 0, 'jobs_duration_total_seconds should be non-negative'
+        assert collection['job_waiting_time_total_seconds'] >= 0, 'job_waiting_time_total_seconds should be non-negative'
+        # max >= min when both are set
+        if collection['job_duration_maximum_seconds'] is not None and collection['job_duration_minimum_seconds'] is not None:
+            assert collection['job_duration_maximum_seconds'] >= collection['job_duration_minimum_seconds'], (
+                'job_duration_maximum_seconds should be >= job_duration_minimum_seconds'
+            )
+        if collection['job_waiting_time_maximum_seconds'] is not None and collection['job_waiting_time_minimum_seconds'] is not None:
+            assert collection['job_waiting_time_maximum_seconds'] >= collection['job_waiting_time_minimum_seconds'], (
+                'job_waiting_time_maximum_seconds should be >= job_waiting_time_minimum_seconds'
+            )
+    # same structural checks for unknown (Custom) collections
+    for collection in unknown_collections:
+        for field in new_fields:
+            assert field in collection, f'Missing new field {field!r} in Custom collections_versions entry'
+        assert isinstance(collection['jobs_never_started_total'], int)
+        assert isinstance(collection['templates_total'], int)
+        assert isinstance(collection['inventories_total'], int)
+        assert isinstance(collection['ansible_versions'], list)
 
 
 def _validate_role_stats_and_collections_versions(json_data):
