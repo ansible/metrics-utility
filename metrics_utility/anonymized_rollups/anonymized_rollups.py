@@ -63,7 +63,8 @@ def anonymize_data(data, salt):
             - module_stats: array of module statistics
             - collection_stats: array of collection statistics
             - role_stats: array of role statistics
-            - jobs_by_collections_versions: array of {name, version, jobs_total, jobs_failed_total, jobs_successful_total} from installed collections
+            - jobs_by_installed_collections_versions: array of {name, version, jobs_total, jobs_failed_total,
+              jobs_successful_total} from installed collections
         salt: Salt string for hashing (used for job_template_name hashing)
     """
     if not data or not isinstance(data, dict):
@@ -113,7 +114,7 @@ def anonymize_data(data, salt):
                 if 'collection_name' in role and role['collection_name']:
                     role['collection_name'] = 'Custom'
 
-    # anonymize jobs_by_collections_versions - replace collection name and version with 'Unknown' for unknown collections
+    # anonymize jobs_by_installed_collections_versions - replace collection name and version with 'Unknown' for unknown collections
     # Load collections.json to check if collection is known
     collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
     try:
@@ -122,8 +123,8 @@ def anonymize_data(data, salt):
     except (FileNotFoundError, json.JSONDecodeError):
         collections = {}
 
-    if 'jobs_by_collections_versions' in data and data['jobs_by_collections_versions']:
-        for collection_version in data['jobs_by_collections_versions']:
+    if 'jobs_by_installed_collections_versions' in data and data['jobs_by_installed_collections_versions']:
+        for collection_version in data['jobs_by_installed_collections_versions']:
             if collection_version and 'name' in collection_version:
                 collection_name = collection_version.get('name', '')
                 # If collection is not in the known collections mapping, replace name and version with 'Custom'
@@ -355,7 +356,7 @@ def _inject_controller_version_to_all_items(jobs_list: List[Dict[str, Any]], con
     return jobs_list
 
 
-def _extract_jobs_by_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _extract_jobs_by_installed_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract and transform installed collections from jobs data."""
     installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
     return [
@@ -435,7 +436,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
-      - jobs_by_collections_versions: array of {name, version, jobs_total, jobs_failed_total, jobs_successful_total} from installed collections
+      - jobs_by_installed_collections_versions: array of {name, version, jobs_total, jobs_failed_total,
+        jobs_successful_total} from installed collections
       - table_metadata: object with table metadata statistics
       - controller_versions: array of controller versions
 
@@ -488,7 +490,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
     role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
-    jobs_by_collections_versions = _extract_jobs_by_collections_versions(jobs)
+    jobs_by_installed_collections_versions = _extract_jobs_by_installed_collections_versions(jobs)
 
     # Merge job_host_summary into jobs groupings
     jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged = _merge_all_jobs_groupings(
@@ -522,7 +524,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_ansible_version': jobs_by_ansible_version_merged,
         'jobs_by_controller_version': jobs_by_controller_version,
-        'jobs_by_collections_versions': jobs_by_collections_versions,
+        'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
         'table_metadata': table_metadata_root,
         'controller_versions': controller_versions,
     }

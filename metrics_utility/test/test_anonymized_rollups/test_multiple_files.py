@@ -323,16 +323,16 @@ def _validate_events_modules(result):
     assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
 
 
-def _validate_jobs_by_collections_versions(result):
+def _validate_jobs_by_installed_collections_versions(result):
     """Validate collections versions section.
 
     Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is unknown →
     anonymised to Custom/Custom.  All timing/template/inventory/ansible_version stats should match
     the per-collection rollup values calculated from jobs 1-4 and 6 (job 5 filtered – no finished).
     """
-    jobs_by_collections_versions = result['jobs_by_collections_versions']
-    assert isinstance(jobs_by_collections_versions, list), 'jobs_by_collections_versions should be a list'
-    cv = {(c['name'], c['version']): c for c in jobs_by_collections_versions}
+    jobs_by_installed_collections_versions = result['jobs_by_installed_collections_versions']
+    assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
+    cv = {(c['name'], c['version']): c for c in jobs_by_installed_collections_versions}
 
     # --- jobs_total counts (unchanged from before) ---
     assert cv.get(('Custom', 'Custom'))['jobs_total'] == 5, f'Expected Custom Custom (ansible.builtin) in 5 jobs, got {cv.get(("Custom", "Custom"))}'
@@ -342,7 +342,9 @@ def _validate_jobs_by_collections_versions(result):
     assert cv.get(('ansible.windows', '1.0.0'))['jobs_total'] == 1
     assert cv.get(('community.aws', '1.5.0'))['jobs_total'] == 1
 
-    assert len(jobs_by_collections_versions) == 6, f'Expected 6 unique collection-version pairs, got {len(jobs_by_collections_versions)}'
+    assert len(jobs_by_installed_collections_versions) == 6, (
+        f'Expected 6 unique collection-version pairs, got {len(jobs_by_installed_collections_versions)}'
+    )
 
     # --- Custom/Custom (ansible.builtin 2.9.10, 5 jobs) ---
     # jobs 1(s,3s,0s) 2(f,5s,2s) 3(s,7s,4s) 4(s,2s,1s) 6(f,NaN,NaN,never-started)
@@ -460,7 +462,7 @@ def _validate_jobs_by_collections_versions(result):
         'inventories_total',
         'ansible_versions',
     ]
-    for collection in jobs_by_collections_versions:
+    for collection in jobs_by_installed_collections_versions:
         assert 'name' in collection, 'Each collection should have name field'
         assert 'version' in collection, 'Each collection should have version field'
         assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
@@ -474,7 +476,9 @@ def _validate_jobs_by_collections_versions(result):
             f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
         )
         for field in new_fields:
-            assert field in collection, f'Missing new field {field!r} in jobs_by_collections_versions entry {collection["name"]} {collection["version"]}'
+            assert field in collection, (
+                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["name"]} {collection["version"]}'
+            )
         assert isinstance(collection['jobs_never_started_total'], int)
         assert isinstance(collection['templates_total'], int)
         assert isinstance(collection['inventories_total'], int)
@@ -708,7 +712,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
         # job_host_summary is now merged into jobs_by_job_type
         assert 'module_stats' in result
         assert 'collection_stats' in result
-        assert 'jobs_by_collections_versions' in result
+        assert 'jobs_by_installed_collections_versions' in result
 
     # ========== Validate Jobs ==========
     jobs_list = result['jobs_by_job_type']
@@ -743,8 +747,8 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     assert credential_types == sorted(credential_types), 'credential_types should be sorted'
 
     # ========== Validate Collections Versions ==========
-    print('--- Validating jobs_by_collections_versions data values ---')
-    _validate_jobs_by_collections_versions(result)
+    print('--- Validating jobs_by_installed_collections_versions data values ---')
+    _validate_jobs_by_installed_collections_versions(result)
 
     # ========== Validate Jobs by Launch Type ==========
     _validate_jobs_by_launch_type(result)
@@ -797,7 +801,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Event-related fields should be missing when there are no events
     assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
     assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
-    assert 'jobs_by_collections_versions' in result
+    assert 'jobs_by_installed_collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
     statistics = result['statistics']
@@ -906,8 +910,8 @@ def test_empty_csv_files_handling(cleanup_test_data):
 
     # modules_used_per_playbook is computed but not included in final output
 
-    assert isinstance(result['jobs_by_collections_versions'], list), 'jobs_by_collections_versions should be a list'
-    assert len(result['jobs_by_collections_versions']) == 0, 'jobs_by_collections_versions should be empty with no data'
+    assert isinstance(result['jobs_by_installed_collections_versions'], list), 'jobs_by_installed_collections_versions should be a list'
+    assert len(result['jobs_by_installed_collections_versions']) == 0, 'jobs_by_installed_collections_versions should be empty with no data'
 
     # Verify credentials field is present but empty when there's no data
     # (credentials_list would be empty list)
