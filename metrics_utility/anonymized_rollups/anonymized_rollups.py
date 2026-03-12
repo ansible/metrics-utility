@@ -346,6 +346,15 @@ def _inject_controller_version(jobs_by_controller_version: List[Dict[str, Any]],
     return jobs_by_controller_version
 
 
+def _inject_controller_version_to_all_items(jobs_list: List[Dict[str, Any]], controller_versions: List[str]) -> List[Dict[str, Any]]:
+    """Inject the first controller_version from the controller_versions list into every
+    item of the given jobs grouping list."""
+    first_version = controller_versions[0] if controller_versions else None
+    for item in jobs_list:
+        item['controller_version'] = first_version
+    return jobs_list
+
+
 def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract and transform installed collections from jobs data."""
     installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
@@ -481,6 +490,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
     controller_versions: List[str] = controller_version_root if isinstance(controller_version_root, list) else []
     jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
+
+    # Inject controller_version into every item of the three job groupings
+    jobs_by_job_type_merged = _inject_controller_version_to_all_items(jobs_by_job_type_merged, controller_versions)
+    jobs_by_launch_type_merged = _inject_controller_version_to_all_items(jobs_by_launch_type_merged, controller_versions)
+    jobs_by_ansible_version_merged = _inject_controller_version_to_all_items(jobs_by_ansible_version_merged, controller_versions)
 
     # Calculate task statistics and update statistics dictionary
     task_statistics = _calculate_task_statistics(jobs_by_job_type_merged)
