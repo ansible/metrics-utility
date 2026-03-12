@@ -345,7 +345,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         if not stats_all:
             return stats_new if stats_new else []
         if not stats_new:
-            return stats_all if stats_all else []
+            return stats_all
 
         numeric_cols = [
             'jobs_total',
@@ -361,8 +361,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         ]
         list_cols = ['templates', 'inventories', 'ansible_versions', 'job_types']
 
-        item_all = stats_all[0] if stats_all else {}
-        item_new = stats_new[0] if stats_new else {}
+        item_all = stats_all[0]
+        item_new = stats_new[0]
         merged_item = self._create_merged_item(item_all, item_new, numeric_cols, list_cols)
         return [merged_item] if merged_item else []
 

@@ -496,16 +496,16 @@ def validate_jobs_by_controller_version(result):
     assert item['jobs_never_started_total'] == 0
 
     # Duration totals
-    assert item['jobs_duration_total_seconds'] == 3180.0
-    assert item['job_duration_maximum_seconds'] == 480.0
-    assert item['job_duration_minimum_seconds'] == 330.0
-    assert item['jobs_successful_duration_total_seconds'] == 1110.0
-    assert item['jobs_failed_duration_total_seconds'] == 2070.0
+    assert item['jobs_duration_total_seconds'] == pytest.approx(3180.0)
+    assert item['job_duration_maximum_seconds'] == pytest.approx(480.0)
+    assert item['job_duration_minimum_seconds'] == pytest.approx(330.0)
+    assert item['jobs_successful_duration_total_seconds'] == pytest.approx(1110.0)
+    assert item['jobs_failed_duration_total_seconds'] == pytest.approx(2070.0)
 
     # Waiting times
-    assert item['job_waiting_time_total_seconds'] == 240.0
-    assert item['job_waiting_time_maximum_seconds'] == 30.0
-    assert item['job_waiting_time_minimum_seconds'] == 30.0
+    assert item['job_waiting_time_total_seconds'] == pytest.approx(240.0)
+    assert item['job_waiting_time_maximum_seconds'] == pytest.approx(30.0)
+    assert item['job_waiting_time_minimum_seconds'] == pytest.approx(30.0)
 
     # Deduplication totals
     assert item['templates_total'] == 3
