@@ -335,6 +335,17 @@ def _build_statistics(
     return statistics
 
 
+def _inject_controller_version(jobs_by_controller_version: List[Dict[str, Any]], controller_versions: List[str]) -> List[Dict[str, Any]]:
+    """Inject the first controller_version from the controller_versions list into the
+    single-item jobs_by_controller_version summary."""
+    if not jobs_by_controller_version:
+        return jobs_by_controller_version
+
+    first_version = controller_versions[0] if controller_versions else None
+    jobs_by_controller_version[0]['controller_version'] = first_version
+    return jobs_by_controller_version
+
+
 def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract and transform installed collections from jobs data."""
     installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
@@ -466,6 +477,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         job_host_summary_by_ansible_version,
     )
 
+    # Build jobs_by_controller_version: inject first controller_version from the controller_version collector
+    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
+    controller_versions: List[str] = controller_version_root if isinstance(controller_version_root, list) else []
+    jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
+
     # Calculate task statistics and update statistics dictionary
     task_statistics = _calculate_task_statistics(jobs_by_job_type_merged)
     statistics.update(task_statistics)
@@ -479,6 +495,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_ansible_version': jobs_by_ansible_version_merged,
+        'jobs_by_controller_version': jobs_by_controller_version,
         'collections_versions': collections_versions,
         'table_metadata': table_metadata_root,
         'controller_versions': controller_version_root if isinstance(controller_version_root, list) else [],
