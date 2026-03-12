@@ -231,9 +231,10 @@ jobs_lines = [
     (
         '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
         '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,workflow,,auto,'
-        'controller1,f,pending,f,2025-06-13 10:00:30+00:00,2025-06-13 10:02:00+00:00,90.000,,,'
+        'controller1,f,failed,t,2025-06-13 10:00:30+00:00,2025-06-13 10:02:00+00:00,90.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
-        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,20,'
+        '""ansible.builtin"": {""version"": ""2.9.10""}, '
+        '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,20,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
@@ -241,7 +242,8 @@ jobs_lines = [
         '2025-06-13 11:00:00+00:00,default_unified_job_11_2025-06-13,1,manual,,auto,'
         'controller1,f,pending,f,2025-06-13 11:00:10+00:00,2025-06-13 11:01:50+00:00,100.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
-        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,8,'
+        '""ansible.builtin"": {""version"": ""2.9.10""}, '
+        '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,8,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
@@ -249,7 +251,8 @@ jobs_lines = [
         '2025-06-13 11:00:00+00:00,default_unified_job_11_2025-06-13,1,scheduled,,auto,'
         'controller1,f,pending,f,2025-06-13 11:00:20+00:00,2025-06-13 11:02:50+00:00,150.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
-        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,15,'
+        '""ansible.builtin"": {""version"": ""2.9.10""}, '
+        '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,15,'
         'default_unified_job_template_2025-06-13,git'
     ),
     (
@@ -328,14 +331,14 @@ jobs_host_summary_service_lines = [
     ),
     (
         '5,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
-        '31,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '31,default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
         '2025-06-13 10:00:00+00:00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
     ),
     (
         '6,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
-        '32,default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '32,default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
         '2025-06-13 10:00:00+00:00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
         'default_unified_job_template_2025-06-13,job'
@@ -461,22 +464,22 @@ main_jobevent_service_lines = [
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:30+00:00',
+    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
     '10,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:30+00:00',
+    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
     '11,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:30+00:00',
+    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
     '12,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:30+00:00',
+    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
     '13,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     '13aac8b6-038d-4cbe-af99-67276d80d01b,,warning,,,,,,,,f,f,f,,,'
@@ -488,7 +491,7 @@ main_jobevent_service_lines = [
     '15,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     '150d1d0c-dccb-4940-83ee-4d75c2f22493,,deprecated,,,,,,,,f,f,f,,,'
-    ',,3,3,,,,,,,f,2025-06-13 10:00:30+00:00',
+    ',,3,3,,,,,,,t,2025-06-13 10:00:30+00:00',
     '16,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,11_default_host_1_2025-06-13_1,f,f,f,'

@@ -105,12 +105,12 @@ test_lines = [
     'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
     'default_unified_job_template_2025-06-13',
     '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    'default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
     '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
     'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
     'default_unified_job_template_2025-06-13',
     '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+    'default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
     '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
     'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
     'default_unified_job_template_2025-06-13',

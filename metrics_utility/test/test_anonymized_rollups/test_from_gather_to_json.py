@@ -387,7 +387,7 @@ def _validate_jobs_values_multi_hour(json_data, statistics):
     job = json_data['jobs_by_job_type'][0]
     assert job['jobs_total'] == 6, 'Job type should have 6 jobs'
     assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
-    assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
+    assert job['jobs_failed_total'] == 1, 'Should have 1 failed job (job 3 from 10:00h)'
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
     # Job durations: 10:00 hour: 120s + 180s + 90s = 390s
     #                11:00 hour: 100s + 150s + 80s = 330s
@@ -439,9 +439,12 @@ def _validate_job_host_summary_values_multi_hour(json_data, statistics):
 
     job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
     assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
-    # 6 jobs × 2 hosts = 12 ok tasks
-    assert job_entry['ok_total'] == 12, 'Should have 12 ok tasks'
-    assert job_entry['failures_total'] == 0, 'Should have 0 failures'
+    # 10:00h: jobs 1 and 2 have ok=1 per host (2×2=4), job 3 (failed) has ok=0 per host (1×2=0)
+    # 11:00h: all 3 jobs have ok=1 per host (3×2=6)
+    # Total: 4 + 0 + 6 = 10
+    assert job_entry['ok_total'] == 10, 'Should have 10 ok tasks (job 3 from 10:00h is failed with ok=0)'
+    # job 3 (10:00h, failed) has failures=1 per host, 2 hosts → 2 total failures
+    assert job_entry['failures_total'] == 2, 'Should have 2 failures (job 3 from 10:00h: 2 hosts × failures=1)'
     assert job_entry['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
     # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
