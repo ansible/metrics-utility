@@ -365,6 +365,18 @@ def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
             'jobs_total': item.get('job_count', 0),
             'jobs_failed_total': item.get('jobs_failed_total', 0),
             'jobs_successful_total': item.get('jobs_successful_total', 0),
+            'jobs_never_started_total': item.get('jobs_never_started_total', 0),
+            'jobs_duration_total_seconds': item.get('jobs_duration_total_seconds', 0),
+            'jobs_successful_duration_total_seconds': item.get('jobs_successful_duration_total_seconds', 0),
+            'jobs_failed_duration_total_seconds': item.get('jobs_failed_duration_total_seconds', 0),
+            'job_duration_maximum_seconds': item.get('job_duration_maximum_seconds'),
+            'job_duration_minimum_seconds': item.get('job_duration_minimum_seconds'),
+            'job_waiting_time_total_seconds': item.get('job_waiting_time_total_seconds', 0),
+            'job_waiting_time_maximum_seconds': item.get('job_waiting_time_maximum_seconds'),
+            'job_waiting_time_minimum_seconds': item.get('job_waiting_time_minimum_seconds'),
+            'templates_total': item.get('templates_total', 0),
+            'inventories_total': item.get('inventories_total', 0),
+            'ansible_versions': item.get('ansible_versions', []),
         }
         for item in installed_collections
         if item and 'collection_name' in item and 'collection_version' in item

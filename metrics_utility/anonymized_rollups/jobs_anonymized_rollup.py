@@ -373,8 +373,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return sorted(all_set.union(new_set))
 
     def _merge_collections(self, data_all, data_new):
-        """Merge installed_collections by summing job_count, jobs_failed_total, and
-        jobs_successful_total for the same collection+version."""
+        """Merge installed_collections by summing numeric fields, taking max/min for extremes,
+        and unioning list fields for the same collection+version."""
         collections_all = {(item['collection_name'], item['collection_version']): item for item in data_all.get('installed_collections', [])}
         collections_new = {(item['collection_name'], item['collection_version']): item for item in data_new.get('installed_collections', [])}
 
@@ -383,20 +383,59 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         for key in all_collection_keys:
             item_all = collections_all.get(key, {})
             item_new = collections_new.get(key, {})
-            merged_collections[key] = {
+
+            # Numeric sum columns
+            merged = {
                 'job_count': item_all.get('job_count', 0) + item_new.get('job_count', 0),
                 'jobs_failed_total': item_all.get('jobs_failed_total', 0) + item_new.get('jobs_failed_total', 0),
                 'jobs_successful_total': item_all.get('jobs_successful_total', 0) + item_new.get('jobs_successful_total', 0),
+                'jobs_never_started_total': item_all.get('jobs_never_started_total', 0) + item_new.get('jobs_never_started_total', 0),
+                'jobs_duration_total_seconds': item_all.get('jobs_duration_total_seconds', 0) + item_new.get('jobs_duration_total_seconds', 0),
+                'jobs_successful_duration_total_seconds': (
+                    item_all.get('jobs_successful_duration_total_seconds', 0) + item_new.get('jobs_successful_duration_total_seconds', 0)
+                ),
+                'jobs_failed_duration_total_seconds': (
+                    item_all.get('jobs_failed_duration_total_seconds', 0) + item_new.get('jobs_failed_duration_total_seconds', 0)
+                ),
+                'job_waiting_time_total_seconds': item_all.get('job_waiting_time_total_seconds', 0)
+                + item_new.get('job_waiting_time_total_seconds', 0),
             }
 
+            # Max columns
+            for col in ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']:
+                val_all = item_all.get(col)
+                val_new = item_new.get(col)
+                if val_all is not None and val_new is not None:
+                    merged[col] = max(val_all, val_new)
+                else:
+                    merged[col] = val_all if val_all is not None else val_new
+
+            # Min columns
+            for col in ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']:
+                val_all = item_all.get(col)
+                val_new = item_new.get(col)
+                if val_all is not None and val_new is not None:
+                    merged[col] = min(val_all, val_new)
+                else:
+                    merged[col] = val_all if val_all is not None else val_new
+
+            # List columns (union for deduplication)
+            for col, total_col in [('templates', 'templates_total'), ('inventories', 'inventories_total')]:
+                list_all = item_all.get(col) or []
+                list_new = item_new.get(col) or []
+                merged_list = sorted(set(list_all) | set(list_new))
+                merged[col] = merged_list
+                merged[total_col] = len(merged_list)
+
+            # Ansible versions (union)
+            versions_all = item_all.get('ansible_versions') or []
+            versions_new = item_new.get('ansible_versions') or []
+            merged['ansible_versions'] = sorted(set(versions_all) | set(versions_new))
+
+            merged_collections[key] = merged
+
         installed_collections = [
-            {
-                'collection_name': collection_name,
-                'collection_version': collection_version,
-                'job_count': stats['job_count'],
-                'jobs_failed_total': stats['jobs_failed_total'],
-                'jobs_successful_total': stats['jobs_successful_total'],
-            }
+            {'collection_name': collection_name, 'collection_version': collection_version, **stats}
             for (collection_name, collection_version), stats in merged_collections.items()
         ]
         installed_collections.sort(key=lambda x: (x['collection_name'], x['collection_version']))
@@ -539,10 +578,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         return None
 
-    def _process_collections_dict(self, collections_data, collections_stats, failed):
+    def _process_collections_dict(self, collections_data, collections_stats, failed, row_stats):
         """
         Process a collections dict and update the stats dict with collection name/version pairs,
-        tracking job_count, jobs_failed_total, and jobs_successful_total.
+        tracking job_count, jobs_failed_total, jobs_successful_total and additional job statistics.
+
+        row_stats is a dict with per-row statistics:
+            job_duration_seconds, job_waiting_time_seconds, jobs_never_started,
+            unified_job_template_id, inventory_id, ansible_version.
         """
         if not isinstance(collections_data, dict):
             return
@@ -559,12 +602,65 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                         'job_count': 0,
                         'jobs_failed_total': 0,
                         'jobs_successful_total': 0,
+                        'jobs_never_started_total': 0,
+                        'jobs_duration_total_seconds': 0,
+                        'jobs_successful_duration_total_seconds': 0,
+                        'jobs_failed_duration_total_seconds': 0,
+                        'job_duration_maximum_seconds': None,
+                        'job_duration_minimum_seconds': None,
+                        'job_waiting_time_total_seconds': 0,
+                        'job_waiting_time_maximum_seconds': None,
+                        'job_waiting_time_minimum_seconds': None,
+                        'templates': set(),
+                        'inventories': set(),
+                        'ansible_versions': set(),
                     }
-                collections_stats[key]['job_count'] += 1
+                stats = collections_stats[key]
+                stats['job_count'] += 1
                 if failed:
-                    collections_stats[key]['jobs_failed_total'] += 1
+                    stats['jobs_failed_total'] += 1
                 else:
-                    collections_stats[key]['jobs_successful_total'] += 1
+                    stats['jobs_successful_total'] += 1
+
+                # Never started
+                if row_stats.get('jobs_never_started'):
+                    stats['jobs_never_started_total'] += 1
+
+                # Duration stats
+                duration = row_stats.get('job_duration_seconds')
+                if duration is not None and not pd.isna(duration):
+                    stats['jobs_duration_total_seconds'] += duration
+                    if failed:
+                        stats['jobs_failed_duration_total_seconds'] += duration
+                    else:
+                        stats['jobs_successful_duration_total_seconds'] += duration
+                    if stats['job_duration_maximum_seconds'] is None or duration > stats['job_duration_maximum_seconds']:
+                        stats['job_duration_maximum_seconds'] = duration
+                    if stats['job_duration_minimum_seconds'] is None or duration < stats['job_duration_minimum_seconds']:
+                        stats['job_duration_minimum_seconds'] = duration
+
+                # Waiting time stats
+                waiting_time = row_stats.get('job_waiting_time_seconds')
+                if waiting_time is not None and not pd.isna(waiting_time):
+                    stats['job_waiting_time_total_seconds'] += waiting_time
+                    if stats['job_waiting_time_maximum_seconds'] is None or waiting_time > stats['job_waiting_time_maximum_seconds']:
+                        stats['job_waiting_time_maximum_seconds'] = waiting_time
+                    if stats['job_waiting_time_minimum_seconds'] is None or waiting_time < stats['job_waiting_time_minimum_seconds']:
+                        stats['job_waiting_time_minimum_seconds'] = waiting_time
+
+                # Templates and inventories (for deduplication)
+                template_id = row_stats.get('unified_job_template_id')
+                if template_id is not None and not (isinstance(template_id, float) and pd.isna(template_id)):
+                    stats['templates'].add(template_id)
+
+                inventory_id = row_stats.get('inventory_id')
+                if inventory_id is not None and not (isinstance(inventory_id, float) and pd.isna(inventory_id)):
+                    stats['inventories'].add(inventory_id)
+
+                # Ansible versions
+                ansible_version = row_stats.get('ansible_version')
+                if ansible_version is not None and not (isinstance(ansible_version, float) and pd.isna(ansible_version)):
+                    stats['ansible_versions'].add(str(ansible_version))
 
     def _hash_installed_collections(self, raw):
         """Compute a SHA-256 hash of the raw installed_collections string.
@@ -624,9 +720,17 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             collections_data = parse_cache[cache_key]
             if collections_data:
                 failed = bool(getattr(row, 'failed', False))
-                self._process_collections_dict(collections_data, collections_stats, failed)
+                row_stats = {
+                    'job_duration_seconds': getattr(row, 'job_duration_seconds', None),
+                    'job_waiting_time_seconds': getattr(row, 'job_waiting_time_seconds', None),
+                    'jobs_never_started': bool(getattr(row, 'jobs_never_started', False)),
+                    'unified_job_template_id': getattr(row, 'unified_job_template_id', None),
+                    'inventory_id': getattr(row, 'inventory_id', None),
+                    'ansible_version': getattr(row, 'ansible_version', None),
+                }
+                self._process_collections_dict(collections_data, collections_stats, failed, row_stats)
 
-        # Convert dict to list of dicts
+        # Convert dict to list of dicts, converting sets to sorted lists
         result = [
             {
                 'collection_name': collection_name,
@@ -634,6 +738,20 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 'job_count': stats['job_count'],
                 'jobs_failed_total': stats['jobs_failed_total'],
                 'jobs_successful_total': stats['jobs_successful_total'],
+                'jobs_never_started_total': stats['jobs_never_started_total'],
+                'jobs_duration_total_seconds': stats['jobs_duration_total_seconds'],
+                'jobs_successful_duration_total_seconds': stats['jobs_successful_duration_total_seconds'],
+                'jobs_failed_duration_total_seconds': stats['jobs_failed_duration_total_seconds'],
+                'job_duration_maximum_seconds': stats['job_duration_maximum_seconds'],
+                'job_duration_minimum_seconds': stats['job_duration_minimum_seconds'],
+                'job_waiting_time_total_seconds': stats['job_waiting_time_total_seconds'],
+                'job_waiting_time_maximum_seconds': stats['job_waiting_time_maximum_seconds'],
+                'job_waiting_time_minimum_seconds': stats['job_waiting_time_minimum_seconds'],
+                'templates': sorted(stats['templates']),
+                'inventories': sorted(stats['inventories']),
+                'templates_total': len(stats['templates']),
+                'inventories_total': len(stats['inventories']),
+                'ansible_versions': sorted(stats['ansible_versions']),
             }
             for (collection_name, collection_version), stats in collections_stats.items()
         ]
