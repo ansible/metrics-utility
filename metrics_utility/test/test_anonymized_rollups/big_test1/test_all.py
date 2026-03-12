@@ -590,7 +590,7 @@ def validate_jobs_by_controller_version(result):
     assert sorted(item['ansible_versions']) == ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
 
     # controller_version is None since no controller_version data is provided in this test
-    assert item.get('controller_version') is None
+    assert 'controller_version' in item and item['controller_version'] is None
 
 
 def validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_ansible_version_list):
