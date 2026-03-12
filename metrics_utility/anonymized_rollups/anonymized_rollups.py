@@ -491,14 +491,14 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'statistics': statistics,
         'rollup_period_ansible_versions': ansible_versions_merged,
         'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
-        'rollup_period_credential_types': credentials_list if isinstance(credentials_list, list) else [],
+        'rollup_period_credential_types': credentials_list,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_ansible_version': jobs_by_ansible_version_merged,
         'jobs_by_controller_version': jobs_by_controller_version,
         'collections_versions': collections_versions,
         'table_metadata': table_metadata_root,
-        'controller_versions': controller_version_root if isinstance(controller_version_root, list) else [],
+        'controller_versions': controller_versions,
     }
 
     # Only include event-related arrays if there are events
