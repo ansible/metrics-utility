@@ -699,18 +699,15 @@ def _validate_jobs_by_controller_version(json_data, statistics):
     controller_versions = json_data.get('controller_versions', [])
     expected_controller_version = controller_versions[0] if controller_versions else None
     assert ctrl_summary.get('controller_version') == expected_controller_version, (
-        f'Expected controller_version {expected_controller_version!r}, '
-        f'got {ctrl_summary.get("controller_version")!r}'
+        f'Expected controller_version {expected_controller_version!r}, got {ctrl_summary.get("controller_version")!r}'
     )
 
     # Totals must match the overall statistics (summary covers all jobs)
     assert ctrl_summary['jobs_total'] == statistics['rollup_period_jobs_total'], (
-        f'jobs_total should match statistics: '
-        f'expected {statistics["rollup_period_jobs_total"]}, got {ctrl_summary["jobs_total"]}'
+        f'jobs_total should match statistics: expected {statistics["rollup_period_jobs_total"]}, got {ctrl_summary["jobs_total"]}'
     )
     assert ctrl_summary['jobs_failed_total'] == statistics['rollup_period_jobs_failed'], (
-        f'jobs_failed_total should match statistics: '
-        f'expected {statistics["rollup_period_jobs_failed"]}, got {ctrl_summary["jobs_failed_total"]}'
+        f'jobs_failed_total should match statistics: expected {statistics["rollup_period_jobs_failed"]}, got {ctrl_summary["jobs_failed_total"]}'
     )
     assert ctrl_summary['jobs_successful_total'] == statistics['rollup_period_jobs_successful'], (
         f'jobs_successful_total should match statistics: '
@@ -729,10 +726,18 @@ def _validate_jobs_by_controller_version(json_data, statistics):
 
     # Required fields
     for field in [
-        'jobs_total', 'jobs_failed_total', 'jobs_successful_total', 'jobs_never_started_total',
-        'templates_total', 'inventories_total',
-        'jobs_duration_total_seconds', 'job_duration_maximum_seconds', 'job_duration_minimum_seconds',
-        'job_waiting_time_total_seconds', 'job_waiting_time_maximum_seconds', 'job_waiting_time_minimum_seconds',
+        'jobs_total',
+        'jobs_failed_total',
+        'jobs_successful_total',
+        'jobs_never_started_total',
+        'templates_total',
+        'inventories_total',
+        'jobs_duration_total_seconds',
+        'job_duration_maximum_seconds',
+        'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds',
+        'job_waiting_time_maximum_seconds',
+        'job_waiting_time_minimum_seconds',
         'ansible_versions',
     ]:
         assert field in ctrl_summary, f'Should have {field} in jobs_by_controller_version item'

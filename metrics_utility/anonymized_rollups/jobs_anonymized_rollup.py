@@ -150,12 +150,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_dict.update({'job_types': ('model', lambda x: sorted(set(x.dropna())))})
 
         # Group by an external constant Series so the dataframe itself is not modified
-        aggregations_all_jobs = (
-            dataframe
-            .groupby(pd.Series(0, index=dataframe.index))
-            .agg(**aggregations_dict)
-            .reset_index(drop=True)
-        )
+        aggregations_all_jobs = dataframe.groupby(pd.Series(0, index=dataframe.index)).agg(**aggregations_dict).reset_index(drop=True)
 
         self._add_totals_to_aggregation(
             aggregations_all_jobs,

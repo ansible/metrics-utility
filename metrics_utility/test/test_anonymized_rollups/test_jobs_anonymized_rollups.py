@@ -450,15 +450,15 @@ def test_jobs_anonymized_rollups_base_aggregation():
     ctrl_summary = ctrl_summary_list[0]
     # Counts: jobs 1,2,3,4,6 are valid (job 5 filtered - no finished)
     assert ctrl_summary['jobs_total'] == 5
-    assert ctrl_summary['jobs_failed_total'] == 2       # jobs 2 and 6
-    assert ctrl_summary['jobs_successful_total'] == 3   # jobs 1, 3, 4
+    assert ctrl_summary['jobs_failed_total'] == 2  # jobs 2 and 6
+    assert ctrl_summary['jobs_successful_total'] == 3  # jobs 1, 3, 4
     assert ctrl_summary['jobs_never_started_total'] == 1  # job 6 has started=None
-    assert ctrl_summary['templates_total'] == 3         # T1 (id=1), T2 (id=2), T3 (id=3)
-    assert ctrl_summary['inventories_total'] == 3       # inventory_id 1, 2, 3
+    assert ctrl_summary['templates_total'] == 3  # T1 (id=1), T2 (id=2), T3 (id=3)
+    assert ctrl_summary['inventories_total'] == 3  # inventory_id 1, 2, 3
     # Durations: 3s + 5s + 7s + 2s = 17s (job 6 is NaN, skipped in sum)
     assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(17.0, rel=1e-6)
-    assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)   # job 3
-    assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)   # job 4
+    assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)  # job 3
+    assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)  # job 4
     # Waiting times: 0s + 2s + 4s + 1s = 7s (job 6 is NaN, skipped)
     assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(7.0, rel=1e-6)
     assert ctrl_summary['job_waiting_time_maximum_seconds'] == pytest.approx(4.0, rel=1e-6)  # job 3
@@ -803,6 +803,5 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     assert ctrl_summary['jobs_successful_total'] == 3
     # No controller_version data was provided in input_data, so it is injected as None
     assert ctrl_summary.get('controller_version') is None, (
-        f'controller_version should be None when no controller_version data is provided, '
-        f'got {ctrl_summary.get("controller_version")!r}'
+        f'controller_version should be None when no controller_version data is provided, got {ctrl_summary.get("controller_version")!r}'
     )

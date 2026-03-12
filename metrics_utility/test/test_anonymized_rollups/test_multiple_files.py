@@ -374,11 +374,11 @@ def _validate_jobs_by_controller_version(result):
     ctrl_summary = ctrl_summary_list[0]
     # 5 valid jobs total (job 5 filtered - no finished)
     assert ctrl_summary['jobs_total'] == 5
-    assert ctrl_summary['jobs_failed_total'] == 2        # jobs 2 and 6
-    assert ctrl_summary['jobs_successful_total'] == 3    # jobs 1, 3, 4
+    assert ctrl_summary['jobs_failed_total'] == 2  # jobs 2 and 6
+    assert ctrl_summary['jobs_successful_total'] == 3  # jobs 1, 3, 4
     assert ctrl_summary['jobs_never_started_total'] == 1  # job 6 has started=None
-    assert ctrl_summary['templates_total'] == 3          # T1, T2, T3
-    assert ctrl_summary['inventories_total'] == 3        # inventory_id 1, 2, 3
+    assert ctrl_summary['templates_total'] == 3  # T1, T2, T3
+    assert ctrl_summary['inventories_total'] == 3  # inventory_id 1, 2, 3
     # Durations: 3+5+7+2 = 17s (job 6 NaN skipped)
     assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(17.0)
     assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(7.0)
@@ -804,6 +804,4 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # jobs_by_controller_version should be present but empty when there is no jobs data
     assert 'jobs_by_controller_version' in result, 'Should have jobs_by_controller_version even with empty data'
     assert isinstance(result['jobs_by_controller_version'], list), 'jobs_by_controller_version should be a list'
-    assert len(result['jobs_by_controller_version']) == 0, (
-        'jobs_by_controller_version should be empty when there are no jobs'
-    )
+    assert len(result['jobs_by_controller_version']) == 0, 'jobs_by_controller_version should be empty when there are no jobs'
