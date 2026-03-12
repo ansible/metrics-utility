@@ -414,18 +414,18 @@ def validate_job_host_summary(result, job_type, workflowjob_type):
     assert result['statistics']['rollup_period_job_host_pairs_total'] == 32
 
     # Validate merged host summary fields for 'job' type
-    required_fields = ['ok_total', 'failures_total', 'unreachable_total']
+    required_fields = ['ok_total', 'failed_total', 'unreachable_total']
     for field in required_fields:
         assert field in job_type
     assert job_type['ok_total'] > 0
-    assert job_type['failures_total'] > 0
+    assert job_type['failed_total'] > 0
     assert job_type['unreachable_total'] > 0
 
     # Validate merged host summary fields for 'workflowjob' type
     for field in required_fields:
         assert field in workflowjob_type
     assert workflowjob_type['ok_total'] > 0
-    assert workflowjob_type['failures_total'] > 0
+    assert workflowjob_type['failed_total'] > 0
     assert workflowjob_type['unreachable_total'] > 0
 
 

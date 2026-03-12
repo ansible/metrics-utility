@@ -175,7 +175,7 @@ def _validate_jobs_by_job_type_structure(json_data):
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
         assert 'unreachable_total' in job
-        assert 'failures_total' in job
+        assert 'failed_total' in job
         assert 'ok_total' in job
         assert 'skipped_total' in job
         assert 'ignored_total' in job
@@ -194,7 +194,7 @@ def _validate_jobs_by_launch_type_structure(json_data):
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
         assert 'unreachable_total' in job
-        assert 'failures_total' in job
+        assert 'failed_total' in job
         assert 'ok_total' in job
         assert 'skipped_total' in job
         assert 'ignored_total' in job
@@ -215,7 +215,7 @@ def _validate_jobs_by_ansible_version_structure(json_data):
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
         assert 'unreachable_total' in job
-        assert 'failures_total' in job
+        assert 'failed_total' in job
         assert 'ok_total' in job
         assert 'skipped_total' in job
         assert 'ignored_total' in job
@@ -422,7 +422,7 @@ def _validate_job_host_summary_values(json_data, statistics):
     job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
     assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
     assert job_entry['ok_total'] == 6, 'Should have 6 ok tasks'
-    assert job_entry['failures_total'] == 0, 'Should have 0 failures'
+    assert job_entry['failed_total'] == 0, 'Should have 0 failures'
     assert job_entry['unreachable_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
     # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
@@ -445,7 +445,7 @@ def _validate_job_host_summary_values_multi_hour(json_data, statistics):
     # Total: 4 + 0 + 6 = 10
     assert job_entry['ok_total'] == 10, 'Should have 10 ok tasks (job 3 from 10:00h is failed with ok=0)'
     # job 3 (10:00h, failed) has failures=1 per host, 2 hosts → 2 total failures
-    assert job_entry['failures_total'] == 2, 'Should have 2 failures (job 3 from 10:00h: 2 hosts × failures=1)'
+    assert job_entry['failed_total'] == 2, 'Should have 2 failures (job 3 from 10:00h: 2 hosts × failures=1)'
     assert job_entry['unreachable_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
     # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),

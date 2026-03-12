@@ -193,7 +193,7 @@ def _validate_job_host_summary(jobs_list, result):
     assert job_type_entry is not None, 'Should have job_type job'
     # Note: unique_hosts_total is only at top level, not in groupings
     assert job_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for job type'
-    assert job_type_entry['failures_total'] == 2, 'Should have 2 failures for job type'
+    assert job_type_entry['failed_total'] == 2, 'Should have 2 failures for job type'
     assert job_type_entry['skipped_total'] == 2, 'Should have 2 skipped for job type'
     assert job_type_entry['unreachable_total'] == 0, 'Should have 0 dark for job type'
     assert job_type_entry['ignored_total'] == 0, 'Should have 0 ignored for job type'
@@ -203,7 +203,7 @@ def _validate_job_host_summary(jobs_list, result):
     assert workflowjob_type_entry is not None, 'Should have job_type workflowjob'
     # Note: unique_hosts_total is only at top level, not in groupings
     assert workflowjob_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for workflowjob type'
-    assert workflowjob_type_entry['failures_total'] == 4, 'Should have 4 failures for workflowjob type'
+    assert workflowjob_type_entry['failed_total'] == 4, 'Should have 4 failures for workflowjob type'
     assert workflowjob_type_entry['skipped_total'] == 0, 'Should have 0 skipped for workflowjob type'
     assert workflowjob_type_entry['unreachable_total'] == 0, 'Should have 0 dark for workflowjob type'
     assert workflowjob_type_entry['ignored_total'] == 0, 'Should have 0 ignored for workflowjob type'
@@ -213,11 +213,11 @@ def _validate_job_host_summary(jobs_list, result):
     assert adhoccommand_type_entry is not None, 'Should have job_type adhoccommand'
     # Note: unique_hosts_total is only at top level, not in groupings
     assert adhoccommand_type_entry['ok_total'] == 0, 'Should have 0 ok tasks (no job_host_summary match)'
-    assert adhoccommand_type_entry['failures_total'] == 0, 'Should have 0 failures (no job_host_summary match)'
+    assert adhoccommand_type_entry['failed_total'] == 0, 'Should have 0 failures (no job_host_summary match)'
     assert adhoccommand_type_entry['skipped_total'] == 0, 'Should have 0 skipped (no job_host_summary match)'
 
     total_ok = sum(j.get('ok_total', 0) for j in jobs_list)
-    total_failures = sum(j.get('failures_total', 0) for j in jobs_list)
+    total_failures = sum(j.get('failed_total', 0) for j in jobs_list)
     total_skipped = sum(j.get('skipped_total', 0) for j in jobs_list)
     total_dark = sum(j.get('unreachable_total', 0) for j in jobs_list)
     total_ignored = sum(j.get('ignored_total', 0) for j in jobs_list)
@@ -415,7 +415,7 @@ def _validate_jobs_by_launch_type(result):
     assert manual_entry['jobs_duration_total_seconds'] == pytest.approx(3.0), 'manual should have 3s total duration'
     # Note: unique_hosts_total is only at top level, not in groupings
     assert 'ok_total' in manual_entry, 'Should have ok_total field from job_host_summary merge'
-    assert 'failures_total' in manual_entry, 'Should have failures_total field from job_host_summary merge'
+    assert 'failed_total' in manual_entry, 'Should have failed_total field from job_host_summary merge'
 
     assert scheduled_entry['jobs_total'] == 2, 'scheduled should have 2 jobs'
     assert scheduled_entry['jobs_failed_total'] == 2, 'scheduled should have 2 failed jobs (both job 2 and job 6 have failed=1)'

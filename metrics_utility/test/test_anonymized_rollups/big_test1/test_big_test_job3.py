@@ -79,7 +79,7 @@ def test_big_test3():
         job_type_data = result['jobs_by_job_type'][0]
         assert job_type_data['job_type'] == 'job', 'job_type should be "job"'
         assert job_type_data['ok_total'] == 14, f'Should have 14 ok tasks total, got {job_type_data["ok_total"]}'
-        assert job_type_data['failures_total'] == 1, f'Should have 1 failure total, got {job_type_data["failures_total"]}'
+        assert job_type_data['failed_total'] == 1, f'Should have 1 failure total, got {job_type_data["failed_total"]}'
         assert job_type_data['unreachable_total'] == 1, f'Should have 1 dark total, got {job_type_data["unreachable_total"]}'
         assert job_type_data['successful_hosts_total'] == 2, f'Should have 2 successful hosts, got {job_type_data["successful_hosts_total"]}'
         assert job_type_data['failed_hosts_total'] == 1, f'Should have 1 failed host, got {job_type_data["failed_hosts_total"]}'
