@@ -255,6 +255,7 @@ def test_all_jobs_combined_no_events(cleanup_test_data):
     validate_execution_environments(result)
     validate_credentials(result)
     validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_ansible_version_list)
+    validate_jobs_by_controller_version(result)
 
     print('\n=== All validations passed! ===')
 
@@ -265,6 +266,7 @@ def validate_result_structure(result):
     assert 'jobs_by_job_type' in result
     assert 'jobs_by_launch_type' in result
     assert 'jobs_by_ansible_version' in result
+    assert 'jobs_by_controller_version' in result
     assert 'collections_versions' in result
 
     # Event-related fields should be missing when there are no events
@@ -477,6 +479,44 @@ def validate_credentials(result):
     for cred_type in expected_types:
         assert cred_type in credential_types
     assert credential_types == sorted(credential_types)
+
+
+def validate_jobs_by_controller_version(result):
+    """Validate the jobs_by_controller_version field - single summary item for all jobs."""
+    jobs_by_cv = result['jobs_by_controller_version']
+    assert isinstance(jobs_by_cv, list)
+    assert len(jobs_by_cv) == 1, f'Expected 1 item in jobs_by_controller_version, got {len(jobs_by_cv)}'
+
+    item = jobs_by_cv[0]
+
+    # Jobs counts
+    assert item['jobs_total'] == 8
+    assert item['jobs_failed_total'] == 5
+    assert item['jobs_successful_total'] == 3
+    assert item['jobs_never_started_total'] == 0
+
+    # Duration totals
+    assert item['jobs_duration_total_seconds'] == 3180.0
+    assert item['job_duration_maximum_seconds'] == 480.0
+    assert item['job_duration_minimum_seconds'] == 330.0
+    assert item['jobs_successful_duration_total_seconds'] == 1110.0
+    assert item['jobs_failed_duration_total_seconds'] == 2070.0
+
+    # Waiting times
+    assert item['job_waiting_time_total_seconds'] == 240.0
+    assert item['job_waiting_time_maximum_seconds'] == 30.0
+    assert item['job_waiting_time_minimum_seconds'] == 30.0
+
+    # Deduplication totals
+    assert item['templates_total'] == 3
+    assert item['inventories_total'] == 1
+
+    # Ansible versions (all 5 versions across all jobs)
+    assert 'ansible_versions' in item
+    assert sorted(item['ansible_versions']) == ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0']
+
+    # controller_version is None since no controller_version data is provided in this test
+    assert item.get('controller_version') is None
 
 
 def validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_ansible_version_list):
