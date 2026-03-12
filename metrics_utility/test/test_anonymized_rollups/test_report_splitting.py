@@ -152,8 +152,8 @@ def _create_jobs_by_job_type(num_jobs):
                 'templates_total': 1,
                 'inventories_total': 1,
                 'ansible_versions': ansible_versions,
-                'dark_total': i % 5,
-                'failures_total': i % 3,
+                'unreachable_total': i % 5,
+                'failed_total': i % 3,
                 'ok_total': 10 + (i % 20),
                 'skipped_total': i % 4,
                 'ignored_total': i % 2,
@@ -178,8 +178,8 @@ def _create_jobs_by_launch_type():
                 'jobs_total': 25 + (i * 10),
                 'jobs_successful_total': 20 + (i * 8),
                 'jobs_failed_total': 5 + (i * 2),
-                'dark_total': i * 5,
-                'failures_total': i * 3,
+                'unreachable_total': i * 5,
+                'failed_total': i * 3,
                 'ok_total': 100 + (i * 20),
                 'skipped_total': i * 4,
                 'ignored_total': i * 2,
@@ -204,8 +204,8 @@ def _create_jobs_by_ansible_version():
                 'jobs_total': 30 + (i * 5),
                 'jobs_successful_total': 25 + (i * 4),
                 'jobs_failed_total': 5 + i,
-                'dark_total': i * 3,
-                'failures_total': i * 2,
+                'unreachable_total': i * 3,
+                'failed_total': i * 2,
                 'ok_total': 120 + (i * 15),
                 'skipped_total': i * 3,
                 'ignored_total': i,
@@ -219,18 +219,18 @@ def _create_jobs_by_ansible_version():
     return jobs_by_ansible_version
 
 
-def _create_collections_versions():
-    """Create collections_versions array."""
-    collections_versions = []
+def _create_jobs_by_installed_collections_versions():
+    """Create jobs_by_installed_collections_versions array."""
+    jobs_by_installed_collections_versions = []
     for i in range(20):
-        collections_versions.append(
+        jobs_by_installed_collections_versions.append(
             {
                 'name': f'ansible.collection_{i:03d}',
                 'version': f'1.{i}.0',
-                'job_count': 10 + (i % 20),
+                'jobs_total': 10 + (i % 20),
             }
         )
-    return collections_versions
+    return jobs_by_installed_collections_versions
 
 
 def _create_ansible_versions():
@@ -269,7 +269,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
     jobs_by_job_type = _create_jobs_by_job_type(num_jobs)
     jobs_by_launch_type = _create_jobs_by_launch_type()
     jobs_by_ansible_version = _create_jobs_by_ansible_version()
-    collections_versions = _create_collections_versions()
+    jobs_by_installed_collections_versions = _create_jobs_by_installed_collections_versions()
     ansible_versions = _create_ansible_versions()
 
     anonymized_rollup = {
@@ -283,7 +283,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         'jobs_by_job_type': jobs_by_job_type,
         'jobs_by_launch_type': jobs_by_launch_type,
         'jobs_by_ansible_version': jobs_by_ansible_version,
-        'collections_versions': collections_versions,
+        'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
     }
 
     return anonymized_rollup

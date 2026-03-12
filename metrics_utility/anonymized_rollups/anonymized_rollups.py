@@ -52,8 +52,8 @@ def anonymize_data(data, salt):
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
 
-    For items with collection_source == 'Unknown', replaces module names, collection names,
-    and role names with the string "Unknown" instead of hashing them.
+    For items with collection_source == 'Custom', replaces module names, collection names,
+    and role names with the string "Custom" instead of hashing them.
 
     Args:
         data: Flattened data structure with keys:
@@ -63,7 +63,8 @@ def anonymize_data(data, salt):
             - module_stats: array of module statistics
             - collection_stats: array of collection statistics
             - role_stats: array of role statistics
-            - collections_versions: array of {name, version, job_count} from installed collections
+            - jobs_by_installed_collections_versions: array of {name, version, jobs_total, jobs_failed_total,
+              jobs_successful_total} from installed collections
         salt: Salt string for hashing (used for job_template_name hashing)
     """
     if not data or not isinstance(data, dict):
@@ -88,32 +89,32 @@ def anonymize_data(data, salt):
             if job and 'job_template_name' in job and job['job_template_name']:
                 job['job_template_name'] = hash(job['job_template_name'], salt)
 
-    # anonymize module_stats - replace module name and collection name with 'Unknown' for 'Unknown' sources
+    # anonymize module_stats - replace module name and collection name with 'Custom' for 'Custom' sources
     if 'module_stats' in data and data['module_stats']:
         for module in data['module_stats']:
-            if module and module.get('collection_source') == 'Unknown':
+            if module and module.get('collection_source') == 'Custom':
                 if 'module_name' in module and module['module_name']:
-                    module['module_name'] = 'Unknown'
+                    module['module_name'] = 'Custom'
                 if 'collection_name' in module and module['collection_name']:
-                    module['collection_name'] = 'Unknown'
+                    module['collection_name'] = 'Custom'
 
-    # anonymize collection_stats - replace collection name with 'Unknown' for 'Unknown' sources
+    # anonymize collection_stats - replace collection name with 'Custom' for 'Custom' sources
     if 'collection_stats' in data and data['collection_stats']:
         for collection in data['collection_stats']:
-            if collection and collection.get('collection_source') == 'Unknown':
+            if collection and collection.get('collection_source') == 'Custom':
                 if 'collection_name' in collection and collection['collection_name']:
-                    collection['collection_name'] = 'Unknown'
+                    collection['collection_name'] = 'Custom'
 
-    # anonymize role_stats - replace role name and collection name with 'Unknown' for 'Unknown' sources
+    # anonymize role_stats - replace role name and collection name with 'Custom' for 'Custom' sources
     if 'role_stats' in data and data['role_stats']:
         for role in data['role_stats']:
-            if role and role.get('collection_source') == 'Unknown':
+            if role and role.get('collection_source') == 'Custom':
                 if 'role' in role and role['role']:
-                    role['role'] = 'Unknown'
+                    role['role'] = 'Custom'
                 if 'collection_name' in role and role['collection_name']:
-                    role['collection_name'] = 'Unknown'
+                    role['collection_name'] = 'Custom'
 
-    # anonymize collections_versions - replace collection name and version with 'Unknown' for unknown collections
+    # anonymize jobs_by_installed_collections_versions - replace collection name and version with 'Unknown' for unknown collections
     # Load collections.json to check if collection is known
     collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
     try:
@@ -122,14 +123,14 @@ def anonymize_data(data, salt):
     except (FileNotFoundError, json.JSONDecodeError):
         collections = {}
 
-    if 'collections_versions' in data and data['collections_versions']:
-        for collection_version in data['collections_versions']:
+    if 'jobs_by_installed_collections_versions' in data and data['jobs_by_installed_collections_versions']:
+        for collection_version in data['jobs_by_installed_collections_versions']:
             if collection_version and 'name' in collection_version:
                 collection_name = collection_version.get('name', '')
-                # If collection is not in the known collections mapping, replace name and version with 'Unknown'
+                # If collection is not in the known collections mapping, replace name and version with 'Custom'
                 if collection_name and collection_name not in collections:
-                    collection_version['name'] = 'Unknown'
-                    collection_version['version'] = 'Unknown'
+                    collection_version['name'] = 'Custom'
+                    collection_version['version'] = 'Custom'
 
     # Note: modules_used_per_playbook anonymization removed since it's not in final output
     # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
@@ -145,8 +146,8 @@ def _normalize_ansible_version_key(ansible_version: Any) -> str:
 def _get_default_host_summary_fields() -> Dict[str, int]:
     """Get default values for host summary fields when no match is found."""
     return {
-        'dark_total': 0,
-        'failures_total': 0,
+        'unreachable_total': 0,
+        'failed_total': 0,
         'ok_total': 0,
         'skipped_total': 0,
         'ignored_total': 0,
@@ -164,8 +165,8 @@ def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
     not per grouping.
     """
     return {
-        'dark_total': jhs_data.get('dark_total', 0),
-        'failures_total': jhs_data.get('failures_total', 0),
+        'unreachable_total': jhs_data.get('unreachable_total', 0),
+        'failed_total': jhs_data.get('failed_total', 0),
         'ok_total': jhs_data.get('ok_total', 0),
         'skipped_total': jhs_data.get('skipped_total', 0),
         'ignored_total': jhs_data.get('ignored_total', 0),
@@ -204,9 +205,9 @@ def _merge_jobs_with_host_summary(
 
 
 def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
-    """Calculate sum of a field from a list of dictionaries, returning None if list is empty."""
+    """Calculate sum of a field from a list of dictionaries, returning 0 if list is empty."""
     if not items:
-        return None
+        return 0
     return sum(item.get(field, 0) for item in items)
 
 
@@ -267,9 +268,9 @@ def _calculate_execution_environments_total(execution_environments: Dict[str, An
 def _calculate_task_statistics(jobs_by_job_type_merged: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Calculate task statistics from merged jobs_by_job_type."""
     task_ok = sum(job.get('ok_total', 0) for job in jobs_by_job_type_merged)
-    task_failed = sum(job.get('failures_total', 0) for job in jobs_by_job_type_merged)
+    task_failed = sum(job.get('failed_total', 0) for job in jobs_by_job_type_merged)
     task_skipped = sum(job.get('skipped_total', 0) for job in jobs_by_job_type_merged)
-    task_unreachable = sum(job.get('dark_total', 0) for job in jobs_by_job_type_merged)
+    task_unreachable = sum(job.get('unreachable_total', 0) for job in jobs_by_job_type_merged)
     task_ignored = sum(job.get('ignored_total', 0) for job in jobs_by_job_type_merged)
 
     return {
@@ -306,8 +307,8 @@ def _build_statistics(
         'rollup_period_jobs_duration_all_statuses_seconds': job_statistics['rollup_period_jobs_duration_all_statuses_seconds'],
         'rollup_period_jobs_successful_duration_total_seconds': job_statistics['rollup_period_jobs_successful_duration_total_seconds'],
         'rollup_period_jobs_failed_duration_total_seconds': job_statistics['rollup_period_jobs_failed_duration_total_seconds'],
-        'rollup_period_organizations_total': jobs.get('organizations_total'),
-        'rollup_period_forks_total': jobs.get('forks_total'),
+        'rollup_period_organizations_total': jobs.get('organizations_total') or 0,
+        'rollup_period_forks_total': jobs.get('forks_total') or 0,
         'rollup_period_templates_total': job_statistics['job_templates_total'],
         'rollup_period_inventories_total': job_statistics['inventories_total'],
         # from job_host_summary (sum of all job_type groups)
@@ -335,14 +336,48 @@ def _build_statistics(
     return statistics
 
 
-def _extract_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _inject_controller_version(jobs_by_controller_version: List[Dict[str, Any]], controller_versions: List[str]) -> List[Dict[str, Any]]:
+    """Inject the first controller_version from the controller_versions list into the
+    single-item jobs_by_controller_version summary."""
+    if not jobs_by_controller_version:
+        return jobs_by_controller_version
+
+    first_version = controller_versions[0] if controller_versions else None
+    jobs_by_controller_version[0]['controller_version'] = first_version
+    return jobs_by_controller_version
+
+
+def _inject_controller_version_to_all_items(jobs_list: List[Dict[str, Any]], controller_versions: List[str]) -> List[Dict[str, Any]]:
+    """Inject the first controller_version from the controller_versions list into every
+    item of the given jobs grouping list."""
+    first_version = controller_versions[0] if controller_versions else None
+    for item in jobs_list:
+        item['controller_version'] = first_version
+    return jobs_list
+
+
+def _extract_jobs_by_installed_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Extract and transform installed collections from jobs data."""
     installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
     return [
         {
             'name': item.get('collection_name', ''),
             'version': item.get('collection_version', ''),
-            'job_count': item.get('job_count', 0),
+            'jobs_total': item.get('job_count', 0),
+            'jobs_failed_total': item.get('jobs_failed_total', 0),
+            'jobs_successful_total': item.get('jobs_successful_total', 0),
+            'jobs_never_started_total': item.get('jobs_never_started_total', 0),
+            'jobs_duration_total_seconds': item.get('jobs_duration_total_seconds', 0),
+            'jobs_successful_duration_total_seconds': item.get('jobs_successful_duration_total_seconds', 0),
+            'jobs_failed_duration_total_seconds': item.get('jobs_failed_duration_total_seconds', 0),
+            'job_duration_maximum_seconds': item.get('job_duration_maximum_seconds'),
+            'job_duration_minimum_seconds': item.get('job_duration_minimum_seconds'),
+            'job_waiting_time_total_seconds': item.get('job_waiting_time_total_seconds', 0),
+            'job_waiting_time_maximum_seconds': item.get('job_waiting_time_maximum_seconds'),
+            'job_waiting_time_minimum_seconds': item.get('job_waiting_time_minimum_seconds'),
+            'templates_total': item.get('templates_total', 0),
+            'inventories_total': item.get('inventories_total', 0),
+            'ansible_versions': item.get('ansible_versions', []),
         }
         for item in installed_collections
         if item and 'collection_name' in item and 'collection_version' in item
@@ -401,7 +436,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
-      - collections_versions: array of {name, version, job_count} from installed collections
+      - jobs_by_installed_collections_versions: array of {name, version, jobs_total, jobs_failed_total,
+        jobs_successful_total} from installed collections
       - table_metadata: object with table metadata statistics
       - controller_versions: array of controller versions
 
@@ -454,7 +490,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
     collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
     role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
-    collections_versions = _extract_collections_versions(jobs)
+    jobs_by_installed_collections_versions = _extract_jobs_by_installed_collections_versions(jobs)
 
     # Merge job_host_summary into jobs groupings
     jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged = _merge_all_jobs_groupings(
@@ -463,6 +499,16 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         job_host_summary_by_launch_type,
         job_host_summary_by_ansible_version,
     )
+
+    # Build jobs_by_controller_version: inject first controller_version from the controller_version collector
+    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
+    controller_versions: List[str] = controller_version_root if isinstance(controller_version_root, list) else []
+    jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
+
+    # Inject controller_version into every item of the three job groupings
+    jobs_by_job_type_merged = _inject_controller_version_to_all_items(jobs_by_job_type_merged, controller_versions)
+    jobs_by_launch_type_merged = _inject_controller_version_to_all_items(jobs_by_launch_type_merged, controller_versions)
+    jobs_by_ansible_version_merged = _inject_controller_version_to_all_items(jobs_by_ansible_version_merged, controller_versions)
 
     # Calculate task statistics and update statistics dictionary
     task_statistics = _calculate_task_statistics(jobs_by_job_type_merged)
@@ -473,13 +519,14 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'statistics': statistics,
         'rollup_period_ansible_versions': ansible_versions_merged,
         'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
-        'rollup_period_credential_types': credentials_list if isinstance(credentials_list, list) else [],
+        'rollup_period_credential_types': credentials_list,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
         'jobs_by_ansible_version': jobs_by_ansible_version_merged,
-        'collections_versions': collections_versions,
+        'jobs_by_controller_version': jobs_by_controller_version,
+        'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
         'table_metadata': table_metadata_root,
-        'controller_versions': controller_version_root if isinstance(controller_version_root, list) else [],
+        'controller_versions': controller_versions,
     }
 
     # Only include event-related arrays if there are events

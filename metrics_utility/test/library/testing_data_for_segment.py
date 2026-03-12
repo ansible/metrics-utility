@@ -141,7 +141,7 @@ segment_data = {
         },
         {
             'module_name': '7e265dd914e887808577cd0b23915b0383f239468598b2ee4e63bdcb1fe054d7',
-            'collection_source': 'Unknown',
+            'collection_source': 'Custom',
             'collection_name': '277dcb69804c1e01de2cb744b13b82e9d589e1e3cfb41d8e4be942013d0adca5',
             'jobs_total': 1,
             'number_of_jobs_never_started': 0,
@@ -284,7 +284,7 @@ segment_data = {
         },
         {
             'collection_name': '277dcb69804c1e01de2cb744b13b82e9d589e1e3cfb41d8e4be942013d0adca5',
-            'collection_source': 'Unknown',
+            'collection_source': 'Custom',
             'jobs_total': 1,
             'number_of_jobs_never_started': 0,
             'unique_hosts_total': 1,
@@ -359,8 +359,8 @@ segment_data = {
     'job_host_summary': [
         {
             'job_template_name': '2cb203a95a183267195e77ade5e3a5694298ca9ab8903f5336cb2d4bd15acb47',
-            'dark_total': 0,
-            'failures_total': 2,
+            'unreachable_total': 0,
+            'failed_total': 2,
             'ok_total': 26,
             'skipped_total': 2,
             'ignored_total': 0,
@@ -368,8 +368,8 @@ segment_data = {
         },
         {
             'job_template_name': 'ea07cdb0d1d412a4a631918a9133f14508acb45339cdb133ea8cef0479b3e9a4',
-            'dark_total': 0,
-            'failures_total': 4,
+            'unreachable_total': 0,
+            'failed_total': 4,
             'ok_total': 26,
             'skipped_total': 0,
             'ignored_total': 0,

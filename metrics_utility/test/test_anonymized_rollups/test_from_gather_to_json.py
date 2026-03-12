@@ -49,6 +49,7 @@ def _validate_top_level_structure(json_data):
     assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
+    assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"
     assert 'table_metadata' in json_data, "Missing 'table_metadata' at top level"
     assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
 
@@ -173,8 +174,8 @@ def _validate_jobs_by_job_type_structure(json_data):
         assert 'jobs_total' in job
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
-        assert 'dark_total' in job
-        assert 'failures_total' in job
+        assert 'unreachable_total' in job
+        assert 'failed_total' in job
         assert 'ok_total' in job
         assert 'skipped_total' in job
         assert 'ignored_total' in job
@@ -192,9 +193,8 @@ def _validate_jobs_by_launch_type_structure(json_data):
         assert 'jobs_total' in job
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
-        assert 'job_type_total' in job
-        assert 'dark_total' in job
-        assert 'failures_total' in job
+        assert 'unreachable_total' in job
+        assert 'failed_total' in job
         assert 'ok_total' in job
         assert 'skipped_total' in job
         assert 'ignored_total' in job
@@ -214,9 +214,8 @@ def _validate_jobs_by_ansible_version_structure(json_data):
         assert 'jobs_total' in job
         assert 'jobs_failed_total' in job
         assert 'templates_total' in job
-        assert 'job_type_total' in job
-        assert 'dark_total' in job
-        assert 'failures_total' in job
+        assert 'unreachable_total' in job
+        assert 'failed_total' in job
         assert 'ok_total' in job
         assert 'skipped_total' in job
         assert 'ignored_total' in job
@@ -233,7 +232,7 @@ def _validate_module_stats_values(json_data):
     print('--- Validating module_stats data values ---')
     module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
 
-    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Unknown']
+    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
     assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
     yum_module = anonymized_modules[0]
     assert yum_module['jobs_total'] == 3, 'Should have 3 jobs using ansible.builtin.yum (anonymized)'
@@ -247,8 +246,8 @@ def _validate_module_stats_values(json_data):
     assert len(yum_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
     for version in yum_module['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert yum_module['module_name'] == 'Unknown', f'Anonymized module name should be "Unknown", got {yum_module["module_name"]}'
-    assert yum_module['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {yum_module.get("collection_name")}'
+    assert yum_module['module_name'] == 'Custom', f'Anonymized module name should be "Custom", got {yum_module["module_name"]}'
+    assert yum_module['collection_name'] == 'Custom', f'Anonymized collection name should be "Custom", got {yum_module.get("collection_name")}'
 
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
@@ -283,10 +282,10 @@ def _validate_collection_stats_values(json_data):
     assert a10_collection['task_ok_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
 
-    anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Unknown']
+    anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
     builtin_collection = anonymized_collections[0]
-    assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
+    assert builtin_collection['collection_source'] == 'Custom', 'ansible.builtin collection should be Custom (not in collections.json)'
     assert builtin_collection['jobs_total'] == 3, 'ansible.builtin collection should have 3 jobs'
     assert 'ansible_versions' in builtin_collection, 'Each collection_stat should have ansible_versions field'
     assert isinstance(builtin_collection['ansible_versions'], list), 'ansible_versions should be a list'
@@ -296,8 +295,8 @@ def _validate_collection_stats_values(json_data):
     assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
     assert builtin_collection['task_ok_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
     assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
-    assert builtin_collection['collection_name'] == 'Unknown', (
-        f'Anonymized collection name should be "Unknown", got {builtin_collection["collection_name"]}'
+    assert builtin_collection['collection_name'] == 'Custom', (
+        f'Anonymized collection name should be "Custom", got {builtin_collection["collection_name"]}'
     )
 
 
@@ -305,40 +304,89 @@ def _validate_role_stats(json_data):
     """Validate anonymized role_stats."""
     if not ('role_stats' in json_data and json_data['role_stats']):
         return
-    anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Unknown']
+    anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Custom']
     for role_stat in anonymized_roles:
         if role_stat.get('role'):
-            assert role_stat['role'] == 'Unknown', f'Anonymized role name should be "Unknown", got {role_stat.get("role")}'
+            assert role_stat['role'] == 'Custom', f'Anonymized role name should be "Custom", got {role_stat.get("role")}'
         if role_stat.get('collection_name'):
-            assert role_stat['collection_name'] == 'Unknown', (
-                f'Anonymized collection_name in role_stat should be "Unknown", got {role_stat.get("collection_name")}'
+            assert role_stat['collection_name'] == 'Custom', (
+                f'Anonymized collection_name in role_stat should be "Custom", got {role_stat.get("collection_name")}'
             )
 
 
-def _validate_collections_versions(json_data):
-    """Validate collections_versions."""
-    if not ('collections_versions' in json_data and json_data['collections_versions']):
+def _validate_jobs_by_installed_collections_versions(json_data):
+    """Validate jobs_by_installed_collections_versions."""
+    if not ('jobs_by_installed_collections_versions' in json_data and json_data['jobs_by_installed_collections_versions']):
         return
-    print('--- Validating collections_versions data values ---')
-    collections_versions = json_data['collections_versions']
-    assert isinstance(collections_versions, list), 'collections_versions should be a list'
-    unknown_collections = [c for c in collections_versions if c.get('name') == 'Unknown']
-    known_collections = [c for c in collections_versions if c.get('name') != 'Unknown']
-    assert len(unknown_collections) > 0, 'Should have at least one collection with "Unknown" name (ansible.builtin)'
+    print('--- Validating jobs_by_installed_collections_versions data values ---')
+    jobs_by_installed_collections_versions = json_data['jobs_by_installed_collections_versions']
+    assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
+    unknown_collections = [c for c in jobs_by_installed_collections_versions if c.get('name') == 'Custom']
+    known_collections = [c for c in jobs_by_installed_collections_versions if c.get('name') != 'Custom']
+    assert len(unknown_collections) > 0, 'Should have at least one collection with "Custom" name (ansible.builtin)'
     for collection in unknown_collections:
-        assert collection['name'] == 'Unknown', f'Unknown collection should have name "Unknown", got {collection.get("name")}'
-        assert collection['version'] == 'Unknown', f'Unknown collection should have version "Unknown", got {collection.get("version")}'
+        assert collection['name'] == 'Custom', f'Custom collection should have name "Custom", got {collection.get("name")}'
+        assert collection['version'] == 'Custom', f'Custom collection should have version "Custom", got {collection.get("version")}'
+    new_fields = [
+        'jobs_never_started_total',
+        'jobs_duration_total_seconds',
+        'jobs_successful_duration_total_seconds',
+        'jobs_failed_duration_total_seconds',
+        'job_duration_maximum_seconds',
+        'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds',
+        'job_waiting_time_maximum_seconds',
+        'job_waiting_time_minimum_seconds',
+        'templates_total',
+        'inventories_total',
+        'ansible_versions',
+    ]
     for collection in known_collections:
-        assert collection['name'] != 'Unknown', f'Known collection should not have name "Unknown", got {collection.get("name")}'
-        assert collection['version'] != 'Unknown', f'Known collection should not have version "Unknown", got {collection.get("version")}'
+        assert collection['name'] != 'Custom', f'Known collection should not have name "Custom", got {collection.get("name")}'
+        assert collection['version'] != 'Custom', f'Known collection should not have version "Custom", got {collection.get("version")}'
         assert 'version' in collection, 'Each collection should have version field'
-        assert 'job_count' in collection, 'Each collection should have job_count field'
+        assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
+        assert 'jobs_failed_total' in collection, 'Each collection should have jobs_failed_total field'
+        assert 'jobs_successful_total' in collection, 'Each collection should have jobs_successful_total field'
+        assert isinstance(collection.get('jobs_total'), int), 'jobs_total should be an integer'
+        assert isinstance(collection.get('jobs_failed_total'), int), 'jobs_failed_total should be an integer'
+        assert isinstance(collection.get('jobs_successful_total'), int), 'jobs_successful_total should be an integer'
+        assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['jobs_total'], (
+            f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
+        )
+        for field in new_fields:
+            assert field in collection, (
+                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["name"]} {collection["version"]}'
+            )
+        assert isinstance(collection['jobs_never_started_total'], int), 'jobs_never_started_total should be an int'
+        assert isinstance(collection['templates_total'], int), 'templates_total should be an int'
+        assert isinstance(collection['inventories_total'], int), 'inventories_total should be an int'
+        assert isinstance(collection['ansible_versions'], list), 'ansible_versions should be a list'
+        assert collection['jobs_duration_total_seconds'] >= 0, 'jobs_duration_total_seconds should be non-negative'
+        assert collection['job_waiting_time_total_seconds'] >= 0, 'job_waiting_time_total_seconds should be non-negative'
+        # max >= min when both are set
+        if collection['job_duration_maximum_seconds'] is not None and collection['job_duration_minimum_seconds'] is not None:
+            assert collection['job_duration_maximum_seconds'] >= collection['job_duration_minimum_seconds'], (
+                'job_duration_maximum_seconds should be >= job_duration_minimum_seconds'
+            )
+        if collection['job_waiting_time_maximum_seconds'] is not None and collection['job_waiting_time_minimum_seconds'] is not None:
+            assert collection['job_waiting_time_maximum_seconds'] >= collection['job_waiting_time_minimum_seconds'], (
+                'job_waiting_time_maximum_seconds should be >= job_waiting_time_minimum_seconds'
+            )
+    # same structural checks for unknown (Custom) collections
+    for collection in unknown_collections:
+        for field in new_fields:
+            assert field in collection, f'Missing new field {field!r} in Custom jobs_by_installed_collections_versions entry'
+        assert isinstance(collection['jobs_never_started_total'], int)
+        assert isinstance(collection['templates_total'], int)
+        assert isinstance(collection['inventories_total'], int)
+        assert isinstance(collection['ansible_versions'], list)
 
 
-def _validate_role_stats_and_collections_versions(json_data):
-    """Validate anonymized role_stats and collections_versions."""
+def _validate_role_stats_and_jobs_by_installed_collections_versions(json_data):
+    """Validate anonymized role_stats and jobs_by_installed_collections_versions."""
     _validate_role_stats(json_data)
-    _validate_collections_versions(json_data)
+    _validate_jobs_by_installed_collections_versions(json_data)
 
 
 def _validate_jobs_values(json_data, statistics):
@@ -381,7 +429,7 @@ def _validate_jobs_values_multi_hour(json_data, statistics):
     job = json_data['jobs_by_job_type'][0]
     assert job['jobs_total'] == 6, 'Job type should have 6 jobs'
     assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
-    assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
+    assert job['jobs_failed_total'] == 1, 'Should have 1 failed job (job 3 from 10:00h)'
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
     # Job durations: 10:00 hour: 120s + 180s + 90s = 390s
     #                11:00 hour: 100s + 150s + 80s = 330s
@@ -415,8 +463,8 @@ def _validate_job_host_summary_values(json_data, statistics):
     job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
     assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
     assert job_entry['ok_total'] == 6, 'Should have 6 ok tasks'
-    assert job_entry['failures_total'] == 0, 'Should have 0 failures'
-    assert job_entry['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    assert job_entry['failed_total'] == 0, 'Should have 0 failures'
+    assert job_entry['unreachable_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
     # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
     # not per job_type group, as host_ids are not tracked in groupings
@@ -433,10 +481,13 @@ def _validate_job_host_summary_values_multi_hour(json_data, statistics):
 
     job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
     assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
-    # 6 jobs × 2 hosts = 12 ok tasks
-    assert job_entry['ok_total'] == 12, 'Should have 12 ok tasks'
-    assert job_entry['failures_total'] == 0, 'Should have 0 failures'
-    assert job_entry['dark_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    # 10:00h: jobs 1 and 2 have ok=1 per host (2×2=4), job 3 (failed) has ok=0 per host (1×2=0)
+    # 11:00h: all 3 jobs have ok=1 per host (3×2=6)
+    # Total: 4 + 0 + 6 = 10
+    assert job_entry['ok_total'] == 10, 'Should have 10 ok tasks (job 3 from 10:00h is failed with ok=0)'
+    # job 3 (10:00h, failed) has failures=1 per host, 2 hosts → 2 total failures
+    assert job_entry['failed_total'] == 2, 'Should have 2 failures (job 3 from 10:00h: 2 hosts × failures=1)'
+    assert job_entry['unreachable_total'] == 0, 'Should have 0 dark (unreachable) hosts'
     assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
     # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
     # not per job_type group, as host_ids are not tracked in groupings
@@ -447,7 +498,7 @@ def _validate_module_stats_values_multi_hour(json_data):
     print('--- Validating module_stats data values (multi-hour) ---')
     module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
 
-    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Unknown']
+    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
     assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
     yum_module = anonymized_modules[0]
     # 6 jobs total (3 from 10:00 + 3 from 11:00)
@@ -464,8 +515,8 @@ def _validate_module_stats_values_multi_hour(json_data):
     assert len(yum_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
     for version in yum_module['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert yum_module['module_name'] == 'Unknown', f'Anonymized module name should be "Unknown", got {yum_module["module_name"]}'
-    assert yum_module['collection_name'] == 'Unknown', f'Anonymized collection name should be "Unknown", got {yum_module.get("collection_name")}'
+    assert yum_module['module_name'] == 'Custom', f'Anonymized module name should be "Custom", got {yum_module["module_name"]}'
+    assert yum_module['collection_name'] == 'Custom', f'Anonymized collection name should be "Custom", got {yum_module.get("collection_name")}'
 
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
@@ -506,10 +557,10 @@ def _validate_collection_stats_values_multi_hour(json_data):
     # 6 jobs × 2 hosts = 12 processed events
     assert a10_collection['processed_events_total'] == 12, 'a10.acos_axapi collection should have 12 processed events (6 jobs × 2 hosts)'
 
-    anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Unknown']
+    anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
     builtin_collection = anonymized_collections[0]
-    assert builtin_collection['collection_source'] == 'Unknown', 'ansible.builtin collection should be Unknown (not in collections.json)'
+    assert builtin_collection['collection_source'] == 'Custom', 'ansible.builtin collection should be Custom (not in collections.json)'
     # 6 jobs total
     assert builtin_collection['jobs_total'] == 6, 'ansible.builtin collection should have 6 jobs'
     assert 'ansible_versions' in builtin_collection, 'Each collection_stat should have ansible_versions field'
@@ -522,8 +573,8 @@ def _validate_collection_stats_values_multi_hour(json_data):
     assert builtin_collection['task_ok_total'] == 12, 'ansible.builtin collection should have 12 successful tasks'
     # 6 jobs × 2 hosts = 12 processed events
     assert builtin_collection['processed_events_total'] == 12, 'ansible.builtin collection should have 12 processed events (6 jobs × 2 hosts)'
-    assert builtin_collection['collection_name'] == 'Unknown', (
-        f'Anonymized collection name should be "Unknown", got {builtin_collection["collection_name"]}'
+    assert builtin_collection['collection_name'] == 'Custom', (
+        f'Anonymized collection name should be "Custom", got {builtin_collection["collection_name"]}'
     )
 
 
@@ -534,8 +585,6 @@ def _validate_jobs_by_launch_type_values(json_data):
     launch_type_entry = json_data['jobs_by_launch_type'][0]
     assert 'launch_type' in launch_type_entry, 'Should have launch_type field'
     assert launch_type_entry['jobs_total'] >= 1, 'Should have at least 1 job in launch_type group'
-    assert 'job_type_total' in launch_type_entry, 'Should have job_type_total field'
-    assert launch_type_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
 
 
 def _validate_jobs_by_ansible_version_values(json_data):
@@ -550,8 +599,6 @@ def _validate_jobs_by_ansible_version_values(json_data):
             f'ansible_version should contain numbers and dots, got {ansible_version_entry["ansible_version"]}'
         )
     assert ansible_version_entry['jobs_total'] >= 1, 'Should have at least 1 job in ansible_version group'
-    assert 'job_type_total' in ansible_version_entry, 'Should have job_type_total field'
-    assert ansible_version_entry['job_type_total'] >= 1, 'Should have at least 1 job type'
     assert 'launch_type_manual_total' not in ansible_version_entry
     assert 'launch_type_scheduled_total' not in ansible_version_entry
 
@@ -678,6 +725,65 @@ def _validate_table_metadata_values(json_data):
     # Just verify that if there's data, it has the expected structure
     # (already validated in _validate_table_metadata_structure)
     assert isinstance(table_metadata, dict), 'table_metadata should be a dictionary'
+
+
+def _validate_jobs_by_controller_version(json_data, statistics):
+    """Validate jobs_by_controller_version: 1 item, correct stats, correct controller_version."""
+    print('--- Validating jobs_by_controller_version data values ---')
+    ctrl_summary_list = json_data['jobs_by_controller_version']
+    assert isinstance(ctrl_summary_list, list), 'jobs_by_controller_version should be a list'
+    assert len(ctrl_summary_list) == 1, 'jobs_by_controller_version should contain exactly 1 item'
+
+    ctrl_summary = ctrl_summary_list[0]
+
+    # controller_version should be the first (smallest) version from the sorted controller_versions list
+    controller_versions = json_data.get('controller_versions', [])
+    expected_controller_version = controller_versions[0] if controller_versions else None
+    assert ctrl_summary.get('controller_version') == expected_controller_version, (
+        f'Expected controller_version {expected_controller_version!r}, got {ctrl_summary.get("controller_version")!r}'
+    )
+
+    # Totals must match the overall statistics (summary covers all jobs)
+    assert ctrl_summary['jobs_total'] == statistics['rollup_period_jobs_total'], (
+        f'jobs_total should match statistics: expected {statistics["rollup_period_jobs_total"]}, got {ctrl_summary["jobs_total"]}'
+    )
+    assert ctrl_summary['jobs_failed_total'] == statistics['rollup_period_jobs_failed'], (
+        f'jobs_failed_total should match statistics: expected {statistics["rollup_period_jobs_failed"]}, got {ctrl_summary["jobs_failed_total"]}'
+    )
+    assert ctrl_summary['jobs_successful_total'] == statistics['rollup_period_jobs_successful'], (
+        f'jobs_successful_total should match statistics: '
+        f'expected {statistics["rollup_period_jobs_successful"]}, got {ctrl_summary["jobs_successful_total"]}'
+    )
+
+    # Duration and waiting totals must also match the known multi-hour values
+    assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
+        f'jobs_duration_total_seconds should be 720s (390+330), got {ctrl_summary["jobs_duration_total_seconds"]}'
+    )
+    assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6)
+    assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6)
+    assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6), (
+        f'job_waiting_time_total_seconds should be 120s (60+60), got {ctrl_summary["job_waiting_time_total_seconds"]}'
+    )
+
+    # Required fields
+    for field in [
+        'jobs_total',
+        'jobs_failed_total',
+        'jobs_successful_total',
+        'jobs_never_started_total',
+        'templates_total',
+        'inventories_total',
+        'jobs_duration_total_seconds',
+        'job_duration_maximum_seconds',
+        'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds',
+        'job_waiting_time_maximum_seconds',
+        'job_waiting_time_minimum_seconds',
+        'ansible_versions',
+    ]:
+        assert field in ctrl_summary, f'Should have {field} in jobs_by_controller_version item'
+    assert isinstance(ctrl_summary['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(ctrl_summary['ansible_versions']) > 0, 'ansible_versions should not be empty'
 
 
 def _validate_controller_versions(json_data):
@@ -812,7 +918,7 @@ def _validate_all_data(json_data, statistics):
     # (3 from 10:00 hour + 3 from 11:00 hour)
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
-    _validate_role_stats_and_collections_versions(json_data)
+    _validate_role_stats_and_jobs_by_installed_collections_versions(json_data)
 
     print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'
@@ -837,6 +943,7 @@ def _validate_all_data(json_data, statistics):
     _validate_table_metadata_structure(json_data)
     _validate_table_metadata_values(json_data)
     _validate_controller_versions(json_data)
+    _validate_jobs_by_controller_version(json_data, statistics)
 
     print('✅ All data value assertions passed!')
 

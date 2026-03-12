@@ -406,8 +406,14 @@ $yaml$,
         WHEN 0 THEN 'callback'
       END,                                    -- launch_type (cycles through: manual, scheduled, workflow, callback)
       false,                                  -- cancel_flag
-      'pending',                              -- status
-      false,                                  -- failed
+      CASE i
+        WHEN 3 THEN 'failed'
+        ELSE 'pending'
+      END,                                    -- status
+      CASE i
+        WHEN 3 THEN true
+        ELSE false
+      END,                                    -- failed
       CASE i
         WHEN 1 THEN 120.000  -- Job 1: 120 seconds
         WHEN 2 THEN 180.000  -- Job 2: 180 seconds
@@ -425,7 +431,10 @@ $yaml$,
       0,                                      -- emitted_events
       'controller1',                          -- controller_node
       false,                                  -- dependencies_processed
-      '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb,  -- installed_collections (matches modules in event data: ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)
+      CASE i
+        WHEN 3 THEN '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}, "redhat.rhel_system_roles": {"version": "1.23.0"}}'::jsonb
+        ELSE '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb
+      END,                                    -- installed_collections (job 3 also includes redhat.rhel_system_roles)
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
       '{}'::jsonb,                            -- job_env
@@ -544,11 +553,11 @@ $yaml$,
         host_name,
         0,-- changed
         0,-- dark
-        0,-- failures
-        1,-- ok
+        CASE WHEN i = 3 THEN 1 ELSE 0 END,-- failures (job 3 is a failed job)
+        CASE WHEN i = 3 THEN 0 ELSE 1 END,-- ok
         0,-- processed
         0,-- skipped
-        false,-- failed
+        CASE WHEN i = 3 THEN true ELSE false END,-- failed
         host_id,
         unified_job_id,
         0,-- ignored
@@ -1257,7 +1266,11 @@ $yaml$,
       0,                                      -- emitted_events
       'controller1',                          -- controller_node
       false,                                  -- dependencies_processed
-      '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb,  -- installed_collections
+      CASE i
+        WHEN 1 THEN '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}, "redhat.rhel_system_roles": {"version": "1.23.0"}}'::jsonb
+        WHEN 2 THEN '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}, "redhat.rhel_system_roles": {"version": "1.23.0"}}'::jsonb
+        ELSE '{"ansible.builtin": {"version": "2.9.10"}, "a10.acos_axapi": {"version": "1.0.0"}}'::jsonb
+      END,                                    -- installed_collections (jobs 1 and 2 also include redhat.rhel_system_roles)
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
       '{}'::jsonb,                            -- job_env

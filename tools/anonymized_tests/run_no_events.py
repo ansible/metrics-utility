@@ -26,14 +26,23 @@ import argparse
 import json
 import os
 import shutil
+import sys
+import time
 
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 import pandas as pd
 
+
+# Add metrics_utility to path
+current_dir = Path(__file__).resolve().parent
+metrics_utility_path = current_dir.parent.parent
+sys.path.insert(0, str(metrics_utility_path))
+
 # Initialize Django before importing Django components
-from metrics_utility import prepare
+from metrics_utility import prepare  # noqa: E402
 
 
 prepare()
@@ -198,6 +207,20 @@ def count_rows(df: pd.DataFrame) -> int:
     return len(df)
 
 
+def format_elapsed_time(elapsed_time: float) -> str:
+    """Format elapsed time in a human-readable format."""
+    hours = int(elapsed_time // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = elapsed_time % 60
+
+    if hours > 0:
+        return f'{hours}h {minutes}m {seconds:.2f}s ({elapsed_time:.2f} seconds)'
+    elif minutes > 0:
+        return f'{minutes}m {seconds:.2f}s ({elapsed_time:.2f} seconds)'
+    else:
+        return f'{seconds:.2f} seconds'
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Collect data from anonymized collectors (except events)',
@@ -234,6 +257,9 @@ Examples:
     )
 
     args = parser.parse_args()
+
+    # Record start time
+    start_time = time.time()
 
     # Clean up ./out directory at the start (recursively remove all files and folders)
     out_dir = './out'
@@ -272,9 +298,11 @@ Examples:
 
     # Collect data for each collector
     results: Dict[str, List[pd.DataFrame]] = {}
+    collector_times: Dict[str, float] = {}
 
     for collector_name, collector_info in COLLECTORS.items():
         print(f'Collecting {collector_name}...')
+        collector_start_time = time.time()
 
         if collector_info['needs_since_until']:
             # Time-series collector
@@ -291,6 +319,9 @@ Examples:
                 collector_info,
                 db,
             )
+
+        collector_elapsed_time = time.time() - collector_start_time
+        collector_times[collector_name] = collector_elapsed_time
 
         results[collector_name] = dataframes
         print(f'  Collected {len(dataframes)} dataframe(s)')
@@ -311,17 +342,19 @@ Examples:
             for i, df in enumerate(dataframes):
                 rows = count_rows(df)
                 total_rows += rows
-                if args.batches:
-                    print(f'  Batch {i + 1}/{len(dataframes)}: {rows:,} rows')
-                else:
-                    # Show time interval for hourly splits
-                    since_interval, until_interval = time_intervals[i]
-                    print(f'  Hour {i + 1} ({since_interval.strftime("%Y-%m-%d %H:%M")} - {until_interval.strftime("%H:%M")}): {rows:,} rows')
+                if rows > 0:
+                    if args.batches:
+                        print(f'  Batch {i + 1}/{len(dataframes)}: {rows:,} rows')
+                    else:
+                        # Show time interval for hourly splits
+                        since_interval, until_interval = time_intervals[i]
+                        print(f'  Hour {i + 1} ({since_interval.strftime("%Y-%m-%d %H:%M")} - {until_interval.strftime("%H:%M")}): {rows:,} rows')
             print(f'  Total: {total_rows:,} rows')
         else:
             # Snapshot collector: show single result
             rows = count_rows(dataframes[0]) if dataframes else 0
-            print(f'  Rows: {rows:,}')
+            if rows > 0:
+                print(f'  Rows: {rows:,}')
 
         print()
 
@@ -362,14 +395,35 @@ Examples:
     # Compute anonymized rollup
     salt = 'salt'  # Default salt, could be made configurable
     print('Computing anonymized rollup from collected data...')
+    rollup_start_time = time.time()
+    rollup_elapsed_time = None
     try:
         json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+        rollup_elapsed_time = time.time() - rollup_start_time
         print('✓ Anonymized rollup computed successfully')
     except Exception as e:
+        rollup_elapsed_time = time.time() - rollup_start_time
         print(f'✗ Error computing anonymized rollup: {e}')
         import traceback
 
         traceback.print_exc()
+        # Print time summary even on error, then return
+        elapsed_time = time.time() - start_time
+        print()
+        print('=' * 70)
+        print('TIME SUMMARY')
+        print('=' * 70)
+        print()
+        print('Collectors:')
+        for collector_name, elapsed_time_collector in collector_times.items():
+            print(f'\t{collector_name}: {format_elapsed_time(elapsed_time_collector)}')
+        print()
+        if rollup_elapsed_time is not None:
+            print(f'\tcompute_anonymized_rollup_from_raw_data: {format_elapsed_time(rollup_elapsed_time)}')
+        print()
+        print(f'\tTotal elapsed time: {format_elapsed_time(elapsed_time)}')
+        print('=' * 70)
+        print()
         return results
 
     # Save final JSON
@@ -415,6 +469,24 @@ Examples:
             print(f'  └─ Contains {len(chunk[chunk_key])} items in {chunk_key}')
 
     print()
+    print('=' * 70)
+    print()
+
+    # Calculate and print time summary
+    elapsed_time = time.time() - start_time
+
+    print('=' * 70)
+    print('TIME SUMMARY')
+    print('=' * 70)
+    print()
+    print('Collectors:')
+    for collector_name, elapsed_time_collector in collector_times.items():
+        print(f'{collector_name}:\n {format_elapsed_time(elapsed_time_collector)}\n')
+    print()
+    if rollup_elapsed_time is not None:
+        print(f'compute_anonymized_rollup_from_raw_data:\n {format_elapsed_time(rollup_elapsed_time)}\n')
+    print()
+    print(f'Total elapsed time:\n {format_elapsed_time(elapsed_time)}\n')
     print('=' * 70)
     print()
 

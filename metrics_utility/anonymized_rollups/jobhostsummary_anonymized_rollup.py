@@ -43,8 +43,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Numeric columns to sum
         numeric_cols = [
-            'dark_total',
-            'failures_total',
+            'unreachable_total',
+            'failed_total',
             'ok_total',
             'skipped_total',
             'ignored_total',
@@ -52,7 +52,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             'successful_hosts_total',
             'failed_hosts_total',
             'unreachable_hosts_total',
-            'job_type_total',
             'launch_type_total',
         ]
 
@@ -103,8 +102,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
     def _recompute_totals(self, merged_item):
         """Recompute totals from list columns."""
-        if 'job_types' in merged_item:
-            merged_item['job_type_total'] = len(merged_item['job_types'])
         if 'launch_types' in merged_item:
             merged_item['launch_type_total'] = len(merged_item['launch_types'])
 
@@ -223,8 +220,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return (
             dataframe.groupby('job_remote_id')
             .agg(
-                dark_total=('dark', 'sum'),
-                failures_total=('failures', 'sum'),
+                unreachable_total=('dark', 'sum'),
+                failed_total=('failures', 'sum'),
                 ok_total=('ok', 'sum'),
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
@@ -244,8 +241,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return (
             dataframe.groupby(['model', 'launch_type', 'ansible_version'])
             .agg(
-                dark_total=('dark', 'sum'),
-                failures_total=('failures', 'sum'),
+                unreachable_total=('dark', 'sum'),
+                failed_total=('failures', 'sum'),
                 ok_total=('ok', 'sum'),
                 skipped_total=('skipped', 'sum'),
                 ignored_total=('ignored', 'sum'),
@@ -261,8 +258,8 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     def _get_common_aggregations(self):
         """Get common aggregation dictionary for grouping operations."""
         return {
-            'dark_total': ('dark_total', 'sum'),
-            'failures_total': ('failures_total', 'sum'),
+            'unreachable_total': ('unreachable_total', 'sum'),
+            'failed_total': ('failed_total', 'sum'),
             'ok_total': ('ok_total', 'sum'),
             'skipped_total': ('skipped_total', 'sum'),
             'ignored_total': ('ignored_total', 'sum'),
@@ -287,7 +284,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_launch_type_dict['job_types'] = ('job_type', lambda x: sorted(set(x.dropna())))
 
         aggregations_by_launch_type = aggregated_by_job.groupby('launch_type').agg(**aggregations_by_launch_type_dict).reset_index()
-        aggregations_by_launch_type['job_type_total'] = aggregations_by_launch_type['job_types'].apply(self._compute_list_length)
         return aggregations_by_launch_type
 
     def _aggregate_by_ansible_version(self, aggregated_by_job, common_aggregations):
@@ -297,7 +293,6 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         aggregations_by_ansible_version_dict['launch_types'] = ('launch_type', lambda x: sorted(set(x.dropna())))
 
         aggregations_by_ansible_version = aggregated_by_job.groupby('ansible_version').agg(**aggregations_by_ansible_version_dict).reset_index()
-        aggregations_by_ansible_version['job_type_total'] = aggregations_by_ansible_version['job_types'].apply(self._compute_list_length)
         aggregations_by_ansible_version['launch_type_total'] = aggregations_by_ansible_version['launch_types'].apply(self._compute_list_length)
         return aggregations_by_ansible_version
 
