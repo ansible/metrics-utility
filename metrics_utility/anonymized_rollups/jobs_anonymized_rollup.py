@@ -296,33 +296,29 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             val_new = item_new.get(col) if item_new.get(col) is not None else 0
             merged_item[col] = val_all + val_new
 
+    def _merge_max_value(self, val_all, val_new):
+        """Return the maximum of two nullable values."""
+        if val_all is not None and val_new is not None:
+            return max(val_all, val_new)
+        return val_all if val_all is not None else val_new
+
+    def _merge_min_value(self, val_all, val_new):
+        """Return the minimum of two nullable values."""
+        if val_all is not None and val_new is not None:
+            return min(val_all, val_new)
+        return val_all if val_all is not None else val_new
+
     def _merge_max_columns(self, merged_item, item_all, item_new):
         """Take maximum value for max columns."""
-        max_cols = ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']
-        for col in max_cols:
+        for col in ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']:
             if col in merged_item:
-                val_all = item_all.get(col)
-                val_new = item_new.get(col)
-                if val_all is not None and val_new is not None:
-                    merged_item[col] = max(val_all, val_new)
-                elif val_all is not None:
-                    merged_item[col] = val_all
-                elif val_new is not None:
-                    merged_item[col] = val_new
+                merged_item[col] = self._merge_max_value(item_all.get(col), item_new.get(col))
 
     def _merge_min_columns(self, merged_item, item_all, item_new):
         """Take minimum value for min columns."""
-        min_cols = ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']
-        for col in min_cols:
+        for col in ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']:
             if col in merged_item:
-                val_all = item_all.get(col)
-                val_new = item_new.get(col)
-                if val_all is not None and val_new is not None:
-                    merged_item[col] = min(val_all, val_new)
-                elif val_all is not None:
-                    merged_item[col] = val_all
-                elif val_new is not None:
-                    merged_item[col] = val_new
+                merged_item[col] = self._merge_min_value(item_all.get(col), item_new.get(col))
 
     def _merge_list_columns(self, merged_item, item_all, item_new, list_cols):
         """Union list columns from both items."""
@@ -372,67 +368,43 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         new_set = set(data_new.get(field_name, []))
         return sorted(all_set.union(new_set))
 
+    def _merge_single_collection(self, item_all, item_new):
+        """Merge two collection stat items by summing numerics, taking max/min, and unioning lists."""
+        numeric_cols = [
+            'job_count',
+            'jobs_failed_total',
+            'jobs_successful_total',
+            'jobs_never_started_total',
+            'jobs_duration_total_seconds',
+            'jobs_successful_duration_total_seconds',
+            'jobs_failed_duration_total_seconds',
+            'job_waiting_time_total_seconds',
+        ]
+        merged = {col: item_all.get(col, 0) + item_new.get(col, 0) for col in numeric_cols}
+
+        for col in ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']:
+            merged[col] = self._merge_max_value(item_all.get(col), item_new.get(col))
+
+        for col in ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']:
+            merged[col] = self._merge_min_value(item_all.get(col), item_new.get(col))
+
+        for col, total_col in [('templates', 'templates_total'), ('inventories', 'inventories_total')]:
+            merged_list = sorted(set(item_all.get(col) or []) | set(item_new.get(col) or []))
+            merged[col] = merged_list
+            merged[total_col] = len(merged_list)
+
+        merged['ansible_versions'] = sorted(set(item_all.get('ansible_versions') or []) | set(item_new.get('ansible_versions') or []))
+
+        return merged
+
     def _merge_collections(self, data_all, data_new):
         """Merge installed_collections by summing numeric fields, taking max/min for extremes,
         and unioning list fields for the same collection+version."""
         collections_all = {(item['collection_name'], item['collection_version']): item for item in data_all.get('installed_collections', [])}
         collections_new = {(item['collection_name'], item['collection_version']): item for item in data_new.get('installed_collections', [])}
 
-        merged_collections = {}
-        all_collection_keys = set(collections_all.keys()) | set(collections_new.keys())
-        for key in all_collection_keys:
-            item_all = collections_all.get(key, {})
-            item_new = collections_new.get(key, {})
-
-            # Numeric sum columns
-            merged = {
-                'job_count': item_all.get('job_count', 0) + item_new.get('job_count', 0),
-                'jobs_failed_total': item_all.get('jobs_failed_total', 0) + item_new.get('jobs_failed_total', 0),
-                'jobs_successful_total': item_all.get('jobs_successful_total', 0) + item_new.get('jobs_successful_total', 0),
-                'jobs_never_started_total': item_all.get('jobs_never_started_total', 0) + item_new.get('jobs_never_started_total', 0),
-                'jobs_duration_total_seconds': item_all.get('jobs_duration_total_seconds', 0) + item_new.get('jobs_duration_total_seconds', 0),
-                'jobs_successful_duration_total_seconds': (
-                    item_all.get('jobs_successful_duration_total_seconds', 0) + item_new.get('jobs_successful_duration_total_seconds', 0)
-                ),
-                'jobs_failed_duration_total_seconds': (
-                    item_all.get('jobs_failed_duration_total_seconds', 0) + item_new.get('jobs_failed_duration_total_seconds', 0)
-                ),
-                'job_waiting_time_total_seconds': item_all.get('job_waiting_time_total_seconds', 0)
-                + item_new.get('job_waiting_time_total_seconds', 0),
-            }
-
-            # Max columns
-            for col in ['job_duration_maximum_seconds', 'job_waiting_time_maximum_seconds']:
-                val_all = item_all.get(col)
-                val_new = item_new.get(col)
-                if val_all is not None and val_new is not None:
-                    merged[col] = max(val_all, val_new)
-                else:
-                    merged[col] = val_all if val_all is not None else val_new
-
-            # Min columns
-            for col in ['job_duration_minimum_seconds', 'job_waiting_time_minimum_seconds']:
-                val_all = item_all.get(col)
-                val_new = item_new.get(col)
-                if val_all is not None and val_new is not None:
-                    merged[col] = min(val_all, val_new)
-                else:
-                    merged[col] = val_all if val_all is not None else val_new
-
-            # List columns (union for deduplication)
-            for col, total_col in [('templates', 'templates_total'), ('inventories', 'inventories_total')]:
-                list_all = item_all.get(col) or []
-                list_new = item_new.get(col) or []
-                merged_list = sorted(set(list_all) | set(list_new))
-                merged[col] = merged_list
-                merged[total_col] = len(merged_list)
-
-            # Ansible versions (union)
-            versions_all = item_all.get('ansible_versions') or []
-            versions_new = item_new.get('ansible_versions') or []
-            merged['ansible_versions'] = sorted(set(versions_all) | set(versions_new))
-
-            merged_collections[key] = merged
+        all_keys = set(collections_all.keys()) | set(collections_new.keys())
+        merged_collections = {key: self._merge_single_collection(collections_all.get(key, {}), collections_new.get(key, {})) for key in all_keys}
 
         installed_collections = [
             {'collection_name': collection_name, 'collection_version': collection_version, **stats}
@@ -578,6 +550,91 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         return None
 
+    def _init_collection_stats_entry(self):
+        """Return a blank stats entry for a new collection+version key."""
+        return {
+            'job_count': 0,
+            'jobs_failed_total': 0,
+            'jobs_successful_total': 0,
+            'jobs_never_started_total': 0,
+            'jobs_duration_total_seconds': 0,
+            'jobs_successful_duration_total_seconds': 0,
+            'jobs_failed_duration_total_seconds': 0,
+            'job_duration_maximum_seconds': None,
+            'job_duration_minimum_seconds': None,
+            'job_waiting_time_total_seconds': 0,
+            'job_waiting_time_maximum_seconds': None,
+            'job_waiting_time_minimum_seconds': None,
+            'templates': set(),
+            'inventories': set(),
+            'ansible_versions': set(),
+        }
+
+    def _is_valid_id(self, value):
+        """Return True when value is a non-None, non-NaN identifier."""
+        return value is not None and not (isinstance(value, float) and pd.isna(value))
+
+    def _update_duration_stats(self, stats, duration, failed):
+        """Update duration-related fields in a collection stats entry."""
+        if duration is None or pd.isna(duration):
+            return
+        stats['jobs_duration_total_seconds'] += duration
+        if failed:
+            stats['jobs_failed_duration_total_seconds'] += duration
+        else:
+            stats['jobs_successful_duration_total_seconds'] += duration
+        stats['job_duration_maximum_seconds'] = self._merge_max_value(stats['job_duration_maximum_seconds'], duration)
+        stats['job_duration_minimum_seconds'] = self._merge_min_value(stats['job_duration_minimum_seconds'], duration)
+
+    def _update_waiting_time_stats(self, stats, waiting_time):
+        """Update waiting-time-related fields in a collection stats entry."""
+        if waiting_time is None or pd.isna(waiting_time):
+            return
+        stats['job_waiting_time_total_seconds'] += waiting_time
+        stats['job_waiting_time_maximum_seconds'] = self._merge_max_value(stats['job_waiting_time_maximum_seconds'], waiting_time)
+        stats['job_waiting_time_minimum_seconds'] = self._merge_min_value(stats['job_waiting_time_minimum_seconds'], waiting_time)
+
+    def _update_collection_set_fields(self, stats, row_stats):
+        """Add template, inventory, and ansible_version values to their respective sets."""
+        template_id = row_stats.get('unified_job_template_id')
+        if self._is_valid_id(template_id):
+            stats['templates'].add(template_id)
+
+        inventory_id = row_stats.get('inventory_id')
+        if self._is_valid_id(inventory_id):
+            stats['inventories'].add(inventory_id)
+
+        ansible_version = row_stats.get('ansible_version')
+        if self._is_valid_id(ansible_version):
+            stats['ansible_versions'].add(str(ansible_version))
+
+    def _process_single_collection(self, collection_name, collection_info, collections_stats, failed, row_stats):
+        """Process one collection entry from a job row, updating collections_stats in place."""
+        if not isinstance(collection_info, dict):
+            return
+
+        version = collection_info.get('version', '')
+        if not version:
+            return
+
+        key = (collection_name, str(version))
+        if key not in collections_stats:
+            collections_stats[key] = self._init_collection_stats_entry()
+
+        stats = collections_stats[key]
+        stats['job_count'] += 1
+        if failed:
+            stats['jobs_failed_total'] += 1
+        else:
+            stats['jobs_successful_total'] += 1
+
+        if row_stats.get('jobs_never_started'):
+            stats['jobs_never_started_total'] += 1
+
+        self._update_duration_stats(stats, row_stats.get('job_duration_seconds'), failed)
+        self._update_waiting_time_stats(stats, row_stats.get('job_waiting_time_seconds'))
+        self._update_collection_set_fields(stats, row_stats)
+
     def _process_collections_dict(self, collections_data, collections_stats, failed, row_stats):
         """
         Process a collections dict and update the stats dict with collection name/version pairs,
@@ -591,76 +648,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             return
 
         for collection_name, collection_info in collections_data.items():
-            if not isinstance(collection_info, dict):
-                continue
-
-            version = collection_info.get('version', '')
-            if version:
-                key = (collection_name, str(version))
-                if key not in collections_stats:
-                    collections_stats[key] = {
-                        'job_count': 0,
-                        'jobs_failed_total': 0,
-                        'jobs_successful_total': 0,
-                        'jobs_never_started_total': 0,
-                        'jobs_duration_total_seconds': 0,
-                        'jobs_successful_duration_total_seconds': 0,
-                        'jobs_failed_duration_total_seconds': 0,
-                        'job_duration_maximum_seconds': None,
-                        'job_duration_minimum_seconds': None,
-                        'job_waiting_time_total_seconds': 0,
-                        'job_waiting_time_maximum_seconds': None,
-                        'job_waiting_time_minimum_seconds': None,
-                        'templates': set(),
-                        'inventories': set(),
-                        'ansible_versions': set(),
-                    }
-                stats = collections_stats[key]
-                stats['job_count'] += 1
-                if failed:
-                    stats['jobs_failed_total'] += 1
-                else:
-                    stats['jobs_successful_total'] += 1
-
-                # Never started
-                if row_stats.get('jobs_never_started'):
-                    stats['jobs_never_started_total'] += 1
-
-                # Duration stats
-                duration = row_stats.get('job_duration_seconds')
-                if duration is not None and not pd.isna(duration):
-                    stats['jobs_duration_total_seconds'] += duration
-                    if failed:
-                        stats['jobs_failed_duration_total_seconds'] += duration
-                    else:
-                        stats['jobs_successful_duration_total_seconds'] += duration
-                    if stats['job_duration_maximum_seconds'] is None or duration > stats['job_duration_maximum_seconds']:
-                        stats['job_duration_maximum_seconds'] = duration
-                    if stats['job_duration_minimum_seconds'] is None or duration < stats['job_duration_minimum_seconds']:
-                        stats['job_duration_minimum_seconds'] = duration
-
-                # Waiting time stats
-                waiting_time = row_stats.get('job_waiting_time_seconds')
-                if waiting_time is not None and not pd.isna(waiting_time):
-                    stats['job_waiting_time_total_seconds'] += waiting_time
-                    if stats['job_waiting_time_maximum_seconds'] is None or waiting_time > stats['job_waiting_time_maximum_seconds']:
-                        stats['job_waiting_time_maximum_seconds'] = waiting_time
-                    if stats['job_waiting_time_minimum_seconds'] is None or waiting_time < stats['job_waiting_time_minimum_seconds']:
-                        stats['job_waiting_time_minimum_seconds'] = waiting_time
-
-                # Templates and inventories (for deduplication)
-                template_id = row_stats.get('unified_job_template_id')
-                if template_id is not None and not (isinstance(template_id, float) and pd.isna(template_id)):
-                    stats['templates'].add(template_id)
-
-                inventory_id = row_stats.get('inventory_id')
-                if inventory_id is not None and not (isinstance(inventory_id, float) and pd.isna(inventory_id)):
-                    stats['inventories'].add(inventory_id)
-
-                # Ansible versions
-                ansible_version = row_stats.get('ansible_version')
-                if ansible_version is not None and not (isinstance(ansible_version, float) and pd.isna(ansible_version)):
-                    stats['ansible_versions'].add(str(ansible_version))
+            self._process_single_collection(collection_name, collection_info, collections_stats, failed, row_stats)
 
     def _hash_installed_collections(self, raw):
         """Compute a SHA-256 hash of the raw installed_collections string.
