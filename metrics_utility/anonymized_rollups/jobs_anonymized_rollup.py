@@ -1,3 +1,4 @@
+import hashlib
 import json
 
 import pandas as pd
@@ -565,6 +566,16 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
                 else:
                     collections_stats[key]['jobs_successful_total'] += 1
 
+    def _hash_installed_collections(self, raw):
+        """Compute a SHA-256 hash of the raw installed_collections string.
+
+        Used as a cache key to avoid re-parsing identical JSON payloads
+        (e.g. all jobs that share the same execution environment).
+        SHA-256 is used instead of the raw string to keep the cache memory-efficient
+        when the JSON payload is large.
+        """
+        return hashlib.sha256(raw.encode('utf-8', errors='replace')).hexdigest()
+
     def _process_collections_from_jobs(self, dataframe):
         """
         Extract unique collection name and version pairs from jobs dataframe.
@@ -572,6 +583,9 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         including failed and successful job counts.
 
         Optimized version using itertuples() for better performance.
+        Additionally uses a hash-based cache to avoid re-parsing identical
+        installed_collections JSON payloads (common when many jobs share the
+        same execution environment).
 
         Returns a list of dicts with:
         - collection_name: str
@@ -586,12 +600,28 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Use dict for tracking job_count, jobs_failed_total, jobs_successful_total per collection+version
         collections_stats = {}
 
+        # Cache: SHA-256 hash of raw JSON string -> parsed collections dict
+        # Many jobs share the same installed_collections because they run on the
+        # same execution environment, so we avoid redundant json.loads() calls.
+        parse_cache = {}
+
         # Use itertuples() for fastest row iteration (10-100x faster than iterrows)
         # itertuples() creates namedtuples with column names as attributes
         # Column names with special characters are sanitized, but 'installed_collections' should work fine
         for row in dataframe.itertuples(index=False):
             installed_collections_data = getattr(row, 'installed_collections', None)
-            collections_data = self._parse_collections_data(installed_collections_data)
+
+            if not installed_collections_data or pd.isna(installed_collections_data):
+                continue
+
+            # Use hash of the raw string as cache key to avoid storing large strings
+            raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
+            cache_key = self._hash_installed_collections(raw)
+
+            if cache_key not in parse_cache:
+                parse_cache[cache_key] = self._parse_collections_data(installed_collections_data)
+
+            collections_data = parse_cache[cache_key]
             if collections_data:
                 failed = bool(getattr(row, 'failed', False))
                 self._process_collections_dict(collections_data, collections_stats, failed)
