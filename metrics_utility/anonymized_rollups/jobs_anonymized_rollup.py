@@ -318,6 +318,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             merged_item['templates_total'] = len(merged_item['templates'])
         if 'inventories' in merged_item:
             merged_item['inventories_total'] = len(merged_item['inventories'])
+
     def _merge_list_fields(self, data_all, data_new, field_name):
         """Merge list fields by union and sort."""
         all_set = set(data_all.get(field_name, []))
@@ -327,14 +328,8 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
     def _merge_collections(self, data_all, data_new):
         """Merge installed_collections by summing job_count, jobs_failed_total, and
         jobs_successful_total for the same collection+version."""
-        collections_all = {
-            (item['collection_name'], item['collection_version']): item
-            for item in data_all.get('installed_collections', [])
-        }
-        collections_new = {
-            (item['collection_name'], item['collection_version']): item
-            for item in data_new.get('installed_collections', [])
-        }
+        collections_all = {(item['collection_name'], item['collection_version']): item for item in data_all.get('installed_collections', [])}
+        collections_new = {(item['collection_name'], item['collection_version']): item for item in data_new.get('installed_collections', [])}
 
         merged_collections = {}
         all_collection_keys = set(collections_all.keys()) | set(collections_new.keys())

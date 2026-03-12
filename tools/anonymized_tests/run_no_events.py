@@ -35,13 +35,14 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 
+
 # Add metrics_utility to path
 current_dir = Path(__file__).resolve().parent
 metrics_utility_path = current_dir.parent.parent
 sys.path.insert(0, str(metrics_utility_path))
 
 # Initialize Django before importing Django components
-from metrics_utility import prepare
+from metrics_utility import prepare  # noqa: E402
 
 
 prepare()
