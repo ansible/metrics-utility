@@ -43,7 +43,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
 
         # Numeric columns to sum
         numeric_cols = [
-            'dark_total',
+            'unreachable_total',
             'failures_total',
             'ok_total',
             'skipped_total',
@@ -220,7 +220,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return (
             dataframe.groupby('job_remote_id')
             .agg(
-                dark_total=('dark', 'sum'),
+                unreachable_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
                 ok_total=('ok', 'sum'),
                 skipped_total=('skipped', 'sum'),
@@ -241,7 +241,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return (
             dataframe.groupby(['model', 'launch_type', 'ansible_version'])
             .agg(
-                dark_total=('dark', 'sum'),
+                unreachable_total=('dark', 'sum'),
                 failures_total=('failures', 'sum'),
                 ok_total=('ok', 'sum'),
                 skipped_total=('skipped', 'sum'),
@@ -258,7 +258,7 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     def _get_common_aggregations(self):
         """Get common aggregation dictionary for grouping operations."""
         return {
-            'dark_total': ('dark_total', 'sum'),
+            'unreachable_total': ('unreachable_total', 'sum'),
             'failures_total': ('failures_total', 'sum'),
             'ok_total': ('ok_total', 'sum'),
             'skipped_total': ('skipped_total', 'sum'),

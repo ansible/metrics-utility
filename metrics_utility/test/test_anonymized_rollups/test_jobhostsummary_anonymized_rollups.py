@@ -295,7 +295,7 @@ def test_jobhostsummary_anonymized():
     # Note: unique_hosts_total is only at top level, not in groupings
 
     # Verify totals for 'job' type (T1: 10 hosts × 3 tasks = 30 tasks, but we have 26 ok + 2 failures + 2 skipped = 30)
-    assert job_type_data['dark_total'] == 0
+    assert job_type_data['unreachable_total'] == 0
     assert job_type_data['failures_total'] == 2  # T1: 2 failures
     assert job_type_data['ok_total'] == 26  # T1: 26 ok
     assert job_type_data['skipped_total'] == 2  # T1: 2 skipped
@@ -308,7 +308,7 @@ def test_jobhostsummary_anonymized():
     # Note: unique_hosts_total is only at top level, not in groupings
 
     # Verify totals for 'workflowjob' type (T2: 6 hosts × 5 tasks = 30 tasks, but we have 26 ok + 4 failures = 30)
-    assert workflowjob_type_data['dark_total'] == 0
+    assert workflowjob_type_data['unreachable_total'] == 0
     assert workflowjob_type_data['failures_total'] == 4  # T2: 4 failures
     assert workflowjob_type_data['ok_total'] == 26  # T2: 26 ok
     assert workflowjob_type_data['skipped_total'] == 0  # T2: 0 skipped

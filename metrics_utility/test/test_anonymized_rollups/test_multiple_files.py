@@ -195,7 +195,7 @@ def _validate_job_host_summary(jobs_list, result):
     assert job_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for job type'
     assert job_type_entry['failures_total'] == 2, 'Should have 2 failures for job type'
     assert job_type_entry['skipped_total'] == 2, 'Should have 2 skipped for job type'
-    assert job_type_entry['dark_total'] == 0, 'Should have 0 dark for job type'
+    assert job_type_entry['unreachable_total'] == 0, 'Should have 0 dark for job type'
     assert job_type_entry['ignored_total'] == 0, 'Should have 0 ignored for job type'
     assert job_type_entry['rescued_total'] == 0, 'Should have 0 rescued for job type'
 
@@ -205,7 +205,7 @@ def _validate_job_host_summary(jobs_list, result):
     assert workflowjob_type_entry['ok_total'] == 26, 'Should have 26 ok tasks for workflowjob type'
     assert workflowjob_type_entry['failures_total'] == 4, 'Should have 4 failures for workflowjob type'
     assert workflowjob_type_entry['skipped_total'] == 0, 'Should have 0 skipped for workflowjob type'
-    assert workflowjob_type_entry['dark_total'] == 0, 'Should have 0 dark for workflowjob type'
+    assert workflowjob_type_entry['unreachable_total'] == 0, 'Should have 0 dark for workflowjob type'
     assert workflowjob_type_entry['ignored_total'] == 0, 'Should have 0 ignored for workflowjob type'
     assert workflowjob_type_entry['rescued_total'] == 0, 'Should have 0 rescued for workflowjob type'
 
@@ -219,7 +219,7 @@ def _validate_job_host_summary(jobs_list, result):
     total_ok = sum(j.get('ok_total', 0) for j in jobs_list)
     total_failures = sum(j.get('failures_total', 0) for j in jobs_list)
     total_skipped = sum(j.get('skipped_total', 0) for j in jobs_list)
-    total_dark = sum(j.get('dark_total', 0) for j in jobs_list)
+    total_dark = sum(j.get('unreachable_total', 0) for j in jobs_list)
     total_ignored = sum(j.get('ignored_total', 0) for j in jobs_list)
     assert total_ok == 52, 'Should have 52 ok tasks total (26 from job + 26 from workflowjob)'
     assert total_failures == 6, 'Should have 6 failures total (2 from job + 4 from workflowjob)'

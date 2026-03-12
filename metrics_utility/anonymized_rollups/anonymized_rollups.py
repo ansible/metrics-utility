@@ -145,7 +145,7 @@ def _normalize_ansible_version_key(ansible_version: Any) -> str:
 def _get_default_host_summary_fields() -> Dict[str, int]:
     """Get default values for host summary fields when no match is found."""
     return {
-        'dark_total': 0,
+        'unreachable_total': 0,
         'failures_total': 0,
         'ok_total': 0,
         'skipped_total': 0,
@@ -164,7 +164,7 @@ def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
     not per grouping.
     """
     return {
-        'dark_total': jhs_data.get('dark_total', 0),
+        'unreachable_total': jhs_data.get('unreachable_total', 0),
         'failures_total': jhs_data.get('failures_total', 0),
         'ok_total': jhs_data.get('ok_total', 0),
         'skipped_total': jhs_data.get('skipped_total', 0),
@@ -269,7 +269,7 @@ def _calculate_task_statistics(jobs_by_job_type_merged: List[Dict[str, Any]]) ->
     task_ok = sum(job.get('ok_total', 0) for job in jobs_by_job_type_merged)
     task_failed = sum(job.get('failures_total', 0) for job in jobs_by_job_type_merged)
     task_skipped = sum(job.get('skipped_total', 0) for job in jobs_by_job_type_merged)
-    task_unreachable = sum(job.get('dark_total', 0) for job in jobs_by_job_type_merged)
+    task_unreachable = sum(job.get('unreachable_total', 0) for job in jobs_by_job_type_merged)
     task_ignored = sum(job.get('ignored_total', 0) for job in jobs_by_job_type_merged)
 
     return {
