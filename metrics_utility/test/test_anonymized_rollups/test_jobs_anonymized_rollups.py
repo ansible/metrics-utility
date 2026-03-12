@@ -440,6 +440,36 @@ def test_jobs_anonymized_rollups_base_aggregation():
         f'by_launch_type={total_jobs_by_launch_type}, by_ansible_version={total_jobs_by_ansible_version}'
     )
 
+    # ========== Validate jobs_by_controller_version aggregation ==========
+    # This is a single-item array summarising ALL valid jobs combined
+    assert 'jobs_by_controller_version' in result, 'Should have jobs_by_controller_version in result'
+    ctrl_summary_list = result['jobs_by_controller_version']
+    assert isinstance(ctrl_summary_list, list), 'jobs_by_controller_version should be a list'
+    assert len(ctrl_summary_list) == 1, 'jobs_by_controller_version should contain exactly 1 item'
+
+    ctrl_summary = ctrl_summary_list[0]
+    # Counts: jobs 1,2,3,4,6 are valid (job 5 filtered - no finished)
+    assert ctrl_summary['jobs_total'] == 5
+    assert ctrl_summary['jobs_failed_total'] == 2       # jobs 2 and 6
+    assert ctrl_summary['jobs_successful_total'] == 3   # jobs 1, 3, 4
+    assert ctrl_summary['jobs_never_started_total'] == 1  # job 6 has started=None
+    assert ctrl_summary['templates_total'] == 3         # T1 (id=1), T2 (id=2), T3 (id=3)
+    assert ctrl_summary['inventories_total'] == 3       # inventory_id 1, 2, 3
+    # Durations: 3s + 5s + 7s + 2s = 17s (job 6 is NaN, skipped in sum)
+    assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(17.0, rel=1e-6)
+    assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(7.0, rel=1e-6)   # job 3
+    assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(2.0, rel=1e-6)   # job 4
+    # Waiting times: 0s + 2s + 4s + 1s = 7s (job 6 is NaN, skipped)
+    assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(7.0, rel=1e-6)
+    assert ctrl_summary['job_waiting_time_maximum_seconds'] == pytest.approx(4.0, rel=1e-6)  # job 3
+    assert ctrl_summary['job_waiting_time_minimum_seconds'] == pytest.approx(0.0, rel=1e-6)  # job 1
+    # All unique ansible versions across all valid jobs
+    assert ctrl_summary['ansible_versions'] == ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
+    # controller_version is NOT set at the base() stage - it is injected in flatten_json_report
+    assert 'controller_version' not in ctrl_summary, (
+        'controller_version should not be present in base() output; it is injected in flatten_json_report'
+    )
+
 
 def test_jobs_anonymized_rollups_ansible_version():
     """Test that organizations_total is correctly aggregated at top level."""
@@ -760,4 +790,19 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
     assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
     assert result['rollup_period_scm_types'] == ['git', 'svn', 'unknown'], (
         f"Expected ['git', 'svn', 'unknown'] for rollup_period_scm_types, got {result['rollup_period_scm_types']}"
+    )
+
+    # Validate jobs_by_controller_version in the flattened output
+    assert 'jobs_by_controller_version' in result, 'Should have jobs_by_controller_version in result'
+    ctrl_summary_list = result['jobs_by_controller_version']
+    assert isinstance(ctrl_summary_list, list), 'jobs_by_controller_version should be a list'
+    assert len(ctrl_summary_list) == 1, 'jobs_by_controller_version should have exactly 1 item'
+    ctrl_summary = ctrl_summary_list[0]
+    assert ctrl_summary['jobs_total'] == 5, f'Expected 5 total jobs, got {ctrl_summary["jobs_total"]}'
+    assert ctrl_summary['jobs_failed_total'] == 2
+    assert ctrl_summary['jobs_successful_total'] == 3
+    # No controller_version data was provided in input_data, so it is injected as None
+    assert ctrl_summary.get('controller_version') is None, (
+        f'controller_version should be None when no controller_version data is provided, '
+        f'got {ctrl_summary.get("controller_version")!r}'
     )

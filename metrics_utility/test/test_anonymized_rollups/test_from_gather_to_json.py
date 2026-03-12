@@ -49,6 +49,7 @@ def _validate_top_level_structure(json_data):
     assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
+    assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"
     assert 'table_metadata' in json_data, "Missing 'table_metadata' at top level"
     assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
 
@@ -685,6 +686,60 @@ def _validate_table_metadata_values(json_data):
     assert isinstance(table_metadata, dict), 'table_metadata should be a dictionary'
 
 
+def _validate_jobs_by_controller_version(json_data, statistics):
+    """Validate jobs_by_controller_version: 1 item, correct stats, correct controller_version."""
+    print('--- Validating jobs_by_controller_version data values ---')
+    ctrl_summary_list = json_data['jobs_by_controller_version']
+    assert isinstance(ctrl_summary_list, list), 'jobs_by_controller_version should be a list'
+    assert len(ctrl_summary_list) == 1, 'jobs_by_controller_version should contain exactly 1 item'
+
+    ctrl_summary = ctrl_summary_list[0]
+
+    # controller_version should be the first (smallest) version from the sorted controller_versions list
+    controller_versions = json_data.get('controller_versions', [])
+    expected_controller_version = controller_versions[0] if controller_versions else None
+    assert ctrl_summary.get('controller_version') == expected_controller_version, (
+        f'Expected controller_version {expected_controller_version!r}, '
+        f'got {ctrl_summary.get("controller_version")!r}'
+    )
+
+    # Totals must match the overall statistics (summary covers all jobs)
+    assert ctrl_summary['jobs_total'] == statistics['rollup_period_jobs_total'], (
+        f'jobs_total should match statistics: '
+        f'expected {statistics["rollup_period_jobs_total"]}, got {ctrl_summary["jobs_total"]}'
+    )
+    assert ctrl_summary['jobs_failed_total'] == statistics['rollup_period_jobs_failed'], (
+        f'jobs_failed_total should match statistics: '
+        f'expected {statistics["rollup_period_jobs_failed"]}, got {ctrl_summary["jobs_failed_total"]}'
+    )
+    assert ctrl_summary['jobs_successful_total'] == statistics['rollup_period_jobs_successful'], (
+        f'jobs_successful_total should match statistics: '
+        f'expected {statistics["rollup_period_jobs_successful"]}, got {ctrl_summary["jobs_successful_total"]}'
+    )
+
+    # Duration and waiting totals must also match the known multi-hour values
+    assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
+        f'jobs_duration_total_seconds should be 720s (390+330), got {ctrl_summary["jobs_duration_total_seconds"]}'
+    )
+    assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6)
+    assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6)
+    assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6), (
+        f'job_waiting_time_total_seconds should be 120s (60+60), got {ctrl_summary["job_waiting_time_total_seconds"]}'
+    )
+
+    # Required fields
+    for field in [
+        'jobs_total', 'jobs_failed_total', 'jobs_successful_total', 'jobs_never_started_total',
+        'templates_total', 'inventories_total',
+        'jobs_duration_total_seconds', 'job_duration_maximum_seconds', 'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds', 'job_waiting_time_maximum_seconds', 'job_waiting_time_minimum_seconds',
+        'ansible_versions',
+    ]:
+        assert field in ctrl_summary, f'Should have {field} in jobs_by_controller_version item'
+    assert isinstance(ctrl_summary['ansible_versions'], list), 'ansible_versions should be a list'
+    assert len(ctrl_summary['ansible_versions']) > 0, 'ansible_versions should not be empty'
+
+
 def _validate_controller_versions(json_data):
     """Validate controller_versions structure and values."""
     print('--- Validating controller_versions data values ---')
@@ -842,6 +897,7 @@ def _validate_all_data(json_data, statistics):
     _validate_table_metadata_structure(json_data)
     _validate_table_metadata_values(json_data)
     _validate_controller_versions(json_data)
+    _validate_jobs_by_controller_version(json_data, statistics)
 
     print('✅ All data value assertions passed!')
 

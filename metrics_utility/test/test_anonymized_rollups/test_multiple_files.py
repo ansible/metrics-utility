@@ -364,6 +364,36 @@ def _validate_collections_versions(result):
         )
 
 
+def _validate_jobs_by_controller_version(result):
+    """Validate jobs_by_controller_version: 1 item summarising all valid jobs."""
+    assert 'jobs_by_controller_version' in result, 'Should have jobs_by_controller_version in result'
+    ctrl_summary_list = result['jobs_by_controller_version']
+    assert isinstance(ctrl_summary_list, list), 'jobs_by_controller_version should be a list'
+    assert len(ctrl_summary_list) == 1, 'jobs_by_controller_version should contain exactly 1 item'
+
+    ctrl_summary = ctrl_summary_list[0]
+    # 5 valid jobs total (job 5 filtered - no finished)
+    assert ctrl_summary['jobs_total'] == 5
+    assert ctrl_summary['jobs_failed_total'] == 2        # jobs 2 and 6
+    assert ctrl_summary['jobs_successful_total'] == 3    # jobs 1, 3, 4
+    assert ctrl_summary['jobs_never_started_total'] == 1  # job 6 has started=None
+    assert ctrl_summary['templates_total'] == 3          # T1, T2, T3
+    assert ctrl_summary['inventories_total'] == 3        # inventory_id 1, 2, 3
+    # Durations: 3+5+7+2 = 17s (job 6 NaN skipped)
+    assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(17.0)
+    assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(7.0)
+    assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(2.0)
+    # Waiting: 0+2+4+1 = 7s (job 6 NaN skipped)
+    assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(7.0)
+    assert ctrl_summary['job_waiting_time_maximum_seconds'] == pytest.approx(4.0)
+    assert ctrl_summary['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
+    assert ctrl_summary['ansible_versions'] == ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
+    # No controller_version data in input_data -> injected as None
+    assert ctrl_summary.get('controller_version') is None, (
+        f'controller_version should be None when not provided, got {ctrl_summary.get("controller_version")!r}'
+    )
+
+
 def _validate_jobs_by_launch_type(result):
     """Validate jobs_by_launch_type section."""
     jobs_by_launch_type_list = result['jobs_by_launch_type']
@@ -605,6 +635,9 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Validate Jobs by Ansible Version ==========
     _validate_jobs_by_ansible_version(result)
 
+    # ========== Validate Jobs by Controller Version ==========
+    _validate_jobs_by_controller_version(result)
+
 
 def test_empty_csv_files_handling(cleanup_test_data):
     """
@@ -767,3 +800,10 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Verify scm_types field is present but empty when there's no data
     assert 'rollup_period_scm_types' in result, 'Should have rollup_period_scm_types at top level'
     assert result['rollup_period_scm_types'] == [], 'Should have empty scm_types list when there is no jobs data'
+
+    # jobs_by_controller_version should be present but empty when there is no jobs data
+    assert 'jobs_by_controller_version' in result, 'Should have jobs_by_controller_version even with empty data'
+    assert isinstance(result['jobs_by_controller_version'], list), 'jobs_by_controller_version should be a list'
+    assert len(result['jobs_by_controller_version']) == 0, (
+        'jobs_by_controller_version should be empty when there are no jobs'
+    )
