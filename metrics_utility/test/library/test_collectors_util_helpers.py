@@ -227,7 +227,7 @@ class TestCopyTablePandasPsycopg:
 
     def test_import_error_silently_ignored(self):
         """When psycopg is not importable, execution continues without error."""
-        mock_db, mock_cursor = self._make_mock_db()
+        mock_db, _ = self._make_mock_db()
 
         with patch.dict('sys.modules', {'psycopg': None}):
             result = _copy_table_pandas(mock_db, 'SELECT id, data FROM test')
