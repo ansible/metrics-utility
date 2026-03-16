@@ -1,5 +1,6 @@
 import csv
 import glob
+import json
 import os
 
 from datetime import datetime, timezone
@@ -104,6 +105,7 @@ def _parse_expected_csv(expected_lines):
 def _read_dataframe(df):
     # Convert boolean columns from True/False to t/f
     # Convert float columns that are actually integers to Int64
+    # Serialize dict/list columns to JSON so they match the expected CSV format
     df_copy = df.copy()
     for col in df_copy.columns:
         if df_copy[col].dtype == 'bool':
@@ -113,6 +115,13 @@ def _read_dataframe(df):
             non_null_values = df_copy[col].dropna()
             if len(non_null_values) > 0 and (non_null_values == non_null_values.astype(int)).all():
                 df_copy[col] = df_copy[col].astype('Int64')
+        elif df_copy[col].dtype == 'object':
+            # Serialize dicts/lists to JSON strings so that to_csv() produces valid JSON
+            # instead of Python repr() (single quotes vs double quotes)
+            if df_copy[col].apply(lambda x: isinstance(x, (dict, list))).any():
+                df_copy[col] = df_copy[col].apply(
+                    lambda x: json.dumps(x, sort_keys=True) if isinstance(x, (dict, list)) else x
+                )
 
     text = df_copy.to_csv(index=False).splitlines()
     reader = csv.reader(text)

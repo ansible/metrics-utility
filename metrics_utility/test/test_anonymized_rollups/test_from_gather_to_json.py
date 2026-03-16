@@ -383,6 +383,79 @@ def _validate_jobs_by_installed_collections_versions(json_data):
         assert isinstance(collection['ansible_versions'], list)
 
 
+def _validate_jobs_by_installed_collections_versions_values(json_data):
+    """Validate jobs_by_installed_collections_versions actual values for multi-hour data (6 jobs total).
+
+    Test data installed_collections:
+      10:00 hour – job 1 & 2: ansible.builtin@2.9.10, a10.acos_axapi@1.0.0
+                   job 3:     ansible.builtin@2.9.10, a10.acos_axapi@1.0.0, redhat.rhel_system_roles@1.23.0
+      11:00 hour – job 1 & 2: ansible.builtin@2.9.10, a10.acos_axapi@1.0.0, redhat.rhel_system_roles@1.23.0
+                   job 3:     ansible.builtin@2.9.10, a10.acos_axapi@1.0.0
+
+    Expected after anonymization:
+      - a10.acos_axapi 1.0.0           → 6 jobs (all)
+      - Custom Custom (ansible.builtin) → 6 jobs (all, anonymized because not in collections.json)
+      - redhat.rhel_system_roles 1.23.0 → 3 jobs (job3 from 10h + jobs 1&2 from 11h)
+    """
+    print('--- Validating jobs_by_installed_collections_versions data values (multi-hour) ---')
+    items = json_data.get('jobs_by_installed_collections_versions', [])
+    assert len(items) == 3, f'Should have 3 installed-collection entries, got {len(items)}: {[i.get("name") for i in items]}'
+
+    by_name_version = {(i['name'], i['version']): i for i in items}
+
+    # --- a10.acos_axapi@1.0.0 (known community collection, present in all 6 jobs) ---
+    a10 = by_name_version.get(('a10.acos_axapi', '1.0.0'))
+    assert a10 is not None, 'Should have a10.acos_axapi 1.0.0 entry'
+    assert a10['jobs_total'] == 6, f'a10.acos_axapi should have 6 jobs, got {a10["jobs_total"]}'
+    assert a10['jobs_failed_total'] == 1, f'a10.acos_axapi should have 1 failed job, got {a10["jobs_failed_total"]}'
+    assert a10['jobs_successful_total'] == 5, f'a10.acos_axapi should have 5 successful jobs, got {a10["jobs_successful_total"]}'
+    assert a10['jobs_never_started_total'] == 0
+    assert a10['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
+        f'a10.acos_axapi jobs_duration_total_seconds should be 720s, got {a10["jobs_duration_total_seconds"]}'
+    )
+    assert a10['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6)
+    assert a10['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6)
+    assert a10['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6)
+    assert a10['templates_total'] == 1
+    assert a10['inventories_total'] == 1
+    assert isinstance(a10['ansible_versions'], list)
+    assert '2.9.10' in a10['ansible_versions']
+
+    # --- Custom/Custom (ansible.builtin anonymized, present in all 6 jobs) ---
+    custom = by_name_version.get(('Custom', 'Custom'))
+    assert custom is not None, 'Should have a Custom/Custom entry (ansible.builtin anonymized)'
+    assert custom['jobs_total'] == 6, f'Custom should have 6 jobs, got {custom["jobs_total"]}'
+    assert custom['jobs_failed_total'] == 1, f'Custom should have 1 failed job, got {custom["jobs_failed_total"]}'
+    assert custom['jobs_successful_total'] == 5, f'Custom should have 5 successful jobs, got {custom["jobs_successful_total"]}'
+    assert custom['jobs_never_started_total'] == 0
+    assert custom['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6)
+    assert custom['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6)
+    assert custom['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6)
+    assert custom['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6)
+    assert custom['templates_total'] == 1
+    assert custom['inventories_total'] == 1
+    assert isinstance(custom['ansible_versions'], list)
+    assert '2.9.10' in custom['ansible_versions']
+
+    # --- redhat.rhel_system_roles@1.23.0 (present in 3 of 6 jobs) ---
+    rhel = by_name_version.get(('redhat.rhel_system_roles', '1.23.0'))
+    assert rhel is not None, 'Should have redhat.rhel_system_roles 1.23.0 entry'
+    assert rhel['jobs_total'] == 3, f'redhat.rhel_system_roles should have 3 jobs, got {rhel["jobs_total"]}'
+    assert rhel['jobs_failed_total'] == 1, f'redhat.rhel_system_roles should have 1 failed job, got {rhel["jobs_failed_total"]}'
+    assert rhel['jobs_successful_total'] == 2, f'redhat.rhel_system_roles should have 2 successful jobs, got {rhel["jobs_successful_total"]}'
+    assert rhel['jobs_never_started_total'] == 0
+    assert rhel['jobs_duration_total_seconds'] == pytest.approx(340.0, rel=1e-6), (
+        f'redhat.rhel_system_roles jobs_duration_total_seconds should be 340s, got {rhel["jobs_duration_total_seconds"]}'
+    )
+    assert rhel['job_duration_maximum_seconds'] == pytest.approx(150.0, rel=1e-6)
+    assert rhel['job_duration_minimum_seconds'] == pytest.approx(90.0, rel=1e-6)
+    assert rhel['job_waiting_time_total_seconds'] == pytest.approx(60.0, rel=1e-6)
+    assert rhel['templates_total'] == 1
+    assert rhel['inventories_total'] == 1
+    assert isinstance(rhel['ansible_versions'], list)
+    assert '2.9.10' in rhel['ansible_versions']
+
+
 def _validate_role_stats_and_jobs_by_installed_collections_versions(json_data):
     """Validate anonymized role_stats and jobs_by_installed_collections_versions."""
     _validate_role_stats(json_data)
@@ -919,6 +992,7 @@ def _validate_all_data(json_data, statistics):
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
     _validate_role_stats_and_jobs_by_installed_collections_versions(json_data)
+    _validate_jobs_by_installed_collections_versions_values(json_data)
 
     print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'
@@ -1013,6 +1087,8 @@ def test_from_gather_to_json(cleanup_glob):
     print('Computing anonymized rollup from collected data...')
     json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
     print('✓ Anonymized rollup computed successfully')
+    print('\n--- Anonymized rollup JSON ---')
+    print(json.dumps(json_data, indent=2))
 
     # Save JSON output
     since = datetime(2025, 6, 13, 10, 0, 0)

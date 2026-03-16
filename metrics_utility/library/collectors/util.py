@@ -112,6 +112,17 @@ def _copy_table_pandas(db, query):
     # Execute query and create DataFrame from results
     # Using cursor approach since pd.read_sql doesn't work well with psycopg3
     with db.cursor() as cursor:
+        # Django's psycopg3 backend globally registers TextLoader for jsonb so that
+        # JSONField can apply custom decoders (see psycopg_any.get_adapters_template).
+        # This means jsonb columns come back as raw JSON strings instead of Python dicts.
+        # We restore native jsonb->dict conversion at the cursor level so psycopg3 parses
+        # JSON in C before Python sees the data - no Python-level json.loads() needed.
+        try:
+            from psycopg.types.json import JsonbLoader
+            cursor.cursor.adapters.register_loader('jsonb', JsonbLoader)
+        except (ImportError, AttributeError):
+            pass  # psycopg2 or non-psycopg3 backend: jsonb already returns dicts
+
         cursor.execute(query)
 
         # Get column names from cursor description
