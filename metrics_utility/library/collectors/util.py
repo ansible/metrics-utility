@@ -86,8 +86,15 @@ def collector(func):
     return constructor
 
 
+def _can_create_functions(db):
+    with db.cursor() as cursor:
+        cursor.execute("SELECT has_schema_privilege(current_user, 'public', 'CREATE')")
+        return cursor.fetchone()[0]
+
+
 def ensure_functions(db):
-    # Execute prepend_query if needed (custom PostgreSQL functions)
+    if not _can_create_functions(db):
+        return
     with db.cursor() as cursor:
         cursor.execute(_yaml_json_functions())
 
