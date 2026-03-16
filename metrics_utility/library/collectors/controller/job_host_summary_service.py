@@ -1,4 +1,4 @@
-from ..util import DataframeOutput, collector, ensure_functions
+from ..util import DataframeOutput, collector
 
 
 @collector
@@ -24,23 +24,6 @@ def job_host_summary_service(*, db=None, since=None, until=None, output=Datafram
                 SELECT DISTINCT mjs.host_id
                 FROM main_jobhostsummary mjs
                 JOIN filtered_jobs fj ON fj.id = mjs.job_id
-            ),
-            --
-            hosts_variables AS (
-                SELECT
-                    fh.host_id,
-                    CASE
-                        WHEN metrics_utility_is_valid_json(h.variables)
-                        THEN h.variables::jsonb->>'ansible_host'
-                        ELSE metrics_utility_parse_yaml_field(h.variables, 'ansible_host')
-                    END AS ansible_host_variable,
-                    CASE
-                        WHEN metrics_utility_is_valid_json(h.variables)
-                        THEN h.variables::jsonb->>'ansible_connection'
-                        ELSE metrics_utility_parse_yaml_field(h.variables, 'ansible_connection')
-                    END AS ansible_connection_variable
-                FROM filtered_hosts fh
-                LEFT JOIN main_host h ON h.id = fh.host_id
             )
         SELECT
             mjs.id,
@@ -48,8 +31,6 @@ def job_host_summary_service(*, db=None, since=None, until=None, output=Datafram
             mjs.modified,
             mjs.host_name,
             mjs.host_id AS host_remote_id,
-            hv.ansible_host_variable,
-            hv.ansible_connection_variable,
             mjs.changed,
             mjs.dark,
             mjs.failures,
@@ -81,9 +62,7 @@ def job_host_summary_service(*, db=None, since=None, until=None, output=Datafram
         LEFT JOIN main_unifiedjobtemplate AS mup ON mup.id = mj.project_id
         LEFT JOIN main_inventory mi ON mi.id = mj.inventory_id
         LEFT JOIN main_organization mo ON mo.id = mu.organization_id
-        LEFT JOIN hosts_variables hv ON hv.host_id = mjs.host_id
         ORDER BY mu.finished ASC
     """
 
-    ensure_functions(db)
     return output.sql(db, query)
