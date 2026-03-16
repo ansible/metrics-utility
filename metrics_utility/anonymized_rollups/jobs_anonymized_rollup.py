@@ -1,6 +1,3 @@
-import hashlib
-import json
-
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
@@ -532,24 +529,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             'json': json_data,
         }
 
-    def _parse_collections_data(self, installed_collections_data):
-        """
-        Parse collections data from row, handling JSON strings and dicts.
-        Returns dict or None if parsing fails.
-        """
-        if pd.isna(installed_collections_data) or not installed_collections_data:
-            return None
-
-        try:
-            if isinstance(installed_collections_data, str):
-                return json.loads(installed_collections_data)
-            if isinstance(installed_collections_data, dict):
-                return installed_collections_data
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-        return None
-
     def _init_collection_stats_entry(self):
         """Return a blank stats entry for a new collection+version key."""
         return {
@@ -650,26 +629,11 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         for collection_name, collection_info in collections_data.items():
             self._process_single_collection(collection_name, collection_info, collections_stats, failed, row_stats)
 
-    def _hash_installed_collections(self, raw):
-        """Compute a SHA-256 hash of the raw installed_collections string.
-
-        Used as a cache key to avoid re-parsing identical JSON payloads
-        (e.g. all jobs that share the same execution environment).
-        SHA-256 is used instead of the raw string to keep the cache memory-efficient
-        when the JSON payload is large.
-        """
-        return hashlib.sha256(raw.encode('utf-8', errors='replace')).hexdigest()
-
     def _process_collections_from_jobs(self, dataframe):
         """
         Extract unique collection name and version pairs from jobs dataframe.
         Count how many jobs use each unique collection+version combination,
         including failed and successful job counts.
-
-        Optimized version using itertuples() for better performance.
-        Additionally uses a hash-based cache to avoid re-parsing identical
-        installed_collections JSON payloads (common when many jobs share the
-        same execution environment).
 
         Returns a list of dicts with:
         - collection_name: str
@@ -684,11 +648,6 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Use dict for tracking job_count, jobs_failed_total, jobs_successful_total per collection+version
         collections_stats = {}
 
-        # Cache: SHA-256 hash of raw JSON string -> parsed collections dict
-        # Many jobs share the same installed_collections because they run on the
-        # same execution environment, so we avoid redundant json.loads() calls.
-        parse_cache = {}
-
         # Use itertuples() for fastest row iteration (10-100x faster than iterrows)
         # itertuples() creates namedtuples with column names as attributes
         # Column names with special characters are sanitized, but 'installed_collections' should work fine
@@ -698,25 +657,19 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             if not installed_collections_data or pd.isna(installed_collections_data):
                 continue
 
-            # Use hash of the raw string as cache key to avoid storing large strings
-            raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
-            cache_key = self._hash_installed_collections(raw)
+            if not isinstance(installed_collections_data, dict):
+                continue
 
-            if cache_key not in parse_cache:
-                parse_cache[cache_key] = self._parse_collections_data(installed_collections_data)
-
-            collections_data = parse_cache[cache_key]
-            if collections_data:
-                failed = bool(getattr(row, 'failed', False))
-                row_stats = {
-                    'job_duration_seconds': getattr(row, 'job_duration_seconds', None),
-                    'job_waiting_time_seconds': getattr(row, 'job_waiting_time_seconds', None),
-                    'jobs_never_started': bool(getattr(row, 'jobs_never_started', False)),
-                    'unified_job_template_id': getattr(row, 'unified_job_template_id', None),
-                    'inventory_id': getattr(row, 'inventory_id', None),
-                    'ansible_version': getattr(row, 'ansible_version', None),
-                }
-                self._process_collections_dict(collections_data, collections_stats, failed, row_stats)
+            failed = bool(getattr(row, 'failed', False))
+            row_stats = {
+                'job_duration_seconds': getattr(row, 'job_duration_seconds', None),
+                'job_waiting_time_seconds': getattr(row, 'job_waiting_time_seconds', None),
+                'jobs_never_started': bool(getattr(row, 'jobs_never_started', False)),
+                'unified_job_template_id': getattr(row, 'unified_job_template_id', None),
+                'inventory_id': getattr(row, 'inventory_id', None),
+                'ansible_version': getattr(row, 'ansible_version', None),
+            }
+            self._process_collections_dict(installed_collections_data, collections_stats, failed, row_stats)
 
         # Convert dict to list of dicts, converting sets to sorted lists
         result = [

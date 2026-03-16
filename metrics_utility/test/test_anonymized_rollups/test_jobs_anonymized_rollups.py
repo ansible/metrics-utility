@@ -1,5 +1,3 @@
-import json
-
 import pandas as pd
 import pytest
 
@@ -25,12 +23,10 @@ jobs = [
         'inventory_name': 'inventory1',
         'inventory_id': 1,
         'scm_type': 'git',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.9.10'},
-                'community.general': {'version': '1.0.0'},
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.9.10'},
+            'community.general': {'version': '1.0.0'},
+        },
     },  # duration 3s, wait 0s
     {
         'id': 2,
@@ -49,13 +45,11 @@ jobs = [
         'inventory_name': 'inventory1',
         'inventory_id': 1,
         'scm_type': 'svn',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.9.10'},  # Same version as job 1
-                'community.general': {'version': '2.0.0'},  # Different version - same collection
-                'ansible.windows': {'version': '1.0.0'},
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.9.10'},  # Same version as job 1
+            'community.general': {'version': '2.0.0'},  # Different version - same collection
+            'ansible.windows': {'version': '1.0.0'},
+        },
     },  # duration 5s (failed), wait 2s
     # controller A, ansible 2.11.0, template T2
     {
@@ -75,13 +69,11 @@ jobs = [
         'inventory_name': 'inventory2',
         'inventory_id': 2,
         'scm_type': 'git',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.9.10'},  # Same version as jobs 1 and 2
-                'community.general': {'version': '2.0.0'},  # Same version as job 2
-                'community.aws': {'version': '1.5.0'},
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.9.10'},  # Same version as jobs 1 and 2
+            'community.general': {'version': '2.0.0'},  # Same version as job 2
+            'community.aws': {'version': '1.5.0'},
+        },
     },  # duration 7s, wait 4s
     # controller B, ansible 2.12.0, template T1
     {
@@ -101,12 +93,10 @@ jobs = [
         'inventory_name': 'inventory1',
         'inventory_id': 1,
         'scm_type': 'git',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.9.10'},  # Same version as other jobs
-                'community.general': {'version': '1.0.0'},  # Same version as job 1
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.9.10'},  # Same version as other jobs
+            'community.general': {'version': '1.0.0'},  # Same version as job 1
+        },
     },  # duration 2s, wait 1s
     # invalid rows (should be filtered out)
     {
@@ -125,11 +115,9 @@ jobs = [
         'inventory_name': 'inventory3',
         'inventory_id': 3,
         'scm_type': 'manual',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.9.10'},
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.9.10'},
+        },
     },
     {
         'id': 6,
@@ -147,12 +135,10 @@ jobs = [
         'inventory_name': 'inventory3',
         'inventory_id': 3,
         'scm_type': 'unknown',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.9.10'},
-                'community.general': {'version': '3.0.0'},  # Another version of community.general
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.9.10'},
+            'community.general': {'version': '3.0.0'},  # Another version of community.general
+        },
     },
 ]
 

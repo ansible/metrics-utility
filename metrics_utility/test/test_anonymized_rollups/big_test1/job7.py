@@ -57,7 +57,6 @@
 #   - Retried tasks: 2 (Host2 Task 3, Host4 Task 4)
 #   Note: Unreachable (dark) tasks are NOT retried per common_data.md rules
 
-import json
 
 
 # Jobs dataset
@@ -79,13 +78,11 @@ jobs = [
         'inventory_name': 'test-inventory',
         'inventory_id': 1,
         'scm_type': 'manual',
-        'installed_collections': json.dumps(
-            {
-                'ansible.builtin': {'version': '2.18.0'},
-                'community.general': {'version': '9.0.0'},
-                'community.weird': {'version': '1.2.0'},
-            }
-        ),
+        'installed_collections': {
+            'ansible.builtin': {'version': '2.18.0'},
+            'community.general': {'version': '9.0.0'},
+            'community.weird': {'version': '1.2.0'},
+        },
     },
 ]
 
