@@ -79,8 +79,6 @@ def test_job_host_summary_service_query_structure(mock_copy_pandas):
     # Should have CTEs for filtering
     assert 'WITH' in query
     assert 'filtered_jobs' in query
-    assert 'filtered_hosts' in query
-    assert 'hosts_variables' in query
 
     # Should query expected tables
     assert 'main_jobhostsummary' in query
@@ -109,8 +107,8 @@ def test_job_host_summary_service_filters_by_finished_jobs(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_job_host_summary_service_uses_yaml_json_functions(mock_copy_pandas):
-    """Test that query uses metrics_utility helper functions."""
+def test_job_host_summary_service_doesnt_yaml_json_functions(mock_copy_pandas):
+    """Test that query doesn't use metrics_utility SQL helper functions."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
@@ -123,8 +121,8 @@ def test_job_host_summary_service_uses_yaml_json_functions(mock_copy_pandas):
     query = call_args[0][1]
 
     # Should use helper functions for parsing YAML/JSON
-    assert 'metrics_utility_is_valid_json' in query
-    assert 'metrics_utility_parse_yaml_field' in query
+    assert 'metrics_utility_is_valid_json' not in query
+    assert 'metrics_utility_parse_yaml_field' not in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
