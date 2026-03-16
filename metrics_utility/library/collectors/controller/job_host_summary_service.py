@@ -18,12 +18,6 @@ def job_host_summary_service(*, db=None, since=None, until=None, output=Datafram
                 FROM main_unifiedjob mu
                 WHERE {where}
                 AND mu.finished IS NOT NULL
-            ),
-            -- Then: only host summaries that belong to those jobs (uses index on main_jobhostsummary.job_id)
-            filtered_hosts AS (
-                SELECT DISTINCT mjs.host_id
-                FROM main_jobhostsummary mjs
-                JOIN filtered_jobs fj ON fj.id = mjs.job_id
             )
         SELECT
             mjs.id,

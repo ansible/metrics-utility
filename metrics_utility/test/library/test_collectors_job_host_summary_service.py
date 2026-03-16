@@ -79,8 +79,6 @@ def test_job_host_summary_service_query_structure(mock_copy_pandas):
     # Should have CTEs for filtering
     assert 'WITH' in query
     assert 'filtered_jobs' in query
-    assert 'filtered_hosts' in query
-    assert 'hosts_variables' in query
 
     # Should query expected tables
     assert 'main_jobhostsummary' in query
