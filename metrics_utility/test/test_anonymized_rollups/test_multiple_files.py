@@ -18,6 +18,7 @@ Enhanced Assertions:
 - Prints full JSON output to terminal for inspection
 """
 
+import json
 import os
 import shutil
 
@@ -59,10 +60,12 @@ def _create_csv_files_from_split_data(data_dir, jobs, events, execution_environm
     jobs_csv_files = []
     csv1 = create_csv_file(jobs_part1, f'{data_dir}/part1_unified_jobs.csv')
     if csv1:
-        jobs_csv_files.append(csv1)
+        # Parse JSON columns (e.g. installed_collections) back to dicts,
+        # since the prepare function expects dicts, not JSON strings.
+        jobs_csv_files.append(load_csv_with_json_columns(csv1))
     csv2 = create_csv_file(jobs_part2, f'{data_dir}/part2_unified_jobs.csv')
     if csv2:
-        jobs_csv_files.append(csv2)
+        jobs_csv_files.append(load_csv_with_json_columns(csv2))
 
     events_part1 = events[:8]
     events_part2 = events[8:16]
@@ -642,9 +645,36 @@ def create_csv_file(data_list, csv_path):
 
     # Convert list of dicts to DataFrame then to CSV
     df = pd.DataFrame(data_list)
+
+    # Serialize dict/list values to JSON strings so the CSV contains valid JSON
+    # (pandas default repr produces single-quoted Python strings, not valid JSON)
+    for col in df.columns:
+        if df[col].apply(lambda x: isinstance(x, (dict, list))).any():
+            df[col] = df[col].apply(lambda x: json.dumps(x) if isinstance(x, (dict, list)) else x)
+
     df.to_csv(csv_path, index=False, encoding='utf-8')
 
     return csv_path
+
+
+def load_csv_with_json_columns(csv_path):
+    """
+    Load a CSV file and parse JSON string columns back to Python objects.
+
+    This is needed because when dicts/lists are written to CSV they become JSON
+    strings, but the rollup prepare functions expect Python dicts/lists.
+    """
+    df = pd.read_csv(csv_path, encoding='utf-8')
+    for col in df.columns:
+        non_null = df[col].dropna()
+        if len(non_null) == 0:
+            continue
+        first_val = non_null.iloc[0]
+        if isinstance(first_val, str) and first_val.startswith(('{', '[')):
+            df[col] = df[col].apply(
+                lambda x: json.loads(x) if isinstance(x, str) else x
+            )
+    return df
 
 
 def test_multiple_csv_files_concatenation(cleanup_test_data):
