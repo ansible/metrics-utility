@@ -102,6 +102,12 @@ def _parse_expected_csv(expected_lines):
     return expected_rows[0], expected_rows[1:]
 
 
+def _is_float_whole_numbers(series):
+    """Return True if all non-null float values are whole numbers."""
+    non_null_values = series.dropna()
+    return len(non_null_values) > 0 and (non_null_values == non_null_values.astype(int)).all()
+
+
 def _read_dataframe(df):
     # Convert boolean columns from True/False to t/f
     # Convert float columns that are actually integers to Int64
@@ -112,8 +118,7 @@ def _read_dataframe(df):
             df_copy[col] = df_copy[col].map({True: 't', False: 'f'})
         elif df_copy[col].dtype in ['float64', 'float32']:
             # If all non-null values are whole numbers, convert to nullable int
-            non_null_values = df_copy[col].dropna()
-            if len(non_null_values) > 0 and (non_null_values == non_null_values.astype(int)).all():
+            if _is_float_whole_numbers(df_copy[col]):
                 df_copy[col] = df_copy[col].astype('Int64')
         elif df_copy[col].dtype == 'object':
             # Serialize dicts/lists to JSON strings so that to_csv() produces valid JSON

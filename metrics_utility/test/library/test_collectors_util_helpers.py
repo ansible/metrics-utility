@@ -62,8 +62,8 @@ class TestEnsureFunctions:
     def test_cursor_cleanup(self):
         """Test that cursor context manager is used properly."""
         mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        _ = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=_)
         mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
         ensure_functions(mock_db)
