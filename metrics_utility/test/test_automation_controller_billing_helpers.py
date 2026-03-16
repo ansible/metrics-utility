@@ -1,11 +1,14 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
+import numpy as np
+
 from django.db import DatabaseError
 
 from metrics_utility.automation_controller_billing.helpers import (
     _datetime_hook,
     get_last_entries_from_db,
+    parse_json_array,
 )
 
 
@@ -96,6 +99,56 @@ class TestDatetimeHook:
         assert str(result['config']).startswith('2024-01-01')
         assert str(result['jobs']).startswith('2024-01-02')
         assert str(result['hosts']).startswith('2024-01-03')
+
+
+class TestParseJsonArray:
+    """Test cases for parse_json_array function."""
+
+    def test_list_input_returned_unchanged(self):
+        """A Python list (psycopg3 JsonbLoader path) is returned as-is."""
+        value = ['event1', 'event2']
+        assert parse_json_array(value) is value
+
+    def test_empty_list_returned_unchanged(self):
+        """An empty list is returned as-is."""
+        assert parse_json_array([]) == []
+
+    def test_null_returns_empty_list(self):
+        """None / NaN produces an empty list."""
+        assert parse_json_array(None) == []
+        assert parse_json_array(np.nan) == []
+
+    def test_valid_json_list_string_parsed(self):
+        """A JSON-encoded list string is parsed into a Python list."""
+        assert parse_json_array('["a", "b", "c"]') == ['a', 'b', 'c']
+
+    def test_valid_json_non_list_returns_empty(self):
+        """A valid JSON value that is not a list returns []."""
+        assert parse_json_array('{"key": "value"}') == []
+
+    def test_invalid_json_string_returns_empty(self):
+        """Malformed JSON returns []."""
+        assert parse_json_array('not-json!!!') == []
+
+    def test_type_error_returns_empty(self):
+        """Non-string, non-null, non-list input that causes TypeError in json.loads returns []."""
+        assert parse_json_array(42) == []
+
+
+class TestDatetimeHookTypeError:
+    """Additional _datetime_hook tests covering the TypeError branch."""
+
+    def test_non_string_value_kept_as_is(self):
+        """A non-string value (e.g. int) that parse_datetime raises TypeError for is kept."""
+        result = _datetime_hook({'count': 5})
+        # parse_datetime(5) raises TypeError → value is stored unchanged
+        assert result == {'count': 5}
+
+    def test_mixed_string_and_non_string(self):
+        """Dict with both datetime strings and non-string values is handled correctly."""
+        result = _datetime_hook({'ts': '2024-01-01T00:00:00Z', 'num': 99})
+        assert result['ts'] == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
+        assert result['num'] == 99
 
 
 class TestIntegration:

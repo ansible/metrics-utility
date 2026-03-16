@@ -192,6 +192,72 @@ class TestCopyTableFiles:
             mock_splitter_instance.file_list.assert_called_once_with(keep_empty=True)
 
 
+class TestCopyTablePandasPsycopg:
+    """Test _copy_table_pandas psycopg3 jsonb-loader branch."""
+
+    def _make_mock_db(self):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.description = [('id',), ('data',)]
+        mock_cursor.fetchall.return_value = [(1, {'key': 'value'})]
+        return mock_db, mock_cursor
+
+    def test_psycopg3_jsonb_loader_registered_when_available(self):
+        """When psycopg is importable, JsonbLoader is registered on the cursor."""
+        mock_db, mock_cursor = self._make_mock_db()
+
+        mock_jsonb_loader = MagicMock()
+
+        mock_psycopg_types_json = MagicMock(JsonbLoader=mock_jsonb_loader)
+        with patch.dict(
+            'sys.modules',
+            {
+                'psycopg': MagicMock(),
+                'psycopg.types': MagicMock(),
+                'psycopg.types.json': mock_psycopg_types_json,
+            },
+        ):
+            result = _copy_table_pandas(mock_db, 'SELECT id, data FROM test')
+
+        # register_loader should have been called on the inner cursor
+        mock_cursor.cursor.adapters.register_loader.assert_called_once_with('jsonb', mock_jsonb_loader)
+        assert isinstance(result, pd.DataFrame)
+
+    def test_import_error_silently_ignored(self):
+        """When psycopg is not importable, execution continues without error."""
+        mock_db, mock_cursor = self._make_mock_db()
+
+        with patch.dict('sys.modules', {'psycopg': None}):
+            result = _copy_table_pandas(mock_db, 'SELECT id, data FROM test')
+
+        # Should still return a DataFrame despite the ImportError
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ['id', 'data']
+
+    def test_attribute_error_silently_ignored(self):
+        """When cursor lacks the .cursor.adapters attribute, execution continues."""
+        mock_db, mock_cursor = self._make_mock_db()
+        # Make register_loader raise AttributeError (e.g. psycopg2 cursor has no .cursor)
+        mock_cursor.cursor.adapters.register_loader.side_effect = AttributeError('no adapters')
+
+        mock_jsonb_loader = MagicMock()
+
+        mock_psycopg_types_json = MagicMock(JsonbLoader=mock_jsonb_loader)
+        with patch.dict(
+            'sys.modules',
+            {
+                'psycopg': MagicMock(),
+                'psycopg.types': MagicMock(),
+                'psycopg.types.json': mock_psycopg_types_json,
+            },
+        ):
+            result = _copy_table_pandas(mock_db, 'SELECT id, data FROM test')
+
+        assert isinstance(result, pd.DataFrame)
+
+
 class TestCopyTablePandas:
     """Test _copy_table_pandas function."""
 
