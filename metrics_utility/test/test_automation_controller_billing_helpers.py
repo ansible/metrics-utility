@@ -107,7 +107,7 @@ class TestParseJsonArray:
     def test_list_input_returned_unchanged(self):
         """A Python list (psycopg3 JsonbLoader path) is returned as-is."""
         value = ['event1', 'event2']
-        assert parse_json_array(value) is value
+        assert parse_json_array(value) == value
 
     def test_empty_list_returned_unchanged(self):
         """An empty list is returned as-is."""

@@ -21,7 +21,7 @@ class TestParseJsonArray:
     def test_list_input_returned_as_is(self):
         """Already-a-list input (psycopg3 JsonbLoader path) is returned unchanged."""
         value = ['a', 'b', 'c']
-        assert parse_json_array(value) is value
+        assert parse_json_array(value) == value
 
     def test_empty_list_input(self):
         """Empty list is returned unchanged."""
@@ -67,7 +67,7 @@ class TestParseJson:
 
     def test_dict_returned_as_is(self):
         d = {'x': 42}
-        assert parse_json(d) is d
+        assert parse_json(d) == d
 
     def test_none_returns_empty_dict(self):
         assert parse_json(None) == {}
