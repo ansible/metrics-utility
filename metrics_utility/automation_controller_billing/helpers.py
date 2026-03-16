@@ -47,6 +47,9 @@ def _datetime_hook(d):
 
 
 def parse_json_array(x):
+    # Already a list (e.g. jsonb column returned as Python list via psycopg3 JsonbLoader)
+    if isinstance(x, list):
+        return x
     if pd.isnull(x):
         return []
     try:
@@ -56,7 +59,7 @@ def parse_json_array(x):
             return parsed
         else:
             return []
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, TypeError):
         return []
 
 
