@@ -1,7 +1,7 @@
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
-from metrics_utility.anonymized_rollups.helpers import sanitize_json
+from metrics_utility.anonymized_rollups.helpers import parse_yaml_json, sanitize_json
 
 
 class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
@@ -203,6 +203,25 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
             dataframe['launch_type'] = 'unknown'
 
         # Keep ansible_version column name (no rename needed)
+
+        # Parse variables field if present
+        if 'variables' in dataframe.columns:
+            # Parse each row's variables field and extract both fields in one pass
+            def extract_variables(variables):
+                parsed = parse_yaml_json(variables)
+                if isinstance(parsed, dict):
+                    return pd.Series(
+                        {'ansible_host_variable': parsed.get('ansible_host'), 'ansible_connection_variable': parsed.get('ansible_connection')}
+                    )
+                return pd.Series({'ansible_host_variable': None, 'ansible_connection_variable': None})
+
+            dataframe[['ansible_host_variable', 'ansible_connection_variable']] = dataframe['variables'].apply(extract_variables)
+
+            # Drop the raw variables column (no longer needed, saves memory)
+            dataframe.drop(columns=['variables'], inplace=True)
+        else:
+            dataframe['ansible_host_variable'] = None
+            dataframe['ansible_connection_variable'] = None
 
         # Compute host_outcome
         dataframe['host_outcome'] = 'successful'
