@@ -671,9 +671,7 @@ def load_csv_with_json_columns(csv_path):
             continue
         first_val = non_null.iloc[0]
         if isinstance(first_val, str) and first_val.startswith(('{', '[')):
-            df[col] = df[col].apply(
-                lambda x: json.loads(x) if isinstance(x, str) else x
-            )
+            df[col] = df[col].apply(lambda x: json.loads(x) if isinstance(x, str) else x)
     return df
 
 

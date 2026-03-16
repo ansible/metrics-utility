@@ -119,9 +119,7 @@ def _read_dataframe(df):
             # Serialize dicts/lists to JSON strings so that to_csv() produces valid JSON
             # instead of Python repr() (single quotes vs double quotes)
             if df_copy[col].apply(lambda x: isinstance(x, (dict, list))).any():
-                df_copy[col] = df_copy[col].apply(
-                    lambda x: json.dumps(x, sort_keys=True) if isinstance(x, (dict, list)) else x
-                )
+                df_copy[col] = df_copy[col].apply(lambda x: json.dumps(x, sort_keys=True) if isinstance(x, (dict, list)) else x)
 
     text = df_copy.to_csv(index=False).splitlines()
     reader = csv.reader(text)
