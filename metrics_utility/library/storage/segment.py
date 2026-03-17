@@ -159,7 +159,7 @@ class StorageSegment:
                         'chunk_size': chunk_size,
                     },
                 },
-                **segment_meta,
+                **(segment_meta or {}),
             )
 
         # Flush to ensure all events are sent
