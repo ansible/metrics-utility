@@ -134,7 +134,7 @@ BEGIN
     true,                                       -- enabled
     false,                                      -- managed_by_policy
     random_ip,                                  -- ip_address
-    'default',                                  -- node_type
+    'hybrid',                                   -- node_type
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- last_seen
     '',                                         -- errors
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                      -- last_health_check
