@@ -31,6 +31,7 @@ jobs = [
                 'community.general': {'version': '1.0.0'},
             }
         ),
+        'execution_environment_id': 1,  # EE for ansible.builtin+community.general 1.0.0
     },  # duration 3s, wait 0s
     {
         'id': 2,
@@ -56,6 +57,7 @@ jobs = [
                 'ansible.windows': {'version': '1.0.0'},
             }
         ),
+        'execution_environment_id': 2,  # EE for ansible.builtin+community.general 2.0.0+ansible.windows
     },  # duration 5s (failed), wait 2s
     # controller A, ansible 2.11.0, template T2
     {
@@ -82,6 +84,7 @@ jobs = [
                 'community.aws': {'version': '1.5.0'},
             }
         ),
+        'execution_environment_id': 3,  # EE for ansible.builtin+community.general 2.0.0+community.aws
     },  # duration 7s, wait 4s
     # controller B, ansible 2.12.0, template T1
     {
@@ -107,6 +110,7 @@ jobs = [
                 'community.general': {'version': '1.0.0'},  # Same version as job 1
             }
         ),
+        'execution_environment_id': 1,  # Same EE as job 1 (same installed_collections)
     },  # duration 2s, wait 1s
     # invalid rows (should be filtered out)
     {
@@ -130,6 +134,7 @@ jobs = [
                 'ansible.builtin': {'version': '2.9.10'},
             }
         ),
+        'execution_environment_id': 4,  # EE for ansible.builtin only
     },
     {
         'id': 6,
@@ -153,6 +158,7 @@ jobs = [
                 'community.general': {'version': '3.0.0'},  # Another version of community.general
             }
         ),
+        'execution_environment_id': 5,  # EE for ansible.builtin+community.general 3.0.0
     },
 ]
 

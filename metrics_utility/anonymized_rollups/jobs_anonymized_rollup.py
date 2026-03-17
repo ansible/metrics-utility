@@ -670,9 +670,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Use dict for tracking job_count, jobs_failed_total, jobs_successful_total per collection+version
         collections_stats = {}
 
-        # Cache: built-in hash of raw JSON string -> parsed collections dict
+        # Cache: execution_environment_id -> parsed collections dict
         # Many jobs share the same installed_collections because they run on the
-        # same execution environment, so we avoid redundant json.loads() calls.
+        # same execution environment. Using execution_environment_id as the key is
+        # more stable than hashing the raw JSON string, since JSONB serialization
+        # does not guarantee identical key ordering across rows.
+        # Falls back to hashing the raw string for rows without an EE id.
         parse_cache = {}
 
         # Use itertuples() for fastest row iteration (10-100x faster than iterrows)
@@ -684,9 +687,16 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             if not installed_collections_data or pd.isna(installed_collections_data):
                 continue
 
-            # Use Python's built-in hash as cache key to avoid re-parsing identical payloads
-            raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
-            cache_key = hash(raw)
+            # Prefer execution_environment_id as the cache key because it is a
+            # stable integer that uniquely identifies a fixed collection set.
+            # Prefix with 'ee:' to avoid any collision with the fallback hash keys.
+            ee_id = getattr(row, 'execution_environment_id', None)
+            if ee_id is not None and not (isinstance(ee_id, float) and pd.isna(ee_id)):
+                cache_key = ('ee', int(ee_id))
+            else:
+                # Fallback: hash the raw string for jobs without an EE id
+                raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
+                cache_key = ('raw', hash(raw))
 
             if cache_key not in parse_cache:
                 parse_cache[cache_key] = self._parse_collections_data(installed_collections_data)

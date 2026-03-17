@@ -86,6 +86,7 @@ jobs = [
                 'community.weird': {'version': '1.0.0'},
             }
         ),
+        'execution_environment_id': 2,  # EE for ansible.builtin 2.15.0 + community.general 7.0.0 + community.weird 1.0.0
     },
 ]
 
