@@ -51,6 +51,10 @@ DECLARE
   network_credential_id INTEGER;
   custom_credential_id INTEGER;
   --
+  -- execution environments
+  ee1_id INTEGER;  -- Python ML Environment (no redhat.rhel_system_roles)
+  ee2_id INTEGER;  -- Node Backend Environment (with redhat.rhel_system_roles)
+  --
 BEGIN
   --
   -- Insert django_content_type entry for 'job' model
@@ -349,6 +353,51 @@ $yaml$,
   RAISE NOTICE 'Inserted Main JobTemplate ptr_id = %',
                default_unified_job_template_id;
   --
+  -- Execution Environments
+  --
+  -- EE 1: Python ML Environment (linked to jobs with no redhat.rhel_system_roles)
+  INSERT INTO public.main_executionenvironment (
+    created,
+    modified,
+    description,
+    image,
+    managed,
+    name,
+    pull
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'Python 3.11 environment with common ML libraries',
+    'registry.example.com/envs/python-ml:3.11',
+    TRUE,
+    'Python ML Environment',
+    'always'
+  )
+  RETURNING id INTO ee1_id;
+  --
+  -- EE 2: Node Backend Environment (linked to jobs with redhat.rhel_system_roles)
+  INSERT INTO public.main_executionenvironment (
+    created,
+    modified,
+    description,
+    image,
+    managed,
+    name,
+    pull
+  ) VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    'Node.js 20 environment for backend services',
+    'registry.example.com/envs/node-backend:20',
+    FALSE,
+    'Node Backend Environment',
+    'missing'
+  )
+  RETURNING id INTO ee2_id;
+  --
+  RAISE NOTICE 'Inserted Execution Environments: EE1 (Python ML) id=%, EE2 (Node Backend) id=%',
+               ee1_id, ee2_id;
+  --
   -- Unified Jobs
   -- Loop to create unified jobs
   FOR i IN 1..job_count LOOP
@@ -380,7 +429,8 @@ $yaml$,
       ansible_version,
       task_impact,
       job_env,
-      polymorphic_ctype_id
+      polymorphic_ctype_id,
+      execution_environment_id
     )
     VALUES (
       TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',                                  -- created (same for all jobs)
@@ -438,7 +488,11 @@ $yaml$,
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
       '{}'::jsonb,                            -- job_env
-      job_content_type_id                     -- polymorphic_ctype_id
+      job_content_type_id,                    -- polymorphic_ctype_id
+      CASE i
+        WHEN 3 THEN ee2_id  -- job 3: with redhat.rhel_system_roles → Node Backend EE
+        ELSE ee1_id         -- jobs 1,2: no rhel_system_roles → Python ML EE
+      END                                     -- execution_environment_id
     )
     RETURNING id
     INTO unified_job_id;
@@ -842,36 +896,6 @@ $yaml$,
     );
   END IF;
   --
-  -- Execution Environments
-  --
-  INSERT INTO public.main_executionenvironment (
-    created,
-    modified,
-    description,
-    image,
-    managed,
-    name,
-    pull
-) VALUES
-(
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-    'Python 3.11 environment with common ML libraries',
-    'registry.example.com/envs/python-ml:3.11',
-    TRUE,
-    'Python ML Environment',
-    'always'
-),
-(
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-    'Node.js 20 environment for backend services',
-    'registry.example.com/envs/node-backend:20',
-    FALSE,
-    'Node Backend Environment',
-    'missing'
-);
-  --
   -- Credential Types
   --
   -- Insert Machine credential type
@@ -1221,7 +1245,8 @@ $yaml$,
       ansible_version,
       task_impact,
       job_env,
-      polymorphic_ctype_id
+      polymorphic_ctype_id,
+      execution_environment_id
     )
     VALUES (
       TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',                                  -- created (same for all jobs)
@@ -1274,7 +1299,11 @@ $yaml$,
       '2.9.10',                               -- ansible_version
       0,                                      -- task_impact
       '{}'::jsonb,                            -- job_env
-      job_content_type_id                     -- polymorphic_ctype_id
+      job_content_type_id,                    -- polymorphic_ctype_id
+      CASE i
+        WHEN 3 THEN ee1_id  -- job 3: no rhel_system_roles → Python ML EE
+        ELSE ee2_id         -- jobs 1,2: with redhat.rhel_system_roles → Node Backend EE
+      END                                     -- execution_environment_id
     )
     RETURNING id
     INTO unified_job_id;
