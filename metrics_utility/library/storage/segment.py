@@ -84,7 +84,7 @@ class StorageSegment:
 
         return chunks if chunks else [data]
 
-    def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None):
+    def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None, segment_meta=None):
         """
         Send data to Segment, splitting into chunks if necessary.
 
@@ -159,6 +159,7 @@ class StorageSegment:
                         'chunk_size': chunk_size,
                     },
                 },
+                **segment_meta,
             )
 
         # Flush to ensure all events are sent
