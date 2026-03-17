@@ -534,17 +534,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
     def _parse_collections_data(self, installed_collections_data):
         """
-        Parse collections data from row, handling JSON strings and dicts.
+        Parse collections data from row as a JSON string.
         Returns dict or None if parsing fails.
         """
         if pd.isna(installed_collections_data) or not installed_collections_data:
             return None
 
         try:
-            if isinstance(installed_collections_data, str):
-                return json.loads(installed_collections_data)
-            if isinstance(installed_collections_data, dict):
-                return installed_collections_data
+            return json.loads(installed_collections_data)
         except (json.JSONDecodeError, TypeError):
             pass
 
