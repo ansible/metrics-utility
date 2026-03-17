@@ -13,6 +13,7 @@ def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
             main_executionenvironment.image as execution_environment_image,
             main_job.inventory_id,
             main_inventory.name as inventory_name,
+            main_unifiedjob.execution_environment_id,
             main_unifiedjob.created,
             main_unifiedjob.name,
             main_unifiedjob.unified_job_template_id,
