@@ -769,7 +769,6 @@ def test_jobs_anonymized_rollups_installed_collections():
             assert collection['job_duration_minimum_seconds'] is None
 
 
-
 # ===========================================================================
 # Tests for untested / low-coverage code paths
 # ===========================================================================
@@ -1133,7 +1132,6 @@ def test_get_collection_cache_key_without_ee_id():
 def test_get_collection_cache_key_with_nan_ee_id():
     """_get_collection_cache_key must fall back to raw hash when EE id is NaN."""
     import collections as _collections
-    import math
 
     rollup = JobsAnonymizedRollup()
     MockRow = _collections.namedtuple('MockRow', ['installed_collections', 'execution_environment_id'])
