@@ -22,16 +22,23 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         id_columns = ['id', 'job_id', 'host_id', 'job_remote_id', 'unified_job_template_id', 'inventory_id']
         for col in id_columns:
-            if col in dataframe.columns:
-                # Convert numeric IDs to strings, preserving NaN values
-                dataframe[col] = dataframe[col].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x)
+            if col not in dataframe.columns:
+                continue
+            # Coerce column to numeric, turning non-numeric values into NaN
+            numeric = pd.to_numeric(dataframe[col], errors='coerce')
+            mask = numeric.notna()
+            if mask.any():
+                # Convert only the numeric rows to integer strings; leave NaN rows untouched
+                dataframe.loc[mask, col] = numeric[mask].astype(int).astype(str)
 
         return dataframe
 
     def _preprocess_dataframe(self, dataframe):
         """Preprocess dataframe: filter, normalize columns, and compute derived fields."""
-        # Filter out jobs that are not finished
-        dataframe = dataframe[dataframe['finished'].notna()]
+        # Filter out jobs that are not finished.
+        # dropna() always returns a new DataFrame (never a view), so subsequent
+        # column assignments are safe direct mutations — no SettingWithCopyWarning.
+        dataframe = dataframe.dropna(subset=['finished'])
 
         # Coerce datetime-like columns to pandas datetimes (timezone-aware if possible)
         for col in ['started', 'finished', 'created']:
