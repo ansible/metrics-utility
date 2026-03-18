@@ -1030,10 +1030,10 @@ def test_merge_max_value_with_none():
     rollup = JobsAnonymizedRollup()
 
     assert rollup._merge_max_value(None, None) is None
-    assert rollup._merge_max_value(None, 5.0) == 5.0
-    assert rollup._merge_max_value(5.0, None) == 5.0
-    assert rollup._merge_max_value(3.0, 7.0) == 7.0
-    assert rollup._merge_max_value(7.0, 3.0) == 7.0
+    assert rollup._merge_max_value(None, 5.0) == pytest.approx(5.0)
+    assert rollup._merge_max_value(5.0, None) == pytest.approx(5.0)
+    assert rollup._merge_max_value(3.0, 7.0) == pytest.approx(7.0)
+    assert rollup._merge_max_value(7.0, 3.0) == pytest.approx(7.0)
 
 
 def test_merge_min_value_with_none():
@@ -1041,10 +1041,10 @@ def test_merge_min_value_with_none():
     rollup = JobsAnonymizedRollup()
 
     assert rollup._merge_min_value(None, None) is None
-    assert rollup._merge_min_value(None, 3.0) == 3.0
-    assert rollup._merge_min_value(3.0, None) == 3.0
-    assert rollup._merge_min_value(3.0, 7.0) == 3.0
-    assert rollup._merge_min_value(7.0, 3.0) == 3.0
+    assert rollup._merge_min_value(None, 3.0) == pytest.approx(3.0)
+    assert rollup._merge_min_value(3.0, None) == pytest.approx(3.0)
+    assert rollup._merge_min_value(3.0, 7.0) == pytest.approx(3.0)
+    assert rollup._merge_min_value(7.0, 3.0) == pytest.approx(3.0)
 
 
 def test_merge_single_item_stats_empty_inputs():
