@@ -16,6 +16,7 @@ def controller_version_service(*, db=None, output=DataframeOutput()):
         WHERE enabled = true
             AND version IS NOT NULL
             AND version != ''
+            AND node_type IN ('control', 'hybrid')
         ORDER BY version ASC
     """
 

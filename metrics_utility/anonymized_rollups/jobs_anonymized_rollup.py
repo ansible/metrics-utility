@@ -1,4 +1,3 @@
-import hashlib
 import json
 
 import pandas as pd
@@ -23,16 +22,23 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
         id_columns = ['id', 'job_id', 'host_id', 'job_remote_id', 'unified_job_template_id', 'inventory_id']
         for col in id_columns:
-            if col in dataframe.columns:
-                # Convert numeric IDs to strings, preserving NaN values
-                dataframe[col] = dataframe[col].apply(lambda x: str(int(x)) if pd.notna(x) and isinstance(x, (int, float)) and x == int(x) else x)
+            if col not in dataframe.columns:
+                continue
+            # Coerce column to numeric, turning non-numeric values into NaN
+            numeric = pd.to_numeric(dataframe[col], errors='coerce')
+            mask = numeric.notna()
+            if mask.any():
+                # Convert only the numeric rows to integer strings; leave NaN rows untouched
+                dataframe.loc[mask, col] = numeric[mask].astype(int).astype(str)
 
         return dataframe
 
     def _preprocess_dataframe(self, dataframe):
         """Preprocess dataframe: filter, normalize columns, and compute derived fields."""
-        # Filter out jobs that are not finished
-        dataframe = dataframe[dataframe['finished'].notna()]
+        # Filter out jobs that are not finished.
+        # dropna() always returns a new DataFrame (never a view), so subsequent
+        # column assignments are safe direct mutations — no SettingWithCopyWarning.
+        dataframe = dataframe.dropna(subset=['finished'])
 
         # Coerce datetime-like columns to pandas datetimes (timezone-aware if possible)
         for col in ['started', 'finished', 'created']:
@@ -534,17 +540,14 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
 
     def _parse_collections_data(self, installed_collections_data):
         """
-        Parse collections data from row, handling JSON strings and dicts.
+        Parse collections data from row as a JSON string.
         Returns dict or None if parsing fails.
         """
         if pd.isna(installed_collections_data) or not installed_collections_data:
             return None
 
         try:
-            if isinstance(installed_collections_data, str):
-                return json.loads(installed_collections_data)
-            if isinstance(installed_collections_data, dict):
-                return installed_collections_data
+            return json.loads(installed_collections_data)
         except (json.JSONDecodeError, TypeError):
             pass
 
@@ -650,15 +653,20 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         for collection_name, collection_info in collections_data.items():
             self._process_single_collection(collection_name, collection_info, collections_stats, failed, row_stats)
 
-    def _hash_installed_collections(self, raw):
-        """Compute a SHA-256 hash of the raw installed_collections string.
-
-        Used as a cache key to avoid re-parsing identical JSON payloads
-        (e.g. all jobs that share the same execution environment).
-        SHA-256 is used instead of the raw string to keep the cache memory-efficient
-        when the JSON payload is large.
+    def _get_collection_cache_key(self, row, installed_collections_data):
         """
-        return hashlib.sha256(raw.encode('utf-8', errors='replace')).hexdigest()
+        Return a hashable cache key for the installed_collections of a row.
+
+        Prefers execution_environment_id as the key because it is a stable
+        integer that uniquely identifies a fixed collection set.  Prefixes the
+        tuple with 'ee' to avoid any collision with the fallback hash keys.
+        Falls back to hashing the raw string for rows that have no EE id.
+        """
+        ee_id = getattr(row, 'execution_environment_id', None)
+        if ee_id is not None and not (isinstance(ee_id, float) and pd.isna(ee_id)):
+            return ('ee', int(ee_id))
+        raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
+        return ('raw', hash(raw))
 
     def _process_collections_from_jobs(self, dataframe):
         """
@@ -667,7 +675,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         including failed and successful job counts.
 
         Optimized version using itertuples() for better performance.
-        Additionally uses a hash-based cache to avoid re-parsing identical
+        Additionally uses a built-in hash cache to avoid re-parsing identical
         installed_collections JSON payloads (common when many jobs share the
         same execution environment).
 
@@ -684,9 +692,12 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         # Use dict for tracking job_count, jobs_failed_total, jobs_successful_total per collection+version
         collections_stats = {}
 
-        # Cache: SHA-256 hash of raw JSON string -> parsed collections dict
+        # Cache: execution_environment_id -> parsed collections dict
         # Many jobs share the same installed_collections because they run on the
-        # same execution environment, so we avoid redundant json.loads() calls.
+        # same execution environment. Using execution_environment_id as the key is
+        # more stable than hashing the raw JSON string, since JSONB serialization
+        # does not guarantee identical key ordering across rows.
+        # Falls back to hashing the raw string for rows without an EE id.
         parse_cache = {}
 
         # Use itertuples() for fastest row iteration (10-100x faster than iterrows)
@@ -698,9 +709,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             if not installed_collections_data or pd.isna(installed_collections_data):
                 continue
 
-            # Use hash of the raw string as cache key to avoid storing large strings
-            raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
-            cache_key = self._hash_installed_collections(raw)
+            cache_key = self._get_collection_cache_key(row, installed_collections_data)
 
             if cache_key not in parse_cache:
                 parse_cache[cache_key] = self._parse_collections_data(installed_collections_data)

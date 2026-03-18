@@ -79,6 +79,7 @@ jobs = [
                 'ansible.builtin': {'version': '2.16.0'},
             }
         ),
+        'execution_environment_id': 3,  # Same EE as job 4 (same installed_collections)
     },
 ]
 

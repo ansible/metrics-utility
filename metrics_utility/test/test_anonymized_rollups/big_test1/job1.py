@@ -77,6 +77,7 @@ jobs = [
                 'ansible.builtin': {'version': '2.15.0'},
             }
         ),
+        'execution_environment_id': 1,  # EE for ansible.builtin 2.15.0 only
     },
 ]
 

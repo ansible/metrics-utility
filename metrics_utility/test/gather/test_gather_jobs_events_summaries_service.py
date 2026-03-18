@@ -206,14 +206,14 @@ def cleanup_glob():
 jobs_lines = [
     (
         'id,polymorphic_ctype_id,model,organization_id,organization_name,'
-        'execution_environment_image,inventory_id,inventory_name,created,'
+        'execution_environment_image,inventory_id,inventory_name,execution_environment_id,created,'
         'name,unified_job_template_id,launch_type,schedule_id,execution_node,'
         'controller_node,cancel_flag,status,failed,started,finished,elapsed,'
         'job_explanation,instance_group_id,installed_collections,ansible_version,forks,'
         'job_template_name,scm_type'
     ),
     (
-        '1,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '1,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
         '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,manual,,auto,'
         'controller1,f,pending,f,2025-06-13 10:00:10+00:00,2025-06-13 10:02:10+00:00,120.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
@@ -221,7 +221,7 @@ jobs_lines = [
         'default_unified_job_template_2025-06-13,git'
     ),
     (
-        '2,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '2,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
         '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,scheduled,,auto,'
         'controller1,f,pending,f,2025-06-13 10:00:20+00:00,2025-06-13 10:03:20+00:00,180.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
@@ -229,7 +229,7 @@ jobs_lines = [
         'default_unified_job_template_2025-06-13,git'
     ),
     (
-        '3,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '3,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
         '2025-06-13 10:00:00+00:00,default_unified_job_2025-06-13,1,workflow,,auto,'
         'controller1,f,failed,t,2025-06-13 10:00:30+00:00,2025-06-13 10:02:00+00:00,90.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
@@ -238,7 +238,7 @@ jobs_lines = [
         'default_unified_job_template_2025-06-13,git'
     ),
     (
-        '4,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '4,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
         '2025-06-13 11:00:00+00:00,default_unified_job_11_2025-06-13,1,manual,,auto,'
         'controller1,f,pending,f,2025-06-13 11:00:10+00:00,2025-06-13 11:01:50+00:00,100.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
@@ -247,7 +247,7 @@ jobs_lines = [
         'default_unified_job_template_2025-06-13,git'
     ),
     (
-        '5,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '5,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
         '2025-06-13 11:00:00+00:00,default_unified_job_11_2025-06-13,1,scheduled,,auto,'
         'controller1,f,pending,f,2025-06-13 11:00:20+00:00,2025-06-13 11:02:50+00:00,150.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
@@ -256,7 +256,7 @@ jobs_lines = [
         'default_unified_job_template_2025-06-13,git'
     ),
     (
-        '6,,job,2,default_org_2025-06-13,,4,default_inventory_2025-06-13,'
+        '6,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
         '2025-06-13 11:00:00+00:00,default_unified_job_11_2025-06-13,1,workflow,,auto,'
         'controller1,f,pending,f,2025-06-13 11:00:30+00:00,2025-06-13 11:01:50+00:00,80.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
@@ -271,6 +271,7 @@ json_lines_skip_ids_columns = [
     'polymorphic_ctype_id',
     'organization_id',
     'inventory_id',
+    'execution_environment_id',
     'unified_job_template_id',
     'schedule_id',
     'instance_group_id',
