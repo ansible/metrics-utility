@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import json
 import sys
 import uuid
@@ -139,11 +140,22 @@ class StorageSegment:
             msg = f'Split data into {total_chunks} chunks'
             print(msg, file=sys.stderr)
 
+        if not segment_meta:
+            segment_meta = {}
+        message_id = segment_meta.get('message_id', None)
+
         # Send each chunk
         for i, chunk in enumerate(chunks, 1):
             chunk_size = self._calculate_size(chunk)
+
+            # chunk hash = sha256(message hash + chunk index)
+            if message_id:
+                segment_meta['message_id'] = hashlib.sha256(f'{message_id}_{i}'.encode('utf-8', errors='replace')).hexdigest()
+
             if self.debug:
                 msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes)'
+                if message_id:
+                    msg += f'; message_id={segment_meta["message_id"]}'
                 print(msg, file=sys.stderr)
 
             analytics.track(
@@ -159,7 +171,7 @@ class StorageSegment:
                         'chunk_size': chunk_size,
                     },
                 },
-                **(segment_meta or {}),
+                **segment_meta,
             )
 
         # Flush to ensure all events are sent
