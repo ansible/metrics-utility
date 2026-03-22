@@ -28,8 +28,15 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
             numeric = pd.to_numeric(dataframe[col], errors='coerce')
             mask = numeric.notna()
             if mask.any():
-                # Convert only the numeric rows to integer strings; leave NaN rows untouched
-                dataframe.loc[mask, col] = numeric[mask].astype(int).astype(str)
+                # Cast to object dtype first so that assigning string values does not
+                # trigger a StringArray → int64 coercion error in pandas 2.2+/3.x,
+                # which occurs when the original column dtype is int64 and pandas
+                # tries to cast the assigned StringArray back to int64.
+                dataframe[col] = dataframe[col].astype(object)
+                # Use to_numpy(dtype=float) to escape any nullable Float64Dtype and
+                # produce a plain numpy float array before converting to int strings,
+                # ensuring the result is an object array rather than a StringArray.
+                dataframe.loc[mask, col] = numeric[mask].to_numpy(dtype=float).astype(int).astype(str)
 
         return dataframe
 
@@ -663,7 +670,7 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         Falls back to hashing the raw string for rows that have no EE id.
         """
         ee_id = getattr(row, 'execution_environment_id', None)
-        if ee_id is not None and not (isinstance(ee_id, float) and pd.isna(ee_id)):
+        if ee_id is not None and not pd.isna(ee_id):
             return ('ee', int(ee_id))
         raw = installed_collections_data if isinstance(installed_collections_data, str) else str(installed_collections_data)
         return ('raw', hash(raw))
