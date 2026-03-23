@@ -97,7 +97,7 @@ def main_host(*, db=None, output=DataframeOutput()):
 
 @collector
 def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()):
-    # prefer running with until=False, to not skip hosts that keep being modified
+    # prefer running with until=None, to not skip hosts that keep being modified
 
     where = f"""
         enabled='t'
