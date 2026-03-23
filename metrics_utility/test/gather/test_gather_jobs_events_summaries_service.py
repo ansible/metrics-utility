@@ -2,8 +2,6 @@ import csv
 import glob
 import os
 
-from datetime import datetime, timezone
-
 import pytest
 
 from django.db import connection
@@ -13,7 +11,7 @@ from metrics_utility.library.collectors.controller.job_host_summary_service impo
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
-from metrics_utility.test.util import run_gather_ext
+from metrics_utility.test.util import run_gather_ext, utcdt
 
 
 env_vars = {
@@ -281,8 +279,8 @@ json_lines_skip_ids_columns = [
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_unified_jobs_command(cleanup_glob):
     """Build and validate unified_jobs output from new library collector."""
-    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
+    since = utcdt('2025-06-12')
+    until = utcdt('2025-06-14')
 
     # Run the new collector directly
     collector_instance = unified_jobs(db=connection, since=since, until=until)
@@ -402,8 +400,8 @@ jobs_host_summary_service_skip_columns = [
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_service_command(cleanup_glob):
     """Build and validate job_host_summary_service output from new library collector."""
-    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
+    since = utcdt('2025-06-12')
+    until = utcdt('2025-06-14')
 
     # Run the new collector directly
     collector_instance = job_host_summary_service(db=connection, since=since, until=until)
@@ -580,8 +578,8 @@ main_jobevent_service_skip_columns = [
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_main_jobevent_service_command(cleanup_glob):
     """Build and validate main_jobevent_service output from new library collector."""
-    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
+    since = utcdt('2025-06-12')
+    until = utcdt('2025-06-14')
 
     # Run the new collector directly
     collector_instance = main_jobevent_service(db=connection, since=since, until=until)
@@ -643,8 +641,8 @@ credentials_service_skip_columns = []
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_credentials_service_command(cleanup_glob):
     """Build and validate credentials_service output from new library collector."""
-    since = datetime(2025, 6, 12, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, tzinfo=timezone.utc)
+    since = utcdt('2025-06-12')
+    until = utcdt('2025-06-14')
 
     # Run the new collector directly
     collector_instance = credentials_service(db=connection, since=since, until=until)

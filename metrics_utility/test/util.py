@@ -11,6 +11,14 @@ import pandas as pd
 import pytest
 
 
+def utcdt(s):
+    """Parse an ISO date/datetime string as UTC. Assumes UTC if no timezone given."""
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
 @contextmanager
 def temporary_env(new_env):
     """Temporarily update os.environ with new_env."""

@@ -1,6 +1,6 @@
 """Test suite for collector utility helper functions."""
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -12,6 +12,7 @@ from metrics_utility.library.collectors.util import (
     date_where,
     ensure_functions,
 )
+from metrics_utility.test.util import utcdt
 
 
 class TestEnsureFunctions:
@@ -287,8 +288,8 @@ class TestDateWhere:
 
     def test_both_since_and_until(self):
         """Test date_where with both since and until produces range condition."""
-        since = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-        until = datetime(2024, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        since = utcdt('2024-01-01')
+        until = utcdt('2024-12-31T23:59:59')
 
         result = date_where('created_at', since, until)
 
@@ -299,7 +300,7 @@ class TestDateWhere:
 
     def test_only_since(self):
         """Test date_where with only since produces >= condition."""
-        since = datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+        since = utcdt('2024-06-01T12:00:00')
 
         result = date_where('modified_date', since, None)
 
@@ -309,7 +310,7 @@ class TestDateWhere:
 
     def test_only_until(self):
         """Test date_where with only until produces < condition."""
-        until = datetime(2024, 3, 15, 18, 30, 0, tzinfo=timezone.utc)
+        until = utcdt('2024-03-15T18:30:00')
 
         result = date_where('timestamp', None, until)
 
@@ -341,8 +342,8 @@ class TestDateWhere:
 
     def test_dotted_table_column_reference(self):
         """Test that table.column references work correctly (not broken by quoting)."""
-        since = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-        until = datetime(2024, 12, 31, 0, 0, 0, tzinfo=timezone.utc)
+        since = utcdt('2024-01-01')
+        until = utcdt('2024-12-31')
 
         result = date_where('main_host.created', since, until)
 
