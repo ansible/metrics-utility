@@ -6,8 +6,8 @@ from typing import Dict
 import pandas as pd
 
 from django.db import connection
-from django.utils.dateparse import parse_datetime
 
+from metrics_utility.library.collectors.controller.config import _datetime_hook
 from metrics_utility.logger import logger
 
 
@@ -34,16 +34,6 @@ def get_last_entries_from_db() -> Dict:
     except Exception as e:
         logger.error(f'Error getting AUTOMATION_ANALYTICS_LAST_ENTRIES from database: {e}')
     return {}
-
-
-def _datetime_hook(d):
-    new_d = {}
-    for key, value in d.items():
-        try:
-            new_d[key] = parse_datetime(value)
-        except TypeError:
-            new_d[key] = value
-    return new_d
 
 
 def parse_json_array(x):

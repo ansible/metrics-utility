@@ -1,11 +1,9 @@
-import os
 import platform
-
-from importlib.metadata import PackageNotFoundError, version
 
 import distro
 
 from ..util import DictOutput, collector
+from .config import _get_install_type, _version
 
 
 @collector
@@ -64,20 +62,3 @@ def config_django(*, billing_provider_params={}, output=DictOutput()):
             },
         }
     )
-
-
-def _version(package):
-    try:
-        return version(package)
-    except PackageNotFoundError:
-        return None
-
-
-def _get_install_type():
-    if os.getenv('container') == 'oci':
-        return 'openshift'
-
-    if os.getenv('KUBERNETES_SERVICE_PORT'):
-        return 'k8s'
-
-    return 'traditional'
