@@ -3,7 +3,7 @@ import os
 import re
 import shutil
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
@@ -987,8 +987,8 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Define two hourly intervals: 10:00-11:00 and 11:00-12:00
     time_intervals = [
-        (datetime(2025, 6, 13, 10, 0, 0), datetime(2025, 6, 13, 11, 0, 0)),
-        (datetime(2025, 6, 13, 11, 0, 0), datetime(2025, 6, 13, 12, 0, 0)),
+        (datetime(2025, 6, 13, 10, 0, 0, tzinfo=timezone.utc), datetime(2025, 6, 13, 11, 0, 0, tzinfo=timezone.utc)),
+        (datetime(2025, 6, 13, 11, 0, 0, tzinfo=timezone.utc), datetime(2025, 6, 13, 12, 0, 0, tzinfo=timezone.utc)),
     ]
 
     # Map collector names to input_data keys expected by compute_anonymized_rollup_from_raw_data
@@ -1015,8 +1015,8 @@ def test_from_gather_to_json(cleanup_glob):
     print('✓ Anonymized rollup computed successfully')
 
     # Save JSON output
-    since = datetime(2025, 6, 13, 10, 0, 0)
-    until = datetime(2025, 6, 13, 12, 0, 0)
+    since = datetime(2025, 6, 13, 10, 0, 0, tzinfo=timezone.utc)
+    until = datetime(2025, 6, 13, 12, 0, 0, tzinfo=timezone.utc)
     _save_json_output(json_data, since, until)
 
     # Validate all data

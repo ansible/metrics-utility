@@ -1,9 +1,10 @@
 """Test suite for collector utility helper functions."""
 
-from datetime import datetime
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 from metrics_utility.library.collectors.util import (
     _copy_table_files,
@@ -286,8 +287,8 @@ class TestDateWhere:
 
     def test_both_since_and_until(self):
         """Test date_where with both since and until produces range condition."""
-        since = datetime(2024, 1, 1, 0, 0, 0)
-        until = datetime(2024, 12, 31, 23, 59, 59)
+        since = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        until = datetime(2024, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
 
         result = date_where('created_at', since, until)
 
@@ -298,7 +299,7 @@ class TestDateWhere:
 
     def test_only_since(self):
         """Test date_where with only since produces >= condition."""
-        since = datetime(2024, 6, 1, 12, 0, 0)
+        since = datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
 
         result = date_where('modified_date', since, None)
 
@@ -308,7 +309,7 @@ class TestDateWhere:
 
     def test_only_until(self):
         """Test date_where with only until produces < condition."""
-        until = datetime(2024, 3, 15, 18, 30, 0)
+        until = datetime(2024, 3, 15, 18, 30, 0, tzinfo=timezone.utc)
 
         result = date_where('timestamp', None, until)
 
@@ -322,31 +323,26 @@ class TestDateWhere:
 
         assert result == 'true'
 
-    def test_isoformat_used(self):
-        """Test that datetime.isoformat() is used for date formatting."""
-        since = datetime(2024, 1, 15, 10, 30, 45)
-        until = datetime(2024, 2, 20, 14, 45, 30)
+    def test_rejects_naive_since(self):
+        with pytest.raises(ValueError, match='since must be timezone-aware'):
+            date_where('field', datetime(2024, 1, 1), None)
 
-        result = date_where('event_time', since, until)
+    def test_rejects_naive_until(self):
+        with pytest.raises(ValueError, match='until must be timezone-aware'):
+            date_where('field', None, datetime(2024, 1, 1))
 
-        # isoformat() produces strings like '2024-01-15T10:30:45'
-        assert '2024-01-15T10:30:45' in result
-        assert '2024-02-20T14:45:30' in result
+    def test_rejects_non_datetime_since(self):
+        with pytest.raises(TypeError, match='since must be a datetime, got str'):
+            date_where('field', '2024-01-01', None)
 
-    def test_since_and_until_format(self):
-        """Test the exact format of the range condition."""
-        since = datetime(2024, 1, 1, 0, 0, 0)
-        until = datetime(2024, 12, 31, 0, 0, 0)
-
-        result = date_where('field', since, until)
-
-        expected = f"( field >= '{since.isoformat()}' AND field < '{until.isoformat()}' )"
-        assert result == expected
+    def test_rejects_non_datetime_until(self):
+        with pytest.raises(TypeError, match='until must be a datetime, got date'):
+            date_where('field', None, date(2024, 1, 1))
 
     def test_dotted_table_column_reference(self):
         """Test that table.column references work correctly (not broken by quoting)."""
-        since = datetime(2024, 1, 1, 0, 0, 0)
-        until = datetime(2024, 12, 31, 0, 0, 0)
+        since = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        until = datetime(2024, 12, 31, 0, 0, 0, tzinfo=timezone.utc)
 
         result = date_where('main_host.created', since, until)
 

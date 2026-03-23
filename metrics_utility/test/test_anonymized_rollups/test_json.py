@@ -1,6 +1,6 @@
 import json
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 import pytest
@@ -93,8 +93,8 @@ def test_json_serialization_roundtrip(cleanup_glob):
     roundtrip for each collector's prepare output.
     """
     # Time range for data collection
-    since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
+    since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
+    until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
 
     db = connection
 
