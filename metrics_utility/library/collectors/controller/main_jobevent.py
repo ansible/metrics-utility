@@ -1,15 +1,8 @@
-from ..util import DataframeOutput, collector
+from ..util import DataframeOutput, collector, date_where
 
 
 @collector
 def main_jobevent(*, db=None, since=None, until=None, output=DataframeOutput()):
-    where = ' AND '.join(
-        [
-            f"main_jobhostsummary.modified >= '{since.isoformat()}'",
-            f"main_jobhostsummary.modified < '{until.isoformat()}'",
-        ]
-    )
-
     query = f"""
         WITH job_scope AS (
             SELECT
@@ -21,7 +14,7 @@ def main_jobevent(*, db=None, since=None, until=None, output=DataframeOutput()):
                 main_jobhostsummary.host_name
             FROM main_jobhostsummary
             JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
-            WHERE {where}
+            WHERE {date_where('main_jobhostsummary.modified', since, until)}
         )
         SELECT
             job_scope.main_jobhostsummary_id,

@@ -291,8 +291,8 @@ class TestDateWhere:
 
         result = date_where('created_at', since, until)
 
-        assert '( "created_at" >=' in result
-        assert 'AND "created_at" <' in result
+        assert 'created_at >=' in result
+        assert 'AND created_at <' in result
         assert since.isoformat() in result
         assert until.isoformat() in result
 
@@ -302,7 +302,7 @@ class TestDateWhere:
 
         result = date_where('modified_date', since, None)
 
-        assert '( "modified_date" >=' in result
+        assert 'modified_date >=' in result
         assert since.isoformat() in result
         assert 'AND' not in result
 
@@ -312,7 +312,7 @@ class TestDateWhere:
 
         result = date_where('timestamp', None, until)
 
-        assert '( "timestamp" <' in result
+        assert 'timestamp <' in result
         assert until.isoformat() in result
         assert '>=' not in result
 
@@ -333,14 +333,6 @@ class TestDateWhere:
         assert '2024-01-15T10:30:45' in result
         assert '2024-02-20T14:45:30' in result
 
-    def test_field_name_quoted(self):
-        """Test that field name is properly quoted."""
-        since = datetime(2024, 1, 1)
-
-        result = date_where('my_field', since, None)
-
-        assert '"my_field"' in result
-
     def test_since_and_until_format(self):
         """Test the exact format of the range condition."""
         since = datetime(2024, 1, 1, 0, 0, 0)
@@ -348,5 +340,17 @@ class TestDateWhere:
 
         result = date_where('field', since, until)
 
-        expected = f'( "field" >= \'{since.isoformat()}\' AND "field" < \'{until.isoformat()}\' )'
+        expected = f"( field >= '{since.isoformat()}' AND field < '{until.isoformat()}' )"
         assert result == expected
+
+    def test_dotted_table_column_reference(self):
+        """Test that table.column references work correctly (not broken by quoting)."""
+        since = datetime(2024, 1, 1, 0, 0, 0)
+        until = datetime(2024, 12, 31, 0, 0, 0)
+
+        result = date_where('main_host.created', since, until)
+
+        assert 'main_host.created >=' in result
+        assert 'main_host.created <' in result
+        # must NOT be quoted as "main_host.created" — PostgreSQL would treat that as a single identifier
+        assert '"main_host.created"' not in result

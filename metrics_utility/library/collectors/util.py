@@ -53,16 +53,16 @@ class CollectionOutput(DictOutput):
         return _copy_table_files(db, query, filespec)
 
 
-# FIXME: psycopg.sql
+# NOTE: `field` should be a hardcoded column name
 def date_where(field, since, until):
     if since and until:
-        return f'( "{field}" >= \'{since.isoformat()}\' AND "{field}" < \'{until.isoformat()}\' )'
+        return f"( {field} >= '{since.isoformat()}' AND {field} < '{until.isoformat()}' )"
 
     if since:
-        return f'( "{field}" >= \'{since.isoformat()}\' )'
+        return f"( {field} >= '{since.isoformat()}' )"
 
     if until:
-        return f'( "{field}" < \'{until.isoformat()}\' )'
+        return f"( {field} < '{until.isoformat()}' )"
 
     return 'true'
 
