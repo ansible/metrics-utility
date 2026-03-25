@@ -10,6 +10,7 @@ from metrics_utility.anonymized_rollups import (
     CredentialsAnonymizedRollup,
     EventModulesAnonymizedRollup,
     ExecutionEnvironmentsAnonymizedRollup,
+    FeatureFlagsAnonymizedRollup,
     JobHostSummaryAnonymizedRollup,
     JobsAnonymizedRollup,
     TableMetadataAnonymizedRollup,
@@ -18,6 +19,7 @@ from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary_service,
     main_jobevent_service,
     table_metadata,
@@ -106,6 +108,7 @@ def test_json_serialization_roundtrip(cleanup_glob):
         ('credentials_service', credentials_service, CredentialsAnonymizedRollup, {'since': since, 'until': until}),
         ('table_metadata', table_metadata, TableMetadataAnonymizedRollup, {}),
         ('controller_version_service', controller_version_service, ControllerVersionAnonymizedRollup, {}),
+        ('feature_flags_service', feature_flags_service, FeatureFlagsAnonymizedRollup, {}),
     ]
 
     for collector_name, collector_func, rollup_class, collector_kwargs in collector_rollup_map:
