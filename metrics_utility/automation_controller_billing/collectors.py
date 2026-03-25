@@ -11,6 +11,7 @@ from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.library.collectors.controller import (
     config,
+    config_django,
     controller_version_service,
     credentials_service,
     execution_environments,
@@ -97,8 +98,13 @@ def until_slicing(_key, _last_gather, **kwargs):
 def cli_config(since, until, output):
     # runs once, used in all the tarballs
     # FIXME: , billing_provider_params={dict} rather than {} getting overwritten in collector.gather
-    collector = config(db=connection)
-    return output.as_dict(collector)
+    try:
+        collector = config_django()
+        return output.as_dict(collector)
+    except Exception:
+        logger.info('config_django unavailable, falling back to DB-based config collector')
+        collector = config(db=connection)
+        return output.as_dict(collector)
 
 
 ### CCSP & CCSPv2 collectors
