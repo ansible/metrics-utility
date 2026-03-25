@@ -93,7 +93,7 @@ def until_slicing(_key, _last_gather, **kwargs):
 
 
 # FIXME: move this one to caller?
-@register('config', '1.0', format='json', config=True)
+@register('config', '2.0', format='json', config=True)
 def cli_config(since, until, output):
     # runs once, used in all the tarballs
     # FIXME: , billing_provider_params={dict} rather than {} getting overwritten in collector.gather
