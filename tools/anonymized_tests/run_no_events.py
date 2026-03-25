@@ -29,7 +29,7 @@ import shutil
 import sys
 import time
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -56,6 +56,7 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary_service,
     table_metadata,
     unified_jobs,
@@ -89,20 +90,25 @@ COLLECTORS = {
         'func': controller_version_service,
         'needs_since_until': False,  # snapshot collector
     },
+    'feature_flags_service': {
+        'func': feature_flags_service,
+        'needs_since_until': False,  # snapshot collector
+    },
 }
 
 # Default since-until from test_from_gather_to_json.py
-DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0)
-DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0)
+DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
+DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
 
 
 def parse_datetime(dt_str: str) -> datetime:
-    """Parse datetime string in format 'YYYY-MM-DD HH:MM:SS'."""
+    """Parse datetime string in format 'YYYY-MM-DD HH:MM:SS' and return UTC-aware datetime."""
     try:
-        return datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+        dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         # Try just date
-        return datetime.strptime(dt_str, '%Y-%m-%d')
+        dt = datetime.strptime(dt_str, '%Y-%m-%d')
+    return dt.replace(tzinfo=timezone.utc)
 
 
 def split_time_range(since: datetime, until: datetime, batches: int = None) -> List[Tuple[datetime, datetime]]:
@@ -373,6 +379,7 @@ Examples:
         'execution_environments': 'execution_environments',
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
+        'feature_flags_service': 'feature_flags',
     }
 
     # Prepare input_data dict

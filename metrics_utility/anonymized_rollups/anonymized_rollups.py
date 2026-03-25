@@ -12,6 +12,7 @@ from metrics_utility.anonymized_rollups.controller_version_anonymized_rollup imp
 from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
+from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
@@ -43,6 +44,8 @@ def create_anonymized_object(rollup_name: str):
         return TableMetadataAnonymizedRollup()
     elif rollup_name == 'controller_version':
         return ControllerVersionAnonymizedRollup()
+    elif rollup_name == 'feature_flags':
+        return FeatureFlagsAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
@@ -450,6 +453,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     credentials_root = data.get('credentials', {})
     table_metadata_root = data.get('table_metadata', {})
     controller_version_root = data.get('controller_version', [])
+    feature_flags_root = data.get('feature_flags', [])
 
     # Extract data structures
     credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
@@ -527,6 +531,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
         'table_metadata': table_metadata_root,
         'controller_versions': controller_versions,
+        'feature_flags': feature_flags_root if isinstance(feature_flags_root, list) else [],
     }
 
     # Only include event-related arrays if there are events
@@ -546,6 +551,7 @@ def anonymize_rollups(
     credentials_rollup,
     table_metadata_rollup,
     controller_version_rollup,
+    feature_flags_rollup,
     salt,
 ):
     """
@@ -559,6 +565,7 @@ def anonymize_rollups(
         credentials_rollup: Credentials statistics
         table_metadata_rollup: Table metadata statistics
         controller_version_rollup: Controller version statistics
+        feature_flags_rollup: Enabled feature flags list
         salt: Salt string for hashing sensitive data
 
     Returns:
@@ -572,6 +579,7 @@ def anonymize_rollups(
         'credentials': credentials_rollup,
         'table_metadata': table_metadata_rollup,
         'controller_version': controller_version_rollup,
+        'feature_flags': feature_flags_rollup,
     }
 
     # First flatten the nested structure
@@ -610,6 +618,9 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     controller_version = load_anonymized_rollup_data(ControllerVersionAnonymizedRollup(), input_data.get('controller_version', []))
     controller_version_result = ControllerVersionAnonymizedRollup().base(controller_version)
 
+    feature_flags = load_anonymized_rollup_data(FeatureFlagsAnonymizedRollup(), input_data.get('feature_flags', []))
+    feature_flags_result = FeatureFlagsAnonymizedRollup().base(feature_flags)
+
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'],
         execution_environments_result['json'],
@@ -618,6 +629,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
         credentials_result['json'],
         table_metadata_result['json'],
         controller_version_result['json'],
+        feature_flags_result['json'],
         salt,
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)

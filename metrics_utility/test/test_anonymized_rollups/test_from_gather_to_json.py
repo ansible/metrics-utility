@@ -13,6 +13,7 @@ from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary_service,
     main_jobevent_service,
     table_metadata,
@@ -51,6 +52,7 @@ def _validate_top_level_structure(json_data):
     assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"
     assert 'table_metadata' in json_data, "Missing 'table_metadata' at top level"
     assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
+    assert 'feature_flags' in json_data, "Missing 'feature_flags' at top level"
 
 
 def _validate_statistics_structure(statistics):
@@ -785,6 +787,27 @@ def _validate_jobs_by_controller_version(json_data, statistics):
     assert len(ctrl_summary['ansible_versions']) > 0, 'ansible_versions should not be empty'
 
 
+def _validate_feature_flags(json_data):
+    """Validate feature_flags structure and values."""
+    print('--- Validating feature_flags data values ---')
+    assert 'feature_flags' in json_data, 'Should have feature_flags at top level'
+    feature_flags = json_data['feature_flags']
+    assert isinstance(feature_flags, list), 'feature_flags should be a list'
+
+    # All entries must be strings (flag names)
+    for flag in feature_flags:
+        assert isinstance(flag, str), f'Each feature flag should be a string, got {type(flag)}'
+        assert flag.startswith('FEATURE_'), f'Feature flag name should start with FEATURE_, got {flag}'
+
+    # Based on test data seeded by dab_feature_flags.sql, two flags are enabled
+    expected_flags = ['FEATURE_ANALYTICS_ENABLED', 'FEATURE_INDIRECT_NODE_COUNTING_ENABLED']
+    assert len(feature_flags) == len(expected_flags), f'Should have {len(expected_flags)} feature flags, got {len(feature_flags)}'
+    assert set(feature_flags) == set(expected_flags), f'Feature flags should match expected set. Expected: {expected_flags}, Got: {feature_flags}'
+
+    # Disabled flag must not appear
+    assert 'FEATURE_SOME_DISABLED_FLAG' not in feature_flags, 'Disabled flag FEATURE_SOME_DISABLED_FLAG should not be in the rollup'
+
+
 def _validate_controller_versions(json_data):
     """Validate controller_versions structure and values."""
     print('--- Validating controller_versions data values ---')
@@ -943,6 +966,7 @@ def _validate_all_data(json_data, statistics):
     _validate_table_metadata_values(json_data)
     _validate_controller_versions(json_data)
     _validate_jobs_by_controller_version(json_data, statistics)
+    _validate_feature_flags(json_data)
 
     print('✅ All data value assertions passed!')
 
@@ -982,6 +1006,10 @@ def test_from_gather_to_json(cleanup_glob):
             'func': controller_version_service,
             'needs_since_until': False,  # snapshot collector
         },
+        'feature_flags_service': {
+            'func': feature_flags_service,
+            'needs_since_until': False,  # snapshot collector
+        },
     }
 
     # Define two hourly intervals: 10:00-11:00 and 11:00-12:00
@@ -999,6 +1027,7 @@ def test_from_gather_to_json(cleanup_glob):
         'execution_environments': 'execution_environments',
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
+        'feature_flags_service': 'feature_flags',
     }
 
     # Collect data from all collectors

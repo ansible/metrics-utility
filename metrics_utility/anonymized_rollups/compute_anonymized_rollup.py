@@ -7,6 +7,7 @@ from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary_service,
     main_jobevent_service,
     table_metadata,
@@ -59,6 +60,12 @@ def compute_anonymized_rollup(db, salt, since, until):
     except Exception as e:
         logger.error(f'Failed to gather controller_version data: {e}')
 
+    feature_flags_data = []
+    try:
+        feature_flags_data = feature_flags_service(db=db).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather feature_flags data: {e}')
+
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
@@ -67,6 +74,7 @@ def compute_anonymized_rollup(db, salt, since, until):
         'credentials': credentials_data,
         'table_metadata': table_metadata_data,
         'controller_version': controller_version_data,
+        'feature_flags': feature_flags_data,
     }
 
     # load data for each collector
