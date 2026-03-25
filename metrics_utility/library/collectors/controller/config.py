@@ -2,11 +2,10 @@ import json
 import os
 import platform
 
+from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 
 import distro
-
-from django.utils.dateparse import parse_datetime
 
 from ..util import DictOutput, collector
 
@@ -134,7 +133,7 @@ def _datetime_hook(d):
     new_d = {}
     for key, value in d.items():
         try:
-            new_d[key] = parse_datetime(value)
-        except TypeError:
+            new_d[key] = datetime.fromisoformat(value)
+        except (TypeError, ValueError):
             new_d[key] = value
     return new_d

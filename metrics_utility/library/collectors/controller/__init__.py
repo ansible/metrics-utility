@@ -1,4 +1,5 @@
 from .config import config
+from .config_django import config_django
 from .controller_version_service import controller_version_service
 from .credentials_service import credentials_service
 from .execution_environments import execution_environments
@@ -14,6 +15,7 @@ from .unified_jobs import unified_jobs
 
 __all__ = [
     'config',
+    'config_django',
     'controller_version_service',
     'credentials_service',
     'execution_environments',
