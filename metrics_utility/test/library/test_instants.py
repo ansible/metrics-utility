@@ -18,6 +18,7 @@ from metrics_utility.library.instants import (
     this_week,
     weeks_ago,
 )
+from metrics_utility.test.util import utcdt
 
 
 def test_now_returns_datetime_with_timezone():
@@ -99,12 +100,11 @@ def test_last_hour_without_relative_to():
 
 def test_last_hour_with_relative_to():
     """Test that last_hour() accepts a relative_to parameter."""
-    reference_time = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    result = last_hour(relative_to=reference_time)
+    result = last_hour(relative_to=utcdt('2025-01-15T12:00:00'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
-    assert result == datetime(2025, 1, 15, 11, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-15T11:00:00')
 
 
 def test_last_day_without_relative_to():
@@ -125,12 +125,11 @@ def test_last_day_without_relative_to():
 
 def test_last_day_with_relative_to():
     """Test that last_day() accepts a relative_to parameter."""
-    reference_time = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
-    result = last_day(relative_to=reference_time)
+    result = last_day(relative_to=utcdt('2025-01-15'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
-    assert result == datetime(2025, 1, 14, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-14')
 
 
 def test_last_week_without_relative_to():
@@ -153,13 +152,12 @@ def test_last_week_without_relative_to():
 def test_last_week_with_relative_to():
     """Test that last_week() accepts a relative_to parameter."""
     # Monday, Jan 13, 2025 at midnight
-    reference_time = datetime(2025, 1, 13, 0, 0, 0, tzinfo=timezone.utc)
-    result = last_week(relative_to=reference_time)
+    result = last_week(relative_to=utcdt('2025-01-13'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
     # Should be Monday, Jan 6, 2025 at midnight
-    assert result == datetime(2025, 1, 6, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-06')
     assert result.weekday() == 0  # Monday
 
 
@@ -187,25 +185,23 @@ def test_last_month_without_relative_to():
 def test_last_month_with_relative_to():
     """Test that last_month() accepts a relative_to parameter."""
     # March 1, 2025 at midnight
-    reference_time = datetime(2025, 3, 1, 0, 0, 0, tzinfo=timezone.utc)
-    result = last_month(relative_to=reference_time)
+    result = last_month(relative_to=utcdt('2025-03-01'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
     # Should be February 1, 2025 at midnight
-    assert result == datetime(2025, 2, 1, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-02-01')
 
 
 def test_last_month_year_boundary():
     """Test that last_month() correctly handles year boundaries."""
     # January 1, 2025 at midnight
-    reference_time = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-    result = last_month(relative_to=reference_time)
+    result = last_month(relative_to=utcdt('2025-01-01'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
     # Should be December 1, 2024 at midnight
-    assert result == datetime(2024, 12, 1, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2024-12-01')
 
 
 def test_hours_ago():
@@ -225,12 +221,11 @@ def test_hours_ago():
 
 def test_hours_ago_with_relative_to():
     """Test that hours_ago(n) accepts a relative_to parameter."""
-    reference_time = datetime(2025, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
-    result = hours_ago(3, relative_to=reference_time)
+    result = hours_ago(3, relative_to=utcdt('2025-01-15T12:00:00'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
-    assert result == datetime(2025, 1, 15, 9, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-15T09:00:00')
 
 
 def test_days_ago():
@@ -251,12 +246,11 @@ def test_days_ago():
 
 def test_days_ago_with_relative_to():
     """Test that days_ago(n) accepts a relative_to parameter."""
-    reference_time = datetime(2025, 1, 15, 0, 0, 0, tzinfo=timezone.utc)
-    result = days_ago(5, relative_to=reference_time)
+    result = days_ago(5, relative_to=utcdt('2025-01-15'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
-    assert result == datetime(2025, 1, 10, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-10')
 
 
 def test_weeks_ago():
@@ -279,13 +273,12 @@ def test_weeks_ago():
 def test_weeks_ago_with_relative_to():
     """Test that weeks_ago(n) accepts a relative_to parameter."""
     # Monday, Jan 20, 2025 at midnight
-    reference_time = datetime(2025, 1, 20, 0, 0, 0, tzinfo=timezone.utc)
-    result = weeks_ago(2, relative_to=reference_time)
+    result = weeks_ago(2, relative_to=utcdt('2025-01-20'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
     # Should be Monday, Jan 6, 2025 at midnight
-    assert result == datetime(2025, 1, 6, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-06')
     assert result.weekday() == 0  # Monday
 
 
@@ -315,25 +308,23 @@ def test_months_ago():
 def test_months_ago_with_relative_to():
     """Test that months_ago(n) accepts a relative_to parameter."""
     # May 1, 2025 at midnight
-    reference_time = datetime(2025, 5, 1, 0, 0, 0, tzinfo=timezone.utc)
-    result = months_ago(2, relative_to=reference_time)
+    result = months_ago(2, relative_to=utcdt('2025-05-01'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
     # Should be exactly March 1, 2025
-    assert result == datetime(2025, 3, 1, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-03-01')
 
 
 def test_months_ago_year_boundary():
     """Test that months_ago correctly handles year boundaries."""
     # February 1, 2025 at midnight
-    reference_time = datetime(2025, 2, 1, 0, 0, 0, tzinfo=timezone.utc)
-    result = months_ago(3, relative_to=reference_time)
+    result = months_ago(3, relative_to=utcdt('2025-02-01'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
     # Should be November 1, 2024
-    assert result == datetime(2024, 11, 1, 0, 0, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2024-11-01')
 
 
 def test_minutes_ago():
@@ -352,17 +343,16 @@ def test_minutes_ago():
 
 def test_minutes_ago_with_relative_to():
     """Test that minutes_ago(n) accepts a relative_to parameter."""
-    reference_time = datetime(2025, 1, 15, 12, 30, 0, tzinfo=timezone.utc)
-    result = minutes_ago(10, relative_to=reference_time)
+    result = minutes_ago(10, relative_to=utcdt('2025-01-15T12:30:00'))
 
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
-    assert result == datetime(2025, 1, 15, 12, 20, 0, tzinfo=timezone.utc)
+    assert result == utcdt('2025-01-15T12:20:00')
 
 
 def test_iso_converts_datetime_to_string():
     """Test that iso() converts a datetime to ISO 8601 string."""
-    dt = datetime(2025, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
+    dt = utcdt('2025-01-15T12:30:45')
     result = iso(dt)
 
     assert isinstance(result, str)
@@ -371,7 +361,7 @@ def test_iso_converts_datetime_to_string():
 
 def test_iso_preserves_timezone():
     """Test that iso() preserves timezone information in the output."""
-    dt = datetime(2025, 1, 15, 12, 30, 45, tzinfo=timezone.utc)
+    dt = utcdt('2025-01-15T12:30:45')
     result = iso(dt)
 
     # The ISO string should contain timezone information

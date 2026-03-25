@@ -1,15 +1,8 @@
-from ..util import DataframeOutput, collector
+from ..util import DataframeOutput, collector, date_where
 
 
 @collector
 def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=DataframeOutput()):
-    where = ' AND '.join(
-        [
-            f"main_indirectmanagednodeaudit.created >= '{since.isoformat()}'",
-            f"main_indirectmanagednodeaudit.created < '{until.isoformat()}'",
-        ]
-    )
-
     query = f"""
         SELECT
             main_indirectmanagednodeaudit.id,
@@ -36,7 +29,7 @@ def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=Dat
         LEFT JOIN main_inventory ON main_inventory.id = main_indirectmanagednodeaudit.inventory_id
         LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
         LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project ON main_unifiedjobtemplate_project.id = main_job.project_id
-        WHERE {where}
+        WHERE {date_where('main_indirectmanagednodeaudit.created', since, until)}
         ORDER BY main_indirectmanagednodeaudit.created ASC
     """
 
