@@ -1,7 +1,5 @@
 import json
 
-from datetime import datetime
-
 import pandas as pd
 import pytest
 
@@ -25,6 +23,7 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.test.util import utcdt
 
 
 def _deep_compare(obj1, obj2, path=''):
@@ -93,8 +92,8 @@ def test_json_serialization_roundtrip(cleanup_glob):
     roundtrip for each collector's prepare output.
     """
     # Time range for data collection
-    since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
+    since = utcdt('2025-06-13')
+    until = utcdt('2025-06-14')
 
     db = connection
 

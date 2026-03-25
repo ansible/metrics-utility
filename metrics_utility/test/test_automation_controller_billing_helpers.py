@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from django.db import DatabaseError
@@ -7,6 +6,7 @@ from metrics_utility.automation_controller_billing.helpers import (
     _datetime_hook,
     get_last_entries_from_db,
 )
+from metrics_utility.test.util import utcdt
 
 
 class TestGetLastEntriesFromDb:
@@ -25,9 +25,9 @@ class TestGetLastEntriesFromDb:
 
         # Assert - _datetime_hook parses datetime strings to datetime objects
         expected_result = {
-            'config': datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
-            'hosts': datetime(2024, 1, 3, 0, 0, tzinfo=timezone.utc),
-            'jobs': datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc),
+            'config': utcdt('2024-01-01'),
+            'hosts': utcdt('2024-01-03'),
+            'jobs': utcdt('2024-01-02'),
         }
         assert result == expected_result
         mock_cursor.execute.assert_called_once()
@@ -117,7 +117,7 @@ class TestIntegration:
         # Assert all return expected realistic data
         # _datetime_hook parses datetime strings to datetime objects
         expected_entries = {
-            'config': datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc),
-            'jobs': datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc),
+            'config': utcdt('2024-01-01'),
+            'jobs': utcdt('2024-01-02'),
         }
         assert entries == expected_entries

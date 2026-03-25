@@ -1,4 +1,4 @@
-from ..util import DataframeOutput, collector
+from ..util import DataframeOutput, collector, date_where
 
 
 @collector
@@ -44,8 +44,7 @@ def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
         LEFT JOIN main_project ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
         LEFT JOIN main_unifiedjobtemplate AS mut ON mut.id = main_unifiedjob.unified_job_template_id
         WHERE
-            main_unifiedjob.finished >= '{since.isoformat()}'
-            AND main_unifiedjob.finished < '{until.isoformat()}'
+            {date_where('main_unifiedjob.finished', since, until)}
         ORDER BY main_unifiedjob.id ASC
     """
 

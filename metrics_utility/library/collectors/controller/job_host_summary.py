@@ -1,14 +1,9 @@
-from ..util import DataframeOutput, collector, ensure_functions
+from ..util import DataframeOutput, collector, date_where, ensure_functions
 
 
 @collector
 def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput()):
-    where = ' AND '.join(
-        [
-            f"main_jobhostsummary.modified >= '{since.isoformat()}'",
-            f"main_jobhostsummary.modified < '{until.isoformat()}'",
-        ]
-    )
+    where = date_where('main_jobhostsummary.modified', since, until)
 
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     query = f"""
@@ -78,5 +73,6 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
         ORDER BY main_jobhostsummary.modified ASC
     """
 
+    # ensure_functions writes to DB, cannot be used in service (readonly DB)
     ensure_functions(db)
     return output.sql(db, query)

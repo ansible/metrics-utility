@@ -1,4 +1,4 @@
-from ..util import DataframeOutput, collector
+from ..util import DataframeOutput, collector, date_where
 
 
 @collector
@@ -11,8 +11,7 @@ def credentials_service(*, db=None, since=None, until=None, output=DataframeOutp
         JOIN main_credential ON main_credential.id = main_unifiedjob_credentials.credential_id
         JOIN main_credentialtype ON main_credentialtype.id = main_credential.credential_type_id
         WHERE
-            main_unifiedjob.finished >= '{since.isoformat()}'
-            AND main_unifiedjob.finished < '{until.isoformat()}'
+            {date_where('main_unifiedjob.finished', since, until)}
             AND main_credentialtype.managed = true
     """
 

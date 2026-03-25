@@ -1,6 +1,5 @@
 """Tests for helper functions in total_workers_vcpu module."""
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,6 +9,7 @@ from metrics_utility.library.collectors.others.total_workers_vcpu import (
     get_total_workers_cpu,
     timestamp_format,
 )
+from metrics_utility.test.util import utcdt
 
 
 class TestTimestampFormat:
@@ -18,8 +18,7 @@ class TestTimestampFormat:
     def test_timestamp_format_basic(self):
         """Test basic timestamp formatting."""
         # 2024-01-01 12:30:45.123 UTC
-        dt = datetime(2024, 1, 1, 12, 30, 45, 123000, tzinfo=timezone.utc)
-        ts = dt.timestamp()
+        ts = utcdt('2024-01-01T12:30:45.123').timestamp()
 
         result = timestamp_format(ts)
 
@@ -28,8 +27,7 @@ class TestTimestampFormat:
 
     def test_timestamp_format_midnight(self):
         """Test formatting midnight timestamp."""
-        dt = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-        ts = dt.timestamp()
+        ts = utcdt('2024-01-01').timestamp()
 
         result = timestamp_format(ts)
 
@@ -37,8 +35,7 @@ class TestTimestampFormat:
 
     def test_timestamp_format_with_milliseconds(self):
         """Test formatting preserves milliseconds."""
-        dt = datetime(2024, 1, 1, 12, 30, 45, 999000, tzinfo=timezone.utc)
-        ts = dt.timestamp()
+        ts = utcdt('2024-01-01T12:30:45.999').timestamp()
 
         result = timestamp_format(ts)
 
@@ -47,8 +44,7 @@ class TestTimestampFormat:
 
     def test_timestamp_format_no_timezone_offset(self):
         """Test that +00:00 is replaced with Z."""
-        dt = datetime(2024, 6, 15, 8, 45, 30, 500000, tzinfo=timezone.utc)
-        ts = dt.timestamp()
+        ts = utcdt('2024-06-15T08:45:30.500').timestamp()
 
         result = timestamp_format(ts)
 
