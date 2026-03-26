@@ -44,7 +44,7 @@ if not os.getenv('VIRTUAL_ENV') and venv_path.exists():
         sys.path.insert(0, str(site_packages[0]))
 
 from metrics_utility import prepare  # noqa: E402
-from metrics_utility.anonymized_rollups.compute_anonymized_rollup import compute_anonymized_rollup  # noqa: E402
+from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup  # noqa: E402
 
 
 # Initialize Django and database connection

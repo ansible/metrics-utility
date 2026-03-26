@@ -8,7 +8,7 @@ import pytest
 
 from django.db import connection
 
-from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,

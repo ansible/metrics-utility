@@ -24,7 +24,7 @@ from datetime import datetime
 import pandas as pd
 import pytest
 
-from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.library.storage.segment import StorageSegment
 
 # Import all job data from job1 through job8
