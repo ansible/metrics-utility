@@ -11,7 +11,6 @@ from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import Cre
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
-from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
@@ -584,5 +583,3 @@ def anonymize_rollups(
     anonymize_data(data, salt)
 
     return data
-
-

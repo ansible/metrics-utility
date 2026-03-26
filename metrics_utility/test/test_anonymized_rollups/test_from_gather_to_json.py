@@ -8,7 +8,6 @@ import pytest
 
 from django.db import connection
 
-from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
@@ -19,6 +18,7 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.util import utcdt
 
 

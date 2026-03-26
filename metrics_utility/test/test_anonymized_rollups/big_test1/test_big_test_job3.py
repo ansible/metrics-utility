@@ -22,10 +22,10 @@ import tempfile
 
 import pandas as pd
 
-from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.test_anonymized_rollups.big_test1.credentials import credentials
 from metrics_utility.test.test_anonymized_rollups.big_test1.execution_environments import execution_environments
 from metrics_utility.test.test_anonymized_rollups.big_test1.job3 import events, jobhostsummary, jobs
+from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 
 
 def test_big_test3():

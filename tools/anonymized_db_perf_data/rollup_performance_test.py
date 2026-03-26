@@ -29,17 +29,17 @@ prepare()
 
 from django.db import connection  # noqa: E402
 
-# Import rollup computation
-from metrics_utility.test.test_anonymized_rollups.helpers import (  # noqa: E402
-    compute_anonymized_rollup_from_raw_data,
-)
-
 # Import collectors
 from metrics_utility.library.collectors.controller import (  # noqa: E402
     execution_environments,
     job_host_summary_service,
     main_jobevent_service,
     unified_jobs,
+)
+
+# Import rollup computation
+from metrics_utility.test.test_anonymized_rollups.helpers import (  # noqa: E402
+    compute_anonymized_rollup_from_raw_data,
 )
 
 

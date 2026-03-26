@@ -6,6 +6,7 @@ run the full rollup+anonymize pipeline, and write intermediate debug files to ./
 They are intentionally NOT part of the production flow — production code calls the individual
 rollup classes and anonymize_rollups() directly.
 """
+
 import json
 import os
 import shutil

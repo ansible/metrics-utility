@@ -26,7 +26,6 @@ from datetime import datetime
 import pandas as pd
 import pytest
 
-from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.library.storage.segment import StorageSegment
 
 # Import all job data from job1 through job8 (but NOT events)
@@ -48,6 +47,7 @@ from metrics_utility.test.test_anonymized_rollups.big_test1.job7 import jobhosts
 from metrics_utility.test.test_anonymized_rollups.big_test1.job7 import jobs as jobs7
 from metrics_utility.test.test_anonymized_rollups.big_test1.job8 import jobhostsummary as jhs8
 from metrics_utility.test.test_anonymized_rollups.big_test1.job8 import jobs as jobs8
+from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 
 
 @pytest.fixture(scope='module')
