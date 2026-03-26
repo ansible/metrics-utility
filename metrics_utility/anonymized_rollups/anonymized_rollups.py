@@ -423,6 +423,11 @@ def _merge_all_jobs_groupings(
     return jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged
 
 
+def _as_list(value: Any) -> List[Any]:
+    """Return *value* unchanged when it is already a list; otherwise return an empty list."""
+    return value if isinstance(value, list) else []
+
+
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
@@ -450,7 +455,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     feature_flags_root = data.get('feature_flags', [])
 
     # Extract data structures
-    credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
+    credentials_list: List[str] = _as_list(credentials_root)
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
@@ -500,7 +505,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Build jobs_by_controller_version: inject first controller_version from the controller_version collector
     jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
-    controller_versions: List[str] = controller_version_root if isinstance(controller_version_root, list) else []
+    controller_versions: List[str] = _as_list(controller_version_root)
     jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
 
     # Inject controller_version into every item of the three job groupings
@@ -516,7 +521,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     flattened: Dict[str, Any] = {
         'statistics': statistics,
         'rollup_period_ansible_versions': ansible_versions_merged,
-        'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
+        'rollup_period_scm_types': _as_list(jobs.get('scm_types')),
         'rollup_period_credential_types': credentials_list,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
@@ -525,7 +530,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
         'table_metadata': table_metadata_root,
         'controller_versions': controller_versions,
-        'feature_flags': feature_flags_root if isinstance(feature_flags_root, list) else [],
+        'feature_flags': _as_list(feature_flags_root),
     }
 
     # Only include event-related arrays if there are events
