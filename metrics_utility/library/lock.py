@@ -7,7 +7,7 @@ def lock(
     wait=False,
     db=None,
 ):
-    # Acquire the lock and yield to caller
+    """Acquire the lock and yield to caller"""
 
     if not isinstance(key, str):
         raise ValueError('Cannot use %s as a lock id' % key)
@@ -31,6 +31,7 @@ def lock(
             acquired = cursor.fetchone()[0]
         else:
             acquired = True
+
         try:
             yield acquired
         finally:

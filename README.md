@@ -82,7 +82,10 @@ db = ... # django.db.connection / psycopg 3
 
 dir_storage = storage.StorageDirectory(base_path='./out')
 
-with lock(db=db, key='my-unique-key'):
+with lock('my-unique-key', wait=False, db=db) as acquired:
+    if not acquired:
+        raise "too bad" # or use wait=True instead
+
     # dict, will be converted to json
     config_dict = config(db=db).gather()
 
