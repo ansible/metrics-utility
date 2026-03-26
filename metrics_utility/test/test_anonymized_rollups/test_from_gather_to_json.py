@@ -18,6 +18,7 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.library.collectors.service import task_executions_service
 from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.util import utcdt
 
@@ -53,6 +54,7 @@ def _validate_top_level_structure(json_data):
     assert 'table_metadata' in json_data, "Missing 'table_metadata' at top level"
     assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
     assert 'feature_flags' in json_data, "Missing 'feature_flags' at top level"
+    assert 'observability_by_tasks' in json_data, "Missing 'observability_by_tasks' at top level"
 
 
 def _validate_statistics_structure(statistics):
@@ -1010,6 +1012,10 @@ def test_from_gather_to_json(cleanup_glob):
             'func': feature_flags_service,
             'needs_since_until': False,  # snapshot collector
         },
+        'task_executions_service': {
+            'func': task_executions_service,
+            'needs_since_until': False,  # snapshot collector (collects previous day internally)
+        },
     }
 
     # Define two hourly intervals: 10:00-11:00 and 11:00-12:00
@@ -1028,6 +1034,7 @@ def test_from_gather_to_json(cleanup_glob):
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
         'feature_flags_service': 'feature_flags',
+        'task_executions_service': 'task_executions',
     }
 
     # Collect data from all collectors

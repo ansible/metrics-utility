@@ -15,6 +15,7 @@ from .helpers import sanitize_json
 from .jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from .jobs_anonymized_rollup import JobsAnonymizedRollup
 from .table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
+from .task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
 
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     'JobHostSummaryAnonymizedRollup',
     'JobsAnonymizedRollup',
     'TableMetadataAnonymizedRollup',
+    'TaskExecutionsAnonymizedRollup',
     'anonymize_data',
     'anonymize_rollups',
     'create_anonymized_object',

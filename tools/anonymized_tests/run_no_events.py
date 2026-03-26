@@ -47,7 +47,7 @@ from metrics_utility import prepare  # noqa: E402
 
 prepare()
 
-from django.db import connection  # noqa: E402
+from django.db import connection, connections  # noqa: E402
 
 from metrics_utility.library.collectors.controller import (  # noqa: E402
     controller_version_service,
@@ -57,6 +57,9 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     job_host_summary_service,
     table_metadata,
     unified_jobs,
+)
+from metrics_utility.library.collectors.service import (  # noqa: E402
+    task_executions_service,
 )
 from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
 from metrics_utility.test.test_anonymized_rollups.helpers import (  # noqa: E402
@@ -332,6 +335,21 @@ Examples:
         results[collector_name] = dataframes
         print(f'  Collected {len(dataframes)} dataframe(s)')
 
+    # Collect task_executions_service from the metrics-service DB (different DB, same host).
+    # It receives since/until directly (covers the same window as the controller collectors).
+    print('Collecting task_executions_service (metrics-service DB)...')
+    collector_start_time = time.time()
+    try:
+        service_db = connections['metrics_service']
+        df = task_executions_service(db=service_db, since=since, until=until).gather()
+        results['task_executions_service'] = [df if df is not None else pd.DataFrame()]
+        print(f'  Collected 1 dataframe(s)')
+    except Exception as e:
+        print(f'  ⚠ Warning: Failed to collect task_executions_service: {e}')
+        print('  (metrics-service DB may not be available; skipping observability data)')
+        results['task_executions_service'] = [pd.DataFrame()]
+    collector_times['task_executions_service'] = time.time() - collector_start_time
+
     print()
     print('=' * 70)
     print('COLLECTION RESULTS')
@@ -342,7 +360,7 @@ Examples:
     for collector_name, dataframes in results.items():
         print(f'{collector_name}:')
 
-        if COLLECTORS[collector_name]['needs_since_until']:
+        if COLLECTORS.get(collector_name, {}).get('needs_since_until', False):
             # Time-series collector: show per batch
             total_rows = 0
             for i, df in enumerate(dataframes):
@@ -380,6 +398,7 @@ Examples:
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
         'feature_flags_service': 'feature_flags',
+        'task_executions_service': 'task_executions',  # from metrics-service DB
     }
 
     # Prepare input_data dict

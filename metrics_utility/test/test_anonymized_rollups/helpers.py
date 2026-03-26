@@ -24,6 +24,7 @@ from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
+from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
 from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
@@ -34,6 +35,7 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.library.collectors.service import task_executions_service
 from metrics_utility.logger import logger
 
 
@@ -115,6 +117,9 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     feature_flags = load_anonymized_rollup_data(FeatureFlagsAnonymizedRollup(), input_data.get('feature_flags', []))
     feature_flags_result = FeatureFlagsAnonymizedRollup().base(feature_flags)
 
+    task_executions = load_anonymized_rollup_data(TaskExecutionsAnonymizedRollup(), input_data.get('task_executions', []))
+    task_executions_result = TaskExecutionsAnonymizedRollup().base(task_executions)
+
     anonymized_rollup = anonymize_rollups(
         events_modules_result['json'],
         execution_environments_result['json'],
@@ -125,6 +130,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
         controller_version_result['json'],
         feature_flags_result['json'],
         salt,
+        task_executions_rollup=task_executions_result['json'],
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
     anonymized_rollup = sanitize_json(anonymized_rollup)
@@ -187,6 +193,12 @@ def compute_anonymized_rollup(db, salt, since, until):
     except Exception as e:
         logger.error(f'Failed to gather feature_flags data: {e}')
 
+    task_executions_data = []
+    try:
+        task_executions_data = task_executions_service(db=db).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather task_executions data: {e}')
+
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
@@ -196,6 +208,7 @@ def compute_anonymized_rollup(db, salt, since, until):
         'table_metadata': table_metadata_data,
         'controller_version': controller_version_data,
         'feature_flags': feature_flags_data,
+        'task_executions': task_executions_data,
     }
 
     # load data for each collector

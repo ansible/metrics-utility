@@ -14,6 +14,7 @@ from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import F
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
+from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
 
 
 def hash(value, salt):
@@ -40,6 +41,8 @@ def create_anonymized_object(rollup_name: str):
         return ControllerVersionAnonymizedRollup()
     elif rollup_name == 'feature_flags':
         return FeatureFlagsAnonymizedRollup()
+    elif rollup_name == 'task_executions':
+        return TaskExecutionsAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
@@ -453,6 +456,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     table_metadata_root = data.get('table_metadata', {})
     controller_version_root = data.get('controller_version', [])
     feature_flags_root = data.get('feature_flags', [])
+    task_executions_root = data.get('task_executions', [])
 
     # Extract data structures
     credentials_list: List[str] = _as_list(credentials_root)
@@ -531,6 +535,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'table_metadata': table_metadata_root,
         'controller_versions': controller_versions,
         'feature_flags': _as_list(feature_flags_root),
+        'observability_by_tasks': _as_list(task_executions_root),
     }
 
     # Only include event-related arrays if there are events
@@ -552,6 +557,7 @@ def anonymize_rollups(
     controller_version_rollup,
     feature_flags_rollup,
     salt,
+    task_executions_rollup=None,
 ):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
@@ -566,6 +572,7 @@ def anonymize_rollups(
         controller_version_rollup: Controller version statistics
         feature_flags_rollup: Enabled feature flags list
         salt: Salt string for hashing sensitive data
+        task_executions_rollup: Task execution observability statistics (optional)
 
     Returns:
         Flattened and anonymized rollup data
@@ -579,6 +586,7 @@ def anonymize_rollups(
         'table_metadata': table_metadata_rollup,
         'controller_version': controller_version_rollup,
         'feature_flags': feature_flags_rollup,
+        'task_executions': task_executions_rollup or [],
     }
 
     # First flatten the nested structure
