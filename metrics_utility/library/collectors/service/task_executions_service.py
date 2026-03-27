@@ -10,8 +10,8 @@ def task_executions_service(*, db=None, since=None, until=None, output=Dataframe
     """
     Collect task execution statistics from the metrics-service database.
 
-    Gathers observability data about collector task executions from
-    tasks_hourlymetricscollection and tasks_taskexecution tables.
+    Gathers observability data about collector task executions from the
+    tasks_taskexecution table.
 
     This is a snapshot-style collector (runs once per day) that provides
     internal observability about how well the collector pipeline is running.
@@ -22,7 +22,7 @@ def task_executions_service(*, db=None, since=None, until=None, output=Dataframe
         until: End datetime (exclusive). Defaults to start of today (UTC).
 
     Returns:
-        DataFrame with columns: collector_type, status, execution_time_seconds
+        DataFrame with columns: started_at, completed_at, collector_type
     """
     if since is None or until is None:
         now = datetime.now(timezone.utc)
@@ -32,17 +32,17 @@ def task_executions_service(*, db=None, since=None, until=None, output=Dataframe
 
     query = f"""
         SELECT
-            hmc.collector_type,
-            hmc.status,
-            te.execution_time_seconds
-        FROM tasks_hourlymetricscollection hmc
-        LEFT JOIN tasks_taskexecution te ON hmc.task_execution_id = te.id
-        WHERE hmc.collection_timestamp >= '{since.isoformat()}'
-          AND hmc.collection_timestamp < '{until.isoformat()}'
-        ORDER BY hmc.collector_type
+            started_at,
+            completed_at,
+            result_data->'collector_type' AS collector_type
+        FROM tasks_taskexecution
+        WHERE result_data->'collector_type' IS NOT NULL
+          AND started_at >= '{since.isoformat()}'
+          AND started_at < '{until.isoformat()}'
+        ORDER BY collector_type
     """
 
     try:
         return output.sql(db, query)
     except Exception:
-        return pd.DataFrame(columns=['collector_type', 'status', 'execution_time_seconds'])
+        return pd.DataFrame(columns=['started_at', 'completed_at', 'collector_type'])

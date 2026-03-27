@@ -37,12 +37,13 @@ class TaskExecutionsAnonymizedRollup(BaseAnonymizedRollup):
     of the anonymized report can see how well the collector pipeline is running.
 
     For each collector_type the rollup reports:
-      - executions_total            – number of recorded executions
-      - executions_failed_total     – number of failed executions
-      - executions_missing_total    – expected - actual (≥ 0)
-      - execution_duration_total_seconds   – sum of execution_time_seconds
-      - execution_duration_minimum_seconds – minimum execution_time_seconds
-      - execution_duration_maximum_seconds – maximum execution_time_seconds
+      - executions_total                       – number of recorded executions
+      - executions_missing_total               – expected - actual (≥ 0)
+      - execution_duration_total_seconds       – sum of execution_time_seconds
+      - execution_duration_minimum_seconds     – minimum execution_time_seconds
+      - execution_duration_maximum_seconds     – maximum execution_time_seconds
+
+    Execution duration is derived from started_at and completed_at timestamps.
 
     For snapshot collectors exactly one execution is expected per day, so
     min == max == total (unification with the hourly case is intentional).
@@ -52,6 +53,16 @@ class TaskExecutionsAnonymizedRollup(BaseAnonymizedRollup):
         super().__init__('task_executions')
         self.collector_names = ['task_executions']
 
+    def _compute_execution_seconds(self, group):
+        """
+        Return a Series of execution durations in seconds derived from
+        started_at and completed_at columns.
+        """
+        started = pd.to_datetime(group['started_at'], utc=True, errors='coerce')
+        completed = pd.to_datetime(group['completed_at'], utc=True, errors='coerce')
+        delta = completed - started
+        return delta.dt.total_seconds()
+
     def prepare(self, dataframe):
         """
         Aggregate raw collector-execution rows into per-collector-type statistics.
@@ -59,16 +70,18 @@ class TaskExecutionsAnonymizedRollup(BaseAnonymizedRollup):
         if dataframe is None or (isinstance(dataframe, pd.DataFrame) and dataframe.empty):
             return sanitize_json([])
 
+        dataframe = dataframe.copy()
+        dataframe['collector_type'] = dataframe['collector_type'].str.strip('"')
+
         result = []
 
         for collector_type, group in dataframe.groupby('collector_type'):
             executions_total = len(group)
-            executions_failed_total = int((group['status'] == 'failed').sum())
 
             expected = _EXPECTED_EXECUTIONS_PER_DAY.get(str(collector_type), _DEFAULT_EXPECTED)
             executions_missing_total = max(0, expected - executions_total)
 
-            times = group['execution_time_seconds'].dropna()
+            times = self._compute_execution_seconds(group).dropna()
             if len(times) > 0:
                 duration_total = float(times.sum())
                 duration_min = float(times.min())
@@ -81,7 +94,6 @@ class TaskExecutionsAnonymizedRollup(BaseAnonymizedRollup):
             result.append({
                 'collector_type': str(collector_type),
                 'executions_total': executions_total,
-                'executions_failed_total': executions_failed_total,
                 'executions_missing_total': executions_missing_total,
                 'execution_duration_total_seconds': duration_total,
                 'execution_duration_minimum_seconds': duration_min,

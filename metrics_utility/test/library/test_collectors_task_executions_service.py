@@ -26,9 +26,9 @@ def test_task_executions_service_calls_copy_table(mock_copy_pandas):
     """Collector calls _copy_table_pandas with the correct DB and a valid SQL query."""
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame({
+        'started_at': [datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc)],
+        'completed_at': [datetime(2025, 6, 13, 1, 0, 5, tzinfo=timezone.utc)],
         'collector_type': ['unified_jobs'],
-        'status': ['collected'],
-        'execution_time_seconds': [5.0],
     })
 
     since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
@@ -46,7 +46,7 @@ def test_task_executions_service_calls_copy_table(mock_copy_pandas):
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_task_executions_service_query_structure(mock_copy_pandas):
-    """SQL query references the expected tables and columns (no pipeline tasks)."""
+    """SQL query references tasks_taskexecution with the expected columns and filters."""
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame()
 
@@ -59,17 +59,17 @@ def test_task_executions_service_query_structure(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    assert 'tasks_hourlymetricscollection' in query
     assert 'tasks_taskexecution' in query
-    assert 'collector_type' in query
-    assert 'status' in query
-    assert 'execution_time_seconds' in query
+    assert 'started_at' in query
+    assert 'completed_at' in query
+    assert "result_data->'collector_type'" in query
+    assert "result_data->'collector_type' IS NOT NULL" in query
     assert '2025-06-13' in query
     assert '2025-06-14' in query
 
-    # Pipeline tasks are NOT queried here — they run after this collector
+    # Old join-based tables must not appear
+    assert 'tasks_hourlymetricscollection' not in query
     assert 'UNION ALL' not in query
-    assert 'JOIN tasks_task ' not in query   # tasks_taskexecution is OK; the bare tasks_task table is not
     assert 'daily_metrics_rollup' not in query
 
 
@@ -80,7 +80,7 @@ def test_task_executions_service_returns_empty_dataframe_on_error(mock_copy_pand
     exception (e.g. when the tasks_* tables do not exist in the test database).
     """
     mock_db = MagicMock()
-    mock_copy_pandas.side_effect = Exception('relation "tasks_hourlymetricscollection" does not exist')
+    mock_copy_pandas.side_effect = Exception('relation "tasks_taskexecution" does not exist')
 
     since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
     until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
@@ -90,14 +90,14 @@ def test_task_executions_service_returns_empty_dataframe_on_error(mock_copy_pand
 
     assert isinstance(result, pd.DataFrame)
     assert result.empty
-    assert list(result.columns) == ['collector_type', 'status', 'execution_time_seconds']
+    assert list(result.columns) == ['started_at', 'completed_at', 'collector_type']
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_task_executions_service_defaults_to_previous_day(mock_copy_pandas):
     """
     When no since/until is provided the query window covers the previous calendar day,
-    filtering tasks_hourlymetricscollection by collection_timestamp.
+    filtering tasks_taskexecution by started_at.
     """
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame()
@@ -108,8 +108,8 @@ def test_task_executions_service_defaults_to_previous_day(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    assert 'collection_timestamp >=' in query
-    assert 'collection_timestamp <' in query
+    assert 'started_at >=' in query
+    assert 'started_at <' in query
 
 
 @pytest.mark.parametrize('since,until', [
@@ -123,18 +123,26 @@ def test_task_executions_service_returns_dataframe_with_expected_columns(mock_co
     """Collector returns a DataFrame with the three expected columns."""
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame({
+        'started_at': [
+            datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
+        ],
+        'completed_at': [
+            datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 2, 0, 5, tzinfo=timezone.utc),
+            None,
+        ],
         'collector_type': ['unified_jobs', 'unified_jobs', 'job_host_summary_service'],
-        'status': ['collected', 'collected', 'failed'],
-        'execution_time_seconds': [4.5, 5.1, None],
     })
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
     result = instance.gather()
 
     assert isinstance(result, pd.DataFrame)
+    assert 'started_at' in result.columns
+    assert 'completed_at' in result.columns
     assert 'collector_type' in result.columns
-    assert 'status' in result.columns
-    assert 'execution_time_seconds' in result.columns
     assert len(result) == 3
 
 
@@ -142,18 +150,26 @@ def test_task_executions_service_returns_dataframe_with_expected_columns(mock_co
 def test_task_executions_service_covers_both_hourly_and_snapshot_collectors(mock_copy_pandas):
     """
     Collector covers both hourly collectors (24 runs/day) and snapshot collectors
-    (1 run/day) — all recorded in tasks_hourlymetricscollection.
+    (1 run/day) — all recorded in tasks_taskexecution.
     Pipeline tasks are NOT included; they run after this collector.
     """
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame({
+        'started_at': [
+            datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
+        ],
+        'completed_at': [
+            datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 2, 0, 3, tzinfo=timezone.utc),
+            datetime(2025, 6, 13, 3, 0, 1, tzinfo=timezone.utc),
+        ],
         'collector_type': [
-            'unified_jobs',          # hourly
-            'unified_jobs',          # hourly (second hour)
+            'unified_jobs',           # hourly
+            'unified_jobs',           # hourly (second hour)
             'execution_environments', # snapshot
         ],
-        'status': ['collected', 'collected', 'collected'],
-        'execution_time_seconds': [4.2, 3.9, 1.1],
     })
 
     since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
