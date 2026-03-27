@@ -343,7 +343,7 @@ Examples:
         service_db = connections['metrics_service']
         df = task_executions_service(db=service_db, since=since, until=until).gather()
         results['task_executions_service'] = [df if df is not None else pd.DataFrame()]
-        print(f'  Collected 1 dataframe(s)')
+        print('  Collected 1 dataframe(s)')
     except Exception as e:
         print(f'  ⚠ Warning: Failed to collect task_executions_service: {e}')
         print('  (metrics-service DB may not be available; skipping observability data)')

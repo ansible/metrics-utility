@@ -1,6 +1,7 @@
 """
 Unit tests for the task_executions_service collector.
 """
+
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
@@ -25,11 +26,13 @@ def test_task_executions_service_basic():
 def test_task_executions_service_calls_copy_table(mock_copy_pandas):
     """Collector calls _copy_table_pandas with the correct DB and a valid SQL query."""
     mock_db = MagicMock()
-    mock_copy_pandas.return_value = pd.DataFrame({
-        'started_at': [datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc)],
-        'completed_at': [datetime(2025, 6, 13, 1, 0, 5, tzinfo=timezone.utc)],
-        'collector_type': ['unified_jobs'],
-    })
+    mock_copy_pandas.return_value = pd.DataFrame(
+        {
+            'started_at': [datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc)],
+            'completed_at': [datetime(2025, 6, 13, 1, 0, 5, tzinfo=timezone.utc)],
+            'collector_type': ['unified_jobs'],
+        }
+    )
 
     since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
     until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
@@ -112,29 +115,34 @@ def test_task_executions_service_defaults_to_previous_day(mock_copy_pandas):
     assert 'started_at <' in query
 
 
-@pytest.mark.parametrize('since,until', [
-    (
-        datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc),
-        datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc),
-    ),
-])
+@pytest.mark.parametrize(
+    'since,until',
+    [
+        (
+            datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc),
+            datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc),
+        ),
+    ],
+)
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_task_executions_service_returns_dataframe_with_expected_columns(mock_copy_pandas, since, until):
     """Collector returns a DataFrame with the three expected columns."""
     mock_db = MagicMock()
-    mock_copy_pandas.return_value = pd.DataFrame({
-        'started_at': [
-            datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
-        ],
-        'completed_at': [
-            datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 2, 0, 5, tzinfo=timezone.utc),
-            None,
-        ],
-        'collector_type': ['unified_jobs', 'unified_jobs', 'job_host_summary_service'],
-    })
+    mock_copy_pandas.return_value = pd.DataFrame(
+        {
+            'started_at': [
+                datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
+            ],
+            'completed_at': [
+                datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 2, 0, 5, tzinfo=timezone.utc),
+                None,
+            ],
+            'collector_type': ['unified_jobs', 'unified_jobs', 'job_host_summary_service'],
+        }
+    )
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -154,23 +162,25 @@ def test_task_executions_service_covers_both_hourly_and_snapshot_collectors(mock
     Pipeline tasks are NOT included; they run after this collector.
     """
     mock_db = MagicMock()
-    mock_copy_pandas.return_value = pd.DataFrame({
-        'started_at': [
-            datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
-        ],
-        'completed_at': [
-            datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 2, 0, 3, tzinfo=timezone.utc),
-            datetime(2025, 6, 13, 3, 0, 1, tzinfo=timezone.utc),
-        ],
-        'collector_type': [
-            'unified_jobs',           # hourly
-            'unified_jobs',           # hourly (second hour)
-            'execution_environments', # snapshot
-        ],
-    })
+    mock_copy_pandas.return_value = pd.DataFrame(
+        {
+            'started_at': [
+                datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
+            ],
+            'completed_at': [
+                datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 2, 0, 3, tzinfo=timezone.utc),
+                datetime(2025, 6, 13, 3, 0, 1, tzinfo=timezone.utc),
+            ],
+            'collector_type': [
+                'unified_jobs',  # hourly
+                'unified_jobs',  # hourly (second hour)
+                'execution_environments',  # snapshot
+            ],
+        }
+    )
 
     since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
     until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)

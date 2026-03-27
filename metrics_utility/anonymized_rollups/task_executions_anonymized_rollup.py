@@ -8,18 +8,22 @@ from metrics_utility.anonymized_rollups.helpers import sanitize_json
 # Hourly collectors run once per hour → 24 expected per day.
 # Snapshot collectors run once per day → 1 expected per day.
 # Pipeline tasks run once per day → 1 expected per day.
-_HOURLY_COLLECTORS = frozenset({
-    'unified_jobs',
-    'job_host_summary_service',
-    'credentials_service',
-    'main_jobevent_service',
-})
-_SNAPSHOT_COLLECTORS = frozenset({
-    'execution_environments',
-    'table_metadata',
-    'controller_version_service',
-    'feature_flags_service',
-})
+_HOURLY_COLLECTORS = frozenset(
+    {
+        'unified_jobs',
+        'job_host_summary_service',
+        'credentials_service',
+        'main_jobevent_service',
+    }
+)
+_SNAPSHOT_COLLECTORS = frozenset(
+    {
+        'execution_environments',
+        'table_metadata',
+        'controller_version_service',
+        'feature_flags_service',
+    }
+)
 _EXPECTED_EXECUTIONS_PER_DAY = {
     **{c: 24 for c in _HOURLY_COLLECTORS},
     **{c: 1 for c in _SNAPSHOT_COLLECTORS},
@@ -91,14 +95,16 @@ class TaskExecutionsAnonymizedRollup(BaseAnonymizedRollup):
                 duration_min = None
                 duration_max = None
 
-            result.append({
-                'collector_type': str(collector_type),
-                'executions_total': executions_total,
-                'executions_missing_total': executions_missing_total,
-                'execution_duration_total_seconds': duration_total,
-                'execution_duration_minimum_seconds': duration_min,
-                'execution_duration_maximum_seconds': duration_max,
-            })
+            result.append(
+                {
+                    'collector_type': str(collector_type),
+                    'executions_total': executions_total,
+                    'executions_missing_total': executions_missing_total,
+                    'execution_duration_total_seconds': duration_total,
+                    'execution_duration_minimum_seconds': duration_min,
+                    'execution_duration_maximum_seconds': duration_max,
+                }
+            )
 
         return sanitize_json(result)
 
