@@ -783,7 +783,10 @@ def create_credentials():
         VALUES (NOW(), NOW(), 'Perf Test Credential', '', {ct_id}, '{{}}'::jsonb, FALSE)
         RETURNING id;
         """
-        credential_ids.append(parse_id(run(sql)))
+        cred_id = parse_id(run(sql))
+        if cred_id is None:
+            raise RuntimeError(f'Failed to create credential for type {ct_id}')
+        credential_ids.append(cred_id)
     return credential_ids
 
 
