@@ -48,6 +48,9 @@ from metrics_utility import prepare  # noqa: E402
 prepare()
 
 from django.db import connection, connections  # noqa: E402
+from metrics_utility.anonymized_rollups.compute_anonymized_rollup import (  # noqa: E402
+    compute_anonymized_rollup_from_raw_data,
+)
 
 from metrics_utility.library.collectors.controller import (  # noqa: E402
     controller_version_service,
@@ -62,9 +65,6 @@ from metrics_utility.library.collectors.service import (  # noqa: E402
     task_executions_service,
 )
 from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
-from metrics_utility.anonymized_rollups.compute_anonymized_rollup import (  # noqa: E402
-    compute_anonymized_rollup_from_raw_data,
-)
 
 
 # Collectors to run (excluding events/main_jobevent_service)
