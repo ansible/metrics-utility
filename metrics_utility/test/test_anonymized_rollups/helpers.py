@@ -121,15 +121,15 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     task_executions_result = TaskExecutionsAnonymizedRollup().base(task_executions)
 
     anonymized_rollup = anonymize_rollups(
-        events_modules_result['json'],
-        execution_environments_result['json'],
-        jobs_result['json'],
-        job_host_summary_result['json'],
-        credentials_result['json'],
-        table_metadata_result['json'],
-        controller_version_result['json'],
-        feature_flags_result['json'],
-        salt,
+        events_modules_rollup=events_modules_result['json'],
+        execution_environments_rollup=execution_environments_result['json'],
+        jobs_rollup=jobs_result['json'],
+        job_host_summary_rollup=job_host_summary_result['json'],
+        credentials_rollup=credentials_result['json'],
+        table_metadata_rollup=table_metadata_result['json'],
+        controller_version_rollup=controller_version_result['json'],
+        feature_flags_rollup=feature_flags_result['json'],
+        salt=salt,
         task_executions_rollup=task_executions_result['json'],
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
@@ -195,7 +195,7 @@ def compute_anonymized_rollup(db, salt, since, until):
 
     task_executions_data = []
     try:
-        task_executions_data = task_executions_service(db=db).gather()
+        task_executions_data = task_executions_service(db=db, since=since, until=until).gather()
     except Exception as e:
         logger.error(f'Failed to gather task_executions data: {e}')
 

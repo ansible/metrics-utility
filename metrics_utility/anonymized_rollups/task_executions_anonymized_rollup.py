@@ -110,7 +110,8 @@ class TaskExecutionsAnonymizedRollup(BaseAnonymizedRollup):
 
     def merge(self, data_all, data_new):
         """
-        Snapshot collector: always replace with the latest data (no accumulation).
+        Daily collector: always replace with the latest data (no accumulation).
+        We do not need to accumulate data here, we are collecting only once per daily report
         """
         return data_new
 

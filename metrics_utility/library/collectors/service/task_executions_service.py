@@ -1,7 +1,5 @@
 from datetime import datetime, timedelta, timezone
 
-import pandas as pd
-
 from ..util import DataframeOutput, collector
 
 
@@ -42,7 +40,4 @@ def task_executions_service(*, db=None, since=None, until=None, output=Dataframe
         ORDER BY collector_type
     """
 
-    try:
-        return output.sql(db, query)
-    except Exception:
-        return pd.DataFrame(columns=['started_at', 'completed_at', 'collector_type'])
+    return output.sql(db, query)

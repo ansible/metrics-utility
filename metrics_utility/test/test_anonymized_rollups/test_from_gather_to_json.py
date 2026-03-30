@@ -6,7 +6,7 @@ import shutil
 import pandas as pd
 import pytest
 
-from django.db import connection
+from django.db import connection, connections
 
 from metrics_utility.library.collectors.controller import (
     controller_version_service,
@@ -878,10 +878,13 @@ def _collect_data_from_collectors(collectors, time_intervals, db):
     for collector_name, collector_info in collectors.items():
         print(f'Collecting {collector_name}...')
 
+        # Allow individual collectors to override the default DB connection.
+        collector_db = collector_info.get('db', db)
+
         if collector_info['needs_since_until']:
-            dataframes = _collect_time_series_data(collector_info['func'], collector_name, time_intervals, db)
+            dataframes = _collect_time_series_data(collector_info['func'], collector_name, time_intervals, collector_db)
         else:
-            dataframes = _collect_snapshot_data(collector_info['func'], collector_name, db)
+            dataframes = _collect_snapshot_data(collector_info['func'], collector_name, collector_db)
 
         results[collector_name] = dataframes
         print(f'  Collected {len(dataframes)} dataframe(s)')
@@ -1014,7 +1017,8 @@ def test_from_gather_to_json(cleanup_glob):
         },
         'task_executions_service': {
             'func': task_executions_service,
-            'needs_since_until': False,  # snapshot collector (collects previous day internally)
+            'needs_since_until': True,
+            'db': connections['metrics_service'],
         },
     }
 
