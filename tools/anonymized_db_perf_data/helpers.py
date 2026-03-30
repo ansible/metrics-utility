@@ -775,9 +775,9 @@ def create_execution_environments(count=3):
 
 def create_credentials():
     """Create one credential per built-in type and return their IDs."""
-    result = run("SELECT id FROM main_credentialtype WHERE managed = TRUE;")
+    result = run('SELECT id FROM main_credentialtype WHERE managed = TRUE;')
     credential_ids = []
-    for (ct_id,) in (result or []):
+    for (ct_id,) in result or []:
         sql = f"""
         INSERT INTO main_credential (created, modified, name, description, credential_type_id, inputs, managed)
         VALUES (NOW(), NOW(), 'Perf Test Credential', '', {ct_id}, '{{}}'::jsonb, FALSE)
@@ -792,7 +792,7 @@ def create_job_credentials(job_id, credential_ids):
     if not credential_ids:
         return
     values = ', '.join(f'({job_id}, {cred_id})' for cred_id in credential_ids)
-    run(f"INSERT INTO main_unifiedjob_credentials (unifiedjob_id, credential_id) VALUES {values};")
+    run(f'INSERT INTO main_unifiedjob_credentials (unifiedjob_id, credential_id) VALUES {values};')
 
 
 def create_instance(version='4.5.0', node_type='control'):
