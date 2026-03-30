@@ -6,7 +6,7 @@ import shutil
 import pandas as pd
 import pytest
 
-from django.db import connection, connections
+from django.db import connection
 
 from metrics_utility.library.collectors.controller import (
     controller_version_service,
@@ -18,7 +18,6 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
-from metrics_utility.library.collectors.service import task_executions_service
 from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.util import utcdt
 
@@ -1015,11 +1014,6 @@ def test_from_gather_to_json(cleanup_glob):
             'func': feature_flags_service,
             'needs_since_until': False,  # snapshot collector
         },
-        'task_executions_service': {
-            'func': task_executions_service,
-            'needs_since_until': True,
-            'db': connections['metrics_service'],
-        },
     }
 
     # Define two hourly intervals: 10:00-11:00 and 11:00-12:00
@@ -1038,7 +1032,6 @@ def test_from_gather_to_json(cleanup_glob):
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
         'feature_flags_service': 'feature_flags',
-        'task_executions_service': 'task_executions',
     }
 
     # Collect data from all collectors
