@@ -29,7 +29,7 @@ import shutil
 import sys
 import time
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -47,20 +47,24 @@ from metrics_utility import prepare  # noqa: E402
 
 prepare()
 
-from django.db import connection  # noqa: E402
+from django.db import connection, connections  # noqa: E402
 
-from metrics_utility.anonymized_rollups.anonymized_rollups import (  # noqa: E402
-    compute_anonymized_rollup_from_raw_data,
-)
 from metrics_utility.library.collectors.controller import (  # noqa: E402
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary_service,
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.library.collectors.service import (  # noqa: E402
+    task_executions_service,
+)
 from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
+from metrics_utility.test.test_anonymized_rollups.helpers import (  # noqa: E402
+    compute_anonymized_rollup_from_raw_data,
+)
 
 
 # Collectors to run (excluding events/main_jobevent_service)
@@ -89,20 +93,25 @@ COLLECTORS = {
         'func': controller_version_service,
         'needs_since_until': False,  # snapshot collector
     },
+    'feature_flags_service': {
+        'func': feature_flags_service,
+        'needs_since_until': False,  # snapshot collector
+    },
 }
 
 # Default since-until from test_from_gather_to_json.py
-DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0)
-DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0)
+DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
+DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
 
 
 def parse_datetime(dt_str: str) -> datetime:
-    """Parse datetime string in format 'YYYY-MM-DD HH:MM:SS'."""
+    """Parse datetime string in format 'YYYY-MM-DD HH:MM:SS' and return UTC-aware datetime."""
     try:
-        return datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+        dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
     except ValueError:
         # Try just date
-        return datetime.strptime(dt_str, '%Y-%m-%d')
+        dt = datetime.strptime(dt_str, '%Y-%m-%d')
+    return dt.replace(tzinfo=timezone.utc)
 
 
 def split_time_range(since: datetime, until: datetime, batches: int = None) -> List[Tuple[datetime, datetime]]:
@@ -326,6 +335,21 @@ Examples:
         results[collector_name] = dataframes
         print(f'  Collected {len(dataframes)} dataframe(s)')
 
+    # Collect task_executions_service from the metrics-service DB (different DB, same host).
+    # It receives since/until directly (covers the same window as the controller collectors).
+    print('Collecting task_executions_service (metrics-service DB)...')
+    collector_start_time = time.time()
+    try:
+        service_db = connections['metrics_service']
+        df = task_executions_service(db=service_db, since=since, until=until).gather()
+        results['task_executions_service'] = [df if df is not None else pd.DataFrame()]
+        print('  Collected 1 dataframe(s)')
+    except Exception as e:
+        print(f'  ⚠ Warning: Failed to collect task_executions_service: {e}')
+        print('  (metrics-service DB may not be available; skipping observability data)')
+        results['task_executions_service'] = [pd.DataFrame()]
+    collector_times['task_executions_service'] = time.time() - collector_start_time
+
     print()
     print('=' * 70)
     print('COLLECTION RESULTS')
@@ -336,7 +360,7 @@ Examples:
     for collector_name, dataframes in results.items():
         print(f'{collector_name}:')
 
-        if COLLECTORS[collector_name]['needs_since_until']:
+        if COLLECTORS.get(collector_name, {}).get('needs_since_until', False):
             # Time-series collector: show per batch
             total_rows = 0
             for i, df in enumerate(dataframes):
@@ -373,6 +397,8 @@ Examples:
         'execution_environments': 'execution_environments',
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
+        'feature_flags_service': 'feature_flags',
+        'task_executions_service': 'task_executions',  # from metrics-service DB
     }
 
     # Prepare input_data dict

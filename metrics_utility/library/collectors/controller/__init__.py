@@ -3,6 +3,7 @@ from .config_django import config_django
 from .controller_version_service import controller_version_service
 from .credentials_service import credentials_service
 from .execution_environments import execution_environments
+from .feature_flags_service import feature_flags_service
 from .job_host_summary import job_host_summary
 from .job_host_summary_service import job_host_summary_service
 from .main_host import main_host, main_host_daily
@@ -19,6 +20,7 @@ __all__ = [
     'controller_version_service',
     'credentials_service',
     'execution_environments',
+    'feature_flags_service',
     'job_host_summary',
     'job_host_summary_service',
     'main_host',

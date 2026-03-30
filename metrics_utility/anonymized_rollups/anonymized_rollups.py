@@ -1,24 +1,20 @@
 import hashlib
 import json
 import os
-import shutil
 
 from typing import Any, Callable, Dict, List
 
 import pandas as pd
 
-from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.controller_version_anonymized_rollup import ControllerVersionAnonymizedRollup
 from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
-from metrics_utility.anonymized_rollups.helpers import sanitize_json
+from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
-
-
-OUT_BATCHES_DIR = './out/batches'
+from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
 
 
 def hash(value, salt):
@@ -43,6 +39,10 @@ def create_anonymized_object(rollup_name: str):
         return TableMetadataAnonymizedRollup()
     elif rollup_name == 'controller_version':
         return ControllerVersionAnonymizedRollup()
+    elif rollup_name == 'feature_flags':
+        return FeatureFlagsAnonymizedRollup()
+    elif rollup_name == 'task_executions':
+        return TaskExecutionsAnonymizedRollup()
     else:
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
@@ -426,6 +426,11 @@ def _merge_all_jobs_groupings(
     return jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged
 
 
+def _as_list(value: Any) -> List[Any]:
+    """Return *value* unchanged when it is already a list; otherwise return an empty list."""
+    return value if isinstance(value, list) else []
+
+
 def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Manually flattens the given nested report into:
@@ -450,9 +455,11 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     credentials_root = data.get('credentials', {})
     table_metadata_root = data.get('table_metadata', {})
     controller_version_root = data.get('controller_version', [])
+    feature_flags_root = data.get('feature_flags', [])
+    task_executions_root = data.get('task_executions', [])
 
     # Extract data structures
-    credentials_list: List[str] = credentials_root if isinstance(credentials_root, list) else []
+    credentials_list: List[str] = _as_list(credentials_root)
     jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
     job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
     job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
@@ -502,7 +509,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Build jobs_by_controller_version: inject first controller_version from the controller_version collector
     jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
-    controller_versions: List[str] = controller_version_root if isinstance(controller_version_root, list) else []
+    controller_versions: List[str] = _as_list(controller_version_root)
     jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
 
     # Inject controller_version into every item of the three job groupings
@@ -518,7 +525,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     flattened: Dict[str, Any] = {
         'statistics': statistics,
         'rollup_period_ansible_versions': ansible_versions_merged,
-        'rollup_period_scm_types': jobs.get('scm_types', []) if isinstance(jobs.get('scm_types'), list) else [],
+        'rollup_period_scm_types': _as_list(jobs.get('scm_types')),
         'rollup_period_credential_types': credentials_list,
         'jobs_by_job_type': jobs_by_job_type_merged,
         'jobs_by_launch_type': jobs_by_launch_type_merged,
@@ -527,6 +534,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
         'table_metadata': table_metadata_root,
         'controller_versions': controller_versions,
+        'feature_flags': _as_list(feature_flags_root),
+        'observability_by_tasks': _as_list(task_executions_root),
     }
 
     # Only include event-related arrays if there are events
@@ -546,7 +555,9 @@ def anonymize_rollups(
     credentials_rollup,
     table_metadata_rollup,
     controller_version_rollup,
+    feature_flags_rollup,
     salt,
+    task_executions_rollup=None,
 ):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
@@ -559,7 +570,9 @@ def anonymize_rollups(
         credentials_rollup: Credentials statistics
         table_metadata_rollup: Table metadata statistics
         controller_version_rollup: Controller version statistics
+        feature_flags_rollup: Enabled feature flags list
         salt: Salt string for hashing sensitive data
+        task_executions_rollup: Task execution observability statistics (optional)
 
     Returns:
         Flattened and anonymized rollup data
@@ -572,6 +585,8 @@ def anonymize_rollups(
         'credentials': credentials_rollup,
         'table_metadata': table_metadata_rollup,
         'controller_version': controller_version_rollup,
+        'feature_flags': feature_flags_rollup,
+        'task_executions': task_executions_rollup or [],
     }
 
     # First flatten the nested structure
@@ -581,96 +596,3 @@ def anonymize_rollups(
     anonymize_data(data, salt)
 
     return data
-
-
-def compute_anonymized_rollup_from_raw_data(input_data, salt):
-
-    # delete everything in the directory ./out/batches (including subdirectories)
-    if os.path.exists(OUT_BATCHES_DIR):
-        shutil.rmtree(OUT_BATCHES_DIR, ignore_errors=True)
-
-    jobs = load_anonymized_rollup_data(JobsAnonymizedRollup(), input_data['unified_jobs'])
-    jobs_result = JobsAnonymizedRollup().base(jobs)
-
-    job_host_summary = load_anonymized_rollup_data(JobHostSummaryAnonymizedRollup(), input_data['job_host_summary'])
-    job_host_summary_result = JobHostSummaryAnonymizedRollup().base(job_host_summary)
-
-    events_modules = load_anonymized_rollup_data(EventModulesAnonymizedRollup(), input_data['main_jobevent'])
-    events_modules_result = EventModulesAnonymizedRollup().base(events_modules)
-
-    execution_environments = load_anonymized_rollup_data(ExecutionEnvironmentsAnonymizedRollup(), input_data['execution_environments'])
-    execution_environments_result = ExecutionEnvironmentsAnonymizedRollup().base(execution_environments)
-
-    credentials = load_anonymized_rollup_data(CredentialsAnonymizedRollup(), input_data['credentials'])
-    credentials_result = CredentialsAnonymizedRollup().base(credentials)
-
-    table_metadata = load_anonymized_rollup_data(TableMetadataAnonymizedRollup(), input_data.get('table_metadata', []))
-    table_metadata_result = TableMetadataAnonymizedRollup().base(table_metadata)
-
-    controller_version = load_anonymized_rollup_data(ControllerVersionAnonymizedRollup(), input_data.get('controller_version', []))
-    controller_version_result = ControllerVersionAnonymizedRollup().base(controller_version)
-
-    anonymized_rollup = anonymize_rollups(
-        events_modules_result['json'],
-        execution_environments_result['json'],
-        jobs_result['json'],
-        job_host_summary_result['json'],
-        credentials_result['json'],
-        table_metadata_result['json'],
-        controller_version_result['json'],
-        salt,
-    )
-    # Sanitize the result to replace NaN and infinity values with None (valid JSON)
-    anonymized_rollup = sanitize_json(anonymized_rollup)
-
-    # save anonymized rollup to file
-    os.makedirs(OUT_BATCHES_DIR, exist_ok=True)
-    file_name = os.path.join(OUT_BATCHES_DIR, 'anonymized_rollup.json')
-    with open(file_name, 'w') as f:
-        f.write(json.dumps(anonymized_rollup, indent=2))
-    return anonymized_rollup
-
-
-# loads data from a list of dataframes
-# then filter_function is applied to the dataframe
-# all result dataframes are concatenated into one dataframe
-def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_list):
-    # compat for one dataframe
-    if isinstance(dataframe_list, pd.DataFrame):
-        prepared_data = rollup_object.prepare(dataframe_list)
-        return rollup_object.merge(None, prepared_data)
-
-    concat_data = None
-
-    rollup_object_name = rollup_object.rollup_name
-
-    counter = -1
-    for dataframe in dataframe_list:
-        counter += 1
-        # compat for CSVs
-        if isinstance(dataframe, str):
-            dataframe = pd.read_csv(dataframe, encoding='utf-8')
-
-        prepared_data = rollup_object.prepare(dataframe)
-        # serialize prepared data to json
-        prepared_data = json.dumps(prepared_data, indent=2)
-        # back to dict/list
-        prepared_data = json.loads(prepared_data)
-        concat_data = rollup_object.merge(concat_data, prepared_data)
-        # concat data to json and then back
-        concat_data = json.dumps(concat_data, indent=2)
-        concat_data = json.loads(concat_data)
-
-        # Create a subdirectory for this rollup
-        rollup_batch_dir = os.path.join(OUT_BATCHES_DIR, rollup_object_name)
-        os.makedirs(rollup_batch_dir, exist_ok=True)
-        # save prepare data and concat data to separate files (as json pretty printed)
-        # Each rollup has its own folder
-        file1_name = os.path.join(rollup_batch_dir, f'{counter}_prepare.json')
-        file2_name = os.path.join(rollup_batch_dir, f'{counter}_xconcat.json')
-        with open(file1_name, 'w') as f:
-            f.write(json.dumps(prepared_data, indent=2))
-        with open(file2_name, 'w') as f:
-            f.write(json.dumps(concat_data, indent=2))
-
-    return concat_data
