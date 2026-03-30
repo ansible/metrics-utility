@@ -25,8 +25,8 @@ _SNAPSHOT_COLLECTORS = frozenset(
     }
 )
 _EXPECTED_EXECUTIONS_PER_DAY = {
-    **{c: 24 for c in _HOURLY_COLLECTORS},
-    **{c: 1 for c in _SNAPSHOT_COLLECTORS},
+    **dict.fromkeys(_HOURLY_COLLECTORS, 24),
+    **dict.fromkeys(_SNAPSHOT_COLLECTORS, 1),
 }
 
 # Default expected count for unknown collector types (assume hourly).
