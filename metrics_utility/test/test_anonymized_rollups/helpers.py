@@ -143,7 +143,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     return anonymized_rollup
 
 
-def compute_anonymized_rollup(db, salt, since, until):
+def compute_anonymized_rollup(db, salt, since, until, service_db=None):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = []
     try:
@@ -194,10 +194,11 @@ def compute_anonymized_rollup(db, salt, since, until):
         logger.error(f'Failed to gather feature_flags data: {e}')
 
     task_executions_data = []
-    try:
-        task_executions_data = task_executions_service(db=db, since=since, until=until).gather()
-    except Exception as e:
-        logger.error(f'Failed to gather task_executions data: {e}')
+    if service_db is not None:
+        try:
+            task_executions_data = task_executions_service(db=service_db, since=since, until=until).gather()
+        except Exception as e:
+            logger.error(f'Failed to gather task_executions data: {e}')
 
     input_data = {
         'execution_environments': execution_environments_data,

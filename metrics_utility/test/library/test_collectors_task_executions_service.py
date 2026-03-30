@@ -77,10 +77,13 @@ def test_task_executions_service_query_structure(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_task_executions_service_returns_empty_dataframe_on_error(mock_copy_pandas):
+def test_task_executions_service_propagates_error(mock_copy_pandas):
     """
-    Collector returns an empty DataFrame when the underlying DB query raises an
-    exception (e.g. when the tasks_* tables do not exist in the test database).
+    Collector propagates exceptions to the caller (fail-fast).
+
+    tasks_taskexecution lives in the metrics-service DB, not the controller DB.
+    Passing the wrong connection raises an error that must surface so callers
+    can detect the misconfiguration rather than silently producing empty data.
     """
     mock_db = MagicMock()
     mock_copy_pandas.side_effect = Exception('relation "tasks_taskexecution" does not exist')
@@ -89,11 +92,8 @@ def test_task_executions_service_returns_empty_dataframe_on_error(mock_copy_pand
     until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
-    result = instance.gather()
-
-    assert isinstance(result, pd.DataFrame)
-    assert result.empty
-    assert list(result.columns) == ['started_at', 'completed_at', 'collector_type']
+    with pytest.raises(Exception, match='tasks_taskexecution'):
+        instance.gather()
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
