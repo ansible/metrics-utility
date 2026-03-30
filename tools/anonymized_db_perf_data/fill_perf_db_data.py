@@ -8,9 +8,13 @@ import uuid
 from datetime import datetime, timedelta
 
 from helpers import (
+    create_credentials,
+    create_execution_environments,
     create_hosts,
+    create_instance,
     create_inventory,
     create_job,
+    create_job_credentials,
     create_job_events,
     create_job_host_summaries,
     create_job_templates,
@@ -71,6 +75,15 @@ def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffi
     # Create hosts (depends on inventory)
     host_ids = create_hosts(inventory_id=inventory_id, host_count=host_count, unique_suffix=unique_suffix)
 
+    # Create one controller instance (needed by controller_version_service collector)
+    create_instance()
+
+    # Create execution environments with distinct installed_collections sets
+    ee_list = create_execution_environments()
+
+    # Create one credential per built-in type
+    credential_ids = create_credentials()
+
     print('=== Initial data created ===')
     print(f'Organization: Perf Test Organization {unique_suffix} (ID: {org_id})')
     print(f'Inventory: Perf Test Inventory {unique_suffix} (ID: {inventory_id})')
@@ -86,10 +99,12 @@ def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffi
         'host_count': host_count,
         'task_count': task_count,
         'unique_suffix': unique_suffix,
+        'ee_list': ee_list,  # [(ee_id, installed_collections), ...]
+        'credential_ids': credential_ids,
     }
 
 
-def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10, start_date=None, end_date=None):
+def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10, start_date=None, end_date=None, no_events=False):
     """Fill the database with performance test data.
 
     Note: This function does NOT clean existing data. Use clean_all_data.py to clean before filling.
@@ -109,20 +124,23 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
     init_data = fill_init_data(host_count=host_count, task_count=task_count, template_count=template_count)
 
     for i in range(job_count):
-        fill_job(init_data, i, start_date, end_date)
+        fill_job(init_data, i, start_date, end_date, no_events=no_events)
 
     print_counts()
 
 
 def fill_job_data(init_data, job_index, start_date, end_date):
     """Create a job using the init_data IDs. Returns (job_id, job_created, job_finished)."""
-    # Randomly select a job template
     templates = init_data['templates']
     template_id = random.choice(list(templates.keys()))
     template_name = templates[template_id]
 
+    # Cycle through EEs so jobs are distributed across them
+    ee_list = init_data['ee_list']
+    ee_id, installed_collections = ee_list[job_index % len(ee_list)]
+
     job_id, job_created, job_finished = create_job(
-        name=template_name,  # Use template name as job name (AWX behavior)
+        name=template_name,
         inventory_id=init_data['inventory_id'],
         project_id=init_data['project_id'],
         org_id=init_data['org_id'],
@@ -130,6 +148,8 @@ def fill_job_data(init_data, job_index, start_date, end_date):
         job_template_id=template_id,
         start_date=start_date,
         end_date=end_date,
+        execution_environment_id=ee_id,
+        installed_collections=installed_collections,
     )
     return job_id, job_created, job_finished
 
@@ -142,10 +162,12 @@ def fill_jobevent(init_data, job_id, job_index, job_created):
     create_job_events(job_id, init_data['host_ids'], init_data['task_count'], job_index, job_created, unique_suffix=init_data.get('unique_suffix'))
 
 
-def fill_job(init_data, job_index, start_date, end_date):
+def fill_job(init_data, job_index, start_date, end_date, no_events=False):
     job_id, job_created, job_finished = fill_job_data(init_data, job_index, start_date, end_date)
     fill_jobhostsummary(init_data, job_id, job_created, job_finished)
-    fill_jobevent(init_data, job_id, job_index, job_created)
+    create_job_credentials(job_id, init_data['credential_ids'])
+    if not no_events:
+        fill_jobevent(init_data, job_id, job_index, job_created)
     return
 
 
@@ -187,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--date', type=str, default=None, help='Constrain jobs to a single day (e.g. 2024-01-25). Default spreads across all of January 2024'
     )
+    parser.add_argument('--no-events', action='store_true', default=False, help='Skip generating job events')
 
     args = parser.parse_args()
 
@@ -206,4 +229,5 @@ if __name__ == '__main__':
         template_count=args.template_count,
         start_date=start_date,
         end_date=end_date,
+        no_events=args.no_events,
     )
