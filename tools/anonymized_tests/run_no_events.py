@@ -48,7 +48,7 @@ from metrics_utility import prepare  # noqa: E402
 prepare()
 
 from django.db import connection, connections  # noqa: E402
-from metrics_utility.anonymized_rollups.compute_anonymized_rollup import (  # noqa: E402
+from metrics_utility.test.test_anonymized_rollups.helpers import (  # noqa: E402
     compute_anonymized_rollup_from_raw_data,
 )
 
