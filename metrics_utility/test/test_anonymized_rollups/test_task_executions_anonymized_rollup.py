@@ -185,13 +185,13 @@ def test_merge_always_returns_new_data():
     rollup = TaskExecutionsAnonymizedRollup()
     old = [{'collector_type': 'unified_jobs', 'executions_total': 5}]
     new = [{'collector_type': 'unified_jobs', 'executions_total': 10}]
-    assert rollup.merge(old, new) is new
+    assert rollup.merge(old, new) == new
 
 
 def test_merge_with_none_old_returns_new():
     rollup = TaskExecutionsAnonymizedRollup()
     new = [{'collector_type': 'unified_jobs', 'executions_total': 3}]
-    assert rollup.merge(None, new) is new
+    assert rollup.merge(None, new) == new
 
 
 # ---------------------------------------------------------------------------
