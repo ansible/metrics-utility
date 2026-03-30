@@ -5,6 +5,7 @@ Unit tests targeting uncovered branches in anonymized_rollups.py:
   - _calculate_host_summary_totals: empty host_ids branch
   - _inject_controller_version: empty list early return
 """
+
 import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import (
