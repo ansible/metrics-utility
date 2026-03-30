@@ -1422,7 +1422,7 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
 
     from datetime import datetime
 
-    from metrics_utility.anonymized_rollups.anonymized_rollups import compute_anonymized_rollup_from_raw_data
+    from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
     from metrics_utility.test.test_anonymized_rollups.test_credentials_anonymized_rollup import credentials
     from metrics_utility.test.test_anonymized_rollups.test_events_modules_anonymized_rollups import events
     from metrics_utility.test.test_anonymized_rollups.test_execution_environments_anonymized_rollups import execution_environments

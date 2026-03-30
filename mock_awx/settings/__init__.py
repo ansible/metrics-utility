@@ -9,7 +9,22 @@ DATABASES = {
         'PASSWORD': 'mypassword',
         'HOST': os.getenv('METRICS_UTILITY_DB_HOST', 'localhost'),
         'PORT': '5432',
-    }
+    },
+    # metrics-service database — same Postgres instance, different DB name/credentials.
+    # Override any of these via environment variables:
+    #   METRICS_SERVICE_DB_HOST      (defaults to METRICS_UTILITY_DB_HOST / localhost)
+    #   METRICS_SERVICE_DB_PORT      (defaults to 5432)
+    #   METRICS_SERVICE_DB_NAME      (defaults to metrics_service)
+    #   METRICS_SERVICE_DB_USER      (defaults to metrics_service)
+    #   METRICS_SERVICE_DB_PASSWORD  (defaults to metrics_service)
+    'metrics_service': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('METRICS_SERVICE_DB_NAME', 'metrics_service'),
+        'USER': os.getenv('METRICS_SERVICE_DB_USER', 'metrics_service'),
+        'PASSWORD': os.getenv('METRICS_SERVICE_DB_PASSWORD', 'metrics_service'),
+        'HOST': os.getenv('METRICS_SERVICE_DB_HOST', os.getenv('METRICS_UTILITY_DB_HOST', 'localhost')),
+        'PORT': os.getenv('METRICS_SERVICE_DB_PORT', '5432'),
+    },
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 INSTALLED_APPS = ['awx.conf']
