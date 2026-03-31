@@ -19,7 +19,7 @@ until = library.instants.now()
 dataframe = library.dataframes.DataframeHostMetric()
 collector = library.collectors.controller.host_metric(db=controller_db, since=since)
 
-with library.lock(db=metrics_db, key=worker_key):
+with library.lock(worker_key, wait=True, db=metrics_db):
     dataframe.add(collector.gather())
 
 with library.tempdir(prefix=worker_key):
