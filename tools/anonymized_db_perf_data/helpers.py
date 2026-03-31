@@ -735,13 +735,19 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     print(f'Created {len(values)} job events ({task_count} tasks x {host_count} hosts)')
 
 
-# Sample installed_collections per EE. Jobs sharing the same EE must use the
-# same value — the rollup caches parsed collections once per execution_environment_id.
-SAMPLE_INSTALLED_COLLECTIONS = [
-    {'ansible.builtin': {'version': '2.9.10'}, 'a10.acos_axapi': {'version': '1.0.0'}, 'redhat.rhel_system_roles': {'version': '1.23.0'}},
-    {'ansible.builtin': {'version': '2.9.10'}, 'ansible.posix': {'version': '1.5.4'}, 'community.general': {'version': '7.5.0'}},
-    {'ansible.builtin': {'version': '2.15.0'}, 'amazon.aws': {'version': '7.1.0'}, 'ansible.netcommon': {'version': '5.0.0'}},
-]
+_COLLECTION_NAMESPACES = ['ansible', 'community', 'redhat', 'amazon', 'google', 'azure', 'cisco', 'f5', 'netapp', 'vmware']
+_COLLECTION_NAMES = ['posix', 'general', 'windows', 'network', 'cloud', 'storage', 'security', 'utils', 'netcommon', 'platform']
+
+
+def _random_installed_collections(seed, count=50):
+    """Generate a random installed_collections dict for an EE."""
+    rng = random.Random(seed)
+    collections = {}
+    while len(collections) < count:
+        key = f'{rng.choice(_COLLECTION_NAMESPACES)}.{rng.choice(_COLLECTION_NAMES)}'
+        if key not in collections:
+            collections[key] = {'version': f'{rng.randint(1, 5)}.{rng.randint(0, 9)}.{rng.randint(0, 9)}'}
+    return collections
 
 
 def create_execution_environment(name, image):
@@ -762,14 +768,14 @@ def create_execution_environment(name, image):
     return ee_id
 
 
-def create_execution_environments(count=3):
+def create_execution_environments(count=100):
     """Create execution environments and return list of (ee_id, installed_collections) tuples."""
     results = []
     for i in range(count):
         name = f'Perf Test EE {i + 1}'
         image = f'registry.example.com/perf-test-ee-{i + 1}:latest'
         ee_id = create_execution_environment(name, image)
-        results.append((ee_id, SAMPLE_INSTALLED_COLLECTIONS[i % len(SAMPLE_INSTALLED_COLLECTIONS)]))
+        results.append((ee_id, _random_installed_collections(seed=i)))
     return results
 
 
