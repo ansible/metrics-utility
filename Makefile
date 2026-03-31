@@ -29,4 +29,14 @@ clean:
 psql:
 	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx
 
-.PHONY: help sync test coverage lint fix compose clean psql
+pcompose:
+	podman-compose -f tools/docker/docker-compose.yaml up
+
+pclean:
+	podman-compose -f tools/docker/docker-compose.yaml down -v
+
+ppsql:
+	podman-compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx
+
+
+.PHONY: help sync test coverage lint fix compose clean psql pcompose pclean ppsql
