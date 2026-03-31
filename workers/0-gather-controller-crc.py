@@ -21,7 +21,7 @@ until = library.instants.this_day()
 collector = library.collectors.controller.anonymous(db=controller_db, since=since, until=until, custom_params=True)
 
 # DB lock, in *our* DB
-with library.lock(db=metrics_db, key=worker_key):
+with library.lock(worker_key, wait=True, db=metrics_db):
     # run gather, get json (buffer/string/filelist)
     data = collector.gather()
 
