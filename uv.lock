@@ -305,6 +305,7 @@ source = { editable = "." }
 dependencies = [
     { name = "boto3" },
     { name = "botocore" },
+    { name = "cryptography" },
     { name = "distro" },
     { name = "django" },
     { name = "kubernetes" },
@@ -329,6 +330,7 @@ dev = [
 requires-dist = [
     { name = "boto3", specifier = "==1.35.96" },
     { name = "botocore", specifier = "==1.35.96" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "distro", specifier = "==1.9.0" },
     { name = "django", specifier = "==5.2.7" },
     { name = "kubernetes", specifier = ">=33.1.0" },

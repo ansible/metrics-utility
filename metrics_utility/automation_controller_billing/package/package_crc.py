@@ -2,16 +2,33 @@
 
 import json
 import os
+import tempfile
+
+from datetime import datetime, timezone
 
 import requests
 
 from awx.main.utils import get_awx_http_client_headers
+from cryptography import x509
 from django.conf import settings
 
 import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
 from metrics_utility.logger import logger
+
+
+def _is_cert_valid(cert_pem: str) -> bool:
+    """Return True if cert_pem is a parseable, non-expired X.509 certificate."""
+    try:
+        cert = x509.load_pem_x509_certificate(cert_pem.encode('utf-8'))
+        if cert.not_valid_after_utc < datetime.now(timezone.utc):
+            logger.warning(f'Candlepin cert expired at {cert.not_valid_after_utc}; falling back to service account auth')
+            return False
+        return True
+    except Exception as e:
+        logger.warning(f'Could not parse Candlepin cert: {e}')
+        return False
 
 
 class PackageCRC(base.Package):
@@ -25,6 +42,18 @@ class PackageCRC(base.Package):
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
     SHIPPING_AUTH_SERVICE_ACCOUNT = 'service-account'
+
+    def __init__(self, collector):
+        super().__init__(collector)
+        self._resolved_auth_mode = None
+        self._temp_cert_path = None
+        self._temp_key_path = None
+
+    def _candlepin_cert_pem(self):
+        return (self.collector.billing_provider_params or {}).get('candlepin_cert_pem')
+
+    def _candlepin_key_pem(self):
+        return (self.collector.billing_provider_params or {}).get('candlepin_key_pem')
 
     def _tarname_base(self):
         timestamp = self.collector.gather_until
@@ -48,18 +77,82 @@ class PackageCRC(base.Package):
     def _get_http_request_headers(self):
         return get_awx_http_client_headers()
 
-    def shipping_auth_mode(self):
-        # TODO make this as a configuration so we can use this for local testing,
-        # for now, uncomment when testin locally in docker
-        # return self.SHIPPING_AUTH_IDENTITY
+    def _get_client_certificates(self):
+        if self._temp_cert_path and self._temp_key_path:
+            return (self._temp_cert_path, self._temp_key_path)
+        return super()._get_client_certificates()
 
-        return self.SHIPPING_AUTH_SERVICE_ACCOUNT
+    def ship(self):
+        if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
+            return super().ship()
+
+        # mTLS path: write cert + key to secure temp files, then delegate to base ship().
+        # Temp files must remain on disk across _get_client_certificates() and the POST.
+        cert_fd = key_fd = cert_path = key_path = None
+        try:
+            cert_fd, cert_path = tempfile.mkstemp(prefix='metrics_cert_', suffix='.pem')
+            os.chmod(cert_path, 0o600)
+            with os.fdopen(cert_fd, 'w') as f:
+                f.write(self._candlepin_cert_pem())
+            cert_fd = None  # fdopen took ownership
+
+            key_fd, key_path = tempfile.mkstemp(prefix='metrics_key_', suffix='.pem')
+            os.chmod(key_path, 0o600)
+            with os.fdopen(key_fd, 'w') as f:
+                f.write(self._candlepin_key_pem())
+            key_fd = None
+
+            self._temp_cert_path = cert_path
+            self._temp_key_path = key_path
+            return super().ship()
+
+        except requests.exceptions.SSLError as e:
+            logger.error(f'mTLS upload failed ({e}); retrying with service account auth')
+            self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
+            self._temp_cert_path = None
+            self._temp_key_path = None
+            return super().ship()
+
+        finally:
+            for fd in [cert_fd, key_fd]:
+                if fd is not None:
+                    try:
+                        os.close(fd)
+                    except OSError:
+                        pass
+            for path in [cert_path, key_path]:
+                if path and os.path.exists(path):
+                    try:
+                        os.unlink(path)
+                    except OSError as e:
+                        logger.warning(f'Could not remove temp cert file {path}: {e}')
+            self._temp_cert_path = None
+            self._temp_key_path = None
+
+    def shipping_auth_mode(self):
+        if self._resolved_auth_mode is not None:
+            return self._resolved_auth_mode
+
+        cert_pem = self._candlepin_cert_pem()
+        key_pem = self._candlepin_key_pem()
+        if cert_pem and key_pem and _is_cert_valid(cert_pem):
+            self._resolved_auth_mode = self.SHIPPING_AUTH_CERTIFICATES
+        else:
+            self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
+
+        return self._resolved_auth_mode
 
     def is_shipping_configured(self):
         # TODO: move to base, or children
         ret = super()
         if ret is False:
             return False
+
+        if self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
+            if not self.get_ingress_url():
+                logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
+                return False
+            return True
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             if not self.get_ingress_url():
@@ -105,6 +198,18 @@ class PackageCRC(base.Package):
                 verify=self.CERT_PATH,
                 proxies=proxies,
                 headers=headers,
+                timeout=(31, 31),
+            )
+
+        elif self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
+            # session.cert is already set by base ship(); just POST with server cert verification.
+            proxies = {'https': self.get_proxy_url()} if self.get_proxy_url() else {}
+            response = session.post(
+                url,
+                files=files,
+                verify=self.CERT_PATH,
+                proxies=proxies,
+                headers=session.headers,
                 timeout=(31, 31),
             )
 
