@@ -22,15 +22,15 @@ class TestCollectorLocks:
 
         mock_connection.cursor.return_value = mock_cursor_context
 
-        with lock('my_string_key', False, db=mock_connection) as acquired:
+        with lock('my_string_key', wait=False, db=mock_connection) as acquired:
             assert acquired is True
         executed_sql = mock_cursor.execute.call_args_list[0][0][0]  # This returns the argument for the first call to execute
         assert 'SELECT hashtext(%s)::bigint' in executed_sql
         assert 'my_string_key' not in executed_sql
 
     def test_acquire_lock(self):
-        with lock('test', False, db=connection) as acquired:
+        with lock('test', wait=False, db=connection) as acquired:
             assert acquired is not None
             with pytest.raises(Exception):
-                with lock('test', False, db=connection):
+                with lock('test', wait=False, db=connection):
                     assert False, 'this should be unreachable'

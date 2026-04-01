@@ -38,7 +38,7 @@ with library.tempdir(prefix=worker_key):
     )
 
     # we *may* want to wait=False and abort the task instead
-    with library.lock(db=metrics_db, key=worker_key, wait=True):
+    with library.lock(worker_key, wait=True, db=metrics_db):
         while not package.done():  # 100M-sized tarballs
             # actually calls collectors gather
             with package.next() as tarball:

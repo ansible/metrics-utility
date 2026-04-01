@@ -5,10 +5,6 @@ from metrics_utility.base import Collector
 
 class AnalyticsCollector(Collector):
     @staticmethod
-    def db_connection():
-        return None
-
-    @staticmethod
     def _package_class():
         return Package
 
