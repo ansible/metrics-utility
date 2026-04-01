@@ -1,0 +1,322 @@
+"""
+Unit tests for the candlepin_manage management command.
+
+All DB access and Candlepin API calls are mocked.
+The Command class is instantiated directly rather than via call_command
+because metrics_utility is not in INSTALLED_APPS.
+"""
+
+from io import StringIO
+from unittest.mock import patch
+
+from metrics_utility.management.commands.candlepin_manage import Command
+from metrics_utility.management.validation import (
+    CANDLEPIN_UUID_PLACEHOLDER,
+)
+
+
+# ---------------------------------------------------------------------------
+# Fixtures and helpers
+# ---------------------------------------------------------------------------
+
+SAMPLE_CERT_PEM = '-----BEGIN CERTIFICATE-----\nMIIBtest==\n-----END CERTIFICATE-----\n'
+SAMPLE_KEY_PEM = '-----BEGIN RSA PRIVATE KEY-----\nMIIEtest==\n-----END RSA PRIVATE KEY-----\n'
+SAMPLE_NEW_CERT = '-----BEGIN CERTIFICATE-----\nnewcert==\n-----END CERTIFICATE-----\n'
+SAMPLE_NEW_KEY = '-----BEGIN RSA PRIVATE KEY-----\nnewkey==\n-----END RSA PRIVATE KEY-----\n'
+CONSUMER_UUID = 'aaaabbbb-cccc-dddd-eeee-ffffffffffff'
+SAMPLE_ORG = '1234567'
+SAMPLE_USERNAME = 'rh-user@example.com'
+SAMPLE_PASSWORD = 'secret'
+
+SAMPLE_CERT_INFO = {
+    'serial': '9999',
+    'cn': 'test-consumer',
+    'not_after': '2027-01-01T00:00:00+00:00',
+    'days_remaining': 365,
+    'not_before': '2026-01-01T00:00:00+00:00',
+    'validity_days': 365,
+    'issuer_cn': 'Red Hat CA',
+    'issuer_org': 'Red Hat',
+}
+SAMPLE_NEW_CERT_INFO = {**SAMPLE_CERT_INFO, 'serial': '10000', 'days_remaining': 365}
+
+
+def _run(subcommand, *extra_args, **kwargs):
+    """Invoke Command.handle() directly, return (stdout, stderr, exit_code)."""
+    out = StringIO()
+    err = StringIO()
+    cmd = Command(stdout=out, stderr=err)
+
+    # Build options dict mirroring what argparse would produce.
+    defaults = {
+        'subcommand': subcommand,
+        'dry_run': kwargs.pop('dry_run', False),
+        'force': kwargs.pop('force', False),
+        'username': kwargs.pop('username', None),
+        'password': kwargs.pop('password', None),
+        'org': kwargs.pop('org', None),
+        'candlepin_url': kwargs.pop('candlepin_url', None),
+        'candlepin_ca': kwargs.pop('candlepin_ca', None),
+        'proxy': kwargs.pop('proxy', None),
+    }
+    defaults.update(kwargs)
+
+    exit_code = 0
+    try:
+        cmd.handle(**defaults)
+    except SystemExit as e:
+        exit_code = e.code
+
+    return out.getvalue(), err.getvalue(), exit_code
+
+
+# ---------------------------------------------------------------------------
+# register subcommand
+# ---------------------------------------------------------------------------
+
+
+class TestRegisterSubcommand:
+    def test_registers_and_prints_cert_info(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db', return_value=(None, None, None, None)
+            ):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+                    with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_registration_to_db'):
+                            stdout, _, exit_code = _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG)
+        assert exit_code == 0
+        assert CONSUMER_UUID in stdout
+        assert SAMPLE_CERT_INFO['serial'] in stdout
+
+    def test_saves_to_db_on_success(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db', return_value=(None, None, None, None)
+            ):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+                    with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_registration_to_db') as mock_save:
+                            _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG)
+        mock_save.assert_called_once_with(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+
+    def test_dry_run_skips_save(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db', return_value=(None, None, None, None)
+            ):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+                    with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_registration_to_db') as mock_save:
+                            stdout, _, exit_code = _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG, dry_run=True)
+        mock_save.assert_not_called()
+        assert exit_code == 0
+        assert 'dry-run' in stdout
+
+    def test_skips_if_cert_exists_without_force(self, monkeypatch):
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                stdout, _, exit_code = _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG)
+        MockClient.return_value.register_consumer.assert_not_called()
+        assert exit_code == 0
+        assert '--force' in stdout
+
+    def test_force_re_registers_when_cert_exists(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db', return_value=(None, None, None, None)
+            ):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
+                    with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_NEW_CERT_INFO):
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_registration_to_db'):
+                            _, _, exit_code = _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG, force=True)
+        MockClient.return_value.register_consumer.assert_called_once()
+        assert exit_code == 0
+
+    def test_reads_credentials_from_db_when_no_cli_args(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db',
+                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, 'install-uuid'),
+            ):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+                    with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_registration_to_db'):
+                            _, _, exit_code = _run('register')
+        assert exit_code == 0
+        MockClient.return_value.register_consumer.assert_called_once()
+
+    def test_exits_nonzero_when_username_missing(self, monkeypatch):
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db',
+                return_value=(None, SAMPLE_PASSWORD, SAMPLE_ORG, None),
+            ):
+                _, stderr, exit_code = _run('register')
+        assert exit_code != 0
+        assert 'username' in stderr
+
+    def test_exits_nonzero_when_password_missing(self, monkeypatch):
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db',
+                return_value=(SAMPLE_USERNAME, None, SAMPLE_ORG, None),
+            ):
+                _, stderr, exit_code = _run('register')
+        assert exit_code != 0
+        assert 'password' in stderr
+
+    def test_exits_nonzero_when_org_missing(self, monkeypatch):
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db',
+                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None, None),
+            ):
+                _, stderr, exit_code = _run('register')
+        assert exit_code != 0
+        assert 'org' in stderr
+
+    def test_exits_nonzero_when_api_fails(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            with patch(
+                'metrics_utility.management.commands.candlepin_manage._fetch_registration_credentials_from_db',
+                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, None),
+            ):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
+                    _, stderr, exit_code = _run('register')
+        assert exit_code != 0
+        assert 'failed' in stderr.lower()
+
+
+# ---------------------------------------------------------------------------
+# renew subcommand
+# ---------------------------------------------------------------------------
+
+
+class TestRenewSubcommand:
+    def test_checkin_and_no_renewal_when_cert_healthy(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                with patch('metrics_utility.management.commands.candlepin_manage.needs_renewal', return_value=False):
+                    with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                        stdout, _, exit_code = _run('renew')
+        MockClient.return_value.checkin.assert_called_once()
+        MockClient.return_value.regenerate_cert.assert_not_called()
+        assert exit_code == 0
+        assert 'No renewal needed' in stdout
+
+    def test_renews_when_cert_near_expiry(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', side_effect=[SAMPLE_CERT_INFO, SAMPLE_NEW_CERT_INFO]):
+                with patch('metrics_utility.management.commands.candlepin_manage.needs_renewal', return_value=True):
+                    with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                        MockClient.return_value.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_cert_to_db') as mock_save:
+                            stdout, _, exit_code = _run('renew')
+        MockClient.return_value.regenerate_cert.assert_called_once()
+        mock_save.assert_called_once_with(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
+        assert exit_code == 0
+        assert 'renewed' in stdout.lower()
+
+    def test_force_renews_even_when_cert_healthy(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', side_effect=[SAMPLE_CERT_INFO, SAMPLE_NEW_CERT_INFO]):
+                with patch('metrics_utility.management.commands.candlepin_manage.needs_renewal', return_value=False):
+                    with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                        MockClient.return_value.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_cert_to_db'):
+                            stdout, _, exit_code = _run('renew', force=True)
+        MockClient.return_value.regenerate_cert.assert_called_once()
+        assert exit_code == 0
+        assert 'forced' in stdout
+
+    def test_dry_run_skips_save_on_renewal(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', side_effect=[SAMPLE_CERT_INFO, SAMPLE_NEW_CERT_INFO]):
+                with patch('metrics_utility.management.commands.candlepin_manage.needs_renewal', return_value=True):
+                    with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                        MockClient.return_value.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_cert_to_db') as mock_save:
+                            stdout, _, exit_code = _run('renew', dry_run=True)
+        mock_save.assert_not_called()
+        assert exit_code == 0
+        assert 'dry-run' in stdout
+
+    def test_exits_nonzero_when_no_cert_in_db(self):
+        with patch('metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db', return_value=(None, None, None)):
+            _, stderr, exit_code = _run('renew')
+        assert exit_code != 0
+        assert 'register' in stderr
+
+    def test_exits_nonzero_when_uuid_is_placeholder(self):
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CANDLEPIN_UUID_PLACEHOLDER),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                _, stderr, exit_code = _run('renew')
+        assert exit_code != 0
+        assert 'register' in stderr
+
+    def test_exits_nonzero_when_renewal_api_fails(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                with patch('metrics_utility.management.commands.candlepin_manage.needs_renewal', return_value=True):
+                    with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                        MockClient.return_value.regenerate_cert.side_effect = RuntimeError('Candlepin down')
+                        _, stderr, exit_code = _run('renew')
+        assert exit_code != 0
+        assert 'failed' in stderr.lower()
+
+    def test_prints_old_and_new_serial_on_renewal(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        with patch(
+            'metrics_utility.management.commands.candlepin_manage._fetch_candlepin_lifecycle_from_db',
+            return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID),
+        ):
+            with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', side_effect=[SAMPLE_CERT_INFO, SAMPLE_NEW_CERT_INFO]):
+                with patch('metrics_utility.management.commands.candlepin_manage.needs_renewal', return_value=True):
+                    with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                        MockClient.return_value.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
+                        with patch('metrics_utility.management.commands.candlepin_manage._save_candlepin_cert_to_db'):
+                            stdout, _, _ = _run('renew')
+        assert SAMPLE_CERT_INFO['serial'] in stdout
+        assert SAMPLE_NEW_CERT_INFO['serial'] in stdout

@@ -239,8 +239,10 @@ def _upsert_conf_settings(key_value_pairs, error_context):
             with connection.cursor() as cursor:
                 for key, value in key_value_pairs:
                     cursor.execute(_CONF_SETTING_UPSERT_SQL, [key, json.dumps(value)])
+        return True
     except Exception as e:
         logger.error(f'Could not save {error_context} to conf_setting: {e}')
+        return False
 
 
 def _save_candlepin_cert_to_db(cert_pem, key_pem):
@@ -249,14 +251,14 @@ def _save_candlepin_cert_to_db(cert_pem, key_pem):
     Uses UPSERT so that rows are created if missing and updated if present.
     Best-effort: failures are logged as errors but never propagate.
     """
-    _upsert_conf_settings(
+    if _upsert_conf_settings(
         [
             (CANDLEPIN_CERT_SETTING_KEY, cert_pem),
             (CANDLEPIN_KEY_SETTING_KEY, key_pem),
         ],
         error_context='renewed Candlepin cert',
-    )
-    logger.info('Renewed Candlepin cert and key saved to conf_setting.')
+    ):
+        logger.info('Renewed Candlepin cert and key saved to conf_setting.')
 
 
 def _fetch_registration_credentials_from_db():
@@ -302,15 +304,15 @@ def _save_candlepin_registration_to_db(cert_pem, key_pem, consumer_uuid):
     Uses UPSERT so that rows are created on first registration and updated on
     subsequent calls.  Best-effort: failures are logged as errors but never propagate.
     """
-    _upsert_conf_settings(
+    if _upsert_conf_settings(
         [
             (CANDLEPIN_CERT_SETTING_KEY, cert_pem),
             (CANDLEPIN_KEY_SETTING_KEY, key_pem),
             (CANDLEPIN_UUID_SETTING_KEY, consumer_uuid),
         ],
         error_context='Candlepin registration',
-    )
-    logger.info(f'Candlepin consumer registration saved to conf_setting (uuid={consumer_uuid}).')
+    ):
+        logger.info(f'Candlepin consumer registration saved to conf_setting (uuid={consumer_uuid}).')
 
 
 def _register_candlepin_consumer():
