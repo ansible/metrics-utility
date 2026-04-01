@@ -79,7 +79,7 @@ def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffi
     create_instance()
 
     # Create execution environments with distinct installed_collections sets
-    ee_list = create_execution_environments()
+    ee_list = create_execution_environments(unique_suffix=unique_suffix)
 
     # Create one credential per built-in type
     credential_ids = create_credentials()

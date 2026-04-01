@@ -768,12 +768,12 @@ def create_execution_environment(name, image):
     return ee_id
 
 
-def create_execution_environments(count=100):
+def create_execution_environments(count=100, unique_suffix=None):
     """Create execution environments and return list of (ee_id, installed_collections) tuples."""
     results = []
     for i in range(count):
-        name = f'Perf Test EE {i + 1}'
-        image = f'registry.example.com/perf-test-ee-{i + 1}:latest'
+        name = f'Perf Test EE {i + 1} {unique_suffix}'
+        image = f'registry.example.com/perf-test-ee-{i + 1}-{unique_suffix}:latest'
         ee_id = create_execution_environment(name, image)
         results.append((ee_id, _random_installed_collections(seed=i)))
     return results
@@ -815,7 +815,7 @@ def create_instance(version='4.5.0', node_type='control'):
         capacity, capacity_adjustment, errors, node_state
     )
     VALUES (
-        NOW(), NOW(), '{instance_uuid}', 'perf-test-controller', '{version}', '{node_type}',
+        NOW(), NOW(), '{instance_uuid}', 'perf-test-controller-{instance_uuid}', '{version}', '{node_type}',
         TRUE, TRUE, FALSE, '',
         0, 0, 0, 0,
         0, 1.0, '', 'ready'
