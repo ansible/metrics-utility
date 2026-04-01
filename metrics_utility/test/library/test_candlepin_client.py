@@ -316,3 +316,121 @@ class TestRegenerateCert:
             with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
                 client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
         mock_log.info.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# register_consumer()
+# ---------------------------------------------------------------------------
+
+
+class TestRegisterConsumer:
+    SAMPLE_CERT = '-----BEGIN CERTIFICATE-----\nnewcert==\n-----END CERTIFICATE-----\n'
+    SAMPLE_KEY = '-----BEGIN RSA PRIVATE KEY-----\nnewkey==\n-----END RSA PRIVATE KEY-----\n'
+    SAMPLE_UUID = 'cccccccc-dddd-eeee-ffff-000000000000'
+
+    def _mock_success_response(self):
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = {
+            'uuid': self.SAMPLE_UUID,
+            'idCert': {
+                'cert': self.SAMPLE_CERT,
+                'key': self.SAMPLE_KEY,
+                'serial': {'serial': 12345},
+            },
+        }
+        return resp
+
+    def test_returns_cert_key_uuid_on_success(self):
+        client = CandlepinClient()
+        with patch('requests.post', return_value=self._mock_success_response()):
+            cert, key, uuid_ = client.register_consumer('user', 'pass', 'my-org')
+        assert cert == self.SAMPLE_CERT
+        assert key == self.SAMPLE_KEY
+        assert uuid_ == self.SAMPLE_UUID
+
+    def test_posts_to_consumers_endpoint(self):
+        client = CandlepinClient(base_url='https://candlepin.example.com/sub')
+        with patch('requests.post', return_value=self._mock_success_response()) as mock_post:
+            client.register_consumer('user', 'pass', 'my-org')
+        url = mock_post.call_args[0][0]
+        assert url == 'https://candlepin.example.com/sub/consumers'
+
+    def test_passes_org_as_query_param(self):
+        client = CandlepinClient()
+        with patch('requests.post', return_value=self._mock_success_response()) as mock_post:
+            client.register_consumer('user', 'pass', 'test-org-123')
+        kwargs = mock_post.call_args[1]
+        assert kwargs.get('params', {}).get('owner') == 'test-org-123'
+
+    def test_uses_basic_auth(self):
+        client = CandlepinClient()
+        with patch('requests.post', return_value=self._mock_success_response()) as mock_post:
+            client.register_consumer('myuser', 'mypass', 'org')
+        kwargs = mock_post.call_args[1]
+        assert kwargs.get('auth') == ('myuser', 'mypass')
+
+    def test_consumer_type_is_aap(self):
+        client = CandlepinClient()
+        with patch('requests.post', return_value=self._mock_success_response()) as mock_post:
+            client.register_consumer('user', 'pass', 'org')
+        payload = mock_post.call_args[1]['json']
+        assert payload['type']['label'] == 'aap'
+
+    def test_install_uuid_used_in_facts(self):
+        client = CandlepinClient()
+        install_uuid = 'aaaabbbb-cccc-dddd-eeee-ffffffffffff'
+        with patch('requests.post', return_value=self._mock_success_response()) as mock_post:
+            client.register_consumer('user', 'pass', 'org', install_uuid=install_uuid)
+        payload = mock_post.call_args[1]['json']
+        assert payload['facts']['aap.instance_uuid'] == install_uuid
+
+    def test_random_uuid_used_when_install_uuid_not_given(self):
+        client = CandlepinClient()
+        with patch('requests.post', return_value=self._mock_success_response()) as mock_post:
+            client.register_consumer('user', 'pass', 'org')
+        payload = mock_post.call_args[1]['json']
+        # just verify it's set to something non-empty
+        assert payload['facts']['aap.instance_uuid']
+
+    def test_raises_on_http_error(self):
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.ok = False
+        resp.status_code = 401
+        resp.text = 'Unauthorized'
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='401'):
+                client.register_consumer('bad', 'creds', 'org')
+
+    def test_raises_on_network_error(self):
+        client = CandlepinClient()
+        with patch('requests.post', side_effect=requests.exceptions.ConnectionError('refused')):
+            with pytest.raises(RuntimeError, match='network error'):
+                client.register_consumer('user', 'pass', 'org')
+
+    def test_raises_when_uuid_missing_from_response(self):
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = {'idCert': {'cert': self.SAMPLE_CERT, 'key': self.SAMPLE_KEY}}
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='uuid'):
+                client.register_consumer('user', 'pass', 'org')
+
+    def test_raises_when_idcert_missing(self):
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = {'uuid': self.SAMPLE_UUID}
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='idCert'):
+                client.register_consumer('user', 'pass', 'org')
+
+    def test_logs_info_on_success(self):
+        client = CandlepinClient()
+        with patch('requests.post', return_value=self._mock_success_response()):
+            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+                client.register_consumer('user', 'pass', 'org')
+        mock_log.info.assert_called_once()
+        assert self.SAMPLE_UUID in mock_log.info.call_args[0][0]
