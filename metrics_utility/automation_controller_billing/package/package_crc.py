@@ -2,33 +2,18 @@
 
 import json
 import os
-import tempfile
-
-from datetime import datetime, timezone
 
 import requests
 
 from awx.main.utils import get_awx_http_client_headers
-from cryptography import x509
 from django.conf import settings
 
 import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.library.candlepin.client import CandlepinClient
+from metrics_utility.library.candlepin.lifecycle import is_cert_valid as _is_cert_valid
 from metrics_utility.logger import logger
-
-
-def _is_cert_valid(cert_pem: str) -> bool:
-    """Return True if cert_pem is a parseable, non-expired X.509 certificate."""
-    try:
-        cert = x509.load_pem_x509_certificate(cert_pem.encode('utf-8'))
-        if cert.not_valid_after_utc < datetime.now(timezone.utc):
-            logger.warning(f'Candlepin cert expired at {cert.not_valid_after_utc}; falling back to service account auth')
-            return False
-        return True
-    except Exception as e:
-        logger.warning(f'Could not parse Candlepin cert: {e}')
-        return False
 
 
 class PackageCRC(base.Package):
@@ -82,65 +67,36 @@ class PackageCRC(base.Package):
             return (self._temp_cert_path, self._temp_key_path)
         return super()._get_client_certificates()
 
-    def _cleanup_temp_pem_files(self, cert_fd, key_fd, cert_path, key_path):
-        """Close any still-open file descriptors and delete the temp PEM files."""
-        for fd in [cert_fd, key_fd]:
-            if fd is not None:
-                try:
-                    os.close(fd)
-                except OSError:
-                    pass
-        for path in [cert_path, key_path]:
-            if path and os.path.exists(path):
-                try:
-                    os.unlink(path)
-                except OSError as e:
-                    logger.warning(f'Could not remove temp cert file {path}: {e}')
-        self._temp_cert_path = None
-        self._temp_key_path = None
-
     def ship(self):
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             return super().ship()
 
-        # mTLS path: write cert + key to secure temp files, then delegate to base ship().
-        # Temp files must remain on disk across _get_client_certificates() and the POST.
-        cert_fd = key_fd = cert_path = key_path = None
+        # mTLS path: delegate temp-file lifecycle to CandlepinClient._temp_cert_files so
+        # the files exist for the duration of the POST then are unconditionally cleaned up.
         try:
-            cert_fd, cert_path = tempfile.mkstemp(prefix='metrics_cert_', suffix='.pem')
-            os.chmod(cert_path, 0o600)
-            with os.fdopen(cert_fd, 'w') as f:
-                f.write(self._candlepin_cert_pem())
-            cert_fd = None  # fdopen took ownership
-
-            key_fd, key_path = tempfile.mkstemp(prefix='metrics_key_', suffix='.pem')
-            os.chmod(key_path, 0o600)
-            with os.fdopen(key_fd, 'w') as f:
-                f.write(self._candlepin_key_pem())
-            key_fd = None
-
-            self._temp_cert_path = cert_path
-            self._temp_key_path = key_path
-            return super().ship()
-
-        except requests.exceptions.SSLError as e:
-            # Before falling back, verify that service account credentials are present.
-            # In an mTLS-only deployment they won't be, and a blind retry would silently
-            # return False with no actionable error context for the operator.
-            if not self._get_rh_user() or not self._get_rh_password():
-                raise FailedToUploadPayload(
-                    f'mTLS upload failed and no service account credentials are configured to fall back to '
-                    f'(METRICS_UTILITY_SERVICE_ACCOUNT_ID / METRICS_UTILITY_SERVICE_ACCOUNT_SECRET are not set). '
-                    f'Original SSL error: {e}'
-                ) from e
-            logger.error(f'mTLS upload failed ({e}); retrying with service account auth')
-            self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
+            with CandlepinClient._temp_cert_files(self._candlepin_cert_pem(), self._candlepin_key_pem()) as (cert_path, key_path):
+                self._temp_cert_path = cert_path
+                self._temp_key_path = key_path
+                try:
+                    return super().ship()
+                except requests.exceptions.SSLError as e:
+                    # Before falling back, verify that service account credentials are present.
+                    # In an mTLS-only deployment they won't be, and a blind retry would silently
+                    # return False with no actionable error context for the operator.
+                    if not self._get_rh_user() or not self._get_rh_password():
+                        raise FailedToUploadPayload(
+                            f'mTLS upload failed and no service account credentials are configured to fall back to '
+                            f'(METRICS_UTILITY_SERVICE_ACCOUNT_ID / METRICS_UTILITY_SERVICE_ACCOUNT_SECRET are not set). '
+                            f'Original SSL error: {e}'
+                        ) from e
+                    logger.error(f'mTLS upload failed ({e}); retrying with service account auth')
+                    self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
+                    self._temp_cert_path = None
+                    self._temp_key_path = None
+                    return super().ship()
+        finally:
             self._temp_cert_path = None
             self._temp_key_path = None
-            return super().ship()
-
-        finally:
-            self._cleanup_temp_pem_files(cert_fd, key_fd, cert_path, key_path)
 
     def shipping_auth_mode(self):
         if self._resolved_auth_mode is not None:

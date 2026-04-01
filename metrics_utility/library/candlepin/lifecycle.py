@@ -1,6 +1,7 @@
 """
 Candlepin certificate lifecycle helpers.
 
+is_cert_valid   — quick parseable/non-expired guard used at ship time
 parse_cert      — extract metadata from a PEM cert string
 needs_renewal   — check whether a cert is within the renewal window
 run_candlepin_lifecycle — orchestrate check-in + proactive renewal per gather run
@@ -52,6 +53,24 @@ def parse_cert(pem_text):
         'days_remaining': remaining.days,
         'validity_days': (expiry - cert.not_valid_before_utc).days,
     }
+
+
+def is_cert_valid(cert_pem: str) -> bool:
+    """Return True if cert_pem is parseable and not yet expired.
+
+    Logs a warning (suitable for operator visibility) when the cert is expired
+    or unparseable, then returns False so the caller can fall back to service-
+    account authentication.
+    """
+    try:
+        info = parse_cert(cert_pem)
+        if info['days_remaining'] < 0:
+            logger.warning(f'Candlepin cert expired at {info["not_after"]}; falling back to service account auth')
+            return False
+        return True
+    except ValueError as e:
+        logger.warning(f'Could not parse Candlepin cert: {e}')
+        return False
 
 
 def needs_renewal(pem_text, days_before_expiry):
