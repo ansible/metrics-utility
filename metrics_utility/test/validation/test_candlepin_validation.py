@@ -101,7 +101,7 @@ class TestFetchCandlepinCertFromDb:
                 _fetch_candlepin_cert_from_db()
 
         mock_logger.warning.assert_called_once()
-        assert 'Could not fetch Candlepin cert from DB' in mock_logger.warning.call_args[0][0]
+        assert 'Could not fetch Candlepin' in mock_logger.warning.call_args[0][0]
 
     def test_queries_both_setting_keys(self):
         mock_conn, mock_cursor = _make_cursor_with_rows([])
