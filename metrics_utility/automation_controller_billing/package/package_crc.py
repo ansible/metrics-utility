@@ -74,6 +74,23 @@ class PackageCRC(base.Package):
             return (self._temp_cert_path, self._temp_key_path)
         return super()._get_client_certificates()
 
+    def _cleanup_temp_pem_files(self, cert_fd, key_fd, cert_path, key_path):
+        """Close any still-open file descriptors and delete the temp PEM files."""
+        for fd in [cert_fd, key_fd]:
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        for path in [cert_path, key_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.unlink(path)
+                except OSError as e:
+                    logger.warning(f'Could not remove temp cert file {path}: {e}')
+        self._temp_cert_path = None
+        self._temp_key_path = None
+
     def ship(self):
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             return super().ship()
@@ -115,20 +132,7 @@ class PackageCRC(base.Package):
             return super().ship()
 
         finally:
-            for fd in [cert_fd, key_fd]:
-                if fd is not None:
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-            for path in [cert_path, key_path]:
-                if path and os.path.exists(path):
-                    try:
-                        os.unlink(path)
-                    except OSError as e:
-                        logger.warning(f'Could not remove temp cert file {path}: {e}')
-            self._temp_cert_path = None
-            self._temp_key_path = None
+            self._cleanup_temp_pem_files(cert_fd, key_fd, cert_path, key_path)
 
     def shipping_auth_mode(self):
         if self._resolved_auth_mode is not None:
