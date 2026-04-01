@@ -73,12 +73,20 @@ class TestCandlepinClientInit:
         client = CandlepinClient(base_url='https://example.com/sub/')
         assert not client.base_url.endswith('/')
 
-    def test_verify_false_when_no_ca(self):
+    def test_verify_true_by_default(self):
         client = CandlepinClient()
-        assert client.verify is False
+        assert client.verify is True
 
     def test_verify_set_to_ca_path(self):
         client = CandlepinClient(candlepin_ca='/etc/rhsm/ca/redhat-uep.pem')
+        assert client.verify == '/etc/rhsm/ca/redhat-uep.pem'
+
+    def test_verify_false_requires_explicit_opt_in(self):
+        client = CandlepinClient(verify_tls=False)
+        assert client.verify is False
+
+    def test_ca_path_takes_precedence_over_verify_tls_false(self):
+        client = CandlepinClient(candlepin_ca='/etc/rhsm/ca/redhat-uep.pem', verify_tls=False)
         assert client.verify == '/etc/rhsm/ca/redhat-uep.pem'
 
     def test_proxy_set(self):
