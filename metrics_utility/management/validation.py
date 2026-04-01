@@ -7,7 +7,9 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
+from metrics_utility.base.utils import bool_from_env
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
+from metrics_utility.library.candlepin.lifecycle import get_candlepin_ca, get_candlepin_url, get_renewal_days, run_candlepin_lifecycle
 from metrics_utility.logger import logger
 
 
@@ -82,6 +84,9 @@ VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 # Update these to match the actual row keys used by the AAP controller.
 CANDLEPIN_CERT_SETTING_KEY = 'CANDLEPIN_CONSUMER_CERT'
 CANDLEPIN_KEY_SETTING_KEY = 'CANDLEPIN_CONSUMER_KEY'
+CANDLEPIN_UUID_SETTING_KEY = 'CANDLEPIN_CONSUMER_UUID'
+
+CANDLEPIN_RENEWAL_DAYS_DEFAULT = 30
 
 ship_path_description = 'place for collected data and built reports'
 
@@ -176,19 +181,60 @@ def _fetch_candlepin_cert_from_db():
     Returns (cert_pem, key_pem) strings if found, or (None, None) on any error or absence.
     This is best-effort: failures are logged as warnings and never propagate.
     """
+    cert_pem, key_pem, _ = _fetch_candlepin_lifecycle_from_db()
+    return cert_pem, key_pem
+
+
+def _fetch_candlepin_lifecycle_from_db():
+    """Read cert PEM, key PEM, and consumer UUID from conf_setting in a single query.
+
+    Returns (cert_pem, key_pem, consumer_uuid), any of which may be None if the
+    corresponding row is absent or on any DB error.  Best-effort: failures are
+    logged as warnings and never propagate.
+    """
+    all_keys = [CANDLEPIN_CERT_SETTING_KEY, CANDLEPIN_KEY_SETTING_KEY, CANDLEPIN_UUID_SETTING_KEY]
     try:
         from django.db import connection
 
+        placeholders = ', '.join(['%s'] * len(all_keys))
         with connection.cursor() as cursor:
             cursor.execute(
-                'SELECT key, value FROM conf_setting WHERE key IN (%s, %s)',
-                [CANDLEPIN_CERT_SETTING_KEY, CANDLEPIN_KEY_SETTING_KEY],
+                f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})',
+                all_keys,
             )
             rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
-        return rows.get(CANDLEPIN_CERT_SETTING_KEY), rows.get(CANDLEPIN_KEY_SETTING_KEY)
+        return (
+            rows.get(CANDLEPIN_CERT_SETTING_KEY),
+            rows.get(CANDLEPIN_KEY_SETTING_KEY),
+            rows.get(CANDLEPIN_UUID_SETTING_KEY),
+        )
     except Exception as e:
-        logger.warning(f'Could not fetch Candlepin cert from DB: {e}')
-        return None, None
+        logger.warning(f'Could not fetch Candlepin lifecycle data from DB: {e}')
+        return None, None, None
+
+
+def _save_candlepin_cert_to_db(cert_pem, key_pem):
+    """Persist a renewed Candlepin identity cert and key back to conf_setting.
+
+    Uses UPSERT so that rows are created if missing and updated if present.
+    Best-effort: failures are logged as errors but never propagate.
+    """
+    try:
+        from django.db import connection
+
+        upsert_sql = """
+            INSERT INTO conf_setting (created, modified, key, value)
+            VALUES (NOW(), NOW(), %s, %s)
+            ON CONFLICT (key) DO UPDATE
+                SET value = EXCLUDED.value,
+                    modified = NOW()
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(upsert_sql, [CANDLEPIN_CERT_SETTING_KEY, json.dumps(cert_pem)])
+            cursor.execute(upsert_sql, [CANDLEPIN_KEY_SETTING_KEY, json.dumps(key_pem)])
+        logger.info('Renewed Candlepin cert and key saved to conf_setting.')
+    except Exception as e:
+        logger.error(f'Could not save renewed Candlepin cert to DB: {e}')
 
 
 def handle_crc_ship_target():
@@ -224,8 +270,13 @@ def handle_crc_ship_target():
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
     # Attempt to load Candlepin mTLS credentials from the AAP DB (best-effort).
-    cert_pem, key_pem = _fetch_candlepin_cert_from_db()
+    cert_pem, key_pem, consumer_uuid = _fetch_candlepin_lifecycle_from_db()
+
     if cert_pem and key_pem:
+        # Run lifecycle management (check-in + proactive renewal) when enabled.
+        if bool_from_env('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED'):
+            cert_pem, key_pem = _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid)
+
         billing_provider_params['candlepin_cert_pem'] = cert_pem
         billing_provider_params['candlepin_key_pem'] = key_pem
         logger.info('Candlepin identity cert loaded from DB; mTLS will be attempted.')
@@ -233,6 +284,48 @@ def handle_crc_ship_target():
         logger.info('No Candlepin identity cert found in DB; will use service account auth.')
 
     return billing_provider_params
+
+
+def _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid):
+    """Orchestrate Candlepin check-in and proactive cert renewal.
+
+    Called from handle_crc_ship_target() when
+    METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED is set.  Returns the
+    (possibly renewed) (cert_pem, key_pem) tuple.  If renewal fails, the
+    original cert is returned so the caller can still attempt mTLS (which
+    will then fall back to service-account auth via the existing SSLError
+    handler in PackageCRC.ship()).
+    """
+    if not consumer_uuid:
+        logger.warning(
+            'Candlepin lifecycle is enabled but CANDLEPIN_CONSUMER_UUID is not set in conf_setting; '
+            'skipping check-in and renewal (registration must be performed by the AAP platform).'
+        )
+        return cert_pem, key_pem
+
+    candlepin_url = get_candlepin_url()
+    renewal_days = get_renewal_days()
+    candlepin_ca = get_candlepin_ca()
+    proxy = os.getenv('METRICS_UTILITY_PROXY_URL')
+
+    try:
+        new_cert_pem, new_key_pem = run_candlepin_lifecycle(
+            cert_pem,
+            key_pem,
+            consumer_uuid,
+            candlepin_url=candlepin_url,
+            renewal_days=renewal_days,
+            candlepin_ca=candlepin_ca,
+            proxy=proxy,
+        )
+    except Exception as e:
+        logger.error(f'Candlepin lifecycle failed: {e}; proceeding with existing cert')
+        return cert_pem, key_pem
+
+    if new_cert_pem != cert_pem or new_key_pem != key_pem:
+        _save_candlepin_cert_to_db(new_cert_pem, new_key_pem)
+
+    return new_cert_pem, new_key_pem
 
 
 def validate_report_type(errors, method):
