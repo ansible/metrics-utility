@@ -86,6 +86,11 @@ CANDLEPIN_CERT_SETTING_KEY = 'CANDLEPIN_CONSUMER_CERT'
 CANDLEPIN_KEY_SETTING_KEY = 'CANDLEPIN_CONSUMER_KEY'
 CANDLEPIN_UUID_SETTING_KEY = 'CANDLEPIN_CONSUMER_UUID'
 
+# Placeholder UUID written by the AAP DB seed / migration before a real consumer is
+# registered.  Treat it the same as an absent UUID so we never attempt a Candlepin
+# lifecycle call with a non-functional consumer identity.
+CANDLEPIN_UUID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000'
+
 CANDLEPIN_RENEWAL_DAYS_DEFAULT = 30
 
 ship_path_description = 'place for collected data and built reports'
@@ -175,16 +180,6 @@ def handle_not_s3():
         logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="s3": {", ".join(surplus)}')
 
 
-def _fetch_candlepin_cert_from_db():
-    """Attempt to read the Candlepin consumer identity cert and key PEM from conf_setting.
-
-    Returns (cert_pem, key_pem) strings if found, or (None, None) on any error or absence.
-    This is best-effort: failures are logged as warnings and never propagate.
-    """
-    cert_pem, key_pem, _ = _fetch_candlepin_lifecycle_from_db()
-    return cert_pem, key_pem
-
-
 def _fetch_candlepin_lifecycle_from_db():
     """Read cert PEM, key PEM, and consumer UUID from conf_setting in a single query.
 
@@ -220,7 +215,7 @@ def _save_candlepin_cert_to_db(cert_pem, key_pem):
     Best-effort: failures are logged as errors but never propagate.
     """
     try:
-        from django.db import connection
+        from django.db import connection, transaction
 
         upsert_sql = """
             INSERT INTO conf_setting (created, modified, key, value)
@@ -229,9 +224,10 @@ def _save_candlepin_cert_to_db(cert_pem, key_pem):
                 SET value = EXCLUDED.value,
                     modified = NOW()
         """
-        with connection.cursor() as cursor:
-            cursor.execute(upsert_sql, [CANDLEPIN_CERT_SETTING_KEY, json.dumps(cert_pem)])
-            cursor.execute(upsert_sql, [CANDLEPIN_KEY_SETTING_KEY, json.dumps(key_pem)])
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(upsert_sql, [CANDLEPIN_CERT_SETTING_KEY, json.dumps(cert_pem)])
+                cursor.execute(upsert_sql, [CANDLEPIN_KEY_SETTING_KEY, json.dumps(key_pem)])
         logger.info('Renewed Candlepin cert and key saved to conf_setting.')
     except Exception as e:
         logger.error(f'Could not save renewed Candlepin cert to DB: {e}')
@@ -296,9 +292,10 @@ def _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid):
     will then fall back to service-account auth via the existing SSLError
     handler in PackageCRC.ship()).
     """
-    if not consumer_uuid:
+    if not consumer_uuid or consumer_uuid == CANDLEPIN_UUID_PLACEHOLDER:
         logger.warning(
-            'Candlepin lifecycle is enabled but CANDLEPIN_CONSUMER_UUID is not set in conf_setting; '
+            'Candlepin lifecycle is enabled but CANDLEPIN_CONSUMER_UUID is not set in conf_setting '
+            '(or still contains the placeholder value); '
             'skipping check-in and renewal (registration must be performed by the AAP platform).'
         )
         return cert_pem, key_pem

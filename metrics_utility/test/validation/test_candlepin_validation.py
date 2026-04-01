@@ -7,7 +7,9 @@ import pytest
 from metrics_utility.management.validation import (
     CANDLEPIN_CERT_SETTING_KEY,
     CANDLEPIN_KEY_SETTING_KEY,
-    _fetch_candlepin_cert_from_db,
+    CANDLEPIN_UUID_PLACEHOLDER,
+    _fetch_candlepin_lifecycle_from_db,
+    _run_candlepin_lifecycle,
     handle_crc_ship_target,
 )
 
@@ -26,7 +28,7 @@ def _make_cursor_with_rows(rows):
     return mock_conn, mock_cursor
 
 
-class TestFetchCandlepinCertFromDb:
+class TestFetchCandlepinLifecycleFromDb:
     def test_returns_cert_and_key_when_both_present(self):
         rows = [
             (CANDLEPIN_CERT_SETTING_KEY, json.dumps(SAMPLE_CERT_PEM)),
@@ -35,7 +37,7 @@ class TestFetchCandlepinCertFromDb:
         mock_conn, _ = _make_cursor_with_rows(rows)
 
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            cert, key = _fetch_candlepin_cert_from_db()
+            cert, key, _ = _fetch_candlepin_lifecycle_from_db()
 
         assert cert == SAMPLE_CERT_PEM
         assert key == SAMPLE_KEY_PEM
@@ -44,7 +46,7 @@ class TestFetchCandlepinCertFromDb:
         mock_conn, _ = _make_cursor_with_rows([])
 
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            cert, key = _fetch_candlepin_cert_from_db()
+            cert, key, _ = _fetch_candlepin_lifecycle_from_db()
 
         assert cert is None
         assert key is None
@@ -57,7 +59,7 @@ class TestFetchCandlepinCertFromDb:
         mock_conn, _ = _make_cursor_with_rows(rows)
 
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            cert, key = _fetch_candlepin_cert_from_db()
+            cert, key, _ = _fetch_candlepin_lifecycle_from_db()
 
         assert cert == SAMPLE_CERT_PEM
         assert key is None
@@ -70,7 +72,7 @@ class TestFetchCandlepinCertFromDb:
         mock_conn, _ = _make_cursor_with_rows(rows)
 
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            cert, key = _fetch_candlepin_cert_from_db()
+            cert, key, _ = _fetch_candlepin_lifecycle_from_db()
 
         assert cert is None
         assert key == SAMPLE_KEY_PEM
@@ -83,14 +85,14 @@ class TestFetchCandlepinCertFromDb:
         mock_conn, _ = _make_cursor_with_rows(rows)
 
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            cert, key = _fetch_candlepin_cert_from_db()
+            cert, key, _ = _fetch_candlepin_lifecycle_from_db()
 
         assert cert is None
         assert key == SAMPLE_KEY_PEM
 
     def test_returns_none_none_on_db_exception(self):
         with patch('django.db.connection.cursor', side_effect=Exception('DB connection refused')):
-            cert, key = _fetch_candlepin_cert_from_db()
+            cert, key, _ = _fetch_candlepin_lifecycle_from_db()
 
         assert cert is None
         assert key is None
@@ -98,7 +100,7 @@ class TestFetchCandlepinCertFromDb:
     def test_logs_warning_on_db_exception(self):
         with patch('django.db.connection.cursor', side_effect=Exception('timeout')):
             with patch('metrics_utility.management.validation.logger') as mock_logger:
-                _fetch_candlepin_cert_from_db()
+                _fetch_candlepin_lifecycle_from_db()
 
         mock_logger.warning.assert_called_once()
         assert 'Could not fetch Candlepin' in mock_logger.warning.call_args[0][0]
@@ -107,7 +109,7 @@ class TestFetchCandlepinCertFromDb:
         mock_conn, mock_cursor = _make_cursor_with_rows([])
 
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            _fetch_candlepin_cert_from_db()
+            _fetch_candlepin_lifecycle_from_db()
 
         sql_call = mock_cursor.execute.call_args[0][0]
         args = mock_cursor.execute.call_args[0][1]
@@ -200,3 +202,42 @@ class TestHandleCrcShipTargetCandlepin:
 
         assert params['billing_provider'] == 'aws'
         assert params['billing_account_id'] == '123456789012'
+
+
+class TestRunCandlepinLifecyclePlaceholderUUID:
+    """_run_candlepin_lifecycle must treat the all-zeros placeholder UUID as absent."""
+
+    def test_placeholder_uuid_skips_lifecycle(self):
+        """Placeholder UUID must not be forwarded to run_candlepin_lifecycle."""
+        with patch('metrics_utility.management.validation.run_candlepin_lifecycle') as mock_lifecycle:
+            result = _run_candlepin_lifecycle(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CANDLEPIN_UUID_PLACEHOLDER)
+
+        mock_lifecycle.assert_not_called()
+        assert result == (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
+
+    def test_placeholder_uuid_logs_warning(self):
+        with patch('metrics_utility.management.validation.logger') as mock_logger:
+            _run_candlepin_lifecycle(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CANDLEPIN_UUID_PLACEHOLDER)
+
+        mock_logger.warning.assert_called_once()
+        msg = mock_logger.warning.call_args[0][0]
+        assert 'placeholder' in msg or 'not set' in msg
+
+    def test_none_uuid_skips_lifecycle(self):
+        """None consumer_uuid (absent DB row) must also skip lifecycle."""
+        with patch('metrics_utility.management.validation.run_candlepin_lifecycle') as mock_lifecycle:
+            result = _run_candlepin_lifecycle(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, None)
+
+        mock_lifecycle.assert_not_called()
+        assert result == (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
+
+    def test_real_uuid_proceeds_with_lifecycle(self):
+        """A genuine UUID (non-placeholder, non-None) must invoke run_candlepin_lifecycle."""
+        real_uuid = '12345678-1234-1234-1234-123456789abc'
+        with patch('metrics_utility.management.validation.run_candlepin_lifecycle', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)) as mock_lifecycle:
+            with patch('metrics_utility.management.validation.get_candlepin_url', return_value='https://example.com'):
+                with patch('metrics_utility.management.validation.get_renewal_days', return_value=30):
+                    with patch('metrics_utility.management.validation.get_candlepin_ca', return_value=None):
+                        _run_candlepin_lifecycle(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, real_uuid)
+
+        mock_lifecycle.assert_called_once()
