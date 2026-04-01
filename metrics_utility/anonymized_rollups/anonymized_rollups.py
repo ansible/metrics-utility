@@ -555,8 +555,9 @@ def anonymize_rollups(
     credentials_rollup,
     table_metadata_rollup,
     controller_version_rollup,
-    feature_flags_rollup,
     salt,
+    *,
+    feature_flags_rollup=None,
     task_executions_rollup=None,
 ):
     """
@@ -570,9 +571,9 @@ def anonymize_rollups(
         credentials_rollup: Credentials statistics
         table_metadata_rollup: Table metadata statistics
         controller_version_rollup: Controller version statistics
-        feature_flags_rollup: Enabled feature flags list
         salt: Salt string for hashing sensitive data
-        task_executions_rollup: Task execution observability statistics (optional)
+        feature_flags_rollup: Enabled feature flags list (optional, keyword-only)
+        task_executions_rollup: Task execution observability statistics (optional, keyword-only)
 
     Returns:
         Flattened and anonymized rollup data
@@ -585,7 +586,7 @@ def anonymize_rollups(
         'credentials': credentials_rollup,
         'table_metadata': table_metadata_rollup,
         'controller_version': controller_version_rollup,
-        'feature_flags': feature_flags_rollup,
+        'feature_flags': feature_flags_rollup or [],
         'task_executions': task_executions_rollup or [],
     }
 
