@@ -190,29 +190,51 @@ def _fetch_candlepin_lifecycle_from_db():
         return None, None, None
 
 
+_CONF_SETTING_UPSERT_SQL = """
+    INSERT INTO conf_setting (created, modified, key, value)
+    VALUES (NOW(), NOW(), %s, %s)
+    ON CONFLICT (key) DO UPDATE
+        SET value = EXCLUDED.value,
+            modified = NOW()
+"""
+
+
+def _upsert_conf_settings(key_value_pairs, error_context):
+    """UPSERT one or more rows into conf_setting within a single transaction.
+
+    Args:
+        key_value_pairs: Iterable of (key, value) tuples; values are JSON-serialised
+                         before being written.
+        error_context:   Short string included in the error log message to identify
+                         which caller failed (e.g. 'renewed Candlepin cert').
+
+    Best-effort: failures are logged as errors but never propagate.
+    """
+    try:
+        from django.db import connection, transaction
+
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                for key, value in key_value_pairs:
+                    cursor.execute(_CONF_SETTING_UPSERT_SQL, [key, json.dumps(value)])
+    except Exception as e:
+        logger.error(f'Could not save {error_context} to conf_setting: {e}')
+
+
 def _save_candlepin_cert_to_db(cert_pem, key_pem):
     """Persist a renewed Candlepin identity cert and key back to conf_setting.
 
     Uses UPSERT so that rows are created if missing and updated if present.
     Best-effort: failures are logged as errors but never propagate.
     """
-    try:
-        from django.db import connection, transaction
-
-        upsert_sql = """
-            INSERT INTO conf_setting (created, modified, key, value)
-            VALUES (NOW(), NOW(), %s, %s)
-            ON CONFLICT (key) DO UPDATE
-                SET value = EXCLUDED.value,
-                    modified = NOW()
-        """
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                cursor.execute(upsert_sql, [CANDLEPIN_CERT_SETTING_KEY, json.dumps(cert_pem)])
-                cursor.execute(upsert_sql, [CANDLEPIN_KEY_SETTING_KEY, json.dumps(key_pem)])
-        logger.info('Renewed Candlepin cert and key saved to conf_setting.')
-    except Exception as e:
-        logger.error(f'Could not save renewed Candlepin cert to DB: {e}')
+    _upsert_conf_settings(
+        [
+            (CANDLEPIN_CERT_SETTING_KEY, cert_pem),
+            (CANDLEPIN_KEY_SETTING_KEY, key_pem),
+        ],
+        error_context='renewed Candlepin cert',
+    )
+    logger.info('Renewed Candlepin cert and key saved to conf_setting.')
 
 
 def _fetch_registration_credentials_from_db():
@@ -258,24 +280,15 @@ def _save_candlepin_registration_to_db(cert_pem, key_pem, consumer_uuid):
     Uses UPSERT so that rows are created on first registration and updated on
     subsequent calls.  Best-effort: failures are logged as errors but never propagate.
     """
-    try:
-        from django.db import connection, transaction
-
-        upsert_sql = """
-            INSERT INTO conf_setting (created, modified, key, value)
-            VALUES (NOW(), NOW(), %s, %s)
-            ON CONFLICT (key) DO UPDATE
-                SET value = EXCLUDED.value,
-                    modified = NOW()
-        """
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                cursor.execute(upsert_sql, [CANDLEPIN_CERT_SETTING_KEY, json.dumps(cert_pem)])
-                cursor.execute(upsert_sql, [CANDLEPIN_KEY_SETTING_KEY, json.dumps(key_pem)])
-                cursor.execute(upsert_sql, [CANDLEPIN_UUID_SETTING_KEY, json.dumps(consumer_uuid)])
-        logger.info(f'Candlepin consumer registration saved to conf_setting (uuid={consumer_uuid}).')
-    except Exception as e:
-        logger.error(f'Could not save Candlepin registration to DB: {e}')
+    _upsert_conf_settings(
+        [
+            (CANDLEPIN_CERT_SETTING_KEY, cert_pem),
+            (CANDLEPIN_KEY_SETTING_KEY, key_pem),
+            (CANDLEPIN_UUID_SETTING_KEY, consumer_uuid),
+        ],
+        error_context='Candlepin registration',
+    )
+    logger.info(f'Candlepin consumer registration saved to conf_setting (uuid={consumer_uuid}).')
 
 
 def _register_candlepin_consumer():

@@ -16,15 +16,25 @@ class CandlepinClient:
     All API calls authenticate with the consumer identity certificate (mTLS),
     matching the pattern used by subscription-manager after initial registration.
 
-    Candlepin's own CA is not in the system trust store, so TLS server verification
-    defaults to False unless a CA path is provided via ``candlepin_ca``.
+    TLS server verification is **enabled** by default (``verify_tls=True``).
+    Pass ``candlepin_ca`` to verify against a specific CA bundle rather than the
+    system trust store.  Verification can only be disabled by explicitly passing
+    ``verify_tls=False``; this should be used only in controlled test environments
+    and never in production.
     """
 
     DEFAULT_CANDLEPIN_URL = 'https://subscription.rhsm.redhat.com/subscription'
 
-    def __init__(self, base_url=None, candlepin_ca=None, proxy=None):
+    def __init__(self, base_url=None, candlepin_ca=None, proxy=None, verify_tls=True):
         self.base_url = (base_url or self.DEFAULT_CANDLEPIN_URL).rstrip('/')
-        self.verify = candlepin_ca if candlepin_ca else False
+        if candlepin_ca:
+            self.verify = candlepin_ca
+        elif verify_tls:
+            self.verify = True
+        else:
+            # Explicit opt-in required to reach this branch — never set by default.
+            logger.warning('CandlepinClient: TLS verification is DISABLED (verify_tls=False). Do not use in production.')
+            self.verify = False
         if proxy:
             # Use the caller-supplied URL as-is for HTTPS targets (preserves the
             # intended scheme — usually http:// so requests uses plain HTTP to reach
