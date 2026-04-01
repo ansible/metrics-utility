@@ -56,14 +56,19 @@ def parse_cert(pem_text):
 
 
 def is_cert_valid(cert_pem: str) -> bool:
-    """Return True if cert_pem is parseable and not yet expired.
+    """Return True if cert_pem is parseable, already valid, and not yet expired.
 
-    Logs a warning (suitable for operator visibility) when the cert is expired
-    or unparseable, then returns False so the caller can fall back to service-
-    account authentication.
+    Logs a warning (suitable for operator visibility) when the cert is not yet
+    valid, expired, or unparseable, then returns False so the caller can fall
+    back to service-account authentication.
     """
     try:
         info = parse_cert(cert_pem)
+        now = datetime.now(timezone.utc)
+        not_before = datetime.fromisoformat(info['not_before'])
+        if now < not_before:
+            logger.warning(f'Candlepin cert is not yet valid (not_before={info["not_before"]}); falling back to service account auth')
+            return False
         if info['days_remaining'] < 0:
             logger.warning(f'Candlepin cert expired at {info["not_after"]}; falling back to service account auth')
             return False
