@@ -107,6 +107,15 @@ class PackageCRC(base.Package):
             return super().ship()
 
         except requests.exceptions.SSLError as e:
+            # Before falling back, verify that service account credentials are present.
+            # In an mTLS-only deployment they won't be, and a blind retry would silently
+            # return False with no actionable error context for the operator.
+            if not self._get_rh_user() or not self._get_rh_password():
+                raise FailedToUploadPayload(
+                    f'mTLS upload failed and no service account credentials are configured to fall back to '
+                    f'(METRICS_UTILITY_SERVICE_ACCOUNT_ID / METRICS_UTILITY_SERVICE_ACCOUNT_SECRET are not set). '
+                    f'Original SSL error: {e}'
+                ) from e
             logger.error(f'mTLS upload failed ({e}); retrying with service account auth')
             self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
             self._temp_cert_path = None

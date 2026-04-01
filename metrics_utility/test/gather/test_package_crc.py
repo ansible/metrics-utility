@@ -302,12 +302,47 @@ class TestShip:
         assert package._temp_cert_path is None
         assert package._temp_key_path is None
 
-    def test_ssl_error_falls_back_to_service_account(self, valid_cert_and_key):
+    def test_ssl_error_raises_when_no_service_account_credentials(self, valid_cert_and_key):
+        """If mTLS fails and no service account creds exist, raise FailedToUploadPayload instead of silently returning False."""
+        from metrics_utility.exceptions import FailedToUploadPayload
+
         cert_pem, key_pem = valid_cert_and_key
         package = _make_package(cert_pem=cert_pem, key_pem=key_pem)
 
-        with patch.object(base_package.Package, 'ship', side_effect=[requests.exceptions.SSLError('handshake failed'), True]):
-            result = package.ship()
+        with patch.object(base_package.Package, 'ship', side_effect=requests.exceptions.SSLError('handshake failed')):
+            with patch.object(PackageCRC, '_get_rh_user', return_value=None):
+                with patch.object(PackageCRC, '_get_rh_password', return_value=None):
+                    with pytest.raises(FailedToUploadPayload) as exc_info:
+                        package.ship()
+
+        assert 'mTLS upload failed' in str(exc_info.value)
+        assert 'METRICS_UTILITY_SERVICE_ACCOUNT_ID' in str(exc_info.value)
+        assert 'handshake failed' in str(exc_info.value)
+
+    def test_ssl_error_raises_preserves_original_ssl_error_as_cause(self, valid_cert_and_key):
+        """The raised FailedToUploadPayload must chain the original SSLError via __cause__."""
+        from metrics_utility.exceptions import FailedToUploadPayload
+
+        cert_pem, key_pem = valid_cert_and_key
+        package = _make_package(cert_pem=cert_pem, key_pem=key_pem)
+        ssl_error = requests.exceptions.SSLError('handshake failed')
+
+        with patch.object(base_package.Package, 'ship', side_effect=ssl_error):
+            with patch.object(PackageCRC, '_get_rh_user', return_value=None):
+                with patch.object(PackageCRC, '_get_rh_password', return_value=None):
+                    with pytest.raises(FailedToUploadPayload) as exc_info:
+                        package.ship()
+
+        assert exc_info.value.__cause__ is ssl_error
+
+    def test_ssl_error_falls_back_to_service_account_when_credentials_present(self, valid_cert_and_key):
+        cert_pem, key_pem = valid_cert_and_key
+        package = _make_package(cert_pem=cert_pem, key_pem=key_pem)
+
+        with patch.object(PackageCRC, '_get_rh_user', return_value='client-id'):
+            with patch.object(PackageCRC, '_get_rh_password', return_value='secret'):
+                with patch.object(base_package.Package, 'ship', side_effect=[requests.exceptions.SSLError('handshake failed'), True]):
+                    result = package.ship()
 
         assert result is True
         assert package._resolved_auth_mode == PackageCRC.SHIPPING_AUTH_SERVICE_ACCOUNT
@@ -327,8 +362,10 @@ class TestShip:
                 raise requests.exceptions.SSLError('SSL error')
             return True
 
-        with patch.object(base_package.Package, 'ship', side_effect=raise_first_then_succeed):
-            package.ship()
+        with patch.object(PackageCRC, '_get_rh_user', return_value='client-id'):
+            with patch.object(PackageCRC, '_get_rh_password', return_value='secret'):
+                with patch.object(base_package.Package, 'ship', side_effect=raise_first_then_succeed):
+                    package.ship()
 
         assert not os.path.exists(captured['cert'])
         assert not os.path.exists(captured['key'])
@@ -337,9 +374,11 @@ class TestShip:
         cert_pem, key_pem = valid_cert_and_key
         package = _make_package(cert_pem=cert_pem, key_pem=key_pem)
 
-        with patch.object(base_package.Package, 'ship', side_effect=[requests.exceptions.SSLError('handshake'), True]):
-            with patch('metrics_utility.automation_controller_billing.package.package_crc.logger') as mock_logger:
-                package.ship()
+        with patch.object(PackageCRC, '_get_rh_user', return_value='client-id'):
+            with patch.object(PackageCRC, '_get_rh_password', return_value='secret'):
+                with patch.object(base_package.Package, 'ship', side_effect=[requests.exceptions.SSLError('handshake'), True]):
+                    with patch('metrics_utility.automation_controller_billing.package.package_crc.logger') as mock_logger:
+                        package.ship()
 
         mock_logger.error.assert_called_once()
         assert 'mTLS upload failed' in mock_logger.error.call_args[0][0]
