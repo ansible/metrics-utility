@@ -116,17 +116,12 @@ class Command(BaseCommand):
     # register
     # ------------------------------------------------------------------
 
-    def _handle_register(self, options):
-        dry_run = options['dry_run']
-        force = options['force']
+    def _resolve_and_validate_credentials(self, options):
+        """Merge CLI options with DB values and validate all required fields are present.
 
-        # Check whether a cert is already stored unless --force.
-        existing_cert, existing_key, _ = _fetch_candlepin_lifecycle_from_db()
-        if existing_cert and existing_key and not force:
-            self.stdout.write('A Candlepin identity certificate is already stored in conf_setting. Use --force to re-register and replace it.')
-            return True
-
-        # Resolve credentials: CLI flags take precedence over conf_setting.
+        Returns ``(username, password, org, db_install_uuid)`` on success, or ``None``
+        if any required field is missing (errors are written to ``self.stderr``).
+        """
         db_username, db_password, db_org, db_install_uuid = _fetch_registration_credentials_from_db()
 
         username = options.get('username') or db_username
@@ -143,7 +138,25 @@ class Command(BaseCommand):
         if missing:
             for m in missing:
                 self.stderr.write(f'Missing required value: {m}')
+            return None
+
+        return username, password, org, db_install_uuid
+
+    def _handle_register(self, options):
+        dry_run = options['dry_run']
+        force = options['force']
+
+        # Check whether a cert is already stored unless --force.
+        existing_cert, existing_key, _ = _fetch_candlepin_lifecycle_from_db()
+        if existing_cert and existing_key and not force:
+            self.stdout.write('A Candlepin identity certificate is already stored in conf_setting. Use --force to re-register and replace it.')
+            return True
+
+        # Resolve credentials: CLI flags take precedence over conf_setting.
+        resolved = self._resolve_and_validate_credentials(options)
+        if resolved is None:
             return False
+        username, password, org, db_install_uuid = resolved
 
         candlepin_url = options.get('candlepin_url') or get_candlepin_url()
         candlepin_ca = options.get('candlepin_ca') or get_candlepin_ca()
