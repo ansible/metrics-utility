@@ -82,8 +82,8 @@ class TestCandlepinClientInit:
         assert client.verify == '/etc/rhsm/ca/redhat-uep.pem'
 
     def test_proxy_set(self):
-        client = CandlepinClient(proxy='http://proxy:3128')
-        assert client.proxies == {'https': 'http://proxy:3128', 'http': 'http://proxy:3128'}
+        client = CandlepinClient(proxy='https://proxy:3128')
+        assert client.proxies == {'https': 'https://proxy:3128', 'http': 'http://proxy:3128'}
 
     def test_proxy_none_gives_empty_dict(self):
         client = CandlepinClient()
