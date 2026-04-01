@@ -153,18 +153,21 @@ def get_candlepin_url():
     return os.getenv('METRICS_UTILITY_CANDLEPIN_URL', CandlepinClient.DEFAULT_CANDLEPIN_URL)
 
 
+RENEWAL_DAYS_DEFAULT = 30
+
+
 def get_renewal_days():
     raw = os.getenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS')
     if raw is None:
-        return 30
+        return RENEWAL_DAYS_DEFAULT
     try:
         days = int(raw)
         if days < 1:
             raise ValueError('must be >= 1')
         return days
     except (ValueError, TypeError) as e:
-        logger.warning(f'METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS={raw!r} is invalid ({e}); using default 30')
-        return 30
+        logger.warning(f'METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS={raw!r} is invalid ({e}); using default {RENEWAL_DAYS_DEFAULT}')
+        return RENEWAL_DAYS_DEFAULT
 
 
 def get_candlepin_ca():

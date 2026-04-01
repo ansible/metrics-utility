@@ -26,9 +26,9 @@ class CandlepinClient:
         self.base_url = (base_url or self.DEFAULT_CANDLEPIN_URL).rstrip('/')
         self.verify = candlepin_ca if candlepin_ca else False
         if proxy:
-            # Normalise: strip any existing scheme, then prefix per-protocol.
-            host = proxy.split('://', 1)[-1]
-            self.proxies = {'https': f'https://{host}', 'http': f'http://{host}'}
+            # Pass the URL as-is; requests uses it as the proxy endpoint for both
+            # HTTP and HTTPS targets (HTTPS goes via CONNECT tunneling over HTTP).
+            self.proxies = {'https': proxy, 'http': proxy}
         else:
             self.proxies = {}
 

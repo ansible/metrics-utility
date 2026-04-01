@@ -97,8 +97,6 @@ SUBSCRIPTIONS_PASSWORD_SETTING_KEY = 'SUBSCRIPTIONS_PASSWORD'
 # lifecycle call with a non-functional consumer identity.
 CANDLEPIN_UUID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000'
 
-CANDLEPIN_RENEWAL_DAYS_DEFAULT = 30
-
 ship_path_description = 'place for collected data and built reports'
 
 
