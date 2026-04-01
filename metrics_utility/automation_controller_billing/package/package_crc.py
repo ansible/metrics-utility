@@ -136,7 +136,7 @@ class PackageCRC(base.Package):
 
     def is_shipping_configured(self):
         # TODO: move to base, or children
-        ret = super()
+        ret = super().is_shipping_configured()
         if ret is False:
             return False
 
