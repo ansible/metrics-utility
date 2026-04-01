@@ -7,6 +7,7 @@ from dateutil.relativedelta import relativedelta
 
 from metrics_utility.base.utils import bool_from_env
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
+from metrics_utility.library.candlepin.client import CandlepinClient
 from metrics_utility.library.candlepin.lifecycle import get_candlepin_ca, get_candlepin_url, get_renewal_days, run_candlepin_lifecycle
 from metrics_utility.logger import logger
 
@@ -83,6 +84,11 @@ VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 CANDLEPIN_CERT_SETTING_KEY = 'CANDLEPIN_CONSUMER_CERT'
 CANDLEPIN_KEY_SETTING_KEY = 'CANDLEPIN_CONSUMER_KEY'
 CANDLEPIN_UUID_SETTING_KEY = 'CANDLEPIN_CONSUMER_UUID'
+
+# AWX conf_setting keys for the subscription credentials used for initial registration.
+# These are set by AWX when the customer configures their Red Hat subscription.
+SUBSCRIPTIONS_USERNAME_SETTING_KEY = 'SUBSCRIPTIONS_USERNAME'
+SUBSCRIPTIONS_PASSWORD_SETTING_KEY = 'SUBSCRIPTIONS_PASSWORD'
 
 # Placeholder UUID written by the AAP DB seed / migration before a real consumer is
 # registered.  Treat it the same as an absent UUID so we never attempt a Candlepin
@@ -211,6 +217,111 @@ def _save_candlepin_cert_to_db(cert_pem, key_pem):
         logger.error(f'Could not save renewed Candlepin cert to DB: {e}')
 
 
+def _fetch_registration_credentials_from_db():
+    """Read Candlepin registration credentials from AWX conf_setting.
+
+    Reads SUBSCRIPTIONS_USERNAME, SUBSCRIPTIONS_PASSWORD (set by AWX when the
+    customer configures their Red Hat subscription), LICENSE.account_number (org
+    key for the Candlepin /consumers endpoint), and INSTALL_UUID (used as the
+    consumer's aap.instance_uuid fact).
+
+    Returns (username, password, org, install_uuid), any of which may be None
+    if the corresponding row is absent or on any DB error.  Best-effort: failures
+    are logged as warnings and never propagate.
+    """
+    keys = [SUBSCRIPTIONS_USERNAME_SETTING_KEY, SUBSCRIPTIONS_PASSWORD_SETTING_KEY, 'LICENSE', 'INSTALL_UUID']
+    try:
+        from django.db import connection
+
+        placeholders = ', '.join(['%s'] * len(keys))
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})',
+                keys,
+            )
+            rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
+
+        license_data = rows.get('LICENSE', {})
+        org = license_data.get('account_number') if isinstance(license_data, dict) else None
+        return (
+            rows.get(SUBSCRIPTIONS_USERNAME_SETTING_KEY),
+            rows.get(SUBSCRIPTIONS_PASSWORD_SETTING_KEY),
+            org,
+            rows.get('INSTALL_UUID'),
+        )
+    except Exception as e:
+        logger.warning(f'Could not fetch Candlepin registration credentials from DB: {e}')
+        return None, None, None, None
+
+
+def _save_candlepin_registration_to_db(cert_pem, key_pem, consumer_uuid):
+    """Persist a new Candlepin consumer registration (cert, key, UUID) to conf_setting.
+
+    Uses UPSERT so that rows are created on first registration and updated on
+    subsequent calls.  Best-effort: failures are logged as errors but never propagate.
+    """
+    try:
+        from django.db import connection, transaction
+
+        upsert_sql = """
+            INSERT INTO conf_setting (created, modified, key, value)
+            VALUES (NOW(), NOW(), %s, %s)
+            ON CONFLICT (key) DO UPDATE
+                SET value = EXCLUDED.value,
+                    modified = NOW()
+        """
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute(upsert_sql, [CANDLEPIN_CERT_SETTING_KEY, json.dumps(cert_pem)])
+                cursor.execute(upsert_sql, [CANDLEPIN_KEY_SETTING_KEY, json.dumps(key_pem)])
+                cursor.execute(upsert_sql, [CANDLEPIN_UUID_SETTING_KEY, json.dumps(consumer_uuid)])
+        logger.info(f'Candlepin consumer registration saved to conf_setting (uuid={consumer_uuid}).')
+    except Exception as e:
+        logger.error(f'Could not save Candlepin registration to DB: {e}')
+
+
+def _register_candlepin_consumer():
+    """Register a new Candlepin consumer using credentials from AWX conf_setting.
+
+    Called from handle_crc_ship_target() when no identity cert exists in the DB
+    and METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED is set.
+
+    Reads SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD and the org key from
+    LICENSE.account_number, then calls POST /consumers on Candlepin to obtain an
+    identity certificate.  On success the cert, key, and consumer UUID are
+    persisted to conf_setting via UPSERT.
+
+    Returns (cert_pem, key_pem, consumer_uuid) on success, (None, None, None) on
+    any failure.  Best-effort: logs errors but never propagates.
+    """
+    username, password, org, install_uuid = _fetch_registration_credentials_from_db()
+
+    if not username or not password:
+        logger.warning(
+            'Candlepin registration is enabled but SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD '
+            'are not set in conf_setting; skipping registration.'
+        )
+        return None, None, None
+
+    if not org:
+        logger.warning('Candlepin registration is enabled but LICENSE.account_number is not available; skipping registration.')
+        return None, None, None
+
+    candlepin_url = get_candlepin_url()
+    candlepin_ca = get_candlepin_ca()
+    proxy = os.getenv('METRICS_UTILITY_PROXY_URL')
+    client = CandlepinClient(base_url=candlepin_url, candlepin_ca=candlepin_ca, proxy=proxy)
+
+    try:
+        cert_pem, key_pem, consumer_uuid = client.register_consumer(username, password, org, install_uuid)
+    except Exception as e:
+        logger.error(f'Candlepin consumer registration failed: {e}')
+        return None, None, None
+
+    _save_candlepin_registration_to_db(cert_pem, key_pem, consumer_uuid)
+    return cert_pem, key_pem, consumer_uuid
+
+
 def handle_crc_ship_target():
     billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
     red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
@@ -235,6 +346,10 @@ def handle_crc_ship_target():
 
     # Attempt to load Candlepin mTLS credentials from the AAP DB (best-effort).
     cert_pem, key_pem, consumer_uuid = _fetch_candlepin_lifecycle_from_db()
+
+    # If no cert exists yet, attempt initial registration when enabled.
+    if (not cert_pem or not key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED'):
+        cert_pem, key_pem, consumer_uuid = _register_candlepin_consumer()
 
     if cert_pem and key_pem:
         # Run lifecycle management (check-in + proactive renewal) when enabled.

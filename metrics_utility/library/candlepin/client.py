@@ -1,5 +1,6 @@
 import os
 import tempfile
+import uuid as _uuid_mod
 
 from datetime import datetime, timezone
 
@@ -29,6 +30,69 @@ class CandlepinClient:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    def register_consumer(self, username, password, org, install_uuid=None):
+        """POST /consumers?owner={org} — register a new AAP consumer with basic auth.
+
+        Uses the customer's Red Hat subscription credentials (SUBSCRIPTIONS_USERNAME /
+        SUBSCRIPTIONS_PASSWORD from AWX conf_setting) to register this controller
+        instance as a Candlepin consumer and obtain an identity certificate for mTLS.
+
+        Args:
+            username:     Red Hat subscription username (from SUBSCRIPTIONS_USERNAME).
+            password:     Red Hat subscription password (from SUBSCRIPTIONS_PASSWORD).
+            org:          Candlepin owner/org key (from LICENSE.account_number).
+            install_uuid: AWX INSTALL_UUID used as the consumer's aap.instance_uuid
+                          fact; falls back to a random UUID if not provided.
+
+        Returns:
+            Tuple ``(cert_pem, key_pem, consumer_uuid)``.
+
+        Raises:
+            RuntimeError on any network or API failure.
+        """
+        url = f'{self.base_url}/consumers'
+        instance_uuid = install_uuid or str(_uuid_mod.uuid4())
+        payload = {
+            'name': f'aap-{instance_uuid[:8]}',
+            'type': {'label': 'aap'},
+            'facts': {
+                'system.certificate_version': '3.3',
+                'system.name': 'aap-controller',
+                'aap.instance_uuid': instance_uuid,
+            },
+        }
+        try:
+            resp = requests.post(
+                url,
+                params={'owner': org},
+                auth=(username, password),
+                json=payload,
+                headers={'Content-Type': 'application/json'},
+                verify=self.verify,
+                proxies=self.proxies,
+                timeout=120,
+            )
+        except Exception as e:
+            raise RuntimeError(f'Candlepin register_consumer network error: {e}') from e
+
+        if not resp.ok:
+            raise RuntimeError(f'Candlepin register_consumer failed with status {resp.status_code}: {resp.text}')
+
+        try:
+            body = resp.json()
+            consumer_uuid = body.get('uuid')
+            id_cert = body.get('idCert', {})
+            cert_pem = id_cert.get('cert')
+            key_pem = id_cert.get('key')
+        except Exception as e:
+            raise RuntimeError(f'Candlepin register_consumer: could not parse response JSON: {e}') from e
+
+        if not consumer_uuid or not cert_pem or not key_pem:
+            raise RuntimeError('Candlepin register_consumer: response missing uuid, idCert.cert or idCert.key')
+
+        logger.info(f'Candlepin consumer registered successfully (uuid={consumer_uuid})')
+        return cert_pem, key_pem, consumer_uuid
 
     def checkin(self, consumer_uuid, cert_pem, key_pem):
         """PUT /consumers/{uuid} — reset inactivity timer.
