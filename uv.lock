@@ -282,7 +282,7 @@ wheels = [
 
 [[package]]
 name = "django-ansible-base"
-version = "2025.10.20"
+version = "2026.3.19"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
@@ -293,9 +293,9 @@ dependencies = [
     { name = "inflection" },
     { name = "sqlparse" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/00/3c876b87e5eb4f88c63621bc38048e004834a6e4c80dff40f8ed19730f3e/django_ansible_base-2025.10.20.tar.gz", hash = "sha256:11562985d3c62989afb60065be5fb3b89b35f01ce5844132b2bb82f361f476e2", size = 316742, upload-time = "2025-10-20T14:58:23.639Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/07/a9f165756a60a8b33cdf51b12734d1b1101a69ad12ebfb4f8c5f9d6bcd4a/django_ansible_base-2026.3.19.tar.gz", hash = "sha256:2c876a94d44036aba4a1febe51cbbbcf4fabbaf063d03afcbf001c53f90dc52e", size = 346176, upload-time = "2026-03-19T14:45:15.052Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/39/43528c3b0378bae3cce99f02d7021acc4a3d665735ddb152f7ba8386c6a8/django_ansible_base-2025.10.20-py3-none-any.whl", hash = "sha256:7c4383aaf9fd798d6c894a6546048158de451232c88f1750bbdd55a6fc23c3ee", size = 417093, upload-time = "2025-10-20T14:58:22.1Z" },
+    { url = "https://files.pythonhosted.org/packages/9c/3a/5294ceed4c390bf3d35d9c9c025f6f841382da74c8452bfd68da4b484437/django_ansible_base-2026.3.19-py3-none-any.whl", hash = "sha256:2b4a79e938b550a772e0b144ade7ad39d9d4dcfe22e3cdf4422a375ae0729c2f", size = 456362, upload-time = "2026-03-19T14:45:13.373Z" },
 ]
 
 [[package]]
