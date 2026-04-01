@@ -19,6 +19,13 @@ def prepare():
             mock_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'mock_awx'))
             sys.path.append(mock_path)
 
+    db_env_vars = [key for key in os.environ if key.startswith('METRICS_UTILITY_DB_')]
+    if spec is not None and db_env_vars:
+        sys.stderr.write(
+            f'Warning: {", ".join(db_env_vars)} ignored because Automation Controller modules were found. '
+            'These only take effect in standalone mode.\n'
+        )
+
     import django
 
     from awx import prepare_env
