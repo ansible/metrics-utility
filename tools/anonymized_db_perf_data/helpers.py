@@ -781,9 +781,11 @@ def create_execution_environments(count=100, unique_suffix=None):
 
 def create_credentials():
     """Create one credential per built-in type and return their IDs."""
-    result = run('SELECT id FROM main_credentialtype WHERE managed = TRUE;')
+    result = run("SELECT id FROM main_credentialtype WHERE managed = TRUE AND name IN ('Machine', 'Vault', 'Amazon Web Services', 'Network');")
+    if not result:
+        raise RuntimeError('Failed to fetch built-in credential types')
     credential_ids = []
-    for (ct_id,) in result or []:
+    for (ct_id,) in result:
         sql = f"""
         INSERT INTO main_credential (created, modified, name, description, credential_type_id, inputs, managed)
         VALUES (NOW(), NOW(), 'Perf Test Credential', '', {ct_id}, '{{}}'::jsonb, FALSE)
