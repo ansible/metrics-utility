@@ -79,8 +79,8 @@ def test_datetime_hook_with_non_datetime_string():
 
     result = _datetime_hook(input_dict)
 
-    # parse_datetime returns None for invalid datetime strings
-    assert result['text'] is None
+    # Non-datetime strings are preserved as-is
+    assert result['text'] == 'hello'
 
 
 def test_get_controller_settings():

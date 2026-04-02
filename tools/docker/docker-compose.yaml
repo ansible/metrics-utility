@@ -49,6 +49,7 @@ services:
       - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-4-main_hostmetric.sql
       - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql
       - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-6-main_jobhostsummary.sql
+      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-7-dab_feature_flags.sql
 
   postgres-wait:
     image: "mirror.gcr.io/postgres"

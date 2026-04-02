@@ -1,7 +1,5 @@
 import json
 
-from datetime import datetime
-
 import pandas as pd
 import pytest
 
@@ -12,6 +10,7 @@ from metrics_utility.anonymized_rollups import (
     CredentialsAnonymizedRollup,
     EventModulesAnonymizedRollup,
     ExecutionEnvironmentsAnonymizedRollup,
+    FeatureFlagsAnonymizedRollup,
     JobHostSummaryAnonymizedRollup,
     JobsAnonymizedRollup,
     TableMetadataAnonymizedRollup,
@@ -20,11 +19,13 @@ from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary_service,
     main_jobevent_service,
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.test.util import utcdt
 
 
 def _deep_compare(obj1, obj2, path=''):
@@ -93,8 +94,8 @@ def test_json_serialization_roundtrip(cleanup_glob):
     roundtrip for each collector's prepare output.
     """
     # Time range for data collection
-    since = datetime(2025, 6, 13, 0, 0, 0)
-    until = datetime(2025, 6, 14, 0, 0, 0)
+    since = utcdt('2025-06-13')
+    until = utcdt('2025-06-14')
 
     db = connection
 
@@ -107,6 +108,7 @@ def test_json_serialization_roundtrip(cleanup_glob):
         ('credentials_service', credentials_service, CredentialsAnonymizedRollup, {'since': since, 'until': until}),
         ('table_metadata', table_metadata, TableMetadataAnonymizedRollup, {}),
         ('controller_version_service', controller_version_service, ControllerVersionAnonymizedRollup, {}),
+        ('feature_flags_service', feature_flags_service, FeatureFlagsAnonymizedRollup, {}),
     ]
 
     for collector_name, collector_func, rollup_class, collector_kwargs in collector_rollup_map:

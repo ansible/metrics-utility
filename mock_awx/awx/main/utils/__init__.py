@@ -2,7 +2,7 @@ from django.utils.dateparse import parse_datetime
 
 
 def get_awx_version():
-    "24.6.123"
+    return '24.6.123'
 
 
 def get_awx_http_client_headers():

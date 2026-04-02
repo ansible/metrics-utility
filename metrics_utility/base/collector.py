@@ -86,17 +86,6 @@ class Collector:
 
         return self.collections.get('config') is not None
 
-    @staticmethod
-    @abstractmethod
-    def db_connection():
-        """
-        DB connection for advisory lock. Can be
-        - django.db.connection or
-        - sqlalchemy.engine.base.Engine.raw_connection()
-        - etc.
-        """
-        pass
-
     def gather(self, dest=None, subset=None, since=None, until=None):
         """Entry point for gathering
 

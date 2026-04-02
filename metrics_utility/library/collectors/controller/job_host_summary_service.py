@@ -1,22 +1,15 @@
-from ..util import DataframeOutput, collector
+from ..util import DataframeOutput, collector, date_where
 
 
 @collector
 def job_host_summary_service(*, db=None, since=None, until=None, output=DataframeOutput()):
-    where = ' AND '.join(
-        [
-            f"mu.finished >= '{since.isoformat()}'",
-            f"mu.finished < '{until.isoformat()}'",
-        ]
-    )
-
     query = f"""
         WITH
             -- First: restrict to jobs that FINISHED in the window (uses index on main_unifiedjob.finished if present)
             filtered_jobs AS (
                 SELECT mu.id
                 FROM main_unifiedjob mu
-                WHERE {where}
+                WHERE {date_where('mu.finished', since, until)}
                 AND mu.finished IS NOT NULL
             )
         SELECT

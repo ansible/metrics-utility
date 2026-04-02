@@ -1,9 +1,10 @@
 """Test suite for collector utility helper functions."""
 
-from datetime import datetime
+from datetime import date, datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 from metrics_utility.library.collectors.util import (
     _copy_table_files,
@@ -11,6 +12,7 @@ from metrics_utility.library.collectors.util import (
     date_where,
     ensure_functions,
 )
+from metrics_utility.test.util import utcdt
 
 
 class TestEnsureFunctions:
@@ -286,33 +288,33 @@ class TestDateWhere:
 
     def test_both_since_and_until(self):
         """Test date_where with both since and until produces range condition."""
-        since = datetime(2024, 1, 1, 0, 0, 0)
-        until = datetime(2024, 12, 31, 23, 59, 59)
+        since = utcdt('2024-01-01')
+        until = utcdt('2024-12-31T23:59:59')
 
         result = date_where('created_at', since, until)
 
-        assert '( "created_at" >=' in result
-        assert 'AND "created_at" <' in result
+        assert 'created_at >=' in result
+        assert 'AND created_at <' in result
         assert since.isoformat() in result
         assert until.isoformat() in result
 
     def test_only_since(self):
         """Test date_where with only since produces >= condition."""
-        since = datetime(2024, 6, 1, 12, 0, 0)
+        since = utcdt('2024-06-01T12:00:00')
 
         result = date_where('modified_date', since, None)
 
-        assert '( "modified_date" >=' in result
+        assert 'modified_date >=' in result
         assert since.isoformat() in result
         assert 'AND' not in result
 
     def test_only_until(self):
         """Test date_where with only until produces < condition."""
-        until = datetime(2024, 3, 15, 18, 30, 0)
+        until = utcdt('2024-03-15T18:30:00')
 
         result = date_where('timestamp', None, until)
 
-        assert '( "timestamp" <' in result
+        assert 'timestamp <' in result
         assert until.isoformat() in result
         assert '>=' not in result
 
@@ -322,31 +324,30 @@ class TestDateWhere:
 
         assert result == 'true'
 
-    def test_isoformat_used(self):
-        """Test that datetime.isoformat() is used for date formatting."""
-        since = datetime(2024, 1, 15, 10, 30, 45)
-        until = datetime(2024, 2, 20, 14, 45, 30)
+    def test_rejects_naive_since(self):
+        with pytest.raises(ValueError, match='since must be timezone-aware'):
+            date_where('field', datetime(2024, 1, 1), None)
 
-        result = date_where('event_time', since, until)
+    def test_rejects_naive_until(self):
+        with pytest.raises(ValueError, match='until must be timezone-aware'):
+            date_where('field', None, datetime(2024, 1, 1))
 
-        # isoformat() produces strings like '2024-01-15T10:30:45'
-        assert '2024-01-15T10:30:45' in result
-        assert '2024-02-20T14:45:30' in result
+    def test_rejects_non_datetime_since(self):
+        with pytest.raises(TypeError, match='since must be a datetime, got str'):
+            date_where('field', '2024-01-01', None)
 
-    def test_field_name_quoted(self):
-        """Test that field name is properly quoted."""
-        since = datetime(2024, 1, 1)
+    def test_rejects_non_datetime_until(self):
+        with pytest.raises(TypeError, match='until must be a datetime, got date'):
+            date_where('field', None, date(2024, 1, 1))
 
-        result = date_where('my_field', since, None)
+    def test_dotted_table_column_reference(self):
+        """Test that table.column references work correctly (not broken by quoting)."""
+        since = utcdt('2024-01-01')
+        until = utcdt('2024-12-31')
 
-        assert '"my_field"' in result
+        result = date_where('main_host.created', since, until)
 
-    def test_since_and_until_format(self):
-        """Test the exact format of the range condition."""
-        since = datetime(2024, 1, 1, 0, 0, 0)
-        until = datetime(2024, 12, 31, 0, 0, 0)
-
-        result = date_where('field', since, until)
-
-        expected = f'( "field" >= \'{since.isoformat()}\' AND "field" < \'{until.isoformat()}\' )'
-        assert result == expected
+        assert 'main_host.created >=' in result
+        assert 'main_host.created <' in result
+        # must NOT be quoted as "main_host.created" — PostgreSQL would treat that as a single identifier
+        assert '"main_host.created"' not in result

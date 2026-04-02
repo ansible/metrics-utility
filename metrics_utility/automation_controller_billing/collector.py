@@ -79,10 +79,6 @@ class Collector(base.Collector):
 
         return True
 
-    @staticmethod
-    def db_connection():
-        return connection
-
     @classmethod
     def registered_collectors(cls, module=None):
         from metrics_utility.automation_controller_billing import collectors

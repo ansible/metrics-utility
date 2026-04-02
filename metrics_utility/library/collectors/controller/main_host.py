@@ -90,13 +90,14 @@ def _main_host_query(where):
 def main_host(*, db=None, output=DataframeOutput()):
     query = _main_host_query("enabled='t'")
 
+    # ensure_functions writes to DB, cannot be used in service (readonly DB)
     ensure_functions(db)
     return output.sql(db, query)
 
 
 @collector
 def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()):
-    # prefer running with until=False, to not skip hosts that keep being modified
+    # prefer running with until=None, to not skip hosts that keep being modified
 
     where = f"""
         enabled='t'
@@ -105,5 +106,6 @@ def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()
     """
     query = _main_host_query(where)
 
+    # ensure_functions writes to DB, cannot be used in service (readonly DB)
     ensure_functions(db)
     return output.sql(db, query)
