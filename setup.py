@@ -1,6 +1,6 @@
 from setuptools import setup
 
-# evil test change
+evil() # test change
 
 if __name__ == '__main__':
     setup()
