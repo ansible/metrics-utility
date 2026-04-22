@@ -63,7 +63,7 @@ def anonymize_data(data, salt):
             - module_stats: array of module statistics
             - collection_stats: array of collection statistics
             - role_stats: array of role statistics
-            - jobs_by_installed_collections_versions: array of {name, version, jobs_total, jobs_failed_total,
+            - jobs_by_installed_collections_versions: array of {collection, version, jobs_total, jobs_failed_total,
               jobs_successful_total} from installed collections
         salt: Salt string for hashing (used for job_template_name hashing)
     """
@@ -114,7 +114,7 @@ def anonymize_data(data, salt):
                 if 'collection_name' in role and role['collection_name']:
                     role['collection_name'] = 'Custom'
 
-    # anonymize jobs_by_installed_collections_versions - replace collection name and version with 'Unknown' for unknown collections
+    # anonymize jobs_by_installed_collections_versions - replace collection and version with "Custom" for unknown collections
     # Load collections.json to check if collection is known
     collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
     try:
@@ -125,11 +125,11 @@ def anonymize_data(data, salt):
 
     if 'jobs_by_installed_collections_versions' in data and data['jobs_by_installed_collections_versions']:
         for collection_version in data['jobs_by_installed_collections_versions']:
-            if collection_version and 'name' in collection_version:
-                collection_name = collection_version.get('name', '')
-                # If collection is not in the known collections mapping, replace name and version with 'Custom'
+            if collection_version and 'collection' in collection_version:
+                collection_name = collection_version.get('collection', '')
+                # If collection is not in the known collections mapping, replace collection and version with 'Custom'
                 if collection_name and collection_name not in collections:
-                    collection_version['name'] = 'Custom'
+                    collection_version['collection'] = 'Custom'
                     collection_version['version'] = 'Custom'
 
     # Note: modules_used_per_playbook anonymization removed since it's not in final output
@@ -361,7 +361,7 @@ def _extract_jobs_by_installed_collections_versions(jobs: Dict[str, Any]) -> Lis
     installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
     return [
         {
-            'name': item.get('collection_name', ''),
+            'collection': item.get('collection_name', ''),
             'version': item.get('collection_version', ''),
             'jobs_total': item.get('job_count', 0),
             'jobs_failed_total': item.get('jobs_failed_total', 0),
@@ -441,7 +441,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
       - jobs_by_job_type: array (grouped by job_type, merged with job_host_summary data)
       - jobs_by_launch_type: array (grouped by launch_type, merged with job_host_summary data)
       - jobs_by_ansible_version: array (grouped by ansible_version, merged with job_host_summary data)
-      - jobs_by_installed_collections_versions: array of {name, version, jobs_total, jobs_failed_total,
+      - jobs_by_installed_collections_versions: array of {collection, version, jobs_total, jobs_failed_total,
         jobs_successful_total} from installed collections
       - table_metadata: object with table metadata statistics
       - controller_versions: array of controller versions
