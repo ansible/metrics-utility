@@ -16,9 +16,12 @@ _COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za
 
 
 def extract_collection_name(x: str | None) -> str | None:
-    if not x:
+    if x is None or pd.isna(x):
         return None
-    m = _COLLECTION_RE.match(x)
+    s = str(x).strip() if not isinstance(x, str) else x.strip()
+    if not s or s.lower() == 'nan':
+        return None
+    m = _COLLECTION_RE.match(s)
     return f'{m.group(1)}.{m.group(2)}' if m else None
 
 
