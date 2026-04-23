@@ -24,6 +24,29 @@ def hash(value, salt):
     return hashed
 
 
+def _installed_collection_name_is_unknown(collection_name: Any, known: Dict[str, Any]) -> bool:
+    """
+    Return True if the name should be anonymized to 'Custom': missing, blank, NA,
+    or not present in the known collections map.
+
+    Using ``if collection_name:`` is unsafe for pandas ``pd.NA`` (TypeError in boolean
+    context); we normalize with ``pd.isna`` first.
+    """
+    if collection_name is None:
+        return True
+    if isinstance(collection_name, float) and pd.isna(collection_name):
+        return True
+    try:
+        if pd.isna(collection_name):
+            return True
+    except (TypeError, ValueError):
+        pass
+    s = str(collection_name).strip()
+    if not s:
+        return True
+    return s not in known
+
+
 def create_anonymized_object(rollup_name: str):
     if rollup_name == 'jobs':
         return JobsAnonymizedRollup()
@@ -127,8 +150,7 @@ def anonymize_data(data, salt):
         for collection_version in data['jobs_by_installed_collections_versions']:
             if collection_version and 'collection' in collection_version:
                 collection_name = collection_version.get('collection', '')
-                # If collection is not in the known collections mapping, replace collection and version with 'Custom'
-                if collection_name and collection_name not in collections:
+                if _installed_collection_name_is_unknown(collection_name, collections):
                     collection_version['collection'] = 'Custom'
                     collection_version['version'] = 'Custom'
 
