@@ -38,16 +38,24 @@ jobs:
         run: |
           cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags}.sql | sudo su - postgres -c psql
 
+      - name: "Pull minio"
+        run: |
+          mkdir -p ~/.local/bin
+          curl -fL https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z -o ~/.local/bin/mc
+          curl -fL https://dl.min.io/server/minio/release/linux-amd64/minio -o ~/.local/bin/minio
+          chmod +x ~/.local/bin/{mc,minio}
+
+          MC_CHECKSUM=`md5sum ~/.local/bin/mc | awk '{ print $1 }'`
+          MINIO_CHECKSUM=`md5sum ~/.local/bin/minio | awk '{ print $1 }'`
+
+          [ "$MC_CHECKSUM" = "4e57e038d26428190dd757cb47aae202" ]
+          [ "$MINIO_CHECKSUM" = "88a11227cd67611d1a64f0c6d2bc13d8" ]
+
       - name: "Set up minio"
         env:
           MINIO_ROOT_USER: minioaccess
           MINIO_ROOT_PASSWORD: miniosecret
         run: |
-          mkdir -p ~/.local/bin
-          curl https://dl.min.io/client/mc/release/linux-amd64/mc -o ~/.local/bin/mc
-          curl https://dl.min.io/server/minio/release/linux-amd64/minio -o ~/.local/bin/minio
-          chmod +x ~/.local/bin/{mc,minio}
-
           mkdir minio-data
           minio server ./minio-data --console-address ":9001" &
 
