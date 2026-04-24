@@ -6,11 +6,13 @@ Unit tests targeting uncovered branches in anonymized_rollups.py:
   - _inject_controller_version: empty list early return
 """
 
+import pandas as pd
 import pytest
 
 from metrics_utility.anonymized_rollups.anonymized_rollups import (
     _calculate_host_summary_totals,
     _inject_controller_version,
+    _installed_collection_name_is_unknown,
     anonymize_data,
     create_anonymized_object,
 )
@@ -76,6 +78,70 @@ def test_anonymize_data_empty_dict_does_not_raise():
     data = {}
     anonymize_data(data, 'salt')
     assert data == {}
+
+
+@pytest.mark.parametrize(
+    'collection_name, expected_unknown',
+    [
+        (None, True),
+        ('', True),
+        (' ', True),
+        (pd.NA, True),
+        (float('nan'), True),
+        ('ansible.posix', False),
+        ('definitely_not_in_known_collections_zzz', True),
+    ],
+)
+def test_installed_collection_name_is_unknown(collection_name, expected_unknown):
+    known = {'ansible.posix': 'certified'}
+    assert _installed_collection_name_is_unknown(collection_name, known) is expected_unknown
+
+
+def test_anonymize_data_known_collection_unchanged():
+    data = {
+        'jobs_by_installed_collections_versions': [
+            {
+                'collection': 'ansible.posix',
+                'version': '1.5.0',
+                'jobs_total': 1,
+            }
+        ],
+    }
+    anonymize_data(data, 'salt')
+    assert data['jobs_by_installed_collections_versions'][0]['collection'] == 'ansible.posix'
+    assert data['jobs_by_installed_collections_versions'][0]['version'] == '1.5.0'
+
+
+def test_anonymize_data_empty_collection_name_becomes_custom():
+    data = {
+        'jobs_by_installed_collections_versions': [
+            {
+                'collection': '',
+                'version': '1.0.0',
+                'jobs_total': 1,
+            }
+        ],
+    }
+    anonymize_data(data, 'salt')
+    row = data['jobs_by_installed_collections_versions'][0]
+    assert row['collection'] == 'Custom'
+    assert row['version'] == 'Custom'
+
+
+def test_anonymize_data_pd_na_collection_does_not_raise():
+    data = {
+        'jobs_by_installed_collections_versions': [
+            {
+                'collection': pd.NA,
+                'version': '1.0.0',
+                'jobs_total': 1,
+            }
+        ],
+    }
+    anonymize_data(data, 'salt')
+    row = data['jobs_by_installed_collections_versions'][0]
+    assert row['collection'] == 'Custom'
+    assert row['version'] == 'Custom'
 
 
 # ---------------------------------------------------------------------------
