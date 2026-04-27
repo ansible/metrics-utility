@@ -7,7 +7,7 @@ from django.utils.timezone import now, timedelta
 
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.base import register
-from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.base.utils import bool_from_env, get_gather_interval_hours, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.library.collectors.controller import (
     config,
@@ -57,6 +57,8 @@ Some collectors will use them, others will not.
 
 def daily_slicing(key, last_gather, **kwargs):
     since, until = kwargs.get('since', None), kwargs.get('until', now())
+    interval = timedelta(hours=get_gather_interval_hours())
+
     if since is not None:
         last_entry = since
     else:
@@ -67,17 +69,11 @@ def daily_slicing(key, last_gather, **kwargs):
         except TypeError:  # last_entries has a stale non-datetime entry for this collector
             last_entry = max(last_gather, horizon)
 
-    start, end = last_entry, None
-    start_beginning_of_next_day = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
-
-    # If the date range is over one day, we want first interval to contain the rest of the day
-    # then we'll cycle by full days
-    if until > start_beginning_of_next_day:
-        yield (start, start_beginning_of_next_day)
-        start = start_beginning_of_next_day
-
+    start = last_entry
     while start < until:
-        end = min(start + timedelta(days=1), until)
+        # Never cross a calendar-day boundary so tarballs stay day-aligned in storage
+        day_end = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        end = min(start + interval, day_end, until)
         yield (start, end)
         start = end
 

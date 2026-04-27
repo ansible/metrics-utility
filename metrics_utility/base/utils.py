@@ -18,6 +18,19 @@ def get_max_gather_period_days():
         raise
 
 
+def get_gather_interval_hours():
+    """
+    Get the gather interval in hours from environment variable.
+    Defaults to 24 (one slice per calendar day). Set to a smaller value
+    (e.g. 4) to break large daily queries into sub-day batches.
+    """
+    try:
+        return int(os.getenv('METRICS_UTILITY_GATHER_INTERVAL_HOURS', '24'))
+    except (ValueError, TypeError):
+        logger.error('METRICS_UTILITY_GATHER_INTERVAL_HOURS cannot be converted to an integer')
+        raise
+
+
 def get_optional_collectors():
     """
     Get the list of optional collectors from environment variable.

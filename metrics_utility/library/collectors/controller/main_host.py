@@ -1,4 +1,4 @@
-from ..util import DataframeOutput, collector, date_where, ensure_functions
+from ..util import DataframeOutput, collector, date_where, ensure_functions, get_batch_size
 
 
 def _main_host_query(where):
@@ -98,14 +98,26 @@ def main_host(*, db=None, output=DataframeOutput()):
 @collector
 def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()):
     # prefer running with until=None, to not skip hosts that keep being modified
-
-    where = f"""
+    time_where = f"""
         enabled='t'
         AND ({date_where('main_host.created', since, until)}
         OR {date_where('main_host.modified', since, until)})
     """
-    query = _main_host_query(where)
+
+    def build_query(batch_filter='TRUE'):
+        return _main_host_query(f'{time_where} AND ({batch_filter})')
 
     # ensure_functions writes to DB, cannot be used in service (readonly DB)
     ensure_functions(db)
-    return output.sql(db, query)
+
+    batch_size = get_batch_size()
+    if batch_size:
+        min_max_query = f'SELECT MIN(id), MAX(id) FROM main_host WHERE {time_where}'
+        return output.batch_sql(
+            db,
+            query_fn=lambda s, e: build_query(f'main_host.id >= {s} AND main_host.id < {e}'),
+            min_max_query=min_max_query,
+            batch_size=batch_size,
+        )
+
+    return output.sql(db, build_query())

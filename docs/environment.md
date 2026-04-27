@@ -4,6 +4,8 @@ All known metrics-utility environment variables:
 AWX_PATH
 KUBERNETES_SERVICE_PORT
 METRICS_UTILITY_BILLING_ACCOUNT_ID
+METRICS_UTILITY_GATHER_BATCH_SIZE
+METRICS_UTILITY_GATHER_INTERVAL_HOURS
 METRICS_UTILITY_BILLING_PROVIDER
 METRICS_UTILITY_BUCKET_ACCESS_KEY
 METRICS_UTILITY_BUCKET_ENDPOINT
@@ -93,6 +95,8 @@ container
 * `METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX` - `total_workers_vcpu` collector custom lock name
 * `METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR` - disable `job_host_summary` collector (use together with `METRICS_UTILITY_OPTIONAL_COLLECTORS`)
 * `METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES` - skip updating last gather info from controller settings
+* `METRICS_UTILITY_GATHER_BATCH_SIZE` - row-count batch size for collectors that support ID-range batching (`job_host_summary`, `main_jobevent`); default 0 (disabled). When set (e.g. 100000), each COPY query is limited to approximately that many rows using keyset pagination on the primary key — no OFFSET/LIMIT overhead. Combine with `METRICS_UTILITY_GATHER_INTERVAL_HOURS` for high-scale deployments.
+* `METRICS_UTILITY_GATHER_INTERVAL_HOURS` - time-window size per gather slice in hours; default 24 (one slice per calendar day). Reducing this (e.g. to 4) divides each day into N smaller COPY queries, each producing its own tarball. Applies to all `daily_slicing` collectors. Does not affect `until_slicing` collectors (config, main_host, execution_environments, etc.).
 * `METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS` - maximum lenght of collection interval in days, default 28; `get_max_gather_period_days`
 * `METRICS_UTILITY_OPTIONAL_COLLECTORS` - optional collectors, comma-separated list
 * `METRICS_UTILITY_PROMETHEUS_URL` - Prometheus base url

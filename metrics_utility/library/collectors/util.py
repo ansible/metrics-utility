@@ -1,3 +1,4 @@
+import os
 import tempfile
 
 from datetime import datetime
@@ -5,11 +6,45 @@ from datetime import datetime
 from ..csv_file_splitter import CsvFileSplitter
 
 
+def get_batch_size():
+    """
+    Get the row-count batch size for collectors that support ID-range batching.
+    Defaults to 0 (disabled). Set to e.g. 100000 to limit each COPY query to
+    approximately that many rows using keyset pagination on the primary key.
+    """
+    try:
+        return int(os.getenv('METRICS_UTILITY_GATHER_BATCH_SIZE', '0'))
+    except (ValueError, TypeError):
+        return 0
+
+
 # default in db collectors
 # outputs a pandas DataFrame for SQL
 class DataframeOutput:
     def sql(self, db, query):
         return _copy_table_pandas(db, query)
+
+    def batch_sql(self, db, query_fn, min_max_query, batch_size):
+        """ID-range batching for library usage. Returns a single concatenated DataFrame."""
+        import pandas as pd
+
+        with db.cursor() as cursor:
+            cursor.execute(min_max_query)
+            row = cursor.fetchone()
+
+        if not row or row[0] is None:
+            return pd.DataFrame()
+
+        min_id, max_id = int(row[0]), int(row[1])
+        dfs = []
+        batch_start = min_id
+
+        while batch_start <= max_id:
+            batch_end = batch_start + batch_size
+            dfs.append(_copy_table_pandas(db, query_fn(batch_start, batch_end)))
+            batch_start = batch_end
+
+        return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
 
 # default in dict collectors
@@ -53,6 +88,17 @@ class CollectionOutput(DictOutput):
     def sql(self, db, query):
         filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created
         return _copy_table_files(db, query, filespec)
+
+    def batch_sql(self, db, query_fn, min_max_query, batch_size):
+        """Run query_fn in row-count batches using ID-range keyset pagination.
+
+        query_fn(batch_start, batch_end) must return the full SQL query with the
+        ID-range filter already embedded in its WHERE clause (and any CTE that
+        scans the same table), so each batch pays only for its own rows.
+        min_max_query must return (MIN(id), MAX(id)) for the relevant time window.
+        """
+        filespec = tempfile.mktemp(dir=self.full_path)
+        return _batch_copy_table_files(db, query_fn, min_max_query, batch_size, filespec)
 
 
 # NOTE: `field` should be a hardcoded column name
@@ -110,6 +156,43 @@ def _copy_table_files(db, query, filespec):
             while data := copy.read():
                 byte_data = bytes(data)
                 file.write(byte_data.decode())
+
+    return file.file_list(keep_empty=True)
+
+
+def _batch_copy_table_files(db, query_fn, min_max_query, batch_size, filespec):
+    """Execute query_fn in ID-range batches, writing all output to one CsvFileSplitter.
+
+    The first batch uses COPY … WITH CSV HEADER so the splitter captures the
+    header row; subsequent batches use COPY … WITH CSV (no header) and their
+    rows are appended directly. If the splitter cycles to a new file it replays
+    the stored header automatically.
+    """
+    file = CsvFileSplitter(filespec=filespec)
+
+    with db.cursor() as cursor:
+        cursor.execute(min_max_query)
+        row = cursor.fetchone()
+
+    if not row or row[0] is None:
+        return file.file_list(keep_empty=True)
+
+    min_id, max_id = int(row[0]), int(row[1])
+    first_batch = True
+    batch_start = min_id
+
+    while batch_start <= max_id:
+        batch_end = batch_start + batch_size
+        query = query_fn(batch_start, batch_end)
+        copy_suffix = 'WITH CSV HEADER' if first_batch else 'WITH CSV'
+
+        with db.cursor() as cursor:
+            with cursor.copy(f'COPY ({query}) TO STDOUT {copy_suffix}') as copy:
+                while data := copy.read():
+                    file.write(bytes(data).decode())
+
+        first_batch = False
+        batch_start = batch_end
 
     return file.file_list(keep_empty=True)
 
