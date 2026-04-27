@@ -166,7 +166,12 @@ class TestStorageSegmentErrors:
         with pytest.raises(TypeError):
             storage._split_into_chunks('not-a-dict', 100)
 
+    def test_put_with_filename_raises_value_error(self):
+        storage = StorageSegment()
+        with pytest.raises(ValueError, match='not supported'):
+            storage.put(artifact_name='test', filename='foo.json')
+
     def test_put_without_dict_raises_value_error(self):
         storage = StorageSegment()
-        with pytest.raises(ValueError, match='use dict='):
-            storage.put(artifact_name='test', filename='foo.json')
+        with pytest.raises(ValueError, match='dict= argument is required'):
+            storage.put(artifact_name='test')

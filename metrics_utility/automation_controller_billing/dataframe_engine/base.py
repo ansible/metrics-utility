@@ -285,7 +285,7 @@ class Base(DataframeSchemaMixin):
         if rollup is None:
             return new_group
 
-        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer', validate='many_to_many')
+        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer', validate='one_to_one')
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         return self.cast_dataframe(rollup, self.cast_types())
 

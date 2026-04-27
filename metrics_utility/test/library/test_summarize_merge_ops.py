@@ -1,8 +1,9 @@
 """Tests covering the combine_set/combine_json/combine_json_values lambda branches
-in BaseTraditional.summarize_merged_dataframes() and the validate='many_to_many'
+in BaseTraditional.summarize_merged_dataframes() and the validate='one_to_one'
 path in both Base.merge() and BaseTraditional.merge()."""
 
 import pandas as pd
+import pytest
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
 from metrics_utility.library.dataframes.base_traditional import BaseTraditional
@@ -33,7 +34,7 @@ def test_summarize_combine_json_values():
     assert 'k' in result['col'].iloc[0]
 
 
-# --- validate='many_to_many' in BaseTraditional.merge() ---
+# --- validate='one_to_one' in BaseTraditional.merge() ---
 
 
 class _ConcreteTraditional(BaseTraditional):
@@ -54,7 +55,7 @@ class _ConcreteTraditional(BaseTraditional):
         return {}
 
 
-def test_base_traditional_merge_many_to_many():
+def test_base_traditional_merge_outer():
     bt = _ConcreteTraditional()
     df1 = pd.DataFrame({'id': [1], 'val': [10]}).set_index('id')
     df2 = pd.DataFrame({'id': [2], 'val': [20]}).set_index('id')
@@ -62,7 +63,15 @@ def test_base_traditional_merge_many_to_many():
     assert len(result) == 2
 
 
-# --- validate='many_to_many' in Base.merge() ---
+def test_base_traditional_merge_raises_on_duplicate_keys():
+    bt = _ConcreteTraditional()
+    df1 = pd.DataFrame({'id': [1, 1], 'val': [10, 20]}).set_index('id')
+    df2 = pd.DataFrame({'id': [2], 'val': [30]}).set_index('id')
+    with pytest.raises(pd.errors.MergeError):
+        bt.merge(df1, df2)
+
+
+# --- validate='one_to_one' in Base.merge() ---
 
 
 class _ConcreteBase(Base):
@@ -83,9 +92,17 @@ class _ConcreteBase(Base):
         return {}
 
 
-def test_base_engine_merge_many_to_many():
+def test_base_engine_merge_outer():
     b = _ConcreteBase(extractor=None, month=None, extra_params={})
     df1 = pd.DataFrame({'id': [1], 'val': [10]}).set_index('id')
     df2 = pd.DataFrame({'id': [2], 'val': [20]}).set_index('id')
     result = b.merge(df1, df2)
     assert len(result) == 2
+
+
+def test_base_engine_merge_raises_on_duplicate_keys():
+    b = _ConcreteBase(extractor=None, month=None, extra_params={})
+    df1 = pd.DataFrame({'id': [1, 1], 'val': [10, 20]}).set_index('id')
+    df2 = pd.DataFrame({'id': [2], 'val': [30]}).set_index('id')
+    with pytest.raises(pd.errors.MergeError):
+        b.merge(df1, df2)

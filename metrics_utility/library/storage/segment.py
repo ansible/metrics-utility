@@ -120,9 +120,10 @@ class StorageSegment:
         per-message size limit.
         """
         chunks = []
-        if filename or fileobj or dict is None:
-            msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
-            raise ValueError(msg)
+        if filename or fileobj:
+            raise ValueError('StorageSegment: filename= & fileobj= not supported, use dict=')
+        if dict is None:
+            raise ValueError('StorageSegment: dict= argument is required')
 
         # Check if segment is available and configured
         if not SEGMENT_AVAILABLE:
