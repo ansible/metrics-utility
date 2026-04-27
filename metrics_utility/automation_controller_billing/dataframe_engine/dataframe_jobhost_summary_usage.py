@@ -120,8 +120,6 @@ class DataframeJobhostSummaryUsage(Base):
             job_created=('job_created', 'max'),
             managed_node_type=('managed_node_type', 'min'),
             managed_node_types_set=('managed_node_type_string', set),
-            # TODO: optimize the aggregation to keep less rows around
-            # job_ids=('inventory_name', set),
             events=('events', merge_arrays),
             canonical_facts=('canonical_facts', merge_json_sets),
             facts=('facts', merge_json_sets),

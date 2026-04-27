@@ -9,10 +9,6 @@ from contextlib import contextmanager
 
 
 # dict_to_json_file - create a temporary file with the input dict stringified to json
-# Example:
-
-# with dict_to_json_file({'foo': 'bar'}) as filename:
-#     storage.put('collected.json', filename=filename)
 
 
 @contextmanager

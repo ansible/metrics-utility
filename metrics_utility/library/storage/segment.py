@@ -75,7 +75,7 @@ class StorageSegment:
 
         if data is not None and not isinstance(data, dict):
             msg = f'Data is not a dictionary, got {type(data).__name__}'
-            raise Exception(msg)
+            raise TypeError(msg)
 
         for key, value in data.items():
             if isinstance(value, dict):
@@ -122,7 +122,7 @@ class StorageSegment:
         chunks = []
         if filename or fileobj or dict is None:
             msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
-            raise Exception(msg)
+            raise ValueError(msg)
 
         # Check if segment is available and configured
         if not SEGMENT_AVAILABLE:

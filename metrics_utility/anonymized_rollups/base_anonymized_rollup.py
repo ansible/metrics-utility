@@ -85,11 +85,11 @@ class BaseAnonymizedRollup:
         return dataframe
 
     # Base receive the full daily rollup and computes some final statistics for the day
-    def base(self, dataframe):
+    def base(self, _dataframe):
         """Compute final daily statistics from the fully-merged rollup data.
 
         Args:
-            dataframe: The accumulated rollup data produced by successive calls to
+            _dataframe: The accumulated rollup data produced by successive calls to
                 ``merge`` across all batches for the day.
 
         Returns:
@@ -157,12 +157,7 @@ class BaseAnonymizedRollup:
                 df.to_csv(csv_buffer, index=False)
                 tar_files[f'{key}.csv'] = csv_buffer.getvalue().encode('utf-8')
 
-            elif isinstance(value, list):
-                # Sanitize and store JSON data in memory for tar
-                sanitized_value = sanitize_json(value)
-                tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
-
-            elif isinstance(value, dict):
+            elif isinstance(value, (list, dict)):
                 # Sanitize and store JSON data in memory for tar
                 sanitized_value = sanitize_json(value)
                 tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')

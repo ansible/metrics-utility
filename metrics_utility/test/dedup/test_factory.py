@@ -73,7 +73,6 @@ class TestDedupFactory:
         result = factory.create()
 
         assert isinstance(result, DedupRenewal)
-        # assert result.dataframes == mock_dataframes
         assert result.extra_params == base_extra_params
 
     def test_create_ccsp_deduplicator_explicit(self, mock_dataframes, base_extra_params):
@@ -96,7 +95,6 @@ class TestDedupFactory:
         result = factory.create()
 
         assert isinstance(result, DedupRenewal)
-        # assert result.dataframes == mock_dataframes
         assert result.extra_params == base_extra_params
 
     def test_create_ccsp_experimental_with_ccsp_report(self, mock_dataframes, base_extra_params):
@@ -166,7 +164,6 @@ class TestDedupFactory:
             result = factory.create()
 
             assert isinstance(result, expected_class)
-            # assert result.dataframes == mock_dataframes
             assert result.extra_params == base_extra_params
 
     def test_create_with_empty_extra_params(self, mock_dataframes):

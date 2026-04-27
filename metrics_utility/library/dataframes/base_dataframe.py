@@ -3,7 +3,6 @@
 import pandas as pd
 
 
-# f = path or file-like
 def from_csv(f):
     """Read a CSV file (path or file-like) into a pandas DataFrame.
 
@@ -193,8 +192,6 @@ class BaseDataframe:
         """
         return df.reset_index()
 
-    # build_dataframe, where batches=iter_batches()
-    # FIXME: cli only?
     def from_tarballs(self, batches):
         """Process an iterable of raw batches and build the accumulated rollup.
 

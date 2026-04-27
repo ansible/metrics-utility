@@ -74,7 +74,7 @@ class Base:
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
-            raise Exception(f'{self.__class__.__name__}: Upload failed with status {response.status_code}: {response.text}')
+            raise RuntimeError(f'{self.__class__.__name__}: Upload failed with status {response.status_code}: {response.text}')
 
 
 class StorageCRC(Base):
@@ -88,10 +88,10 @@ class StorageCRC(Base):
         self.client_secret = settings.get('client_secret')
 
         if not self.client_id:
-            raise Exception('StorageCRC: client_id not set')
+            raise ValueError('StorageCRC: client_id not set')
 
         if not self.client_secret:
-            raise Exception('StorageCRC: client_secret not set')
+            raise ValueError('StorageCRC: client_secret not set')
 
     def _bearer(self):
         """Obtain an OAuth2 bearer token from the SSO endpoint.

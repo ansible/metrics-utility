@@ -10,35 +10,13 @@ from metrics_utility.library import CsvFileSplitter
 TIMESTAMP_CSV_LINE_LENGTH = 40
 
 
-def trivial_slicing(key, last_gather, since, until, **kwargs):
-    """Return a single slice covering the entire [since, until) window.
-
-    Args:
-        key: Unused collector key.
-        last_gather: Unused last-gather datetime.
-        since: Start of the collection window.
-        until: End of the collection window.
-        **kwargs: Ignored extra keyword arguments.
-
-    Returns:
-        List with one ``(since, until)`` tuple.
-    """
+def trivial_slicing(_key, _last_gather, since, until, **kwargs):
+    """Return a single slice covering the entire [since, until) window."""
     return [(since, until)]
 
 
-def one_day_slicing(key, last_gather, since, until, **kwargs):
-    """Yield one-day time slices between *since* and *until*.
-
-    Args:
-        key: Unused collector key.
-        last_gather: Unused last-gather datetime.
-        since: Start of the collection window (truncated to midnight).
-        until: End of the collection window (truncated to midnight).
-        **kwargs: Ignored extra keyword arguments.
-
-    Yields:
-        ``(start, end)`` tuples spanning one calendar day each.
-    """
+def one_day_slicing(_key, _last_gather, since, until, **kwargs):
+    """Yield one-day time slices between *since* and *until*."""
     since = since.replace(hour=0, minute=0, second=0, microsecond=0)
     until = until.replace(hour=0, minute=0, second=0, microsecond=0)
     start, end = since, None

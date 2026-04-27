@@ -46,7 +46,7 @@ class DictOutput:
             return None
 
         if type(data) is not dict:
-            raise Exception('data must be a dict, or None')
+            raise TypeError('data must be a dict, or None')
 
         return data
 
@@ -86,7 +86,7 @@ class CollectionOutput(DictOutput):
             return None
 
         if type(filenames) is not list:
-            raise Exception('filenames must be a list, or None')
+            raise TypeError('filenames must be a list, or None')
 
         return filenames
 

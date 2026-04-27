@@ -536,14 +536,11 @@ class ReportCCSPv2(Base):
         h1_heading_cell = ws.cell(row=current_row, column=1)
         h1_heading_cell.value = self.config['h1_heading']['value']
 
-        # h1_heading_cell.fill = PatternFill("solid", fgColor=self.BLACK_COLOR_HEX)
         h1_heading_cell.font = Font(
             name=self.FONT,
             size=12,
             bold=True,
-        )  # color=self.WHITE_COLOR_HEX)
-
-        # h1_heading_cell.alignment = Alignment(horizontal='center')
+        )
 
         current_row += 1
         return current_row

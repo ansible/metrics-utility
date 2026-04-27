@@ -31,7 +31,7 @@ class StorageS3:
         self.secret_key = settings.get('secret_key')
 
         if not self.bucket:
-            raise Exception('StorageS3: bucket not set')
+            raise ValueError('StorageS3: bucket not set')
 
         self._client = None
 

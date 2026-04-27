@@ -21,11 +21,11 @@ class ExtractorTarballs:
     def __init__(self):
         log('library.extractors ExtractorTarballs.__init__')
 
-    def extract(self, local, only=None):
+    def extract(self, _local, only=None):
         """Yield fake CSV objects based on *only*.
 
         Args:
-            local: Unused local path parameter.
+            _local: Unused local path parameter.
             only: A filename string, list of filenames, or None (yields a default).
 
         Yields:

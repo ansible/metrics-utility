@@ -78,7 +78,7 @@ class DedupRenewal(BaseDedupRenewal):
 
             # Iterative search to cover indirect relationships
             iterations = int(self.extra_params['report_renewal_guidance_dedup_iterations'])
-            for i in range(iterations):
+            for _ in range(iterations):
                 # Hostname dupe lookup
                 dupes = self.find_dupes(dupes, 'hostname', dupes['hostname'])
 

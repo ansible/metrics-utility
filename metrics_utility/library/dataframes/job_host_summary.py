@@ -99,8 +99,6 @@ class DataframeJobHostSummary(BaseTraditional):
             job_created=('job_created', 'max'),
             managed_node_type=('managed_node_type', 'min'),
             managed_node_types_set=('managed_node_type_string', set),
-            # TODO: optimize the aggregation to keep less rows around
-            # job_ids=('inventory_name', set),
             events=('events', merge_arrays),
             canonical_facts=('canonical_facts', merge_json_sets),
             facts=('facts', merge_json_sets),
@@ -181,7 +179,6 @@ class DataframeJobHostSummary(BaseTraditional):
             return dataframe
 
         # Enrich direct managed nodes with canonical facts and facts from scope data when experimental deduplication is enabled
-        # FIXME: dedup logic should NOT depend on deduplicator choice this way, just on is not None
         if deduplicator == 'ccsp-experimental' and scope_dataframe is not None and not scope_dataframe.empty:
             # Create a mapping from host_name to canonical_facts and facts
             if 'canonical_facts' in scope_dataframe.columns and 'facts' in scope_dataframe.columns:

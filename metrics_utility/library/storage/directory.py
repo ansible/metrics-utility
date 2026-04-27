@@ -25,7 +25,7 @@ class StorageDirectory:
         self.base_path = settings.get('base_path')
 
         if not self.base_path:
-            raise Exception('StorageDirectory: base_path not set')
+            raise ValueError('StorageDirectory: base_path not set')
 
     # FIXME: used by ExtractorDirectory for now, replace with glob
     def list_files(self, relative_prefix):

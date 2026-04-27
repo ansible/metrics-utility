@@ -170,7 +170,7 @@ class Base:
 
         return destination_dataframe
 
-    def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
+    def _build_data_section_scope(self, current_row, ws, dataframe):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
 
@@ -540,7 +540,6 @@ class Base:
             for c_idx, value in enumerate(row, 1):
                 cell = ws.cell(row=r_idx, column=c_idx)
                 cell.value = value
-                # cell.border = dotted_border
 
                 if row_counter == 0:
                     # set header style

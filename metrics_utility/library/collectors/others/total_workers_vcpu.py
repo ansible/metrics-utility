@@ -180,11 +180,11 @@ class PrometheusClient:
         """
         response = self.session.get(url, params=params, timeout=self.timeout)
         if response.status_code != 200:
-            raise Exception(f'HTTP error {response.status_code}: {response.text}')
+            raise RuntimeError(f'HTTP error {response.status_code}: {response.text}')
 
         data = response.json()
         if data.get('status') != 'success':
-            raise Exception(f'Prometheus API error: {data.get("error", "Unknown error")}')
+            raise RuntimeError(f'Prometheus API error: {data.get("error", "Unknown error")}')
 
         return data
 

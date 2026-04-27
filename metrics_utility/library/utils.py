@@ -41,26 +41,12 @@ def tempdir(prefix=None, cleanup=True):
             os.chdir(original_dir)
 
 
-def last_gather(db=None, key=None):
-    """Return the last-gather timestamp for *key* (stub — always returns None).
-
-    Args:
-        db: Unused database connection parameter.
-        key: Unused collector key parameter.
-
-    Returns:
-        None (not yet implemented).
-    """
+def last_gather(**_kwargs):
+    """Return the last-gather timestamp (stub — always returns None)."""
     log('library.utils last_gather')
     return None
 
 
-def save_last_gather(db=None, key=None, value=None):
-    """Persist the last-gather timestamp for *key* (stub — no-op).
-
-    Args:
-        db: Unused database connection parameter.
-        key: Unused collector key parameter.
-        value: Unused timestamp value parameter.
-    """
+def save_last_gather(**_kwargs):
+    """Persist the last-gather timestamp (stub — no-op)."""
     log('library.utils save_last_gather')
