@@ -2,6 +2,7 @@
 
 import pandas as pd
 
+from metrics_utility.dataframe_schema import JobHostSummarySchema
 from metrics_utility.library.dataframes.base_traditional import (
     BaseTraditional,
     merge_arrays,
@@ -10,18 +11,10 @@ from metrics_utility.library.dataframes.base_traditional import (
     merge_sets,
     parse_json_array,
 )
-from metrics_utility.metric_utils import (
-    DIRECT,
-    INDIRECT,
-    JOB_HOST_SUMMARY_CAST_TYPES,
-    JOB_HOST_SUMMARY_DATA_COLUMNS,
-    JOB_HOST_SUMMARY_INDEX_COLUMNS,
-    JOB_HOST_SUMMARY_OPERATIONS,
-    MANAGED_NODE_TYPES,
-)
+from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
-class DataframeJobHostSummary(BaseTraditional):
+class DataframeJobHostSummary(JobHostSummarySchema, BaseTraditional):
     """Aggregated job-host-summary dataframe used by the library-layer CCSP report path.
 
     Processes both direct managed node (``job_host_summary``) and indirect
@@ -124,22 +117,6 @@ class DataframeJobHostSummary(BaseTraditional):
             facts=('facts', merge_setdicts),
             host_names_before_dedup=('host_names_before_dedup', merge_sets),
         )
-
-    @staticmethod
-    def unique_index_columns():
-        return JOB_HOST_SUMMARY_INDEX_COLUMNS
-
-    @staticmethod
-    def data_columns():
-        return JOB_HOST_SUMMARY_DATA_COLUMNS
-
-    @staticmethod
-    def cast_types():
-        return JOB_HOST_SUMMARY_CAST_TYPES
-
-    @staticmethod
-    def operations():
-        return JOB_HOST_SUMMARY_OPERATIONS
 
     def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None, deduplicator=None):
         """

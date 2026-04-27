@@ -7,12 +7,13 @@ from itertools import chain
 
 import pandas as pd
 
+from metrics_utility.dataframe_schema import DataframeSchemaMixin
 from metrics_utility.library.dataframes.base_dataframe import BaseDataframe
 
 
 # a dataframe class with logic for merges based on lists of indexes and merge operations
 # used by DataframeMainJobevent, DataframeMainHost and DataframeJobHostSummary
-class BaseTraditional(BaseDataframe):
+class BaseTraditional(BaseDataframe, DataframeSchemaMixin):
     """Dataframe base class with outer-join merge logic and hostname deduplication.
 
     Used by :class:`DataframeJobHostSummary`, ``DataframeMainHost``, and
@@ -119,22 +120,6 @@ class BaseTraditional(BaseDataframe):
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         rollup = self.cast_dataframe(rollup)
         return rollup
-
-    @staticmethod
-    def cast_types():
-        return {}
-
-    @staticmethod
-    def data_columns():
-        return []
-
-    @staticmethod
-    def operations():
-        return {}
-
-    @staticmethod
-    def unique_index_columns():
-        return []
 
 
 def combine_json(json1, json2):

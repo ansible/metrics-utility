@@ -8,6 +8,8 @@ import pandas as pd
 
 from dateutil.relativedelta import relativedelta
 
+from metrics_utility.dataframe_schema import DataframeSchemaMixin
+
 
 def granularity_cast(date, granularity):
     """Truncate *date* to the start of its month or year according to *granularity*.
@@ -147,7 +149,7 @@ def combine_json_values(val1, val2):
     return merged
 
 
-class Base:
+class Base(DataframeSchemaMixin):
     """Abstract base class for billing dataframe engines.
 
     Subclasses implement :meth:`build_dataframe` to extract and aggregate raw
@@ -319,19 +321,3 @@ class Base:
         # cast types to match the table
         df_grouped = self.cast_dataframe(df_grouped, self.cast_types())
         return df_grouped.reset_index()
-
-    @staticmethod
-    def unique_index_columns():
-        return []
-
-    @staticmethod
-    def data_columns():
-        return []
-
-    @staticmethod
-    def cast_types():
-        return {}
-
-    @staticmethod
-    def operations():
-        return {}

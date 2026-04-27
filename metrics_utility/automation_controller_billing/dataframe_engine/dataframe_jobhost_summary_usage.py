@@ -4,19 +4,12 @@ import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets, parse_json_array
-from metrics_utility.metric_utils import (
-    DIRECT,
-    INDIRECT,
-    JOB_HOST_SUMMARY_CAST_TYPES,
-    JOB_HOST_SUMMARY_DATA_COLUMNS,
-    JOB_HOST_SUMMARY_INDEX_COLUMNS,
-    JOB_HOST_SUMMARY_OPERATIONS,
-    MANAGED_NODE_TYPES,
-)
+from metrics_utility.dataframe_schema import JobHostSummarySchema
+from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
 # dataframe for job_host_summary / main_indirectmanagednodeaudit
-class DataframeJobhostSummaryUsage(Base):
+class DataframeJobhostSummaryUsage(JobHostSummarySchema, Base):
     """Aggregates job-host-summary (direct) and indirect managed node audit data."""
 
     def build_dataframe(self):
@@ -147,22 +140,6 @@ class DataframeJobhostSummaryUsage(Base):
             facts=('facts', merge_setdicts),
             host_names_before_dedup=('host_names_before_dedup', merge_sets),
         )
-
-    @staticmethod
-    def unique_index_columns():
-        return JOB_HOST_SUMMARY_INDEX_COLUMNS
-
-    @staticmethod
-    def data_columns():
-        return JOB_HOST_SUMMARY_DATA_COLUMNS
-
-    @staticmethod
-    def cast_types():
-        return JOB_HOST_SUMMARY_CAST_TYPES
-
-    @staticmethod
-    def operations():
-        return JOB_HOST_SUMMARY_OPERATIONS
 
     def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None):
         """
