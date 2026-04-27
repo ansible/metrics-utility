@@ -18,6 +18,13 @@ _JOBEVENT_TYPES_SQL = ', '.join(f"'{t}'" for t in _JOBEVENT_TYPES)
 
 @collector
 def main_jobevent(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect job-event rows from the large partitioned main_jobevent table.
+
+    Uses a job_scope CTE (based on the smaller main_jobhostsummary) to scope events to
+    the given time window, filtering to the 9 relevant runner event types. When
+    METRICS_UTILITY_GATHER_BATCH_SIZE is set, applies an ID-range filter on
+    main_jobevent.id so each batch uses a primary-key scan rather than a full partition scan.
+    """
     where = date_where('main_jobhostsummary.modified', since, until)
 
     def build_query(jobevent_batch_filter='TRUE'):
@@ -73,12 +80,15 @@ def main_jobevent(*, db=None, since=None, until=None, output=DataframeOutput()):
         # time window (based on the smaller main_jobhostsummary); the ID filter
         # is applied to the large partitioned main_jobevent table so each batch
         # uses a primary-key scan rather than a full-partition scan.
+        # Note: min_max_query aliases main_jobhostsummary as 'jhs', so the time
+        # filter must reference the alias (not the bare table name used in `where`).
+        min_max_where = date_where('jhs.modified', since, until)
         min_max_query = f"""
             SELECT MIN(je.id), MAX(je.id)
             FROM main_jobevent je
             JOIN main_jobhostsummary jhs
                 ON jhs.job_id = je.job_id AND jhs.host_name = je.host_name
-            WHERE {where}
+            WHERE {min_max_where}
             AND je.event IN ({_JOBEVENT_TYPES_SQL})
         """
         return output.batch_sql(

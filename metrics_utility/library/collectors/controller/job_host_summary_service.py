@@ -3,6 +3,13 @@ from ..util import DataframeOutput, collector, date_where, get_batch_size
 
 @collector
 def job_host_summary_service(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect job-host summary rows scoped to jobs that finished in the given window.
+
+    Uses a filtered_jobs CTE to restrict to the relevant job IDs via main_unifiedjob.finished,
+    then joins to main_jobhostsummary and related tables. When METRICS_UTILITY_GATHER_BATCH_SIZE
+    is set, applies an ID-range filter on main_jobhostsummary.id; the filtered_jobs CTE
+    (one row per job) is re-evaluated per batch but remains cheap relative to the main table.
+    """
     jobs_where = date_where('mu.finished', since, until)
 
     def build_query(batch_filter='TRUE'):
@@ -53,7 +60,7 @@ def job_host_summary_service(*, db=None, since=None, until=None, output=Datafram
             LEFT JOIN main_inventory mi ON mi.id = mj.inventory_id
             LEFT JOIN main_organization mo ON mo.id = mu.organization_id
             WHERE ({batch_filter})
-            ORDER BY mu.finished ASC
+            ORDER BY mjs.id ASC
         """
 
     batch_size = get_batch_size()

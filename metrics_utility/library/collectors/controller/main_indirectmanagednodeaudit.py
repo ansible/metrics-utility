@@ -3,6 +3,12 @@ from ..util import DataframeOutput, collector, date_where, get_batch_size
 
 @collector
 def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect indirect managed node audit rows for the given time window.
+
+    Joins main_indirectmanagednodeaudit with job, inventory, and organization tables.
+    Only available on Controller >= 2.6 (the table does not exist on 2.4).
+    Supports METRICS_UTILITY_GATHER_BATCH_SIZE for ID-range batching on the primary table.
+    """
     where = date_where('main_indirectmanagednodeaudit.created', since, until)
 
     def build_query(batch_filter='TRUE'):

@@ -94,8 +94,11 @@ class CollectionOutput(DictOutput):
         return self.files(collector.gather(output=self))
 
     def _make_filespec(self):
-        # mkdtemp creates a directory atomically; 'data' inside is the CsvFileSplitter
-        # prefix, so split files become <tmpdir>/data_split0, <tmpdir>/data_split1, …
+        """Return a secure filespec prefix for CsvFileSplitter inside a fresh subdirectory.
+
+        Uses mkdtemp (atomic, race-free) so split files become
+        <tmpdir>/data_split0, <tmpdir>/data_split1, …
+        """
         tmpdir = tempfile.mkdtemp(dir=self.full_path)
         return os.path.join(tmpdir, 'data')
 

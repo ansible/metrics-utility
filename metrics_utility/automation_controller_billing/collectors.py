@@ -56,6 +56,12 @@ Some collectors will use them, others will not.
 
 
 def daily_slicing(key, last_gather, **kwargs):
+    """Yield (since, until) time slices for a collector, bounded by METRICS_UTILITY_GATHER_INTERVAL_HOURS.
+
+    Slices never cross a calendar-day boundary so tarballs stay day-aligned in storage.
+    When METRICS_UTILITY_GATHER_INTERVAL_HOURS < 24, multiple slices are emitted per day.
+    The default of 24 h reproduces the original one-slice-per-day behaviour.
+    """
     since, until = kwargs.get('since', None), kwargs.get('until', now())
     interval = timedelta(hours=get_gather_interval_hours())
 
@@ -79,6 +85,12 @@ def daily_slicing(key, last_gather, **kwargs):
 
 
 def until_slicing(_key, _last_gather, **kwargs):
+    """Yield a single point-in-time slice for snapshot collectors that do a full-table scan.
+
+    Used for collectors whose data does not have a meaningful time range (e.g. config,
+    execution_environments). The slice is always (until - 1 s, until - 1 s) so the
+    snapshot lands in the last second of the current gather window.
+    """
     # For tables where we always need to do a table full scan, ignoring since & until
     # Always store the inventory snapshot into the last daily partition (until - 1 second)
     until = kwargs.get('until', now())

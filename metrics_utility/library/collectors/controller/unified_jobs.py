@@ -3,6 +3,12 @@ from ..util import DataframeOutput, collector, date_where, get_batch_size
 
 @collector
 def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect unified job rows that finished within the given time window.
+
+    Joins main_unifiedjob with content type, job template, inventory, organization,
+    execution environment, and project tables. Supports METRICS_UTILITY_GATHER_BATCH_SIZE
+    for ID-range batching on main_unifiedjob.id.
+    """
     where = date_where('main_unifiedjob.finished', since, until)
 
     def build_query(batch_filter='TRUE'):

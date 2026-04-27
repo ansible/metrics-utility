@@ -97,6 +97,13 @@ def main_host(*, db=None, output=DataframeOutput()):
 
 @collector
 def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect enabled hosts that were created or modified within the given time window.
+
+    Filters by either main_host.created OR main_host.modified so recently-updated hosts
+    are not missed. Running with until=None is preferred to avoid skipping hosts that
+    keep being modified. Supports METRICS_UTILITY_GATHER_BATCH_SIZE for ID-range batching
+    on main_host.id.
+    """
     # prefer running with until=None, to not skip hosts that keep being modified
     time_where = f"""
         enabled='t'

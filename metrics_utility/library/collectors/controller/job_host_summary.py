@@ -3,6 +3,13 @@ from ..util import DataframeOutput, collector, date_where, ensure_functions, get
 
 @collector
 def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect job-host summary rows from the Controller DB for the given time window.
+
+    Joins main_jobhostsummary with host variables, job metadata, inventory, and
+    organization. When METRICS_UTILITY_GATHER_BATCH_SIZE is set, executes the query
+    in ID-range batches so the ID filter is pushed into the filtered_hosts CTE and the
+    final WHERE clause, keeping each batch cheap.
+    """
     where = date_where('main_jobhostsummary.modified', since, until)
 
     # ensure_functions writes to DB, cannot be used in service (readonly DB)
@@ -74,7 +81,7 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
             -- get variables from precomputed hosts_variables
             LEFT JOIN hosts_variables ON hosts_variables.host_id = main_jobhostsummary.host_id
             WHERE {where} AND ({batch_filter})
-            ORDER BY main_jobhostsummary.modified ASC
+            ORDER BY main_jobhostsummary.id ASC
         """
 
     batch_size = get_batch_size()
