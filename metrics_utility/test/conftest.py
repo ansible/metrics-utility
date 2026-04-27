@@ -204,3 +204,16 @@ def validate_cell(wb, sheet_name, address, value):
     """
     sheet = wb[sheet_name]
     assert sheet[address].value == value, f'Sheet: {sheet_name}, cell: {address}, expected value: {value}, actual value: {sheet[address].value}'
+
+
+def run_report_sanity_check(env_vars, file_path, since, until):
+    from metrics_utility.test.util import run_build_int
+
+    run_build_int(env_vars, {'since': since, 'until': until, 'force': True})
+    workbook = openpyxl.load_workbook(filename=file_path)
+    try:
+        assert len(workbook.sheetnames) > 0
+        sheet = pd.read_excel(file_path, sheet_name='Managed nodes')
+        assert len(transform_sheet(sheet.to_dict())) > 0
+    finally:
+        workbook.close()

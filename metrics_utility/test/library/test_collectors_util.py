@@ -161,7 +161,7 @@ def test_dict_output_raises_type_error_for_non_dict():
         output.dict('not-a-dict')
 
 
-def test_collection_output_raises_type_error_for_non_list():
-    output = CollectionOutput(full_path='/tmp')
+def test_collection_output_raises_type_error_for_non_list(tmp_path):
+    output = CollectionOutput(full_path=str(tmp_path))
     with pytest.raises(TypeError, match='filenames must be a list'):
         output.files('not-a-list')
