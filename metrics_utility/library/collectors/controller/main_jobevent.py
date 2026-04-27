@@ -3,21 +3,6 @@
 from ..util import DataframeOutput, collector, date_where
 
 
-_JOBEVENT_TYPES = (
-    'runner_on_ok',
-    'runner_on_failed',
-    'runner_on_unreachable',
-    'runner_on_skipped',
-    'runner_retry',
-    'runner_on_async_ok',
-    'runner_item_on_ok',
-    'runner_item_on_failed',
-    'runner_item_on_skipped',
-)
-
-_JOBEVENT_TYPES_SQL = ', '.join(f"'{t}'" for t in _JOBEVENT_TYPES)
-
-
 @collector
 def main_jobevent(*, db=None, since=None, until=None, output=DataframeOutput()):
     """Collect job events joined with host-summary data for the CCSP report.
