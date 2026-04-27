@@ -57,8 +57,8 @@ class PackageCRC(base.Package):
 
     def is_shipping_configured(self):
         # TODO: move to base, or children
-        ret = super()
-        if ret is False:
+        ret = super().is_shipping_configured()
+        if not ret:
             return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
