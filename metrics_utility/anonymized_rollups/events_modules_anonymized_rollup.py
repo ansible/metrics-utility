@@ -17,8 +17,9 @@ from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_co
 
 # Regex pattern to match collection names (e.g., namespace.collection.role or namespace.collection.role.task)
 # Pattern is safe from reDOS: uses non-capturing groups and non-nested quantifiers
-_COLLECTION_RE = re.compile(r'^(\w+)\.(\w+)\.\w+(?:\.\w+)*$')
-_COLLECTION_PATTERN = r'^(\w+\.\w+)\.\w+(?:\.\w+)*$'
+# Uses explicit ASCII character class [A-Za-z0-9_] rather than \w to avoid matching Unicode word chars
+_COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
+_COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
 
 
 def extract_collection_name(x: str | None) -> str | None:
