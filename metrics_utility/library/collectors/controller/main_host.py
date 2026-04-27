@@ -1,7 +1,17 @@
+"""Collectors for host inventory data from the Controller database."""
+
 from ..util import DataframeOutput, collector, date_where, ensure_functions
 
 
 def _main_host_query(where):
+    """Build the host inventory SQL query with the given WHERE clause.
+
+    Args:
+        where: SQL WHERE clause fragment (already validated as safe).
+
+    Returns:
+        Complete SQL query string selecting host inventory fields.
+    """
     return f"""
         SELECT
             main_host.name as host_name,
@@ -88,6 +98,15 @@ def _main_host_query(where):
 
 @collector
 def main_host(*, db=None, output=DataframeOutput()):
+    """Collect all currently-enabled hosts from the Controller inventory (snapshot).
+
+    Args:
+        db: Django database connection.
+        output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
+
+    Returns:
+        pandas DataFrame with host fields, or list of CSV paths.
+    """
     query = _main_host_query("enabled='t'")
 
     # ensure_functions writes to DB, cannot be used in service (readonly DB)
@@ -97,6 +116,18 @@ def main_host(*, db=None, output=DataframeOutput()):
 
 @collector
 def main_host_daily(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect enabled hosts created or modified within the given time window.
+
+    Args:
+        db: Django database connection.
+        since: Inclusive start datetime.
+        until: Exclusive end datetime (prefer passing None to avoid skipping recently
+            modified hosts).
+        output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
+
+    Returns:
+        pandas DataFrame with host fields, or list of CSV paths.
+    """
     # prefer running with until=None, to not skip hosts that keep being modified
 
     where = f"""

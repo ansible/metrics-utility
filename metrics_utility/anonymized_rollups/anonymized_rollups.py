@@ -18,6 +18,15 @@ from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import
 
 
 def hash(value, salt):
+    """Return the SHA-256 hex digest of ``salt:value``.
+
+    Args:
+        value: The string value to hash.
+        salt: A salt string prepended to the value before hashing.
+
+    Returns:
+        Hex-encoded SHA-256 digest string.
+    """
     # has the value and salt, hash should be string
     combined = (salt + ':' + value).encode('utf-8')
     hashed = hashlib.sha256(combined).hexdigest()
@@ -48,6 +57,19 @@ def _installed_collection_name_is_unknown(collection_name: Any, known: Dict[str,
 
 
 def create_anonymized_object(rollup_name: str):
+    """Instantiate and return the rollup object for the given collector name.
+
+    Args:
+        rollup_name: One of ``'jobs'``, ``'job_host_summary'``, ``'events_modules'``,
+            ``'execution_environments'``, ``'credentials'``, ``'table_metadata'``,
+            ``'controller_version'``, ``'feature_flags'``, or ``'task_executions'``.
+
+    Returns:
+        An instance of the corresponding ``*AnonymizedRollup`` class.
+
+    Raises:
+        ValueError: If *rollup_name* is not recognised.
+    """
     if rollup_name == 'jobs':
         return JobsAnonymizedRollup()
     elif rollup_name == 'job_host_summary':

@@ -1,3 +1,5 @@
+"""Collector output helpers, SQL execution utilities, and the ``@collector`` decorator."""
+
 import tempfile
 
 from datetime import datetime
@@ -8,14 +10,38 @@ from ..csv_file_splitter import CsvFileSplitter
 # default in db collectors
 # outputs a pandas DataFrame for SQL
 class DataframeOutput:
+    """Output adapter used by DB-backed library collectors to return a pandas DataFrame."""
+
     def sql(self, db, query):
+        """Execute *query* and return a pandas DataFrame.
+
+        Args:
+            db: Django database connection.
+            query: SQL query string.
+
+        Returns:
+            pandas DataFrame with the query results.
+        """
         return _copy_table_pandas(db, query)
 
 
 # default in dict collectors
 # outputs a dict
 class DictOutput:
+    """Output adapter for collectors that return a plain Python dict."""
+
     def dict(self, data):
+        """Validate and return a dict, or None.
+
+        Args:
+            data: Must be a dict or None.
+
+        Returns:
+            The dict unchanged, or None.
+
+        Raises:
+            Exception: If *data* is neither a dict nor None.
+        """
         if data is None:
             return None
 
@@ -29,11 +55,33 @@ class DictOutput:
 # outputs a list of CSV filenames for SQL, keeps dict intact
 # .as_* functions take a whole collector, pass self as output
 class CollectionOutput(DictOutput):
+    """Output adapter passed from the CLI to collectors.
+
+    CSV collectors write files to ``full_path`` and return a list of file paths.
+    JSON collectors return a dict (handled by the :class:`DictOutput` base class).
+    """
+
     def __init__(self, full_path):
+        """Initialise with the directory where CSV output files will be written.
+
+        Args:
+            full_path: Absolute path to the staging directory.
+        """
         self.full_path = full_path
 
     # takes a list of filenames, returns the same
     def files(self, filenames):
+        """Validate and return a list of CSV file paths.
+
+        Args:
+            filenames: Must be a list of path strings or None.
+
+        Returns:
+            The list unchanged, or None.
+
+        Raises:
+            Exception: If *filenames* is neither a list nor None.
+        """
         if filenames is None:
             return None
 
@@ -44,10 +92,26 @@ class CollectionOutput(DictOutput):
 
     # takes a collector, returns a dict
     def as_dict(self, collector):
+        """Gather from *collector* and return the result as a dict.
+
+        Args:
+            collector: A collector object with a ``gather(output=…)`` method.
+
+        Returns:
+            The gathered dict, or None.
+        """
         return self.dict(collector.gather(output=self))
 
     # takes a collector, returns a list of filenames
     def as_files(self, collector):
+        """Gather from *collector* and return the result as a list of file paths.
+
+        Args:
+            collector: A collector object with a ``gather(output=…)`` method.
+
+        Returns:
+            List of CSV file paths, or None.
+        """
         return self.files(collector.gather(output=self))
 
     def sql(self, db, query):
@@ -55,8 +119,22 @@ class CollectionOutput(DictOutput):
         return _copy_table_files(db, query, filespec)
 
 
-# NOTE: `field` should be a hardcoded column name
 def date_where(field, since, until):
+    """Build a SQL WHERE clause fragment that filters *field* to the [since, until) window.
+
+    Args:
+        field: Column name (should be a hardcoded literal, not user input).
+        since: Optional timezone-aware datetime for the inclusive lower bound.
+        until: Optional timezone-aware datetime for the exclusive upper bound.
+
+    Returns:
+        SQL fragment string (e.g. ``"( created >= '…' AND created < '…' )"``),
+        or ``'true'`` if neither bound is specified.
+
+    Raises:
+        TypeError: If *since* or *until* is not None and not a datetime.
+        ValueError: If *since* or *until* is timezone-naive.
+    """
     for name, value in [('since', since), ('until', until)]:
         if value is not None and not isinstance(value, datetime):
             raise TypeError(f'date_where: {name} must be a datetime, got {type(value).__name__}')
@@ -95,6 +173,14 @@ def collector(func):
 
 
 def ensure_functions(db):
+    """Create or replace the custom PostgreSQL helper functions used by collectors.
+
+    Installs ``metrics_utility_parse_yaml_field`` and
+    ``metrics_utility_is_valid_json`` into the active database connection.
+
+    Args:
+        db: Django database connection.
+    """
     # Execute prepend_query if needed (custom PostgreSQL functions)
     with db.cursor() as cursor:
         cursor.execute(_yaml_json_functions())

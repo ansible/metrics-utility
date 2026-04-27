@@ -1,3 +1,5 @@
+"""Base class for all anonymized rollup processors."""
+
 import io
 import json
 import os
@@ -11,7 +13,19 @@ from metrics_utility.anonymized_rollups.helpers import sanitize_json
 
 
 class BaseAnonymizedRollup:
+    """Base class for all anonymized rollup processors.
+
+    Subclasses implement ``prepare``, ``merge``, and ``base`` to define how
+    raw collector data is aggregated into a JSON structure suitable for
+    inclusion in the anonymized daily report.
+    """
+
     def __init__(self, rollup_name: str):
+        """Initialize the rollup with a name identifier.
+
+        Args:
+            rollup_name: Unique name for this rollup (used as a directory key when saving).
+        """
         self.rollup_name = rollup_name
         self.collector_names = []
 
@@ -19,6 +33,18 @@ class BaseAnonymizedRollup:
     # this is used in batch processing
     # where we need to merge partial rollup with current batch aggregation
     def merge(self, dataframe_all, dataframe_new):
+        """Combine accumulated rollup data with a new batch.
+
+        The default implementation concatenates two DataFrames.  Subclasses may
+        override this method for non-DataFrame data structures or custom merge logic.
+
+        Args:
+            dataframe_all: The accumulated data so far (may be None on the first call).
+            dataframe_new: The freshly prepared batch to merge in.
+
+        Returns:
+            The merged data (a concatenated DataFrame by default).
+        """
         if dataframe_all is None:
             return dataframe_new
 
@@ -45,13 +71,49 @@ class BaseAnonymizedRollup:
     # this works in batches, for example we are collecting every hour
     # this hourly data arrive into prepare, then it gets merged with partial rollup (initaly empty)
     def prepare(self, dataframe):
+        """Transform a raw batch DataFrame into the intermediate rollup structure.
+
+        Called once per hourly (or other interval) batch.  The result is later
+        passed to ``merge`` to accumulate across batches.
+
+        Args:
+            dataframe: Raw pandas DataFrame from the collector.
+
+        Returns:
+            Transformed data (DataFrame or JSON-serialisable structure).
+        """
         return dataframe
 
     # Base receive the full daily rollup and computes some final statistics for the day
     def base(self, dataframe):
+        """Compute final daily statistics from the fully-merged rollup data.
+
+        Args:
+            dataframe: The accumulated rollup data produced by successive calls to
+                ``merge`` across all batches for the day.
+
+        Returns:
+            An empty DataFrame by default; subclasses return a dict with a
+            ``'json'`` key containing the final JSON payload.
+        """
         return pd.DataFrame()
 
     def save_rollup(self, rollup_data: dict, base_path: str, since: datetime, until: datetime, packed: bool = True) -> None:
+        """Persist rollup data to the filesystem, optionally as a tar.gz archive.
+
+        Rollup data is written to
+        ``<base_path>/rollups/<year>/<month>/<day>/<rollup_name>/``.
+        DataFrames are stored as CSV files; scalars, lists and dicts as JSON.
+
+        Args:
+            rollup_data: Dict mapping key names to data (DataFrame, Series,
+                list, dict, or scalar).
+            base_path: Root directory under which the rollup tree is created.
+            since: Start timestamp of the rollup window (determines date path).
+            until: End timestamp of the rollup window (used in file names).
+            packed: When True (default) all files are bundled into a .tar.gz
+                archive; when False they are written individually to the directory.
+        """
         # rollup data is dictionary
         # the dictionary can have those values:
         # scalar, list, pandas.Series, pandas.DataFrame

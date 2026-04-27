@@ -1,3 +1,5 @@
+"""Dataframe engine for job-host summary and indirect managed node audit data."""
+
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
@@ -7,6 +9,8 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 # dataframe for job_host_summary / main_indirectmanagednodeaudit
 class DataframeJobhostSummaryUsage(Base):
+    """Aggregates job-host-summary (direct) and indirect managed node audit data."""
+
     def build_dataframe(self):
         # A daily rollup dataframe
         billing_data_monthly_rollup = None

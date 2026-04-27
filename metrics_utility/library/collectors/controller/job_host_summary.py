@@ -1,8 +1,25 @@
+"""Collector for job_host_summary records from the Controller database."""
+
 from ..util import DataframeOutput, collector, date_where, ensure_functions
 
 
 @collector
 def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect job-host-summary records including hostname variable enrichment.
+
+    Installs custom PostgreSQL helper functions (``metrics_utility_parse_yaml_field``
+    and ``metrics_utility_is_valid_json``) before querying so that ``ansible_host``
+    can be extracted from host variables stored as YAML or JSON text.
+
+    Args:
+        db: Django database connection.
+        since: Inclusive start datetime for the ``modified`` filter.
+        until: Exclusive end datetime for the ``modified`` filter.
+        output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
+
+    Returns:
+        pandas DataFrame or list of CSV file paths depending on *output*.
+    """
     where = date_where('main_jobhostsummary.modified', since, until)
 
     # TODO: controler needs to have an index on main_jobhostsummary.modified

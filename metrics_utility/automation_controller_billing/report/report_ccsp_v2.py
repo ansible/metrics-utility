@@ -1,3 +1,5 @@
+"""Report builder for the CCSPv2 (Cloud Consumption Service Provider v2) XLSX report."""
+
 ######################################
 # Code for building the spreadsheet
 ######################################
@@ -16,6 +18,12 @@ from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
 class ReportCCSPv2(Base):
+    """XLSX report builder for the CCSPv2 billing report format.
+
+    Generates multi-sheet workbooks containing usage summaries, managed node
+    lists, data-collection status, and optional content-usage sheets.
+    """
+
     def __init__(self, dataframes, extra_params):
         self.wb = Workbook()
 

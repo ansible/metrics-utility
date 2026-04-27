@@ -1,3 +1,5 @@
+"""Custom Django ManagementUtility for the metrics-utility CLI entry point."""
+
 import os
 import sys
 
@@ -11,6 +13,14 @@ from metrics_utility.logger import logger
 
 
 class ManagementUtility(management.ManagementUtility):
+    """Customised Django :class:`ManagementUtility` for the metrics-utility CLI.
+
+    Limits the exposed commands to ``build_report`` and
+    ``gather_automation_controller_billing_data``, and surfaces
+    :class:`~metrics_utility.exceptions.MetricsException` errors as clean
+    log messages with a non-zero exit code.
+    """
+
     def execute(self):
         """
         Given the command-line arguments, figure out which subcommand is being
@@ -58,6 +68,14 @@ class ManagementUtility(management.ManagementUtility):
             self.run_subcommand(subcommand, self.argv)
 
     def main_help_text(self, commands_only=False):
+        """Return the main help text.
+
+        Args:
+            commands_only: When True, return only the list of commands.
+
+        Returns:
+            Help text string.
+        """
         commands = 'Commands: build_report, gather_automation_controller_billing_data'
         if commands_only:
             return commands
@@ -65,6 +83,17 @@ class ManagementUtility(management.ManagementUtility):
             return f'Usage: {os.path.basename(sys.argv[0])} <command> [options]\n{commands}'
 
     def fetch_command(self, subcommand):
+        """Import and return the Command class for *subcommand*.
+
+        Args:
+            subcommand: Name of the management command to load.
+
+        Returns:
+            An instance of the command's ``Command`` class.
+
+        Raises:
+            Exception: If the command module cannot be imported.
+        """
         try:
             module = import_module(f'metrics_utility.management.commands.{subcommand}')
         except Exception as ex:
@@ -75,12 +104,23 @@ class ManagementUtility(management.ManagementUtility):
 
     @staticmethod
     def get_commands():
+        """Return a dict mapping each command name to ``'metrics_utility'``.
+
+        Returns:
+            Dict of ``{command_name: 'metrics_utility'}`` entries.
+        """
         commands = {}
         path = os.path.join(os.path.dirname(__file__), 'management')
         commands.update({name: 'metrics_utility' for name in management.find_commands(path)})
         return commands
 
     def run_subcommand(self, subcommand, argv):
+        """Execute *subcommand* and handle exceptions gracefully.
+
+        Args:
+            subcommand: The management command name to run.
+            argv: Full argument list (including the program name).
+        """
         try:
             self.fetch_command(subcommand).run_from_argv(argv)
         except MetricsException as e:

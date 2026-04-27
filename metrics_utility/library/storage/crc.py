@@ -1,3 +1,5 @@
+"""Storage backends for uploading artifacts to Red Hat CRC (console.redhat.com)."""
+
 import json
 
 from importlib.metadata import version
@@ -6,12 +8,25 @@ import requests
 
 
 class Base:
+    """Abstract base class for CRC storage backends.
+
+    Concrete subclasses implement :meth:`_request` to perform the authenticated
+    HTTP upload.
+    """
+
     def __init__(self, **settings):
+        """Initialise with ingress/proxy/cert settings.
+
+        Args:
+            **settings: Accepts ``'ingress_url'``, ``'proxy_url'``, and
+                ``'verify_cert_path'`` keys.
+        """
         self.ingress_url = settings.get('ingress_url', 'https://console.redhat.com/api/ingress/v1/upload')
         self.proxy_url = settings.get('proxy_url')
         self.verify_cert_path = settings.get('verify_cert_path', '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem')
 
     def _session(self):
+        """Create and return a configured :class:`requests.Session` instance."""
         session = requests.Session()
         session.headers = {
             'User-Agent': f'metrics-utility {version("metrics-utility")}',
@@ -23,12 +38,23 @@ class Base:
         return session
 
     def _proxies(self):
+        """Return a proxies dict for requests, or an empty dict if none configured."""
         if not self.proxy_url:
             return {}
 
         return {'https': self.proxy_url}
 
     def put(self, artifact_name, *, filename=None, fileobj=None, dict=None):
+        """Upload an artifact to the CRC ingress API.
+
+        Exactly one of *filename*, *fileobj*, or *dict* must be provided.
+
+        Args:
+            artifact_name: The artifact file name sent as part of the multipart request.
+            filename: Path to a local file to upload.
+            fileobj: An open file-like object to upload.
+            dict: A dict that will be JSON-serialised and uploaded.
+        """
         # FIXME: only for .tar.gz
         tgz_content_type = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
@@ -51,6 +77,8 @@ class Base:
 
 
 class StorageCRC(Base):
+    """CRC storage backend that authenticates using service-account OAuth2 credentials."""
+
     def __init__(self, **settings):
         super().__init__(**settings)
 
@@ -65,6 +93,11 @@ class StorageCRC(Base):
             raise Exception('StorageCRC: client_secret not set')
 
     def _bearer(self):
+        """Obtain an OAuth2 bearer token from the SSO endpoint.
+
+        Returns:
+            Bearer token string.
+        """
         response = requests.post(
             self.sso_url,
             data={
@@ -80,6 +113,14 @@ class StorageCRC(Base):
         return json.loads(response.content)['access_token']
 
     def _request(self, files):
+        """Send *files* to the ingress URL with a fresh bearer token.
+
+        Args:
+            files: Multipart files dict passed to :func:`requests.Session.post`.
+
+        Returns:
+            :class:`requests.Response`.
+        """
         session = self._session()
 
         access_token = self._bearer()
@@ -93,6 +134,8 @@ class StorageCRC(Base):
 
 
 class StorageCRCMutual(Base):
+    """CRC storage backend that authenticates using mutual TLS (RHSM certificates)."""
+
     def __init__(self, **settings):
         super().__init__(**settings)
 

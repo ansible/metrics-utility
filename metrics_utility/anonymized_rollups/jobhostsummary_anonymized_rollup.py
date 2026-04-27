@@ -1,3 +1,5 @@
+"""Anonymized rollup for job_host_summary_service collector data."""
+
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
@@ -297,6 +299,15 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
         return aggregations_by_ansible_version
 
     def prepare(self, dataframe):
+        """Aggregate raw job-host-summary rows into per-dimension statistics.
+
+        Args:
+            dataframe: Raw pandas DataFrame from the job_host_summary_service collector.
+
+        Returns:
+            JSON-serialisable dict with ``by_job_type``, ``by_launch_type``,
+            ``by_ansible_version``, ``job_host_pairs_total``, and ``host_ids`` keys.
+        """
         # Convert ID columns to strings at the beginning
         dataframe = self._convert_id_columns_to_strings(dataframe)
 

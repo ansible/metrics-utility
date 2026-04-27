@@ -66,7 +66,13 @@ def setup_processed_dataframe(fixed_now):
 
 
 def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=[]):
-    """Test the sheet names in the Excel file."""
+    """Assert that an Excel workbook contains exactly the expected sheet tabs.
+
+    Args:
+        file_path: Path to the XLSX file.
+        expected_sheets: Dict (ordered) whose keys are the expected sheet names.
+        excluded_sheets: Sheet names to ignore when comparing.
+    """
 
     wb = openpyxl.load_workbook(file_path)
     try:
@@ -78,14 +84,28 @@ def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=[]):
 
 
 def normalize_column(col):
-    """Remove whitespace, newlines, and uppercase chars from column name."""
+    """Normalise a column header by stripping whitespace/newlines and lowercasing.
+
+    Args:
+        col: Column header string.
+
+    Returns:
+        Normalised string.
+    """
     if not col:
         return ''
     return col.strip().replace('\n', ' ').lower()
 
 
 def validate_sheet_columns(file_path, expected_sheets, usage_reporting_min_row):
-    """Test the column names for each sheet."""
+    """Assert that each worksheet has the expected columns and cell values.
+
+    Args:
+        file_path: Path to the XLSX file.
+        expected_sheets: Dict mapping sheet names to lists of column-data dicts.
+        usage_reporting_min_row: Row number where the header starts in the
+            ``'Usage Reporting'`` sheet.
+    """
 
     # Determine the min_row (first row) to identify.
     def get_min_row(sheet_name):
@@ -174,5 +194,13 @@ def transform_sheet(sheet):
 
 
 def validate_cell(wb, sheet_name, address, value):
+    """Assert that a specific cell in an openpyxl workbook has the expected value.
+
+    Args:
+        wb: Open :class:`openpyxl.workbook.workbook.Workbook` instance.
+        sheet_name: Name of the worksheet to check.
+        address: Cell address string (e.g. ``'A1'``).
+        value: Expected cell value.
+    """
     sheet = wb[sheet_name]
     assert sheet[address].value == value, f'Sheet: {sheet_name}, cell: {address}, expected value: {value}, actual value: {sheet[address].value}'
