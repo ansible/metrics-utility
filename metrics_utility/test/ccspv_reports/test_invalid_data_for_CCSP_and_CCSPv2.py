@@ -99,7 +99,6 @@ def test_invalid_data_handling(report, date_range, sheet, cleanup):
     if os.path.isfile(file_name):
         workbook = openpyxl.load_workbook(filename=file_name)
         try:
-            assert workbook is not None
             # Verify that at least one sheet exists (even if data is invalid)
             assert len(workbook.sheetnames) > 0
         finally:

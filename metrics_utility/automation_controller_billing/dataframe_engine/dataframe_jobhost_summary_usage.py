@@ -7,6 +7,9 @@ from metrics_utility.automation_controller_billing.helpers import merge_arrays, 
 from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
+DATETIME64_NS = 'datetime64[ns]'
+
+
 # dataframe for job_host_summary / main_indirectmanagednodeaudit
 class DataframeJobhostSummaryUsage(Base):
     """Aggregates job-host-summary (direct) and indirect managed node audit data."""
@@ -168,9 +171,9 @@ class DataframeJobhostSummaryUsage(Base):
             'task_runs': int,
             'host_runs': int,
             'managed_node_type': int,
-            'first_automation': 'datetime64[ns]',
-            'last_automation': 'datetime64[ns]',
-            'job_created': 'datetime64[ns]',
+            'first_automation': DATETIME64_NS,
+            'last_automation': DATETIME64_NS,
+            'job_created': DATETIME64_NS,
         }
 
     @staticmethod

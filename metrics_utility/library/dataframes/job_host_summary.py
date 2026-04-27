@@ -15,6 +15,7 @@ from metrics_utility.library.dataframes.base_traditional import (
 DIRECT = 0
 INDIRECT = 1
 MANAGED_NODE_TYPES = {DIRECT: 'DIRECT', INDIRECT: 'INDIRECT'}
+DATETIME64_NS = 'datetime64[ns]'
 
 
 class DataframeJobHostSummary(BaseTraditional):
@@ -149,9 +150,9 @@ class DataframeJobHostSummary(BaseTraditional):
             'task_runs': int,
             'host_runs': int,
             'managed_node_type': int,
-            'first_automation': 'datetime64[ns]',
-            'last_automation': 'datetime64[ns]',
-            'job_created': 'datetime64[ns]',
+            'first_automation': DATETIME64_NS,
+            'last_automation': DATETIME64_NS,
+            'job_created': DATETIME64_NS,
         }
 
     @staticmethod

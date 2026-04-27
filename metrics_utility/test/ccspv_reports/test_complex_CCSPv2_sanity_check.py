@@ -44,7 +44,7 @@ def test_command(cleanup):
     try:
         # test workbook is openable with the lib we're creating it with
         workbook = openpyxl.load_workbook(filename=file_path)
-        assert workbook is not None
+        assert len(workbook.sheetnames) > 0
 
         sheet = pandas.read_excel(file_path, sheet_name='Managed nodes')
         assert len(transform_sheet(sheet.to_dict())) > 0

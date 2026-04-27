@@ -104,7 +104,7 @@ def test_sanitize_json_json_serializable():
 
     # This should not raise an exception
     json_string = json.dumps(result)
-    assert json_string is not None
+    assert len(json_string) > 0
 
     # Verify we can parse it back
     parsed = json.loads(json_string)

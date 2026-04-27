@@ -92,6 +92,6 @@ def test_empty_data(report, date_range, sheet, cleanup):
     if os.path.isfile(file_name):
         workbook = openpyxl.load_workbook(filename=file_name)
         try:
-            assert workbook is not None
+            assert len(workbook.sheetnames) > 0
         finally:
             workbook.close()

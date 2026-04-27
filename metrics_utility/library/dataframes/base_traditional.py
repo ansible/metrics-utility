@@ -95,11 +95,11 @@ class BaseTraditional(BaseDataframe):
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json':
-                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
             del df[f'{col}_x']
@@ -115,26 +115,30 @@ class BaseTraditional(BaseDataframe):
         if rollup is None:
             return new_group
 
-        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer', validate='many_to_many')
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         rollup = self.cast_dataframe(rollup)
         return rollup
 
     @staticmethod
     def cast_types():
-        pass
+        # Subclasses must override this to return a dict of column-to-dtype mappings.
+        return {}
 
     @staticmethod
     def data_columns():
-        pass
+        # Subclasses must override this to return a list of data column names.
+        return []
 
     @staticmethod
     def operations():
-        pass
+        # Subclasses must override this to return a dict of column merge operations.
+        return {}
 
     @staticmethod
     def unique_index_columns():
-        pass
+        # Subclasses must override this to return a list of index column names.
+        return []
 
 
 def combine_json(json1, json2):

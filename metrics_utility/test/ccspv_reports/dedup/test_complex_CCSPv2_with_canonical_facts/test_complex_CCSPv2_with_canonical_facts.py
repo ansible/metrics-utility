@@ -138,7 +138,7 @@ def transform_sheet_with_json_normalization(sheet_dict):
                     parsed = json.loads(value)
                     # Sort the parsed structure
                     sorted_row[key] = sort_json_fields(parsed)
-                except (json.JSONDecodeError, TypeError, ValueError):
+                except (TypeError, ValueError):
                     # Keep original value if not valid JSON
                     sorted_row[key] = value
             else:
