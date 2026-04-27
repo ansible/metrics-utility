@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from metrics_utility.library.collectors.util import collector
+from metrics_utility.library.collectors.util import CollectionOutput, DictOutput, collector
 
 
 def test_collector_decorator_basic():
@@ -153,3 +153,15 @@ def test_collector_decorator_with_db_connection():
     assert result == [('row1',), ('row2',)]
     mock_db.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once_with('SELECT * FROM test')
+
+
+def test_dict_output_raises_type_error_for_non_dict():
+    output = DictOutput()
+    with pytest.raises(TypeError, match='data must be a dict'):
+        output.dict('not-a-dict')
+
+
+def test_collection_output_raises_type_error_for_non_list():
+    output = CollectionOutput(full_path='/tmp')
+    with pytest.raises(TypeError, match='filenames must be a list'):
+        output.files('not-a-list')
