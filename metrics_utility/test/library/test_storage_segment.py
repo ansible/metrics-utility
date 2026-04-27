@@ -1,5 +1,7 @@
 from unittest.mock import Mock, patch
 
+import pytest
+
 from metrics_utility.library.storage.segment import StorageSegment
 from metrics_utility.test.library.testing_data_for_segment import segment_data, segment_data_large
 
@@ -156,3 +158,15 @@ class TestStorageSegmentAvailable:
         assert mock_analytics.sync_mode is True
         assert mock_analytics.track.call_count == len(chunks)
         assert mock_analytics.flush.call_count == 1
+
+
+class TestStorageSegmentErrors:
+    def test_split_non_dict_raises_type_error(self):
+        storage = StorageSegment()
+        with pytest.raises(TypeError):
+            storage._split_into_chunks('not-a-dict', 100)
+
+    def test_put_without_dict_raises_value_error(self):
+        storage = StorageSegment()
+        with pytest.raises(ValueError, match='use dict='):
+            storage.put(artifact_name='test', filename='foo.json')

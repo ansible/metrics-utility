@@ -9,3 +9,5 @@ INDIRECT = 1
 
 MANAGED_NODE_TYPES = {DIRECT: 'DIRECT', INDIRECT: 'INDIRECT'}
 """Mapping from integer node-type codes to human-readable string labels."""
+
+DATETIME64_NS = 'datetime64[ns]'

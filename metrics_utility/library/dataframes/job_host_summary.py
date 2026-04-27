@@ -10,12 +10,7 @@ from metrics_utility.library.dataframes.base_traditional import (
     merge_sets,
     parse_json_array,
 )
-
-
-DIRECT = 0
-INDIRECT = 1
-MANAGED_NODE_TYPES = {DIRECT: 'DIRECT', INDIRECT: 'INDIRECT'}
-DATETIME64_NS = 'datetime64[ns]'
+from metrics_utility.metric_utils import DATETIME64_NS, DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
 class DataframeJobHostSummary(BaseTraditional):

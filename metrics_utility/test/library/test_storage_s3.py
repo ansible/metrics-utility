@@ -87,3 +87,8 @@ def test_remove():
     storage = StorageS3(**s3_settings)
     storage.remove(s3_object_name)
     assert storage.exists(s3_object_name) is False
+
+
+def test_missing_bucket_raises_value_error():
+    with pytest.raises(ValueError, match='bucket not set'):
+        StorageS3()

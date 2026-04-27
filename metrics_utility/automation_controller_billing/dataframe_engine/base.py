@@ -322,20 +322,16 @@ class Base:
 
     @staticmethod
     def unique_index_columns():
-        # Subclasses must override this to return a list of index column names.
         return []
 
     @staticmethod
     def data_columns():
-        # Subclasses must override this to return a list of data column names.
         return []
 
     @staticmethod
     def cast_types():
-        # Subclasses must override this to return a dict of column-to-dtype mappings.
         return {}
 
     @staticmethod
     def operations():
-        # Subclasses must override this to return a dict of column merge operations.
         return {}

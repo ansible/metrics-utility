@@ -4,10 +4,7 @@ import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets, parse_json_array
-from metrics_utility.metric_utils import DIRECT, INDIRECT, MANAGED_NODE_TYPES
-
-
-DATETIME64_NS = 'datetime64[ns]'
+from metrics_utility.metric_utils import DATETIME64_NS, DIRECT, INDIRECT, MANAGED_NODE_TYPES
 
 
 # dataframe for job_host_summary / main_indirectmanagednodeaudit

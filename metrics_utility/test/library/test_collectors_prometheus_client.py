@@ -88,7 +88,7 @@ def test_query_with_time_param(mock_get):
 
 @patch('requests.Session.get')
 def test_query_http_error(mock_get):
-    """Test query handling of HTTP errors."""
+    """Test query handling of HTTP errors raises RuntimeError."""
     mock_response = Mock()
     mock_response.status_code = 500
     mock_response.text = 'Internal Server Error'
@@ -96,13 +96,13 @@ def test_query_http_error(mock_get):
 
     client = PrometheusClient(url='http://localhost:9090')
 
-    with pytest.raises(Exception, match='HTTP error 500'):
+    with pytest.raises(RuntimeError, match='HTTP error 500'):
         client.query('up')
 
 
 @patch('requests.Session.get')
 def test_query_prometheus_api_error(mock_get):
-    """Test query handling of Prometheus API errors."""
+    """Test query handling of Prometheus API errors raises RuntimeError."""
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.return_value = {'status': 'error', 'error': 'Query timeout'}
@@ -110,7 +110,7 @@ def test_query_prometheus_api_error(mock_get):
 
     client = PrometheusClient(url='http://localhost:9090')
 
-    with pytest.raises(Exception, match='Prometheus API error'):
+    with pytest.raises(RuntimeError, match='Prometheus API error'):
         client.query('up')
 
 

@@ -113,3 +113,8 @@ def test_remove():
     storage = StorageDirectory(base_path=base_path)
     storage.remove(target_filename)
     assert storage.exists(target_filename) is False
+
+
+def test_missing_base_path_raises_value_error():
+    with pytest.raises(ValueError, match='base_path not set'):
+        StorageDirectory()
