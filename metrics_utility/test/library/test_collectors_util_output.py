@@ -9,6 +9,8 @@ from metrics_utility.library.collectors.util import (
     CollectionOutput,
     DataframeOutput,
     DictOutput,
+    _batch_copy_table_files,
+    get_batch_size,
 )
 
 
@@ -220,11 +222,13 @@ class TestCollectionOutput:
         test_path = str(tmp_path)
         output = CollectionOutput(test_path)
 
-        # Mock tempfile.mktemp to verify it's called with correct dir
-        with patch('tempfile.mktemp') as mock_mktemp:
-            mock_mktemp.return_value = f'{test_path}/test_file'
+        # Mock tempfile.mkdtemp to verify it's called with correct dir.
+        # Return test_path itself so os.path.join(tmpdir, 'data') resolves to a
+        # writable path without needing a real subdirectory.
+        with patch('tempfile.mkdtemp') as mock_mkdtemp:
+            mock_mkdtemp.return_value = test_path
             output.sql(mock_db, 'SELECT * FROM test')
-            mock_mktemp.assert_called_once_with(dir=test_path)
+            mock_mkdtemp.assert_called_once_with(dir=test_path)
 
     def test_as_dict_calls_collector(self):
         """Test that as_dict calls collector.gather with output=self."""
@@ -269,3 +273,178 @@ class TestCollectionOutput:
         result = output.as_files(mock_collector)
 
         assert result == test_files
+
+
+class TestGetBatchSize:
+    """Test get_batch_size utility function."""
+
+    def test_returns_zero_when_not_set(self):
+        with patch.dict('os.environ', {}, clear=True):
+            assert get_batch_size() == 0
+
+    def test_returns_configured_value(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_BATCH_SIZE': '100000'}):
+            assert get_batch_size() == 100000
+
+    def test_returns_zero_for_negative(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_BATCH_SIZE': '-1'}):
+            assert get_batch_size() == 0
+
+    def test_returns_zero_for_non_integer(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_BATCH_SIZE': 'bad'}):
+            assert get_batch_size() == 0
+
+    def test_returns_zero_explicitly(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_BATCH_SIZE': '0'}):
+            assert get_batch_size() == 0
+
+
+class TestBatchCopyTableFiles:
+    """Test _batch_copy_table_files function."""
+
+    def test_raises_on_zero_batch_size(self, tmp_path):
+        mock_db = MagicMock()
+        filespec = str(tmp_path / 'data')
+        with pytest.raises(ValueError, match='batch_size must be > 0'):
+            _batch_copy_table_files(mock_db, lambda s, e: '', '', 0, filespec)
+
+    def test_raises_on_negative_batch_size(self, tmp_path):
+        mock_db = MagicMock()
+        filespec = str(tmp_path / 'data')
+        with pytest.raises(ValueError, match='batch_size must be > 0'):
+            _batch_copy_table_files(mock_db, lambda s, e: '', '', -1, filespec)
+
+    def test_returns_empty_file_when_no_rows(self, tmp_path):
+        """When min/max returns NULL the function still returns the (empty) file list."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (None, None)
+
+        filespec = str(tmp_path / 'data')
+        result = _batch_copy_table_files(mock_db, lambda s, e: 'SELECT 1', 'SELECT MIN(id), MAX(id)', 1000, filespec)
+
+        # CsvFileSplitter always creates at least one (empty) file even with no data
+        assert isinstance(result, list)
+        assert len(result) == 1
+
+    def test_executes_correct_number_of_batches(self, tmp_path):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_copy = MagicMock()
+
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
+        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+
+        # IDs 1..300 with batch_size=100 → 3 batches
+        mock_cursor.fetchone.return_value = (1, 300)
+        mock_copy.read.return_value = None  # no data, just structure
+
+        query_calls = []
+
+        def track_query(s, e):
+            query_calls.append((s, e))
+            return f'SELECT * WHERE id >= {s} AND id < {e}'
+
+        filespec = str(tmp_path / 'data')
+        _batch_copy_table_files(mock_db, track_query, 'SELECT MIN(id), MAX(id)', 100, filespec)
+
+        assert query_calls == [(1, 101), (101, 201), (201, 301)]
+
+    def test_first_batch_uses_csv_header(self, tmp_path):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_copy = MagicMock()
+
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
+        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_cursor.fetchone.return_value = (1, 200)
+        mock_copy.read.return_value = None
+
+        filespec = str(tmp_path / 'data')
+        _batch_copy_table_files(mock_db, lambda s, e: 'SELECT 1', 'SELECT MIN(id), MAX(id)', 100, filespec)
+
+        copy_calls = mock_cursor.copy.call_args_list
+        assert 'WITH CSV HEADER' in copy_calls[0][0][0]
+        assert 'WITH CSV HEADER' not in copy_calls[1][0][0]
+        assert 'WITH CSV' in copy_calls[1][0][0]
+
+
+class TestDataframeBatchSql:
+    """Test DataframeOutput.batch_sql returns concatenated DataFrame."""
+
+    def _make_mock_db(self, min_id, max_id, rows_per_batch):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (min_id, max_id)
+        mock_cursor.description = [('id',), ('val',)]
+        mock_cursor.fetchall.return_value = [(i, f'v{i}') for i in range(rows_per_batch)]
+        return mock_db
+
+    def test_returns_dataframe_with_all_batches(self):
+        mock_db = self._make_mock_db(1, 200, 5)
+        output = DataframeOutput()
+        result = output.batch_sql(mock_db, lambda s, e: f'SELECT * WHERE id>={s}', 'SELECT MIN(id), MAX(id)', 100)
+        assert isinstance(result, pd.DataFrame)
+        # 2 batches × 5 rows each
+        assert len(result) == 10
+
+    def test_returns_empty_dataframe_when_no_rows(self):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (None, None)
+
+        output = DataframeOutput()
+        result = output.batch_sql(mock_db, lambda s, e: 'SELECT 1', 'SELECT MIN(id), MAX(id)', 100)
+        assert isinstance(result, pd.DataFrame)
+        assert len(result) == 0
+
+
+class TestCollectionOutputBatchSql:
+    """Test CollectionOutput.batch_sql writes CSV batches."""
+
+    def test_batch_sql_calls_batch_copy(self, tmp_path):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_copy = MagicMock()
+
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
+        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_cursor.fetchone.return_value = (None, None)  # no data
+
+        output = CollectionOutput(str(tmp_path))
+        result = output.batch_sql(
+            mock_db,
+            query_fn=lambda s, e: f'SELECT * WHERE id >= {s}',
+            min_max_query='SELECT MIN(id), MAX(id) FROM t',
+            batch_size=1000,
+        )
+        assert isinstance(result, list)
+
+    def test_batch_sql_uses_full_path(self, tmp_path):
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (None, None)
+
+        test_path = str(tmp_path)
+        output = CollectionOutput(test_path)
+
+        with patch('tempfile.mkdtemp') as mock_mkdtemp:
+            mock_mkdtemp.return_value = test_path
+            output.batch_sql(mock_db, lambda s, e: 'SELECT 1', 'SELECT MIN(id), MAX(id)', 1000)
+            mock_mkdtemp.assert_called_once_with(dir=test_path)

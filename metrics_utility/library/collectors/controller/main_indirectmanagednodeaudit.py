@@ -33,7 +33,7 @@ def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=Dat
             LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
             LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project ON main_unifiedjobtemplate_project.id = main_job.project_id
             WHERE {where} AND ({batch_filter})
-            ORDER BY main_indirectmanagednodeaudit.created ASC
+            ORDER BY main_indirectmanagednodeaudit.id ASC
         """
 
     batch_size = get_batch_size()

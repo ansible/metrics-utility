@@ -3,6 +3,8 @@ import tempfile
 
 from datetime import datetime
 
+from metrics_utility.logger import logger
+
 from ..csv_file_splitter import CsvFileSplitter
 
 
@@ -11,11 +13,17 @@ def get_batch_size():
     Get the row-count batch size for collectors that support ID-range batching.
     Defaults to 0 (disabled). Set to e.g. 100000 to limit each COPY query to
     approximately that many rows using keyset pagination on the primary key.
+    Returns 0 (disabled) on any invalid or negative value.
     """
     try:
-        return int(os.getenv('METRICS_UTILITY_GATHER_BATCH_SIZE', '0'))
+        value = int(os.getenv('METRICS_UTILITY_GATHER_BATCH_SIZE', '0'))
     except (ValueError, TypeError):
+        logger.error('METRICS_UTILITY_GATHER_BATCH_SIZE cannot be converted to an integer, disabling batching')
         return 0
+    if value < 0:
+        logger.error('METRICS_UTILITY_GATHER_BATCH_SIZE must be >= 0, got %d, disabling batching', value)
+        return 0
+    return value
 
 
 # default in db collectors
@@ -85,9 +93,14 @@ class CollectionOutput(DictOutput):
     def as_files(self, collector):
         return self.files(collector.gather(output=self))
 
+    def _make_filespec(self):
+        # mkdtemp creates a directory atomically; 'data' inside is the CsvFileSplitter
+        # prefix, so split files become <tmpdir>/data_split0, <tmpdir>/data_split1, …
+        tmpdir = tempfile.mkdtemp(dir=self.full_path)
+        return os.path.join(tmpdir, 'data')
+
     def sql(self, db, query):
-        filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created
-        return _copy_table_files(db, query, filespec)
+        return _copy_table_files(db, query, self._make_filespec())
 
     def batch_sql(self, db, query_fn, min_max_query, batch_size):
         """Run query_fn in row-count batches using ID-range keyset pagination.
@@ -97,8 +110,7 @@ class CollectionOutput(DictOutput):
         scans the same table), so each batch pays only for its own rows.
         min_max_query must return (MIN(id), MAX(id)) for the relevant time window.
         """
-        filespec = tempfile.mktemp(dir=self.full_path)
-        return _batch_copy_table_files(db, query_fn, min_max_query, batch_size, filespec)
+        return _batch_copy_table_files(db, query_fn, min_max_query, batch_size, self._make_filespec())
 
 
 # NOTE: `field` should be a hardcoded column name
@@ -168,6 +180,9 @@ def _batch_copy_table_files(db, query_fn, min_max_query, batch_size, filespec):
     rows are appended directly. If the splitter cycles to a new file it replays
     the stored header automatically.
     """
+    if batch_size <= 0:
+        raise ValueError(f'batch_size must be > 0, got {batch_size}')
+
     file = CsvFileSplitter(filespec=filespec)
 
     with db.cursor() as cursor:

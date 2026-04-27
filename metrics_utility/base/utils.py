@@ -23,12 +23,16 @@ def get_gather_interval_hours():
     Get the gather interval in hours from environment variable.
     Defaults to 24 (one slice per calendar day). Set to a smaller value
     (e.g. 4) to break large daily queries into sub-day batches.
+    Must be >= 1; a zero or negative value would cause daily_slicing to loop forever.
     """
     try:
-        return int(os.getenv('METRICS_UTILITY_GATHER_INTERVAL_HOURS', '24'))
+        value = int(os.getenv('METRICS_UTILITY_GATHER_INTERVAL_HOURS', '24'))
     except (ValueError, TypeError):
         logger.error('METRICS_UTILITY_GATHER_INTERVAL_HOURS cannot be converted to an integer')
         raise
+    if value < 1:
+        raise ValueError(f'METRICS_UTILITY_GATHER_INTERVAL_HOURS must be >= 1, got {value}')
+    return value
 
 
 def get_optional_collectors():

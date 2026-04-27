@@ -2,7 +2,9 @@
 
 from unittest.mock import patch
 
-from metrics_utility.base.utils import bool_from_env
+import pytest
+
+from metrics_utility.base.utils import bool_from_env, get_gather_interval_hours, get_max_gather_period_days
 
 
 class TestBoolFromEnv:
@@ -72,3 +74,51 @@ class TestBoolFromEnv:
         """Test that explicit None default works."""
         with patch.dict('os.environ', {}, clear=True):
             assert bool_from_env('MISSING_VAR', default=None) is None
+
+
+class TestGetGatherIntervalHours:
+    """Test get_gather_interval_hours utility function."""
+
+    def test_returns_default_24_when_not_set(self):
+        with patch.dict('os.environ', {}, clear=True):
+            assert get_gather_interval_hours() == 24
+
+    def test_returns_configured_value(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_INTERVAL_HOURS': '4'}):
+            assert get_gather_interval_hours() == 4
+
+    def test_returns_1_minimum(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_INTERVAL_HOURS': '1'}):
+            assert get_gather_interval_hours() == 1
+
+    def test_raises_on_zero(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_INTERVAL_HOURS': '0'}):
+            with pytest.raises(ValueError, match='must be >= 1'):
+                get_gather_interval_hours()
+
+    def test_raises_on_negative(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_INTERVAL_HOURS': '-5'}):
+            with pytest.raises(ValueError, match='must be >= 1'):
+                get_gather_interval_hours()
+
+    def test_raises_on_non_integer(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_GATHER_INTERVAL_HOURS': 'bad'}):
+            with pytest.raises((ValueError, TypeError)):
+                get_gather_interval_hours()
+
+
+class TestGetMaxGatherPeriodDays:
+    """Test get_max_gather_period_days utility function."""
+
+    def test_returns_default_28_when_not_set(self):
+        with patch.dict('os.environ', {}, clear=True):
+            assert get_max_gather_period_days() == 28
+
+    def test_returns_configured_value(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': '14'}):
+            assert get_max_gather_period_days() == 14
+
+    def test_raises_on_non_integer(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': 'bad'}):
+            with pytest.raises((ValueError, TypeError)):
+                get_max_gather_period_days()
