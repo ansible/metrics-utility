@@ -250,7 +250,7 @@ def _merge_ansible_versions(jobs_by_job_type: List[Dict[str, Any]]) -> List[str]
         ansible_versions = job.get('ansible_versions', [])
         if isinstance(ansible_versions, list):
             ansible_versions_set.update(ansible_versions)
-    return sorted(list(ansible_versions_set)) if ansible_versions_set else []
+    return sorted(ansible_versions_set) if ansible_versions_set else []
 
 
 def _calculate_execution_environments_total(execution_environments: Dict[str, Any]) -> Any:

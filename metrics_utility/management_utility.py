@@ -111,7 +111,7 @@ class ManagementUtility(management.ManagementUtility):
         """
         commands = {}
         path = os.path.join(os.path.dirname(__file__), 'management')
-        commands.update({name: 'metrics_utility' for name in management.find_commands(path)})
+        commands.update(dict.fromkeys(management.find_commands(path), 'metrics_utility'))
         return commands
 
     def run_subcommand(self, subcommand, argv):

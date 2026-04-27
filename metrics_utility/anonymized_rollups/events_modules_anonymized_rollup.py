@@ -17,8 +17,8 @@ from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_co
 
 # Regex pattern to match collection names (e.g., namespace.collection.role or namespace.collection.role.task)
 # Pattern is safe from reDOS: uses non-capturing groups and non-nested quantifiers
-_COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
-_COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
+_COLLECTION_RE = re.compile(r'^(\w+)\.(\w+)\.\w+(?:\.\w+)*$')
+_COLLECTION_PATTERN = r'^(\w+\.\w+)\.\w+(?:\.\w+)*$'
 
 
 def extract_collection_name(x: str | None) -> str | None:
@@ -163,7 +163,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            merged_item[col] = sorted(list(set_all.union(set_new)))
+            merged_item[col] = sorted(set_all.union(set_new))
 
     def _merge_single_item(self, item_all, item_new):
         """Merge a single item from all and new data."""
@@ -209,7 +209,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Merge unique_modules lists (union and sort)."""
         unique_modules_all = set(data_all.get('unique_modules', []))
         unique_modules_new = set(data_new.get('unique_modules', []))
-        return sorted(list(unique_modules_all.union(unique_modules_new)))
+        return sorted(unique_modules_all.union(unique_modules_new))
 
     def _merge_modules_per_playbook(self, data_all, data_new):
         """Merge modules_per_playbook dicts (union lists per playbook)."""
@@ -222,14 +222,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             list_new = modules_per_playbook_new.get(playbook, []) or []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            modules_per_playbook[playbook] = sorted(list(set_all.union(set_new)))
+            modules_per_playbook[playbook] = sorted(set_all.union(set_new))
         return modules_per_playbook
 
     def _merge_unique_hosts(self, data_all, data_new):
         """Merge unique_hosts lists (union and sort)."""
         unique_hosts_all = set(data_all.get('unique_hosts', []))
         unique_hosts_new = set(data_new.get('unique_hosts', []))
-        return sorted(list(unique_hosts_all.union(unique_hosts_new)))
+        return sorted(unique_hosts_all.union(unique_hosts_new))
 
     def merge(self, data_all, data_new):
         """
@@ -540,7 +540,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _convert_set_or_list_to_sorted_list(value):
         """Convert set or list to sorted list, return empty list for other types."""
         if isinstance(value, set):
-            return sorted(list(value))
+            return sorted(value)
         if isinstance(value, list):
             return value
         return []
@@ -582,15 +582,15 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _compute_unique_metadata(self, task_summary):
         """Compute unique_modules, modules_per_playbook, and unique_hosts."""
-        unique_modules = sorted(list(set(task_summary['module_name'].dropna().unique())))
+        unique_modules = sorted(set(task_summary['module_name'].dropna().unique()))
 
         modules_per_playbook = {}
         for playbook in task_summary['playbook'].dropna().unique():
-            modules_in_playbook = sorted(list(set(task_summary[task_summary['playbook'] == playbook]['module_name'].dropna().unique())))
+            modules_in_playbook = sorted(set(task_summary[task_summary['playbook'] == playbook]['module_name'].dropna().unique()))
             modules_per_playbook[playbook] = modules_in_playbook
 
         host_sets = [s for s in task_summary['host_ids'].dropna() if isinstance(s, set)]
-        unique_hosts = sorted(list(set().union(*host_sets))) if host_sets else []
+        unique_hosts = sorted(set().union(*host_sets)) if host_sets else []
 
         return unique_modules, modules_per_playbook, unique_hosts
 

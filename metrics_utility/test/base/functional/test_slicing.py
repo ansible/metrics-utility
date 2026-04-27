@@ -47,7 +47,7 @@ def test_slices_by_date(collector):
                 files[member.name] = archive.extractfile(member)
 
             assert_common_files(files)
-            assert './csv_one_day_slicing_1.csv' in files.keys()
+            assert './csv_one_day_slicing_1.csv' in files
 
             lines = files['./csv_one_day_slicing_1.csv'].readlines()
             _header = lines.pop(0)

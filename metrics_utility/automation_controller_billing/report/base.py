@@ -104,14 +104,14 @@ class Base:
         """
         # If the cell is a dictionary, convert each set value to a sorted list, then dump as a JSON string.
         if isinstance(cell, dict):
-            new_cell = {k: sorted(list(v)) if isinstance(v, set) else v for k, v in cell.items()}
+            new_cell = {k: sorted(v) if isinstance(v, set) else v for k, v in cell.items()}
             return json.dumps(new_cell)
         # If the cell itself is a set, convert it to a sorted list and then to a JSON string.
         elif isinstance(cell, set):
-            return json.dumps(sorted(list(cell)))
+            return json.dumps(sorted(cell))
         # If the cell is a list, convert any set elements inside to sorted lists and dump as a JSON string.
         elif isinstance(cell, list):
-            new_cell = [sorted(list(item)) if isinstance(item, set) else item for item in cell]
+            new_cell = [sorted(item) if isinstance(item, set) else item for item in cell]
             # Sort the list itself if it contains strings
             if new_cell and all(isinstance(item, str) for item in new_cell):
                 new_cell = sorted(new_cell)

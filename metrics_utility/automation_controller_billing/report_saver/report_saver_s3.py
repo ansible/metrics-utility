@@ -31,7 +31,7 @@ class ReportSaverS3:
         Returns:
             True if at least one object is found at the destination key.
         """
-        return len([file for file in self.s3_handler.list_files(self.report_spreadsheet_destination_path)]) > 0
+        return len(list(self.s3_handler.list_files(self.report_spreadsheet_destination_path))) > 0
 
     def save(self, report_spreadsheet):
         """Save the openpyxl Workbook to a temporary file and upload it to S3.
