@@ -47,7 +47,8 @@ class Base:
     def put(self, artifact_name, *, filename=None, fileobj=None, dict=None):
         """Upload an artifact to the CRC ingress API.
 
-        Exactly one of *filename*, *fileobj*, or *dict* must be provided.
+        Accepts *filename*, *fileobj*, and/or *dict*. If multiple are provided,
+        each input is uploaded in sequence.
 
         Args:
             artifact_name: The artifact file name sent as part of the multipart request.
