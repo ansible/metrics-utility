@@ -10,7 +10,15 @@ from metrics_utility.library.dataframes.base_traditional import (
     merge_sets,
     parse_json_array,
 )
-from metrics_utility.metric_utils import DATETIME64_NS, DIRECT, INDIRECT, MANAGED_NODE_TYPES
+from metrics_utility.metric_utils import (
+    DIRECT,
+    INDIRECT,
+    JOB_HOST_SUMMARY_CAST_TYPES,
+    JOB_HOST_SUMMARY_DATA_COLUMNS,
+    JOB_HOST_SUMMARY_INDEX_COLUMNS,
+    JOB_HOST_SUMMARY_OPERATIONS,
+    MANAGED_NODE_TYPES,
+)
 
 
 class DataframeJobHostSummary(BaseTraditional):
@@ -119,48 +127,19 @@ class DataframeJobHostSummary(BaseTraditional):
 
     @staticmethod
     def unique_index_columns():
-        return ['organization_name', 'job_template_name', 'host_name', 'original_host_name', 'install_uuid', 'job_remote_id']
+        return JOB_HOST_SUMMARY_INDEX_COLUMNS
 
     @staticmethod
     def data_columns():
-        return [
-            'host_runs',
-            'task_runs',
-            'first_automation',
-            'last_automation',
-            'job_created',
-            'managed_node_type',
-            'managed_node_types_set',
-            'canonical_facts',
-            'facts',
-            'events',
-            'host_names_before_dedup',
-        ]
+        return JOB_HOST_SUMMARY_DATA_COLUMNS
 
     @staticmethod
     def cast_types():
-        return {
-            'task_runs': int,
-            'host_runs': int,
-            'managed_node_type': int,
-            'first_automation': DATETIME64_NS,
-            'last_automation': DATETIME64_NS,
-            'job_created': DATETIME64_NS,
-        }
+        return JOB_HOST_SUMMARY_CAST_TYPES
 
     @staticmethod
     def operations():
-        return {
-            'first_automation': 'min',
-            'last_automation': 'max',
-            'job_created': 'max',
-            'managed_node_type': 'min',
-            'managed_node_types_set': 'combine_set',
-            'events': 'combine_set',
-            'canonical_facts': 'combine_json_values',
-            'facts': 'combine_json_values',
-            'host_names_before_dedup': 'combine_set',
-        }
+        return JOB_HOST_SUMMARY_OPERATIONS
 
     def dedup(self, dataframe, hostname_mapping=None, scope_dataframe=None, deduplicator=None):
         """
