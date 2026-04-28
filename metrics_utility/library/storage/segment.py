@@ -3,6 +3,7 @@ import hashlib
 import json
 import sys
 import uuid
+import time
 
 from metrics_utility.logger import logger
 
@@ -174,10 +175,8 @@ class StorageSegment:
                 **segment_meta,
             )
 
-            analytics.flush()
+            time.sleep(3)
 
             # time.sleep(3) - uncomment as backup plan
-
         analytics.flush()
-
         return chunks
