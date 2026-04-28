@@ -159,7 +159,7 @@ class StorageSegment:
                 print(msg, file=sys.stderr)
 
             analytics.track(
-                anonymous_id=f'{anonymous_id}_{i}',
+                anonymous_id=f'{anonymous_id}',
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
@@ -173,8 +173,11 @@ class StorageSegment:
                 },
                 **segment_meta,
             )
+
             analytics.flush()
 
             # time.sleep(3) - uncomment as backup plan
+
+        analytics.flush()
 
         return chunks
