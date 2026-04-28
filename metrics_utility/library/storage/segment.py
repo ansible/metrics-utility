@@ -21,6 +21,12 @@ class StorageSegment:
     # including `properties` wrapper, event name, and segment_meta; keep this conservative.
     REGULAR_MESSAGE_LIMIT = 24 * 1024
 
+    # Segment enforces a 500KB limit per batch POST. We flush before reaching it,
+    # leaving headroom for per-event metadata the SDK adds (anonymousId, timestamp,
+    # context, etc.). EVENT_OVERHEAD is a conservative per-event estimate.
+    BATCH_SIZE_LIMIT = 450 * 1024
+    EVENT_OVERHEAD = 512
+
     def __init__(self, **settings):
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
@@ -130,7 +136,6 @@ class StorageSegment:
         # Configure Segment client
         analytics.write_key = self.write_key
         analytics.debug = self.debug
-        analytics.sync_mode = True
 
         max_size = self.REGULAR_MESSAGE_LIMIT
         chunks = self._split_into_chunks(dict, max_size)
@@ -145,9 +150,17 @@ class StorageSegment:
             segment_meta = {}
         message_id = segment_meta.get('message_id', None)
 
-        # Send each chunk
+        # Send each chunk, flushing before the batch would exceed Segment's 500KB limit
+        batch_bytes = 0
         for i, chunk in enumerate(chunks, 1):
             chunk_size = self._calculate_size(chunk)
+            event_size = chunk_size + self.EVENT_OVERHEAD
+
+            if batch_bytes + event_size > self.BATCH_SIZE_LIMIT and batch_bytes > 0:
+                if self.debug:
+                    print(f'Flushing batch at {batch_bytes} bytes before adding chunk {i}', file=sys.stderr)
+                analytics.flush()
+                batch_bytes = 0
 
             # chunk hash = sha256(message hash + chunk index)
             if message_id:
@@ -174,8 +187,9 @@ class StorageSegment:
                 },
                 **segment_meta,
             )
+            batch_bytes += event_size
 
-        # Flush to ensure all events are sent
+        # Flush remaining queued events
         analytics.flush()
 
         return chunks
