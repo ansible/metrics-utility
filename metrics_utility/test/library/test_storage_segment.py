@@ -133,6 +133,7 @@ class TestStorageSegmentAvailable:
         # Should split into 7 chunks as tested earlier
         assert len(chunks) == 7
         assert mock_analytics.track.call_count == 7
+        # 7 chunks well under 450 KB batch limit — only the final flush should fire
         assert mock_analytics.flush.call_count == 1
 
         # Verify chunk numbering in the calls
@@ -141,3 +142,46 @@ class TestStorageSegmentAvailable:
             chunk_info = call_kwargs['properties']['chunk_info']
             assert chunk_info['chunk_number'] == i
             assert chunk_info['total_chunks'] == 7
+
+    @patch('metrics_utility.library.storage.segment.analytics')
+    @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
+    def test_put_single_flush_when_chunks_fit_in_one_batch(self, mock_analytics):
+        """All chunks are sent in one batch when total size is below BATCH_SIZE_LIMIT."""
+        mock_analytics.track = Mock()
+        mock_analytics.flush = Mock()
+
+        storage_segment = StorageSegment(write_key='test_write_key', debug=False)
+        chunks = storage_segment.put(
+            artifact_name='test_artifact',
+            dict=segment_data_large,
+            event_name='Test Event',
+        )
+
+        assert mock_analytics.track.call_count == len(chunks)
+        assert mock_analytics.flush.call_count == 1
+
+    @patch('metrics_utility.library.storage.segment.analytics')
+    @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
+    def test_put_flushes_mid_loop_when_batch_limit_reached(self, mock_analytics):
+        """flush() is called before queuing a chunk that would push the batch over BATCH_SIZE_LIMIT.
+
+        Segment silently drops events from batch POSTs that exceed 500 KB and returns
+        HTTP 200, so we flush proactively before reaching that threshold.
+        """
+        mock_analytics.track = Mock()
+        mock_analytics.flush = Mock()
+
+        storage_segment = StorageSegment(write_key='test_write_key', debug=False)
+        # Lower the limit so each large (~24 KB) chunk forces its own batch
+        storage_segment.BATCH_SIZE_LIMIT = storage_segment.REGULAR_MESSAGE_LIMIT + storage_segment.EVENT_OVERHEAD
+
+        chunks = storage_segment.put(
+            artifact_name='test_artifact',
+            dict=segment_data_large,
+            event_name='Test Event',
+        )
+
+        # Every chunk must still be tracked — none dropped
+        assert mock_analytics.track.call_count == len(chunks)
+        # Multiple flushes confirm that mid-loop splitting occurred
+        assert mock_analytics.flush.call_count > 1
