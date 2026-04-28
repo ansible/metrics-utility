@@ -159,7 +159,7 @@ class StorageSegment:
                 print(msg, file=sys.stderr)
 
             analytics.track(
-                anonymous_id=anonymous_id',
+                anonymous_id=anonymous_id,
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
