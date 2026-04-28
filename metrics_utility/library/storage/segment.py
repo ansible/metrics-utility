@@ -3,6 +3,7 @@ import hashlib
 import json
 import sys
 import uuid
+import time
 
 from metrics_utility.logger import logger
 
@@ -173,6 +174,9 @@ class StorageSegment:
                 },
                 **segment_meta,
             )
+
+            # sleep for 3 seconds
+            time.sleep(3)
 
         # Flush to ensure all events are sent
         analytics.flush()
