@@ -40,16 +40,16 @@ class JobHostSummarySchema(DataframeSchemaMixin):
 
     @staticmethod
     def unique_index_columns():
-        return JOB_HOST_SUMMARY_INDEX_COLUMNS
+        return list(JOB_HOST_SUMMARY_INDEX_COLUMNS)
 
     @staticmethod
     def data_columns():
-        return JOB_HOST_SUMMARY_DATA_COLUMNS
+        return list(JOB_HOST_SUMMARY_DATA_COLUMNS)
 
     @staticmethod
     def cast_types():
-        return JOB_HOST_SUMMARY_CAST_TYPES
+        return dict(JOB_HOST_SUMMARY_CAST_TYPES)
 
     @staticmethod
     def operations():
-        return JOB_HOST_SUMMARY_OPERATIONS
+        return dict(JOB_HOST_SUMMARY_OPERATIONS)

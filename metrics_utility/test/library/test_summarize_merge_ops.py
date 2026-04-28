@@ -31,7 +31,29 @@ def test_summarize_combine_json():
 def test_summarize_combine_json_values():
     df = pd.DataFrame({'col_x': [{'k': 'v1'}], 'col_y': [{'k': 'v2'}]})
     result = _bt().summarize_merged_dataframes(df, ['col'], operations={'col': 'combine_json_values'})
-    assert 'k' in result['col'].iloc[0]
+    assert result['col'].iloc[0] == {'k': {'v1', 'v2'}}
+
+
+def test_summarize_lambda_branches_bind_per_column():
+    # Exercises all three lambda operations in a single call with multiple columns.
+    # A single-column call cannot expose the closure-over-loop-variable bug (S1515)
+    # because col is only ever one value; this multi-column call would regress if
+    # the c=col default-arg capture were removed.
+    df = pd.DataFrame(
+        {
+            'a_x': [{'x': 1}],
+            'a_y': [{'y': 2}],
+            'b_x': [['p']],
+            'b_y': [['q']],
+            'c_x': [{'k': 'v1'}],
+            'c_y': [{'k': 'v2'}],
+        }
+    )
+    ops = {'a': 'combine_json', 'b': 'combine_set', 'c': 'combine_json_values'}
+    result = _bt().summarize_merged_dataframes(df, ['a', 'b', 'c'], operations=ops)
+    assert result['a'].iloc[0] == {'x': 1, 'y': 2}
+    assert result['b'].iloc[0] == {'p', 'q'}
+    assert result['c'].iloc[0] == {'k': {'v1', 'v2'}}
 
 
 # --- validate='one_to_one' in BaseTraditional.merge() ---
