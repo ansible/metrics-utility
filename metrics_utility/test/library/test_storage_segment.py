@@ -149,15 +149,19 @@ class TestStorageSegmentAvailable:
 
         Without sync_mode the SDK batches all chunks into one POST which can silently
         exceed Segment's 500 KB batch limit and drop events with no error raised.
+        flush() is called once at the end only — sync_mode handles per-track delivery,
+        so no mid-loop batch flushing is needed.
         """
         mock_analytics.track = Mock()
         mock_analytics.flush = Mock()
 
         storage_segment = StorageSegment(write_key='test_write_key', debug=False)
-        storage_segment.put(
+        chunks = storage_segment.put(
             artifact_name='test_artifact',
             dict=segment_data_large,
             event_name='Test Event',
         )
 
         assert mock_analytics.sync_mode is True
+        assert mock_analytics.track.call_count == len(chunks)
+        assert mock_analytics.flush.call_count == 1
