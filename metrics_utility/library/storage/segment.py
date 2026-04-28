@@ -2,8 +2,8 @@ import datetime
 import hashlib
 import json
 import sys
-import uuid
 import time
+import uuid
 
 from metrics_utility.logger import logger
 
