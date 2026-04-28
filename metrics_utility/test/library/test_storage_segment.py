@@ -93,6 +93,7 @@ class TestStorageSegmentAvailable:
         chunks = storage_segment.put(artifact_name='test_artifact', dict=segment_data, event_name='Test Event')
 
         assert mock_analytics.sync_mode is True
+        assert mock_analytics.gzip is True
         assert mock_analytics.track.call_count == len(chunks)
         assert mock_analytics.flush.call_count == 1
 
@@ -154,5 +155,6 @@ class TestStorageSegmentAvailable:
         )
 
         assert mock_analytics.sync_mode is True
+        assert mock_analytics.gzip is True
         assert mock_analytics.track.call_count == len(chunks)
         assert mock_analytics.flush.call_count == 1

@@ -135,6 +135,9 @@ class StorageSegment:
         # can silently exceed Segment's 500 KB batch limit and drop events, returning
         # HTTP 200 with no error callback fired.
         analytics.sync_mode = True
+        # gzip compresses each ~25 KB chunk to ~3 KB on the wire, reducing per-request
+        # transfer time when sync_mode sends one HTTP call per chunk.
+        analytics.gzip = True
 
         max_size = self.REGULAR_MESSAGE_LIMIT
         chunks = self._split_into_chunks(dict, max_size)
