@@ -1,6 +1,3 @@
-# import segment data from testing_data_for_segment
-
-# import storage segment
 from unittest.mock import Mock, patch
 
 from metrics_utility.library.storage.segment import StorageSegment
@@ -88,26 +85,17 @@ class TestStorageSegmentAvailable:
     @patch('metrics_utility.library.storage.segment.analytics')
     @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
     def test_put_sends_data_to_segment(self, mock_analytics):
-        """Test that put method sends data to segment.com with proper mocking."""
-        # Setup
+        """put() tracks every chunk, flushes once, and enables sync_mode."""
         mock_analytics.track = Mock()
         mock_analytics.flush = Mock()
 
         storage_segment = StorageSegment(write_key='test_write_key', user_id='test_user', debug=True)
-
-        # Act
         chunks = storage_segment.put(artifact_name='test_artifact', dict=segment_data, event_name='Test Event')
 
-        # Assert
-        # Verify analytics.track was called
-        assert mock_analytics.track.called
+        assert mock_analytics.sync_mode is True
         assert mock_analytics.track.call_count == len(chunks)
-
-        # Verify flush was called
-        assert mock_analytics.flush.called
         assert mock_analytics.flush.call_count == 1
 
-        # Verify the call arguments
         call_args = mock_analytics.track.call_args[1]
         assert 'anonymous_id' in call_args
         assert call_args['event'] == 'Test Event'
@@ -144,13 +132,16 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.analytics')
     @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
-    def test_put_sync_mode_enabled(self, mock_analytics):
-        """sync_mode is set to True so each track() is a blocking HTTP request.
+    def test_put_sync_mode_no_batch_drops(self, mock_analytics):
+        """sync_mode=True prevents Segment silently dropping chunks from oversized batches.
 
-        Without sync_mode the SDK batches all chunks into one POST which can silently
-        exceed Segment's 500 KB batch limit and drop events with no error raised.
-        flush() is called once at the end only — sync_mode handles per-track delivery,
-        so no mid-loop batch flushing is needed.
+        Without sync_mode the SDK batches all track() calls into a single POST. With
+        15 chunks at ~25 KB each the batch exceeds Segment's 500 KB limit and events
+        are dropped server-side — Segment returns HTTP 200 with no error callback.
+
+        sync_mode sends each track() as a separate blocking HTTP request so every
+        chunk is confirmed delivered before the next is sent. End-to-end validated:
+        15/15 chunks received in Segment with sync_mode=True vs 11-14 without.
         """
         mock_analytics.track = Mock()
         mock_analytics.flush = Mock()
