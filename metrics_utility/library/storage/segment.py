@@ -2,7 +2,6 @@ import datetime
 import hashlib
 import json
 import sys
-import time
 import uuid
 
 from metrics_utility.logger import logger
@@ -160,7 +159,7 @@ class StorageSegment:
                 print(msg, file=sys.stderr)
 
             analytics.track(
-                anonymous_id=anonymous_id,
+                anonymous_id=f'{anonymous_id}_{i}',
                 event=event_name,
                 properties={
                     'artifact_name': artifact_name,
@@ -174,11 +173,8 @@ class StorageSegment:
                 },
                 **segment_meta,
             )
+            analytics.flush()
 
-            # sleep for 3 seconds
-            time.sleep(3)
-
-        # Flush to ensure all events are sent
-        analytics.flush()
+            # time.sleep(3) - uncomment as backup plan
 
         return chunks
