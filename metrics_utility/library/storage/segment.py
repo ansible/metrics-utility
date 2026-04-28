@@ -130,6 +130,7 @@ class StorageSegment:
         # Configure Segment client
         analytics.write_key = self.write_key
         analytics.debug = self.debug
+        analytics.sync_mode = True
 
         max_size = self.REGULAR_MESSAGE_LIMIT
         chunks = self._split_into_chunks(dict, max_size)
