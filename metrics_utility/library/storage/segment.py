@@ -17,17 +17,14 @@ except ImportError:
 
 
 class StorageSegment:
-    # Size limits for Segment messages
-    # 32KB for regular messages, but leave some room for the additional metadata
+    # Max JSON size of each `data` chunk. Segment enforces ~32KB per `track` message
+    # including `properties` wrapper, event name, and segment_meta; keep this conservative.
     REGULAR_MESSAGE_LIMIT = 24 * 1024
-    # 512MB for bulk messages, but leave some room for the additional metadata
-    BULK_MESSAGE_LIMIT = 500 * 1024 * 1024
 
     def __init__(self, **settings):
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')
-        self.use_bulk = settings.get('use_bulk', False)
 
         if not SEGMENT_AVAILABLE:
             logger.info('StorageSegment: segment module not installed. Analytics will be disabled.')
@@ -44,15 +41,17 @@ class StorageSegment:
         Split data into chunks based on max_size.
 
         Always splits by top-level keys - each top-level key gets its own chunk(s).
-        If a top-level key's value is a list, that list may be split into multiple chunks
-        if it exceeds max_size.
+        If a top-level key's value is a list, it is split in order: the next item is
+        considered appended to the current chunk; if ``json.dumps`` of that chunk
+        would exceed max_size, the current chunk is finalized and a new one is started
+        (or a single oversize item is emitted alone).
 
         Args:
             data: Dictionary to split, dictionary contains key : value pairs
             Those key value pairs are either dicts or list
             only lists are split into chunks, dicts are not split, thus dicts can not
             be larger than max_size
-            max_size: Maximum size in bytes for each chunk
+            max_size: Maximum size in bytes for each chunk (JSON of top-level {key: ...})
 
         Returns:
             List of data chunks
@@ -72,11 +71,14 @@ class StorageSegment:
                 active_chunk = {key: []}
 
                 for item in value:
-                    active_chunk_size = self._calculate_size(active_chunk)
-                    item_size = self._calculate_size(item)
-                    if active_chunk_size + item_size > max_size:
-                        chunks.append(active_chunk)
-                        active_chunk = {key: [item]}
+                    trial = {key: active_chunk[key] + [item]}
+                    if self._calculate_size(trial) > max_size:
+                        if len(active_chunk[key]) > 0:
+                            chunks.append(active_chunk)
+                            active_chunk = {key: [item]}
+                        else:
+                            # single item does not fit max_size; emit it alone
+                            chunks.append({key: [item]})
                     else:
                         active_chunk[key].append(item)
 
@@ -98,10 +100,9 @@ class StorageSegment:
                        (defaults to 'Metrics Artifact Upload')
 
         This method supports sending anonymized analytics from
-        multiple apps. Data will be automatically split into chunks
-        based on Segment's size limits:
-        - 32KB for regular messages
-        - 512MB for bulk messages (when use_bulk=True)
+        multiple apps. Data is split so each `data` chunk is under
+        :attr:`REGULAR_MESSAGE_LIMIT` (JSON bytes), with headroom for Segment's
+        per-message size limit.
         """
         chunks = []
         if filename or fileobj or dict is None:
@@ -130,8 +131,7 @@ class StorageSegment:
         analytics.write_key = self.write_key
         analytics.debug = self.debug
 
-        # Determine size limit based on bulk mode
-        max_size = self.BULK_MESSAGE_LIMIT if self.use_bulk else self.REGULAR_MESSAGE_LIMIT
+        max_size = self.REGULAR_MESSAGE_LIMIT
         chunks = self._split_into_chunks(dict, max_size)
 
         total_chunks = len(chunks)
