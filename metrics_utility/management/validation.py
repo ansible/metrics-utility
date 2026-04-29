@@ -1,3 +1,5 @@
+"""Validation helpers for metrics-utility management commands (gather and build)."""
+
 import datetime
 import json
 import os
@@ -99,6 +101,15 @@ ship_path_description = 'place for collected data and built reports'
 
 
 def handle_directory_ship_target():
+    """Read and validate METRICS_UTILITY_SHIP_PATH for directory mode.
+
+    Returns:
+        Dict with ``'ship_path'`` key.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If the
+            environment variable is not set.
+    """
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
 
     if not ship_path:
@@ -108,6 +119,16 @@ def handle_directory_ship_target():
 
 
 def handle_s3_ship_target():
+    """Read and validate all S3-related environment variables.
+
+    Returns:
+        Dict with ``'ship_path'``, ``'bucket_name'``, ``'bucket_endpoint'``,
+        ``'bucket_region'``, ``'bucket_access_key'``, and ``'bucket_secret_key'``.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If any required
+            S3 variable is missing.
+    """
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME')
     bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT')
@@ -145,6 +166,7 @@ def handle_s3_ship_target():
 
 
 def handle_not_s3():
+    """Warn if S3 environment variables are set while the ship target is not ``'s3'``."""
     surplus = []
 
     if os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY'):
@@ -336,6 +358,16 @@ def _register_candlepin_consumer():
 
 
 def handle_crc_ship_target():
+    """Read and validate CRC-related billing provider environment variables.
+
+    Returns:
+        Dict with ``'billing_provider'`` and optionally ``'billing_account_id'``
+        and ``'red_hat_org_id'``.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If a required
+            billing variable is missing or has an unsupported value.
+    """
     billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
     red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
 
@@ -642,6 +674,7 @@ def handle_env_validation(method: str):
 
 
 def handle_not_crc():
+    """Warn if CRC environment variables are set while the ship target is not ``'crc'``."""
     surplus = []
 
     if os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID'):
@@ -657,14 +690,45 @@ def handle_not_crc():
 
 # patchable in tests
 def now():
+    """Return the current local datetime (patchable in tests).
+
+    Returns:
+        :class:`datetime.datetime` representing the current moment.
+    """
     return datetime.datetime.now()
 
 
 def startofday(dt):
+    """Return *dt* with the time component reset to midnight.
+
+    Args:
+        dt: A :class:`datetime.datetime` instance.
+
+    Returns:
+        The same date at 00:00:00.000000.
+    """
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def parse_date_param(value, help_texts={None: ''}, name=None):
+    """Parse a human-friendly date string into a timezone-aware datetime.
+
+    Supported formats: ISO date (``2023-12-20``), ``Nd``/``Ndays`` (N days ago,
+    start of day), ``Nmo``/``Nmonths`` (N months ago, start of day), or
+    ``Nm``/``Nminutes`` (N minutes ago).
+
+    Args:
+        value: The string to parse, or None/empty to return None.
+        help_texts: Dict mapping parameter names to help text shown in errors.
+        name: The parameter name (used as a key into *help_texts* and in error messages).
+
+    Returns:
+        A timezone-aware :class:`datetime.datetime`, or None if *value* is empty.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the string
+            cannot be parsed.
+    """
     if not value:
         return None
 
@@ -707,6 +771,14 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
 
 
 def validate_ccsp_params(options):
+    """Validate CLI option combinations specific to CCSP/CCSPv2 report types.
+
+    Args:
+        options: Dict of parsed CLI options.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
+    """
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
@@ -725,6 +797,19 @@ def validate_ccsp_params(options):
 
 
 def validate_renewal_params(options, help_texts):
+    """Validate CLI option combinations specific to the RENEWAL_GUIDANCE report type.
+
+    Args:
+        options: Dict of parsed CLI options.
+        help_texts: Dict mapping parameter names to their help strings.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
+        :exc:`~metrics_utility.exceptions.MissingRequiredParameter`: If ``--since``
+            is not provided.
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If ``--ephemeral``
+            has an unsupported format.
+    """
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
@@ -746,6 +831,19 @@ def validate_renewal_params(options, help_texts):
 
 
 def parse_since_until(options, help_texts):
+    """Parse ``--since`` and ``--until`` options and validate their ordering.
+
+    Args:
+        options: Dict of parsed CLI options.
+        help_texts: Dict mapping parameter names to their help strings.
+
+    Returns:
+        Tuple of ``(since, until)`` as timezone-aware datetimes (either may be None).
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If ``--until`` is
+            earlier than ``--since``.
+    """
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
 
@@ -759,6 +857,15 @@ def parse_since_until(options, help_texts):
 
 
 def validate_build_params(options, help_texts):
+    """Dispatch to the report-type-specific validation function and parse since/until.
+
+    Args:
+        options: Dict of parsed CLI options.
+        help_texts: Dict mapping parameter names to their help strings.
+
+    Returns:
+        Tuple of ``(since, until)`` datetimes (either may be None).
+    """
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     if not report_type:
         return None, None
@@ -773,6 +880,18 @@ def validate_build_params(options, help_texts):
 
 
 def parse_number_of_days(date_option):
+    """Convert an ephemeral duration string (e.g. ``'3months'``, ``'5days'``) to an integer day count.
+
+    Args:
+        date_option: String with a numeric prefix and a unit suffix (``d``/``day``/``days``
+            or ``mo``/``month``/``months``), or None/empty.
+
+    Returns:
+        Integer number of days, or None if *date_option* is empty.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the format is not recognised.
+    """
     if not date_option:
         return None
 

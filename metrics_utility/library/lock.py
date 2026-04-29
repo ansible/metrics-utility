@@ -1,3 +1,5 @@
+"""PostgreSQL advisory-lock context manager."""
+
 from contextlib import contextmanager
 
 
@@ -7,7 +9,24 @@ def lock(
     wait=False,
     db=None,
 ):
-    """Acquire the lock and yield to caller"""
+    """Acquire a PostgreSQL advisory lock by name and yield whether it was acquired.
+
+    Uses ``pg_try_advisory_lock`` (non-blocking) when *wait* is False, or
+    ``pg_advisory_lock`` (blocking) when *wait* is True.  The lock is released
+    in the ``finally`` block.
+
+    Args:
+        key: A unique string identifying the lock (hashed to a bigint internally).
+        wait: When True, block until the lock is available.  When False (default),
+            yield immediately with ``acquired=False`` if the lock is held elsewhere.
+        db: Django database connection used to execute the lock SQL.
+
+    Yields:
+        bool: True if the lock was successfully acquired, False otherwise.
+
+    Raises:
+        ValueError: If *key* is not a string.
+    """
 
     if not isinstance(key, str):
         raise ValueError('Cannot use %s as a lock id' % key)

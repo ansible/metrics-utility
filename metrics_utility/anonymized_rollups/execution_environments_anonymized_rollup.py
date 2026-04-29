@@ -1,3 +1,5 @@
+"""Anonymized rollup for execution_environment_service collector data."""
+
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup

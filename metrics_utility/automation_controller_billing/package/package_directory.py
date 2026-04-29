@@ -1,3 +1,5 @@
+"""Package implementation that ships billing tarballs to a local directory."""
+
 import os
 import shutil
 
@@ -9,6 +11,8 @@ from metrics_utility.logger import logger
 
 
 class PackageDirectory(base.Package):
+    """Package that copies the generated tarball into a local date-partitioned directory."""
+
     def _batch_since_and_until(self):
         # TODO: how to verify this is the daily batch of job_host_summary?
         # self.collection_keys is: ['job_host_summary', 'manifest']

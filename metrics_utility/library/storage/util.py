@@ -1,3 +1,5 @@
+"""Utility helpers for the storage layer: temp-file JSON serialisation and date filtering."""
+
 import datetime
 import json
 import re
@@ -15,6 +17,14 @@ from contextlib import contextmanager
 
 @contextmanager
 def dict_to_json_file(data):
+    """Write *data* to a temporary JSON file and yield its path.
+
+    Args:
+        data: JSON-serialisable dict or list.
+
+    Yields:
+        Absolute path to the temporary ``.json`` file (deleted on context exit).
+    """
     with tempfile.NamedTemporaryFile(mode='x', encoding='utf-8', newline='\n', suffix='.json', delete_on_close=False) as file:
         json.dump(data, file)
         file.close()
@@ -26,6 +36,20 @@ def dict_to_json_file(data):
 
 
 def date_filter(filename, since=None, until=None):
+    """Return True if *filename* contains a date timestamp within [since, until).
+
+    Expects timestamps in the format ``%Y-%m-%d-%H%M%S%z`` embedded anywhere in
+    the filename.
+
+    Args:
+        filename: File path or name string to parse.
+        since: Optional inclusive lower bound datetime.
+        until: Optional exclusive upper bound datetime.
+
+    Returns:
+        True if the embedded timestamp falls within the requested range (or the
+        date falls within when either bound is None); False if no timestamp is found.
+    """
     m = re.search(r'\b\d{4}-\d{2}-\d{2}-\d{2}\d{2}\d{2}([-+]\d+)?', filename)
     if not m:
         return False

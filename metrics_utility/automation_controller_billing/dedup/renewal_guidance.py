@@ -1,3 +1,5 @@
+"""Deduplication implementations for the Renewal Guidance report."""
+
 import pandas as pd
 
 

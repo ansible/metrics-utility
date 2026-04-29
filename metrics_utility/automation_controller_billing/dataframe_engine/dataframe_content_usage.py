@@ -1,3 +1,5 @@
+"""Dataframe engine for content (module/collection/role) usage from main_jobevent."""
+
 import re
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
@@ -5,6 +7,8 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 
 # dataframe for main_jobevent
 class DataframeContentUsage(Base):
+    """Aggregates task runs by host/module/collection/role from main_jobevent CSV batches."""
+
     def build_dataframe(self):
         # A monthly rollup dataframe
         content_explorer_rollup = None
@@ -88,14 +92,32 @@ class DataframeContentUsage(Base):
 
     @staticmethod
     def collection_regexp():
+        """Return the regex pattern for matching fully-qualified collection module names.
+
+        Returns:
+            Regex pattern string.
+        """
         return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
 
     @staticmethod
     def standalone_role_regexp():
+        """Return the regex pattern for matching standalone two-part role names.
+
+        Returns:
+            Regex pattern string.
+        """
         return r'^(\w+)\.(\w+)$'
 
     @staticmethod
     def extract_collection_name(x):
+        """Extract the ``namespace.collection`` prefix from a fully-qualified module name.
+
+        Args:
+            x: Module name string or None.
+
+        Returns:
+            Two-part collection name string, or None.
+        """
         if x is None:
             return None
 
@@ -108,6 +130,14 @@ class DataframeContentUsage(Base):
 
     @staticmethod
     def extract_role_name(x):
+        """Extract a normalised role name from a fully-qualified or standalone role string.
+
+        Args:
+            x: Role name string or None.
+
+        Returns:
+            Normalised role name string, or None.
+        """
         if x is None:
             return None
 

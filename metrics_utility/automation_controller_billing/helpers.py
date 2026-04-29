@@ -1,3 +1,5 @@
+"""Helper utilities for the automation_controller_billing package."""
+
 import json
 
 from itertools import chain
@@ -37,6 +39,14 @@ def get_last_entries_from_db() -> Dict:
 
 
 def parse_json_array(x):
+    """Parse a JSON string as a list, returning an empty list on failure.
+
+    Args:
+        x: A JSON string, or null/NaN value.
+
+    Returns:
+        The parsed list, or an empty list if *x* is null/NaN or not a JSON array.
+    """
     if pd.isnull(x):
         return []
     try:
@@ -50,8 +60,16 @@ def parse_json_array(x):
         return []
 
 
-# Helper function to parse a JSON string or return the dict if it's already a dict.
 def parse_json(val):
+    """Parse a JSON string into a dict, or pass through a dict unchanged.
+
+    Args:
+        val: A JSON-encoded string or an existing dict.
+
+    Returns:
+        The parsed dict, or an empty dict if parsing fails or *val* is neither
+        a string nor a dict.
+    """
     if isinstance(val, str):
         try:
             return json.loads(val)
@@ -62,8 +80,19 @@ def parse_json(val):
     return {}
 
 
-# Function to merge a list of JSON values into a dict mapping each key to a set of non-null/non-empty values.
 def merge_json_sets(json_values):
+    """Merge a sequence of JSON dict values into a mapping of key → set of non-null values.
+
+    Each value in *json_values* is parsed as a JSON dict (if necessary).  For
+    every key across all dicts, non-null/non-empty/non-``'NA'`` values are
+    collected into a set.
+
+    Args:
+        json_values: Iterable of JSON strings or dicts.
+
+    Returns:
+        Dict mapping each key to a set of its distinct non-empty values.
+    """
     merged = {}
     for val in json_values:
         d = parse_json(val)
@@ -79,8 +108,15 @@ def merge_json_sets(json_values):
     return merged
 
 
-# Function to merge array type columns getting a unique set back
 def merge_arrays(values):
+    """Flatten and deduplicate a sequence of lists into a single list of unique items.
+
+    Args:
+        values: Iterable of lists (None entries are ignored).
+
+    Returns:
+        A list containing all unique non-None items from all input lists.
+    """
     # Filter out None values
     valid_events = [e for e in values if e is not None]
     # Flatten the list of lists and extract unique events

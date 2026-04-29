@@ -1,3 +1,5 @@
+"""Dataframe for job event data used by the library-layer CCSP content-usage report."""
+
 import re
 
 from metrics_utility.library.dataframes.base_traditional import BaseTraditional
@@ -9,6 +11,8 @@ COLLECTION_REGEXP = r'^(\w+)\.(\w+)\.(\w+)(?:\.\w+)*$'
 
 
 class DataframeMainJobevent(BaseTraditional):
+    """Aggregated job-event dataframe for collection/module/role usage analysis."""
+
     TARBALL_NAMES = ['main_jobevent.csv', 'config.json']
 
     def prepare(self, tup):
@@ -68,6 +72,14 @@ class DataframeMainJobevent(BaseTraditional):
 
     @staticmethod
     def extract_collection_name(x):
+        """Extract the ``namespace.collection`` prefix from a fully-qualified module name.
+
+        Args:
+            x: Module name string or None.
+
+        Returns:
+            Two-part collection name string, or None.
+        """
         if x is None:
             return None
 
@@ -78,6 +90,14 @@ class DataframeMainJobevent(BaseTraditional):
 
     @staticmethod
     def extract_role_name(x):
+        """Extract a normalised role name from a fully-qualified or standalone role string.
+
+        Args:
+            x: Role name string or None.
+
+        Returns:
+            Normalised role name (collection or standalone), or None.
+        """
         if x is None:
             return None
 

@@ -1,3 +1,5 @@
+"""Base extractor class and safe tarball extraction utilities for billing data."""
+
 import json
 import os
 import re
@@ -49,12 +51,35 @@ CSV_SHEETS = {
 
 
 class Base:
+    """Abstract base class for billing data extractors.
+
+    Subclasses implement :meth:`iter_batches` to yield per-tarball data dicts
+    and :meth:`fetch_partition_paths` to locate the tarballs for a given date.
+    Common helpers for tarball extraction, CSV loading, and path construction
+    are provided here.
+    """
+
     LOG_PREFIX = '[ExtractorBase]'
 
     def __init__(self, extra_params):
+        """Initialise the extractor with configuration parameters.
+
+        Args:
+            extra_params: Dict containing at least ``'ship_path'`` and
+                ``'optional_sheets'`` keys.
+        """
         self.extra_params = extra_params
 
     def load_config(self, file_path):
+        """Read and return a JSON config file from *file_path*.
+
+        Args:
+            file_path: Absolute path to a ``config.json`` file extracted from
+                a tarball.
+
+        Returns:
+            Parsed dict, or None if the file is not found.
+        """
         try:
             with open(file_path) as f:
                 return json.loads(f.read())
@@ -62,6 +87,23 @@ class Base:
             logger.warning(f'{self.LOG_PREFIX} missing required file under path: {file_path} and date: {self.date}')
 
     def process_tarballs(self, path, temp_dir, enabled_set=None):
+        """Extract a tarball and return a dict of DataFrames and config.
+
+        Extracts the archive at *path* into *temp_dir*, then reads each
+        requested CSV file into a pandas DataFrame.  The ``config`` key always
+        holds the parsed ``config.json`` dict.
+
+        Args:
+            path: Path to the ``.tar.gz`` file to extract.
+            temp_dir: Temporary directory to extract files into.
+            enabled_set: Optional set of CSV names to extract; if None, all
+                known CSVs are extracted.
+
+        Returns:
+            Dict with keys ``'config'``, ``'data_collection_status'``,
+            ``'job_host_summary'``, ``'main_host'``, ``'main_host_daily'``,
+            ``'main_indirectmanagednodeaudit'``, and ``'main_jobevent'``.
+        """
         _safe_extract(path, temp_dir, enabled_set=enabled_set)
         self.enabled_set = enabled_set
 
@@ -146,6 +188,24 @@ class Base:
         return bool(set(sheet_options) & set(sheets_required))
 
     def filter_tarball_paths(self, paths, collections):
+        """Filter tarball paths to those matching the requested collection names.
+
+        Paths produced by older versions (without a collection-name suffix) and
+        unknown or ambiguous names are always included to avoid data loss.
+
+        Args:
+            paths: Iterable of tarball path strings.
+            collections: List of collector names to match (e.g. ``['main_host']``),
+                or None to return all paths.
+
+        Returns:
+            Filtered list of matching path strings.
+
+        Raises:
+            :exc:`~metrics_utility.exceptions.MetricsException`: If
+                ``'data_collection_status'`` or ``'config'`` is in *collections*
+                (these are never used as tarball name filters).
+        """
         # collections=['main_host', 'foo'] - returns only filenames matching *-main_host.tar.gz or *-foo.tar.gz
         if collections is None:
             return paths

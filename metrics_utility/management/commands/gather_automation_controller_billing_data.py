@@ -90,6 +90,11 @@ class Command(BaseCommand):
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
     def handle(self, *args, **options):
+        """Execute the gather_automation_controller_billing_data management command.
+
+        Validates environment variables, instantiates the billing Collector,
+        and runs the gathering pipeline, shipping tarballs to the configured target.
+        """
         if options.get('verbose'):
             debug()
         handle_env_validation('gather')
@@ -123,6 +128,17 @@ class Command(BaseCommand):
             logger.info('Analytics collected')
 
     def _handle_ship_target(self, ship_target):
+        """Validate the ship target and return configuration parameters.
+
+        Args:
+            ship_target: Value of METRICS_UTILITY_SHIP_TARGET.
+
+        Returns:
+            Dict of billing-provider parameters for the Collector.
+
+        Raises:
+            :exc:`~metrics_utility.exceptions.BadShipTarget`: For unrecognised values.
+        """
         if ship_target == 'crc':
             handle_not_s3()
             return handle_crc_ship_target()

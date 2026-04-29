@@ -1,3 +1,5 @@
+"""Anonymized rollup for unified_jobs collector data."""
+
 import json
 
 import pandas as pd
@@ -185,6 +187,20 @@ class JobsAnonymizedRollup(BaseAnonymizedRollup):
         return organizations, forks_total, scm_types
 
     def prepare(self, dataframe):
+        """Aggregate raw unified-jobs rows into per-dimension job statistics.
+
+        Filters to only finished jobs, then groups by job_type, launch_type,
+        ansible_version and produces an all-jobs summary for the controller
+        version grouping.
+
+        Args:
+            dataframe: Raw pandas DataFrame from the unified_jobs collector.
+
+        Returns:
+            JSON-serialisable dict with ``by_job_type``, ``by_launch_type``,
+            ``by_ansible_version``, ``by_controller_version``, ``organizations``,
+            ``forks_total``, ``scm_types``, and ``installed_collections`` keys.
+        """
         # Convert ID columns to strings at the beginning
         dataframe = self._convert_id_columns_to_strings(dataframe)
 
