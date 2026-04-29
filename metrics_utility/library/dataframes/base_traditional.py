@@ -1,3 +1,5 @@
+"""Base class for traditional (non-engine) billing dataframes and merge helpers."""
+
 import json
 
 from functools import reduce
@@ -11,7 +13,22 @@ from metrics_utility.library.dataframes.base_dataframe import BaseDataframe
 # a dataframe class with logic for merges based on lists of indexes and merge operations
 # used by DataframeMainJobevent, DataframeMainHost and DataframeJobHostSummary
 class BaseTraditional(BaseDataframe):
+    """Dataframe base class with outer-join merge logic and hostname deduplication.
+
+    Used by :class:`DataframeJobHostSummary`, ``DataframeMainHost``, and
+    ``DataframeMainJobevent``.  Subclasses define :meth:`unique_index_columns`,
+    :meth:`data_columns`, :meth:`cast_types`, and :meth:`operations`.
+    """
+
     def cast_dataframe(self, df):
+        """Cast index and column types after an outer merge.
+
+        Args:
+            df: DataFrame with a single or composite index.
+
+        Returns:
+            Type-cast DataFrame.
+        """
         types = self.cast_types()
         levels = []
         if len(self.unique_index_columns()) == 1:
@@ -30,6 +47,17 @@ class BaseTraditional(BaseDataframe):
         return df.astype(types)
 
     def dedup(self, dataframe, hostname_mapping=None, **kwargs):
+        """Deduplicate hosts by mapping hostnames to canonical values.
+
+        Args:
+            dataframe: DataFrame to deduplicate.
+            hostname_mapping: Dict mapping original hostnames to canonical hostnames.
+                If None or empty, the original DataFrame is returned unchanged.
+            **kwargs: Ignored extra keyword arguments.
+
+        Returns:
+            Deduplicated DataFrame, or :meth:`empty` if *dataframe* is empty.
+        """
         if dataframe is None or dataframe.empty:
             return self.empty()
 
@@ -49,6 +77,18 @@ class BaseTraditional(BaseDataframe):
         return df_grouped.reset_index()
 
     def summarize_merged_dataframes(self, df, columns, operations={}):
+        """Reduce ``_x``/``_y`` suffix columns produced by an outer merge.
+
+        Args:
+            df: DataFrame after ``pd.merge(..., how='outer')``.
+            columns: List of base column names to reconcile.
+            operations: Dict mapping column names to merge strategies
+                (``'min'``, ``'max'``, ``'combine_set'``, ``'combine_json'``,
+                ``'combine_json_values'``; default is summation).
+
+        Returns:
+            The DataFrame with reconciled columns (in-place modifications).
+        """
         for col in columns:
             if operations.get(col) == 'min':
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
@@ -97,8 +137,16 @@ class BaseTraditional(BaseDataframe):
         pass
 
 
-# For JSON/dict columns: update one dict with the other (later values overwrite earlier ones)
 def combine_json(json1, json2):
+    """Merge two dicts, with values from *json2* overwriting those in *json1*.
+
+    Args:
+        json1: First dict (non-dict inputs are treated as empty).
+        json2: Second dict (non-dict inputs are treated as empty).
+
+    Returns:
+        Merged dict.
+    """
     merged = {}
     if isinstance(json1, dict):
         merged.update(json1)
@@ -129,9 +177,16 @@ def combine_set(set1, set2):
     return set1.union(set2)
 
 
-# Helper function to combine two JSON values.
-# For each key, it builds a set of non-null, non-empty values from both inputs.
 def combine_json_values(val1, val2):
+    """Combine two value-dicts by building a set of non-null/non-empty values per key.
+
+    Args:
+        val1: First dict (values may be scalars or sets).
+        val2: Second dict (values may be scalars or sets).
+
+    Returns:
+        Dict mapping each key to a set of distinct non-empty values.
+    """
     merged = {}
     for d in [val1, val2]:
         if isinstance(d, dict):
@@ -146,14 +201,38 @@ def combine_json_values(val1, val2):
 
 
 def merge_sets(x):
+    """Return the union of an iterable of sets.
+
+    Args:
+        x: Iterable of sets.
+
+    Returns:
+        A single merged set.
+    """
     return set().union(*x)
 
 
 def merge_setdicts(x):
+    """Reduce an iterable of value-dicts into one dict using :func:`combine_json_values`.
+
+    Args:
+        x: Iterable of dicts where each value may be a set or scalar.
+
+    Returns:
+        Merged dict mapping each key to a set of its distinct non-empty values.
+    """
     return reduce(combine_json_values, x, {})
 
 
 def parse_json_array(x):
+    """Parse a JSON string as a list, returning an empty list on failure.
+
+    Args:
+        x: JSON string, or null/NaN value.
+
+    Returns:
+        Parsed list, or an empty list if *x* is null/NaN or not a JSON array.
+    """
     if pd.isnull(x):
         return []
     try:
@@ -167,8 +246,15 @@ def parse_json_array(x):
         return []
 
 
-# Helper function to parse a JSON string or return the dict if it's already a dict.
 def parse_json(val):
+    """Parse a JSON string into a dict, or pass through a dict unchanged.
+
+    Args:
+        val: JSON-encoded string or existing dict.
+
+    Returns:
+        Parsed dict, or an empty dict if parsing fails or *val* is neither.
+    """
     if isinstance(val, str):
         try:
             return json.loads(val)
@@ -179,8 +265,15 @@ def parse_json(val):
     return {}
 
 
-# Function to merge a list of JSON values into a dict mapping each key to a set of non-null/non-empty values.
 def merge_json_sets(json_values):
+    """Merge a sequence of JSON dict values into a mapping of key → set of non-null values.
+
+    Args:
+        json_values: Iterable of JSON strings or dicts.
+
+    Returns:
+        Dict mapping each key to a set of its distinct non-empty values.
+    """
     merged = {}
     for val in json_values:
         d = parse_json(val)
@@ -196,8 +289,15 @@ def merge_json_sets(json_values):
     return merged
 
 
-# Function to merge array type columns getting a unique set back
 def merge_arrays(values):
+    """Flatten and deduplicate a sequence of lists into a single list of unique items.
+
+    Args:
+        values: Iterable of lists (None entries are ignored).
+
+    Returns:
+        List containing all unique non-None items from all input lists.
+    """
     # Filter out None values
     valid_events = [e for e in values if e is not None]
     # Flatten the list of lists and extract unique events

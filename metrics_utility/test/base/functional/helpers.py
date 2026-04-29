@@ -1,3 +1,5 @@
+"""Helper functions for functional tests: CSV generators and slicing functions."""
+
 import os
 
 from django.utils.timezone import timedelta
@@ -9,10 +11,34 @@ TIMESTAMP_CSV_LINE_LENGTH = 40
 
 
 def trivial_slicing(key, last_gather, since, until, **kwargs):
+    """Return a single slice covering the entire [since, until) window.
+
+    Args:
+        key: Unused collector key.
+        last_gather: Unused last-gather datetime.
+        since: Start of the collection window.
+        until: End of the collection window.
+        **kwargs: Ignored extra keyword arguments.
+
+    Returns:
+        List with one ``(since, until)`` tuple.
+    """
     return [(since, until)]
 
 
 def one_day_slicing(key, last_gather, since, until, **kwargs):
+    """Yield one-day time slices between *since* and *until*.
+
+    Args:
+        key: Unused collector key.
+        last_gather: Unused last-gather datetime.
+        since: Start of the collection window (truncated to midnight).
+        until: End of the collection window (truncated to midnight).
+        **kwargs: Ignored extra keyword arguments.
+
+    Yields:
+        ``(start, end)`` tuples spanning one calendar day each.
+    """
     since = since.replace(hour=0, minute=0, second=0, microsecond=0)
     until = until.replace(hour=0, minute=0, second=0, microsecond=0)
     start, end = since, None
@@ -23,6 +49,19 @@ def one_day_slicing(key, last_gather, since, until, **kwargs):
 
 
 def csv_generator(full_path, file_name, files_cnt, max_data_size, header, line):
+    """Generate one or more split CSV files using :class:`~metrics_utility.library.CsvFileSplitter`.
+
+    Args:
+        full_path: Directory to write files into.
+        file_name: Base file name (without extension).
+        files_cnt: Number of split files to produce.
+        max_data_size: Maximum file size in bytes before splitting.
+        header: CSV header line string (including newline).
+        line: CSV data line string to repeat (including newline).
+
+    Returns:
+        List of generated file paths.
+    """
     file_path = get_file_path(full_path, file_name)
     file = CsvFileSplitter(filespec=file_path, max_file_size=max_data_size)
 
@@ -54,14 +93,36 @@ def timestamp_csv(full_path, file_name, files_cnt, max_data_size, since, until):
 
 
 def get_file_path(path, table):
+    """Return the expected CSV file path for a given table name.
+
+    Args:
+        path: Directory path.
+        table: Table name used as the base filename.
+
+    Returns:
+        Full path string.
+    """
     return os.path.join(path, table + '_table.csv')
 
 
 def decode_csv_line(line):
+    """Decode a raw CSV bytes line into a list of stripped field strings.
+
+    Args:
+        line: Bytes object representing one CSV row.
+
+    Returns:
+        List of field strings.
+    """
     return line.decode('utf-8').replace('\r', '').replace('\n', '').split(',')
 
 
 def assert_common_files(files):
+    """Assert that *files* contains the three files present in every tarball.
+
+    Args:
+        files: Dict (or dict-like) of filename → content mappings from a tarball.
+    """
     assert './config.json' in files.keys()
     assert './manifest.json' in files.keys()
     assert './data_collection_status.csv' in files.keys()

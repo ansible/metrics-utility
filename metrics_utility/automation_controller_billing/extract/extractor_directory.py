@@ -1,3 +1,5 @@
+"""Extractor that reads billing tarballs from the local filesystem."""
+
 import os
 import tempfile
 
@@ -6,9 +8,21 @@ from metrics_utility.logger import logger
 
 
 class ExtractorDirectory(Base):
+    """Extracts billing data tarballs from a local directory partition."""
+
     LOG_PREFIX = '[ExtractorDirectory]'
 
     def iter_batches(self, date, collections, optional):
+        """Yield per-tarball data dicts for the given date.
+
+        Args:
+            date: :class:`datetime.date` identifying the day partition to read.
+            collections: List of required collector names (used to filter tarballs).
+            optional: List of additional collector names to include if present.
+
+        Yields:
+            Dict from :meth:`~.base.Base.process_tarballs` for each tarball found.
+        """
         # Read tarball in memory in batches
         logger.debug(f'{self.LOG_PREFIX} Processing {date}')
         paths = self.fetch_partition_paths(date, collections)
@@ -25,6 +39,15 @@ class ExtractorDirectory(Base):
                     logger.exception(f'{self.LOG_PREFIX} ERROR: Extracting {path} failed with {e}')
 
     def fetch_partition_paths(self, date, collections):
+        """Return filtered paths to all tarballs in the date partition directory.
+
+        Args:
+            date: :class:`datetime.date` used to construct the partition path.
+            collections: List of collector names to filter by (or None for all).
+
+        Returns:
+            List of absolute file paths matching the requested collections.
+        """
         prefix = self.get_path_prefix(date)
 
         try:

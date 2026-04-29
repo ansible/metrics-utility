@@ -1,7 +1,15 @@
+"""Test Package stub used by functional tests."""
+
 from metrics_utility.base import Package as InsightsAnalyticsPackage
 
 
 class Package(InsightsAnalyticsPackage):
+    """Minimal Package subclass for functional tests.
+
+    Uses a small MAX_DATA_SIZE so tests trigger file splitting with little data,
+    and returns empty/None values for all auth and shipping methods.
+    """
+
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.test.test_payload+tgz'
     MAX_DATA_SIZE = 1000
 

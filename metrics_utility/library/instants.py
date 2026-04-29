@@ -1,7 +1,14 @@
+"""Datetime helper functions for common time boundary calculations."""
+
 from datetime import datetime, timedelta, timezone
 
 
 def now():
+    """Return the current UTC datetime.
+
+    Returns:
+        timezone-aware :class:`datetime.datetime` in UTC.
+    """
     return datetime.now(tz=timezone.utc)
 
 

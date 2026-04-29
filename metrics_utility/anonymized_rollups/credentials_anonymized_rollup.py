@@ -1,3 +1,5 @@
+"""Anonymized rollup for credentials_service collector data."""
+
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 

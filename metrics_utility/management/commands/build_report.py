@@ -26,6 +26,15 @@ from metrics_utility.management.validation import (
 
 
 def get_report_path(ship_path, date):
+    """Return the directory path for storing the monthly report.
+
+    Args:
+        ship_path: Root data directory (``METRICS_UTILITY_SHIP_PATH``).
+        date: A date or datetime object identifying the report month.
+
+    Returns:
+        String path ``<ship_path>/reports/<YYYY>/<MM>``.
+    """
     year = date.strftime('%Y')
     month = date.strftime('%m')
 
@@ -33,6 +42,11 @@ def get_report_path(ship_path, date):
 
 
 def get_organization_filter():
+    """Return the METRICS_UTILITY_ORGANIZATION_FILTER value with a trailing semicolon stripped.
+
+    Returns:
+        The filter string, or None if the environment variable is not set or empty.
+    """
     # handle None or empty string
     if not os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER'):
         return None
@@ -119,6 +133,12 @@ class Command(BaseCommand):
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
     def handle(self, *args, **options):
+        """Execute the build_report management command.
+
+        Validates environment, resolves the reporting period, builds the
+        appropriate dataframes, runs deduplication, generates the XLSX report,
+        and saves it via the configured report saver.
+        """
         if options.get('verbose'):
             debug()
 
@@ -197,6 +217,17 @@ class Command(BaseCommand):
         logger.info(f'Report generated into {ship_target}: {report_saver_engine.report_spreadsheet_destination_path}')
 
     def _handle_ship_target(self, ship_target):
+        """Validate and configure the ship target, returning base extra params.
+
+        Args:
+            ship_target: Value of METRICS_UTILITY_SHIP_TARGET.
+
+        Returns:
+            Dict of base parameters for the extractor and report saver.
+
+        Raises:
+            :exc:`~metrics_utility.exceptions.BadShipTarget`: For unrecognised values.
+        """
         if ship_target in ['controller_db', 'directory']:
             # controller_db is just directory but with different extractor
             handle_not_crc()
@@ -210,6 +241,21 @@ class Command(BaseCommand):
             raise BadShipTarget(f'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var ({ship_target}), allowed values: {allowed}')
 
     def _handle_extra_params(self, ship_target=None):
+        """Build the full extra_params dict from environment variables.
+
+        Args:
+            ship_target: Value of METRICS_UTILITY_SHIP_TARGET.
+
+        Returns:
+            Dict of all parameters needed by the dataframe, dedup, report,
+            and report-saver factories.
+
+        Raises:
+            :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If
+                METRICS_UTILITY_REPORT_TYPE is missing.
+            :exc:`~metrics_utility.exceptions.BadRequiredEnvVar`: If
+                METRICS_UTILITY_REPORT_TYPE has an unsupported value.
+        """
         base = self._handle_ship_target(ship_target)
 
         report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')

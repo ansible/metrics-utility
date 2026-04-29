@@ -1,3 +1,5 @@
+"""Extractor that reads host_metric data directly from the Controller database."""
+
 import datetime
 
 import pandas as pd
@@ -6,12 +8,31 @@ from django.db import connection
 
 
 class ExtractorControllerDB:
+    """Extracts host_metric data from the AWX/Controller PostgreSQL database.
+
+    Uses marker-based keyset pagination to stream large result sets in batches
+    of :attr:`limit` rows.
+    """
+
     def __init__(self, extra_params):
+        """Initialise the DB extractor.
+
+        Args:
+            extra_params: Dict containing at least ``'opt_since'`` (datetime).
+        """
         super().__init__()
 
         self.extra_params = extra_params
 
     def iter_batches(self):
+        """Yield host_metric batches from the Controller database.
+
+        Uses keyset pagination on ``hostname + host_id`` to iterate large result
+        sets without repeated full scans.
+
+        Yields:
+            Dict ``{'host_metric': pandas.DataFrame}`` for each non-empty batch.
+        """
         with connection.cursor() as cursor:
             cursor.execute(self.pg_functions())
 
@@ -49,6 +70,12 @@ class ExtractorControllerDB:
         return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
     def pg_functions(self):
+        """Return SQL that creates or replaces the custom PostgreSQL helper functions.
+
+        Returns:
+            SQL string defining ``metrics_utility_parse_yaml_field`` and
+            ``metrics_utility_is_valid_json``.
+        """
         query = """
             -- Define function for parsing field out of yaml encoded as text
             CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field(
@@ -85,6 +112,16 @@ class ExtractorControllerDB:
         return query
 
     def host_metric_query(self, since, marker_cond=''):
+        """Build the host_metric SQL query with an optional keyset-pagination marker.
+
+        Args:
+            since: Inclusive lower bound timestamp (timezone-aware datetime).
+            marker_cond: Optional SQL fragment appended to the WHERE clause for
+                keyset pagination (default ``''`` returns all rows).
+
+        Returns:
+            SQL query string.
+        """
         query = f"""
             SELECT main_hostmetric.hostname,
                    COALESCE(main_host.id, 0) AS host_id,
@@ -119,4 +156,9 @@ class ExtractorControllerDB:
 
     @staticmethod
     def limit():
+        """Return the maximum number of rows fetched per page.
+
+        Returns:
+            int row-count limit.
+        """
         return 10000
