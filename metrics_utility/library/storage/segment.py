@@ -130,6 +130,11 @@ class StorageSegment:
         # Configure Segment client
         analytics.write_key = self.write_key
         analytics.debug = self.debug
+        # sync_mode makes each track() a blocking HTTP request instead of queuing to a
+        # background thread. Without it the SDK batches all chunks into one POST which
+        # can silently exceed Segment's 500 KB batch limit and drop events, returning
+        # HTTP 200 with no error callback fired.
+        analytics.sync_mode = True
 
         max_size = self.REGULAR_MESSAGE_LIMIT
         chunks = self._split_into_chunks(dict, max_size)
