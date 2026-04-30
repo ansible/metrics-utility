@@ -1,8 +1,24 @@
+"""Collector for unified_jobs (all job types) from the Controller database."""
+
 from ..util import DataframeOutput, collector, date_where
 
 
 @collector
 def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect unified job records from the Controller database.
+
+    Joins ``main_unifiedjob`` with content-type, organization, inventory,
+    execution-environment, and project tables to produce a rich job dataset.
+
+    Args:
+        db: Django database connection.
+        since: Inclusive start datetime for the ``finished`` filter.
+        until: Exclusive end datetime for the ``finished`` filter.
+        output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
+
+    Returns:
+        pandas DataFrame or list of CSV file paths depending on *output*.
+    """
     query = f"""
         SELECT
             main_unifiedjob.id,

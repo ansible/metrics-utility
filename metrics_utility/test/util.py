@@ -1,3 +1,5 @@
+"""Test utilities: command runners, environment helpers, and fixture generators."""
+
 import os
 import random
 import subprocess
@@ -42,6 +44,16 @@ def temporary_env(new_env):
 
 
 def _run_ext(env, name, args):
+    """Run a management command as a subprocess and fail the test on non-zero exit.
+
+    Args:
+        env: Dict of additional environment variables.
+        name: Management command name (e.g. ``'build_report'``).
+        args: List of additional CLI arguments.
+
+    Returns:
+        :class:`subprocess.CompletedProcess` result.
+    """
     result = subprocess.run(
         [sys.executable, 'manage.py', name, *args],
         text=True,
@@ -61,10 +73,28 @@ def _run_ext(env, name, args):
 
 
 def run_build_ext(env, args):
+    """Run the ``build_report`` command as an external subprocess.
+
+    Args:
+        env: Dict of additional environment variables.
+        args: List of additional CLI arguments.
+
+    Returns:
+        :class:`subprocess.CompletedProcess` result.
+    """
     return _run_ext(env, 'build_report', args)
 
 
 def run_gather_ext(env, args):
+    """Run the ``gather_automation_controller_billing_data`` command as an external subprocess.
+
+    Args:
+        env: Dict of additional environment variables.
+        args: List of additional CLI arguments.
+
+    Returns:
+        :class:`subprocess.CompletedProcess` result.
+    """
     return _run_ext(env, 'gather_automation_controller_billing_data', args)
 
 
@@ -72,6 +102,12 @@ def run_gather_ext(env, args):
 
 
 def run_build_int(env, options):
+    """Run the ``build_report`` command in-process (useful for debugger and coverage).
+
+    Args:
+        env: Dict of environment variables to temporarily set.
+        options: Dict of parsed CLI options forwarded to ``Command().handle``.
+    """
     from metrics_utility.management.commands.build_report import Command
 
     with temporary_env(env):
@@ -79,6 +115,12 @@ def run_build_int(env, options):
 
 
 def run_gather_int(env, options):
+    """Run the ``gather_automation_controller_billing_data`` command in-process.
+
+    Args:
+        env: Dict of environment variables to temporarily set.
+        options: Dict of parsed CLI options forwarded to ``Command().handle``.
+    """
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
     with temporary_env(env):

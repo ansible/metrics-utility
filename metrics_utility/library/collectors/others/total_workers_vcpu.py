@@ -1,3 +1,5 @@
+"""Collector that queries Prometheus for total worker vCPU usage in the previous hour."""
+
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
@@ -8,6 +10,24 @@ from ..util import DictOutput, collector
 
 @collector
 def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_url=None, ca_cert_path=None, token=None, output=DictOutput()):
+    """Collect total worker vCPU count for the previous hour from Prometheus.
+
+    When *metering_enabled* is False, returns a synthetic value of 1.
+    When enabled, queries Prometheus using a service-account bearer token and
+    CA certificate for TLS verification.
+
+    Args:
+        cluster_name: Human-readable cluster identifier included in the output.
+        metering_enabled: When True, contact Prometheus; when False use a stub value.
+        prometheus_url: Base URL of the Prometheus API.
+        ca_cert_path: Path to the CA certificate for SSL verification.
+        token: Service-account bearer token for Prometheus authentication.
+        output: Output adapter (defaults to :class:`~..util.DictOutput`).
+
+    Returns:
+        Dict with collection metadata and ``total_workers_vcpu``, or None if
+        Prometheus has no data for the previous hour.
+    """
     now = datetime.now(timezone.utc)
     current_ts = now.timestamp()
     prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
@@ -45,6 +65,14 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
 
 
 def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
+    """Return the start and end timestamps of the hour preceding *current_timestamp*.
+
+    Args:
+        current_timestamp: Unix timestamp representing "now".
+
+    Returns:
+        Tuple of ``(previous_hour_start, previous_hour_end)`` as floats.
+    """
     current_hour_start = (current_timestamp // 3600) * 3600
 
     previous_hour_start = current_hour_start - 3600
@@ -54,6 +82,15 @@ def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
 
 
 def get_total_workers_cpu(prom, base_timestamp: float) -> Tuple[float, str]:
+    """Query Prometheus for the maximum total CPU cores during the previous hour.
+
+    Args:
+        prom: :class:`PrometheusClient` instance.
+        base_timestamp: Start of the previous hour as a Unix timestamp.
+
+    Returns:
+        Tuple of ``(total_vcpu_value, promql_query_string)``.
+    """
     promql_query = f'max_over_time(sum(machine_cpu_cores)[59m59s999ms:5m] @ {base_timestamp})'
     total_workers_vcpu = prom.get_current_value(promql_query)
 
@@ -61,6 +98,14 @@ def get_total_workers_cpu(prom, base_timestamp: float) -> Tuple[float, str]:
 
 
 def timestamp_format(timestamp_val):
+    """Format a Unix timestamp as an ISO 8601 UTC string with millisecond precision.
+
+    Args:
+        timestamp_val: Unix timestamp (float or int).
+
+    Returns:
+        String like ``'2024-01-15T14:00:00.000Z'``.
+    """
     return datetime.fromtimestamp(timestamp_val, timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
@@ -98,6 +143,15 @@ class PrometheusClient:
     """
 
     def __init__(self, url: str, timeout: int = 30, token=None, ca_cert_path=None):
+        """Initialise the Prometheus client.
+
+        Args:
+            url: Base URL of the Prometheus API (trailing slashes are stripped).
+            timeout: HTTP request timeout in seconds (default 30).
+            token: Optional Bearer token for authentication.
+            ca_cert_path: Optional path to a CA certificate file for TLS
+                verification; if provided, overrides the default trust store.
+        """
         self.url = url.rstrip('/')  # no trailing slash
         self.timeout = timeout
 
@@ -112,6 +166,18 @@ class PrometheusClient:
             self.session.verify = ca_cert_path
 
     def _get(self, url, params):
+        """Perform a GET request and return the parsed JSON response.
+
+        Args:
+            url: Full URL to request.
+            params: Query parameters dict.
+
+        Returns:
+            Parsed JSON dict.
+
+        Raises:
+            Exception: On non-200 HTTP status or a Prometheus API error.
+        """
         response = self.session.get(url, params=params, timeout=self.timeout)
         if response.status_code != 200:
             raise Exception(f'HTTP error {response.status_code}: {response.text}')

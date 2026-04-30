@@ -1,3 +1,5 @@
+"""Base class and shared helpers for building CCSP/CCSPv2 XLSX report spreadsheets."""
+
 ######################################
 # Code for building the spreadsheet
 ######################################
@@ -13,6 +15,13 @@ from metrics_utility.metric_utils import INDIRECT
 
 
 class Base:
+    """Shared spreadsheet-building utilities for all billing report types.
+
+    Provides helpers for creating styled worksheet sections, handling
+    experimental deduplication columns, and converting complex data types
+    (sets, lists, dicts) into Excel-compatible cell values.
+    """
+
     BLACK_COLOR_HEX = '00000000'
     WHITE_COLOR_HEX = '00FFFFFF'
     BLUE_COLOR_HEX = '000000FF'
@@ -84,6 +93,15 @@ class Base:
         return labels
 
     def convert_cell(self, cell):
+        """Convert a complex cell value (set/list/dict) to a JSON string for Excel.
+
+        Args:
+            cell: The cell value to convert.
+
+        Returns:
+            A JSON-encoded string for sets, lists, and dicts; the original
+            value unchanged for scalars.
+        """
         # If the cell is a dictionary, convert each set value to a sorted list, then dump as a JSON string.
         if isinstance(cell, dict):
             new_cell = {k: sorted(list(v)) if isinstance(v, set) else v for k, v in cell.items()}
@@ -102,6 +120,17 @@ class Base:
         return cell
 
     def add_sheet(self, title, sheet_index, widths=None):
+        """Create a new worksheet in the workbook and optionally set column widths.
+
+        Args:
+            title: Worksheet tab title.
+            sheet_index: Position (0-based) in the workbook's sheet list.
+            widths: Optional dict mapping 1-based column indices to widths in
+                Excel units.
+
+        Returns:
+            The newly created :class:`openpyxl.worksheet.worksheet.Worksheet`.
+        """
         self.wb.create_sheet(title=title)
         ws = self.wb.worksheets[sheet_index]
         if widths:
@@ -109,6 +138,12 @@ class Base:
         return ws
 
     def set_widths(self, ws, widths):
+        """Set the width of one or more columns in a worksheet.
+
+        Args:
+            ws: An :class:`openpyxl.worksheet.worksheet.Worksheet` instance.
+            widths: Dict mapping 1-based column indices to widths in Excel units.
+        """
         for key, value in widths.items():
             ws.column_dimensions[get_column_letter(key)].width = value
 

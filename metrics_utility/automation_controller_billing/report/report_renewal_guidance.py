@@ -1,3 +1,5 @@
+"""Report builder for the Renewal Guidance XLSX report."""
+
 ######################################
 # Code for building the spreadsheet
 ######################################
@@ -14,6 +16,12 @@ from metrics_utility.automation_controller_billing.report.base import Base
 
 
 class ReportRenewalGuidance(Base):
+    """XLSX report builder for the Renewal Guidance billing report.
+
+    Generates workbooks summarising host lifecycle data to support licence
+    renewal decisions, with optional ephemeral-host filtering.
+    """
+
     def __init__(self, dataframes, extra_params):
         self.wb = Workbook()
 

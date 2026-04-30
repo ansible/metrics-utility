@@ -1,9 +1,22 @@
+"""Dataframe for host inventory data used by the library-layer CCSP/Renewal report path."""
+
 import pandas as pd
 
 from metrics_utility.library.dataframes.base_traditional import BaseTraditional, merge_json_sets, merge_setdicts, merge_sets, parse_json
 
 
 def compute_serial(row):
+    """Compute a compound serial key from a host row's canonical_facts.
+
+    Combines ``ansible_product_serial`` and ``ansible_machine_id`` with a
+    ``/`` separator.  Returns None if either field is null.
+
+    Args:
+        row: A pandas Series (row) with a ``canonical_facts`` field.
+
+    Returns:
+        Compound serial string (``"serial/machine_id"``) or None.
+    """
     facts = parse_json(row['canonical_facts'])
 
     if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
@@ -13,6 +26,8 @@ def compute_serial(row):
 
 
 class DataframeMainHost(BaseTraditional):
+    """Aggregated host-inventory dataframe for the library-layer CCSP/Renewal path."""
+
     TARBALL_NAMES = ['main_host.csv', 'main_host_daily.csv', 'config.json']
 
     def prepare(self, tup):

@@ -1,13 +1,37 @@
+"""CCSP deduplication logic for billing dataframes."""
+
 from collections import defaultdict
 
 
 class DedupCCSP:
+    """CCSP host deduplication engine.
+
+    In standard mode, returns the built dataframes unchanged (no deduplication).
+    In experimental mode, uses hardware serial numbers (``ansible_product_serial``
+    combined with ``ansible_machine_id``) to detect duplicate host records and
+    map them to a single canonical hostname.
+    """
+
     def __init__(self, dataframes, extra_params, experimental=False):
+        """Initialise the CCSP deduplicator.
+
+        Args:
+            dataframes: Dict mapping dataframe names to
+                :class:`~metrics_utility.automation_controller_billing.dataframe_engine.base.Base`
+                engine instances.
+            extra_params: Dict of configuration parameters.
+            experimental: When True, use serial-based deduplication.
+        """
         self.dataframes = dataframes
         self.extra_params = extra_params
         self.experimental = experimental
 
     def run(self):
+        """Build all dataframes and optionally apply serial-based deduplication.
+
+        Returns:
+            Dict mapping dataframe names to the (possibly deduplicated) DataFrames.
+        """
         new = {}
         for name, dataframe in self.dataframes.items():
             new[name] = dataframe.build_dataframe()
@@ -41,6 +65,19 @@ class DedupCCSP:
         return new
 
     def df_to_mapping(self, df):
+        """Build a hostname→canonical-hostname mapping from serial-number grouping.
+
+        For each unique hardware serial, the first-seen hostname is chosen as the
+        canonical representative.  All other hostnames sharing a serial are mapped
+        to that canonical hostname.
+
+        Args:
+            df: The main_host DataFrame containing ``host_name`` and ``serials``
+                columns.
+
+        Returns:
+            Dict mapping non-canonical hostnames to their canonical hostname.
+        """
         serial_to_hosts = defaultdict(set)
         serial_to_first = {}
 

@@ -1,3 +1,5 @@
+"""Package implementation that ships billing tarballs to an S3-compatible object store."""
+
 import os
 
 from django.conf import settings
@@ -9,6 +11,8 @@ from metrics_utility.logger import logger
 
 
 class PackageS3(base.Package):
+    """Package that uploads the generated tarball into a date-partitioned S3 prefix."""
+
     def _batch_since_and_until(self):
         # TODO: how to verify this is the daily batch of job_host_summary?
         # self.collection_keys is: ['job_host_summary', 'manifest']

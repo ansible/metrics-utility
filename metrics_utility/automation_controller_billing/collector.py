@@ -1,3 +1,5 @@
+"""Billing-specific Collector implementation for Automation Controller metrics."""
+
 import json
 import os
 
@@ -15,7 +17,28 @@ from metrics_utility.logger import logger
 
 
 class Collector(base.Collector):
+    """Billing-specific collector that ships Automation Controller metrics data.
+
+    Extends the base :class:`~metrics_utility.base.collector.Collector` with
+    billing-provider configuration, an advisory-lock name that avoids conflicts
+    with the upstream Analytics collector, and optional last-gathered-entry
+    persistence suppression.
+    """
+
     def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
+        """Initialise the billing collector.
+
+        Args:
+            collection_type: One of ``Collector.MANUAL_COLLECTION``,
+                ``Collector.DRY_RUN``, or ``Collector.SCHEDULED_COLLECTION``
+                (default).
+            collector_module: Python module containing ``@register``-decorated
+                collector functions.  Defaults to the bundled collectors module.
+            ship_target: Shipping destination (``'crc'``, ``'directory'``, or
+                ``'s3'``).
+            billing_provider_params: Extra parameters forwarded to the package
+                (e.g. S3 credentials, billing account ID).
+        """
         if collector_module is None:
             from metrics_utility.automation_controller_billing import collectors
 
@@ -81,11 +104,28 @@ class Collector(base.Collector):
 
     @classmethod
     def registered_collectors(cls, module=None):
+        """Return a dict of all collectors registered in the billing collectors module.
+
+        Args:
+            module: Ignored; always uses the built-in billing collectors module.
+
+        Returns:
+            Dict mapping collector key names to ``{'name', 'version'}`` dicts.
+        """
         from metrics_utility.automation_controller_billing import collectors
 
         return base.Collector.registered_collectors(collectors)
 
     def _load_last_gathered_entries(self):
+        """Load the last-gathered timestamps from the Controller database.
+
+        Reads ``AUTOMATION_ANALYTICS_LAST_ENTRIES`` from the ``conf_setting``
+        table, sharing the same persistence mechanism as the upstream Analytics
+        collector.
+
+        Returns:
+            Dict mapping collector keys to their last-gathered datetimes.
+        """
         # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
         # We can safely do this, by making sure we use the same lock as Analytics, before we persist
         # these settings.
@@ -109,7 +149,18 @@ class Collector(base.Collector):
             self._update_last_gathered_entries()
 
     def _save_last_gathered_entries(self, last_gathered_entries):
+        """Persist last-gathered timestamps to the Django settings object.
+
+        Args:
+            last_gathered_entries: Dict mapping collector keys to their latest
+                successfully-gathered datetimes.
+        """
         settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
 
     def _package_class(self):
+        """Return the Package class appropriate for the configured ship target.
+
+        Returns:
+            A :class:`~metrics_utility.base.package.Package` subclass.
+        """
         return PackageFactory(ship_target=self.ship_target).create()

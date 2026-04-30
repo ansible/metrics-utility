@@ -1,3 +1,5 @@
+"""Dataframe engine for parsing data_collection_status CSV files from billing tarballs."""
+
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
@@ -5,7 +7,15 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 
 # dataframe for data_collection_status
 class DataframeCollectionStatus(Base):
+    """Reads and concatenates data_collection_status CSV batches into a single DataFrame."""
+
     def build_dataframe(self):
+        """Build the full data_collection_status DataFrame across all date batches.
+
+        Returns:
+            Concatenated DataFrame with timestamp columns coerced to naive
+            datetimes, or None if no data was found.
+        """
         # all-rows dataframe, no aggregation
         dataframe = None
 

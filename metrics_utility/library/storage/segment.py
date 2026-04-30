@@ -1,3 +1,5 @@
+"""Storage backend that ships anonymized analytics to Segment."""
+
 import datetime
 import hashlib
 import json
@@ -17,11 +19,24 @@ except ImportError:
 
 
 class StorageSegment:
+    """Segment analytics storage backend.
+
+    Sends anonymized artifact data as ``track`` events, automatically
+    splitting large payloads into multiple messages that stay under Segment's
+    per-message size limit.
+    """
+
     # Max JSON size of each `data` chunk. Segment enforces ~32KB per `track` message
     # including `properties` wrapper, event name, and segment_meta; keep this conservative.
     REGULAR_MESSAGE_LIMIT = 24 * 1024
 
     def __init__(self, **settings):
+        """Initialise the Segment storage backend.
+
+        Args:
+            **settings: Accepts ``'debug'`` (bool), ``'user_id'`` (str), and
+                ``'write_key'`` (str, required for actual uploads).
+        """
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')

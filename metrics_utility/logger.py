@@ -1,3 +1,5 @@
+"""Configure and expose the metrics-utility logger and debug helper."""
+
 import logging
 import sys
 import warnings
@@ -12,4 +14,5 @@ logger = logging.getLogger(__name__)
 
 
 def debug():
+    """Set the logger level to DEBUG, enabling verbose output."""
     logger.setLevel(logging.DEBUG)

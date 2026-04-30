@@ -1,3 +1,5 @@
+"""Collector that gathers Controller configuration and license information."""
+
 import json
 import os
 import platform
@@ -27,6 +29,17 @@ SETTINGS = [
 
 @collector
 def config(*, db=None, billing_provider_params={}, output=DictOutput()):
+    """Collect Controller configuration, license, and version information.
+
+    Args:
+        db: Django database connection used to read ``conf_setting``.
+        billing_provider_params: Dict of billing-provider metadata included
+            in the ``billing_provider_params`` key of the returned dict.
+        output: Output adapter (defaults to :class:`~..util.DictOutput`).
+
+    Returns:
+        Dict containing settings, license info, version, and platform details.
+    """
     settings = _get_controller_settings(db, keys=SETTINGS)
     license_info = settings.get('LICENSE', {})
 
@@ -81,6 +94,14 @@ def config(*, db=None, billing_provider_params={}, output=DictOutput()):
 
 
 def _version(package):
+    """Return the installed version string for *package*, or None if not found.
+
+    Args:
+        package: PyPI package name.
+
+    Returns:
+        Version string or None.
+    """
     try:
         return version(package)
     except PackageNotFoundError:
@@ -88,6 +109,11 @@ def _version(package):
 
 
 def _get_install_type():
+    """Detect the deployment type from environment variables.
+
+    Returns:
+        ``'openshift'``, ``'k8s'``, or ``'traditional'``.
+    """
     if os.getenv('container') == 'oci':
         return 'openshift'
 
@@ -130,6 +156,15 @@ def _get_controller_version(db):
 
 
 def _datetime_hook(d):
+    """JSON object hook that converts ISO 8601 strings to datetime objects.
+
+    Args:
+        d: Dict produced by the JSON decoder.
+
+    Returns:
+        Dict with string values that parse as datetimes replaced by
+        :class:`datetime.datetime` instances.
+    """
     new_d = {}
     for key, value in d.items():
         try:

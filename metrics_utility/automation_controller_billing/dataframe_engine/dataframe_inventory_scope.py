@@ -1,3 +1,5 @@
+"""Dataframe engine for host inventory scope from main_host CSV batches."""
+
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base, merge_setdicts, merge_sets
@@ -5,6 +7,16 @@ from metrics_utility.automation_controller_billing.helpers import merge_json_set
 
 
 def compute_serial(row):
+    """Compute a compound serial key from a host row's canonical_facts.
+
+    Args:
+        row: pandas Series with a ``canonical_facts`` field containing at least
+            ``ansible_product_serial`` and ``ansible_machine_id``.
+
+    Returns:
+        Compound serial string (``"serial/machine_id"``) or None if either
+        field is null.
+    """
     facts = parse_json(row['canonical_facts'])
     if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
@@ -13,6 +25,8 @@ def compute_serial(row):
 
 # dataframe for main_host
 class DataframeInventoryScope(Base):
+    """Aggregates host inventory data from main_host/main_host_daily CSV batches."""
+
     def build_dataframe(self):
         # A daily rollup dataframe
 

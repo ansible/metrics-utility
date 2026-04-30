@@ -1,3 +1,5 @@
+"""Factory for selecting and constructing the appropriate deduplicator."""
+
 from metrics_utility.automation_controller_billing.dedup.ccsp import DedupCCSP
 from metrics_utility.automation_controller_billing.dedup.renewal_guidance import (
     DedupRenewal,
@@ -8,11 +10,32 @@ from metrics_utility.exceptions import NotSupportedFactory
 
 
 class Factory:  # DedupFactory
+    """Factory that creates the correct deduplicator for the given report type and configuration."""
+
     def __init__(self, dataframes, extra_params):
+        """Initialise the dedup factory.
+
+        Args:
+            dataframes: Dict mapping dataframe names to engine instances.
+            extra_params: Dict containing at least ``'deduplicator'`` and
+                ``'report_type'`` keys.
+        """
         self.dataframes = dataframes
         self.extra_params = extra_params
 
     def create(self):
+        """Instantiate and return the appropriate deduplicator.
+
+        Reads ``'deduplicator'`` and ``'report_type'`` from ``extra_params`` to
+        determine which class to return.
+
+        Returns:
+            A deduplicator instance with a ``run()`` method.
+
+        Raises:
+            :exc:`~metrics_utility.exceptions.NotSupportedFactory`: If the
+                combination of deduplicator and report_type is not supported.
+        """
         deduplicator = self.extra_params['deduplicator']
         report_type = self.extra_params['report_type']
 
@@ -52,5 +75,16 @@ class Factory:  # DedupFactory
         raise NotSupportedFactory(f'Factory for {deduplicator} not supported')
 
     def _validate_report_type(self, report_type, allowed_types, error_message):
+        """Raise if *report_type* is not in *allowed_types*.
+
+        Args:
+            report_type: The report type string to check.
+            allowed_types: Set of permitted report type strings.
+            error_message: Format string used in the exception (``{report_type}`` is substituted).
+
+        Raises:
+            :exc:`~metrics_utility.exceptions.NotSupportedFactory`: When
+                *report_type* is not in *allowed_types*.
+        """
         if report_type not in allowed_types:
             raise NotSupportedFactory(error_message.format(report_type=report_type))
