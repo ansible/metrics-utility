@@ -1,3 +1,5 @@
+"""Django-based config collector that reads settings via AWX Python APIs."""
+
 import platform
 
 import distro
@@ -8,6 +10,18 @@ from .config import _get_install_type, _version
 
 @collector
 def config_django(*, billing_provider_params={}, output=DictOutput()):
+    """Collect Controller configuration using AWX Django APIs (in-process variant).
+
+    Equivalent to :func:`config` but reads settings and license info directly
+    from the AWX Django application rather than querying the database.
+
+    Args:
+        billing_provider_params: Dict of billing-provider metadata.
+        output: Output adapter (defaults to :class:`~..util.DictOutput`).
+
+    Returns:
+        Dict with configuration, license, version, and platform details.
+    """
     from awx.conf.license import get_license
     from awx.main.utils import get_awx_version
     from django.conf import settings

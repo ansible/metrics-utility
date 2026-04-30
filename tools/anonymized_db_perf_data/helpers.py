@@ -436,7 +436,16 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
 
 
 def create_job(
-    name='Perf Test Job', inventory_id=None, project_id=None, org_id=None, job_index=0, job_template_id=None, start_date=None, end_date=None
+    name='Perf Test Job',
+    inventory_id=None,
+    project_id=None,
+    org_id=None,
+    job_index=0,
+    job_template_id=None,
+    start_date=None,
+    end_date=None,
+    execution_environment_id=None,
+    installed_collections=None,
 ):
     """Create a job (via unified_job) and return its auto-generated ID and timestamps."""
     # Get deterministic timestamps for this job
@@ -447,8 +456,9 @@ def create_job(
     started_str = started.strftime('%Y-%m-%d %H:%M:%S+00')
     finished_str = finished.strftime('%Y-%m-%d %H:%M:%S+00')
 
-    # unified_job_template_id can be NULL or reference a job template
     ujt_value = job_template_id if job_template_id else 'NULL'
+    ee_value = execution_environment_id if execution_environment_id else 'NULL'
+    collections_sql = f"'{json.dumps(installed_collections)}'::jsonb" if installed_collections else "'[]'::jsonb"
 
     # First create the unified job entry and get its ID
     sql_uj = f"""
@@ -458,7 +468,8 @@ def create_job(
         job_args, job_cwd, job_explanation, start_args, result_traceback,
         celery_task_id, execution_node, emitted_events, controller_node,
         dependencies_processed, organization_id, installed_collections,
-        ansible_version, task_impact, job_env, unified_job_template_id
+        ansible_version, task_impact, job_env, unified_job_template_id,
+        execution_environment_id
     )
     VALUES (
         '{created_str}', '{created_str}', '{name}', 'Performance testing job',
@@ -466,8 +477,9 @@ def create_job(
         'manual', FALSE, 'successful', FALSE, '{started_str}', '{finished_str}', {elapsed},
         '', '', '', '', '',
         '', 'localhost', 0, '',
-        TRUE, {org_id}, '[]'::jsonb,
-        '2.15.0', 1, '{{}}'::jsonb, {ujt_value}
+        TRUE, {org_id}, {collections_sql},
+        '2.15.0', 1, '{{}}'::jsonb, {ujt_value},
+        {ee_value}
     )
     RETURNING id;
     """
@@ -721,6 +733,102 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     """
     run(sql)
     print(f'Created {len(values)} job events ({task_count} tasks x {host_count} hosts)')
+
+
+_COLLECTION_NAMESPACES = ['ansible', 'community', 'redhat', 'amazon', 'google', 'azure', 'cisco', 'f5', 'netapp', 'vmware']
+_COLLECTION_NAMES = ['posix', 'general', 'windows', 'network', 'cloud', 'storage', 'security', 'utils', 'netcommon', 'platform']
+
+
+def _random_installed_collections(seed, count=50):
+    """Generate a random installed_collections dict for an EE."""
+    rng = random.Random(seed)
+    collections = {}
+    while len(collections) < count:
+        key = f'{rng.choice(_COLLECTION_NAMESPACES)}.{rng.choice(_COLLECTION_NAMES)}'
+        if key not in collections:
+            collections[key] = {'version': f'{rng.randint(1, 5)}.{rng.randint(0, 9)}.{rng.randint(0, 9)}'}
+    return collections
+
+
+def create_execution_environment(name, image):
+    """Create an execution environment row and return its ID."""
+    sql = f"""
+    INSERT INTO main_executionenvironment (
+        created, modified, name, description, image, managed, pull
+    )
+    VALUES (
+        NOW(), NOW(), '{name}', '', '{image}', FALSE, 'missing'
+    )
+    RETURNING id;
+    """
+    output = run(sql)
+    ee_id = parse_id(output)
+    if ee_id is None:
+        raise RuntimeError(f'Failed to create execution environment: {name}')
+    return ee_id
+
+
+def create_execution_environments(count=100, unique_suffix=None):
+    """Create execution environments and return list of (ee_id, installed_collections) tuples."""
+    results = []
+    for i in range(count):
+        name = f'Perf Test EE {i + 1} {unique_suffix}'
+        image = f'registry.example.com/perf-test-ee-{i + 1}-{unique_suffix}:latest'
+        ee_id = create_execution_environment(name, image)
+        results.append((ee_id, _random_installed_collections(seed=i)))
+    return results
+
+
+def create_credentials():
+    """Create one credential per built-in type and return their IDs."""
+    result = run("SELECT id FROM main_credentialtype WHERE managed = TRUE AND name IN ('Machine', 'Vault', 'Amazon Web Services', 'Network');")
+    if not result:
+        raise RuntimeError('Failed to fetch built-in credential types')
+    credential_ids = []
+    for (ct_id,) in result:
+        sql = f"""
+        INSERT INTO main_credential (created, modified, name, description, credential_type_id, inputs, managed)
+        VALUES (NOW(), NOW(), 'Perf Test Credential', '', {ct_id}, '{{}}'::jsonb, FALSE)
+        RETURNING id;
+        """
+        cred_id = parse_id(run(sql))
+        if cred_id is None:
+            raise RuntimeError(f'Failed to create credential for type {ct_id}')
+        credential_ids.append(cred_id)
+    return credential_ids
+
+
+def create_job_credentials(job_id, credential_ids):
+    """Link credentials to a job."""
+    if not credential_ids:
+        return
+    values = ', '.join(f'({job_id}, {cred_id})' for cred_id in credential_ids)
+    run(f'INSERT INTO main_unifiedjob_credentials (unifiedjob_id, credential_id) VALUES {values};')
+
+
+def create_instance(version='4.5.0', node_type='control'):
+    """Create a controller instance row for controller_version_service."""
+    instance_uuid = str(uuid.uuid4())
+    sql = f"""
+    INSERT INTO main_instance (
+        created, modified, uuid, hostname, version, node_type,
+        enabled, managed_by_policy, managed, ip_address,
+        cpu, memory, cpu_capacity, mem_capacity,
+        capacity, capacity_adjustment, errors, node_state
+    )
+    VALUES (
+        NOW(), NOW(), '{instance_uuid}', 'perf-test-controller-{instance_uuid}', '{version}', '{node_type}',
+        TRUE, TRUE, FALSE, '',
+        0, 0, 0, 0,
+        0, 1.0, '', 'ready'
+    )
+    RETURNING id;
+    """
+    output = run(sql)
+    instance_id = parse_id(output)
+    if instance_id is None:
+        raise RuntimeError('Failed to create main_instance row')
+    return instance_id
 
 
 if __name__ == '__main__':

@@ -323,11 +323,11 @@ def _validate_jobs_by_installed_collections_versions(json_data):
     print('--- Validating jobs_by_installed_collections_versions data values ---')
     jobs_by_installed_collections_versions = json_data['jobs_by_installed_collections_versions']
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
-    unknown_collections = [c for c in jobs_by_installed_collections_versions if c.get('name') == 'Custom']
-    known_collections = [c for c in jobs_by_installed_collections_versions if c.get('name') != 'Custom']
-    assert len(unknown_collections) > 0, 'Should have at least one collection with "Custom" name (ansible.builtin)'
+    unknown_collections = [c for c in jobs_by_installed_collections_versions if c.get('collection') == 'Custom']
+    known_collections = [c for c in jobs_by_installed_collections_versions if c.get('collection') != 'Custom']
+    assert len(unknown_collections) > 0, 'Should have at least one collection with "Custom" collection (ansible.builtin)'
     for collection in unknown_collections:
-        assert collection['name'] == 'Custom', f'Custom collection should have name "Custom", got {collection.get("name")}'
+        assert collection['collection'] == 'Custom', f'Custom collection should have collection "Custom", got {collection.get("collection")}'
         assert collection['version'] == 'Custom', f'Custom collection should have version "Custom", got {collection.get("version")}'
     new_fields = [
         'jobs_never_started_total',
@@ -344,7 +344,7 @@ def _validate_jobs_by_installed_collections_versions(json_data):
         'ansible_versions',
     ]
     for collection in known_collections:
-        assert collection['name'] != 'Custom', f'Known collection should not have name "Custom", got {collection.get("name")}'
+        assert collection['collection'] != 'Custom', f'Known collection should not have collection "Custom", got {collection.get("collection")}'
         assert collection['version'] != 'Custom', f'Known collection should not have version "Custom", got {collection.get("version")}'
         assert 'version' in collection, 'Each collection should have version field'
         assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
@@ -358,7 +358,7 @@ def _validate_jobs_by_installed_collections_versions(json_data):
         )
         for field in new_fields:
             assert field in collection, (
-                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["name"]} {collection["version"]}'
+                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["collection"]} {collection["version"]}'
             )
         assert isinstance(collection['jobs_never_started_total'], int), 'jobs_never_started_total should be an int'
         assert isinstance(collection['templates_total'], int), 'templates_total should be an int'

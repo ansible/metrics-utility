@@ -1,3 +1,9 @@
+"""Public API for the anonymized_rollups package.
+
+Exports rollup classes for each data collector and the top-level functions
+used to combine, flatten, and anonymize daily rollup data before shipping.
+"""
+
 from .anonymized_rollups import (
     anonymize_data,
     anonymize_rollups,

@@ -1,8 +1,21 @@
+"""Collector for indirect managed node audit records from the Controller database."""
+
 from ..util import DataframeOutput, collector, date_where
 
 
 @collector
 def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=DataframeOutput()):
+    """Collect indirect managed node audit records within the given time window.
+
+    Args:
+        db: Django database connection.
+        since: Inclusive start datetime for the ``created`` filter.
+        until: Exclusive end datetime for the ``created`` filter.
+        output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
+
+    Returns:
+        pandas DataFrame with indirect node audit fields, or list of CSV paths.
+    """
     query = f"""
         SELECT
             main_indirectmanagednodeaudit.id,

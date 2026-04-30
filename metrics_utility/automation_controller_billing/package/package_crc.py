@@ -1,3 +1,5 @@
+"""Package implementation that ships billing data to the Red Hat CRC ingress API."""
+
 import json
 import os
 
@@ -13,6 +15,12 @@ from metrics_utility.logger import logger
 
 
 class PackageCRC(base.Package):
+    """Package that ships tarballs to Red Hat's CRC (console.redhat.com) ingress API.
+
+    Uses service-account OAuth2 credentials to obtain a bearer token from the
+    SSO endpoint before uploading.
+    """
+
     CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 

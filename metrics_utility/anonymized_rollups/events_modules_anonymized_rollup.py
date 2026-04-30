@@ -1,3 +1,9 @@
+"""Anonymized rollup for main_jobevent_service collector data.
+
+Aggregates module, collection, and role usage statistics from job event data,
+anonymising custom module/collection/role names before inclusion in reports.
+"""
+
 import json
 import os
 import re
@@ -16,13 +22,35 @@ _COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za
 
 
 def extract_collection_name(x: str | None) -> str | None:
-    if not x:
+    """Extract the ``namespace.collection`` prefix from a fully-qualified module name.
+
+    Args:
+        x: A module name such as ``ansible.builtin.copy`` or None/NaN.
+
+    Returns:
+        The two-part collection name (e.g. ``ansible.builtin``), or None if the
+        input does not match the expected pattern.
+    """
+    if x is None or pd.isna(x):
         return None
-    m = _COLLECTION_RE.match(x)
+    s = str(x).strip() if not isinstance(x, str) else x.strip()
+    if not s or s.lower() == 'nan':
+        return None
+    m = _COLLECTION_RE.match(s)
     return f'{m.group(1)}.{m.group(2)}' if m else None
 
 
 def merge_by_name(obj1, obj2, name_key):
+    """Merge two lists of dicts by a common key, later values overwriting earlier ones.
+
+    Args:
+        obj1: First list of dicts.
+        obj2: Second list of dicts.
+        name_key: The dict key used to identify matching records.
+
+    Returns:
+        A list of merged dicts with one entry per unique key value.
+    """
     merged = {}
 
     for entry in obj1 + obj2:

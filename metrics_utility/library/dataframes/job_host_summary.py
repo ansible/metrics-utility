@@ -1,3 +1,5 @@
+"""Dataframe for job_host_summary and indirect managed node audit data (CCSP report)."""
+
 import pandas as pd
 
 from metrics_utility.library.dataframes.base_traditional import (
@@ -16,6 +18,12 @@ MANAGED_NODE_TYPES = {DIRECT: 'DIRECT', INDIRECT: 'INDIRECT'}
 
 
 class DataframeJobHostSummary(BaseTraditional):
+    """Aggregated job-host-summary dataframe used by the library-layer CCSP report path.
+
+    Processes both direct managed node (``job_host_summary``) and indirect
+    managed node (``main_indirectmanagednodeaudit``) data from billing tarballs.
+    """
+
     TARBALL_NAMES = ['job_host_summary.csv', 'main_indirectmanagednodeaudit.csv', 'config.json']
 
     def prepare(self, tup):

@@ -332,7 +332,7 @@ def _validate_jobs_by_installed_collections_versions(result):
     """
     jobs_by_installed_collections_versions = result['jobs_by_installed_collections_versions']
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
-    cv = {(c['name'], c['version']): c for c in jobs_by_installed_collections_versions}
+    cv = {(c['collection'], c['version']): c for c in jobs_by_installed_collections_versions}
 
     # --- jobs_total counts (unchanged from before) ---
     assert cv.get(('Custom', 'Custom'))['jobs_total'] == 5, f'Expected Custom Custom (ansible.builtin) in 5 jobs, got {cv.get(("Custom", "Custom"))}'
@@ -463,7 +463,7 @@ def _validate_jobs_by_installed_collections_versions(result):
         'ansible_versions',
     ]
     for collection in jobs_by_installed_collections_versions:
-        assert 'name' in collection, 'Each collection should have name field'
+        assert 'collection' in collection, 'Each collection should have collection field'
         assert 'version' in collection, 'Each collection should have version field'
         assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
         assert 'jobs_failed_total' in collection, 'Each collection should have jobs_failed_total field'
@@ -477,7 +477,7 @@ def _validate_jobs_by_installed_collections_versions(result):
         )
         for field in new_fields:
             assert field in collection, (
-                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["name"]} {collection["version"]}'
+                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["collection"]} {collection["version"]}'
             )
         assert isinstance(collection['jobs_never_started_total'], int)
         assert isinstance(collection['templates_total'], int)

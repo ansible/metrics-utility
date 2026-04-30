@@ -1,3 +1,5 @@
+"""Dataframe engine for host_metric data fetched directly from the Controller database."""
+
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import Base
@@ -5,7 +7,15 @@ from metrics_utility.automation_controller_billing.dataframe_engine.base import 
 
 # dataframe for host_metric
 class DBDataframeHostMetric(Base):
+    """Reads host_metric batches from :class:`~.extract.extractor_controller_db.ExtractorControllerDB`."""
+
     def build_dataframe(self):
+        """Build the host_metric DataFrame by iterating over DB extractor batches.
+
+        Returns:
+            Concatenated DataFrame with timestamp columns coerced to timezone-naive
+            datetimes, or None if no batches were returned.
+        """
         host_metric_concat = None
 
         ###############################
