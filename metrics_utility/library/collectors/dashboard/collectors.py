@@ -15,7 +15,14 @@ from datetime import datetime
 from typing import List, TypedDict
 
 from ..util import collector
-from .queries import get_job_host_summaries_query, get_job_labels_query, get_jobs_query
+from .queries import (
+    get_job_host_summaries_for_ids_query,
+    get_job_host_summaries_query,
+    get_job_labels_for_ids_query,
+    get_job_labels_query,
+    get_jobs_batch_query,
+    get_jobs_query,
+)
 
 
 class AWXJobHostSummaryType(TypedDict):
@@ -136,7 +143,9 @@ def _dashboard_job_host_summaries(since: datetime, until: datetime, db, **kwargs
 
 
 @collector
-def dashboard_jobs(*, db=None, since: datetime = None, until: datetime = None) -> DashboardJobsResultType:
+def dashboard_jobs(
+    *, db=None, since: datetime = None, until: datetime = None, after_id: int = None, batch_size: int = None
+) -> DashboardJobsResultType:
     """
     Collect job data for the dashboard.
 
@@ -183,17 +192,56 @@ def dashboard_jobs(*, db=None, since: datetime = None, until: datetime = None) -
          }
     """
 
-    all_labels = _dashboard_job_labels(since, until, db)
-    all_host_summaries = _dashboard_job_host_summaries(since, until, db)
-    query, params = get_jobs_query(since, until)
+    batched = after_id is not None and batch_size is not None
+
+    if batched:
+        query, params = get_jobs_batch_query(since, until, after_id, batch_size)
+    else:
+        query, params = get_jobs_query(since, until)
+
     with db.cursor() as cursor:
         cursor.execute(query, params)
         columns = [col[0] for col in cursor.description]
-        results = []
-        for row in cursor:
-            data = dict(zip(columns, row))
-            host_summaries = all_host_summaries.get(data['id'], [])
-            result = {
+        rows = [dict(zip(columns, row)) for row in cursor]
+
+    if not rows:
+        return {'count': 0, 'results': []}
+
+    if batched:
+        job_ids = [row['id'] for row in rows]
+        labels_query, labels_params = get_job_labels_for_ids_query(job_ids)
+        summaries_query, summaries_params = get_job_host_summaries_for_ids_query(job_ids)
+    else:
+        labels_query, labels_params = get_job_labels_query(since, until)
+        summaries_query, summaries_params = get_job_host_summaries_query(since, until)
+
+    all_labels: dict[int, list[int]] = {}
+    with db.cursor() as cursor:
+        cursor.execute(labels_query, labels_params)
+        for lrow in cursor:
+            cols = [col[0] for col in cursor.description]
+            data = dict(zip(cols, lrow))
+            all_labels.setdefault(data['unifiedjob_id'], []).append(data['label_id'])
+
+    all_host_summaries: dict[int, list] = {}
+    with db.cursor() as cursor:
+        cursor.execute(summaries_query, summaries_params)
+        for srow in cursor:
+            cols = [col[0] for col in cursor.description]
+            data = dict(zip(cols, srow))
+            all_host_summaries.setdefault(data['job_id'], []).append(
+                {
+                    'id': data['id'],
+                    'host_id': data['host_id'],
+                    'host_name': data['host_name'],
+                }
+            )
+
+    results = []
+    for data in rows:
+        host_summaries = all_host_summaries.get(data['id'], [])
+        results.append(
+            {
                 'id': data['id'],
                 'name': data['name'],
                 'unified_job_template_id': data['unified_job_template_id'],
@@ -212,5 +260,5 @@ def dashboard_jobs(*, db=None, since: datetime = None, until: datetime = None) -
                 'host_summaries': host_summaries,
                 'num_hosts': len(host_summaries),
             }
-            results.append(result)
+        )
     return {'count': len(results), 'results': results}
