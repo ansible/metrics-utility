@@ -211,31 +211,31 @@ def dashboard_jobs(
         job_ids = [row['id'] for row in rows]
         labels_query, labels_params = get_job_labels_for_ids_query(job_ids)
         summaries_query, summaries_params = get_job_host_summaries_for_ids_query(job_ids)
+
+        all_labels: dict[int, list[int]] = {}
+        with db.cursor() as cursor:
+            cursor.execute(labels_query, labels_params)
+            cols = [col[0] for col in cursor.description]
+            for lrow in cursor:
+                data = dict(zip(cols, lrow))
+                all_labels.setdefault(data['unifiedjob_id'], []).append(data['label_id'])
+
+        all_host_summaries: dict[int, list] = {}
+        with db.cursor() as cursor:
+            cursor.execute(summaries_query, summaries_params)
+            cols = [col[0] for col in cursor.description]
+            for srow in cursor:
+                data = dict(zip(cols, srow))
+                all_host_summaries.setdefault(data['job_id'], []).append(
+                    {
+                        'id': data['id'],
+                        'host_id': data['host_id'],
+                        'host_name': data['host_name'],
+                    }
+                )
     else:
-        labels_query, labels_params = get_job_labels_query(since, until)
-        summaries_query, summaries_params = get_job_host_summaries_query(since, until)
-
-    all_labels: dict[int, list[int]] = {}
-    with db.cursor() as cursor:
-        cursor.execute(labels_query, labels_params)
-        for lrow in cursor:
-            cols = [col[0] for col in cursor.description]
-            data = dict(zip(cols, lrow))
-            all_labels.setdefault(data['unifiedjob_id'], []).append(data['label_id'])
-
-    all_host_summaries: dict[int, list] = {}
-    with db.cursor() as cursor:
-        cursor.execute(summaries_query, summaries_params)
-        for srow in cursor:
-            cols = [col[0] for col in cursor.description]
-            data = dict(zip(cols, srow))
-            all_host_summaries.setdefault(data['job_id'], []).append(
-                {
-                    'id': data['id'],
-                    'host_id': data['host_id'],
-                    'host_name': data['host_name'],
-                }
-            )
+        all_labels = _dashboard_job_labels(since, until, db)
+        all_host_summaries = _dashboard_job_host_summaries(since, until, db)
 
     results = []
     for data in rows:
