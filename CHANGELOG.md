@@ -1,15 +1,10 @@
 # Changelog
 
-## 0.8.0dev
-
-- remove django-ansible-base dependency
-- TODO
-
-
 ## 0.7.3
 
 - rename `installed_collections` to `collection`
 - Segment: enable `sync_mode`, remove `use_bulk`
+- TODO
 
 
 ## 0.7.2
