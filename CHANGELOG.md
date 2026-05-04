@@ -1,11 +1,42 @@
 # Changelog
 
-## 0.7.0dev
+## 0.8.0dev
 
-- Removed direct AWX dependencies from collectors module
-- Replaced AWX license functions with direct database queries
-- added `metrics_utility.library`
+- remove django-ansible-base dependency
 - TODO
+
+
+## 0.7.3
+
+- rename `installed_collections` to `collection`
+- Segment: enable `sync_mode`, remove `use_bulk`
+
+
+## 0.7.2
+
+- new collectors: feature flags, task executions
+- bump `config` collector version to 2.0
+- add back `config_django` as a new collector (Django-based config collection)
+- dev: add more `METRICS_UTILITY_DB_` env vars, warn if present in controller venv
+- dev: collectors: unify date interpolation through `date_where`
+
+
+## 0.7.1
+
+- fix jobs anonymized rollup numeric column handling
+
+
+## 0.7.0
+
+- removed direct AWX dependencies from collectors module
+- replaced AWX license functions with direct database queries
+- added `metrics_utility.library` (collectors, dataframes, storage, instants)
+- library.storage: Directory, S3, Segment, CRC, CRCMutual backends
+- anonymized rollups, JSON rollups
+- Segment analytics: chunked data transmission, metadata
+- dashboard collectors
+- collection-name filtering for tarballs
+- dev: performance testing, mock data, CI updates
 
 
 ## 0.6.1
