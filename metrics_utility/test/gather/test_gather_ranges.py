@@ -34,7 +34,7 @@ def cleanup_glob():
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_larger_range(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-05'])
+    result = run_gather_ext(env_vars, ['--ship', '--verbose', '--since=2024-01-01', '--until=2024-01-05'])
     validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
@@ -45,7 +45,7 @@ def test_larger_range(cleanup_glob):
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_smaller_range(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
+    result = run_gather_ext(env_vars, ['--ship', '--verbose', '--since=2024-01-01', '--until=2024-01-03'])
     validate_exists(file_glob)
 
     text = result.stderr + '\n' + result.stdout
@@ -59,7 +59,7 @@ def test_only_host_scope(cleanup_glob):
     new_env_vars['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_host'
     new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '1'
 
-    result = run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
+    result = run_gather_ext(new_env_vars, ['--ship', '--verbose', '--since=2024-01-01', '--until=2024-01-03'])
 
     text = result.stderr + '\n' + result.stdout
 
@@ -99,3 +99,25 @@ def test_only_host_scope(cleanup_glob):
         print(tar.getnames())
         # ensure main_host.csv is present
         # assert './main_host.csv' in tar.getnames()
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_since_only(cleanup_glob):
+    result = run_gather_ext(env_vars, ['--ship', '--verbose', '--since=2024-01-01'])
+    validate_exists(file_glob)
+
+    text = result.stderr + '\n' + result.stdout
+    assert 'Original since-until: 2024-01-01 00:00:00+00:00 to None' in text
+    assert 'End of the collection interval set to ' in text
+    assert 'Final since-until: ' in text
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_no_since_no_until(cleanup_glob):
+    result = run_gather_ext(env_vars, ['--ship', '--verbose'])
+    validate_exists(file_glob)
+
+    text = result.stderr + '\n' + result.stdout
+    assert 'Original since-until: None to None' in text
+    assert 'End of the collection interval set to ' in text
+    assert 'Final since-until: None to ' in text
