@@ -2,7 +2,7 @@
 
 ## 0.7.3
 
-- rename `installed_collections` to `collection`
+- `installed_collections`: change `name` to `collection`
 - Segment: enable `sync_mode`, remove `use_bulk`
 - TODO
 
