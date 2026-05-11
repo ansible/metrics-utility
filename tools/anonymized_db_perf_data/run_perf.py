@@ -132,7 +132,6 @@ def main():
     try:
         json_data = compute_anonymized_rollup(
             db=connection,
-            salt='',
             since=since,
             until=until,
         )

@@ -59,7 +59,6 @@ def test_big_test6():
         # Compute anonymized rollups
         result = compute_anonymized_rollup_from_raw_data(
             input_data=input_data,
-            salt='test_salt',
         )
 
         # Verify job_host_summary rollup

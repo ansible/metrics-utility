@@ -1041,9 +1041,8 @@ def test_from_gather_to_json(cleanup_glob):
     input_data = _prepare_input_data(results, collector_to_input_key)
 
     # Compute anonymized rollup from raw data
-    salt = 'salt'
     print('Computing anonymized rollup from collected data...')
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data)
     print('✓ Anonymized rollup computed successfully')
 
     # Save JSON output

@@ -75,7 +75,7 @@ def create_anonymized_object(rollup_name: str):
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
-def anonymize_data(data, salt):
+def anonymize_data(data):
     """
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
@@ -93,7 +93,6 @@ def anonymize_data(data, salt):
             - role_stats: array of role statistics
             - jobs_by_installed_collections_versions: array of {collection, version, jobs_total, jobs_failed_total,
               jobs_successful_total} from installed collections
-        salt: Unused, kept for API compatibility.
     """
     if not data or not isinstance(data, dict):
         return
@@ -563,7 +562,6 @@ def anonymize_rollups(
     credentials_rollup,
     table_metadata_rollup,
     controller_version_rollup,
-    salt,
     *,
     feature_flags_rollup=None,
     task_executions_rollup=None,
@@ -579,7 +577,6 @@ def anonymize_rollups(
         credentials_rollup: Credentials statistics
         table_metadata_rollup: Table metadata statistics
         controller_version_rollup: Controller version statistics
-        salt: Salt string for hashing sensitive data
         feature_flags_rollup: Enabled feature flags list (optional, keyword-only)
         task_executions_rollup: Task execution observability statistics (optional, keyword-only)
 
@@ -602,6 +599,6 @@ def anonymize_rollups(
     data = flatten_json_report(data)
 
     # Then anonymize the flattened structure
-    anonymize_data(data, salt)
+    anonymize_data(data)
 
     return data
