@@ -75,6 +75,33 @@ def create_anonymized_object(rollup_name: str):
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
+def _anonymize_custom_items(items: List[Dict[str, Any]], fields: List[str]) -> None:
+    """Set each field to 'Custom' on items whose collection_source is 'Custom'."""
+    for item in items:
+        if item and item.get('collection_source') == 'Custom':
+            for field in fields:
+                if item.get(field):
+                    item[field] = 'Custom'
+
+
+def _load_known_collections() -> Dict[str, Any]:
+    collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
+    try:
+        with open(collections_path, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def _anonymize_installed_collections_versions(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> None:
+    """Replace collection/version with 'Custom' for any collection not in the known list."""
+    for item in items:
+        if item and 'collection' in item:
+            if _installed_collection_name_is_unknown(item.get('collection', ''), known_collections):
+                item['collection'] = 'Custom'
+                item['version'] = 'Custom'
+
+
 def anonymize_data(data):
     """
     Anonymizes sensitive data in the flattened report structure.
@@ -97,50 +124,13 @@ def anonymize_data(data):
     if not data or not isinstance(data, dict):
         return
 
-    # anonymize module_stats - replace module name and collection name with 'Custom' for 'Custom' sources
-    if 'module_stats' in data and data['module_stats']:
-        for module in data['module_stats']:
-            if module and module.get('collection_source') == 'Custom':
-                if 'module_name' in module and module['module_name']:
-                    module['module_name'] = 'Custom'
-                if 'collection_name' in module and module['collection_name']:
-                    module['collection_name'] = 'Custom'
-
-    # anonymize collection_stats - replace collection name with 'Custom' for 'Custom' sources
-    if 'collection_stats' in data and data['collection_stats']:
-        for collection in data['collection_stats']:
-            if collection and collection.get('collection_source') == 'Custom':
-                if 'collection_name' in collection and collection['collection_name']:
-                    collection['collection_name'] = 'Custom'
-
-    # anonymize role_stats - replace role name and collection name with 'Custom' for 'Custom' sources
-    if 'role_stats' in data and data['role_stats']:
-        for role in data['role_stats']:
-            if role and role.get('collection_source') == 'Custom':
-                if 'role' in role and role['role']:
-                    role['role'] = 'Custom'
-                if 'collection_name' in role and role['collection_name']:
-                    role['collection_name'] = 'Custom'
-
-    # anonymize jobs_by_installed_collections_versions - replace collection and version with "Custom" for unknown collections
-    # Load collections.json to check if collection is known
-    collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
-    try:
-        with open(collections_path, 'r') as f:
-            collections = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        collections = {}
-
-    if 'jobs_by_installed_collections_versions' in data and data['jobs_by_installed_collections_versions']:
-        for collection_version in data['jobs_by_installed_collections_versions']:
-            if collection_version and 'collection' in collection_version:
-                collection_name = collection_version.get('collection', '')
-                if _installed_collection_name_is_unknown(collection_name, collections):
-                    collection_version['collection'] = 'Custom'
-                    collection_version['version'] = 'Custom'
-
-    # Note: modules_used_per_playbook anonymization removed since it's not in final output
-    # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
+    _anonymize_custom_items(data.get('module_stats') or [], ['module_name', 'collection_name'])
+    _anonymize_custom_items(data.get('collection_stats') or [], ['collection_name'])
+    _anonymize_custom_items(data.get('role_stats') or [], ['role', 'collection_name'])
+    _anonymize_installed_collections_versions(
+        data.get('jobs_by_installed_collections_versions') or [],
+        _load_known_collections(),
+    )
 
 
 def _normalize_ansible_version_key(ansible_version: Any) -> str:
