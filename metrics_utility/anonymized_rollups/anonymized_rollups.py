@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 
@@ -15,22 +14,6 @@ from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import 
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
-
-
-def hash(value, salt):
-    """Return the SHA-256 hex digest of ``salt:value``.
-
-    Args:
-        value: The string value to hash.
-        salt: A salt string prepended to the value before hashing.
-
-    Returns:
-        Hex-encoded SHA-256 digest string.
-    """
-    # has the value and salt, hash should be string
-    combined = (salt + ':' + value).encode('utf-8')
-    hashed = hashlib.sha256(combined).hexdigest()
-    return hashed
 
 
 def _installed_collection_name_is_unknown(collection_name: Any, known: Dict[str, Any]) -> bool:
@@ -110,29 +93,10 @@ def anonymize_data(data, salt):
             - role_stats: array of role statistics
             - jobs_by_installed_collections_versions: array of {collection, version, jobs_total, jobs_failed_total,
               jobs_successful_total} from installed collections
-        salt: Salt string for hashing (used for job_template_name hashing)
+        salt: Unused, kept for API compatibility.
     """
     if not data or not isinstance(data, dict):
         return
-
-    # anonymize jobs_by_job_type job template name (if present)
-    # Note: jobs_by_job_type is now grouped by job_type, but may still have job_template_name for templates_total
-    if 'jobs_by_job_type' in data and data['jobs_by_job_type']:
-        for job in data['jobs_by_job_type']:
-            if job and 'job_template_name' in job and job['job_template_name']:
-                job['job_template_name'] = hash(job['job_template_name'], salt)
-
-    # anonymize jobs_by_launch_type job template name (if present)
-    if 'jobs_by_launch_type' in data and data['jobs_by_launch_type']:
-        for job in data['jobs_by_launch_type']:
-            if job and 'job_template_name' in job and job['job_template_name']:
-                job['job_template_name'] = hash(job['job_template_name'], salt)
-
-    # anonymize jobs_by_ansible_version job template name (if present)
-    if 'jobs_by_ansible_version' in data and data['jobs_by_ansible_version']:
-        for job in data['jobs_by_ansible_version']:
-            if job and 'job_template_name' in job and job['job_template_name']:
-                job['job_template_name'] = hash(job['job_template_name'], salt)
 
     # anonymize module_stats - replace module name and collection name with 'Custom' for 'Custom' sources
     if 'module_stats' in data and data['module_stats']:
