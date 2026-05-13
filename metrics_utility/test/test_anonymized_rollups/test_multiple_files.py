@@ -679,7 +679,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Split and create CSV files for each collector ==========
     input_data = _create_csv_files_from_split_data(data_dir, jobs, events, execution_environments, jobhostsummary, credentials)
 
-    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data)
 
     # print the result with pretty json
     import json
@@ -784,7 +784,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     }
 
     # Should not crash, but return empty/default results
-    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data)
 
     # Print the result for debugging
     import json

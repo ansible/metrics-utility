@@ -87,7 +87,7 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_l
     return concat_data
 
 
-def compute_anonymized_rollup_from_raw_data(input_data, salt):
+def compute_anonymized_rollup_from_raw_data(input_data):
 
     # delete everything in the directory ./out/batches (including subdirectories)
     if os.path.exists(OUT_BATCHES_DIR):
@@ -129,7 +129,6 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
         table_metadata_rollup=table_metadata_result['json'],
         controller_version_rollup=controller_version_result['json'],
         feature_flags_rollup=feature_flags_result['json'],
-        salt=salt,
         task_executions_rollup=task_executions_result['json'],
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
@@ -143,7 +142,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     return anonymized_rollup
 
 
-def compute_anonymized_rollup(db, salt, since, until, service_db=None):
+def compute_anonymized_rollup(db, since, until, service_db=None):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = []
     try:
@@ -213,6 +212,6 @@ def compute_anonymized_rollup(db, salt, since, until, service_db=None):
     }
 
     # load data for each collector
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data)
 
     return json_data
