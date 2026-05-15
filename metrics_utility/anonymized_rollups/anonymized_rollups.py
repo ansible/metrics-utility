@@ -555,6 +555,7 @@ def anonymize_rollups(
     *,
     feature_flags_rollup=None,
     task_executions_rollup=None,
+    **kwargs,
 ):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
@@ -569,6 +570,7 @@ def anonymize_rollups(
         controller_version_rollup: Controller version statistics
         feature_flags_rollup: Enabled feature flags list (optional, keyword-only)
         task_executions_rollup: Task execution observability statistics (optional, keyword-only)
+        **kwargs: Accepted and ignored for backwards compatibility (e.g. the removed ``salt`` parameter)
 
     Returns:
         Flattened and anonymized rollup data
