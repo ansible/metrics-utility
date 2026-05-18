@@ -95,6 +95,43 @@ def daily_slicing(key, last_gather, **kwargs):
         start = end
 
 
+def hourly_slicing(key, last_gather, **kwargs):
+    """Generate time slices aligned to hour boundaries.
+
+    Yields ``(start, end)`` pairs that never cross an hour boundary.
+
+    Args:
+        key: Collector key name used to look up the last-gathered entry.
+        last_gather: Fallback datetime used when no entry exists for *key*.
+        **kwargs: Accepts optional ``since`` and ``until`` datetimes.
+
+    Yields:
+        Tuple of ``(since, until)`` timezone-aware datetimes.
+    """
+    since, until = kwargs.get('since', None), kwargs.get('until', now())
+    if since is not None:
+        last_entry = since
+    else:
+        horizon = until - timedelta(days=get_max_gather_period_days())
+        last_entries = get_last_entries_from_db()
+        try:
+            last_entry = max(last_entries.get(key) or last_gather, horizon)
+        except TypeError:  # last_entries has a stale non-datetime entry for this collector
+            last_entry = max(last_gather, horizon)
+
+    start, end = last_entry, None
+    start_beginning_of_next_hour = start.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+
+    if until > start_beginning_of_next_hour:
+        yield (start, start_beginning_of_next_hour)
+        start = start_beginning_of_next_hour
+
+    while start < until:
+        end = min(start + timedelta(hours=1), until)
+        yield (start, end)
+        start = end
+
+
 def until_slicing(_key, _last_gather, **kwargs):
     """Generate a single snapshot slice positioned at ``until - 1 second``.
 
@@ -182,7 +219,7 @@ def cli_main_indirectmanagednodeaudit(since, until, output):
         return None
 
 
-@register('main_jobevent', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_jobevent', '1.0', format='csv', fnc_slicing=hourly_slicing)
 def cli_main_jobevent(since, until, output):
     if 'main_jobevent' not in get_optional_collectors():
         return None
