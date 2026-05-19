@@ -192,7 +192,7 @@ class TestHandleDedupColumnsForScope:
         df = pd.DataFrame({'other': [1]})
         columns = ['host_name']
         convert_cols = []
-        new_columns, new_convert = r.handle_dedup_columns_for_scope(df, columns, convert_cols)
+        new_columns, _ = r.handle_dedup_columns_for_scope(df, columns, convert_cols)
         assert 'host_names_before_dedup' not in new_columns
 
 
