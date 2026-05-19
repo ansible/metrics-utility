@@ -51,20 +51,20 @@ from metrics_utility.exceptions import NotSupportedFactory
 
 
 class TestExtractFactory:
-    def _factory(self, ship_target):
-        return ExtractFactory(ship_target=ship_target, extra_params={'ship_path': '/tmp', 'optional_sheets': None})
+    def _factory(self, ship_target, tmp_path):
+        return ExtractFactory(ship_target=ship_target, extra_params={'ship_path': str(tmp_path), 'optional_sheets': None})
 
-    def test_directory_creates_extractor_directory(self):
-        result = self._factory('directory').create()
+    def test_directory_creates_extractor_directory(self, tmp_path):
+        result = self._factory('directory', tmp_path).create()
         assert isinstance(result, ExtractorDirectory)
 
-    def test_s3_creates_extractor_s3(self):
-        result = self._factory('s3').create()
+    def test_s3_creates_extractor_s3(self, tmp_path):
+        result = self._factory('s3', tmp_path).create()
         assert isinstance(result, ExtractorS3)
 
-    def test_unknown_target_raises(self):
+    def test_unknown_target_raises(self, tmp_path):
         with pytest.raises(NotSupportedFactory):
-            self._factory('ftp').create()
+            self._factory('ftp', tmp_path).create()
 
 
 # ---------------------------------------------------------------------------
@@ -126,26 +126,26 @@ class TestReportFactory:
 # ---------------------------------------------------------------------------
 
 
-def _saver_params():
-    return {'report_spreadsheet_destination_path': '/tmp/report.xlsx'}
+def _saver_params(tmp_path):
+    return {'report_spreadsheet_destination_path': str(tmp_path / 'report.xlsx')}
 
 
 class TestReportSaverFactory:
-    def test_directory_creates_directory_saver(self):
-        result = ReportSaverFactory(ship_target='directory', extra_params=_saver_params()).create()
+    def test_directory_creates_directory_saver(self, tmp_path):
+        result = ReportSaverFactory(ship_target='directory', extra_params=_saver_params(tmp_path)).create()
         assert isinstance(result, ReportSaverDirectory)
 
-    def test_controller_db_creates_directory_saver(self):
-        result = ReportSaverFactory(ship_target='controller_db', extra_params=_saver_params()).create()
+    def test_controller_db_creates_directory_saver(self, tmp_path):
+        result = ReportSaverFactory(ship_target='controller_db', extra_params=_saver_params(tmp_path)).create()
         assert isinstance(result, ReportSaverDirectory)
 
-    def test_s3_creates_s3_saver(self):
-        result = ReportSaverFactory(ship_target='s3', extra_params=_saver_params()).create()
+    def test_s3_creates_s3_saver(self, tmp_path):
+        result = ReportSaverFactory(ship_target='s3', extra_params=_saver_params(tmp_path)).create()
         assert isinstance(result, ReportSaverS3)
 
-    def test_unknown_target_raises(self):
+    def test_unknown_target_raises(self, tmp_path):
         with pytest.raises(NotSupportedFactory):
-            ReportSaverFactory(ship_target='ftp', extra_params=_saver_params()).create()
+            ReportSaverFactory(ship_target='ftp', extra_params=_saver_params(tmp_path)).create()
 
 
 # ---------------------------------------------------------------------------

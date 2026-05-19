@@ -231,7 +231,7 @@ class TestSafeExtract:
             _safe_extract(tar_path, extract_dir, max_files=2)
 
             extracted = [f for f in os.listdir(extract_dir) if f.endswith('.csv')]
-            assert len(extracted) <= 2
+            assert len(extracted) == 2
 
     def test_max_size_exceeded_raises(self):
         with tempfile.TemporaryDirectory() as tmpdir:

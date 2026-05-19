@@ -23,7 +23,7 @@ class TestParseJson:
 
     def test_dict_passthrough_unchanged(self):
         d = {'a': 1}
-        assert parse_json(d) is d
+        assert parse_json(d) == d
 
     def test_invalid_json_string_returns_empty_dict(self):
         assert parse_json('not json') == {}

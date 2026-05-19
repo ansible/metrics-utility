@@ -17,7 +17,7 @@ class TestExtractCollectionName:
 
     def test_four_part_fqcn(self):
         """namespace.collection.role.task -> namespace.collection"""
-        assert DataframeContentUsage.extract_collection_name('community.general.git_config') == 'community.general'
+        assert DataframeContentUsage.extract_collection_name('community.general.git_config.subtask') == 'community.general'
 
     def test_two_part_name_returns_none(self):
         """namespace.collection (no third segment) -> None"""
