@@ -1,7 +1,15 @@
 from datetime import datetime
 
 
-def get_min_max_job_id_query(since: datetime, until: datetime) -> tuple[str, list]:
+_ALLOWED_DATE_FIELDS = frozenset({'modified', 'finished'})
+
+
+def _validate_date_field(date_field: str) -> None:
+    if date_field not in _ALLOWED_DATE_FIELDS:
+        raise ValueError(f'date_field must be one of {sorted(_ALLOWED_DATE_FIELDS)}, got {date_field!r}')
+
+
+def get_min_max_job_id_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
     """
     Return the min and max job IDs for the filtered window.
 
@@ -10,11 +18,12 @@ def get_min_max_job_id_query(since: datetime, until: datetime) -> tuple[str, lis
     Args:
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
+        date_field: Column used for the date range filter — ``'modified'`` (default) or ``'finished'``.
 
     Returns:
         Tuple of (SQL query string with placeholders, [params])
     """
-    where_clause, params = get_where_clause(since, until)
+    where_clause, params = get_where_clause(since, until, date_field=date_field)
     query = f"""
         SELECT MIN(uj.id) AS min_id, MAX(uj.id) AS max_id
         FROM main_unifiedjob uj
@@ -23,35 +32,41 @@ def get_min_max_job_id_query(since: datetime, until: datetime) -> tuple[str, lis
     return query, params
 
 
-def get_where_clause(since: datetime, until: datetime) -> tuple[str, list]:
+def get_where_clause(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
     """
-    Generate SQL WHERE clause for filtering jobs by job modification date range.
+    Generate SQL WHERE clause for filtering jobs by a date range.
     Excludes sync jobs and includes only jobs with status 'failed' or 'successful'.
 
     Args:
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
+        date_field: Column used for the date range filter — ``'modified'`` (default, used by the
+            CLI billing/CCSP pipeline to pick up records changed since the last run) or
+            ``'finished'`` (used by dashboard/anonymized collection where job completion time
+            is the meaningful boundary and the ``finished`` index can be exploited).
 
     Returns:
         Tuple of (SQL WHERE clause string with placeholders, [params])
     """
-    where_clause = """
+    _validate_date_field(date_field)
+    where_clause = f"""
     WHERE uj.launch_type != %s
     AND (uj.status= %s OR uj.status = %s)
-    AND uj.modified >= %s
-    AND uj.modified < %s
+    AND uj.{date_field} >= %s
+    AND uj.{date_field} < %s
     """
     params = ['sync', 'failed', 'successful', since.isoformat(), until.isoformat()]
     return where_clause, params
 
 
-def get_job_labels_query(since: datetime, until: datetime) -> tuple[str, list]:
+def get_job_labels_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
     """
     Generate SQL query to fetch job labels for jobs executed within the specified date range.
 
     Args:
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
+        date_field: Column used for the date range filter — ``'modified'`` (default) or ``'finished'``.
 
     Returns:
         Tuple of (SQL query string with placeholders, [params])
@@ -60,7 +75,7 @@ def get_job_labels_query(since: datetime, until: datetime) -> tuple[str, list]:
         - main_unifiedjob_labels
         - main_unifiedjob (for filtering by date range)
     """
-    where_clause, params = get_where_clause(since, until)
+    where_clause, params = get_where_clause(since, until, date_field=date_field)
     query = f"""
             SELECT
                 l.unifiedjob_id,
@@ -73,13 +88,14 @@ def get_job_labels_query(since: datetime, until: datetime) -> tuple[str, list]:
     return query, params
 
 
-def get_job_host_summaries_query(since: datetime, until: datetime) -> tuple[str, list]:
+def get_job_host_summaries_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
     """
     Generate SQL query to fetch job host summaries for jobs executed within the specified date range.
 
     Args:
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
+        date_field: Column used for the date range filter — ``'modified'`` (default) or ``'finished'``.
 
     Returns:
         Tuple of (SQL query string with placeholders, [params])
@@ -88,7 +104,7 @@ def get_job_host_summaries_query(since: datetime, until: datetime) -> tuple[str,
         - main_jobhostsummary
         - main_unifiedjob (for filtering by date range)
     """
-    where_clause, params = get_where_clause(since, until)
+    where_clause, params = get_where_clause(since, until, date_field=date_field)
     query = f"""
          SELECT
             hs.id, hs.host_name, hs.host_id, hs.job_id
@@ -99,13 +115,16 @@ def get_job_host_summaries_query(since: datetime, until: datetime) -> tuple[str,
     return query, params
 
 
-def get_jobs_query(since: datetime, until: datetime) -> tuple[str, list]:
+def get_jobs_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
     """
     Generate SQL query to fetch jobs executed within the specified date range.
 
     Args:
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
+        date_field: Column used for the date range filter and sort — ``'modified'`` (default) or
+            ``'finished'``. Use ``'finished'`` for dashboard/anonymized collection to exploit the
+            existing ``main_unifiedjob_finished_eccf6159`` index.
 
     Returns:
         Tuple of (SQL query string with placeholders, [params])
@@ -118,7 +137,7 @@ def get_jobs_query(since: datetime, until: datetime) -> tuple[str, list]:
         - main_project
         - main_unifiedjobtemplate
     """
-    where_clause, params = get_where_clause(since, until)
+    where_clause, params = get_where_clause(since, until, date_field=date_field)
     query = f"""SELECT
     uj.id,
     COALESCE(ujt.name, uj.name) as name,
@@ -144,11 +163,11 @@ def get_jobs_query(since: datetime, until: datetime) -> tuple[str, list]:
     JOIN main_job mj on mj.unifiedjob_ptr_id = uj.id
     LEFT JOIN main_unifiedjobtemplate ujt ON ujt.id = uj.unified_job_template_id
     LEFT JOIN auth_user u on u.id = uj.created_by_id
-    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id {where_clause} order by uj.modified"""
+    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id {where_clause} order by uj.{date_field}"""
     return query, params
 
 
-def get_jobs_batch_query(since: datetime, until: datetime, after_id: int, batch_size: int) -> tuple[str, list]:
+def get_jobs_batch_query(since: datetime, until: datetime, after_id: int, batch_size: int, date_field: str = 'modified') -> tuple[str, list]:
     """
     Cursor-paginated variant of ``get_jobs_query``.
 
@@ -160,11 +179,12 @@ def get_jobs_batch_query(since: datetime, until: datetime, after_id: int, batch_
         until: End of date range (exclusive)
         after_id: Exclusive lower bound on job ID (use 0 or min_id - 1 for first page)
         batch_size: Maximum number of rows to return
+        date_field: Column used for the date range filter — ``'modified'`` (default) or ``'finished'``.
 
     Returns:
         Tuple of (SQL query string with placeholders, [params])
     """
-    where_clause, params = get_where_clause(since, until)
+    where_clause, params = get_where_clause(since, until, date_field=date_field)
     params += [after_id, batch_size]
     query = f"""SELECT
     uj.id,

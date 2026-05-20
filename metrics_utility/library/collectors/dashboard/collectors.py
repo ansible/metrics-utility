@@ -56,7 +56,7 @@ class DashboardJobsResultType(TypedDict):
     results: List[AWXJobType]
 
 
-def _dashboard_job_labels(since: datetime, until: datetime, db, **kwargs) -> dict[int, list[int]]:
+def _dashboard_job_labels(since: datetime, until: datetime, db, date_field: str = 'modified', **kwargs) -> dict[int, list[int]]:
     """
     Collect job labels for the dashboard.
 
@@ -66,6 +66,7 @@ def _dashboard_job_labels(since: datetime, until: datetime, db, **kwargs) -> dic
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
         db: Database connection
+        date_field: Column used for the date range filter — ``'modified'`` (default) or ``'finished'``.
         **kwargs: Additional parameters
 
     Returns:
@@ -80,7 +81,7 @@ def _dashboard_job_labels(since: datetime, until: datetime, db, **kwargs) -> dic
     }
     """
 
-    query, params = get_job_labels_query(since, until)
+    query, params = get_job_labels_query(since, until, date_field=date_field)
     result = {}
     with db.cursor() as cursor:
         cursor.execute(query, params)
@@ -95,7 +96,9 @@ def _dashboard_job_labels(since: datetime, until: datetime, db, **kwargs) -> dic
     return result
 
 
-def _dashboard_job_host_summaries(since: datetime, until: datetime, db, **kwargs) -> dict[int, list[AWXJobHostSummaryType]]:
+def _dashboard_job_host_summaries(
+    since: datetime, until: datetime, db, date_field: str = 'modified', **kwargs
+) -> dict[int, list[AWXJobHostSummaryType]]:
     """
     Collect job host summaries for the dashboard.
 
@@ -105,6 +108,7 @@ def _dashboard_job_host_summaries(since: datetime, until: datetime, db, **kwargs
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
         db: Database connection
+        date_field: Column used for the date range filter — ``'modified'`` (default) or ``'finished'``.
         **kwargs: Additional parameters
 
     returns:
@@ -123,7 +127,7 @@ def _dashboard_job_host_summaries(since: datetime, until: datetime, db, **kwargs
         ...
     }
     """
-    query, params = get_job_host_summaries_query(since, until)
+    query, params = get_job_host_summaries_query(since, until, date_field=date_field)
     result = {}
     with db.cursor() as cursor:
         cursor.execute(query, params)
@@ -144,7 +148,13 @@ def _dashboard_job_host_summaries(since: datetime, until: datetime, db, **kwargs
 
 @collector
 def dashboard_jobs(
-    *, db=None, since: datetime = None, until: datetime = None, after_id: int = None, batch_size: int = None
+    *,
+    db=None,
+    since: datetime = None,
+    until: datetime = None,
+    after_id: int = None,
+    batch_size: int = None,
+    date_field: str = 'modified',
 ) -> DashboardJobsResultType:
     """
     Collect job data for the dashboard.
@@ -155,7 +165,11 @@ def dashboard_jobs(
         since: Start of date range (inclusive)
         until: End of date range (exclusive)
         db: Database connection
-        **kwargs: Additional parameters
+        after_id: If provided alongside ``batch_size``, enables cursor-based pagination.
+        batch_size: Maximum rows per batch when paginating.
+        date_field: Column used for the date range filter — ``'modified'`` (default, used by the
+            CLI billing/CCSP pipeline) or ``'finished'`` (used by dashboard/anonymized collection
+            to exploit the existing finished index).
 
     Returns:
         dict with keys:
@@ -195,9 +209,9 @@ def dashboard_jobs(
     batched = after_id is not None and batch_size is not None
 
     if batched:
-        query, params = get_jobs_batch_query(since, until, after_id, batch_size)
+        query, params = get_jobs_batch_query(since, until, after_id, batch_size, date_field=date_field)
     else:
-        query, params = get_jobs_query(since, until)
+        query, params = get_jobs_query(since, until, date_field=date_field)
 
     with db.cursor() as cursor:
         cursor.execute(query, params)
@@ -234,8 +248,8 @@ def dashboard_jobs(
                     }
                 )
     else:
-        all_labels = _dashboard_job_labels(since, until, db)
-        all_host_summaries = _dashboard_job_host_summaries(since, until, db)
+        all_labels = _dashboard_job_labels(since, until, db, date_field=date_field)
+        all_host_summaries = _dashboard_job_host_summaries(since, until, db, date_field=date_field)
 
     results = []
     for data in rows:

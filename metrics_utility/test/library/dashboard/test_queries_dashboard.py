@@ -16,7 +16,7 @@ class TestQueriesDashboard:
     since = datetime.fromisoformat('2024-01-01T00:00:00Z')
     until = datetime.fromisoformat('2024-02-01T23:59:59Z')
 
-    def test_where_clause(self):
+    def test_where_clause_defaults_to_modified(self):
         result, params = get_where_clause(self.since, self.until)
         assert 'WHERE' in result
         assert 'uj.launch_type != %s' in result
@@ -25,6 +25,18 @@ class TestQueriesDashboard:
         assert 'AND uj.modified < %s' in result
         expected_params = ['sync', 'failed', 'successful', '2024-01-01T00:00:00+00:00', '2024-02-01T23:59:59+00:00']
         assert params == expected_params
+
+    def test_where_clause_finished(self):
+        result, params = get_where_clause(self.since, self.until, date_field='finished')
+        assert 'AND uj.finished >= %s' in result
+        assert 'AND uj.finished < %s' in result
+        assert 'modified' not in result
+
+    def test_where_clause_invalid_date_field(self):
+        import pytest
+
+        with pytest.raises(ValueError, match='date_field must be'):
+            get_where_clause(self.since, self.until, date_field='created')
 
     def test_get_job_labels_query(self):
         result, _ = get_job_labels_query(self.since, self.until)
@@ -70,6 +82,12 @@ class TestQueriesDashboard:
         assert 'uj.created' in result
         assert 'uj.modified' in result
         assert result.count('CASE') == 2
+
+    def test_get_jobs_query_finished(self):
+        result, _ = get_jobs_query(self.since, self.until, date_field='finished')
+        assert 'AND uj.finished >= %s' in result
+        assert 'AND uj.finished < %s' in result
+        assert 'order by uj.finished' in result
 
     def test_get_min_max_job_id_query(self):
         result, params = get_min_max_job_id_query(self.since, self.until)

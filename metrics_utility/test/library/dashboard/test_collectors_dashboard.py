@@ -264,7 +264,7 @@ class TestCollectorsDashboard:
         collector = dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=0, batch_size=5000)
         collector.gather()
 
-        mock_batch_query.assert_called_once_with(self.since, self.until, 0, 5000)
+        mock_batch_query.assert_called_once_with(self.since, self.until, 0, 5000, date_field='modified')
         mock_labels_query.assert_called_once_with([1])
         mock_summaries_query.assert_called_once_with([1])
 
@@ -320,6 +320,6 @@ class TestCollectorsDashboard:
         collector = dashboard_jobs(since=self.since, until=self.until, db=self.mock_db)
         collector.gather()
 
-        mock_labels.assert_called_once_with(self.since, self.until, self.mock_db)
-        mock_summaries.assert_called_once_with(self.since, self.until, self.mock_db)
-        mock_jobs_query.assert_called_once_with(self.since, self.until)
+        mock_labels.assert_called_once_with(self.since, self.until, self.mock_db, date_field='modified')
+        mock_summaries.assert_called_once_with(self.since, self.until, self.mock_db, date_field='modified')
+        mock_jobs_query.assert_called_once_with(self.since, self.until, date_field='modified')
