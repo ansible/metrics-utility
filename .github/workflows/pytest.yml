@@ -95,7 +95,15 @@ jobs:
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
         run: |
-          uv run pytest -s -v --cov=. --cov-report=xml
+          uv run pytest -s -v --cov=. --cov-branch --cov-report=xml
+
+      - name: "Upload coverage to Codecov"
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unit-tests
+          fail_ci_if_error: false
 
       - name: "Upload code coverage report"
         if: ${{ github.base_ref }}
