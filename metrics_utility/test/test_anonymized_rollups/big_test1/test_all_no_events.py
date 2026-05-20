@@ -230,7 +230,7 @@ def test_all_jobs_combined_no_events(cleanup_test_data):
     input_data = create_all_csv_files(data_dir, all_jobs, all_events, all_jobhostsummary)
 
     # Run the anonymized rollup computation
-    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data)
 
     # Save result and split into chunks
     save_result_and_chunks(result, since, until, year, month, day)

@@ -419,12 +419,11 @@ Examples:
                 input_data[input_key] = [pd.DataFrame()]
 
     # Compute anonymized rollup
-    salt = 'salt'  # Default salt, could be made configurable
     print('Computing anonymized rollup from collected data...')
     rollup_start_time = time.time()
     rollup_elapsed_time = None
     try:
-        json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+        json_data = compute_anonymized_rollup_from_raw_data(input_data)
         rollup_elapsed_time = time.time() - rollup_start_time
         print('✓ Anonymized rollup computed successfully')
     except Exception as e:

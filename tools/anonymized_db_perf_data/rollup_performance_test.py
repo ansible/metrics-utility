@@ -164,7 +164,7 @@ def main():
 
     metrics, _ = run_task(
         'Rollup Computation',
-        lambda: compute_anonymized_rollup_from_raw_data(input_data, salt=''),
+        lambda: compute_anonymized_rollup_from_raw_data(input_data),
     )
     if metrics:
         all_metrics.append(metrics)
