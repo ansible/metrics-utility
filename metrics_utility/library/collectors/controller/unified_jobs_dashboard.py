@@ -70,7 +70,6 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeO
              FROM main_jobhostsummary
              WHERE job_id = main_unifiedjob.id) AS num_hosts
         FROM main_unifiedjob
-        LEFT JOIN main_unifiedjobtemplate ON main_unifiedjobtemplate.id = main_unifiedjob.unified_job_template_id
         LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
         LEFT JOIN main_job ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
         LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
