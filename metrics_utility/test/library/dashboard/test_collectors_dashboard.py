@@ -323,3 +323,24 @@ class TestCollectorsDashboard:
         mock_labels.assert_called_once_with(self.since, self.until, self.mock_db, date_field='modified')
         mock_summaries.assert_called_once_with(self.since, self.until, self.mock_db, date_field='modified')
         mock_jobs_query.assert_called_once_with(self.since, self.until, date_field='modified')
+
+    def test_dashboard_jobs_raises_on_only_after_id(self):
+        """Passing after_id without batch_size must raise rather than silently run a full-window query."""
+        import pytest
+
+        with pytest.raises(ValueError, match='after_id and batch_size'):
+            dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=100).gather()
+
+    def test_dashboard_jobs_raises_on_only_batch_size(self):
+        """Passing batch_size without after_id must raise rather than silently ignore the batch intent."""
+        import pytest
+
+        with pytest.raises(ValueError, match='after_id and batch_size'):
+            dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, batch_size=5000).gather()
+
+    def test_dashboard_jobs_raises_on_zero_batch_size(self):
+        """batch_size=0 must raise — a zero-row page would loop forever."""
+        import pytest
+
+        with pytest.raises(ValueError, match='batch_size must be greater than 0'):
+            dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=0, batch_size=0).gather()

@@ -94,6 +94,8 @@ class TestQueriesDashboard:
         assert 'MIN(uj.id) AS min_id' in result
         assert 'MAX(uj.id) AS max_id' in result
         assert 'FROM main_unifiedjob uj' in result
+        # Must join main_job so bounds match the INNER JOIN in get_jobs_batch_query
+        assert 'JOIN main_job mj ON mj.unifiedjob_ptr_id = uj.id' in result
         # Same base filter as get_where_clause
         assert 'uj.launch_type != %s' in result
         assert 'uj.status' in result

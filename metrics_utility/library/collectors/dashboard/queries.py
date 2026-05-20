@@ -14,6 +14,8 @@ def get_min_max_job_id_query(since: datetime, until: datetime, date_field: str =
     Return the min and max job IDs for the filtered window.
 
     Used to establish cursor bounds before a batched collection run.
+    Mirrors the ``JOIN main_job`` in ``get_jobs_batch_query`` so bounds only
+    cover actual Job-type records and not WorkflowJobs, ProjectUpdates, etc.
 
     Args:
         since: Start of date range (inclusive)
@@ -27,6 +29,7 @@ def get_min_max_job_id_query(since: datetime, until: datetime, date_field: str =
     query = f"""
         SELECT MIN(uj.id) AS min_id, MAX(uj.id) AS max_id
         FROM main_unifiedjob uj
+        JOIN main_job mj ON mj.unifiedjob_ptr_id = uj.id
         {where_clause}
     """
     return query, params
@@ -115,30 +118,11 @@ def get_job_host_summaries_query(since: datetime, until: datetime, date_field: s
     return query, params
 
 
-def get_jobs_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
-    """
-    Generate SQL query to fetch jobs executed within the specified date range.
-
-    Args:
-        since: Start of date range (inclusive)
-        until: End of date range (exclusive)
-        date_field: Column used for the date range filter and sort — ``'modified'`` (default) or
-            ``'finished'``. Use ``'finished'`` for dashboard/anonymized collection to exploit the
-            existing ``main_unifiedjob_finished_eccf6159`` index.
-
-    Returns:
-        Tuple of (SQL query string with placeholders, [params])
-
-    Database schema:
-        - main_unifiedjob
-        - main_job
-        - main_unifiedjobtemplate
-        - auth_user
-        - main_project
-        - main_unifiedjobtemplate
-    """
-    where_clause, params = get_where_clause(since, until, date_field=date_field)
-    query = f"""SELECT
+# Shared SELECT and JOIN fragment used by both get_jobs_query and get_jobs_batch_query.
+# Both functions build on this base so that adding a column or join in one place
+# automatically applies to the batched path and prevents schema drift in the shared
+# dict-building loop in dashboard_jobs.
+_JOBS_BASE_SQL = """SELECT
     uj.id,
     COALESCE(ujt.name, uj.name) as name,
     uj.unified_job_template_id,
@@ -163,7 +147,25 @@ def get_jobs_query(since: datetime, until: datetime, date_field: str = 'modified
     JOIN main_job mj on mj.unifiedjob_ptr_id = uj.id
     LEFT JOIN main_unifiedjobtemplate ujt ON ujt.id = uj.unified_job_template_id
     LEFT JOIN auth_user u on u.id = uj.created_by_id
-    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id {where_clause} order by uj.{date_field}"""
+    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id"""
+
+
+def get_jobs_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
+    """
+    Generate SQL query to fetch jobs executed within the specified date range.
+
+    Args:
+        since: Start of date range (inclusive)
+        until: End of date range (exclusive)
+        date_field: Column used for the date range filter and sort — ``'modified'`` (default) or
+            ``'finished'``. Use ``'finished'`` for dashboard/anonymized collection to exploit the
+            existing ``main_unifiedjob_finished_eccf6159`` index.
+
+    Returns:
+        Tuple of (SQL query string with placeholders, [params])
+    """
+    where_clause, params = get_where_clause(since, until, date_field=date_field)
+    query = f'{_JOBS_BASE_SQL} {where_clause} order by uj.{date_field}'
     return query, params
 
 
@@ -186,32 +188,7 @@ def get_jobs_batch_query(since: datetime, until: datetime, after_id: int, batch_
     """
     where_clause, params = get_where_clause(since, until, date_field=date_field)
     params += [after_id, batch_size]
-    query = f"""SELECT
-    uj.id,
-    COALESCE(ujt.name, uj.name) as name,
-    uj.unified_job_template_id,
-    uj.organization_id,
-    uj.started,
-    uj.finished,
-    uj.status,
-    uj.elapsed,
-    CASE WHEN
-    uj.launch_type ='manual' or uj.launch_type ='relaunch' then u.id
-    ELSE null
-    END as launched_by_id,
-    CASE
-    WHEN uj.launch_type ='manual' or uj.launch_type ='relaunch' then u.username
-    ELSE null
-    END as launched_by_username,
-    mj.project_id,
-    ujp.name as project_name,
-    uj.created,
-    uj.modified
-    FROM main_unifiedjob uj
-    JOIN main_job mj on mj.unifiedjob_ptr_id = uj.id
-    LEFT JOIN main_unifiedjobtemplate ujt ON ujt.id = uj.unified_job_template_id
-    LEFT JOIN auth_user u on u.id = uj.created_by_id
-    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id
+    query = f"""{_JOBS_BASE_SQL}
     {where_clause} AND uj.id > %s
     ORDER BY uj.id
     LIMIT %s"""

@@ -206,7 +206,12 @@ def dashboard_jobs(
          }
     """
 
-    batched = after_id is not None and batch_size is not None
+    if (after_id is None) != (batch_size is None):
+        raise ValueError('after_id and batch_size must both be provided or both omitted')
+    if batch_size is not None and batch_size <= 0:
+        raise ValueError('batch_size must be greater than 0')
+
+    batched = after_id is not None
 
     if batched:
         query, params = get_jobs_batch_query(since, until, after_id, batch_size, date_field=date_field)
