@@ -1,7 +1,7 @@
 """Package implementation that ships billing tarballs to an S3-compatible object store."""
 
-from metrics_utility.gather.base.s3_handler import S3Handler
 from metrics_utility.gather.package.package_local import PackageLocal
+from metrics_utility.gather.package.s3_handler import S3Handler
 
 
 class PackageS3(PackageLocal):

@@ -15,11 +15,10 @@ from metrics_utility.exceptions import NotSupportedFactory
 from metrics_utility.gather.collection.collection import Collection
 from metrics_utility.gather.collection.collection_csv import CollectionCSV
 from metrics_utility.gather.collection.collection_json import CollectionJSON
-from metrics_utility.gather.helpers import get_last_entries_from_db
 from metrics_utility.gather.package.package_crc import PackageCRC
 from metrics_utility.gather.package.package_directory import PackageDirectory
 from metrics_utility.gather.package.package_s3 import PackageS3
-from metrics_utility.gather.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
