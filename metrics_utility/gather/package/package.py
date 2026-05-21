@@ -7,8 +7,7 @@ from django.conf import settings
 
 from metrics_utility.gather.collection.collection_data_status import CollectionDataStatus
 from metrics_utility.gather.collection.collection_manifest import CollectionManifest
-from metrics_utility.gather.package import crc_handler
-from metrics_utility.gather.package.s3_handler import S3Handler
+from metrics_utility.gather.package import crc_handler, s3_handler
 from metrics_utility.logger import logger
 
 
@@ -103,7 +102,7 @@ class Package:
             self.shipping_successful = crc_handler.ship(self.tar_path)
         elif self.collector.ship_target == 's3':
             destination_path = self._local_destination_path()
-            S3Handler(params=self.collector.billing_provider_params).upload_file(self.tar_path, object_name=destination_path)
+            s3_handler.upload_file(self.collector.billing_provider_params, self.tar_path, object_name=destination_path)
             self.shipping_successful = True
         else:
             destination_path = self._local_destination_path()
