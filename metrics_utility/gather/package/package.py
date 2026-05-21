@@ -98,19 +98,22 @@ class Package:
 
         logger.debug(f'shipping analytics file: {self.tar_path}')
 
-        if self.collector.ship_target == 'crc':
-            self.shipping_successful = crc_handler.ship(self.tar_path)
-        elif self.collector.ship_target == 's3':
-            destination_path = self._local_destination_path()
-            s3_handler.upload_file(self.collector.billing_provider_params, self.tar_path, object_name=destination_path)
-            self.shipping_successful = True
-        else:
-            destination_path = self._local_destination_path()
-            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
-            shutil.copyfile(self.tar_path, destination_path)
-            self.shipping_successful = True
+        try:
+            if self.collector.ship_target == 'crc':
+                crc_handler.ship(self.tar_path)
+            elif self.collector.ship_target == 's3':
+                destination_path = self._local_destination_path()
+                s3_handler.upload_file(self.collector.billing_provider_params, self.tar_path, object_name=destination_path)
+            else:
+                destination_path = self._local_destination_path()
+                os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+                shutil.copyfile(self.tar_path, destination_path)
 
-        logger.debug(f'shipping successful: {self.shipping_successful}')
+            self.shipping_successful = True
+        except Exception as e:
+            logger.exception(f'Failed to ship analytics archive: {e}')
+            self.shipping_successful = False
+
         return self.shipping_successful
 
     def update_last_gathered_entries(self, updates_dict):
