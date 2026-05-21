@@ -1,5 +1,4 @@
 import logging
-import os
 
 from argparse import RawDescriptionHelpFormatter
 
@@ -98,7 +97,7 @@ class Command(BaseCommand):
         """
         if options.get('verbose'):
             logger.setLevel(logging.DEBUG)
-        handle_env_validation()
+        ship_target = handle_env_validation()
 
         opt_since = options.get('since')
         opt_until = options.get('until')
@@ -108,7 +107,6 @@ class Command(BaseCommand):
         since = parse_date_param(opt_since, self.help_texts, 'since')
         until = parse_date_param(opt_until, self.help_texts, 'until')
 
-        ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
         extra_params = self._handle_ship_target(ship_target)
 
         if opt_ship and opt_dry_run:
