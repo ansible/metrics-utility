@@ -14,7 +14,7 @@ from django.utils.timezone import now, timedelta
 from metrics_utility.gather.collection import Collection
 from metrics_utility.gather.decorators import register
 from metrics_utility.gather.package.package import Package
-from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days
 from metrics_utility.library.collectors.controller.config import config
 from metrics_utility.library.collectors.controller.config_django import config_django
 from metrics_utility.library.lock import lock
@@ -252,30 +252,15 @@ class Collector:
 
         last_key = None
 
-        disable_job_host_summary = bool_from_env('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR')
-
-        optional_collectors = get_optional_collectors()
-
         for collection in self.collections['csv']:
             if last_key != collection.key:
-                write_enabled = False
-
-                if collection.key == 'job_host_summary' and not disable_job_host_summary:
-                    write_enabled = True
-
-                if collection.key in optional_collectors:
-                    write_enabled = True
-
-                if write_enabled:
-                    logger.warning(f'Progress info: Now gathering {collection.key}')
-                else:
-                    logger.warning(f'Progress info: Skipping {collection.key} because it is not enabled.')
-
+                logger.warning(f'Progress info: Now gathering {collection.key}')
                 last_key = collection.key
 
             collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
+                logger.warning(f'Progress info: Skipping {collection.key}')
                 continue
 
             # If collection has sub_collections (it means it collected more files)

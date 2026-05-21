@@ -228,7 +228,10 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     disabled_env_vars['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
 
     # run the gather command with disabled collector
-    run_gather_ext(disabled_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
+    rg = run_gather_ext(disabled_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
+
+    assert 'Progress info: Now gathering job_host_summary' in rg.stderr
+    assert 'Progress info: Skipping job_host_summary' in rg.stderr
 
     jobhost_found = False
 
