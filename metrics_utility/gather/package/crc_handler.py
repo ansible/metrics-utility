@@ -1,6 +1,5 @@
 """CRC (console.redhat.com) transport: OAuth2 token exchange and tarball upload."""
 
-import json
 import os
 
 import requests
@@ -77,7 +76,9 @@ def ship(tar_path):
             verify=CERT_PATH,
             timeout=(31, 31),
         )
-        access_token = json.loads(r.content)['access_token']
+        if r.status_code >= 300:
+            raise FailedToUploadPayload(f'SSO token request failed with status {r.status_code}, {r.text}')
+        access_token = r.json()['access_token']
 
         headers = session.headers
         headers['authorization'] = f'Bearer {access_token}'
