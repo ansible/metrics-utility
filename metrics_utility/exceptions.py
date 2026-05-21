@@ -37,12 +37,6 @@ class NoAnalyticsCollected(MetricsException):
     pass
 
 
-class NotSupportedFactory(MetricsException):
-    """Raised when a factory receives an unrecognised type or target value."""
-
-    pass
-
-
 class UnparsableParameter(MetricsException):
     """Raised when a CLI parameter value cannot be parsed into the expected type."""
 

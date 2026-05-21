@@ -1,19 +1,18 @@
 import os
 import pathlib
+import shutil
 import tarfile
+
+from django.conf import settings
 
 from metrics_utility.gather.collection.collection_data_status import CollectionDataStatus
 from metrics_utility.gather.collection.collection_manifest import CollectionManifest
+from metrics_utility.gather.package import crc_handler
+from metrics_utility.gather.package.s3_handler import S3Handler
 from metrics_utility.logger import logger
 
 
 class Package:
-    """
-    Package serves for managing one tarball and shipping it to the cloud.
-
-    See the README.md and tests/functional/test_gathering.py to see how are packages used
-    """
-
     MAX_DATA_SIZE = 200 * 1048576
 
     def __init__(self, collector):
@@ -54,6 +53,10 @@ class Package:
         if 'Error:' in str(self.tar_path):
             return False
 
+        if self.collector.ship_target == 'crc':
+            if not crc_handler.is_shipping_configured():
+                return False
+
         return True
 
     def make_tgz(self):
@@ -89,6 +92,28 @@ class Package:
             logger.exception(f'Failed to write analytics archive file: {e}')
             return False
 
+    def ship(self):
+        if not self.is_shipping_configured():
+            self.shipping_successful = False
+            return False
+
+        logger.debug(f'shipping analytics file: {self.tar_path}')
+
+        if self.collector.ship_target == 'crc':
+            self.shipping_successful = crc_handler.ship(self.tar_path)
+        elif self.collector.ship_target == 's3':
+            destination_path = self._local_destination_path()
+            S3Handler(params=self.collector.billing_provider_params).upload_file(self.tar_path, object_name=destination_path)
+            self.shipping_successful = True
+        else:
+            destination_path = self._local_destination_path()
+            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+            shutil.copyfile(self.tar_path, destination_path)
+            self.shipping_successful = True
+
+        logger.debug(f'shipping successful: {self.shipping_successful}')
+        return self.shipping_successful
+
     def update_last_gathered_entries(self, updates_dict):
         if self.shipping_successful:
             for collection in self.collections:
@@ -97,6 +122,28 @@ class Package:
     #
     # Private methods ---------------------------
     #
+
+    def _tarname_base(self):
+        if self.collector.ship_target == 'crc':
+            timestamp = self.collector.gather_until
+            return f'{settings.SYSTEM_UUID}-{timestamp.strftime("%Y-%m-%d-%H%M%S%z")}'
+        else:
+            since, until = self._batch_since_and_until()
+            return f'{settings.INSTALL_UUID}-{since.strftime("%Y-%m-%d-%H%M%S%z")}-{until.strftime("%Y-%m-%d-%H%M%S%z")}'
+
+    def _batch_since_and_until(self):
+        return self.collections[0].since, self.collections[0].until
+
+    def _local_destination_path(self):
+        since, _ = self._batch_since_and_until()
+        base_path = self.collector.billing_provider_params['ship_path']
+        filename = os.path.basename(self.tar_path)
+
+        year = since.strftime('%Y')
+        month = since.strftime('%m')
+        day = since.strftime('%d')
+
+        return os.path.join(base_path, f'data/{year}/{month}/{day}', filename)
 
     def _collection_to_tar(self, tar, collection):
         try:
