@@ -1,4 +1,4 @@
-"""Validation helpers for metrics-utility management commands (gather and build)."""
+"""Validation helpers for the gather_automation_controller_billing_data command."""
 
 import datetime
 import os
@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
+from metrics_utility.exceptions import MissingRequiredEnvVar, UnparsableParameter
 from metrics_utility.logger import logger
 
 
@@ -17,41 +17,9 @@ date_format_text = (
     'a number of months ago (--{name}=2mo) (mo, month, months; start of day, UTC).'
 )
 
-ALLOWED_EPHEMERAL_PATTERN = r'^\d+(d|day|days|m|mo|month|months)$'
-
 # Constants for valid values
 MAX_GATHER_PERIOD_DAYS = 3650  # 10 years maximum
 MAX_GATHER_PERIOD_DAYS_ERROR_MSG = f'Value must be number between 0 to {MAX_GATHER_PERIOD_DAYS}'
-
-VALID_REPORT_TYPES = {'CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE'}
-
-VALID_SHEETS = {
-    'CCSP': {
-        'ccsp_summary',
-        'managed_nodes',
-        'indirectly_managed_nodes',
-        'inventory_scope',
-        'usage_by_collections',
-        'usage_by_roles',
-        'usage_by_modules',
-        'usage_by_organizations',
-        'managed_nodes_by_organizations',
-    },
-    'CCSPv2': {
-        'ccsp_summary',
-        'jobs',
-        'managed_nodes',
-        'indirectly_managed_nodes',
-        'inventory_scope',
-        'infrastructure_summary',
-        'usage_by_organizations',
-        'usage_by_collections',
-        'usage_by_roles',
-        'usage_by_modules',
-        'data_collection_status',
-        'managed_nodes_by_organizations',
-    },
-}
 
 VALID_COLLECTORS = {
     ## shared
@@ -68,16 +36,19 @@ VALID_COLLECTORS = {
     'controller_version_service',
     'credentials_service',
     'execution_environments',
+    'feature_flags_service',
     'job_host_summary_service',
     'main_jobevent_service',
     'table_metadata',
     'unified_jobs',
+    ## dashboard & service
+    'dashboard_jobs',
+    'task_executions_service',
 }
 
-VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
-ship_path_description = 'place for collected data and built reports'
+ship_path_description = 'place for collected data'
 
 
 def handle_directory_ship_target():
@@ -193,79 +164,10 @@ def handle_crc_ship_target():
     # only used for the other modes
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     if ship_path:
-        allowed = '", "'.join(['controller_db', 'directory', 's3'])
+        allowed = '", "'.join(['directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
     return billing_provider_params
-
-
-def validate_report_type(errors, method):
-    """
-    Validates the 'METRICS_UTILITY_REPORT_TYPE' environment variable against a set of valid report types.
-
-    If the environment variable is set and its value is not in the list of valid report types,
-    an error message is appended to the provided errors list.
-
-    Args:
-        errors (list): A list to which error messages will be appended if validation fails.
-
-    Returns:
-        str or None: The value of the 'METRICS_UTILITY_REPORT_TYPE' environment variable if set, otherwise None.
-    """
-    if method == 'gather':
-        return None
-
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
-    if report_type and report_type not in VALID_REPORT_TYPES:
-        errors.append(
-            f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
-            f'Please note these values are case sensitive'
-        )
-    if report_type is None:
-        errors.append(
-            f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
-            f'Please note these values are case sensitive'
-        )
-    return report_type
-
-
-def validate_ccsp_report_sheets(errors, report_type):
-    """
-    Validates the optional CCSP report sheets specified in the environment variable
-    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' for a given report type.
-
-    Args:
-        errors (list): A list to which error messages will be appended if invalid sheets are found.
-        report_type (str): The type of report for which to validate the optional sheets.
-
-    Side Effects:
-        Appends error messages to the 'errors' list if any specified sheets are not valid for the given report type.
-
-    Environment Variables:
-        METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS: A comma-separated string of optional sheet names to validate.
-
-    Notes:
-        - If 'ccsp_sheets' is not set or 'report_type' is None, no validation is performed.
-        - The set of valid sheets for each report type is defined in the global 'VALID_SHEETS' dictionary.
-    """
-    ccsp_sheets = (
-        os.getenv(
-            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-            'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-        )
-        .rstrip(',')
-        .split(',')
-    )
-    if ccsp_sheets and report_type:
-        ccsp_sheets_set = set(ccsp_sheets)
-        if report_type in VALID_SHEETS:
-            invalid = ccsp_sheets_set - VALID_SHEETS[report_type]
-            if invalid:
-                errors.append(
-                    f'Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS for '
-                    f'{report_type}: {", ".join(invalid)}. Valid values: '
-                    f'{", ".join(VALID_SHEETS[report_type])}'
-                )
 
 
 def validate_collectors(errors):
@@ -299,55 +201,21 @@ def validate_collectors(errors):
             errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
 
 
-def validate_ship_target(errors, method, report_type):
-    """
-    Validates the 'METRICS_UTILITY_SHIP_TARGET' environment variable against a set of valid ship targets.
-
-    If the environment variable is set and its value is not in the list of valid ship targets,
-    an error message is appended to the provided errors list.
+def validate_ship_target(errors):
+    """Validate METRICS_UTILITY_SHIP_TARGET for the gather command.
 
     Args:
         errors (list): A list to which error messages will be appended if validation fails.
 
     Returns:
         str or None: The value of the 'METRICS_UTILITY_SHIP_TARGET' environment variable if set, otherwise None.
-
-    Notes:
-        - The set of valid ship targets is defined by the global variable VALID_SHIP_TARGET.
-        - Error messages include the invalid ship target and the list of valid values.
     """
     ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
-    ship_target_type = VALID_SHIP_TARGET_BUILD
-    if method == 'gather':
-        ship_target_type = VALID_SHIP_TARGET_GATHER
     if ship_target is None:
-        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is empty. Valid values: {", ".join(ship_target_type)}')
-    if ship_target and ship_target not in ship_target_type:
-        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(ship_target_type)}')
-    if method == 'build' and report_type == 'RENEWAL_GUIDANCE' and ship_target != 'controller_db':
-        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Only "controller_db" is allowed for "RENEWAL_GUIDANCE"')
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is empty. Valid values: {", ".join(VALID_SHIP_TARGET_GATHER)}')
+    if ship_target and ship_target not in VALID_SHIP_TARGET_GATHER:
+        errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(VALID_SHIP_TARGET_GATHER)}')
     return ship_target
-
-
-def validate_ship_path(errors, ship_target, method):
-    """
-    Validates the ship path environment variable based on the ship target.
-
-    Args:
-        errors (list): A list to which error messages will be appended if validation fails.
-        ship_target (str): The value of the METRICS_UTILITY_SHIP_TARGET environment variable.
-
-    Notes:
-        - For 'directory' ship target, checks if METRICS_UTILITY_SHIP_PATH is an existing directory.
-        - Appends an error message to 'errors' if the directory does not exist.
-    """
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
-    if not ship_path:
-        # already handled in handle_*_ship_target
-        return
-
-    if method == 'build' and ship_target in VALID_SHIP_TARGET_BUILD - {'s3'} and not os.path.isdir(ship_path):
-        errors.append(f'Invalid METRICS_UTILITY_SHIP_PATH: {ship_path} is not an existing directory.')
 
 
 def validate_max_gather_period_days(errors):
@@ -380,43 +248,25 @@ def validate_max_gather_period_days(errors):
     return None
 
 
-def handle_env_validation(method: str):
+def handle_env_validation():
     """
-    Validates required environment variables and configuration for the application.
-
-    This function performs a series of validation checks on environment variables and configuration
-    settings required for the application to run correctly. It collects any validation errors and
-    raises a `MissingRequiredEnvVar` exception if any issues are found.
+    Validates required environment variables for the gather command.
 
     Validation steps include:
-    - Validating the report type.
-    - Validating CCSP report sheets based on the report type.
     - Validating collectors.
-    - Validating the ship target (uses the `method` argument to determine which set of valid targets to check).
-    - Validating the ship path based on the ship target.
     - Validating the max gather period days.
-
-    Args:
-        method (str): Determines which command is running, for command-specific logic
-            Should be either 'gather' or 'build'
+    - Validating the ship target.
 
     Raises:
         MissingRequiredEnvVar: If any required environment variable or configuration is missing or invalid.
-
-    Notes:
-        - The function accumulates all errors before raising an exception, providing a comprehensive error message.
-        - The specific validation functions (`validate_*`) are expected to append error messages to the provided `errors` list.
     """
     errors = []
-    report_type = validate_report_type(errors, method)
     validate_collectors(errors)
     validate_max_gather_period_days(errors)
-    if method == 'build':
-        validate_ccsp_report_sheets(errors, report_type)
-    ship_target = validate_ship_target(errors, method, report_type)
-    validate_ship_path(errors, ship_target, method)
+    ship_target = validate_ship_target(errors)
     if errors:
         raise MissingRequiredEnvVar('\n'.join(errors))
+    return ship_target
 
 
 def handle_not_crc():
@@ -514,171 +364,3 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
         parsed = parsed.replace(tzinfo=datetime.timezone.utc)
 
     return parsed
-
-
-def validate_ccsp_params(options):
-    """Validate CLI option combinations specific to CCSP/CCSPv2 report types.
-
-    Args:
-        options: Dict of parsed CLI options.
-
-    Raises:
-        :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
-    """
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
-    opt_month = options.get('month', None)
-    opt_since = options.get('since', None)
-    opt_until = options.get('until', None)
-    opt_ephemeral = options.get('ephemeral', None)
-
-    # bad type
-    if opt_ephemeral:
-        raise BadParameter(f'METRICS_UTILITY_REPORT_TYPE {report_type} does not allow --ephemeral.')
-
-    # bad combos
-    if opt_month and (opt_since or opt_until):
-        raise BadParameter('The --since and --until parameters are not allowed if the --month parameter is provided.')
-    if opt_until and not opt_since:
-        raise BadParameter('The --until parameter is ignored without --since.')
-
-
-def validate_renewal_params(options, help_texts):
-    """Validate CLI option combinations specific to the RENEWAL_GUIDANCE report type.
-
-    Args:
-        options: Dict of parsed CLI options.
-        help_texts: Dict mapping parameter names to their help strings.
-
-    Raises:
-        :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
-        :exc:`~metrics_utility.exceptions.MissingRequiredParameter`: If ``--since``
-            is not provided.
-        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If ``--ephemeral``
-            has an unsupported format.
-    """
-    opt_month = options.get('month', None)
-    opt_since = options.get('since', None)
-    opt_until = options.get('until', None)
-    opt_ephemeral = options.get('ephemeral', None)
-
-    # bad type
-    if opt_month:
-        raise BadParameter('The --month parameter is not allowed for renewal guidance report.')
-    if opt_until:
-        raise BadParameter('The --until parameter is not allowed for renewal guidance report.')
-
-    # required
-    if not opt_since:
-        raise MissingRequiredParameter('The --since parameter is required for renewal guidance report.')
-
-    # validation
-    if opt_ephemeral and not re.match(ALLOWED_EPHEMERAL_PATTERN, opt_ephemeral):
-        raise UnparsableParameter(help_texts.get('ephemeral'))
-
-
-def parse_since_until(options, help_texts):
-    """Parse ``--since`` and ``--until`` options and validate their ordering.
-
-    Args:
-        options: Dict of parsed CLI options.
-        help_texts: Dict mapping parameter names to their help strings.
-
-    Returns:
-        Tuple of ``(since, until)`` as timezone-aware datetimes (either may be None).
-
-    Raises:
-        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If ``--until`` is
-            earlier than ``--since``.
-    """
-    opt_since = options.get('since', None)
-    opt_until = options.get('until', None)
-
-    since = parse_date_param(opt_since, help_texts, 'since')
-    until = parse_date_param(opt_until, help_texts, 'until')
-
-    if (opt_since and opt_until) and until < since:
-        raise UnparsableParameter('The date for --until cannot be before the date for --since.')
-
-    return since, until
-
-
-def validate_build_params(options, help_texts):
-    """Dispatch to the report-type-specific validation function and parse since/until.
-
-    Args:
-        options: Dict of parsed CLI options.
-        help_texts: Dict mapping parameter names to their help strings.
-
-    Returns:
-        Tuple of ``(since, until)`` datetimes (either may be None).
-    """
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
-    if not report_type:
-        return None, None
-
-    if report_type in {'CCSP', 'CCSPv2'}:
-        validate_ccsp_params(options)
-
-    if report_type in {'RENEWAL_GUIDANCE'}:
-        validate_renewal_params(options, help_texts)
-
-    return parse_since_until(options, help_texts)
-
-
-def parse_number_of_days(date_option):
-    """Convert an ephemeral duration string (e.g. ``'3months'``, ``'5days'``) to an integer day count.
-
-    Args:
-        date_option: String with a numeric prefix and a unit suffix (``d``/``day``/``days``
-            or ``mo``/``month``/``months``), or None/empty.
-
-    Returns:
-        Integer number of days, or None if *date_option* is empty.
-
-    Raises:
-        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the format is not recognised.
-    """
-    if not date_option:
-        return None
-
-    if date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days'):
-        if date_option.endswith('d'):
-            suffix_length = len('d')
-        elif date_option.endswith('day'):
-            suffix_length = len('day')
-        elif date_option.endswith('days'):
-            suffix_length = len('days')
-
-        days = int(date_option[0:-suffix_length])
-    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
-        if date_option.endswith('mo'):
-            suffix_length = len('mo')
-        elif date_option.endswith('month'):
-            suffix_length = len('month')
-        elif date_option.endswith('months'):
-            suffix_length = len('months')
-
-        days = int(date_option[0:-suffix_length]) * 30  # using 30 days per month
-    else:
-        raise UnparsableParameter(f"Can't parse parameter value {date_option}")
-
-    return days
-
-
-def handle_month(month):
-    """Process month argument"""
-    if month is not None:
-        try:
-            date = datetime.datetime.strptime(month, '%Y-%m')
-        except ValueError:
-            raise DateFormatError('Invalid --month format. Supported date format: YYYY-MM')
-    else:
-        """Return last month if no month was passed"""
-        beginning_of_the_month = datetime.datetime.today().replace(day=1)
-        beginning_of_the_previous_month = beginning_of_the_month - relativedelta(months=1)
-        date = beginning_of_the_previous_month
-        y = date.strftime('%Y')
-        m = date.strftime('%m')
-        month = f'{y}-{m}'
-
-    return month, date, date + relativedelta(months=1)

@@ -15,7 +15,7 @@ from metrics_utility.logger import logger
 class ManagementUtility(management.ManagementUtility):
     """Customised Django :class:`ManagementUtility` for the metrics-utility CLI.
 
-    Limits the exposed commands to ``build_report`` and
+    Limits the exposed commands to
     ``gather_automation_controller_billing_data``, and surfaces
     :class:`~metrics_utility.exceptions.MetricsException` errors as clean
     log messages with a non-zero exit code.
@@ -76,7 +76,7 @@ class ManagementUtility(management.ManagementUtility):
         Returns:
             Help text string.
         """
-        commands = 'Commands: build_report, gather_automation_controller_billing_data'
+        commands = 'Commands: gather_automation_controller_billing_data'
         if commands_only:
             return commands
         else:

@@ -97,7 +97,7 @@ class Command(BaseCommand):
         """
         if options.get('verbose'):
             debug()
-        handle_env_validation('gather')
+        handle_env_validation()
 
         opt_since = options.get('since')
         opt_until = options.get('until')
