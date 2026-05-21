@@ -107,7 +107,7 @@ class Command(BaseCommand):
         since = parse_date_param(opt_since, self.help_texts, 'since')
         until = parse_date_param(opt_until, self.help_texts, 'until')
 
-        extra_params = self._handle_ship_target(ship_target)
+        billing_provider_params, ship_params = self._handle_ship_target(ship_target)
 
         if opt_ship and opt_dry_run:
             logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
@@ -116,10 +116,9 @@ class Command(BaseCommand):
         collector = Collector(
             collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN,
             ship_target=ship_target,
-            billing_provider_params=extra_params,
         )
 
-        tgzfiles = collector.gather(since=since, until=until, billing_provider_params=extra_params)
+        tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params, ship_params=ship_params)
         if not tgzfiles:
             logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
@@ -133,7 +132,7 @@ class Command(BaseCommand):
             ship_target: Value of METRICS_UTILITY_SHIP_TARGET.
 
         Returns:
-            Dict of billing-provider parameters for the Collector.
+            Tuple of ``(billing_provider_params, ship_params)``.
 
         Raises:
             :exc:`~metrics_utility.exceptions.BadShipTarget`: For unrecognised values.

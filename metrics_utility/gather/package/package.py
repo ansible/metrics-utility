@@ -88,7 +88,7 @@ class Package:
             logger.exception(f'Failed to write analytics archive file: {e}')
             return False
 
-    def ship(self):
+    def ship(self, ship_params=None):
         if not self.is_shipping_configured():
             self.shipping_successful = False
             return False
@@ -99,10 +99,10 @@ class Package:
             if self.collector.ship_target == 'crc':
                 crc_handler.ship(self.tar_path)
             elif self.collector.ship_target == 's3':
-                destination_path = self._local_destination_path()
-                s3_handler.upload_file(self.collector.billing_provider_params, self.tar_path, object_name=destination_path)
+                destination_path = self._local_destination_path(ship_params)
+                s3_handler.upload_file(ship_params, self.tar_path, object_name=destination_path)
             else:
-                destination_path = self._local_destination_path()
+                destination_path = self._local_destination_path(ship_params)
                 os.makedirs(os.path.dirname(destination_path), exist_ok=True)
                 shutil.copyfile(self.tar_path, destination_path)
 
@@ -133,9 +133,9 @@ class Package:
     def _batch_since_and_until(self):
         return self.collections[0].since, self.collections[0].until
 
-    def _local_destination_path(self):
+    def _local_destination_path(self, ship_params):
         since, _ = self._batch_since_and_until()
-        base_path = self.collector.billing_provider_params['ship_path']
+        base_path = ship_params['ship_path']
         filename = os.path.basename(self.tar_path)
 
         year = since.strftime('%Y')

@@ -50,14 +50,13 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(self, collection_type=SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
+    def __init__(self, collection_type=SCHEDULED_COLLECTION, collector_module=None, ship_target=None):
         if collector_module is None:
             from metrics_utility.gather import collectors
 
             collector_module = collectors
 
         self.ship_target = ship_target
-        self.billing_provider_params = billing_provider_params
 
         self.collector_module = collector_module
         self.collections = {}
@@ -76,13 +75,15 @@ class Collector:
     #
     # Public methods ----------------------------
     #
-    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
+    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None, ship_params=None):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
         :param subset: (list) collector_module's function names if only subset is required (typically tests)
         :param since: (datetime) - low threshold of data changes (max. and default - 28 days ago)
         :param until: (datetime) - high threshold of data changes (defaults to now)
+        :param billing_provider_params: (dict) billing provider metadata for config.json
+        :param ship_params: (dict) shipping credentials (ship_path, S3 bucket params)
         :return: None or list of paths to tarballs (.tar.gz)
         """
 
@@ -98,14 +99,14 @@ class Collector:
 
             self._gather_initialize(dest, subset, since, until)
 
-            if not self._gather_config():
+            if not self._gather_config(billing_provider_params):
                 return None
 
             self._gather_json_collections()
 
-            self._gather_csv_collections()
+            self._gather_csv_collections(ship_params)
 
-            self._process_packages()
+            self._process_packages(ship_params)
 
             self._gather_finalize()
 
@@ -218,15 +219,15 @@ class Collector:
 
         self._create_collections(collectors_subset)
 
-    def _gather_config(self):
+    def _gather_config(self, billing_provider_params):
         """Config is special collection, it's added to each Package"""
         if self.config_collection is None:
             logger.log(self.log_level, "'config' collector data is missing")
             return False
 
-        if self.billing_provider_params is not None:
+        if billing_provider_params:
             self.config_collection.gather_kwargs = {
-                'billing_provider_params': self.billing_provider_params,
+                'billing_provider_params': billing_provider_params,
             }
 
         self.config_collection.gather()
@@ -242,7 +243,7 @@ class Collector:
 
             self._add_collection_to_package(collection)
 
-    def _gather_csv_collections(self):
+    def _gather_csv_collections(self, ship_params=None):
         """CSV collections can contain sub-collections (big db tables).
         In that case they are shipped immediately, because:
          1) the temp file needs to be deleted to ensure enough disk space
@@ -281,23 +282,23 @@ class Collector:
             # ship them in their own package
             if len(collection.sub_collections):
                 for sub_collection in collection.sub_collections:
-                    self._add_collection_to_package(sub_collection)
+                    self._add_collection_to_package(sub_collection, ship_params)
             else:
-                self._add_collection_to_package(collection)
+                self._add_collection_to_package(collection, ship_params)
 
-    def _add_collection_to_package(self, collection):
+    def _add_collection_to_package(self, collection, ship_params=None):
         """Adds collection to package and ships it if collection has slicing"""
         package = self._find_available_package('default', collection.key, collection.data_size())
         package.add_collection(collection)
         if collection.ship_immediately():
-            self._process_package(package)
+            self._process_package(package, ship_params)
 
-    def _process_packages(self):
+    def _process_packages(self, ship_params=None):
         for group, packages in self.packages.items():
             for package in packages:
-                self._process_package(package)
+                self._process_package(package, ship_params)
 
-    def _process_package(self, package):
+    def _process_package(self, package, ship_params=None):
         """
         Processing of package can be called twice, skipping the 2nd call.
         If there is a custom slicing function,
@@ -309,7 +310,7 @@ class Collector:
         if not package.processed:
             package.make_tgz()
             if self.ship:
-                package.ship()
+                package.ship(ship_params)
             package.delete_collected_files()
             package.processed = True
 

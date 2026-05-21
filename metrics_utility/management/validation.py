@@ -55,7 +55,8 @@ def handle_directory_ship_target():
     """Read and validate METRICS_UTILITY_SHIP_PATH for directory mode.
 
     Returns:
-        Dict with ``'ship_path'`` key.
+        Tuple of ``(billing_provider_params, ship_params)`` where *billing_provider_params* is
+        empty and *ship_params* contains ``'ship_path'``.
 
     Raises:
         :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If the
@@ -66,15 +67,15 @@ def handle_directory_ship_target():
     if not ship_path:
         raise MissingRequiredEnvVar(f'Missing required env variable METRICS_UTILITY_SHIP_PATH - {ship_path_description}')
 
-    return {'ship_path': ship_path}
+    return {}, {'ship_path': ship_path}
 
 
 def handle_s3_ship_target():
     """Read and validate all S3-related environment variables.
 
     Returns:
-        Dict with ``'ship_path'``, ``'bucket_name'``, ``'bucket_endpoint'``,
-        ``'bucket_region'``, ``'bucket_access_key'``, and ``'bucket_secret_key'``.
+        Tuple of ``(billing_provider_params, ship_params)`` where *billing_provider_params* is
+        empty and *ship_params* contains ``'ship_path'`` and S3 credentials.
 
     Raises:
         :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If any required
@@ -105,8 +106,7 @@ def handle_s3_ship_target():
     if missing:
         raise MissingRequiredEnvVar(f'Missing some required env variables for S3 configuration, namely: {", ".join(missing)}.')
 
-    # S3Handler params
-    return {
+    ship_params = {
         'ship_path': ship_path,
         'bucket_name': bucket_name,
         'bucket_endpoint': bucket_endpoint,
@@ -114,6 +114,7 @@ def handle_s3_ship_target():
         'bucket_access_key': bucket_access_key,
         'bucket_secret_key': bucket_secret_key,
     }
+    return {}, ship_params
 
 
 def handle_not_s3():
@@ -139,8 +140,9 @@ def handle_crc_ship_target():
     """Read and validate CRC-related billing provider environment variables.
 
     Returns:
-        Dict with ``'billing_provider'`` and optionally ``'billing_account_id'``
-        and ``'red_hat_org_id'``.
+        Tuple of ``(billing_provider_params, ship_params)`` where *billing_provider_params*
+        contains ``'billing_provider'`` (and optionally ``'billing_account_id'``
+        and ``'red_hat_org_id'``) and *ship_params* is empty.
 
     Raises:
         :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If a required
@@ -167,7 +169,7 @@ def handle_crc_ship_target():
         allowed = '", "'.join(['directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
-    return billing_provider_params
+    return billing_provider_params, {}
 
 
 def validate_collectors(errors):

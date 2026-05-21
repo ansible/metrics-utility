@@ -11,12 +11,13 @@ def test_handle_crc_ship_target_aws_billing_params(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
     monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
     monkeypatch.setenv('METRICS_UTILITY_RED_HAT_ORG_ID', '99900001')
-    result = handle_crc_ship_target()
-    assert result == {
+    config_params, ship_params = handle_crc_ship_target()
+    assert config_params == {
         'billing_provider': 'aws',
         'billing_account_id': '123456789012',
         'red_hat_org_id': '99900001',
     }
+    assert ship_params == {}
 
 
 def test_handle_crc_ship_target_aws_requires_billing_account_id(monkeypatch):
