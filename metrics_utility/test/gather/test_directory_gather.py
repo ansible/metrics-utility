@@ -61,3 +61,31 @@ def test_assert_no_since_or_until_needed(cleanup_glob):
     )
 
     validate_exists(file_glob)
+
+
+def test_collector_gating_default(cleanup_glob):
+    """job_host_summary runs by default, main_jobevent runs as default optional collector."""
+    rg = run_gather_ext(env_vars, ['--ship', '--since=2025-06-13', '--until=2025-06-14'])
+
+    assert 'Progress info: Now gathering job_host_summary' in rg.stderr
+    assert 'Progress info: Now gathering main_jobevent' in rg.stderr
+    # main_host is not in optional_collectors by default
+    assert 'Progress info: Skipping main_host' in rg.stderr
+
+
+def test_collector_gating_disable_job_host_summary(cleanup_glob):
+    """job_host_summary can be disabled via env var."""
+    extra_env = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': 'true'}
+    rg = run_gather_ext(extra_env, ['--ship', '--since=2025-06-13', '--until=2025-06-14'])
+
+    assert 'Progress info: Now gathering job_host_summary' in rg.stderr
+    assert 'Progress info: Skipping job_host_summary' in rg.stderr
+
+
+def test_collector_gating_disable_main_jobevent(cleanup_glob):
+    """main_jobevent is skipped when optional_collectors is set to something else."""
+    extra_env = {**env_vars, 'METRICS_UTILITY_OPTIONAL_COLLECTORS': ''}
+    rg = run_gather_ext(extra_env, ['--ship', '--since=2025-06-13', '--until=2025-06-14'])
+
+    assert 'Progress info: Now gathering main_jobevent' in rg.stderr
+    assert 'Progress info: Skipping main_jobevent' in rg.stderr
