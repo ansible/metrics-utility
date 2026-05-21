@@ -7,16 +7,15 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 
-import metrics_utility.base as base
-
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
+from metrics_utility.base.collector import Collector as BaseCollector
 from metrics_utility.base.utils import bool_from_env
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
 
-class Collector(base.Collector):
+class Collector(BaseCollector):
     """Billing-specific collector that ships Automation Controller metrics data.
 
     Extends the base :class:`~metrics_utility.base.collector.Collector` with
@@ -25,7 +24,7 @@ class Collector(base.Collector):
     persistence suppression.
     """
 
-    def __init__(self, collection_type=base.Collector.SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
+    def __init__(self, collection_type=BaseCollector.SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
         """Initialise the billing collector.
 
         Args:
@@ -114,7 +113,7 @@ class Collector(base.Collector):
         """
         from metrics_utility.automation_controller_billing import collectors
 
-        return base.Collector.registered_collectors(collectors)
+        return BaseCollector.registered_collectors(collectors)
 
     def _load_last_gathered_entries(self):
         """Load the last-gathered timestamps from the Controller database.

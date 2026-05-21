@@ -8,13 +8,12 @@ import requests
 from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
 
-import metrics_utility.base as base
-
+from metrics_utility.base.package import Package
 from metrics_utility.exceptions import FailedToUploadPayload
 from metrics_utility.logger import logger
 
 
-class PackageCRC(base.Package):
+class PackageCRC(Package):
     """Package that ships tarballs to Red Hat's CRC (console.redhat.com) ingress API.
 
     Uses service-account OAuth2 credentials to obtain a bearer token from the

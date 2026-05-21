@@ -1,5 +1,5 @@
 from base.functional.helpers import simple_csv, trivial_slicing
-from metrics_utility.base import register
+from metrics_utility.base.decorators import register
 
 
 @register('config', '1.0', config=True)

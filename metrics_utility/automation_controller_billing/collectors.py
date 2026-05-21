@@ -6,29 +6,26 @@ from django.db.utils import ProgrammingError
 from django.utils.timezone import now, timedelta
 
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
-from metrics_utility.base import register
+from metrics_utility.base.decorators import register
 from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
-from metrics_utility.library.collectors.controller import (
-    config,
-    config_django,
-    controller_version_service,
-    credentials_service,
-    execution_environments,
-    feature_flags_service,
-    job_host_summary,
-    job_host_summary_service,
-    main_host,
-    main_host_daily,
-    main_indirectmanagednodeaudit,
-    main_jobevent,
-    main_jobevent_service,
-    table_metadata,
-    unified_jobs,
-)
-from metrics_utility.library.collectors.dashboard import dashboard_jobs
-from metrics_utility.library.collectors.others import total_workers_vcpu
-from metrics_utility.library.collectors.service import task_executions_service
+from metrics_utility.library.collectors.controller.config import config
+from metrics_utility.library.collectors.controller.config_django import config_django
+from metrics_utility.library.collectors.controller.controller_version_service import controller_version_service
+from metrics_utility.library.collectors.controller.credentials_service import credentials_service
+from metrics_utility.library.collectors.controller.execution_environments import execution_environments
+from metrics_utility.library.collectors.controller.feature_flags_service import feature_flags_service
+from metrics_utility.library.collectors.controller.job_host_summary import job_host_summary
+from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
+from metrics_utility.library.collectors.controller.main_host import main_host, main_host_daily
+from metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
+from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent
+from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
+from metrics_utility.library.collectors.controller.table_metadata import table_metadata
+from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
+from metrics_utility.library.collectors.dashboard.collectors import dashboard_jobs
+from metrics_utility.library.collectors.others.total_workers_vcpu import total_workers_vcpu
+from metrics_utility.library.collectors.service.task_executions_service import task_executions_service
 from metrics_utility.logger import logger
 
 

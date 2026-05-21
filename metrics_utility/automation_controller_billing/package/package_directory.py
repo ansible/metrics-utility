@@ -5,12 +5,11 @@ import shutil
 
 from django.conf import settings
 
-import metrics_utility.base as base
-
+from metrics_utility.base.package import Package
 from metrics_utility.logger import logger
 
 
-class PackageDirectory(base.Package):
+class PackageDirectory(Package):
     """Package that copies the generated tarball into a local date-partitioned directory."""
 
     def _batch_since_and_until(self):

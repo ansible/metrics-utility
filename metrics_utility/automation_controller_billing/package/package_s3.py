@@ -4,13 +4,12 @@ import os
 
 from django.conf import settings
 
-import metrics_utility.base as base
-
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
+from metrics_utility.base.package import Package
 from metrics_utility.logger import logger
 
 
-class PackageS3(base.Package):
+class PackageS3(Package):
     """Package that uploads the generated tarball into a date-partitioned S3 prefix."""
 
     def _batch_since_and_until(self):
