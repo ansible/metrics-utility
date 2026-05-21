@@ -15,6 +15,7 @@ from metrics_utility.library.collectors.controller import (
     controller_version_service,
     credentials_service,
     execution_environments,
+    feature_flags_service,
     job_host_summary,
     job_host_summary_service,
     main_host,
@@ -25,7 +26,9 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.library.collectors.dashboard import dashboard_jobs
 from metrics_utility.library.collectors.others import total_workers_vcpu
+from metrics_utility.library.collectors.service import task_executions_service
 from metrics_utility.logger import logger
 
 
@@ -331,4 +334,31 @@ def cli_unified_jobs(since, until, output):
         return None
 
     collector = unified_jobs(db=connection, since=since, until=until)
+    return output.as_files(collector)
+
+
+@register('feature_flags_service', '1.4', format='csv', fnc_slicing=until_slicing)
+def cli_feature_flags_service(since, until, output):
+    if 'feature_flags_service' not in get_optional_collectors():
+        return None
+
+    collector = feature_flags_service(db=connection)
+    return output.as_files(collector)
+
+
+@register('dashboard_jobs', '1.0', format='json', fnc_slicing=daily_slicing)
+def cli_dashboard_jobs(since, until, output):
+    if 'dashboard_jobs' not in get_optional_collectors():
+        return None
+
+    collector = dashboard_jobs(db=connection, since=since, until=until)
+    return output.dict(collector.gather())
+
+
+@register('task_executions_service', '1.0', format='csv', fnc_slicing=daily_slicing)
+def cli_task_executions_service(since, until, output):
+    if 'task_executions_service' not in get_optional_collectors():
+        return None
+
+    collector = task_executions_service(db=connection, since=since, until=until)
     return output.as_files(collector)
