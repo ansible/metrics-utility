@@ -1,14 +1,9 @@
 """Thin boto3 wrapper for S3 upload used by Package shipping."""
 
-import os
-
 import boto3
 
 
-def upload_file(params, file_name, object_name=None):
-    if object_name is None:
-        object_name = os.path.basename(file_name)
-
+def upload_file(params, file_name, object_name):
     session = boto3.Session(
         aws_access_key_id=params.get('bucket_access_key'),
         aws_secret_access_key=params.get('bucket_secret_key'),
