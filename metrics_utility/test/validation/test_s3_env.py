@@ -17,7 +17,7 @@ unset = {
 
 @patch('metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation')
 def expect_gather_error(env, klass, mocked):
-    mocked.return_value = None
+    mocked.return_value = env.get('METRICS_UTILITY_SHIP_TARGET')
 
     with pytest.raises(klass) as e:
         run_gather_int(

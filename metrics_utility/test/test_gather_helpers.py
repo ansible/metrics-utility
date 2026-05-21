@@ -2,17 +2,15 @@ from unittest.mock import MagicMock, patch
 
 from django.db import DatabaseError
 
-from metrics_utility.gather.helpers import (
-    _datetime_hook,
-    get_last_entries_from_db,
-)
+from metrics_utility.gather.utils import get_last_entries_from_db
+from metrics_utility.library.collectors.controller.config import _datetime_hook
 from metrics_utility.test.util import utcdt
 
 
 class TestGetLastEntriesFromDb:
     """Test cases for get_last_entries_from_db function"""
 
-    @patch('metrics_utility.gather.helpers.connection')
+    @patch('metrics_utility.gather.utils.connection')
     def test_successful_entries_retrieval(self, mock_connection):
         """Test successful last entries retrieval"""
         # Setup
@@ -35,7 +33,7 @@ class TestGetLastEntriesFromDb:
         sql_call = mock_cursor.execute.call_args[0][0]
         assert 'AUTOMATION_ANALYTICS_LAST_ENTRIES' in sql_call
 
-    @patch('metrics_utility.gather.helpers.connection')
+    @patch('metrics_utility.gather.utils.connection')
     def test_no_entries_or_empty_value(self, mock_connection):
         """Test when no entries found or value is empty"""
         # Setup
@@ -49,8 +47,8 @@ class TestGetLastEntriesFromDb:
         # Assert
         assert result == {}
 
-    @patch('metrics_utility.gather.helpers.logger')
-    @patch('metrics_utility.gather.helpers.connection')
+    @patch('metrics_utility.gather.utils.logger')
+    @patch('metrics_utility.gather.utils.connection')
     def test_database_error_handling(self, mock_connection, mock_logger):
         """Test error handling when database query fails"""
         # Setup
@@ -101,7 +99,7 @@ class TestDatetimeHook:
 class TestIntegration:
     """Integration tests for helper functions working together"""
 
-    @patch('metrics_utility.gather.helpers.connection')
+    @patch('metrics_utility.gather.utils.connection')
     def test_functions_work_with_real_data(self, mock_connection):
         """Test that all helper functions work with realistic data"""
         # Setup realistic database responses
