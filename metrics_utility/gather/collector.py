@@ -76,7 +76,7 @@ class Collector:
     #
     # Public methods ----------------------------
     #
-    def gather(self, dest=None, subset=None, since=None, until=None):
+    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files

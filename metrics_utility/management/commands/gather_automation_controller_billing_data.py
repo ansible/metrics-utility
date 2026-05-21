@@ -119,7 +119,7 @@ class Command(BaseCommand):
             billing_provider_params=extra_params,
         )
 
-        tgzfiles = collector.gather(since=since, until=until)
+        tgzfiles = collector.gather(since=since, until=until, billing_provider_params=extra_params)
         if not tgzfiles:
             logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
