@@ -6,10 +6,8 @@ from metrics_utility.library.instants import (
     months_ago,
     now,
     this_day,
-    this_hour,
     this_minute,
     this_month,
-    this_week,
 )
 from metrics_utility.test.util import utcdt
 
@@ -29,30 +27,10 @@ def test_this_minute_returns_start_of_minute():
     assert result.microsecond == 0
 
 
-def test_this_hour_returns_start_of_hour():
-    result = this_hour()
-    assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
-    assert result.minute == 0
-    assert result.second == 0
-    assert result.microsecond == 0
-
-
 def test_this_day_returns_start_of_day():
     result = this_day()
     assert isinstance(result, datetime)
     assert result.tzinfo == timezone.utc
-    assert result.hour == 0
-    assert result.minute == 0
-    assert result.second == 0
-    assert result.microsecond == 0
-
-
-def test_this_week_returns_start_of_week():
-    result = this_week()
-    assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
-    assert result.weekday() == 0  # Monday
     assert result.hour == 0
     assert result.minute == 0
     assert result.second == 0

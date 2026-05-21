@@ -95,19 +95,3 @@ class S3Handler:
                 raise e
 
         return status
-
-    def list_files(self, prefix):
-        """Yield S3 object keys under the given prefix.
-
-        Args:
-            prefix: The S3 key prefix to list (e.g. ``'data/2024/01/15'``).
-
-        Yields:
-            S3 object key strings found under *prefix*.
-        """
-        s3_resource = self.get_s3_resource()
-
-        paginator = s3_resource.meta.client.get_paginator('list_objects')
-        for resp in paginator.paginate(Bucket=self.bucket_name, Prefix=prefix):
-            for ret_value in resp.get('Contents', []):
-                yield ret_value['Key']

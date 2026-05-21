@@ -17,22 +17,9 @@ def this_minute():
     return now().replace(second=0, microsecond=0)
 
 
-def this_hour():
-    """Return the start of the current hour."""
-    return now().replace(minute=0, second=0, microsecond=0)
-
-
 def this_day():
     """Return the start of the current day (midnight)."""
     return now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-
-def this_week():
-    """Return the start of the current week (Monday at midnight)."""
-    current = this_day()
-    # weekday() returns 0 for Monday, 6 for Sunday
-    days_since_monday = current.weekday()
-    return current - timedelta(days=days_since_monday)
 
 
 def this_month():
