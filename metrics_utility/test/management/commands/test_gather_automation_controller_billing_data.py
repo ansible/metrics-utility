@@ -3,7 +3,6 @@ from argparse import ArgumentParser
 import pytest
 
 from metrics_utility.exceptions import (
-    BadRequiredEnvVar,
     BadShipTarget,
     FailedToUploadPayload,
     MetricsException,
@@ -61,7 +60,6 @@ def test_command_help(capsys):
     [
         BadShipTarget('bad'),
         MissingRequiredEnvVar('missing'),
-        BadRequiredEnvVar('bad env'),
         FailedToUploadPayload('fail'),
         UnparsableParameter('unparsable'),
     ],

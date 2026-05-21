@@ -13,26 +13,8 @@ class MetricsException(Exception):
         self.name = message
 
 
-class BadParameter(MetricsException):
-    """Raised when a CLI parameter value is invalid for the current context."""
-
-    pass
-
-
-class BadRequiredEnvVar(MetricsException):
-    """Raised when a required environment variable has an unacceptable value."""
-
-    pass
-
-
 class BadShipTarget(MetricsException):
     """Raised when METRICS_UTILITY_SHIP_TARGET has an unrecognised value."""
-
-    pass
-
-
-class DateFormatError(MetricsException):
-    """Raised when a date argument cannot be parsed into the expected format."""
 
     pass
 
@@ -45,12 +27,6 @@ class FailedToUploadPayload(MetricsException):
 
 class MissingRequiredEnvVar(MetricsException):
     """Raised when one or more required environment variables are absent or invalid."""
-
-    pass
-
-
-class MissingRequiredParameter(MetricsException):
-    """Raised when a required CLI parameter is not provided."""
 
     pass
 

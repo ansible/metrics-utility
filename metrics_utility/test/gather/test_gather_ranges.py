@@ -10,7 +10,6 @@ from metrics_utility.test.util import run_gather_ext
 
 
 env_vars = {
-    'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
     'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': '3',

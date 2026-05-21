@@ -5,17 +5,6 @@ from django.db import connection
 from metrics_utility.library.collectors.controller.feature_flags_service import feature_flags_service
 
 
-# Expected enabled feature flags seeded by dab_feature_flags.sql
-# (only flags with condition='boolean' and value='True')
-feature_flags_service_lines = [
-    'name,condition,value,description,support_level,toggle_type,visibility',
-    'FEATURE_ANALYTICS_ENABLED,boolean,True,Enables analytics data collection.,tech-preview,boolean,True',
-    'FEATURE_INDIRECT_NODE_COUNTING_ENABLED,boolean,True,Enables indirect node counting for managed hosts.,supported,boolean,True',
-]
-
-feature_flags_service_skip_columns = []
-
-
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_feature_flags_service_command():
     """Build and validate feature_flags_service output from library collector."""

@@ -55,14 +55,6 @@ class S3Handler:
         """
         return self.session.client('s3', endpoint_url=self.bucket_endpoint)
 
-    def get_s3_bucket(self):
-        """Return the configured S3 Bucket resource.
-
-        Returns:
-            A :class:`boto3.resources.factory.s3.Bucket` instance.
-        """
-        return self.get_s3_resource().Bucket(self.bucket_name)
-
     def upload_file(self, file_name, object_name=None):
         """Upload a file to an S3 bucket
 
