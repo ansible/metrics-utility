@@ -12,7 +12,6 @@ dependencies = [
     "distro==1.9.0",
     "django==5.2.7",
     "kubernetes>=33.1.0",
-    "openpyxl==3.1.2",
     "pandas>=2.2.3",
     "psycopg==3.3.0",
     "requests==2.32.5",
@@ -63,7 +62,7 @@ dev = [
 
 [tool.setuptools]
 # Include and exclude directories for the final package
-packages = {find = {include = ["metrics_utility*"], exclude = ["tools*", "workers*", "sql*", "out*", "docs*", "mock_awx*"]}}
+packages = {find = {include = ["metrics_utility*"], exclude = ["tools*", "sql*", "out*", "docs*", "mock_awx*"]}}
 
 [tool.setuptools.package-data]
 # Include only necessary package data

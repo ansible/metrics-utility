@@ -68,7 +68,7 @@ def test_command_help(capsys):
 )
 def test_handle_known_exceptions(monkeypatch, command_instance, exc):
     handle_env_validation = 'metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation'
-    monkeypatch.setattr(handle_env_validation, lambda x: None)
+    monkeypatch.setattr(handle_env_validation, lambda: None)
 
     with pytest.raises(MetricsException):
         command_instance.handle()
@@ -76,7 +76,7 @@ def test_handle_known_exceptions(monkeypatch, command_instance, exc):
 
 def test_handle_unexpected_exception(monkeypatch, command_instance):
     handle_env_validation = 'metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation'
-    monkeypatch.setattr(handle_env_validation, lambda x: None)
+    monkeypatch.setattr(handle_env_validation, lambda: None)
 
     with pytest.raises(MetricsException):
         command_instance.handle()

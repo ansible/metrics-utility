@@ -5,10 +5,7 @@ from unittest.mock import patch
 import pytest
 
 from metrics_utility.exceptions import MetricsException
-from metrics_utility.management.validation import (
-    parse_date_param,
-    parse_number_of_days,
-)
+from metrics_utility.management.validation import parse_date_param
 
 
 def test_parse_date_param():
@@ -42,17 +39,3 @@ def test_parse_date_param():
     # unknown suffix
     with pytest.raises(MetricsException):
         parse_date_param('4x')
-
-
-def test_parse_number_of_days():
-    assert parse_number_of_days(None) is None
-    assert parse_number_of_days('1d') == 1
-    assert parse_number_of_days('2mo') == 60
-
-    # bare number invalid
-    with pytest.raises(MetricsException):
-        parse_number_of_days('3')
-
-    # unknown suffix
-    with pytest.raises(MetricsException):
-        parse_number_of_days('4x')
