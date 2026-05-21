@@ -98,5 +98,3 @@ def ship(tar_path):
 
     if response.status_code >= 300:
         raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
-
-    return True
