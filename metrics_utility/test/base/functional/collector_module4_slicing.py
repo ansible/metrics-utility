@@ -6,7 +6,7 @@ from base.functional.helpers import (
 from metrics_utility.gather.decorators import register
 
 
-@register('config', '1.0', config=True)
+@register('config', '1.0')
 def config(since, **kwargs):
     return {'version': '1.0'}
 

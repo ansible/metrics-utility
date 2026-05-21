@@ -119,7 +119,7 @@ def until_slicing(_key, _last_gather, **kwargs):
 
 
 # FIXME: move this one to caller?
-@register('config', '2.0', format='json', config=True)
+@register('config', '2.0', format='json')
 def cli_config(since, until, output, billing_provider_params=None):
     try:
         collector = config_django(billing_provider_params=billing_provider_params or {})

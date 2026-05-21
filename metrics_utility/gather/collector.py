@@ -364,7 +364,7 @@ class Collector:
             ):
                 collection = self._create_collection(fnc)
 
-                if fnc.__insights_analytics_config__:
+                if fnc.__insights_analytics_key__ == 'config':
                     self.config_collection = collection
                 else:
                     for since, until in collection.slices():

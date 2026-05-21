@@ -2,7 +2,6 @@ def register(
     key,
     version,
     format='json',
-    config=False,
     fnc_slicing=None,
 ):
     """
@@ -23,7 +22,6 @@ def register(
         f.__insights_analytics_key__ = key
         f.__insights_analytics_version__ = version
         f.__insights_analytics_type__ = format  # 'csv' | 'json' (default)
-        f.__insights_analytics_config__ = config  # True | False (default)
         f.__insights_analytics_fnc_slicing__ = fnc_slicing
 
         return f
