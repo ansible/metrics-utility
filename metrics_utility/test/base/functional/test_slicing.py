@@ -27,7 +27,7 @@ def collector(mocker):
 
 def test_slices_by_date(collector):
     """
-    Slicing by fnc_slicing function `one_day_slicing`.
+    Slicing by slicing function `one_day_slicing`.
     Splits data to 10 days/files.
     """
     days_to_collect = 10
@@ -81,7 +81,7 @@ def test_slices_by_date(collector):
 
 def test_slices_by_date_and_size(collector):
     """
-    Slicing by fnc_slicing function `one_day_slicing`.
+    Slicing by slicing function `one_day_slicing`.
     Splits data to 10 days/files.
     Also splits each day to 2 files by size (CsvFileSplitter)
     => total 20 files

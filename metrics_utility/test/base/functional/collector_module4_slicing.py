@@ -15,7 +15,7 @@ def config(since, **kwargs):
     'csv_one_day_slicing_1',
     '1.0',
     output_format='csv',
-    fnc_slicing=one_day_slicing,
+    slicing=one_day_slicing,
 )
 def csv_one_day_slicing_1(since, *, output, until, **kwargs):
     return timestamp_csv(
@@ -32,7 +32,7 @@ def csv_one_day_slicing_1(since, *, output, until, **kwargs):
     'csv_one_day_slicing_2',
     '1.0',
     output_format='csv',
-    fnc_slicing=one_day_slicing,
+    slicing=one_day_slicing,
 )
 def csv_one_day_slicing_2(since, *, output, until, **kwargs):
     return timestamp_csv(

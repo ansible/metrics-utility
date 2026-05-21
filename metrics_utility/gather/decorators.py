@@ -2,7 +2,7 @@ def register(
     key,
     version,
     output_format='json',
-    fnc_slicing=None,
+    slicing=None,
 ):
     """
     A decorator used to register a function as a metric collector.
@@ -17,10 +17,10 @@ def register(
     """
 
     def decorate(f):
-        f.__insights_analytics_key__ = key
-        f.__insights_analytics_version__ = version
-        f.__insights_analytics_type__ = output_format  # 'csv' | 'json' (default)
-        f.__insights_analytics_fnc_slicing__ = fnc_slicing
+        f._register_key_ = key
+        f._register_version_ = version
+        f._register_output_format_ = output_format
+        f._register_slicing_ = slicing
 
         return f
 

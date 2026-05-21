@@ -375,12 +375,12 @@ class Collector:
         for name, fnc in inspect.getmembers(self.collector_module):
             if not (
                 inspect.isfunction(fnc)  # noqa
-                and hasattr(fnc, '__insights_analytics_key__')  # noqa
-                and hasattr(fnc, '__insights_analytics_type__')  # noqa
+                and hasattr(fnc, '_register_key_')  # noqa
+                and hasattr(fnc, '_register_output_format_')  # noqa
             ):
                 continue
 
-            if fnc.__insights_analytics_key__ == 'config':
+            if fnc._register_key_ == 'config':
                 module_has_config = True
                 if not subset or name in subset:
                     self.config_collection = self._create_collection(fnc)
@@ -400,8 +400,8 @@ class Collector:
         if not module_has_config:
             self.config_collection = self._create_collection(cli_config)
 
-    def _create_collection(self, fnc_collecting):
-        return Collection(self, fnc_collecting)
+    def _create_collection(self, collector_fn):
+        return Collection(self, collector_fn)
 
     def _create_package(self):
         return Package(self)

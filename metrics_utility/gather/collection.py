@@ -17,15 +17,15 @@ class Collection:
     Handles both JSON and CSV collection types via self.output_format.
     """
 
-    def __init__(self, collector, fnc_collecting):
+    def __init__(self, collector, collector_fn):
         self.collector = collector
-        self.fnc_collecting = fnc_collecting
-        self.fnc_slicing = fnc_collecting.__insights_analytics_fnc_slicing__
+        self.collector_fn = collector_fn
+        self.slicing = collector_fn._register_slicing_
 
-        self.key = fnc_collecting.__insights_analytics_key__
-        self.version = fnc_collecting.__insights_analytics_version__
+        self.key = collector_fn._register_key_
+        self.version = collector_fn._register_version_
 
-        self.output_format = fnc_collecting.__insights_analytics_type__
+        self.output_format = collector_fn._register_output_format_
 
         self.filename = f'{self.key}.{self.output_format}'
         self.since = None  # set by Collector._create_collections()
@@ -86,7 +86,7 @@ class Collection:
         output = CollectionOutput(self.collector.gather_dir)
 
         try:
-            result = self.fnc_collecting(
+            result = self.collector_fn(
                 since=self.since,
                 until=self.until,
                 output=output,
@@ -113,15 +113,15 @@ class Collection:
         since = self.collector.gather_since
         until = self.collector.gather_until
         last_gather = self.collector.last_gather
-        if self.fnc_slicing:
-            slices = self.fnc_slicing(self.key, last_gather, since=since, until=until)
+        if self.slicing:
+            slices = self.slicing(self.key, last_gather, since=since, until=until)
         else:
             slices = [(self._gather_since(), self.collector.gather_until)]
 
         return slices
 
     def ship_immediately(self):
-        return self.fnc_slicing is not None
+        return self.slicing is not None
 
     def target(self):
         if self.output_format == 'json':

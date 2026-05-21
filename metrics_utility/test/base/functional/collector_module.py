@@ -40,7 +40,7 @@ def csv_collection_3(*, output, **kwargs):
     'csv_slicing_1',
     '1.0',
     output_format='csv',
-    fnc_slicing=trivial_slicing,
+    slicing=trivial_slicing,
 )
 def csv_slicing_1(*, output, **kwargs):
     return simple_csv(output.full_path, 'csv_slicing_1', 1, 100)
@@ -50,7 +50,7 @@ def csv_slicing_1(*, output, **kwargs):
     'csv_slicing_2',
     '1.0',
     output_format='csv',
-    fnc_slicing=trivial_slicing,
+    slicing=trivial_slicing,
 )
 def csv_slicing_2(*, output, **kwargs):
     return simple_csv(output.full_path, 'csv_slicing_2', 2, 100)
