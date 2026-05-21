@@ -63,28 +63,6 @@ class Collector:
         self.last_gather = None
 
     #
-    # Class methods -----------------------------
-    #
-    @classmethod
-    def registered_collectors(cls, module=None):
-        """
-        Returns all functions in the billing collectors module defined with "@register" decorator
-        """
-        if module is None:
-            from metrics_utility.gather import collectors
-
-            module = collectors
-
-        return {
-            func.__insights_analytics_key__: {
-                'name': func.__insights_analytics_key__,
-                'version': func.__insights_analytics_version__,
-            }
-            for name, func in inspect.getmembers(module)
-            if inspect.isfunction(func) and hasattr(func, '__insights_analytics_key__')
-        }
-
-    #
     # Public methods ----------------------------
     #
     def config_present(self):

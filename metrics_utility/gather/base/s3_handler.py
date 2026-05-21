@@ -47,14 +47,6 @@ class S3Handler:
         """
         return self.session.resource('s3', endpoint_url=self.bucket_endpoint)
 
-    def get_s3_client(self):
-        """Return a boto3 S3 low-level client connected to the configured endpoint.
-
-        Returns:
-            A :class:`botocore.client.S3` instance.
-        """
-        return self.session.client('s3', endpoint_url=self.bucket_endpoint)
-
     def upload_file(self, file_name, object_name=None):
         """Upload a file to an S3 bucket
 
@@ -75,23 +67,3 @@ class S3Handler:
         except ClientError as e:
             logger.error(e)
             return False
-
-    def download_file(self, s3_filename, local_filename):
-        """
-        :param s3_filename - request_id
-        :param local_filename - path to tmp
-        """
-        client = self.get_s3_client()
-
-        full_name = s3_filename  # os.path.join(s3_path, s3_filename) if s3_path else s3_filename
-        try:
-            client.download_file(self.bucket_name, full_name, local_filename)
-            status = True
-        except ClientError as e:
-            code = int(e.response['Error']['Code'])
-            if code == 404:
-                status = False
-            else:
-                raise e
-
-        return status

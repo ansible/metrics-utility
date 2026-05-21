@@ -23,6 +23,7 @@ class PackageCRC(Package):
     CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
+    SHIPPING_AUTH_USERPASS = 'user-pass'
     SHIPPING_AUTH_SERVICE_ACCOUNT = 'service-account'
 
     def _tarname_base(self):
