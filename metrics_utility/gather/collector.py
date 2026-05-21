@@ -11,11 +11,14 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.exceptions import NotSupportedFactory
 from metrics_utility.gather.collection.collection import Collection
 from metrics_utility.gather.collection.collection_csv import CollectionCSV
 from metrics_utility.gather.collection.collection_json import CollectionJSON
 from metrics_utility.gather.helpers import get_last_entries_from_db
-from metrics_utility.gather.package.factory import Factory as PackageFactory
+from metrics_utility.gather.package.package_crc import PackageCRC
+from metrics_utility.gather.package.package_directory import PackageDirectory
+from metrics_utility.gather.package.package_s3 import PackageS3
 from metrics_utility.gather.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
@@ -413,12 +416,13 @@ class Collector:
 
         return collection
 
-    def _create_package(self):
-        package_class = self._package_class()
-        return package_class(self)
+    _PACKAGE_CLASSES = {'crc': PackageCRC, 'directory': PackageDirectory, 's3': PackageS3}
 
-    def _package_class(self):
-        return PackageFactory(ship_target=self.ship_target).create()
+    def _create_package(self):
+        cls = self._PACKAGE_CLASSES.get(self.ship_target)
+        if cls is None:
+            raise NotSupportedFactory(f'Factory for {self.ship_target} not supported')
+        return cls(self)
 
     def _reset_collections_and_packages(self):
         self.collections = {
