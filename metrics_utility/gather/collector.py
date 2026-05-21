@@ -11,7 +11,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.utils.timezone import now, timedelta
 
-from metrics_utility.gather.collection.collection import Collection
+from metrics_utility.gather.collection import Collection
 from metrics_utility.gather.decorators import register
 from metrics_utility.gather.package.package import Package
 from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
