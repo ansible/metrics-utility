@@ -2,7 +2,7 @@
 
 from base.classes.package import Package
 
-from metrics_utility.base import Collector
+from metrics_utility.base.collector import Collector
 
 
 class AnalyticsCollector(Collector):
