@@ -12,8 +12,6 @@ from django.db import connection
 from django.utils.timezone import now, timedelta
 
 from metrics_utility.gather.collection.collection import Collection
-from metrics_utility.gather.collection.collection_csv import CollectionCSV
-from metrics_utility.gather.collection.collection_json import CollectionJSON
 from metrics_utility.gather.package.package import Package
 from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.library.lock import lock
@@ -198,33 +196,31 @@ class Collector:
         self._calculate_collection_interval(since, until)
 
         self.collections = {
-            Collection.COLLECTION_TYPE_JSON: [],
-            Collection.COLLECTION_TYPE_CSV: [],
-            Collection.COLLECTION_TYPE_CONFIG: None,
+            Collection.TYPE_JSON: [],
+            Collection.TYPE_CSV: [],
         }
+        self.config_collection = None
         self.packages = {}
 
         self._create_collections(collectors_subset)
 
     def _gather_config(self):
         """Config is special collection, it's added to each Package"""
-        if self.collections.get('config') is None:
+        if self.config_collection is None:
             logger.log(self.log_level, "'config' collector data is missing")
             return False
 
-        self.collections['config'].gather()
-
         if self.billing_provider_params is not None:
-            config_collection = self.collections['config']
-            data = json.loads(config_collection.data)
-            data['billing_provider_params'] = self.billing_provider_params
-            config_collection._save_gathering(data)
+            self.config_collection.gather_kwargs = {
+                'billing_provider_params': self.billing_provider_params,
+            }
 
+        self.config_collection.gather()
         return True
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
-        for collection in self.collections[Collection.COLLECTION_TYPE_JSON]:
+        for collection in self.collections[Collection.TYPE_JSON]:
             collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
@@ -245,7 +241,7 @@ class Collector:
 
         optional_collectors = get_optional_collectors()
 
-        for collection in self.collections[Collection.COLLECTION_TYPE_CSV]:
+        for collection in self.collections[Collection.TYPE_CSV]:
             if last_key != collection.key:
                 write_enabled = False
 
@@ -358,13 +354,6 @@ class Collector:
         """Creates Collections from decorated functions (by @register) from self.collector_module
         :param subset - array of function names which should be used.
                       - if None, all registered functions will be used
-
-        collections have following structure:
-        {
-            'json': []
-            'csv': []
-            'config': <Collection>
-        }
         """
         for name, fnc in inspect.getmembers(self.collector_module):
             if (
@@ -373,12 +362,10 @@ class Collector:
                 and hasattr(fnc, '__insights_analytics_type__')  # noqa
                 and (not subset or name in subset)  # noqa
             ):
-                # Create collection by type
                 collection = self._create_collection(fnc)
 
-                if collection.is_config:
-                    # It's supposed there is only one registered config
-                    self.collections[Collection.COLLECTION_TYPE_CONFIG] = collection
+                if fnc.__insights_analytics_config__:
+                    self.config_collection = collection
                 else:
                     for since, until in collection.slices():
                         collection.since = since
@@ -387,17 +374,7 @@ class Collector:
                         collection = self._create_collection(fnc)
 
     def _create_collection(self, fnc_collecting):
-        data_type = fnc_collecting.__insights_analytics_type__
-        collection = None
-        if data_type == 'json':
-            collection = CollectionJSON(self, fnc_collecting)
-        elif data_type == 'csv':
-            collection = CollectionCSV(self, fnc_collecting)
-
-        if collection is None:
-            raise RuntimeError(f'Collection of type {data_type} not implemented')
-
-        return collection
+        return Collection(self, fnc_collecting)
 
     def _create_package(self):
         return Package(self)

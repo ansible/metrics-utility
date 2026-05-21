@@ -1,3 +1,6 @@
+import csv
+import io
+import json
 import os
 import pathlib
 import shutil
@@ -5,8 +8,6 @@ import tarfile
 
 from django.conf import settings
 
-from metrics_utility.gather.collection.collection_data_status import CollectionDataStatus
-from metrics_utility.gather.collection.collection_manifest import CollectionManifest
 from metrics_utility.gather.package import crc_handler, s3_handler
 from metrics_utility.logger import logger
 
@@ -18,8 +19,7 @@ class Package:
         self.collector = collector
         self.collections = []
         self.collection_keys = []
-        self.data_collection_status = CollectionDataStatus(self.collector, self)
-        self.manifest = CollectionManifest(collector)
+        self.manifest_data = {}
         self.processed = False
         self.shipping_successful = None
         self.tar_path = None
@@ -148,32 +148,67 @@ class Package:
         try:
             if not collection.is_empty():
                 collection.add_to_tar(tar)
-                self.manifest.add_collection(collection)
+                self.manifest_data[collection.filename] = collection.version
         except Exception as e:
             logger.exception(f'Could not generate metric {collection.filename}: {e}')
             return None
 
     def _config_to_tar(self, tar):
-        if self.collector.collections['config'] is None:
+        if self.collector.config_collection is None:
             logger.error("'config' collector data is missing, and is required to ship.")
             return False
         else:
-            self._collection_to_tar(tar, self.collector.collections['config'])
+            self._collection_to_tar(tar, self.collector.config_collection)
 
         return True
 
     def _data_collection_status_to_tar(self, tar):
         try:
-            self.data_collection_status.gather()
-            self.data_collection_status.add_to_tar(tar)
-            self.manifest.add_collection(self.data_collection_status)
+            buf = io.StringIO()
+            fieldnames = [
+                'collection_start_timestamp',
+                'since',
+                'until',
+                'file_name',
+                'status',
+                'elapsed',
+            ]
+            writer = csv.DictWriter(buf, delimiter=',', fieldnames=fieldnames)
+            writer.writeheader()
+
+            for collection in self.collections:
+                status = 'ok' if collection.gathering_successful else 'failed'
+                elapsed = 0
+                if collection.gathering_started_at and collection.gathering_finished_at:
+                    elapsed = (collection.gathering_finished_at - collection.gathering_started_at).seconds
+
+                writer.writerow(
+                    {
+                        'collection_start_timestamp': collection.gathering_started_at,
+                        'since': collection.since,
+                        'until': collection.until,
+                        'file_name': collection.filename,
+                        'status': status,
+                        'elapsed': elapsed,
+                    }
+                )
+
+            data = buf.getvalue().encode('utf-8')
+            info = tarfile.TarInfo('./data_collection_status.csv')
+            info.size = len(data)
+            info.mtime = self.collector.gather_until.timestamp()
+            tar.addfile(info, fileobj=io.BytesIO(data))
+
+            self.manifest_data['data_collection_status.csv'] = '1.0'
         except Exception as e:
-            logger.exception(f'Could not generate {self.data_collection_status.filename}: {e}')
+            logger.exception(f'Could not generate data_collection_status.csv: {e}')
 
     def _manifest_to_tar(self, tar):
         try:
-            self.manifest.gather()
-            self.manifest.add_to_tar(tar)
-            self.add_collection(self.manifest)
+            data = json.dumps(self.manifest_data).encode('utf-8')
+            info = tarfile.TarInfo('./manifest.json')
+            info.size = len(data)
+            info.mtime = self.collector.gather_until.timestamp()
+            tar.addfile(info, fileobj=io.BytesIO(data))
         except Exception as e:
-            logger.exception(f'Could not generate {self.manifest.filename}: {e}')
+            logger.exception(f'Could not generate manifest.json: {e}')

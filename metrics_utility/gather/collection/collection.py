@@ -1,4 +1,8 @@
-from abc import abstractmethod
+import copy
+import io
+import json
+import os
+import tarfile
 
 from django.utils.timezone import now, timedelta
 
@@ -8,19 +12,18 @@ from metrics_utility.logger import logger
 
 
 class Collection:
-    """Wrapper for gathering function from Collector.collector_module
-    Functions decorated with @register are wrapped by kind of this object.
+    """Wrapper for gathering functions decorated with @register.
+
+    Handles both JSON and CSV collection types via self.data_type.
     """
 
-    COLLECTION_TYPE_CONFIG = 'config'
-    COLLECTION_TYPE_JSON = 'json'
-    COLLECTION_TYPE_CSV = 'csv'
+    TYPE_JSON = 'json'
+    TYPE_CSV = 'csv'
 
     def __init__(self, collector, fnc_collecting):
         self.collector = collector
         self.fnc_collecting = fnc_collecting
         self.fnc_slicing = fnc_collecting.__insights_analytics_fnc_slicing__
-        self.is_config = fnc_collecting.__insights_analytics_config__
 
         self.key = fnc_collecting.__insights_analytics_key__
         self.version = fnc_collecting.__insights_analytics_version__
@@ -36,17 +39,49 @@ class Collection:
         self.gathering_successful = None
         self.last_gathered_entry = self.collector.last_gathered_entry_for(self.key)
 
-    @abstractmethod
+        self.gather_kwargs = {}
+
+        # JSON storage
+        self.data = None
+
+        # CSV storage
+        self.sub_collections = []
+        self.data_filepath = None
+
     def add_to_tar(self, tar):
-        pass
+        if self.data_type == 'json':
+            buf = self.target().encode('utf-8')
+            logger.debug(f'Collection.add_to_tar: | {self.key}.json | Size: {self.data_size()}')
+            info = tarfile.TarInfo(f'./{self.filename}')
+            info.size = len(buf)
+            info.mtime = self.collector.gather_until.timestamp()
+            tar.addfile(info, fileobj=io.BytesIO(buf))
+        else:
+            logger.debug(f'Collection.add_to_tar: | {self.key}.csv | Size: {self.data_size()}')
+            tar.add(self.target(), arcname=f'./{self.filename}')
 
     def cleanup(self):
-        """There is an action only for CollectionCSV"""
-        pass
+        if self.data_type == 'csv':
+            if self.data_filepath and os.path.exists(self.data_filepath):
+                os.remove(self.data_filepath)
+            for collection in self.sub_collections:
+                collection.cleanup()
 
-    @abstractmethod
     def data_size(self):
-        pass
+        if self.data_type == 'json':
+            return len(self.data) if self.data else 0
+
+        if self.data_filepath is None:
+            return 0
+
+        data_size = 0
+        try:
+            if os.path.exists(self.data_filepath):
+                data_size = os.path.getsize(self.data_filepath)
+        except OSError as e:
+            logger.error(f"Can't get size of CSV file: {e}")
+
+        return data_size
 
     def gather(self):
         self.gathering_started_at = now()
@@ -54,11 +89,11 @@ class Collection:
         output = CollectionOutput(self.collector.gather_dir)
 
         try:
-            # This runs a collector function registered with `@register`
             result = self.fnc_collecting(
                 since=self.since,
                 until=self.until,
                 output=output,
+                **self.gather_kwargs,
             )
             self._save_gathering(result)
 
@@ -69,17 +104,18 @@ class Collection:
         finally:
             self._set_gathering_finished()
 
-    @abstractmethod
     def is_empty(self):
-        pass
+        if self.data_type == 'json':
+            return self.data is None or self.data == 'null'
+
+        if self.sub_collections:
+            return all(c.is_empty() for c in self.sub_collections)
+        return self.data_filepath is None
 
     def slices(self):
         since = self.collector.gather_since
         until = self.collector.gather_until
         last_gather = self.collector.last_gather
-        # These slicer functions may return a generator. The `since` parameter is
-        # allowed to be None, and will fall back to LAST_ENTRIES[key] or to
-        # LAST_GATHER (truncated appropriately to match the 28-day limit).
         if self.fnc_slicing:
             slices = self.fnc_slicing(self.key, last_gather, since=since, until=until)
         else:
@@ -88,27 +124,25 @@ class Collection:
         return slices
 
     def ship_immediately(self):
-        """
-        Collection with fnc_slicing has to be shipped immediately.
-        It may gather to the same file(s) as previous slice.
-        Keeping more files is not wanted because of their potential size
-        """
         return self.fnc_slicing is not None
 
-    @abstractmethod
     def target(self):
-        """Data attribute specific for collection"""
-        pass
+        if self.data_type == 'json':
+            return self.data
+        return self.data_filepath
 
     def update_last_gathered_entries(self, updates_dict):
+        if self.data_type == 'csv' and self.sub_collections:
+            for collection in self.sub_collections:
+                collection.update_last_gathered_entries(updates_dict)
+            return
+
         if self.key in updates_dict['locked']:
             return
 
         if self.gathering_successful:
             self._update_last_gathered_key(updates_dict, self.key, self.until)
         else:
-            # collections are ordered by time slices.
-            # in case of error all collections with newer timestamp are ignored
             updates_dict['locked'].add(self.key)
 
     @staticmethod
@@ -120,17 +154,32 @@ class Collection:
             updates_dict['keys'][key] = max(previous, timestamp)
 
     def _gather_since(self):
-        """Start of gathering based on settings excluding slices"""
-
         last_entry = max(
             self.last_gathered_entry or self.collector.last_gather,
             self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
         )
         return self.collector.gather_since or last_entry
 
-    @abstractmethod
     def _save_gathering(self, data):
-        pass
+        if self.data_type == 'json':
+            self.data = json.dumps(data)
+            return
+
+        # CSV: handle multiple files via sub_collections
+        if isinstance(data, list) and len(data) > 1:
+            for fpath in data:
+                sub_collection = copy.copy(self)
+                sub_collection.sub_collections = []
+                sub_collection.data_filepath = fpath
+                sub_collection.gathering_successful = True
+                self.sub_collections.append(sub_collection)
+        elif isinstance(data, list) and len(data) == 1:
+            self.data_filepath = data[0]
+        elif isinstance(data, str):
+            self.data_filepath = data
 
     def _set_gathering_finished(self):
-        self.gathering_finished_at = now()
+        _now = now()
+        self.gathering_finished_at = _now
+        for sub_collection in self.sub_collections:
+            sub_collection.gathering_finished_at = _now
