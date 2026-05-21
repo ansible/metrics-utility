@@ -49,9 +49,6 @@ class Package:
             logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
-        if 'Error:' in str(self.tar_path):
-            return False
-
         if self.collector.ship_target == 'crc':
             if not crc_handler.is_shipping_configured():
                 return False
