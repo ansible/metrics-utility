@@ -394,7 +394,7 @@ class Collector:
             for since, until in collection.slices():
                 collection.since = since
                 collection.until = until
-                self.collections[collection.data_type].append(collection)
+                self.collections[collection.output_format].append(collection)
                 collection = self._create_collection(fnc)
 
         if not module_has_config:

@@ -116,7 +116,7 @@ def until_slicing(_key, _last_gather, **kwargs):
 ### CCSP & CCSPv2 collectors
 
 
-@register('job_host_summary', '1.2', format='csv', fnc_slicing=daily_slicing)
+@register('job_host_summary', '1.2', output_format='csv', fnc_slicing=daily_slicing)
 def cli_job_host_summary(since, until, output):
     # enabled by default, disable using METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR=true
     if bool_from_env('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'):
@@ -126,7 +126,7 @@ def cli_job_host_summary(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_host', '1.0', format='csv', fnc_slicing=until_slicing)
+@register('main_host', '1.0', output_format='csv', fnc_slicing=until_slicing)
 def cli_main_host(since, until, output):
     if 'main_host' not in get_optional_collectors():
         return None
@@ -135,7 +135,7 @@ def cli_main_host(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_host_daily', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_host_daily', '1.0', output_format='csv', fnc_slicing=daily_slicing)
 def cli_main_host_daily(since, until, output):
     if 'main_host_daily' not in get_optional_collectors():
         return None
@@ -144,7 +144,7 @@ def cli_main_host_daily(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_indirectmanagednodeaudit', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_indirectmanagednodeaudit', '1.0', output_format='csv', fnc_slicing=daily_slicing)
 def cli_main_indirectmanagednodeaudit(since, until, output):
     if 'main_indirectmanagednodeaudit' not in get_optional_collectors():
         return None
@@ -162,7 +162,7 @@ def cli_main_indirectmanagednodeaudit(since, until, output):
         return None
 
 
-@register('main_jobevent', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_jobevent', '1.0', output_format='csv', fnc_slicing=daily_slicing)
 def cli_main_jobevent(since, until, output):
     if 'main_jobevent' not in get_optional_collectors():
         return None
@@ -174,7 +174,7 @@ def cli_main_jobevent(since, until, output):
 ### vcpu prometheus collector
 
 
-@register('total_workers_vcpu', '1.0', format='json', fnc_slicing=until_slicing)
+@register('total_workers_vcpu', '1.0', output_format='json', fnc_slicing=until_slicing)
 def cli_total_workers_vcpu(since, until, output):
     if 'total_workers_vcpu' not in get_optional_collectors():
         return None
@@ -251,7 +251,7 @@ def cli_total_workers_vcpu(since, until, output):
 ### anonymized collectors
 
 
-@register('controller_version_service', '1.4', format='csv', fnc_slicing=until_slicing)
+@register('controller_version_service', '1.4', output_format='csv', fnc_slicing=until_slicing)
 def cli_controller_version_service(since, until, output):
     if 'controller_version_service' not in get_optional_collectors():
         return None
@@ -260,7 +260,7 @@ def cli_controller_version_service(since, until, output):
     return output.as_files(collector)
 
 
-@register('credentials_service', '1.4', format='csv', fnc_slicing=daily_slicing)
+@register('credentials_service', '1.4', output_format='csv', fnc_slicing=daily_slicing)
 def cli_credentials_service(since, until, output):
     if 'credentials_service' not in get_optional_collectors():
         return None
@@ -269,7 +269,7 @@ def cli_credentials_service(since, until, output):
     return output.as_files(collector)
 
 
-@register('execution_environments', '1.4', format='csv', fnc_slicing=until_slicing)
+@register('execution_environments', '1.4', output_format='csv', fnc_slicing=until_slicing)
 def cli_execution_environments(since, until, output):
     if 'execution_environments' not in get_optional_collectors():
         return None
@@ -278,7 +278,7 @@ def cli_execution_environments(since, until, output):
     return output.as_files(collector)
 
 
-@register('job_host_summary_service', '1.4', format='csv', fnc_slicing=daily_slicing)
+@register('job_host_summary_service', '1.4', output_format='csv', fnc_slicing=daily_slicing)
 def cli_job_host_summary_service(since, until, output):
     if 'job_host_summary_service' not in get_optional_collectors():
         return None
@@ -287,7 +287,7 @@ def cli_job_host_summary_service(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_jobevent_service', '1.4', format='csv', fnc_slicing=daily_slicing)
+@register('main_jobevent_service', '1.4', output_format='csv', fnc_slicing=daily_slicing)
 def cli_main_jobevent_service(since, until, output):
     if 'main_jobevent_service' not in get_optional_collectors():
         return None
@@ -296,7 +296,7 @@ def cli_main_jobevent_service(since, until, output):
     return output.as_files(collector)
 
 
-@register('table_metadata', '1.4', format='csv', fnc_slicing=until_slicing)
+@register('table_metadata', '1.4', output_format='csv', fnc_slicing=until_slicing)
 def cli_table_metadata(since, until, output):
     if 'table_metadata' not in get_optional_collectors():
         return None
@@ -305,7 +305,7 @@ def cli_table_metadata(since, until, output):
     return output.as_files(collector)
 
 
-@register('unified_jobs', '1.4', format='csv', fnc_slicing=daily_slicing)
+@register('unified_jobs', '1.4', output_format='csv', fnc_slicing=daily_slicing)
 def cli_unified_jobs(since, until, output):
     if 'unified_jobs' not in get_optional_collectors():
         return None
@@ -314,7 +314,7 @@ def cli_unified_jobs(since, until, output):
     return output.as_files(collector)
 
 
-@register('feature_flags_service', '1.4', format='csv', fnc_slicing=until_slicing)
+@register('feature_flags_service', '1.4', output_format='csv', fnc_slicing=until_slicing)
 def cli_feature_flags_service(since, until, output):
     if 'feature_flags_service' not in get_optional_collectors():
         return None
@@ -323,7 +323,7 @@ def cli_feature_flags_service(since, until, output):
     return output.as_files(collector)
 
 
-@register('dashboard_jobs', '1.0', format='json', fnc_slicing=daily_slicing)
+@register('dashboard_jobs', '1.0', output_format='json', fnc_slicing=daily_slicing)
 def cli_dashboard_jobs(since, until, output):
     if 'dashboard_jobs' not in get_optional_collectors():
         return None
@@ -332,7 +332,7 @@ def cli_dashboard_jobs(since, until, output):
     return output.dict(collector.gather())
 
 
-@register('task_executions_service', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('task_executions_service', '1.0', output_format='csv', fnc_slicing=daily_slicing)
 def cli_task_executions_service(since, until, output):
     if 'task_executions_service' not in get_optional_collectors():
         return None

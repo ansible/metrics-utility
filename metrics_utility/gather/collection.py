@@ -14,7 +14,7 @@ from metrics_utility.logger import logger
 class Collection:
     """Wrapper for gathering functions decorated with @register.
 
-    Handles both JSON and CSV collection types via self.data_type.
+    Handles both JSON and CSV collection types via self.output_format.
     """
 
     TYPE_JSON = 'json'
@@ -28,9 +28,9 @@ class Collection:
         self.key = fnc_collecting.__insights_analytics_key__
         self.version = fnc_collecting.__insights_analytics_version__
 
-        self.data_type = fnc_collecting.__insights_analytics_type__
+        self.output_format = fnc_collecting.__insights_analytics_type__
 
-        self.filename = f'{self.key}.{self.data_type}'
+        self.filename = f'{self.key}.{self.output_format}'
         self.since = None  # set by Collector._create_collections()
         self.until = None  # set by Collector._create_collections()
 
@@ -49,7 +49,7 @@ class Collection:
         self.data_filepath = None
 
     def add_to_tar(self, tar):
-        if self.data_type == 'json':
+        if self.output_format == 'json':
             buf = self.target().encode('utf-8')
             logger.debug(f'Collection.add_to_tar: | {self.key}.json | Size: {self.data_size()}')
             info = tarfile.TarInfo(f'./{self.filename}')
@@ -61,14 +61,14 @@ class Collection:
             tar.add(self.target(), arcname=f'./{self.filename}')
 
     def cleanup(self):
-        if self.data_type == 'csv':
+        if self.output_format == 'csv':
             if self.data_filepath and os.path.exists(self.data_filepath):
                 os.remove(self.data_filepath)
             for collection in self.sub_collections:
                 collection.cleanup()
 
     def data_size(self):
-        if self.data_type == 'json':
+        if self.output_format == 'json':
             return len(self.data) if self.data else 0
 
         if self.data_filepath is None:
@@ -105,7 +105,7 @@ class Collection:
             self._set_gathering_finished()
 
     def is_empty(self):
-        if self.data_type == 'json':
+        if self.output_format == 'json':
             return self.data is None or self.data == 'null'
 
         if self.sub_collections:
@@ -127,12 +127,12 @@ class Collection:
         return self.fnc_slicing is not None
 
     def target(self):
-        if self.data_type == 'json':
+        if self.output_format == 'json':
             return self.data
         return self.data_filepath
 
     def update_last_gathered_entries(self, updates_dict):
-        if self.data_type == 'csv' and self.sub_collections:
+        if self.output_format == 'csv' and self.sub_collections:
             for collection in self.sub_collections:
                 collection.update_last_gathered_entries(updates_dict)
             return
@@ -161,7 +161,7 @@ class Collection:
         return self.collector.gather_since or last_entry
 
     def _save_gathering(self, data):
-        if self.data_type == 'json':
+        if self.output_format == 'json':
             self.data = json.dumps(data)
             return
 

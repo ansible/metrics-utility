@@ -14,7 +14,7 @@ def config(since, **kwargs):
 @register(
     'csv_one_day_slicing_1',
     '1.0',
-    format='csv',
+    output_format='csv',
     fnc_slicing=one_day_slicing,
 )
 def csv_one_day_slicing_1(since, *, output, until, **kwargs):
@@ -31,7 +31,7 @@ def csv_one_day_slicing_1(since, *, output, until, **kwargs):
 @register(
     'csv_one_day_slicing_2',
     '1.0',
-    format='csv',
+    output_format='csv',
     fnc_slicing=one_day_slicing,
 )
 def csv_one_day_slicing_2(since, *, output, until, **kwargs):
