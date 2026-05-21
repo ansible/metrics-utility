@@ -3,7 +3,7 @@ from base.functional.helpers import (
     one_day_slicing,
     timestamp_csv,
 )
-from metrics_utility.base.decorators import register
+from metrics_utility.gather.decorators import register
 
 
 @register('config', '1.0', config=True)

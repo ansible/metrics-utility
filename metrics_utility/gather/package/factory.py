@@ -1,9 +1,9 @@
 """Factory for selecting the correct Package class for the configured ship target."""
 
-from metrics_utility.automation_controller_billing.package.package_crc import PackageCRC
-from metrics_utility.automation_controller_billing.package.package_directory import PackageDirectory
-from metrics_utility.automation_controller_billing.package.package_s3 import PackageS3
 from metrics_utility.exceptions import NotSupportedFactory
+from metrics_utility.gather.package.package_crc import PackageCRC
+from metrics_utility.gather.package.package_directory import PackageDirectory
+from metrics_utility.gather.package.package_s3 import PackageS3
 
 
 class Factory:
@@ -21,7 +21,7 @@ class Factory:
         """Return the Package class for the configured ship target.
 
         Returns:
-            A :class:`~metrics_utility.base.package.Package` subclass (uninstantiated).
+            A :class:`~metrics_utility.gather.package.package.Package` subclass (uninstantiated).
 
         Raises:
             :exc:`~metrics_utility.exceptions.NotSupportedFactory`: For unknown

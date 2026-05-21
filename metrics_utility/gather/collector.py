@@ -1,30 +1,28 @@
 import inspect
+import json
 import logging
 import os
 import pathlib
 import shutil
 import tempfile
 
-from abc import abstractmethod
-
+from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.gather.collection.collection import Collection
+from metrics_utility.gather.collection.collection_csv import CollectionCSV
+from metrics_utility.gather.collection.collection_json import CollectionJSON
+from metrics_utility.gather.helpers import get_last_entries_from_db
+from metrics_utility.gather.package.factory import Factory as PackageFactory
+from metrics_utility.gather.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
 
-from .collection import Collection
-from .collection_csv import CollectionCSV
-from .collection_json import CollectionJSON
-from .package import Package
-from .utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
-
 
 class Collector:
-    """Abstract class. The Collector is an entry-point for gathering data
-       from awx to cloud.
-    Abstract and following methods has to be implemented:
-    - _package_class() - reference to your implementation of Package
+    """Collector is an entry-point for gathering Automation Controller billing data.
 
     There are several params:
     - collection_type:
@@ -34,8 +32,6 @@ class Collector:
       - collector functions are wrapped by kind of Collection object
       - Collections are grouped by Package, and Packages are creating tarballs and shipping them.
 
-    Collector is an abstract class, example of implementation is in tests/classes
-
     Data are gathered maximally 28 days ago and can be set to less (see gather(since, until,..))
     """
 
@@ -43,7 +39,15 @@ class Collector:
     DRY_RUN = 'dry-run'
     SCHEDULED_COLLECTION = 'scheduled'
 
-    def __init__(self, collection_type=DRY_RUN, collector_module=None):
+    def __init__(self, collection_type=SCHEDULED_COLLECTION, collector_module=None, ship_target=None, billing_provider_params=None):
+        if collector_module is None:
+            from metrics_utility.gather import collectors
+
+            collector_module = collectors
+
+        self.ship_target = ship_target
+        self.billing_provider_params = billing_provider_params
+
         self.collector_module = collector_module
         self.collections = {}
         self.packages = {}
@@ -62,10 +66,15 @@ class Collector:
     # Class methods -----------------------------
     #
     @classmethod
-    def registered_collectors(cls, module):
+    def registered_collectors(cls, module=None):
         """
-        Returns all functions in 'module' defined with "@register" decorator
+        Returns all functions in the billing collectors module defined with "@register" decorator
         """
+        if module is None:
+            from metrics_utility.gather import collectors
+
+            module = collectors
+
         return {
             func.__insights_analytics_key__: {
                 'name': func.__insights_analytics_key__,
@@ -86,7 +95,7 @@ class Collector:
 
         return self.collections.get('config') is not None
 
-    def gather(self, dest=None, subset=None, since=None, until=None):
+    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
         :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
@@ -95,9 +104,15 @@ class Collector:
         :param until: (datetime) - high threshold of data changes (defaults to now)
         :return: None or list of paths to tarballs (.tar.gz)
         """
-        with lock('gather_analytics_lock', wait=False, db=connection) as acquired:
+
+        key = 'gather_automation_controller_billing_lock'
+        suffix = os.getenv('METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX')
+        if suffix:
+            key = f'gather_automation_controller_billing_{suffix}_lock'
+
+        with lock(key, wait=False, db=connection) as acquired:
             if not acquired:
-                logger.log(self.log_level, 'Not gathering analytics, another task holds lock')
+                logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
 
             self._gather_initialize(dest, subset, since, until)
@@ -225,15 +240,20 @@ class Collector:
         self._create_collections(collectors_subset)
 
     def _gather_config(self):
-        """Config is special collection, it's added to each Package
-        TODO: add "always" flag to @register decorator
-        """
+        """Config is special collection, it's added to each Package"""
         if not self.config_present():
             logger.log(self.log_level, "'config' collector data is missing")
             return False
-        else:
-            self.collections['config'].gather()
-            return True
+
+        self.collections['config'].gather()
+
+        if self.billing_provider_params is not None:
+            config_collection = self.collections['config']
+            data = json.loads(config_collection.data)
+            data['billing_provider_params'] = self.billing_provider_params
+            config_collection._save_gathering(data)
+
+        return True
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
@@ -321,7 +341,17 @@ class Collector:
         if not self.ship:
             return
 
-        self._update_last_gathered_entries()
+        if bool_from_env('METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES'):
+            return
+
+        # We need to wait on analytics lock, to update the last collected timestamp settings
+        # so we don't clash with analytics job collection.
+        with lock('gather_analytics_lock', wait=True, db=connection):
+            # We need to load fresh settings again as we're obtaning the lock, since
+            # Analytics job could have changed this on the background and we'd be resetting
+            # the Analytics values here.
+            self._load_last_gathered_entries()
+            self._update_last_gathered_entries()
 
     def _gather_cleanup(self):
         """Deleting temp files"""
@@ -334,13 +364,16 @@ class Collector:
         self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
 
-    @abstractmethod
     def _load_last_gathered_entries(self):
-        """Loads persisted timestamps named by keys from collector_module
-        Complement to the _save_last_gathered_entries()
-        :return dict
+        """Load the last-gathered timestamps from the Controller database.
+
+        Reads AUTOMATION_ANALYTICS_LAST_ENTRIES from the conf_setting table,
+        sharing the same persistence mechanism as the upstream Analytics collector.
         """
-        pass
+        # We are reusing Settings used by Analytics, so we don't have to backport changes into analytics
+        # We can safely do this, by making sure we use the same lock as Analytics, before we persist
+        # these settings.
+        return get_last_entries_from_db()
 
     def _update_last_gathered_entries(self):
         last_gathered_updates = {'keys': {}, 'locked': set()}
@@ -358,13 +391,9 @@ class Collector:
 
         self._save_last_gathered_entries(self.last_gathered_entries)
 
-    @abstractmethod
     def _save_last_gathered_entries(self, last_gathered_entries):
-        """Saves dictionary with timestamps to persistent storage
-        Complement to the _load_last_gathered_entries()
-        :param last_gathered_entries: dict
-        """
-        pass
+        """Persist last-gathered timestamps to the Django settings object."""
+        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
 
     def _create_collections(self, subset=None):
         """Creates Collections from decorated functions (by @register) from self.collector_module
@@ -415,10 +444,8 @@ class Collector:
         package_class = self._package_class()
         return package_class(self)
 
-    @staticmethod
-    def _package_class():
-        """Has to be redefined by your Package implementation"""
-        return Package
+    def _package_class(self):
+        return PackageFactory(ship_target=self.ship_target).create()
 
     def _reset_collections_and_packages(self):
         self.collections = {

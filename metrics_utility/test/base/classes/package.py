@@ -1,6 +1,6 @@
 """Test Package stub used by functional tests."""
 
-from metrics_utility.base.package import Package as InsightsAnalyticsPackage
+from metrics_utility.gather.package.package import Package as InsightsAnalyticsPackage
 
 
 class Package(InsightsAnalyticsPackage):

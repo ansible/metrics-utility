@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 from django.db.utils import ProgrammingError
 
-from metrics_utility.automation_controller_billing.collectors import (
+from metrics_utility.gather.collectors import (
     cli_main_indirectmanagednodeaudit,
 )
 
@@ -10,9 +10,9 @@ from metrics_utility.automation_controller_billing.collectors import (
 class TestMainIndirectManagedNodeAuditTable:
     """Test cases for the cli_main_indirectmanagednodeaudit function"""
 
-    @patch('metrics_utility.automation_controller_billing.collectors.main_indirectmanagednodeaudit')
-    @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
-    @patch('metrics_utility.automation_controller_billing.collectors.connection')
+    @patch('metrics_utility.gather.collectors.main_indirectmanagednodeaudit')
+    @patch('metrics_utility.gather.collectors.get_optional_collectors')
+    @patch('metrics_utility.gather.collectors.connection')
     def test_main_indirectmanagednodeaudit_table_success(self, mock_connection, mock_get_optional_collectors, mock_main_indirectmanagednodeaudit):
         """Test successful execution when table exists"""
         # Setup
@@ -37,7 +37,7 @@ class TestMainIndirectManagedNodeAuditTable:
         mock_main_indirectmanagednodeaudit.assert_called_once_with(db=mock_connection, since=since, until=until)
         mock_output.as_files.assert_called_once_with(mock_collector)
 
-    @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
+    @patch('metrics_utility.gather.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_not_in_optional_collectors(self, mock_get_optional_collectors):
         """Test returns None when collector is not in optional collectors"""
         # Setup
@@ -49,10 +49,10 @@ class TestMainIndirectManagedNodeAuditTable:
         # Assert
         assert result is None
 
-    @patch('metrics_utility.automation_controller_billing.collectors.logger')
-    @patch('metrics_utility.automation_controller_billing.collectors.main_indirectmanagednodeaudit')
-    @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
-    @patch('metrics_utility.automation_controller_billing.collectors.connection')
+    @patch('metrics_utility.gather.collectors.logger')
+    @patch('metrics_utility.gather.collectors.main_indirectmanagednodeaudit')
+    @patch('metrics_utility.gather.collectors.get_optional_collectors')
+    @patch('metrics_utility.gather.collectors.connection')
     def test_main_indirectmanagednodeaudit_table_programming_error(
         self,
         mock_connection,
@@ -82,10 +82,10 @@ class TestMainIndirectManagedNodeAuditTable:
         assert 'Falling back to behavior without indirect managed node audit data.' in warning_call[0][0]
         assert warning_call[0][1] is mock_main_indirectmanagednodeaudit.side_effect
 
-    @patch('metrics_utility.automation_controller_billing.collectors.logger')
-    @patch('metrics_utility.automation_controller_billing.collectors.main_indirectmanagednodeaudit')
-    @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
-    @patch('metrics_utility.automation_controller_billing.collectors.connection')
+    @patch('metrics_utility.gather.collectors.logger')
+    @patch('metrics_utility.gather.collectors.main_indirectmanagednodeaudit')
+    @patch('metrics_utility.gather.collectors.get_optional_collectors')
+    @patch('metrics_utility.gather.collectors.connection')
     def test_main_indirectmanagednodeaudit_table_logs_specific_error(
         self,
         mock_connection,

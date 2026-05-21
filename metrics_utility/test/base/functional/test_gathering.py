@@ -25,7 +25,7 @@ def collector(mocker):
 
 
 def test_missing_config(mocker, collector):
-    with patch('metrics_utility.base.collector.logger') as mock_logger:
+    with patch('metrics_utility.gather.collector.logger') as mock_logger:
         tgz_files = collector.gather(subset=['json_collection_1', 'json_collection_2'])
 
         assert tgz_files is None

@@ -2,7 +2,7 @@
 
 from base.classes.package import Package
 
-from metrics_utility.base.collector import Collector
+from metrics_utility.gather.collector import Collector
 
 
 class AnalyticsCollector(Collector):
@@ -14,21 +14,15 @@ class AnalyticsCollector(Collector):
 
     @staticmethod
     def _package_class():
-        """Return the test Package class."""
         return Package
 
     def _load_last_gathered_entries(self):
-        """Return an empty dict (no persisted timestamps in tests).
-
-        Returns:
-            Empty dict.
-        """
         return {}
 
     def _save_last_gathered_entries(self, last_gathered_entries):
-        """No-op: test collector does not persist timestamps.
-
-        Args:
-            last_gathered_entries: Ignored.
-        """
         return None
+
+    def _gather_finalize(self):
+        if not self.ship:
+            return
+        self._update_last_gathered_entries()

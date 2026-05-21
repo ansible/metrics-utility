@@ -8,7 +8,7 @@ from metrics_utility.library.lock import lock
 
 
 class TestCollectorLocks:
-    @patch('metrics_utility.automation_controller_billing.collector.connection')
+    @patch('metrics_utility.gather.collector.connection')
     def test_string_key_conversion(self, mock_connection):
         # Mock the cursor and its operations
         mock_cursor = MagicMock()

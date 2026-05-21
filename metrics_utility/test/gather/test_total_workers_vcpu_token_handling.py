@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from metrics_utility.automation_controller_billing.collectors import cli_total_workers_vcpu
 from metrics_utility.exceptions import MetricsException
+from metrics_utility.gather.collectors import cli_total_workers_vcpu
 from metrics_utility.library.collectors.util import DictOutput
 from metrics_utility.test.util import temporary_env
 
@@ -16,8 +16,8 @@ class TestTokenAndCertificateHandling:
     def test_missing_token_file_raises_exception(self):
         """Test that missing token file raises MetricsException."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             mock_exists.return_value = False  # Token file doesn't exist
@@ -29,8 +29,8 @@ class TestTokenAndCertificateHandling:
     def test_missing_ca_cert_file_raises_exception(self):
         """Test that missing CA cert file raises MetricsException."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             # Token exists but CA cert doesn't
@@ -43,8 +43,8 @@ class TestTokenAndCertificateHandling:
     def test_empty_token_file_raises_exception(self):
         """Test that empty token file raises MetricsException."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
             patch('builtins.open', mock_open(read_data='')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
@@ -57,8 +57,8 @@ class TestTokenAndCertificateHandling:
     def test_whitespace_only_token_raises_exception(self):
         """Test that whitespace-only token file raises MetricsException."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
             patch('builtins.open', mock_open(read_data='   \n\t  \n')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
@@ -71,9 +71,9 @@ class TestTokenAndCertificateHandling:
     def test_token_with_newlines_is_stripped(self):
         """Test that token with newlines is properly stripped."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.total_workers_vcpu') as mock_tw_vcpu,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.total_workers_vcpu') as mock_tw_vcpu,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
             patch('builtins.open', mock_open(read_data='test-token-with-newlines\n\n')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
@@ -99,9 +99,9 @@ class TestTokenAndCertificateHandling:
     def test_metering_disabled_skips_token_check(self):
         """Test that when metering is disabled, token/cert files are not checked."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.total_workers_vcpu') as mock_tw_vcpu,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.total_workers_vcpu') as mock_tw_vcpu,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
         ):
             mock_get.return_value = ['total_workers_vcpu']
             # This shouldn't be called since metering is disabled
@@ -130,8 +130,8 @@ class TestTokenAndCertificateHandling:
     def test_token_file_read_error_propagates(self):
         """Test that file read errors are propagated."""
         with (
-            patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
-            patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
             patch('builtins.open', side_effect=IOError('Permission denied')),
         ):
             mock_get.return_value = ['total_workers_vcpu']

@@ -4,11 +4,11 @@ from argparse import RawDescriptionHelpFormatter
 
 from django.core.management.base import BaseCommand
 
-from metrics_utility.automation_controller_billing.collector import Collector
 from metrics_utility.exceptions import (
     BadShipTarget,
     NoAnalyticsCollected,
 )
+from metrics_utility.gather.collector import Collector
 from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
     date_format_text,

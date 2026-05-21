@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 from django.utils.timezone import now, timedelta
 
-from metrics_utility.base.utils import get_max_gather_period_days
+from metrics_utility.gather.utils import get_max_gather_period_days
 from metrics_utility.library.collectors.util import CollectionOutput
 from metrics_utility.logger import logger
 

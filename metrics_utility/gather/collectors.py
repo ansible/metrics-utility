@@ -5,10 +5,10 @@ from django.db import connection
 from django.db.utils import ProgrammingError
 from django.utils.timezone import now, timedelta
 
-from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
-from metrics_utility.base.decorators import register
-from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.gather.decorators import register
+from metrics_utility.gather.helpers import get_last_entries_from_db
+from metrics_utility.gather.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 from metrics_utility.library.collectors.controller.config import config
 from metrics_utility.library.collectors.controller.config_django import config_django
 from metrics_utility.library.collectors.controller.controller_version_service import controller_version_service

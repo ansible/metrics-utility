@@ -1,4 +1,4 @@
-"""Helper utilities for the automation_controller_billing package."""
+"""Helper utilities for the gather package."""
 
 import json
 

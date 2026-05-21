@@ -8,8 +8,8 @@ import requests
 from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
 
-from metrics_utility.base.package import Package
 from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.gather.package.package import Package
 from metrics_utility.logger import logger
 
 
@@ -55,9 +55,7 @@ class PackageCRC(Package):
         return self.SHIPPING_AUTH_SERVICE_ACCOUNT
 
     def is_shipping_configured(self):
-        # TODO: move to base, or children
-        ret = super()
-        if ret is False:
+        if not super().is_shipping_configured():
             return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:

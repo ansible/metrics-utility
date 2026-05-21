@@ -1,7 +1,8 @@
 """Manifest collection that records the version of every file in a tarball."""
 
+from metrics_utility.gather.decorators import register
+
 from .collection_json import CollectionJSON
-from .decorators import register
 
 
 class CollectionManifest(CollectionJSON):
@@ -11,7 +12,7 @@ class CollectionManifest(CollectionJSON):
         """Create the manifest for *collector*'s current gathering window.
 
         Args:
-            collector: The active :class:`~metrics_utility.base.collector.Collector` instance.
+            collector: The active :class:`~metrics_utility.gather.collector.Collector` instance.
         """
         super().__init__(collector, self.collecting)
 
@@ -28,7 +29,7 @@ class CollectionManifest(CollectionJSON):
         """Register a collection's filename and version in the manifest.
 
         Args:
-            collection: A :class:`~metrics_utility.base.collection.Collection` instance
+            collection: A :class:`~metrics_utility.gather.collection.collection.Collection` instance
                 whose filename and version should be recorded.
         """
         self.data[collection.filename] = collection.version

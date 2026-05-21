@@ -4,24 +4,16 @@ import os
 import pathlib
 import tarfile
 
-from abc import abstractmethod
-
 import requests
 
+from metrics_utility.gather.collection.collection_data_status import CollectionDataStatus
+from metrics_utility.gather.collection.collection_manifest import CollectionManifest
 from metrics_utility.logger import logger
-
-from .collection_data_status import CollectionDataStatus
-from .collection_manifest import CollectionManifest
 
 
 class Package:
     """
-    Abstract class
     Package serves for managing one tarball and shipping it to the cloud.
-    Abstract methods has to be implemented, as well as:
-    - CERT_PATH - path to auth certificate (for POST request to cloud), if not development mode
-    - PAYLOAD_CONTENT_TYPE - registered in ingress-service in cloud
-    - MAX_DATA_SIZE - defaults to 200MB (upload limit is 100MB, so it expects 50% compression rate)
 
     See the README.md and tests/functional/test_gathering.py to see how are packages used
     """
@@ -31,7 +23,6 @@ class Package:
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.TODO+tgz'
 
     SHIPPING_AUTH_USERPASS = 'user-pass'
-    SHIPPING_AUTH_S3_USERPASS = 'user-pass-s3'
     SHIPPING_AUTH_IDENTITY = 'x-rh-identity'  # Development mode only
     SHIPPING_AUTH_CERTIFICATES = 'mutual-tls'  # Mutual TLS
 
@@ -72,15 +63,8 @@ class Package:
         for collection in self.collections:
             collection.cleanup()
 
-    @abstractmethod
     def get_ingress_url(self):
-        """URL of cloud's upload URL"""
-        pass
-
-    @abstractmethod
-    def get_s3_configured(self):
-        """URL of cloud's upload URL"""
-        pass
+        raise NotImplementedError
 
     def has_free_space(self, requested_size):
         return self.total_data_size + requested_size <= self.max_data_size()
@@ -108,27 +92,6 @@ class Package:
 
             if not self._get_rh_password():
                 logger.error('REDHAT_PASSWORD is not set')
-                return False
-
-        if self.shipping_auth_mode() == self.SHIPPING_AUTH_S3_USERPASS:
-            if not self.get_s3_configured():
-                logger.error('S3 configuration is not set')
-                return False
-
-            if not self._get_rh_user():
-                logger.error('aws_access_key_id is not set')
-                return False
-
-            if not self._get_rh_password():
-                logger.error('aws_secret_access_key is not set')
-                return False
-
-            if not self._get_rh_region():
-                logger.error('aws_region is not set')
-                return False
-
-            if not self._get_rh_bucket():
-                logger.error('aws_bucket is not set')
                 return False
 
         return True
@@ -251,36 +214,14 @@ class Package:
 
         return True
 
-    @abstractmethod
     def _get_http_request_headers(self):
-        """Optional HTTP headers for POST request to get_ingress_url() URL
-        :return: dict()
-        """
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def _get_rh_user(self):
-        """Auth: username for HTTP POST request to cloud.
-        shipping_auth_mode() must return SHIPPING_AUTH_USERPASS (default)
-        """
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
     def _get_rh_password(self):
-        """Auth: password for HTTP POST request to cloud.
-        shipping_auth_mode() must return SHIPPING_AUTH_USERPASS (default)
-        """
-        pass
-
-    @abstractmethod
-    def _get_rh_region(self):
-        """s3: The region that boto3 will connect to"""
-        pass
-
-    @abstractmethod
-    def _get_rh_bucket(self):
-        """s3: The bucket that boto3 will use"""
-        pass
+        raise NotImplementedError
 
     def _get_client_certificates(self):
         """Auth: get client certificate and key, by default we use the RHSM certs

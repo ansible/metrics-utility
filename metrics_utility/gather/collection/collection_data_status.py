@@ -3,8 +3,9 @@
 import csv
 import os
 
+from metrics_utility.gather.decorators import register
+
 from .collection_csv import CollectionCSV
-from .decorators import register
 
 
 class CollectionDataStatus(CollectionCSV):
@@ -15,8 +16,8 @@ class CollectionDataStatus(CollectionCSV):
         """Initialise status collection for the given package.
 
         Args:
-            collector: The active :class:`~metrics_utility.base.collector.Collector` instance.
-            package: The :class:`~metrics_utility.base.package.Package` whose
+            collector: The active :class:`~metrics_utility.gather.collector.Collector` instance.
+            package: The :class:`~metrics_utility.gather.package.package.Package` whose
                 collections will be summarised.
         """
         super().__init__(collector, self.data_collection_status)

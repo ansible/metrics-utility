@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.gather.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
 
 
 class TestBoolFromEnv:

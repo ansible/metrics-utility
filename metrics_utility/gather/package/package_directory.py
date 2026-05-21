@@ -1,16 +1,16 @@
-"""Package implementation that ships billing tarballs to an S3-compatible object store."""
+"""Package implementation that ships billing tarballs to a local directory."""
 
 import os
+import shutil
 
 from django.conf import settings
 
-from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
-from metrics_utility.base.package import Package
+from metrics_utility.gather.package.package import Package
 from metrics_utility.logger import logger
 
 
-class PackageS3(Package):
-    """Package that uploads the generated tarball into a date-partitioned S3 prefix."""
+class PackageDirectory(Package):
+    """Package that copies the generated tarball into a local date-partitioned directory."""
 
     def _batch_since_and_until(self):
         # TODO: how to verify this is the daily batch of job_host_summary?
@@ -61,8 +61,8 @@ class PackageS3(Package):
         since, _ = self._batch_since_and_until()
         destination_path = self._destination_path(self.collector.billing_provider_params['ship_path'], since, os.path.basename(self.tar_path))
 
-        s3_handler = S3Handler(params=self.collector.billing_provider_params)
-        s3_handler.upload_file(self.tar_path, object_name=destination_path)
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+        shutil.copyfile(self.tar_path, destination_path)
 
         logger.debug(f'tarball saved to: {destination_path}')
 
