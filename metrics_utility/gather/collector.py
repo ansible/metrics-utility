@@ -22,7 +22,7 @@ from metrics_utility.logger import logger
 
 
 @register('config', '2.0')
-def cli_config(since, until, output, billing_provider_params=None):
+def cli_config(output, billing_provider_params=None, **_kwargs):
     try:
         collector = config_django(billing_provider_params=billing_provider_params or {})
         return output.as_dict(collector)
