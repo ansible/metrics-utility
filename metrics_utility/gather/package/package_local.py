@@ -18,20 +18,6 @@ class PackageLocal(Package):
         since, until = self._batch_since_and_until()
         return f'{settings.INSTALL_UUID}-{since.strftime("%Y-%m-%d-%H%M%S%z")}-{until.strftime("%Y-%m-%d-%H%M%S%z")}'
 
-    def is_shipping_configured(self):
-        if not self.tar_path:
-            logger.error('Insights for Ansible Automation Platform TAR not found')
-            return False
-
-        if not os.path.exists(self.tar_path):
-            logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
-            return False
-
-        if 'Error:' in str(self.tar_path):
-            return False
-
-        return True
-
     def _destination_path(self, base_path, timestamp, filename):
         year = timestamp.strftime('%Y')
         month = timestamp.strftime('%m')
