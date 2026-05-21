@@ -91,15 +91,15 @@ container
 * `billing_provider`
   - `GatherCommand` -> `Collector` -> `config.json`
 * `bucket_access_key` (ship\_target=s3)
-  - `GatherCommand` -> `Collector` -> `Package` -> `S3Handler`
+  - `GatherCommand` -> `Collector` -> `Package` -> `s3_handler`
 * `bucket_endpoint` (ship\_target=s3)
-  - `GatherCommand` -> `Collector` -> `Package` -> `S3Handler`
+  - `GatherCommand` -> `Collector` -> `Package` -> `s3_handler`
 * `bucket_name` (ship\_target=s3)
-  - `GatherCommand` -> `Collector` -> `Package` -> `S3Handler`
+  - `GatherCommand` -> `Collector` -> `Package` -> `s3_handler`
 * `bucket_region` (ship\_target=s3)
-  - `GatherCommand` -> `Collector` -> `Package` -> `S3Handler`
+  - `GatherCommand` -> `Collector` -> `Package` -> `s3_handler`
 * `bucket_secret_key` (ship\_target=s3)
-  - `GatherCommand` -> `Collector` -> `Package` -> `S3Handler`
+  - `GatherCommand` -> `Collector` -> `Package` -> `s3_handler`
 * `red_hat_org_id`
   - `GatherCommand` -> `Collector` -> `config.json`
 * `ship_path`
