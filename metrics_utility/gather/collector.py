@@ -211,8 +211,8 @@ class Collector:
         self._calculate_collection_interval(since, until)
 
         self.collections = {
-            Collection.TYPE_JSON: [],
-            Collection.TYPE_CSV: [],
+            'json': [],
+            'csv': [],
         }
         self.config_collection = None
         self.packages = {}
@@ -235,7 +235,7 @@ class Collector:
 
     def _gather_json_collections(self):
         """JSON collections are simpler, they're just gathered and added to the Package"""
-        for collection in self.collections[Collection.TYPE_JSON]:
+        for collection in self.collections['json']:
             collection.gather()
 
             if collection.is_empty() or not collection.gathering_successful:
@@ -256,7 +256,7 @@ class Collector:
 
         optional_collectors = get_optional_collectors()
 
-        for collection in self.collections[Collection.TYPE_CSV]:
+        for collection in self.collections['csv']:
             if last_key != collection.key:
                 write_enabled = False
 

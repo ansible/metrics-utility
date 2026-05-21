@@ -17,9 +17,6 @@ class Collection:
     Handles both JSON and CSV collection types via self.output_format.
     """
 
-    TYPE_JSON = 'json'
-    TYPE_CSV = 'csv'
-
     def __init__(self, collector, fnc_collecting):
         self.collector = collector
         self.fnc_collecting = fnc_collecting
