@@ -16,6 +16,6 @@ class Package(InsightsAnalyticsPackage):
         timestamp = self.collector.gather_until
         return f'test-{timestamp.strftime("%Y-%m-%d-%H%M%S%z")}'
 
-    def ship(self):
+    def ship(self, ship_params=None):
         self.shipping_successful = True
         return True
