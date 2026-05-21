@@ -1,6 +1,6 @@
 # metrics-utility
 
-metrics-utility deals with collecting, analyzing and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances.
+metrics-utility deals with collecting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances.
 
 It provides two interfaces - a [CLI](#cli) and a python [library](#python-library).
 
@@ -9,26 +9,20 @@ Also see below for [dev setup](#developer-setup), and other [docs](#documentatio
 
 ### CLI
 
-A `metrics-utility` CLI tool for collecting and reporting metrics from Controller, allowing users to:
+A `metrics-utility` CLI tool for collecting metrics from Controller, allowing users to:
 
 - Collect Controller usage data from the database, settings, and prometheus
-- Analyze the data and generate `.xlsx` reports
 - Support multiple storage adapters for data persistence (local directory, S3)
 - Push metrics data to `console.redhat.com`
 
 It can run either standalone (against a specified postgres instance),
 or inside the Controller's python virtual environment. The controller mode allows the `config` collector to collect more settings and takes DB connection details from there.
 
-It provides two subcommands:
+It provides one subcommand:
   - `gather_automation_controller_billing_data`
     - collects data from controller, saves daily tarballs with `.csv` / `.json` inside
     - saves tarballs in specified storage
     - optionally sends to console
-  - `build_report`
-    - builds a `.xlsx` report
-      - 3 report types - `CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`
-      - the ccsp* reports use the collected tarballs as the source
-      - the renewal* report reads from controller db
 
 Example invocation:
 
@@ -42,12 +36,6 @@ export METRICS_UTILITY_SHIP_TARGET="directory"
 # gather data
 metrics-utility gather_automation_controller_billing_data --ship --until=10m
 ls out/data/`date +%Y/%m/%d`/ # data/<year>/<month>/<day>/<uuid>-<since>-<until>-<index>-<collection>.tar.gz
-
-# build report
-export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
-
-metrics-utility build_report --month=`date +%Y-%m` # year-month
-ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xlsx
 ```
 
 See [docs/cli.md](./docs/cli.md) and [docs/old-readme.md](./docs/old-readme.md) for details on the usage,  
@@ -61,9 +49,6 @@ The `metrics_utility.library` library provides a lower-level python API exposing
 
 * collectors - functions that collect specific data, from database to a `.csv`, or from elsewhere into a python dict
 * packagers - packages multiple related `.csv` & `.json` into `.tar.gz` daily tarballs
-* extractors - extracts these tarballs, loading specific data into dicts or Pandas dataframe
-* rollups - group and aggregate dataframes, compute stats and optionally save them
-* reports - builds a xlsx report from a set of dataframes
 * storage - unified storage backend for filesystem, s3, segment, crc and db
 * instants - associated datetime-related helpers
 * tempdir & db locking helpers
@@ -99,8 +84,7 @@ for index, file in enumerate(job_csvs):
     os.remove(file)
 ```
 
-See [library README](./metrics_utility/library/README.md) for details.  
-See [workers/](./workers/) for more library usage examples.
+See [library README](./metrics_utility/library/README.md) for details.
 
 
 ## Developer setup
@@ -145,7 +129,6 @@ make compose
 cd metrics-utility
 uv run ./manage.py --help
 uv run ./manage.py gather_automation_controller_billing_data --help
-uv run ./manage.py build_report --help
 ```
 
 `make clean` resets the docker environment,
@@ -180,10 +163,6 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
 * [docs/vcpu.md](./docs/vcpu.md) - docs for the total workers vcpu collector
 * [metrics\_utility/library/](./metrics_utility/library/) - library documentation
-* [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
-* [tools/collections/](./tools/collections/) - scripts for pulling list of collections from galaxy & automation hub
 * [tools/docker/](./tools/docker/) - docker compose environment & mock awx data
-* [tools/perf/](./tools/perf/) - perf test data generator and scripts for build report
-* [tools/testathon/](./tools/testathon/) - data generator for testing
 
 Please follow our [Contributor's Guide](./docs/CONTRIBUTING.md) for details on submitting changes and documentation standards.
