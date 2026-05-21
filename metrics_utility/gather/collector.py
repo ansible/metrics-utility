@@ -172,14 +172,9 @@ class Collector:
                 f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
             )
 
-        last_gather = horizon
-        if last_gather < horizon:
-            last_gather = horizon
-            logger.warning(f'Last analytics run was more than {get_max_gather_period_days()} days prior to {until}, using {horizon} instead.')
-
         self.gather_since = since
         self.gather_until = until
-        self.last_gather = last_gather
+        self.last_gather = horizon
 
         logger.warning(f'Final since-until: {since} to {until}')
 
