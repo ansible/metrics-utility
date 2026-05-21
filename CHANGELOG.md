@@ -30,7 +30,7 @@
 
 - removed direct AWX dependencies from collectors module
 - replaced AWX license functions with direct database queries
-- added `metrics_utility.library` (collectors, dataframes, storage, instants)
+- added `metrics_utility.library` (collectors, dataframes, storage)
 - library.storage: Directory, S3, Segment, CRC, CRCMutual backends
 - anonymized rollups, JSON rollups
 - Segment analytics: chunked data transmission, metadata

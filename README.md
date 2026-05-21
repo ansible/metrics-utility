@@ -50,7 +50,6 @@ The `metrics_utility.library` library provides a lower-level python API exposing
 * collectors - functions that collect specific data, from database to a `.csv`, or from elsewhere into a python dict
 * packagers - packages multiple related `.csv` & `.json` into `.tar.gz` daily tarballs
 * storage - unified storage backend for filesystem, s3, segment, crc and db
-* instants - associated datetime-related helpers
 * tempdir & db locking helpers
 
 The library uses no env variables, and doesn't rely on Controller environment.
@@ -60,7 +59,6 @@ Example use:
 
 ```python
 from metrics_utility.library.collectors.controller import config, main_jobevent
-from metrics_utility.library.instants import last_day, this_day
 from metrics_utility.library import lock, storage
 
 db = ... # django.db.connection / psycopg 3
