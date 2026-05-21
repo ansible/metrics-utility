@@ -12,10 +12,24 @@ from django.db import connection
 from django.utils.timezone import now, timedelta
 
 from metrics_utility.gather.collection.collection import Collection
+from metrics_utility.gather.decorators import register
 from metrics_utility.gather.package.package import Package
 from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.library.collectors.controller.config import config
+from metrics_utility.library.collectors.controller.config_django import config_django
 from metrics_utility.library.lock import lock
 from metrics_utility.logger import logger
+
+
+@register('config', '2.0')
+def cli_config(since, until, output, billing_provider_params=None):
+    try:
+        collector = config_django(billing_provider_params=billing_provider_params or {})
+        return output.as_dict(collector)
+    except Exception:
+        logger.info('config_django unavailable, falling back to DB-based config collector')
+        collector = config(db=connection, billing_provider_params=billing_provider_params or {})
+        return output.as_dict(collector)
 
 
 class Collector:
@@ -355,23 +369,35 @@ class Collector:
         :param subset - array of function names which should be used.
                       - if None, all registered functions will be used
         """
+        module_has_config = False
+
         for name, fnc in inspect.getmembers(self.collector_module):
-            if (
+            if not (
                 inspect.isfunction(fnc)  # noqa
                 and hasattr(fnc, '__insights_analytics_key__')  # noqa
                 and hasattr(fnc, '__insights_analytics_type__')  # noqa
-                and (not subset or name in subset)  # noqa
             ):
+                continue
+
+            if fnc.__insights_analytics_key__ == 'config':
+                module_has_config = True
+                if not subset or name in subset:
+                    self.config_collection = self._create_collection(fnc)
+                continue
+
+            if subset and name not in subset:
+                continue
+
+            collection = self._create_collection(fnc)
+
+            for since, until in collection.slices():
+                collection.since = since
+                collection.until = until
+                self.collections[collection.data_type].append(collection)
                 collection = self._create_collection(fnc)
 
-                if fnc.__insights_analytics_key__ == 'config':
-                    self.config_collection = collection
-                else:
-                    for since, until in collection.slices():
-                        collection.since = since
-                        collection.until = until
-                        self.collections[collection.data_type].append(collection)
-                        collection = self._create_collection(fnc)
+        if not module_has_config:
+            self.config_collection = self._create_collection(cli_config)
 
     def _create_collection(self, fnc_collecting):
         return Collection(self, fnc_collecting)

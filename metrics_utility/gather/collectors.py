@@ -8,8 +8,6 @@ from django.utils.timezone import now, timedelta
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.gather.decorators import register
 from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
-from metrics_utility.library.collectors.controller.config import config
-from metrics_utility.library.collectors.controller.config_django import config_django
 from metrics_utility.library.collectors.controller.controller_version_service import controller_version_service
 from metrics_utility.library.collectors.controller.credentials_service import credentials_service
 from metrics_utility.library.collectors.controller.execution_environments import execution_environments
@@ -113,21 +111,6 @@ def until_slicing(_key, _last_gather, **kwargs):
     until = kwargs.get('until', now())
     last_sec = until - timedelta(seconds=1)
     yield (last_sec, last_sec)
-
-
-### shared collectors
-
-
-# FIXME: move this one to caller?
-@register('config', '2.0', format='json')
-def cli_config(since, until, output, billing_provider_params=None):
-    try:
-        collector = config_django(billing_provider_params=billing_provider_params or {})
-        return output.as_dict(collector)
-    except Exception:
-        logger.info('config_django unavailable, falling back to DB-based config collector')
-        collector = config(db=connection, billing_provider_params=billing_provider_params or {})
-        return output.as_dict(collector)
 
 
 ### CCSP & CCSPv2 collectors
