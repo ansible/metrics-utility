@@ -68,14 +68,6 @@ class Collector:
     #
     # Public methods ----------------------------
     #
-    def config_present(self):
-        """
-        Checks if collector_module contains 'config' method (required)
-        :return: bool
-        """
-
-        return self.collections.get('config') is not None
-
     def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None):
         """Entry point for gathering
 
@@ -122,10 +114,6 @@ class Collector:
             new_paths = [package.tar_path for package in packages if package.tar_path is not None]
             tar_paths += new_paths
         return tar_paths or []
-
-    def delete_tarballs(self):
-        for path in self.all_tar_paths():
-            os.remove(path)
 
     #
     # Private methods ---------------------------
@@ -205,19 +193,26 @@ class Collector:
         return available_package
 
     def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        self._init_tmp_dir(tmp_root_dir)
+        self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
+        self.gather_dir = self.tmp_dir.joinpath('stage')
+        self.gather_dir.mkdir(mode=0o700)
 
         self.last_gathered_entries = self._load_last_gathered_entries()
 
         self._calculate_collection_interval(since, until)
 
-        self._reset_collections_and_packages()
+        self.collections = {
+            Collection.COLLECTION_TYPE_JSON: [],
+            Collection.COLLECTION_TYPE_CSV: [],
+            Collection.COLLECTION_TYPE_CONFIG: None,
+        }
+        self.packages = {}
 
         self._create_collections(collectors_subset)
 
     def _gather_config(self):
         """Config is special collection, it's added to each Package"""
-        if not self.config_present():
+        if self.collections.get('config') is None:
             logger.log(self.log_level, "'config' collector data is missing")
             return False
 
@@ -333,12 +328,8 @@ class Collector:
         """Deleting temp files"""
         shutil.rmtree(self.tmp_dir, ignore_errors=True)  # clean up individual artifact files
         if self.ship:
-            self.delete_tarballs()
-
-    def _init_tmp_dir(self, tmp_root_dir=None):
-        self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
-        self.gather_dir = self.tmp_dir.joinpath('stage')
-        self.gather_dir.mkdir(mode=0o700)
+            for path in self.all_tar_paths():
+                os.remove(path)
 
     def _load_last_gathered_entries(self):
         """Load the last-gathered timestamps from the Controller database.
@@ -365,11 +356,7 @@ class Collector:
 
         self.last_gathered_entries.update(last_gathered_updates['keys'])
 
-        self._save_last_gathered_entries(self.last_gathered_entries)
-
-    def _save_last_gathered_entries(self, last_gathered_entries):
-        """Persist last-gathered timestamps to the Django settings object."""
-        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(last_gathered_entries, cls=DjangoJSONEncoder)
+        settings.AUTOMATION_ANALYTICS_LAST_ENTRIES = json.dumps(self.last_gathered_entries, cls=DjangoJSONEncoder)
 
     def _create_collections(self, subset=None):
         """Creates Collections from decorated functions (by @register) from self.collector_module
@@ -423,11 +410,3 @@ class Collector:
         if cls is None:
             raise NotSupportedFactory(f'Factory for {self.ship_target} not supported')
         return cls(self)
-
-    def _reset_collections_and_packages(self):
-        self.collections = {
-            Collection.COLLECTION_TYPE_JSON: [],
-            Collection.COLLECTION_TYPE_CSV: [],
-            Collection.COLLECTION_TYPE_CONFIG: None,
-        }
-        self.packages = {}

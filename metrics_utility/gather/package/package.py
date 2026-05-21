@@ -27,10 +27,6 @@ class Package:
         self.tar_path = None
         self.total_data_size = 0
 
-    @classmethod
-    def max_data_size(cls):
-        return cls.MAX_DATA_SIZE
-
     def add_collection(self, collection):
         self.collections.append(collection)
         self.collection_keys.append(collection.key)
@@ -44,7 +40,7 @@ class Package:
             collection.cleanup()
 
     def has_free_space(self, requested_size):
-        return self.total_data_size + requested_size <= self.max_data_size()
+        return self.total_data_size + requested_size <= self.MAX_DATA_SIZE
 
     def is_shipping_configured(self):
         if not self.tar_path:

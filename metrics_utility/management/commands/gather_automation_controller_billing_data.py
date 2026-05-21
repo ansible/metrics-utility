@@ -1,3 +1,4 @@
+import logging
 import os
 
 from argparse import RawDescriptionHelpFormatter
@@ -9,7 +10,7 @@ from metrics_utility.exceptions import (
     NoAnalyticsCollected,
 )
 from metrics_utility.gather.collector import Collector
-from metrics_utility.logger import debug, logger
+from metrics_utility.logger import logger
 from metrics_utility.management.validation import (
     date_format_text,
     handle_crc_ship_target,
@@ -96,7 +97,7 @@ class Command(BaseCommand):
         and runs the gathering pipeline, shipping tarballs to the configured target.
         """
         if options.get('verbose'):
-            debug()
+            logger.setLevel(logging.DEBUG)
         handle_env_validation()
 
         opt_since = options.get('since')

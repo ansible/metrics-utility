@@ -11,8 +11,3 @@ if sys.argv[0].endswith('manage.py'):
 # note: total_workers_vcpu requires at least INFO
 logging.basicConfig(format='%(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-
-def debug():
-    """Set the logger level to DEBUG, enabling verbose output."""
-    logger.setLevel(logging.DEBUG)
