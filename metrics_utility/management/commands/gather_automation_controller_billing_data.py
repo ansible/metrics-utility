@@ -1,25 +1,65 @@
 import logging
+import os
 
 from argparse import RawDescriptionHelpFormatter
 
 from django.core.management.base import BaseCommand
 
 from metrics_utility.exceptions import (
-    BadShipTarget,
+    MissingRequiredEnvVar,
     NoAnalyticsCollected,
 )
 from metrics_utility.gather.collector import Collector
 from metrics_utility.logger import logger
 from metrics_utility.management.validation import (
     date_format_text,
-    handle_crc_ship_target,
-    handle_directory_ship_target,
-    handle_env_validation,
-    handle_not_crc,
-    handle_not_s3,
-    handle_s3_ship_target,
     parse_date_param,
 )
+
+
+VALID_COLLECTORS = {
+    ## shared
+    # config, manifest, data_collection_status are always on
+    ## ccsp
+    # job_host_summary is on by default, disable via METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR
+    # main_jobevent is on by default when METRICS_UTILITY_OPTIONAL_COLLECTORS is not set
+    'main_host',
+    'main_host_daily',
+    'main_indirectmanagednodeaudit',
+    'main_jobevent',
+    ## vcpu
+    'total_workers_vcpu',
+    ## anonymized
+    'controller_version_service',
+    'credentials_service',
+    'execution_environments',
+    'feature_flags_service',
+    'job_host_summary_service',
+    'main_jobevent_service',
+    'table_metadata',
+    'unified_jobs',
+    ## dashboard & service
+    'dashboard_jobs',
+    'task_executions_service',
+}
+
+VALID_SHIP_TARGETS = {'directory', 's3', 'crc'}
+
+MAX_GATHER_PERIOD_DAYS = 3650  # 10 years maximum
+
+S3_ENV_VARS = [
+    'METRICS_UTILITY_BUCKET_ACCESS_KEY',
+    'METRICS_UTILITY_BUCKET_ENDPOINT',
+    'METRICS_UTILITY_BUCKET_NAME',
+    'METRICS_UTILITY_BUCKET_REGION',
+    'METRICS_UTILITY_BUCKET_SECRET_KEY',
+]
+
+CRC_ENV_VARS = [
+    'METRICS_UTILITY_BILLING_ACCOUNT_ID',
+    'METRICS_UTILITY_BILLING_PROVIDER',
+    'METRICS_UTILITY_RED_HAT_ORG_ID',
+]
 
 
 class Command(BaseCommand):
@@ -90,31 +130,20 @@ class Command(BaseCommand):
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
     def handle(self, *args, **options):
-        """Execute the gather_automation_controller_billing_data management command.
-
-        Validates environment variables, instantiates the billing Collector,
-        and runs the gathering pipeline, shipping tarballs to the configured target.
-        """
         if options.get('verbose'):
             logger.setLevel(logging.DEBUG)
-        ship_target = handle_env_validation()
 
-        opt_since = options.get('since')
-        opt_until = options.get('until')
-        opt_ship = options.get('ship')
-        opt_dry_run = options.get('dry-run')
+        since = parse_date_param(options.get('since'), self.help_texts, 'since')
+        until = parse_date_param(options.get('until'), self.help_texts, 'until')
 
-        since = parse_date_param(opt_since, self.help_texts, 'since')
-        until = parse_date_param(opt_until, self.help_texts, 'until')
-
-        billing_provider_params, ship_params = self._handle_ship_target(ship_target)
-
-        if opt_ship and opt_dry_run:
+        if options.get('ship') and options.get('dry-run'):
             logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
             return
 
+        ship_target, billing_provider_params, ship_params = self._read_env()
+
         collector = Collector(
-            collection_type=Collector.MANUAL_COLLECTION if opt_ship else Collector.DRY_RUN,
+            collection_type=Collector.MANUAL_COLLECTION if options.get('ship') else Collector.DRY_RUN,
             ship_target=ship_target,
         )
 
@@ -122,31 +151,119 @@ class Command(BaseCommand):
         if not tgzfiles:
             logger.error('No analytics collected')
             raise NoAnalyticsCollected('No analytics collected')
-        if tgzfiles:
-            logger.info('Analytics collected')
+        logger.info('Analytics collected')
 
-    def _handle_ship_target(self, ship_target):
-        """Validate the ship target and return configuration parameters.
+    def _read_env(self):
+        """Validate environment and return (ship_target, billing_provider_params, ship_params)."""
+        errors = []
 
-        Args:
-            ship_target: Value of METRICS_UTILITY_SHIP_TARGET.
+        # Validate optional collectors
+        collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t')
+        if collectors:
+            invalid = set(collectors.split(',')) - VALID_COLLECTORS
+            if invalid:
+                errors.append(f'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS: {", ".join(invalid)}. Valid values: {", ".join(VALID_COLLECTORS)}')
 
-        Returns:
-            Tuple of ``(billing_provider_params, ship_params)``.
+        # Validate max gather period days
+        max_days_str = os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS')
+        if max_days_str is not None:
+            max_days_err = f'Value must be number between 0 to {MAX_GATHER_PERIOD_DAYS}'
+            try:
+                max_days = int(max_days_str)
+                if max_days < 0 or max_days > MAX_GATHER_PERIOD_DAYS:
+                    errors.append(f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: {max_days}. {max_days_err}')
+            except (ValueError, TypeError):
+                errors.append(f'Invalid METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS: "{max_days_str}". {max_days_err}')
 
-        Raises:
-            :exc:`~metrics_utility.exceptions.BadShipTarget`: For unrecognised values.
-        """
+        # Validate ship target
+        ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
+        if not ship_target:
+            errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET is empty. Valid values: {", ".join(VALID_SHIP_TARGETS)}')
+        elif ship_target not in VALID_SHIP_TARGETS:
+            errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(VALID_SHIP_TARGETS)}')
+
+        if errors:
+            raise MissingRequiredEnvVar('\n'.join(errors))
+
+        # Read ship-target-specific configuration and warn about surplus env vars
         if ship_target == 'crc':
-            handle_not_s3()
-            return handle_crc_ship_target()
+            billing_provider_params, ship_params = self._read_crc_env()
+            self._warn_surplus(S3_ENV_VARS, 's3')
         elif ship_target == 'directory':
-            handle_not_crc()
-            handle_not_s3()
-            return handle_directory_ship_target()
+            billing_provider_params, ship_params = self._read_directory_env()
+            self._warn_surplus(CRC_ENV_VARS, 'crc')
+            self._warn_surplus(S3_ENV_VARS, 's3')
         elif ship_target == 's3':
-            handle_not_crc()
-            return handle_s3_ship_target()
+            billing_provider_params, ship_params = self._read_s3_env()
+            self._warn_surplus(CRC_ENV_VARS, 'crc')
+
+        return ship_target, billing_provider_params, ship_params
+
+    @staticmethod
+    def _read_directory_env():
+        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
+        if not ship_path:
+            raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_SHIP_PATH - place for collected data')
+        return {}, {'ship_path': ship_path}
+
+    @staticmethod
+    def _read_s3_env():
+        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
+        bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME')
+        bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT')
+        bucket_region = os.getenv('METRICS_UTILITY_BUCKET_REGION')
+        bucket_access_key = os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY')
+        bucket_secret_key = os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY')
+
+        missing = []
+        if not bucket_name:
+            missing += ['METRICS_UTILITY_BUCKET_NAME - name of S3 bucket']
+        if not bucket_endpoint:
+            missing += ['METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com']
+        if not bucket_access_key:
+            missing += ['METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key']
+        if not bucket_secret_key:
+            missing += ['METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key']
+        if not ship_path:
+            missing += ['METRICS_UTILITY_SHIP_PATH - place for collected data']
+
+        if missing:
+            raise MissingRequiredEnvVar(f'Missing some required env variables for S3 configuration, namely: {", ".join(missing)}.')
+
+        return {}, {
+            'ship_path': ship_path,
+            'bucket_name': bucket_name,
+            'bucket_endpoint': bucket_endpoint,
+            'bucket_region': bucket_region,
+            'bucket_access_key': bucket_access_key,
+            'bucket_secret_key': bucket_secret_key,
+        }
+
+    @staticmethod
+    def _read_crc_env():
+        billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
+
+        billing_provider_params = {'billing_provider': billing_provider}
+        if billing_provider == 'aws':
+            billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID')
+            if not billing_account_id:
+                raise MissingRequiredEnvVar('METRICS_UTILITY_BILLING_ACCOUNT_ID, containing AWS 12 digit customer id needs to be provided.')
+            billing_provider_params['billing_account_id'] = billing_account_id
         else:
-            allowed = ', '.join(['crc', 'directory', 's3'])
-            raise BadShipTarget(f'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var ({ship_target}), allowed values: {allowed}')
+            raise MissingRequiredEnvVar('Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are [aws].')
+
+        red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
+        if red_hat_org_id:
+            billing_provider_params['red_hat_org_id'] = red_hat_org_id
+
+        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
+        if ship_path:
+            logger.warning('Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="directory", "s3"')
+
+        return billing_provider_params, {}
+
+    @staticmethod
+    def _warn_surplus(var_names, expected_target):
+        surplus = [v for v in var_names if os.getenv(v)]
+        if surplus:
+            logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="{expected_target}": {", ".join(surplus)}')
