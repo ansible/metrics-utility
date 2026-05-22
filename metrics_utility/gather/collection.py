@@ -134,6 +134,9 @@ class Collection:
         return self.data_filepath
 
     def update_last_gathered_entries(self, updates_dict):
+        if self.disabled:
+            return
+
         if self.output_format == 'csv' and self.sub_collections:
             for collection in self.sub_collections:
                 collection.update_last_gathered_entries(updates_dict)

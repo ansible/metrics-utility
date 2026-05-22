@@ -102,7 +102,7 @@ class Collector:
             if not self._gather_config(billing_provider_params):
                 return None
 
-            self._gather_json_collections()
+            self._gather_json_collections(ship_params)
 
             self._gather_csv_collections(ship_params)
 
@@ -234,7 +234,7 @@ class Collector:
         self.config_collection.gather()
         return True
 
-    def _gather_json_collections(self):
+    def _gather_json_collections(self, ship_params=None):
         """JSON collections are simpler, they're just gathered and added to the Package"""
         for collection in self.collections['json']:
             collection.gather()
@@ -242,7 +242,7 @@ class Collector:
             if collection.is_empty() or not collection.gathering_successful:
                 continue
 
-            self._add_collection_to_package(collection)
+            self._add_collection_to_package(collection, ship_params)
 
     def _gather_csv_collections(self, ship_params=None):
         """CSV collections can contain sub-collections (big db tables).
