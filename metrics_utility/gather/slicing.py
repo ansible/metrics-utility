@@ -1,7 +1,5 @@
 from django.utils.timezone import now, timedelta
 
-from metrics_utility.gather.utils import get_last_entries_from_db, get_max_gather_period_days
-
 
 def daily_slicing(key, last_gather, **kwargs):
     """Generate time slices aligned to calendar-day boundaries for hourly collectors.
@@ -11,8 +9,8 @@ def daily_slicing(key, last_gather, **kwargs):
 
     Args:
         key: Collector key name used to look up the last-gathered entry.
-        last_gather: Fallback datetime used when no entry exists for *key*.
-        **kwargs: Accepts optional ``since`` and ``until`` datetimes.
+        last_gather: Horizon datetime (now - max_gather_period_days).
+        **kwargs: Accepts ``since``, ``until``, and ``last_gathered_entries``.
 
     Yields:
         Tuple of ``(since, until)`` timezone-aware datetimes.
@@ -21,12 +19,11 @@ def daily_slicing(key, last_gather, **kwargs):
     if since is not None:
         last_entry = since
     else:
-        horizon = until - timedelta(days=get_max_gather_period_days())
-        last_entries = get_last_entries_from_db()
+        last_gathered_entries = kwargs.get('last_gathered_entries', {})
         try:
-            last_entry = max(last_entries.get(key) or last_gather, horizon)
-        except TypeError:  # last_entries has a stale non-datetime entry for this collector
-            last_entry = max(last_gather, horizon)
+            last_entry = max(last_gathered_entries.get(key) or last_gather, last_gather)
+        except TypeError:
+            last_entry = last_gather
 
     start, end = last_entry, None
     start_beginning_of_next_day = start.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
