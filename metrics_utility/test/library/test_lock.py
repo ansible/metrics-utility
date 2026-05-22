@@ -1,26 +1,16 @@
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 from django.db import connection
 
 from metrics_utility.library.lock import lock
+from metrics_utility.test.util import mock_cursor_db
 
 
 class TestCollectorLocks:
-    @patch('metrics_utility.gather.collector.connection')
-    def test_string_key_conversion(self, mock_connection):
-        # Mock the cursor and its operations
-        mock_cursor = MagicMock()
+    def test_string_key_conversion(self):
+        mock_connection, mock_cursor = mock_cursor_db()
         mock_cursor.execute.return_value = None
-        mock_cursor.fetchone.return_value = [True]  # Lock acquisition succeeds
-
-        # Set up the cursor context manager properly
-        mock_cursor_context = MagicMock()
-        mock_cursor_context.__enter__.return_value = mock_cursor
-        mock_cursor_context.__exit__.return_value = None
-
-        mock_connection.cursor.return_value = mock_cursor_context
+        mock_cursor.fetchone.return_value = [True]
 
         with lock('my_string_key', wait=False, db=mock_connection) as acquired:
             assert acquired is True

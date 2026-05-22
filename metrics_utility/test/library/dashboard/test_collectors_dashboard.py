@@ -1,16 +1,16 @@
 import decimal
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from metrics_utility.library.collectors.dashboard.collectors import _dashboard_job_host_summaries, _dashboard_job_labels, dashboard_jobs
+from metrics_utility.test.util import mock_cursor_db
 
 
 class TestCollectorsDashboard:
     def setup_method(self):
         self.since = datetime.fromisoformat('2024-01-01T00:00:00Z')
         self.until = datetime.fromisoformat('2024-02-01T00:00:00Z')
-        self.mock_db = MagicMock()
         self.expected_job_labels = {1: [10, 11], 2: [20]}
         self.expected_job_host_summaries = {
             1: [{'id': 1, 'host_name': 'host1', 'host_id': 100}, {'id': 2, 'host_name': 'host2', 'host_id': 200}],
@@ -18,43 +18,35 @@ class TestCollectorsDashboard:
         }
 
     def test_dashboard_job_labels(self):
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__.return_value = mock_cursor
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('unifiedjob_id',), ('label_id',)]
         rows = [(1, 10), (1, 11), (2, 20)]
         mock_cursor.__iter__.return_value = iter(rows)
-        self.mock_db.cursor.return_value = mock_cursor
-        result = _dashboard_job_labels(self.since, self.until, self.mock_db)
+        result = _dashboard_job_labels(self.since, self.until, mock_db)
         assert result == self.expected_job_labels
 
     def test_dashboard_job_labels_no_results(self):
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__.return_value = mock_cursor
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('unifiedjob_id',), ('label_id',)]
         rows = []
         mock_cursor.__iter__.return_value = iter(rows)
-        self.mock_db.cursor.return_value = mock_cursor
-        result = _dashboard_job_labels(self.since, self.until, self.mock_db)
+        result = _dashboard_job_labels(self.since, self.until, mock_db)
         assert result == {}
 
     def test_dashboard_job_host_summaries(self):
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__.return_value = mock_cursor
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('id',), ('host_name',), ('host_id',), ('job_id',)]
         rows = [(1, 'host1', 100, 1), (2, 'host2', 200, 1), (3, 'host3', None, 2)]
         mock_cursor.__iter__.return_value = iter(rows)
-        self.mock_db.cursor.return_value = mock_cursor
-        result = _dashboard_job_host_summaries(self.since, self.until, self.mock_db)
+        result = _dashboard_job_host_summaries(self.since, self.until, mock_db)
         assert result == self.expected_job_host_summaries
 
     def test_dashboard_job_host_summaries_no_results(self):
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__.return_value = mock_cursor
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('id',), ('host_name',), ('host_id',), ('job_id',)]
         rows = []
         mock_cursor.__iter__.return_value = iter(rows)
-        self.mock_db.cursor.return_value = mock_cursor
-        result = _dashboard_job_host_summaries(self.since, self.until, self.mock_db)
+        result = _dashboard_job_host_summaries(self.since, self.until, mock_db)
         assert result == {}
 
     @patch('metrics_utility.library.collectors.dashboard.collectors._dashboard_job_labels')
@@ -62,8 +54,7 @@ class TestCollectorsDashboard:
     def test_dashboard_jobs(self, mock_dashboard_job_host_summaries, mock_dashboard_job_labels):
         mock_dashboard_job_labels.return_value = self.expected_job_labels
         mock_dashboard_job_host_summaries.return_value = self.expected_job_host_summaries
-        mock_cursor = MagicMock()
-        mock_cursor.__enter__.return_value = mock_cursor
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [
             ('id',),
             ('name',),
@@ -131,8 +122,7 @@ class TestCollectorsDashboard:
             ),
         ]
         mock_cursor.__iter__.return_value = iter(rows)
-        self.mock_db.cursor.return_value = mock_cursor
-        collector = dashboard_jobs(since=self.since, until=self.until, db=self.mock_db)
+        collector = dashboard_jobs(since=self.since, until=self.until, db=mock_db)
         result = collector.gather()
         assert isinstance(result, dict)
         assert result['count'] == 3

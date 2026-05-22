@@ -1,11 +1,11 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from django.db import DatabaseError
 
 from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
-from metrics_utility.test.util import utcdt
+from metrics_utility.test.util import mock_cursor_db, utcdt
 
 
 class TestBoolFromEnv:
@@ -132,14 +132,13 @@ class TestGetOptionalCollectors:
 
 
 class TestGetLastEntriesFromDb:
-    @patch('metrics_utility.gather.utils.connection')
-    def test_successful_entries_retrieval(self, mock_connection):
-        mock_cursor = MagicMock()
-        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
+    def test_successful_entries_retrieval(self):
+        mock_connection, mock_cursor = mock_cursor_db()
         test_json = '"{\\"config\\": \\"2024-01-01T00:00:00Z\\", \\"hosts\\": \\"2024-01-03T00:00:00Z\\", \\"jobs\\": \\"2024-01-02T00:00:00Z\\"}"'
         mock_cursor.fetchone.return_value = (test_json,)
 
-        result = get_last_entries_from_db()
+        with patch('metrics_utility.gather.utils.connection', mock_connection):
+            result = get_last_entries_from_db()
 
         assert result == {
             'config': utcdt('2024-01-01'),
@@ -149,13 +148,12 @@ class TestGetLastEntriesFromDb:
         mock_cursor.execute.assert_called_once()
         assert 'AUTOMATION_ANALYTICS_LAST_ENTRIES' in mock_cursor.execute.call_args[0][0]
 
-    @patch('metrics_utility.gather.utils.connection')
-    def test_no_entries_returns_empty(self, mock_connection):
-        mock_cursor = MagicMock()
-        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
+    def test_no_entries_returns_empty(self):
+        mock_connection, mock_cursor = mock_cursor_db()
         mock_cursor.fetchone.return_value = None
 
-        assert get_last_entries_from_db() == {}
+        with patch('metrics_utility.gather.utils.connection', mock_connection):
+            assert get_last_entries_from_db() == {}
 
     @patch('metrics_utility.gather.utils.logger')
     @patch('metrics_utility.gather.utils.connection')
