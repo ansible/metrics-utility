@@ -19,7 +19,7 @@ def main_hostmetric(*, db=None, since=None, until=None, output=DataframeOutput()
         pandas DataFrame with host metric fields, or list of CSV paths.
     """
     query = f"""
-        SELECT
+        SELECT DISTINCT ON (main_hostmetric.hostname)
             main_hostmetric.hostname,
             COALESCE(main_host.id, 0) AS host_id,
             main_hostmetric.first_automation,

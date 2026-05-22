@@ -42,6 +42,7 @@ def test_main_hostmetric_query_structure(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
+    assert 'DISTINCT ON (main_hostmetric.hostname)' in query
     assert 'main_hostmetric' in query
     assert 'main_host' in query
     assert 'LEFT JOIN main_host ON main_host.name = main_hostmetric.hostname' in query

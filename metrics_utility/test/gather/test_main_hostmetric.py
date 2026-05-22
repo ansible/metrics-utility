@@ -73,14 +73,12 @@ def cleanup_glob():
         os.remove(file)
 
 
-# Each hostmetric row joins with 3 main_host entries (one per inventory),
-# producing 3 rows per hostmetric hostname.
-_hm_header = (
-    'hostname,host_id,first_automation,last_automation,automated_counter,'
-    'deleted_counter,last_deleted,deleted,ansible_product_serial,'
-    'ansible_machine_id,ansible_host_variable,ansible_connection_variable'
-)
-_hm_rows = [
+main_hostmetric_lines = [
+    (
+        'hostname,host_id,first_automation,last_automation,automated_counter,'
+        'deleted_counter,last_deleted,deleted,ansible_product_serial,'
+        'ansible_machine_id,ansible_host_variable,ansible_connection_variable'
+    ),
     'default_host_hostmetric_1_2025-06-13,0,2025-06-01 08:00:00+00,2025-06-10 14:30:00+00,12,0,,f,,,,,',
     'default_host_hostmetric_2_2025-06-13,0,2025-06-28 09:15:00+00,2025-06-12 16:00:00+00,5,1,2025-06-20 10:00:00+00,t,,,,,',
     'default_host_hostmetric_3_2025-06-13,0,2025-06-03 12:00:00+00,2025-06-11 13:45:00+00,7,0,,f,,,,,',
@@ -91,7 +89,6 @@ _hm_rows = [
     'default_host_hostmetric_8_2025-06-13,0,2025-06-29 09:45:00+00,2025-06-07 14:00:00+00,4,1,2025-06-13 09:30:00+00,t,,,,,',
     'default_host_hostmetric_9_2025-06-13,0,2025-06-05 08:30:00+00,2025-06-10 16:00:00+00,9,0,,f,,,,,',
 ]
-main_hostmetric_lines = [_hm_header] + _hm_rows * 3
 
 main_hostmetric_skip_columns = [
     'host_id',
