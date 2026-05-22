@@ -98,6 +98,20 @@ services:
         uv run pytest -s -v
       '
 
+  mock-segment:
+    image: "mirror.gcr.io/python"
+    container_name: mock-segment
+    ports:
+      - "8765:8765"
+    volumes:
+      - ../../tools:/tools:ro
+    tmpfs:
+      - /tmp/segment:rw,mode=1777
+    environment:
+      MOCK_SEGMENT_PORT: "8765"
+      MOCK_SEGMENT_OUTPUT: "/tmp/segment/requests.jsonl"
+    entrypoint: python /tools/mock_segment_server.py --verbose
+
   metrics-utility-env:
     build:
       context: .
