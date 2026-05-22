@@ -62,8 +62,8 @@ def test_command_help(capsys):
         UnparsableParameter('unparsable'),
     ],
 )
-def test_handle_known_exceptions(monkeypatch, command_instance, exc):
-    monkeypatch.setattr(command_instance, '_read_env', lambda: (_ for _ in ()).throw(exc))
+def test_handle_known_exceptions(command_instance, exc):
+    command_instance._read_env = lambda: (_ for _ in ()).throw(exc)
 
     with pytest.raises(MetricsException):
         command_instance.handle()
