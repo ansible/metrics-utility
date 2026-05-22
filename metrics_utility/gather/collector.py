@@ -98,20 +98,21 @@ class Collector:
 
             self._gather_initialize(subset, since, until)
 
-            if not self._gather_config(billing_provider_params):
-                return None
+            try:
+                if not self._gather_config(billing_provider_params):
+                    return None
 
-            self._gather_json_collections(ship_params)
+                self._gather_json_collections(ship_params)
 
-            self._gather_csv_collections(ship_params)
+                self._gather_csv_collections(ship_params)
 
-            self._process_packages(ship_params)
+                self._process_packages(ship_params)
 
-            self._gather_finalize()
+                self._gather_finalize()
 
-            self._gather_cleanup()
-
-            return self.all_tar_paths()
+                return self.all_tar_paths()
+            finally:
+                self._gather_cleanup()
 
     def last_gathered_entry_for(self, key):
         return self.last_gathered_entries.get(key)
@@ -333,10 +334,11 @@ class Collector:
 
     def _gather_cleanup(self):
         """Deleting temp files"""
-        shutil.rmtree(self.tmp_dir, ignore_errors=True)  # clean up individual artifact files
-        if self.ship:
-            for path in self.all_tar_paths():
-                os.remove(path)
+        if not self.ship:
+            return
+        for path in self.all_tar_paths():
+            os.remove(path)
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     def _load_last_gathered_entries(self):
         """Load the last-gathered timestamps from the Controller database.

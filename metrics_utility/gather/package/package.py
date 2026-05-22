@@ -56,7 +56,7 @@ class Package:
         return True
 
     def make_tgz(self):
-        target = self.collector.tmp_dir.parent
+        target = self.collector.tmp_dir
         try:
             tarname_base = self._tarname_base()
             path = pathlib.Path(target)
