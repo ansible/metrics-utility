@@ -18,7 +18,7 @@ date_format_text = (
 
 # patchable in tests
 def now():
-    return datetime.datetime.now()
+    return datetime.datetime.now(datetime.timezone.utc)
 
 
 def startofday(dt):
