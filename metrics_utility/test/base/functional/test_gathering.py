@@ -103,7 +103,7 @@ def test_one_csv_collection_splitted_by_size(collector):
         files = read_tarball(tgz_files[i])
 
         assert_common_files(files)
-        assert len(files.keys()) == 1 + 3
+        assert len(files.keys()) == 4
         assert './big_table.csv' in files.keys()
         assert len(files['./big_table.csv']) == 1000
 
@@ -120,15 +120,15 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
 
         assert_common_files(files)
         if i == 0:
-            assert len(files.keys()) == 2 + 3
+            assert len(files.keys()) == 5
             assert './big_table_2.csv' in files.keys()
             assert './csv_collection_1.csv' in files.keys()
         elif i == 1:
-            assert len(files.keys()) == 2 + 3
+            assert len(files.keys()) == 5
             assert './big_table_2.csv' in files.keys()
             assert './csv_collection_2.csv' in files.keys()
         elif i == 2:
-            assert len(files.keys()) == 1 + 3
+            assert len(files.keys()) == 4
             assert './big_table_2.csv' in files.keys()
 
 
@@ -204,7 +204,7 @@ def test_manifest_and_status(collector):
     files = read_tarball(tgz_files[0])
 
     assert_common_files(files)
-    assert len(files.keys()) == 3 + 3
+    assert len(files.keys()) == 6
 
     assert json.loads(files['./manifest.json']) == {
         'config.json': '1.0',

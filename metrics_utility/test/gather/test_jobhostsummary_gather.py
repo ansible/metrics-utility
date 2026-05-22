@@ -1,13 +1,13 @@
 import csv
 import glob
 import os
-import tarfile
 
 from unittest.mock import patch
 
 import pytest
 
 from metrics_utility.gather.collection import Collection
+from metrics_utility.test.base.functional.helpers import read_tarball
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
@@ -109,6 +109,15 @@ skip_columns = {
 }
 
 
+def find_csv_in_tarballs(tarball_glob, csv_suffix):
+    for file_path in glob.glob(tarball_glob):
+        files = read_tarball(file_path)
+        match = next((name for name in files if name.endswith(csv_suffix)), None)
+        if match is not None:
+            return files[match]
+    return None
+
+
 @pytest.fixture
 def cleanup_glob():
     yield
@@ -119,144 +128,69 @@ def cleanup_glob():
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_command(cleanup_glob):
     """Build xlsx report using build command and test CSV contents."""
-    # run the gather command
     run_gather_ext(env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14', '--force'])
 
-    jobhost_found = False
+    data = find_csv_in_tarballs(file_paths, 'job_host_summary.csv')
+    assert data is not None, 'job_host_summary.csv not found in any tarballs.'
 
-    # locate the generated tarball(s)
-    for file_path in glob.glob(file_paths):
-        with tarfile.open(file_path) as tar:
-            # look for the CSV inside
-            try:
-                member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
-            except StopIteration:
+    rows = list(csv.reader(data.decode('utf-8').splitlines()))
+
+    header = rows[0]
+    assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
+
+    actual_data = rows[1:]
+    assert len(actual_data) == len(expected_rows), f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
+
+    for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
+        for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
+            col_name = header[idx]
+            if col_name in skip_columns:
                 continue
 
-            jobhost_found = True
-            f = tar.extractfile(member)
-            assert f is not None, 'Could not extract job_host_summary.csv'
-
-            # read CSV rows
-            text = f.read().decode('utf-8').splitlines()
-            reader = csv.reader(text)
-            rows = list(reader)
-
-            # check header exactly
-            header = rows[0]
-            assert header == expected_header, f'\nHeader mismatch:\nExpected: {expected_header}\nActual:   {header}'
-
-            # check number of data rows
-            actual_data = rows[1:]
-            assert len(actual_data) == len(expected_rows), f'\nRow count mismatch: expected {len(expected_rows)}, got {len(actual_data)}'
-
-            # compare each cell, skipping unstable ID columns
-            for i, (expected_row, actual_row) in enumerate(zip(expected_rows, actual_data), start=1):
-                for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
-                    col_name = header[idx]
-                    if col_name in skip_columns:
-                        # skip unstable ID
-                        continue
-
-                    assert exp_cell == act_cell, (
-                        f'\nData mismatch on row {i + 1}, column "{col_name}" (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
-                    )
-            break
-
-    if not jobhost_found:
-        pytest.fail('job_host_summary.csv not found in any tarballs.')
+            assert exp_cell == act_cell, (
+                f'\nData mismatch on row {i + 1}, column "{col_name}" (index {idx}):\nExpected: {exp_cell!r}\nActual:   {act_cell!r}'
+            )
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     """Test that job_host_summary.csv is not generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is set to 'true'."""
+    disabled_env_vars = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': 'true'}
 
-    # Create environment variables with collector disabled
-    disabled_env_vars = env_vars.copy()
-    disabled_env_vars['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
-
-    # run the gather command with disabled collector
     rg = run_gather_ext(disabled_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
     assert 'Progress info: Now gathering job_host_summary' in rg.stderr
     assert 'Progress info: Skipping job_host_summary' in rg.stderr
 
-    jobhost_found = False
-
-    # locate the generated tarball(s)
-    for file_path in glob.glob(file_paths):
-        with tarfile.open(file_path) as tar:
-            # look for the CSV inside - it should NOT be present
-            try:
-                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
-                jobhost_found = True
-            except StopIteration:
-                # This is expected when collector is disabled
-                continue
-
-    if jobhost_found:
-        pytest.fail('job_host_summary.csv should not be generated when collector is disabled.')
+    assert find_csv_in_tarballs(file_paths, 'job_host_summary.csv') is None, (
+        'job_host_summary.csv should not be generated when collector is disabled.'
+    )
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_enabled_explicitly(cleanup_glob):
     """Test that job_host_summary.csv is generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is explicitly set to 'false'."""
+    enabled_env_vars = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': 'false'}
 
-    # Create environment variables with collector explicitly enabled
-    enabled_env_vars = env_vars.copy()
-    enabled_env_vars['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'false'
-
-    # run the gather command with explicitly enabled collector
     run_gather_ext(enabled_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
-    jobhost_found = False
-
-    # locate the generated tarball(s)
-    for file_path in glob.glob(file_paths):
-        with tarfile.open(file_path) as tar:
-            # look for the CSV inside - it should be present
-            try:
-                next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
-                jobhost_found = True
-                break
-            except StopIteration:
-                continue
-
-    if not jobhost_found:
-        pytest.fail('job_host_summary.csv should be generated when collector is explicitly enabled.')
+    assert find_csv_in_tarballs(file_paths, 'job_host_summary.csv') is not None, (
+        'job_host_summary.csv should be generated when collector is explicitly enabled.'
+    )
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_case_insensitive_disable(cleanup_glob):
     """Test that the environment variable check is case insensitive for 'true' values."""
+    for test_value in ['TRUE', 'True', 'tRuE']:
+        disabled_env_vars = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': test_value}
 
-    test_cases = ['TRUE', 'True', 'tRuE']
-
-    for test_value in test_cases:
-        # Create environment variables with collector disabled using different cases
-        disabled_env_vars = env_vars.copy()
-        disabled_env_vars['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = test_value
-
-        # run the gather command with disabled collector
         run_gather_ext(disabled_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
-        jobhost_found = False
+        assert find_csv_in_tarballs(file_paths, 'job_host_summary.csv') is None, (
+            f'job_host_summary.csv should not be generated when collector is disabled with value "{test_value}".'
+        )
 
-        # locate the generated tarball(s)
-        for file_path in glob.glob(file_paths):
-            with tarfile.open(file_path) as tar:
-                # look for the CSV inside - it should NOT be present
-                try:
-                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
-                    jobhost_found = True
-                except StopIteration:
-                    # This is expected when collector is disabled
-                    continue
-
-        if jobhost_found:
-            pytest.fail(f'job_host_summary.csv should not be generated when collector is disabled with value "{test_value}".')
-
-        # Clean up files for next iteration
         for file in glob.glob(file_glob):
             os.remove(file)
 
@@ -264,34 +198,15 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
     """Test that job_host_summary.csv is still generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is set to invalid values."""
+    for test_value in ['yes', 'no', '0', 'enabled', 'disabled', 'random_text', '']:
+        test_env_vars = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': test_value}
 
-    invalid_values = ['yes', 'no', '0', 'enabled', 'disabled', 'random_text', '']
-
-    for test_value in invalid_values:
-        # Create environment variables with collector set to invalid value
-        test_env_vars = env_vars.copy()
-        test_env_vars['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = test_value
-
-        # run the gather command
         run_gather_ext(test_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
-        jobhost_found = False
+        assert find_csv_in_tarballs(file_paths, 'job_host_summary.csv') is not None, (
+            f'job_host_summary.csv should be generated when collector has invalid disable value "{test_value}".'
+        )
 
-        # locate the generated tarball(s)
-        for file_path in glob.glob(file_paths):
-            with tarfile.open(file_path) as tar:
-                # look for the CSV inside - it should be present since invalid values don't disable
-                try:
-                    next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
-                    jobhost_found = True
-                    break
-                except StopIteration:
-                    continue
-
-        if not jobhost_found:
-            pytest.fail(f'job_host_summary.csv should be generated when collector has invalid disable value "{test_value}".')
-
-        # Clean up files for next iteration
         for file in glob.glob(file_glob):
             os.remove(file)
 
