@@ -37,6 +37,7 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `job_host_summary(db, since, until).gather() -> DataFrame`
 * `job_host_summary_service(db, since, until).gather() -> DataFrame`
 * `main_host(db).gather() -> DataFrame`
+* `main_host_daily(db, since, until).gather() -> DataFrame`
 * `main_indirectmanagednodeaudit(db, since, until).gather() -> DataFrame`
 * `main_jobevent(db, since, until).gather() -> DataFrame`
 * `main_jobevent_service(db, since, until).gather() -> DataFrame`

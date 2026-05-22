@@ -46,7 +46,7 @@ def _run_ext(env, name, args):
 
     Args:
         env: Dict of additional environment variables.
-        name: Management command name (e.g. ``'build_report'``).
+        name: Management command name (e.g. ``'gather_automation_controller_billing_data'``).
         args: List of additional CLI arguments.
 
     Returns:

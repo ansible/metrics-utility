@@ -60,11 +60,6 @@
 - dev: remove pytz
 
 
-## 0.4.1
-
-- relax boto3 requirement so it builds with any version available
-
-
 ## 0.5.0
 
 - add indirectly managed nodes support, sheets
@@ -79,6 +74,11 @@
 - dev: added tests, mock data generator, scripts, docs, linters, workflows
 - dev: standalone mode with just postgres; python 3.13
 - dev: merge in insights-analytics-generator base lib
+
+
+## 0.4.1
+
+- relax boto3 requirement so it builds with any version available
 
 
 ## 0.4.0

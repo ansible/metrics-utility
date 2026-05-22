@@ -92,7 +92,7 @@ The Docker compose environment is used to provide a quick postgres & minio insta
 
 `uv` is also not required as long as you can manage your own python venv and install dependencies from `pyproject.toml`.
 
-Optionally, `uvx pre-commit install` to run ruff checks from a pre-commit hook, defined in [.pre-commit-config.yaml](../.pre-commit-config.yaml). Or you can run `make lint` / `make fix` manually.
+Optionally, `uvx pre-commit install` to run ruff checks from a pre-commit hook, defined in [.pre-commit-config.yaml](./.pre-commit-config.yaml). Or you can run `make lint` / `make fix` manually.
 
 
 ### Installation

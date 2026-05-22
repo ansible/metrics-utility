@@ -1,6 +1,6 @@
 # Metrics Utility Collectors: Database Tables and Partition Analysis
 
-**Last Updated**: February 2026
+**Last Updated**: May 2026
 
 ## Overview
 
@@ -453,6 +453,178 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 
 ---
 
+### 11. `config_django`
+
+**File**: `metrics_utility/library/collectors/controller/config_django.py`
+
+**Purpose**: Collects Controller configuration via AWX Django APIs (settings, license info, versions, platform details).
+
+**Tables Accessed**:
+- None (uses AWX Django APIs directly)
+
+**Partition Information**:
+- ❌ **Not partitioned** (no direct DB queries)
+
+**Time Range Support**:
+- ❌ Does not support `since`/`until` parameters
+
+**Frequency**:
+- Typically run once per collection cycle (daily)
+
+---
+
+### 12. `controller_version_service`
+
+**File**: `metrics_utility/library/collectors/controller/controller_version_service.py`
+
+**Purpose**: Collects distinct controller versions from enabled instances with control/hybrid node types.
+
+**Tables Accessed**:
+- `main_instance` (READ)
+
+**Partition Information**:
+- ❌ **Not partitioned**
+
+**Time Range Support**:
+- ❌ Does not support `since`/`until` parameters
+
+**Frequency**:
+- Typically run once per collection cycle (daily)
+
+---
+
+### 13. `credentials_service`
+
+**File**: `metrics_utility/library/collectors/controller/credentials_service.py`
+
+**Purpose**: Collects distinct managed credential type names used in jobs within a time window.
+
+**Tables Accessed**:
+- `main_unifiedjob_credentials` (READ)
+- `main_unifiedjob` (READ) - Filtered by `finished` timestamp
+- `main_credential` (READ)
+- `main_credentialtype` (READ)
+
+**Partition Information**:
+- ❌ **Not partitioned** (all tables are non-partitioned)
+
+**Time Range Support**:
+- ✅ **Supports `since`/`until` parameters**
+- Filters by `main_unifiedjob.finished` timestamp
+
+**Frequency**:
+- Run per collection window (typically daily)
+
+---
+
+### 14. `feature_flags_service`
+
+**File**: `metrics_utility/library/collectors/controller/feature_flags_service.py`
+
+**Purpose**: Collects enabled feature flags from the controller.
+
+**Tables Accessed**:
+- `dab_feature_flags_aapflag` (READ)
+
+**Partition Information**:
+- ❌ **Not partitioned**
+
+**Time Range Support**:
+- ❌ Does not support `since`/`until` parameters
+
+**Frequency**:
+- Typically run once per collection cycle (daily)
+
+---
+
+### 15. `table_metadata`
+
+**File**: `metrics_utility/library/collectors/controller/table_metadata.py`
+
+**Purpose**: Collects row count and size information for partitioned and regular tables.
+
+**Tables Accessed**:
+- PostgreSQL system tables (`pg_class`, `pg_inherits`, etc.) for metadata about `main_jobevent`, `main_unifiedjob`, `main_jobhostsummary`
+
+**Partition Information**:
+- ❌ **Not partitioned** (reads system catalog metadata)
+
+**Time Range Support**:
+- ❌ Does not support `since`/`until` parameters
+
+**Frequency**:
+- Typically run once per collection cycle (daily)
+
+---
+
+### 16. `task_executions_service`
+
+**File**: `metrics_utility/library/collectors/service/task_executions_service.py`
+
+**Purpose**: Collects task execution statistics from the metrics-service database for internal observability.
+
+**Tables Accessed**:
+- `tasks_taskexecution` (READ, from metrics-service database)
+
+**Partition Information**:
+- ❌ **Not partitioned**
+
+**Time Range Support**:
+- ✅ **Supports `since`/`until` parameters**
+- Filters by `started_at` timestamp
+
+**Frequency**:
+- Run per collection window (typically daily)
+
+---
+
+### 17. `dashboard_jobs`
+
+**File**: `metrics_utility/library/collectors/dashboard/collectors.py`
+
+**Purpose**: Collects job data for the dashboard including job details, labels, and host summaries.
+
+**Tables Accessed**:
+- `main_unifiedjob` (READ) - Filtered by `modified` timestamp
+- `main_job` (READ)
+- `main_unifiedjobtemplate` (READ)
+- `auth_user` (READ)
+- `main_project` (READ)
+- `main_unifiedjob_labels` (READ)
+- `main_jobhostsummary` (READ)
+
+**Partition Information**:
+- ❌ **Not partitioned** (all tables are non-partitioned)
+
+**Time Range Support**:
+- ✅ **Supports `since`/`until` parameters**
+- Filters by `main_unifiedjob.modified` timestamp
+
+**Frequency**:
+- Run per collection window (typically daily)
+
+---
+
+### 18. `total_workers_vcpu`
+
+**File**: `metrics_utility/library/collectors/others/total_workers_vcpu.py`
+
+**Purpose**: Collects total worker vCPU count from Prometheus for the previous hour.
+
+**Tables Accessed**:
+- None (queries Prometheus HTTP API, not database)
+
+**Partition Information**:
+- ❌ **Not partitioned** (no DB queries)
+
+**Time Range Support**:
+- ❌ Automatically queries previous hour
+
+**Frequency**:
+- Typically run once per collection cycle (daily)
+
+---
+
 ## Partition Pruning Strategies
 
 ### How Partition Pruning Works
@@ -520,6 +692,14 @@ All collectors leverage indexes where available:
 | `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ❌ | Daily snapshot |
 | `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ✅ | Incremental |
 | `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | ❌ | N/A | ✅ | Incremental |
+| `config_django` | (AWX Django APIs) | ❌ | N/A | ❌ | Daily snapshot |
+| `controller_version_service` | `main_instance` | ❌ | N/A | ❌ | Daily snapshot |
+| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | ❌ | N/A | ✅ | Incremental |
+| `feature_flags_service` | `dab_feature_flags_aapflag` | ❌ | N/A | ❌ | Daily snapshot |
+| `table_metadata` | (PostgreSQL system tables) | ❌ | N/A | ❌ | Daily snapshot |
+| `task_executions_service` | `tasks_taskexecution` (metrics-service DB) | ❌ | N/A | ✅ | Incremental |
+| `dashboard_jobs` | `main_unifiedjob`, `main_job`, `main_unifiedjobtemplate`, `auth_user`, `main_project`, `main_unifiedjob_labels`, `main_jobhostsummary` | ❌ | N/A | ✅ | Incremental |
+| `total_workers_vcpu` | (Prometheus API) | ❌ | N/A | ❌ | Daily snapshot |
 
 ---
 

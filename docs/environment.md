@@ -15,6 +15,10 @@ METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX
 METRICS_UTILITY_CRC_INGRESS_URL
 METRICS_UTILITY_CRC_SSO_URL
 METRICS_UTILITY_DB_HOST
+METRICS_UTILITY_DB_NAME
+METRICS_UTILITY_DB_PASSWORD
+METRICS_UTILITY_DB_PORT
+METRICS_UTILITY_DB_USER
 METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR
 METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES
 METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS
@@ -41,6 +45,10 @@ container
 
 * `AWX_PATH` - used to find controller virtualenv, when *not* using `mock_awx`; defaults to `/awx_devel`; runs from `metrics_utility/__init__.py` `.prepare`/`.manage`
 * `METRICS_UTILITY_DB_HOST` - host to talk to controller db when using `mock_awx`
+* `METRICS_UTILITY_DB_NAME` - database name (default `awx`)
+* `METRICS_UTILITY_DB_USER` - database user (default `myuser`)
+* `METRICS_UTILITY_DB_PASSWORD` - database password (default `mypassword`)
+* `METRICS_UTILITY_DB_PORT` - database port (default `5432`)
 
 
 ### Stored in `config.json` - `billing_provider_params`
