@@ -1,6 +1,7 @@
 import csv
 import glob
 import os
+import tarfile
 
 import pytest
 
@@ -10,7 +11,6 @@ from metrics_utility.library.collectors.controller.credentials_service import cr
 from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
-from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
 from metrics_utility.test.util import run_gather_ext, utcdt
 
 
@@ -39,7 +39,7 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
 
     found = False
     for file_path in glob.glob(file_paths):
-        with SafeTarFile(file_path) as tar:
+        with tarfile.open(file_path) as tar:
             try:
                 member = next(m for m in tar.getmembers() if m.name.endswith(csv_filename))
             except StopIteration:

@@ -11,58 +11,6 @@ from metrics_utility.gather.collection import Collection
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
-def safe_tarfile_member_check(member):
-    """
-    Check if a tar member is safe to extract (no path traversal).
-
-    This function prevents 'tar slip' or 'zip slip' attacks by validating
-    that tar members don't contain dangerous paths that could extract files
-    outside the intended directory.
-
-    SonarQube compliance: Addresses security hotspot for archive expansion.
-    """
-    # Reject device files and FIFOs which could be dangerous
-    if member.isdev() or member.isfifo():
-        return False
-    # Reject paths with directory traversal patterns
-    if '..' in member.name or member.name.startswith('/'):
-        return False
-    return True
-
-
-class SafeTarFile:
-    """
-    A context manager for safely opening and reading tar files.
-
-    This class ensures that tar file operations are safe from path traversal
-    attacks by filtering out dangerous members during opening.
-
-    SonarQube compliance: Provides safe archive handling.
-    """
-
-    def __init__(self, file_path, mode='r:gz'):
-        self.file_path = file_path
-        self.mode = mode
-        self.tar = None
-
-    def __enter__(self):
-        # Open the tar file - suppressed security warning as we immediately filter members below
-        self.tar = tarfile.open(self.file_path, self.mode)
-
-        # Filter members to only include safe ones
-        original_members = self.tar.getmembers()
-        safe_members = [m for m in original_members if safe_tarfile_member_check(m)]
-
-        # Replace the members list with filtered safe members
-        self.tar.members = safe_members
-
-        return self.tar
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.tar:
-            self.tar.close()
-
-
 # environment for run_gather_ext
 env_vars = {
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
@@ -178,8 +126,8 @@ def test_command(cleanup_glob):
 
     # locate the generated tarball(s)
     for file_path in glob.glob(file_paths):
-        with SafeTarFile(file_path) as tar:
-            # look for the CSV inside (members are already filtered for safety)
+        with tarfile.open(file_path) as tar:
+            # look for the CSV inside
             try:
                 member = next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
             except StopIteration:
@@ -237,8 +185,8 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
 
     # locate the generated tarball(s)
     for file_path in glob.glob(file_paths):
-        with SafeTarFile(file_path) as tar:
-            # look for the CSV inside - it should NOT be present (members are already filtered for safety)
+        with tarfile.open(file_path) as tar:
+            # look for the CSV inside - it should NOT be present
             try:
                 next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                 jobhost_found = True
@@ -265,8 +213,8 @@ def test_job_host_summary_enabled_explicitly(cleanup_glob):
 
     # locate the generated tarball(s)
     for file_path in glob.glob(file_paths):
-        with SafeTarFile(file_path) as tar:
-            # look for the CSV inside - it should be present (members are already filtered for safety)
+        with tarfile.open(file_path) as tar:
+            # look for the CSV inside - it should be present
             try:
                 next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                 jobhost_found = True
@@ -296,8 +244,8 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
 
         # locate the generated tarball(s)
         for file_path in glob.glob(file_paths):
-            with SafeTarFile(file_path) as tar:
-                # look for the CSV inside - it should NOT be present (members are already filtered for safety)
+            with tarfile.open(file_path) as tar:
+                # look for the CSV inside - it should NOT be present
                 try:
                     next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                     jobhost_found = True
@@ -331,8 +279,8 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
 
         # locate the generated tarball(s)
         for file_path in glob.glob(file_paths):
-            with SafeTarFile(file_path) as tar:
-                # look for the CSV inside - it should be present since invalid values don't disable (members are already filtered for safety)
+            with tarfile.open(file_path) as tar:
+                # look for the CSV inside - it should be present since invalid values don't disable
                 try:
                     next(m for m in tar.getmembers() if m.name.endswith('job_host_summary.csv'))
                     jobhost_found = True
