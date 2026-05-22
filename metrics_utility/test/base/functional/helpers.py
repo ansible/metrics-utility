@@ -1,6 +1,7 @@
 """Helper functions for functional tests: CSV generators and slicing functions."""
 
 import os
+import tarfile
 
 from django.utils.timezone import timedelta
 
@@ -115,6 +116,11 @@ def decode_csv_line(line):
         List of field strings.
     """
     return line.decode('utf-8').replace('\r', '').replace('\n', '').split(',')
+
+
+def read_tarball(path):
+    with tarfile.open(path, 'r:gz') as archive:
+        return {m.name: archive.extractfile(m).read() for m in archive.getmembers()}
 
 
 def assert_common_files(files):

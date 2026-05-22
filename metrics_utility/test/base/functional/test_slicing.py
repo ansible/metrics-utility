@@ -1,5 +1,4 @@
 import datetime
-import tarfile
 
 import pytest
 
@@ -8,7 +7,7 @@ from django.utils.timezone import now, timedelta
 import base.functional.collector_module4_slicing
 
 from base.classes.analytics_collector import AnalyticsCollector
-from base.functional.helpers import assert_common_files, decode_csv_line
+from base.functional.helpers import assert_common_files, decode_csv_line, read_tarball
 
 
 @pytest.fixture
@@ -41,39 +40,36 @@ def test_slices_by_date(collector):
 
     idx = 0
     while since < until:
-        files = {}
-        with tarfile.open(tgz_files[idx], 'r:gz') as archive:
-            for member in archive.getmembers():
-                files[member.name] = archive.extractfile(member)
+        files = read_tarball(tgz_files[idx])
 
-            assert_common_files(files)
-            assert './csv_one_day_slicing_1.csv' in files.keys()
+        assert_common_files(files)
+        assert './csv_one_day_slicing_1.csv' in files.keys()
 
-            lines = files['./csv_one_day_slicing_1.csv'].readlines()
-            _header = lines.pop(0)
-            row = decode_csv_line(lines[0])
+        lines = files['./csv_one_day_slicing_1.csv'].splitlines(True)
+        _header = lines.pop(0)
+        row = decode_csv_line(lines[0])
 
-            csv_since = datetime.datetime(
-                int(row[0]),
-                int(row[1]),
-                int(row[2]),
-                int(row[3]),
-                int(row[4]),
-                int(row[5]),
-                tzinfo=datetime.timezone.utc,
-            )
-            csv_until = datetime.datetime(
-                int(row[6]),
-                int(row[7]),
-                int(row[8]),
-                int(row[9]),
-                int(row[10]),
-                int(row[11]),
-                tzinfo=datetime.timezone.utc,
-            )
+        csv_since = datetime.datetime(
+            int(row[0]),
+            int(row[1]),
+            int(row[2]),
+            int(row[3]),
+            int(row[4]),
+            int(row[5]),
+            tzinfo=datetime.timezone.utc,
+        )
+        csv_until = datetime.datetime(
+            int(row[6]),
+            int(row[7]),
+            int(row[8]),
+            int(row[9]),
+            int(row[10]),
+            int(row[11]),
+            tzinfo=datetime.timezone.utc,
+        )
 
-            assert csv_since == since
-            assert csv_until == since + timedelta(days=1)
+        assert csv_since == since
+        assert csv_until == since + timedelta(days=1)
 
         idx += 1
         since += timedelta(days=1)
