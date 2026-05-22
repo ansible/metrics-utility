@@ -13,12 +13,6 @@ class MetricsException(Exception):
         self.name = message
 
 
-class BadShipTarget(MetricsException):
-    """Raised when METRICS_UTILITY_SHIP_TARGET has an unrecognised value."""
-
-    pass
-
-
 class FailedToUploadPayload(MetricsException):
     """Raised when the HTTP upload of a tarball to the ingress API fails."""
 

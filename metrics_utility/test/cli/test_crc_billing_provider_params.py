@@ -24,3 +24,17 @@ def test_handle_crc_ship_target_aws_requires_billing_account_id(monkeypatch):
     monkeypatch.delenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', raising=False)
     with pytest.raises(MissingRequiredEnvVar, match='METRICS_UTILITY_BILLING_ACCOUNT_ID'):
         Command._read_crc_env()
+
+
+def test_handle_crc_ship_target_unsupported_provider_shows_value(monkeypatch):
+    """Unsupported provider error includes the actual value."""
+    monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'gcp')
+    with pytest.raises(MissingRequiredEnvVar, match="'gcp'"):
+        Command._read_crc_env()
+
+
+def test_handle_crc_ship_target_missing_provider(monkeypatch):
+    """Missing provider error shows None."""
+    monkeypatch.delenv('METRICS_UTILITY_BILLING_PROVIDER', raising=False)
+    with pytest.raises(MissingRequiredEnvVar, match='None'):
+        Command._read_crc_env()

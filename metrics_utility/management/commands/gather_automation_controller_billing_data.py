@@ -47,25 +47,19 @@ VALID_SHIP_TARGETS = {'directory', 's3', 'crc'}
 
 MAX_GATHER_PERIOD_DAYS = 3650  # 10 years maximum
 
-S3_ENV_VARS = [
-    'METRICS_UTILITY_BUCKET_ACCESS_KEY',
-    'METRICS_UTILITY_BUCKET_ENDPOINT',
-    'METRICS_UTILITY_BUCKET_NAME',
-    'METRICS_UTILITY_BUCKET_REGION',
-    'METRICS_UTILITY_BUCKET_SECRET_KEY',
-]
-
-CRC_ENV_VARS = [
-    'METRICS_UTILITY_BILLING_ACCOUNT_ID',
-    'METRICS_UTILITY_BILLING_PROVIDER',
-    'METRICS_UTILITY_RED_HAT_ORG_ID',
-]
-
 S3_REQUIRED_PARAMS = [
     ('bucket_name', 'METRICS_UTILITY_BUCKET_NAME', 'name of S3 bucket'),
     ('bucket_endpoint', 'METRICS_UTILITY_BUCKET_ENDPOINT', 'S3 endpoint, eg. https://s3.us-east.example.com'),
     ('bucket_access_key', 'METRICS_UTILITY_BUCKET_ACCESS_KEY', 'S3 access key'),
     ('bucket_secret_key', 'METRICS_UTILITY_BUCKET_SECRET_KEY', 'S3 secret key'),
+]
+
+S3_ENV_VARS = [env_var for _, env_var, _ in S3_REQUIRED_PARAMS] + ['METRICS_UTILITY_BUCKET_REGION']
+
+CRC_ENV_VARS = [
+    'METRICS_UTILITY_BILLING_ACCOUNT_ID',
+    'METRICS_UTILITY_BILLING_PROVIDER',
+    'METRICS_UTILITY_RED_HAT_ORG_ID',
 ]
 
 
@@ -76,11 +70,8 @@ class Command(BaseCommand):
 
     help = 'Gather Automation Controller billing data'
     help_texts = {
-        'since': (f'Start date for collection, including. {date_format_text.format(name="since")}'),
-        'until': (f'End date for collection, excluding. {date_format_text.format(name="until")}'),
-        'dry-run': ('Gather billing metrics without shipping.'),
-        'ship': ('Enable shipping of billing metrics to the console.redhat.com'),
-        'verbose': ('Print debug information to console.'),
+        'since': f'Start date for collection, including. {date_format_text.format(name="since")}',
+        'until': f'End date for collection, excluding. {date_format_text.format(name="until")}',
     }
 
     def create_parser(self, prog_name, subcommand, **kwargs):
@@ -130,11 +121,12 @@ class Command(BaseCommand):
         )
 
     def add_arguments(self, parser):
-        parser.add_argument('--dry-run', dest='dry-run', action='store_true', help=self.help_texts.get('dry-run'))
-        parser.add_argument('--ship', dest='ship', action='store_true', help=self.help_texts.get('ship'))
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument('--dry-run', dest='dry-run', action='store_true', help='Gather billing metrics without shipping.')
+        group.add_argument('--ship', dest='ship', action='store_true', help='Enable shipping of billing metrics to the console.redhat.com')
         parser.add_argument('--since', dest='since', action='store', help=self.help_texts.get('since'))
         parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
-        parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
+        parser.add_argument('--verbose', dest='verbose', action='store_true', help='Print debug information to console.')
 
     def handle(self, *args, **options):
         if options.get('verbose'):
@@ -142,10 +134,6 @@ class Command(BaseCommand):
 
         since = parse_date_param(options.get('since'), self.help_texts, 'since')
         until = parse_date_param(options.get('until'), self.help_texts, 'until')
-
-        if options.get('ship') and options.get('dry-run'):
-            logger.error('Arguments --ship and --dry-run cannot be processed at the same time, set only one of these.')
-            return
 
         ship_target, billing_provider_params, ship_params = self._read_env()
 
@@ -196,14 +184,14 @@ class Command(BaseCommand):
         if ship_target == 'crc':
             billing_provider_params = self._read_crc_env()
             ship_params = {}
-            self._warn_surplus(S3_ENV_VARS, 's3')
-            self._warn_surplus(['METRICS_UTILITY_SHIP_PATH'], 'directory", "s3')
+            self._warn_surplus(S3_ENV_VARS, ['s3'])
+            self._warn_surplus(['METRICS_UTILITY_SHIP_PATH'], ['directory', 's3'])
         else:
             billing_provider_params = {}
             ship_params = self._read_ship_params(ship_target)
-            self._warn_surplus(CRC_ENV_VARS, 'crc')
+            self._warn_surplus(CRC_ENV_VARS, ['crc'])
             if ship_target == 'directory':
-                self._warn_surplus(S3_ENV_VARS, 's3')
+                self._warn_surplus(S3_ENV_VARS, ['s3'])
 
         return ship_target, billing_provider_params, ship_params
 
@@ -233,24 +221,29 @@ class Command(BaseCommand):
     @staticmethod
     def _read_crc_env():
         billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
+        if billing_provider != 'aws':
+            raise MissingRequiredEnvVar(f'Unsupported METRICS_UTILITY_BILLING_PROVIDER: {billing_provider!r}, supported values are [aws].')
 
+        missing = []
         billing_provider_params = {'billing_provider': billing_provider}
-        if billing_provider == 'aws':
-            billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID')
-            if not billing_account_id:
-                raise MissingRequiredEnvVar('METRICS_UTILITY_BILLING_ACCOUNT_ID, containing AWS 12 digit customer id needs to be provided.')
-            billing_provider_params['billing_account_id'] = billing_account_id
-        else:
-            raise MissingRequiredEnvVar('Unknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are [aws].')
+
+        billing_account_id = os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID')
+        if not billing_account_id:
+            missing.append('METRICS_UTILITY_BILLING_ACCOUNT_ID - AWS 12-digit customer ID')
+        billing_provider_params['billing_account_id'] = billing_account_id
 
         red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
         if red_hat_org_id:
             billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
+        if missing:
+            raise MissingRequiredEnvVar(f'Missing required env variables: {", ".join(missing)}')
+
         return billing_provider_params
 
     @staticmethod
-    def _warn_surplus(var_names, expected_target):
+    def _warn_surplus(var_names, expected_targets):
         surplus = [v for v in var_names if os.getenv(v)]
         if surplus:
-            logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="{expected_target}": {", ".join(surplus)}')
+            targets = ' or '.join(f'"{t}"' for t in expected_targets)
+            logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET={targets}: {", ".join(surplus)}')

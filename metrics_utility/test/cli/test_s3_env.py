@@ -39,7 +39,7 @@ def test_gather_crc(caplog):
             'dry-run': True,
         },
     )
-    assert caplog.messages[0] == 'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="directory", "s3": METRICS_UTILITY_SHIP_PATH'
+    assert caplog.messages[0] == 'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="directory" or "s3": METRICS_UTILITY_SHIP_PATH'
 
 
 def test_gather_directory():
