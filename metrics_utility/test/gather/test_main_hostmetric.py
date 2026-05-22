@@ -1,8 +1,5 @@
-import csv
-import glob
-
-from metrics_utility.test.gather.support.helpers import read_tarball
-from metrics_utility.test.util import _print_comparison, run_gather_ext
+from metrics_utility.test.gather.support.helpers import validate_csv_in_tarballs
+from metrics_utility.test.util import run_gather_ext
 
 
 uuid = '00000000-0000-0000-0000-000000000000'
@@ -17,52 +14,6 @@ def make_env(ship_path):
 
 def make_paths(ship_path):
     return f'{ship_path}/data/2025/06/*/{uuid}-*.tar.gz'
-
-
-def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_columns_names):
-    expected_reader = csv.reader(expected_lines)
-    expected_rows = list(expected_reader)
-    expected_header = expected_rows[0]
-    expected_data = expected_rows[1:]
-
-    actual_rows = []
-    for file_path in sorted(glob.glob(file_paths)):
-        files = read_tarball(file_path)
-        match = next((name for name in files if name.endswith(csv_filename)), None)
-        if match is None:
-            continue
-
-        text = files[match].decode('utf-8').splitlines()
-        reader = csv.reader(text)
-        rows = list(reader)
-        header = rows[0]
-        assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
-        actual_rows.extend(rows[1:])
-
-    assert len(actual_rows) > 0, f'{csv_filename} not found in any tarballs under {file_paths}'
-
-    _print_comparison(
-        [','.join(expected_header)] + [','.join(r) for r in actual_rows],
-        expected_lines,
-    )
-
-    assert len(actual_rows) == len(expected_data), f'\nRow count mismatch in {csv_filename}: expected {len(expected_data)}, got {len(actual_rows)}'
-
-    skip_columns = set(skip_columns_names)
-    actual_sorted = sorted(actual_rows, key=lambda r: r[0])
-    expected_sorted = sorted(expected_data, key=lambda r: r[0])
-
-    for i, (expected_row, actual_row) in enumerate(zip(expected_sorted, actual_sorted), start=1):
-        for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
-            col_name = expected_header[idx]
-            if col_name in skip_columns:
-                continue
-            assert exp_cell == act_cell, (
-                f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
-                f'(index {idx}):\n'
-                f'Expected: {exp_cell!r}\n'
-                f'Actual:   {act_cell!r}'
-            )
 
 
 main_hostmetric_lines = [

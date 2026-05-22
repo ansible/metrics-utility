@@ -4,11 +4,10 @@ from metrics_utility.exceptions import UnparsableParameter
 from metrics_utility.test.util import run_gather_int
 
 
-def make_env(tmp_path):
-    return {
-        'METRICS_UTILITY_SHIP_PATH': str(tmp_path),
-        'METRICS_UTILITY_SHIP_TARGET': 'directory',
-    }
+env_vars = {
+    'METRICS_UTILITY_SHIP_PATH': '/tmp/nowrites',
+    'METRICS_UTILITY_SHIP_TARGET': 'directory',
+}
 
 
 def handle_gather_exception(env_vars, params, klass):
@@ -17,10 +16,8 @@ def handle_gather_exception(env_vars, params, klass):
     return e.value
 
 
-def test_invalid_gather_argument_format(tmp_path):
+def test_invalid_gather_argument_format():
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
-
-    env_vars = make_env(tmp_path)
 
     bad_inputs = ['2', '2y', 'mo3', '3weeks', '3w']
     args = ['until', 'since']

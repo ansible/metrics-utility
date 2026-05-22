@@ -121,3 +121,54 @@ def decode_csv_line(line):
 def read_tarball(path):
     with tarfile.open(path, 'r:gz') as archive:
         return {m.name: archive.extractfile(m).read() for m in archive.getmembers()}
+
+
+def validate_csv_in_tarballs(tarball_glob, csv_filename, expected_lines, skip_columns_names):
+    import csv
+    import glob
+
+    from metrics_utility.test.util import _print_comparison
+
+    expected_reader = csv.reader(expected_lines)
+    expected_rows = list(expected_reader)
+    expected_header = expected_rows[0]
+    expected_data = expected_rows[1:]
+
+    actual_rows = []
+    for file_path in sorted(glob.glob(tarball_glob)):
+        files = read_tarball(file_path)
+        match = next((name for name in files if name.endswith(csv_filename)), None)
+        if match is None:
+            continue
+
+        text = files[match].decode('utf-8').splitlines()
+        reader = csv.reader(text)
+        rows = list(reader)
+        header = rows[0]
+        assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
+        actual_rows.extend(rows[1:])
+
+    assert len(actual_rows) > 0, f'{csv_filename} not found in any tarballs under {tarball_glob}'
+
+    _print_comparison(
+        [','.join(expected_header)] + [','.join(r) for r in actual_rows],
+        expected_lines,
+    )
+
+    assert len(actual_rows) == len(expected_data), f'\nRow count mismatch in {csv_filename}: expected {len(expected_data)}, got {len(actual_rows)}'
+
+    skip_columns = set(skip_columns_names)
+    actual_sorted = sorted(actual_rows, key=lambda r: r[0])
+    expected_sorted = sorted(expected_data, key=lambda r: r[0])
+
+    for i, (expected_row, actual_row) in enumerate(zip(expected_sorted, actual_sorted), start=1):
+        for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
+            col_name = expected_header[idx]
+            if col_name in skip_columns:
+                continue
+            assert exp_cell == act_cell, (
+                f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
+                f'(index {idx}):\n'
+                f'Expected: {exp_cell!r}\n'
+                f'Actual:   {act_cell!r}'
+            )
