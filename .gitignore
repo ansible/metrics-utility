@@ -1,49 +1,20 @@
-# Python & setuptools
-__pycache__
-.venv/
-/build
-/deb-build
-/reprepro
-/rpm-build
-/tar-build
-/setup-bundle-build
-/dist
-/*.egg-info
-*.py[c,o]
-/.eggs
-
-# Testing
-.cache
-.coverage
-.tox
-coverage.xml
-htmlcov
-pep8.txt
-scratch
-testem.log
-.pytest_cache/
+# Python, etc
+/*.egg-info/
+/.coverage
+/.pytest_cache/
+/.venv/
+/coverage.xml
+__pycache__/
 
 # Mac OS X
 *.DS_Store
 
-# VSCode
-.vscode/
-
-# PyCharm
-.idea/*
+# IDEs
+/.vscode/
+/.idea/
 
 # script output
 /out/
 
-# Perf test data
-/tools/perf/generated/
-/tools/anonymized_db_perf_data/out/
-/tools/anonymized_db_perf_data/out_*/
-
 # AI
-/.claude/*
-
-# Temporary collection files
-/tools/collections/collections.json
-/tools/collections/galaxy.[0-9]*
-/tools/collections/hub.[0-9]*
+/.claude/
