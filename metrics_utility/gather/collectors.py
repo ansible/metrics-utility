@@ -42,9 +42,9 @@ or a list of CSV filenames.
     @register('something', '1.0')
     def cli_something(since, until, output):
         # either: the generated archive will contain a `something.json` w/ this JSON
-        return output.dict({'some': 'json'}))
+        return output.as_dict({'some': 'json'})
         # or: the generated archive(s) will contain a `something.csv` (numbered when more than one)
-        return output.files(['tempfile.csv', 'tempfile2.csv']))
+        return output.as_files(['tempfile.csv', 'tempfile2.csv'])
 
 The since/until arguments are datetimes with timezone,
 representing the start (included) and end (excluded) of the desired collection interval.
