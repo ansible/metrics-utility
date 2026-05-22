@@ -22,8 +22,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
                 last_gathered_entries={'job_host_summary': last_gathered},
@@ -39,8 +39,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
                 last_gathered_entries={},
@@ -55,8 +55,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
                 last_gathered_entries={'job_host_summary': None},
@@ -72,8 +72,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
                 last_gathered_entries={'job_host_summary': old_entry},
@@ -88,8 +88,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
                 last_gathered_entries={'job_host_summary': 'not-a-datetime'},
@@ -105,8 +105,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
                 last_gathered_entries={'some_other_collector': other_entry},
@@ -121,8 +121,8 @@ class TestDailySlicingSinceNone:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=None,
                 until=until,
             )
@@ -141,8 +141,8 @@ class TestDailySlicingWithSince:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=since,
                 until=until,
                 last_gathered_entries={'job_host_summary': dt(2024, 1, 10)},
@@ -158,8 +158,8 @@ class TestDailySlicingWithSince:
 
         slices = list(
             daily_slicing(
-                'job_host_summary',
-                horizon,
+                key='job_host_summary',
+                last_gather=horizon,
                 since=since,
                 until=until,
                 last_gathered_entries={'job_host_summary': dt(2024, 1, 20)},
@@ -178,8 +178,8 @@ class TestDailySlicingDayBoundaries:
 
         slices = list(
             daily_slicing(
-                'key',
-                horizon,
+                key='key',
+                last_gather=horizon,
                 since=horizon,
                 until=until,
             )
@@ -193,8 +193,8 @@ class TestDailySlicingDayBoundaries:
 
         slices = list(
             daily_slicing(
-                'key',
-                start,
+                key='key',
+                last_gather=start,
                 since=start,
                 until=until,
             )
@@ -210,8 +210,8 @@ class TestDailySlicingDayBoundaries:
 
         slices = list(
             daily_slicing(
-                'key',
-                since,
+                key='key',
+                last_gather=since,
                 since=since,
                 until=until,
             )

@@ -119,7 +119,13 @@ class Collection:
         until = self.collector.gather_until
         last_gather = self.collector.last_gather
         if self.slicing:
-            slices = self.slicing(self.key, last_gather, since=since, until=until, last_gathered_entries=self.collector.last_gathered_entries)
+            slices = self.slicing(
+                key=self.key,
+                last_gather=last_gather,
+                since=since,
+                until=until,
+                last_gathered_entries=self.collector.last_gathered_entries,
+            )
         else:
             last_entry = max(
                 self.last_gathered_entry or self.collector.last_gather,

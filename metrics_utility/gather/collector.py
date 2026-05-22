@@ -75,10 +75,9 @@ class Collector:
     #
     # Public methods ----------------------------
     #
-    def gather(self, dest=None, subset=None, since=None, until=None, billing_provider_params=None, ship_params=None):
+    def gather(self, subset=None, since=None, until=None, billing_provider_params=None, ship_params=None):
         """Entry point for gathering
 
-        :param dest: (default: /tmp/awx-analytics-*) - directory for temp files
         :param subset: (list) collector_module's function names if only subset is required (typically tests)
         :param since: (datetime) - low threshold of data changes (max. and default - 28 days ago)
         :param until: (datetime) - high threshold of data changes (defaults to now)
@@ -97,7 +96,7 @@ class Collector:
                 logger.log(self.log_level, 'Not gathering Automation Controller billing data, another task holds lock')
                 return None
 
-            self._gather_initialize(dest, subset, since, until)
+            self._gather_initialize(subset, since, until)
 
             if not self._gather_config(billing_provider_params):
                 return None
@@ -202,8 +201,8 @@ class Collector:
 
         return available_package
 
-    def _gather_initialize(self, tmp_root_dir, collectors_subset, since, until):
-        self.tmp_dir = pathlib.Path(tmp_root_dir or tempfile.mkdtemp(prefix='awx_analytics-'))
+    def _gather_initialize(self, collectors_subset, since, until):
+        self.tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix='awx_analytics-'))
         self.gather_dir = self.tmp_dir.joinpath('stage')
         self.gather_dir.mkdir(mode=0o700)
 
