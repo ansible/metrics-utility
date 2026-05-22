@@ -93,7 +93,7 @@ jobs:
 
       - name: "Start mock Segment server"
         run: |
-          go build -o /tmp/mock-segment-server ./tools/mock-segment-server/
+          go build -C tools/mock-segment-server -o /tmp/mock-segment-server .
           /tmp/mock-segment-server &
           until curl -sf http://localhost:8765/requests > /dev/null; do sleep 1; done
 
