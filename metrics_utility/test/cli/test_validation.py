@@ -120,7 +120,7 @@ def test_validate_ship_target_gather_invalid(monkeypatch):
 
 def test_validate_ship_path_empty_raises(monkeypatch):
     with pytest.raises(MissingRequiredEnvVar) as excinfo:
-        Command._read_directory_env()
+        Command._read_ship_params('directory')
     assert 'METRICS_UTILITY_SHIP_PATH' in excinfo.value.name
 
 

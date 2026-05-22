@@ -61,6 +61,13 @@ CRC_ENV_VARS = [
     'METRICS_UTILITY_RED_HAT_ORG_ID',
 ]
 
+S3_REQUIRED_PARAMS = [
+    ('bucket_name', 'METRICS_UTILITY_BUCKET_NAME', 'name of S3 bucket'),
+    ('bucket_endpoint', 'METRICS_UTILITY_BUCKET_ENDPOINT', 'S3 endpoint, eg. https://s3.us-east.example.com'),
+    ('bucket_access_key', 'METRICS_UTILITY_BUCKET_ACCESS_KEY', 'S3 access key'),
+    ('bucket_secret_key', 'METRICS_UTILITY_BUCKET_SECRET_KEY', 'S3 secret key'),
+]
+
 
 class Command(BaseCommand):
     """
@@ -187,57 +194,41 @@ class Command(BaseCommand):
 
         # Read ship-target-specific configuration and warn about surplus env vars
         if ship_target == 'crc':
-            billing_provider_params, ship_params = self._read_crc_env()
+            billing_provider_params = self._read_crc_env()
+            ship_params = {}
             self._warn_surplus(S3_ENV_VARS, 's3')
-        elif ship_target == 'directory':
-            billing_provider_params, ship_params = self._read_directory_env()
+            self._warn_surplus(['METRICS_UTILITY_SHIP_PATH'], 'directory", "s3')
+        else:
+            billing_provider_params = {}
+            ship_params = self._read_ship_params(ship_target)
             self._warn_surplus(CRC_ENV_VARS, 'crc')
-            self._warn_surplus(S3_ENV_VARS, 's3')
-        elif ship_target == 's3':
-            billing_provider_params, ship_params = self._read_s3_env()
-            self._warn_surplus(CRC_ENV_VARS, 'crc')
+            if ship_target == 'directory':
+                self._warn_surplus(S3_ENV_VARS, 's3')
 
         return ship_target, billing_provider_params, ship_params
 
     @staticmethod
-    def _read_directory_env():
-        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
-        if not ship_path:
-            raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_SHIP_PATH - place for collected data')
-        return {}, {'ship_path': ship_path}
-
-    @staticmethod
-    def _read_s3_env():
-        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
-        bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME')
-        bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT')
-        bucket_region = os.getenv('METRICS_UTILITY_BUCKET_REGION')
-        bucket_access_key = os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY')
-        bucket_secret_key = os.getenv('METRICS_UTILITY_BUCKET_SECRET_KEY')
-
+    def _read_ship_params(ship_target):
+        params = {}
         missing = []
-        if not bucket_name:
-            missing += ['METRICS_UTILITY_BUCKET_NAME - name of S3 bucket']
-        if not bucket_endpoint:
-            missing += ['METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com']
-        if not bucket_access_key:
-            missing += ['METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key']
-        if not bucket_secret_key:
-            missing += ['METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key']
+
+        if ship_target == 's3':
+            for key, env_var, desc in S3_REQUIRED_PARAMS:
+                val = os.getenv(env_var)
+                if not val:
+                    missing.append(f'{env_var} - {desc}')
+                params[key] = val
+            params['bucket_region'] = os.getenv('METRICS_UTILITY_BUCKET_REGION')
+
+        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
         if not ship_path:
-            missing += ['METRICS_UTILITY_SHIP_PATH - place for collected data']
+            missing.append('METRICS_UTILITY_SHIP_PATH - place for collected data')
+        params['ship_path'] = ship_path
 
         if missing:
-            raise MissingRequiredEnvVar(f'Missing some required env variables for S3 configuration, namely: {", ".join(missing)}.')
+            raise MissingRequiredEnvVar(f'Missing required env variables: {", ".join(missing)}')
 
-        return {}, {
-            'ship_path': ship_path,
-            'bucket_name': bucket_name,
-            'bucket_endpoint': bucket_endpoint,
-            'bucket_region': bucket_region,
-            'bucket_access_key': bucket_access_key,
-            'bucket_secret_key': bucket_secret_key,
-        }
+        return params
 
     @staticmethod
     def _read_crc_env():
@@ -250,17 +241,13 @@ class Command(BaseCommand):
                 raise MissingRequiredEnvVar('METRICS_UTILITY_BILLING_ACCOUNT_ID, containing AWS 12 digit customer id needs to be provided.')
             billing_provider_params['billing_account_id'] = billing_account_id
         else:
-            raise MissingRequiredEnvVar('Uknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are [aws].')
+            raise MissingRequiredEnvVar('Unknown METRICS_UTILITY_BILLING_PROVIDER env var, supported values are [aws].')
 
         red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
         if red_hat_org_id:
             billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
-        ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
-        if ship_path:
-            logger.warning('Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="directory", "s3"')
-
-        return billing_provider_params, {}
+        return billing_provider_params
 
     @staticmethod
     def _warn_surplus(var_names, expected_target):

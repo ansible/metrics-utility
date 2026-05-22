@@ -39,7 +39,7 @@ def test_gather_crc(caplog):
             'dry-run': True,
         },
     )
-    assert caplog.messages[0] == 'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="directory", "s3"'
+    assert caplog.messages[0] == 'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="directory", "s3": METRICS_UTILITY_SHIP_PATH'
 
 
 def test_gather_directory():
@@ -53,7 +53,7 @@ def test_gather_directory():
                 'dry-run': True,
             },
         )
-    assert e.value.name == 'Missing required env variable METRICS_UTILITY_SHIP_PATH - place for collected data'
+    assert e.value.name == 'Missing required env variables: METRICS_UTILITY_SHIP_PATH - place for collected data'
 
     run_gather_int(
         {
@@ -79,12 +79,12 @@ def test_gather_s3():
             },
         )
     assert (
-        e.value.name == 'Missing some required env variables for S3 configuration, namely: '
+        e.value.name == 'Missing required env variables: '
         'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, '
         'METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, '
         'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, '
         'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, '
-        'METRICS_UTILITY_SHIP_PATH - place for collected data.'
+        'METRICS_UTILITY_SHIP_PATH - place for collected data'
     )
 
     run_gather_int(
