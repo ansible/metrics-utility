@@ -251,13 +251,11 @@ class Collector:
          2) Collections with slicing function can produce duplicate filename
         """
 
-        last_key = None
         logged_status = set()
 
         for collection in self.collections['csv']:
-            if last_key != collection.key:
+            if collection.key not in logged_status:
                 logger.warning(f'Progress info: Now gathering {collection.key}')
-                last_key = collection.key
 
             collection.gather()
 
@@ -278,6 +276,8 @@ class Collector:
                     logger.warning(f'Progress info: No data for {collection.key}')
                     logged_status.add(collection.key)
                 continue
+
+            logged_status.add(collection.key)
 
             # If collection has sub_collections (it means it collected more files)
             # ship them in their own package
