@@ -78,7 +78,10 @@ def ship(tar_path):
         )
         if r.status_code >= 300:
             raise FailedToUploadPayload(f'SSO token request failed with status {r.status_code}, {r.text}')
-        access_token = r.json()['access_token']
+        try:
+            access_token = r.json()['access_token']
+        except (KeyError, ValueError) as e:
+            raise FailedToUploadPayload(f'SSO token response missing access_token: {e}, {r.text}') from e
 
         headers = session.headers
         headers['authorization'] = f'Bearer {access_token}'
