@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from metrics_utility.library.collectors.util import collector
+from metrics_utility.test.util import mock_cursor_db
 
 
 def test_collector_decorator_basic():
@@ -137,14 +138,11 @@ def test_collector_decorator_with_db_connection():
 
     @collector
     def db_collector(*, db):
-        cursor = db.cursor()
-        cursor.execute('SELECT * FROM test')
-        return cursor.fetchall()
+        with db.cursor() as cursor:
+            cursor.execute('SELECT * FROM test')
+            return cursor.fetchall()
 
-    # Create mock database
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value = mock_cursor
+    mock_db, mock_cursor = mock_cursor_db()
     mock_cursor.fetchall.return_value = [('row1',), ('row2',)]
 
     instance = db_collector(db=mock_db)
