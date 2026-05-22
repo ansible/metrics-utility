@@ -287,3 +287,25 @@ def test_config_collector_default_values():
     assert result['total_licensed_instances'] == 0
     assert result['free_instances'] == 0
     assert result['license_expiry'] == 0
+
+
+class TestDatetimeHook:
+    """Test cases for _datetime_hook function"""
+
+    def test_empty_dict_handling(self):
+        result = _datetime_hook({})
+        assert result == {}
+
+    def test_multiple_datetime_fields(self):
+        test_data = {
+            'config': '2024-01-01T10:00:00Z',
+            'jobs': '2024-01-02T15:30:00Z',
+            'hosts': '2024-01-03T08:45:00Z',
+        }
+        result = _datetime_hook(test_data)
+        assert 'config' in result
+        assert 'jobs' in result
+        assert 'hosts' in result
+        assert str(result['config']).startswith('2024-01-01')
+        assert str(result['jobs']).startswith('2024-01-02')
+        assert str(result['hosts']).startswith('2024-01-03')

@@ -1,4 +1,3 @@
-
 from django.db import connection
 
 from metrics_utility.library.collectors.controller.feature_flags_service import feature_flags_service

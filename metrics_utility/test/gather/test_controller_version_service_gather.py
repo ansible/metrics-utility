@@ -1,4 +1,3 @@
-
 from django.db import connection
 
 from metrics_utility.library.collectors.controller.controller_version_service import controller_version_service

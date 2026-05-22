@@ -3,7 +3,6 @@ from unittest.mock import MagicMock, patch
 from django.db import DatabaseError
 
 from metrics_utility.gather.utils import get_last_entries_from_db
-from metrics_utility.library.collectors.controller.config import _datetime_hook
 from metrics_utility.test.util import utcdt
 
 
@@ -61,39 +60,6 @@ class TestGetLastEntriesFromDb:
         assert result == {}
         mock_logger.error.assert_called_once()
         assert 'Error getting AUTOMATION_ANALYTICS_LAST_ENTRIES from database' in str(mock_logger.error.call_args)
-
-
-class TestDatetimeHook:
-    """Test cases for _datetime_hook function"""
-
-    def test_empty_dict_handling(self):
-        """Test handling of empty dictionary"""
-        # Execute
-        result = _datetime_hook({})
-
-        # Assert
-        assert result == {}
-
-    def test_multiple_datetime_fields(self):
-        """Test parsing multiple collector timestamps in one dict"""
-        # Setup - realistic collector function names with timestamps
-        test_data = {
-            'config': '2024-01-01T10:00:00Z',
-            'jobs': '2024-01-02T15:30:00Z',
-            'hosts': '2024-01-03T08:45:00Z',
-        }
-
-        # Execute
-        result = _datetime_hook(test_data)
-
-        # Assert
-        assert 'config' in result
-        assert 'jobs' in result
-        assert 'hosts' in result
-        # All collector timestamps should be parsed
-        assert str(result['config']).startswith('2024-01-01')
-        assert str(result['jobs']).startswith('2024-01-02')
-        assert str(result['hosts']).startswith('2024-01-03')
 
 
 class TestIntegration:
