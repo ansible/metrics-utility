@@ -1,4 +1,3 @@
-import pytest
 
 from django.db import connection
 
@@ -18,7 +17,6 @@ controller_version_service_lines = [
 controller_version_service_skip_columns = []
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_controller_version_service_command():
     """Build and validate controller_version_service output from new library collector."""
     # Run the collector directly

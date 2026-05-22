@@ -259,7 +259,6 @@ json_lines_skip_ids_columns = [
 ]
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_unified_jobs_command(cleanup_glob):
     """Build and validate unified_jobs output from new library collector."""
     since = utcdt('2025-06-12')
@@ -380,7 +379,6 @@ jobs_host_summary_service_skip_columns = [
 ]
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_service_command(cleanup_glob):
     """Build and validate job_host_summary_service output from new library collector."""
     since = utcdt('2025-06-12')
@@ -558,7 +556,6 @@ main_jobevent_service_skip_columns = [
 ]
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_main_jobevent_service_command(cleanup_glob):
     """Build and validate main_jobevent_service output from new library collector."""
     since = utcdt('2025-06-12')
@@ -595,7 +592,6 @@ execution_environments_skip_columns = [
 ]
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_execution_environments_command(cleanup_glob):
     """Build and validate execution_environments.csv contents in the generated tarball."""
     # prepare env
@@ -621,7 +617,6 @@ credentials_service_lines = [
 credentials_service_skip_columns = []
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_credentials_service_command(cleanup_glob):
     """Build and validate credentials_service output from new library collector."""
     since = utcdt('2025-06-12')

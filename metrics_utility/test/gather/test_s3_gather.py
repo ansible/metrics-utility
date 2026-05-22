@@ -19,14 +19,12 @@ env_vars = {
 }
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_command():
     """Build xlsx report using build command and test its contents."""
     run_gather_ext(env_vars, ['--ship', '--until=10m'])
     # mc ls -r local/metricsutilitys3/metrics-utility/shipped_data_*/data/
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_import():
     # test_command doesn't collect coverage
     run_gather_int(

@@ -1,11 +1,9 @@
-import pytest
 
 from django.db import connection
 
 from metrics_utility.library.collectors.controller.feature_flags_service import feature_flags_service
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_feature_flags_service_command():
     """Build and validate feature_flags_service output from library collector."""
     collector_instance = feature_flags_service(db=connection)

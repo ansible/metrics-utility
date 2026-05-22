@@ -30,7 +30,6 @@ def cleanup_glob():
         os.remove(file)
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_larger_range(cleanup_glob):
     result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-05'])
     validate_exists(file_glob)
@@ -41,7 +40,6 @@ def test_larger_range(cleanup_glob):
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_smaller_range(cleanup_glob):
     result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
     validate_exists(file_glob)

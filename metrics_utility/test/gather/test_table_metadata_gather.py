@@ -1,12 +1,10 @@
 import pandas as pd
-import pytest
 
 from django.db import connection
 
 from metrics_utility.library.collectors.controller.table_metadata import table_metadata
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_table_metadata_gather():
     """Test table_metadata collector - prints statistics for validation during development."""
     # Run the collector directly

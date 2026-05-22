@@ -125,7 +125,6 @@ def cleanup_glob():
         os.remove(file)
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_command(cleanup_glob):
     """Build xlsx report using build command and test CSV contents."""
     run_gather_ext(env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14', '--force'])
@@ -152,7 +151,6 @@ def test_command(cleanup_glob):
             )
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     """Test that job_host_summary.csv is not generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is set to 'true'."""
     disabled_env_vars = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': 'true'}
@@ -167,7 +165,6 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     )
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_enabled_explicitly(cleanup_glob):
     """Test that job_host_summary.csv is generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is explicitly set to 'false'."""
     enabled_env_vars = {**env_vars, 'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': 'false'}
@@ -179,7 +176,6 @@ def test_job_host_summary_enabled_explicitly(cleanup_glob):
     )
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_case_insensitive_disable(cleanup_glob):
     """Test that the environment variable check is case insensitive for 'true' values."""
     for test_value in ['TRUE', 'True', 'tRuE']:
@@ -195,7 +191,6 @@ def test_job_host_summary_case_insensitive_disable(cleanup_glob):
             os.remove(file)
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
     """Test that job_host_summary.csv is still generated when METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR is set to invalid values."""
     for test_value in ['yes', 'no', '0', 'enabled', 'disabled', 'random_text', '']:
@@ -211,14 +206,12 @@ def test_job_host_summary_invalid_values_still_enabled(cleanup_glob):
             os.remove(file)
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_main_host_collection_trailing_comma(cleanup_glob):
     main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', trailing_comma=True)
     main_host_collection(cleanup_glob, collectors='main_jobevent', trailing_comma=True)
     main_host_collection(cleanup_glob, collectors='main_host', trailing_comma=True)
 
 
-@pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_main_host_collection_no_trailing_comma(cleanup_glob):
     main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', trailing_comma=False)
     main_host_collection(cleanup_glob, collectors='main_jobevent', trailing_comma=False)
