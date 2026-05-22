@@ -127,8 +127,6 @@ def validate_csv_in_tarballs(tarball_glob, csv_filename, expected_lines, skip_co
     import csv
     import glob
 
-    from metrics_utility.test.util import _print_comparison
-
     expected_reader = csv.reader(expected_lines)
     expected_rows = list(expected_reader)
     expected_header = expected_rows[0]
@@ -149,11 +147,6 @@ def validate_csv_in_tarballs(tarball_glob, csv_filename, expected_lines, skip_co
         actual_rows.extend(rows[1:])
 
     assert len(actual_rows) > 0, f'{csv_filename} not found in any tarballs under {tarball_glob}'
-
-    _print_comparison(
-        [','.join(expected_header)] + [','.join(r) for r in actual_rows],
-        expected_lines,
-    )
 
     assert len(actual_rows) == len(expected_data), f'\nRow count mismatch in {csv_filename}: expected {len(expected_data)}, got {len(actual_rows)}'
 

@@ -131,19 +131,6 @@ def _read_dataframe(df):
     return rows[0], rows[1:], text
 
 
-def _print_comparison(actual_text, expected_lines):
-    """Print actual and expected CSV content for debugging."""
-    print('original --------------------------------')
-    for line in actual_text:
-        print(line)
-    print('--------------------------------\n\n')
-
-    print('expected --------------------------------')
-    for line in expected_lines:
-        print(line)
-    print('--------------------------------\n\n')
-
-
 def _get_sort_key(row, header_row):
     """Create sort key from available columns: job_id, host_id, event, or first column."""
     key_parts = []
@@ -194,7 +181,6 @@ def validate_dataframe(df, expected_lines, skip_columns_names):
     expected_header, expected_data = _parse_expected_csv(expected_lines)
     header, actual_data, text = _read_dataframe(df)
 
-    _print_comparison(text, expected_lines)
     _validate_header(header, expected_header)
     _validate_row_count(actual_data, expected_data)
 
