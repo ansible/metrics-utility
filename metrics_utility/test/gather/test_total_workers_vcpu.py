@@ -113,3 +113,113 @@ class TestTotalWorkersVcpu:
                 result = cli_total_workers_vcpu(None, None, DictOutput())
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 16
+
+
+class TestTokenAndCertificateHandling:
+    def test_missing_token_file_raises_exception(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.return_value = False
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException, match='Service account token not found'):
+                    cli_total_workers_vcpu(None, None, DictOutput())
+
+    def test_missing_ca_cert_file_raises_exception(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.side_effect = lambda path: 'token' in path
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException, match='CA_CERT not found'):
+                    cli_total_workers_vcpu(None, None, DictOutput())
+
+    def test_empty_token_file_raises_exception(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+            patch('builtins.open', mock_open(read_data='')),
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.return_value = True
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException, match='Unable to retrieve the token'):
+                    cli_total_workers_vcpu(None, None, DictOutput())
+
+    def test_whitespace_only_token_raises_exception(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+            patch('builtins.open', mock_open(read_data='   \n\t  \n')),
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.return_value = True
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true'}):
+                with pytest.raises(MetricsException, match='Unable to retrieve the token'):
+                    cli_total_workers_vcpu(None, None, DictOutput())
+
+    def test_token_with_newlines_is_stripped(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.total_workers_vcpu') as mock_tw_vcpu,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+            patch('builtins.open', mock_open(read_data='test-token-with-newlines\n\n')),
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.return_value = True
+
+            mock_collector = MagicMock()
+            mock_collector.gather.return_value = {
+                'cluster_name': 'test-cluster',
+                'total_workers_vcpu': 8,
+                'end_timestamp': '2024-01-01T00:59:59.999Z',
+            }
+            mock_tw_vcpu.return_value = mock_collector
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true'}):
+                cli_total_workers_vcpu(None, None, DictOutput())
+                assert mock_tw_vcpu.call_args[1]['token'] == 'test-token-with-newlines'
+
+    def test_metering_disabled_skips_token_check(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.total_workers_vcpu') as mock_tw_vcpu,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.return_value = False
+
+            mock_collector = MagicMock()
+            mock_collector.gather.return_value = {
+                'cluster_name': 'test-cluster',
+                'total_workers_vcpu': 1,
+                'end_timestamp': '2024-01-01T00:59:59.999Z',
+            }
+            mock_tw_vcpu.return_value = mock_collector
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'false'}):
+                result = cli_total_workers_vcpu(None, None, DictOutput())
+                assert result is not None
+                assert mock_tw_vcpu.call_args[1]['token'] is None
+                assert mock_tw_vcpu.call_args[1]['ca_cert_path'] is None
+
+    def test_token_file_read_error_propagates(self):
+        with (
+            patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get,
+            patch('metrics_utility.gather.collectors.os.path.exists') as mock_exists,
+            patch('builtins.open', side_effect=IOError('Permission denied')),
+        ):
+            mock_get.return_value = ['total_workers_vcpu']
+            mock_exists.return_value = True
+
+            with temporary_env({'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster', 'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true'}):
+                with pytest.raises(IOError, match='Permission denied'):
+                    cli_total_workers_vcpu(None, None, DictOutput())

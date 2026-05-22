@@ -1,10 +1,11 @@
-"""Test suite for base.utils module."""
-
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metrics_utility.gather.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
+from django.db import DatabaseError
+
+from metrics_utility.gather.utils import bool_from_env, get_last_entries_from_db, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.test.util import utcdt
 
 
 class TestBoolFromEnv:
@@ -128,3 +129,39 @@ class TestGetOptionalCollectors:
             result = get_optional_collectors()
             assert '' not in result
             assert 'main_host' in result
+
+
+class TestGetLastEntriesFromDb:
+    @patch('metrics_utility.gather.utils.connection')
+    def test_successful_entries_retrieval(self, mock_connection):
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
+        test_json = '"{\\"config\\": \\"2024-01-01T00:00:00Z\\", \\"hosts\\": \\"2024-01-03T00:00:00Z\\", \\"jobs\\": \\"2024-01-02T00:00:00Z\\"}"'
+        mock_cursor.fetchone.return_value = (test_json,)
+
+        result = get_last_entries_from_db()
+
+        assert result == {
+            'config': utcdt('2024-01-01'),
+            'hosts': utcdt('2024-01-03'),
+            'jobs': utcdt('2024-01-02'),
+        }
+        mock_cursor.execute.assert_called_once()
+        assert 'AUTOMATION_ANALYTICS_LAST_ENTRIES' in mock_cursor.execute.call_args[0][0]
+
+    @patch('metrics_utility.gather.utils.connection')
+    def test_no_entries_returns_empty(self, mock_connection):
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = None
+
+        assert get_last_entries_from_db() == {}
+
+    @patch('metrics_utility.gather.utils.logger')
+    @patch('metrics_utility.gather.utils.connection')
+    def test_database_error_returns_empty(self, mock_connection, mock_logger):
+        mock_connection.cursor.side_effect = DatabaseError('Query failed')
+
+        assert get_last_entries_from_db() == {}
+        mock_logger.error.assert_called_once()
+        assert 'Error getting AUTOMATION_ANALYTICS_LAST_ENTRIES from database' in str(mock_logger.error.call_args)
