@@ -1,11 +1,6 @@
 import os
 
-import pytest
-
 from metrics_utility.test.util import run_gather_ext, run_gather_int
-
-
-pytestmark = pytest.mark.filterwarnings('ignore:datetime.datetime.utcnow:DeprecationWarning:botocore')
 
 
 env_vars = {

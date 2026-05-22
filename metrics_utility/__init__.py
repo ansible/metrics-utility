@@ -1,6 +1,7 @@
 import importlib.util
 import os
 import sys
+import warnings
 
 from metrics_utility.management_utility import ManagementUtility
 
@@ -14,7 +15,7 @@ def prepare():
 
         spec = importlib.util.find_spec('awx')
         if spec is None:
-            sys.stderr.write(f'Automation Controller modules not found in {awx_path} (AWX_PATH). Using mock and continuing.\n')
+            warnings.warn(f'Automation Controller modules not found in {awx_path} (AWX_PATH). Using mock and continuing.')
 
             mock_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'mock_awx'))
             sys.path.append(mock_path)

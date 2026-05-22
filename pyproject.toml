@@ -66,6 +66,12 @@ packages = {find = {include = ["metrics_utility*"], exclude = ["tools*", "sql*",
 # Include only necessary package data
 "*" = ["*.json", "*.sql", "*.txt"]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:Automation Controller modules not found:UserWarning",
+    "ignore:datetime.datetime.utcnow:DeprecationWarning:botocore",
+]
+
 [tool.ruff]
 # Allow longer lines than ruff's default 88.
 line-length = 150
