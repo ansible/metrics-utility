@@ -2,13 +2,13 @@
 Unit tests for the task_executions_service collector.
 """
 
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
 from metrics_utility.library.collectors.service.task_executions_service import task_executions_service
+from metrics_utility.test.util import utcdt
 
 
 def test_task_executions_service_basic():
@@ -28,14 +28,14 @@ def test_task_executions_service_calls_copy_table(mock_copy_pandas):
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame(
         {
-            'started_at': [datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc)],
-            'completed_at': [datetime(2025, 6, 13, 1, 0, 5, tzinfo=timezone.utc)],
+            'started_at': [utcdt('2025-06-13T01:00:00')],
+            'completed_at': [utcdt('2025-06-13T01:00:05')],
             'collector_type': ['unified_jobs'],
         }
     )
 
-    since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
+    since = utcdt('2025-06-13')
+    until = utcdt('2025-06-14')
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -53,8 +53,8 @@ def test_task_executions_service_query_structure(mock_copy_pandas):
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
+    since = utcdt('2025-06-13')
+    until = utcdt('2025-06-14')
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -88,8 +88,8 @@ def test_task_executions_service_propagates_error(mock_copy_pandas):
     mock_db = MagicMock()
     mock_copy_pandas.side_effect = Exception('relation "tasks_taskexecution" does not exist')
 
-    since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
+    since = utcdt('2025-06-13')
+    until = utcdt('2025-06-14')
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
     with pytest.raises(Exception, match='tasks_taskexecution'):
@@ -119,8 +119,8 @@ def test_task_executions_service_defaults_to_previous_day(mock_copy_pandas):
     'since,until',
     [
         (
-            datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc),
-            datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc),
+            utcdt('2025-06-13'),
+            utcdt('2025-06-14'),
         ),
     ],
 )
@@ -131,13 +131,13 @@ def test_task_executions_service_returns_dataframe_with_expected_columns(mock_co
     mock_copy_pandas.return_value = pd.DataFrame(
         {
             'started_at': [
-                datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
+                utcdt('2025-06-13T01:00:00'),
+                utcdt('2025-06-13T02:00:00'),
+                utcdt('2025-06-13T03:00:00'),
             ],
             'completed_at': [
-                datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 2, 0, 5, tzinfo=timezone.utc),
+                utcdt('2025-06-13T01:00:04'),
+                utcdt('2025-06-13T02:00:05'),
                 None,
             ],
             'collector_type': ['unified_jobs', 'unified_jobs', 'job_host_summary_service'],
@@ -165,14 +165,14 @@ def test_task_executions_service_covers_both_hourly_and_snapshot_collectors(mock
     mock_copy_pandas.return_value = pd.DataFrame(
         {
             'started_at': [
-                datetime(2025, 6, 13, 1, 0, 0, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 2, 0, 0, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 3, 0, 0, tzinfo=timezone.utc),
+                utcdt('2025-06-13T01:00:00'),
+                utcdt('2025-06-13T02:00:00'),
+                utcdt('2025-06-13T03:00:00'),
             ],
             'completed_at': [
-                datetime(2025, 6, 13, 1, 0, 4, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 2, 0, 3, tzinfo=timezone.utc),
-                datetime(2025, 6, 13, 3, 0, 1, tzinfo=timezone.utc),
+                utcdt('2025-06-13T01:00:04'),
+                utcdt('2025-06-13T02:00:03'),
+                utcdt('2025-06-13T03:00:01'),
             ],
             'collector_type': [
                 'unified_jobs',  # hourly
@@ -182,8 +182,8 @@ def test_task_executions_service_covers_both_hourly_and_snapshot_collectors(mock
         }
     )
 
-    since = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
-    until = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
+    since = utcdt('2025-06-13')
+    until = utcdt('2025-06-14')
 
     instance = task_executions_service(db=mock_db, since=since, until=until)
     result = instance.gather()

@@ -4,11 +4,11 @@ from datetime import datetime
 from unittest.mock import patch
 
 from metrics_utility.library.collectors.dashboard.collectors import _dashboard_job_host_summaries, _dashboard_job_labels, dashboard_jobs
-from metrics_utility.test.util import mock_cursor_db
+from metrics_utility.test.util import mock_cursor_db, utcdt
 
 
-SINCE = datetime.fromisoformat('2024-01-01T00:00:00Z')
-UNTIL = datetime.fromisoformat('2024-02-01T00:00:00Z')
+SINCE = utcdt('2024-01-01')
+UNTIL = utcdt('2024-02-01')
 
 EXPECTED_JOB_LABELS = {1: [10, 11], 2: [20]}
 EXPECTED_JOB_HOST_SUMMARIES = {

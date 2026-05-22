@@ -1,24 +1,16 @@
 """Tests for bookkeeping/last-gather fallback paths in slicing and collection."""
 
-import datetime
-
 from metrics_utility.gather.slicing import daily_slicing
-
-
-tz = datetime.timezone.utc
-
-
-def dt(year, month, day, hour=0):
-    return datetime.datetime(year, month, day, hour, tzinfo=tz)
+from metrics_utility.test.util import utcdt
 
 
 class TestDailySlicingSinceNone:
     """When since=None, daily_slicing should fall back to last_gathered_entries."""
 
     def test_uses_last_gathered_entry_for_key(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 29)
-        last_gathered = dt(2024, 1, 20)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-29')
+        last_gathered = utcdt('2024-01-20')
 
         slices = list(
             daily_slicing(
@@ -34,8 +26,8 @@ class TestDailySlicingSinceNone:
         assert slices[-1][1] == until
 
     def test_falls_back_to_horizon_when_no_entry(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 3)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-03')
 
         slices = list(
             daily_slicing(
@@ -50,8 +42,8 @@ class TestDailySlicingSinceNone:
         assert slices[0][0] == horizon
 
     def test_falls_back_to_horizon_when_entry_is_none(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 3)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-03')
 
         slices = list(
             daily_slicing(
@@ -66,9 +58,9 @@ class TestDailySlicingSinceNone:
         assert slices[0][0] == horizon
 
     def test_clamps_to_horizon_when_entry_is_older(self):
-        horizon = dt(2024, 1, 10)
-        until = dt(2024, 2, 7)
-        old_entry = dt(2023, 12, 1)
+        horizon = utcdt('2024-01-10')
+        until = utcdt('2024-02-07')
+        old_entry = utcdt('2023-12-01')
 
         slices = list(
             daily_slicing(
@@ -83,8 +75,8 @@ class TestDailySlicingSinceNone:
         assert slices[0][0] == horizon
 
     def test_handles_stale_non_datetime_entry(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 3)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-03')
 
         slices = list(
             daily_slicing(
@@ -99,9 +91,9 @@ class TestDailySlicingSinceNone:
         assert slices[0][0] == horizon
 
     def test_ignores_entries_for_other_keys(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 5)
-        other_entry = dt(2024, 1, 3)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-05')
+        other_entry = utcdt('2024-01-03')
 
         slices = list(
             daily_slicing(
@@ -116,8 +108,8 @@ class TestDailySlicingSinceNone:
         assert slices[0][0] == horizon
 
     def test_defaults_to_empty_when_no_entries_kwarg(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 3)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-03')
 
         slices = list(
             daily_slicing(
@@ -135,9 +127,9 @@ class TestDailySlicingWithSince:
     """When since is provided, daily_slicing should use it directly."""
 
     def test_uses_explicit_since(self):
-        horizon = dt(2024, 1, 1)
-        since = dt(2024, 1, 15)
-        until = dt(2024, 1, 17)
+        horizon = utcdt('2024-01-01')
+        since = utcdt('2024-01-15')
+        until = utcdt('2024-01-17')
 
         slices = list(
             daily_slicing(
@@ -145,16 +137,16 @@ class TestDailySlicingWithSince:
                 last_gather=horizon,
                 since=since,
                 until=until,
-                last_gathered_entries={'job_host_summary': dt(2024, 1, 10)},
+                last_gathered_entries={'job_host_summary': utcdt('2024-01-10')},
             )
         )
 
         assert slices[0][0] == since
 
     def test_ignores_last_gathered_entries_when_since_given(self):
-        horizon = dt(2024, 1, 1)
-        since = dt(2024, 1, 5)
-        until = dt(2024, 1, 7)
+        horizon = utcdt('2024-01-01')
+        since = utcdt('2024-01-05')
+        until = utcdt('2024-01-07')
 
         slices = list(
             daily_slicing(
@@ -162,7 +154,7 @@ class TestDailySlicingWithSince:
                 last_gather=horizon,
                 since=since,
                 until=until,
-                last_gathered_entries={'job_host_summary': dt(2024, 1, 20)},
+                last_gathered_entries={'job_host_summary': utcdt('2024-01-20')},
             )
         )
 
@@ -173,8 +165,8 @@ class TestDailySlicingDayBoundaries:
     """Verify daily_slicing produces correct day-aligned slices."""
 
     def test_single_day(self):
-        horizon = dt(2024, 1, 1)
-        until = dt(2024, 1, 2)
+        horizon = utcdt('2024-01-01')
+        until = utcdt('2024-01-02')
 
         slices = list(
             daily_slicing(
@@ -185,11 +177,11 @@ class TestDailySlicingDayBoundaries:
             )
         )
 
-        assert slices == [(dt(2024, 1, 1), dt(2024, 1, 2))]
+        assert slices == [(utcdt('2024-01-01'), utcdt('2024-01-02'))]
 
     def test_partial_first_day(self):
-        start = dt(2024, 1, 1, 15)
-        until = dt(2024, 1, 3)
+        start = utcdt('2024-01-01T15:00:00')
+        until = utcdt('2024-01-03')
 
         slices = list(
             daily_slicing(
@@ -200,13 +192,13 @@ class TestDailySlicingDayBoundaries:
             )
         )
 
-        assert slices[0] == (dt(2024, 1, 1, 15), dt(2024, 1, 2))
-        assert slices[1] == (dt(2024, 1, 2), dt(2024, 1, 3))
+        assert slices[0] == (utcdt('2024-01-01T15:00:00'), utcdt('2024-01-02'))
+        assert slices[1] == (utcdt('2024-01-02'), utcdt('2024-01-03'))
         assert len(slices) == 2
 
     def test_three_full_days(self):
-        since = dt(2024, 1, 1)
-        until = dt(2024, 1, 4)
+        since = utcdt('2024-01-01')
+        until = utcdt('2024-01-04')
 
         slices = list(
             daily_slicing(
@@ -218,6 +210,6 @@ class TestDailySlicingDayBoundaries:
         )
 
         assert len(slices) == 3
-        assert slices[0] == (dt(2024, 1, 1), dt(2024, 1, 2))
-        assert slices[1] == (dt(2024, 1, 2), dt(2024, 1, 3))
-        assert slices[2] == (dt(2024, 1, 3), dt(2024, 1, 4))
+        assert slices[0] == (utcdt('2024-01-01'), utcdt('2024-01-02'))
+        assert slices[1] == (utcdt('2024-01-02'), utcdt('2024-01-03'))
+        assert slices[2] == (utcdt('2024-01-03'), utcdt('2024-01-04'))

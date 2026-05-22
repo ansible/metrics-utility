@@ -1,11 +1,10 @@
-from datetime import datetime
-
 from metrics_utility.library.collectors.dashboard.queries import get_job_host_summaries_query, get_job_labels_query, get_jobs_query, get_where_clause
+from metrics_utility.test.util import utcdt
 
 
 class TestQueriesDashboard:
-    since = datetime.fromisoformat('2024-01-01T00:00:00Z')
-    until = datetime.fromisoformat('2024-02-01T23:59:59Z')
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01T23:59:59')
 
     def test_where_clause(self):
         result, params = get_where_clause(self.since, self.until)

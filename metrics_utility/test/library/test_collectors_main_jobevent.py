@@ -1,17 +1,16 @@
-import datetime
-
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
 from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent
+from metrics_utility.test.util import utcdt
 
 
 def test_main_jobevent_basic():
     """Test main_jobevent collector basic functionality."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
 
@@ -26,8 +25,8 @@ def test_main_jobevent_basic():
 def test_main_jobevent_calls_copy_table(mock_copy_pandas):
     """Test that main_jobevent calls copy_table."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
     mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2, 3], 'event': ['ok', 'failed', 'ok']})
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
@@ -45,8 +44,8 @@ def test_main_jobevent_calls_copy_table(mock_copy_pandas):
 def test_main_jobevent_query_contains_time_range(mock_copy_pandas):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 5, 1, 8, 0, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 5, 2, 20, 30, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-05-01T08:00:00')
+    until = utcdt('2024-05-02T20:30:00')
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
@@ -66,8 +65,8 @@ def test_main_jobevent_query_contains_time_range(mock_copy_pandas):
 def test_main_jobevent_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
@@ -96,8 +95,8 @@ def test_main_jobevent_query_structure(mock_copy_pandas):
 def test_main_jobevent_filters_event_types(mock_copy_pandas):
     """Test that query filters for specific event types."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)
@@ -118,8 +117,8 @@ def test_main_jobevent_filters_event_types(mock_copy_pandas):
 def test_main_jobevent_unicode_escape_handling(mock_copy_pandas):
     """Test that query handles unicode escapes in event_data."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_jobevent(db=mock_db, since=since, until=until)

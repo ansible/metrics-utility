@@ -1,18 +1,16 @@
-import datetime
-
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
-from metrics_utility.test.util import mock_cursor_db
+from metrics_utility.test.util import mock_cursor_db, utcdt
 
 
 def test_main_jobevent_service_basic():
     """Test main_jobevent_service collector basic functionality."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
 
@@ -32,8 +30,8 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_pandas):
     mock_cursor.fetchall.return_value = []
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -56,14 +54,14 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_pandas):
     mock_db, mock_cursor = mock_cursor_db()
 
     # Mock jobs
-    job_created1 = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
-    job_created2 = datetime.datetime(2024, 1, 16, 14, 45, tzinfo=datetime.timezone.utc)
+    job_created1 = utcdt('2024-01-15T10:30:00')
+    job_created2 = utcdt('2024-01-16T14:45:00')
     mock_cursor.fetchall.return_value = [(100, job_created1), (101, job_created2)]
 
     mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2, 3], 'job_id': [100, 100, 101]})
 
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     result = instance.gather()
@@ -82,12 +80,12 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db, mock_cursor = mock_cursor_db()
 
-    job_created = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
+    job_created = utcdt('2024-01-15T10:30:00')
     mock_cursor.fetchall.return_value = [(100, job_created)]
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -116,13 +114,13 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pan
     """Test that query uses job_id IN clause and builds hourly timestamp ranges."""
     mock_db, mock_cursor = mock_cursor_db()
 
-    job_created1 = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=datetime.timezone.utc)
-    job_created2 = datetime.datetime(2024, 1, 16, 14, 45, 30, tzinfo=datetime.timezone.utc)
+    job_created1 = utcdt('2024-01-15T10:30:45')
+    job_created2 = utcdt('2024-01-16T14:45:30')
     mock_cursor.fetchall.return_value = [(100, job_created1), (200, job_created2)]
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -161,8 +159,8 @@ def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
 
     mock_cursor.fetchall.return_value = []
 
-    since = datetime.datetime(2024, 3, 1, 8, 0, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 3, 2, 20, 0, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-03-01T08:00:00')
+    until = utcdt('2024-03-02T20:00:00')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
@@ -182,12 +180,12 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
     """Test that query handles playbook_on_stats event specially."""
     mock_db, mock_cursor = mock_cursor_db()
 
-    job_created = datetime.datetime(2024, 1, 15, tzinfo=datetime.timezone.utc)
+    job_created = utcdt('2024-01-15')
     mock_cursor.fetchall.return_value = [(100, job_created)]
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
 
     instance = main_jobevent_service(db=mock_db, since=since, until=until)
     instance.gather()
