@@ -1,6 +1,5 @@
 import glob
 import os
-import tarfile
 
 from datetime import datetime
 
@@ -75,13 +74,9 @@ def test_only_host_scope(cleanup_glob):
     month = collection_date.month
     day = collection_date.day
 
-    # ensure month and day is 2 digits
     month = f'{month:02d}'
     day = f'{day:02d}'
 
-    # extract tarball
-
-    # multiline string
     tarball = (
         f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/'
         f'00000000-0000-0000-0000-000000000000-'
@@ -89,12 +84,4 @@ def test_only_host_scope(cleanup_glob):
         f'{year}-{month}-{day}-235959+0000-0-main_host.tar.gz'
     )
 
-    # ensure no other tarballs are present in the directory for current date
-    # assert len(glob.glob(f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/*.tar.gz')) == 1
-
-    # extract tarball
-    with tarfile.open(tarball, 'r') as tar:
-        # just print to do something
-        print(tar.getnames())
-        # ensure main_host.csv is present
-        # assert './main_host.csv' in tar.getnames()
+    assert os.path.exists(tarball)

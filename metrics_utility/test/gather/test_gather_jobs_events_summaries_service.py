@@ -1,7 +1,6 @@
 import csv
 import glob
 import os
-import tarfile
 
 import pytest
 
@@ -11,6 +10,7 @@ from metrics_utility.library.collectors.controller.credentials_service import cr
 from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
+from metrics_utility.test.base.functional.helpers import read_tarball
 from metrics_utility.test.util import run_gather_ext, utcdt
 
 
@@ -31,65 +31,48 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
     expected_lines: list of strings where first is header, rest rows
     skip_columns_names: iterable of column names to skip comparison
     """
-    # Use csv.reader for expected lines to properly handle quoted fields with commas
     expected_reader = csv.reader(expected_lines)
     expected_rows = list(expected_reader)
     expected_header = expected_rows[0]
     expected_data = expected_rows[1:]
 
-    found = False
     for file_path in glob.glob(file_paths):
-        with tarfile.open(file_path) as tar:
-            try:
-                member = next(m for m in tar.getmembers() if m.name.endswith(csv_filename))
-            except StopIteration:
-                continue
+        files = read_tarball(file_path)
+        match = next((name for name in files if name.endswith(csv_filename)), None)
+        if match is None:
+            continue
 
-            found = True
-            f = tar.extractfile(member)
-            assert f is not None, f'Could not extract {csv_filename}'
+        text = files[match].decode('utf-8').splitlines()
 
-            text = f.read().decode('utf-8').splitlines()
+        _print_comparison(text, expected_lines)
 
-            print('original --------------------------------')
-            # print(text)
-            for line in text:
-                print(line)
-            print('--------------------------------\n\n')
+        reader = csv.reader(text)
+        rows = list(reader)
 
-            print('expected --------------------------------')
-            for line in expected_lines:
-                print(line)
-            print('--------------------------------\n\n')
+        header = rows[0]
+        assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
 
-            reader = csv.reader(text)
-            rows = list(reader)
+        actual_data = rows[1:]
+        assert len(actual_data) == len(expected_data), (
+            f'\nRow count mismatch in {csv_filename}: expected {len(expected_data)}, got {len(actual_data)}'
+        )
 
-            header = rows[0]
-            assert header == expected_header, f'\nHeader mismatch for {csv_filename}:\nExpected: {expected_header}\nActual:   {header}'
+        skip_columns = set(skip_columns_names)
+        for i, (expected_row, actual_row) in enumerate(zip(expected_data, actual_data), start=1):
+            for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
+                col_name = header[idx]
+                if col_name in skip_columns:
+                    continue
+                assert exp_cell == act_cell, (
+                    f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
+                    f'(index {idx}):\n'
+                    f'Expected: {exp_cell!r}\n'
+                    f'Actual:   {act_cell!r}'
+                )
 
-            actual_data = rows[1:]
-            assert len(actual_data) == len(expected_data), (
-                f'\nRow count mismatch in {csv_filename}: expected {len(expected_data)}, got {len(actual_data)}'
-            )
+        return
 
-            skip_columns = set(skip_columns_names)
-            for i, (expected_row, actual_row) in enumerate(zip(expected_data, actual_data), start=1):
-                for idx, (exp_cell, act_cell) in enumerate(zip(expected_row, actual_row)):
-                    col_name = header[idx]
-                    if col_name in skip_columns:
-                        continue
-                    assert exp_cell == act_cell, (
-                        f'\nData mismatch in {csv_filename} on row {i + 1}, column {col_name!r} '
-                        f'(index {idx}):\n'
-                        f'Expected: {exp_cell!r}\n'
-                        f'Actual:   {act_cell!r}'
-                    )
-
-            break
-
-    if not found:
-        pytest.fail(f'{csv_filename} not found in any tarballs.')
+    pytest.fail(f'{csv_filename} not found in any tarballs.')
 
 
 def _parse_expected_csv(expected_lines):
