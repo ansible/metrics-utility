@@ -210,6 +210,9 @@ BEGIN
  ('default_host_hostmetric_6'|| '_' || random_suffix, '2025-06-01T06:45:00+00', '2025-06-06T13:15:00+00', NULL, 6, 1, true, 1),
  ('default_host_hostmetric_7'|| '_' || random_suffix, '2025-06-04T10:30:00+00', '2025-06-10T12:30:00+00', NULL, 8, 0, false, 4),
  ('default_host_hostmetric_8'|| '_' || random_suffix, '2025-06-29T09:45:00+00', '2025-06-07T14:00:00+00', '2025-06-13T09:30:00+00', 4, 1, true, 2),
- ('default_host_hostmetric_9'|| '_' || random_suffix, '2025-06-05T08:30:00+00', '2025-06-10T16:00:00+00', NULL, 9, 0, false, 3);
+ ('default_host_hostmetric_9'|| '_' || random_suffix, '2025-06-05T08:30:00+00', '2025-06-10T16:00:00+00', NULL, 9, 0, false, 3),
+ -- recent rows so that run-ccsp2-gather (--until=10m) finds data
+ ('default_host_hostmetric_recent_1'|| '_' || random_suffix, NOW() - INTERVAL '30 days', NOW() - INTERVAL '1 hour', NULL, 20, 0, false, 2),
+ ('default_host_hostmetric_recent_2'|| '_' || random_suffix, NOW() - INTERVAL '15 days', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '3 days', 8, 1, true, 1);
 END
 $$;
