@@ -1,7 +1,7 @@
 from django.db import connection
 
 from metrics_utility.library.collectors.controller.controller_version_service import controller_version_service
-from metrics_utility.test.gather.test_gather_jobs_events_summaries_service import validate_dataframe
+from metrics_utility.test.util import validate_dataframe
 
 
 controller_version_service_lines = [
