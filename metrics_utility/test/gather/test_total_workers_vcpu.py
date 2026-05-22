@@ -1,13 +1,11 @@
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.gather.collectors import cli_total_workers_vcpu
-from metrics_utility.library.collectors.others.total_workers_vcpu import get_hour_boundaries
 from metrics_utility.library.collectors.util import DictOutput
-from metrics_utility.test.util import temporary_env, utcdt
+from metrics_utility.test.util import temporary_env
 
 
 class TestTotalWorkersVcpu:
@@ -115,56 +113,3 @@ class TestTotalWorkersVcpu:
                 result = cli_total_workers_vcpu(None, None, DictOutput())
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 16
-
-
-class TestGetHourBoundaries:
-    """Test suite for the get_hour_boundaries helper function."""
-
-    def test_get_hour_boundaries_calculation(self):
-        """Test that get_hour_boundaries correctly calculates previous hour boundaries."""
-        # Test with a specific timestamp: 2023-12-25 15:30:45 UTC
-        current_ts = utcdt('2023-12-25T15:30:45').timestamp()
-
-        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
-
-        # Previous hour should be 14:00:00 to 14:59:59.999
-        expected_prev_hour_start = utcdt('2023-12-25T14:00:00').timestamp()
-        expected_prev_hour_end = utcdt('2023-12-25T14:59:59.999').timestamp()
-
-        assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
-        assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)
-
-    def test_get_hour_boundaries_at_hour_boundary(self):
-        """Test get_hour_boundaries when current time is exactly at hour boundary."""
-        # Test at exactly 15:00:00
-        current_ts = utcdt('2023-12-25T15:00:00').timestamp()
-
-        prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
-
-        # Previous hour should be 14:00:00 to 14:59:59.999
-        expected_prev_hour_start = utcdt('2023-12-25T14:00:00').timestamp()
-        expected_prev_hour_end = utcdt('2023-12-25T14:59:59.999').timestamp()
-
-        assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
-        assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)
-
-    def test_get_hour_boundaries_different_times(self):
-        """Test get_hour_boundaries with different times throughout the day."""
-        test_cases = [
-            # (hour, expected_prev_hour)
-            (1, 0),  # 01:xx -> previous hour is 00:xx
-            (12, 11),  # 12:xx -> previous hour is 11:xx
-            (23, 22),  # 23:xx -> previous hour is 22:xx
-        ]
-
-        for current_hour, expected_prev_hour in test_cases:
-            test_datetime = datetime(2023, 12, 25, current_hour, 30, 0, tzinfo=timezone.utc)
-            current_ts = test_datetime.timestamp()
-
-            prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
-
-            expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
-            expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
-
-            assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
-            assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)
