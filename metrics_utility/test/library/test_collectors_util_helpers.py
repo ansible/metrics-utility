@@ -1,7 +1,7 @@
 """Test suite for collector utility helper functions."""
 
 from datetime import date, datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
@@ -15,32 +15,47 @@ from metrics_utility.library.collectors.util import (
 from metrics_utility.test.util import utcdt
 
 
+def _mock_cursor_db():
+    """Build a mock db connection with a cursor context manager."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_db, mock_cursor
+
+
+def _mock_copy_db(data_chunks):
+    """Build a mock db connection that yields data_chunks from cursor.copy().read().
+
+    data_chunks: list of bytes objects, each returned by successive read() calls.
+    A final None is appended automatically to signal EOF.
+    """
+    mock_db, mock_cursor = _mock_cursor_db()
+    mock_copy = MagicMock()
+    mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
+    mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+    mock_copy.read.side_effect = [*data_chunks, None]
+    return mock_db, mock_cursor
+
+
 class TestEnsureFunctions:
     """Test ensure_functions helper."""
 
     def test_executes_yaml_json_functions(self):
         """Test that SQL for custom functions is executed."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = _mock_cursor_db()
 
         ensure_functions(mock_db)
 
-        # Verify cursor.execute was called once
         assert mock_cursor.execute.call_count == 1
 
-        # Verify the SQL contains function definitions
         sql_arg = mock_cursor.execute.call_args[0][0]
         assert 'metrics_utility_parse_yaml_field' in sql_arg
         assert 'metrics_utility_is_valid_json' in sql_arg
 
     def test_creates_parse_yaml_field(self):
         """Test that parse_yaml_field function is created."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = _mock_cursor_db()
 
         ensure_functions(mock_db)
 
@@ -50,10 +65,7 @@ class TestEnsureFunctions:
 
     def test_creates_is_valid_json(self):
         """Test that is_valid_json function is created."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = _mock_cursor_db()
 
         ensure_functions(mock_db)
 
@@ -63,14 +75,10 @@ class TestEnsureFunctions:
 
     def test_cursor_cleanup(self):
         """Test that cursor context manager is used properly."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = _mock_cursor_db()
 
         ensure_functions(mock_db)
 
-        # Verify context manager was used
         mock_db.cursor.assert_called_once()
         mock_db.cursor.return_value.__enter__.assert_called_once()
         mock_db.cursor.return_value.__exit__.assert_called_once()
@@ -79,122 +87,58 @@ class TestEnsureFunctions:
 class TestCopyTableFiles:
     """Test _copy_table_files function."""
 
-    def test_creates_csv_files(self, tmp_path):
-        """Test that CSV files are created."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
-
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
-
-        # Simulate data reading
+    def test_writes_csv_content(self, tmp_path):
+        """Test that CSV data from the db is written to a file."""
         csv_data = b'id,name\n1,Alice\n2,Bob\n'
-        mock_copy.read.side_effect = [csv_data, None]
+        mock_db, _ = _mock_copy_db([csv_data])
 
-        filespec = str(tmp_path / 'test_output')
-        result = _copy_table_files(mock_db, 'SELECT * FROM users', filespec)
+        result = _copy_table_files(mock_db, 'SELECT * FROM users', str(tmp_path / 'out'))
 
-        # Should return list of files
-        assert isinstance(result, list)
+        assert len(result) == 1
+        with open(result[0]) as f:
+            assert f.read() == 'id,name\n1,Alice\n2,Bob\n'
 
-    def test_uses_csv_splitter(self, tmp_path):
-        """Test that CsvFileSplitter is used correctly."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
+    def test_file_at_expected_path(self, tmp_path):
+        """Test that output file is created at the filespec path."""
+        mock_db, _ = _mock_copy_db([b'col\nval\n'])
 
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+        filespec = str(tmp_path / 'test')
+        result = _copy_table_files(mock_db, 'SELECT 1', filespec)
 
-        mock_copy.read.return_value = None
+        assert len(result) == 1
+        assert result[0] == filespec
 
-        with patch('metrics_utility.library.collectors.util.CsvFileSplitter') as MockSplitter:
-            mock_splitter_instance = MagicMock()
-            MockSplitter.return_value.__enter__ = MagicMock(return_value=mock_splitter_instance)
-            MockSplitter.return_value.__exit__ = MagicMock(return_value=False)
-            mock_splitter_instance.file_list.return_value = ['file1.csv']
+    def test_multi_chunk_reads(self, tmp_path):
+        """Test that multiple read() chunks are concatenated into a single output."""
+        chunk1 = b'id,name\n1,Alice\n'
+        chunk2 = b'2,Bob\n3,Charlie\n'
+        mock_db, _ = _mock_copy_db([chunk1, chunk2])
 
-            filespec = str(tmp_path / 'test')
-            _copy_table_files(mock_db, 'SELECT id FROM test', filespec)
+        result = _copy_table_files(mock_db, 'SELECT * FROM users', str(tmp_path / 'out'))
 
-            # Verify CsvFileSplitter was created with filespec
-            MockSplitter.assert_called_once_with(filespec=filespec)
-
-            # Verify file_list was called with keep_empty=True
-            mock_splitter_instance.file_list.assert_called_once_with(keep_empty=True)
-
-    def test_returns_file_list(self, tmp_path):
-        """Test that function returns file list from CsvFileSplitter."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
-
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
-
-        mock_copy.read.return_value = None
-
-        with patch('metrics_utility.library.collectors.util.CsvFileSplitter') as MockSplitter:
-            expected_files = ['file1.csv', 'file2.csv', 'file3.csv']
-            mock_splitter_instance = MagicMock()
-            MockSplitter.return_value.__enter__ = MagicMock(return_value=mock_splitter_instance)
-            MockSplitter.return_value.__exit__ = MagicMock(return_value=False)
-            mock_splitter_instance.file_list.return_value = expected_files
-
-            result = _copy_table_files(mock_db, 'SELECT * FROM test', '/tmp/nowrites')
-
-            assert result == expected_files
+        assert len(result) == 1
+        with open(result[0]) as f:
+            assert f.read() == 'id,name\n1,Alice\n2,Bob\n3,Charlie\n'
 
     def test_copy_query_format(self, tmp_path):
         """Test that COPY query is formatted correctly."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
-
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
-
-        mock_copy.read.return_value = None
+        mock_db, mock_cursor = _mock_copy_db([])
 
         query = 'SELECT id, name FROM users WHERE active = true'
         _copy_table_files(mock_db, query, str(tmp_path / 'out'))
 
-        # Verify cursor.copy was called with correct COPY command
         copy_call_arg = mock_cursor.copy.call_args[0][0]
         assert copy_call_arg == f'COPY ({query}) TO STDOUT WITH CSV HEADER'
 
     def test_keeps_empty_files(self, tmp_path):
-        """Test that keep_empty=True is passed to file_list."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
+        """Test that header-only output still produces a file (keep_empty=True)."""
+        mock_db, _ = _mock_copy_db([b'col1,col2\n'])
 
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+        result = _copy_table_files(mock_db, 'SELECT * FROM empty', str(tmp_path / 'out'))
 
-        mock_copy.read.return_value = None
-
-        with patch('metrics_utility.library.collectors.util.CsvFileSplitter') as MockSplitter:
-            mock_splitter_instance = MagicMock()
-            MockSplitter.return_value.__enter__ = MagicMock(return_value=mock_splitter_instance)
-            MockSplitter.return_value.__exit__ = MagicMock(return_value=False)
-            mock_splitter_instance.file_list.return_value = []
-
-            _copy_table_files(mock_db, 'SELECT * FROM empty', '/tmp/nowrites')
-
-            # Verify keep_empty=True was passed
-            mock_splitter_instance.file_list.assert_called_once_with(keep_empty=True)
+        assert len(result) == 1
+        with open(result[0]) as f:
+            assert f.read() == 'col1,col2\n'
 
 
 class TestCopyTablePandas:
@@ -202,11 +146,7 @@ class TestCopyTablePandas:
 
     def test_returns_dataframe(self):
         """Test that function returns pandas DataFrame."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db, mock_cursor = _mock_cursor_db()
         mock_cursor.description = [('col1',), ('col2',)]
         mock_cursor.fetchall.return_value = [('val1', 'val2')]
 
@@ -216,11 +156,7 @@ class TestCopyTablePandas:
 
     def test_correct_column_names(self):
         """Test that DataFrame has correct column names from cursor.description."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db, mock_cursor = _mock_cursor_db()
         mock_cursor.description = [('id',), ('username',), ('email',)]
         mock_cursor.fetchall.return_value = [(1, 'alice', 'alice@example.com')]
 
@@ -230,11 +166,7 @@ class TestCopyTablePandas:
 
     def test_correct_row_data(self):
         """Test that DataFrame contains correct row data from cursor.fetchall."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db, mock_cursor = _mock_cursor_db()
         mock_cursor.description = [('id',), ('value',)]
         mock_cursor.fetchall.return_value = [
             (1, 'first'),
@@ -254,11 +186,7 @@ class TestCopyTablePandas:
 
     def test_empty_result(self):
         """Test that empty query result returns empty DataFrame."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db, mock_cursor = _mock_cursor_db()
         mock_cursor.description = [('col1',), ('col2',)]
         mock_cursor.fetchall.return_value = []
 
@@ -270,17 +198,12 @@ class TestCopyTablePandas:
 
     def test_cursor_cleanup(self):
         """Test that cursor context manager is used properly."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db, mock_cursor = _mock_cursor_db()
         mock_cursor.description = [('id',)]
         mock_cursor.fetchall.return_value = [(1,)]
 
         _copy_table_pandas(mock_db, 'SELECT id FROM test')
 
-        # Verify context manager was used
         mock_db.cursor.assert_called_once()
         mock_db.cursor.return_value.__enter__.assert_called_once()
         mock_db.cursor.return_value.__exit__.assert_called_once()

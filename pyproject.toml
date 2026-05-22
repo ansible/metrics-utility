@@ -68,6 +68,7 @@ packages = {find = {include = ["metrics_utility*"], exclude = ["tools*", "sql*",
 
 [tool.pytest.ini_options]
 filterwarnings = [
+    "error::ResourceWarning",
     "ignore:Automation Controller modules not found:UserWarning",
     "ignore:datetime.datetime.utcnow:DeprecationWarning:botocore",
 ]
