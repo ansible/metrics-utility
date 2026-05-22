@@ -121,14 +121,3 @@ def decode_csv_line(line):
 def read_tarball(path):
     with tarfile.open(path, 'r:gz') as archive:
         return {m.name: archive.extractfile(m).read() for m in archive.getmembers()}
-
-
-def assert_common_files(files):
-    """Assert that *files* contains the three files present in every tarball.
-
-    Args:
-        files: Dict (or dict-like) of filename → content mappings from a tarball.
-    """
-    assert './config.json' in files.keys()
-    assert './manifest.json' in files.keys()
-    assert './data_collection_status.csv' in files.keys()

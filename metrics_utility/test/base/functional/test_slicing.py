@@ -7,7 +7,10 @@ from django.utils.timezone import now, timedelta
 import base.functional.collector_module4_slicing
 
 from base.classes.analytics_collector import AnalyticsCollector
-from base.functional.helpers import assert_common_files, decode_csv_line, read_tarball
+from base.functional.helpers import decode_csv_line, read_tarball
+
+
+COMMON_FILES = ['./config.json', './data_collection_status.csv', './manifest.json']
 
 
 @pytest.fixture
@@ -44,8 +47,7 @@ def test_slices_by_date(collector):
     while since < until:
         files = read_tarball(tgz_files[idx])
 
-        assert_common_files(files)
-        assert './csv_one_day_slicing_1.csv' in files.keys()
+        assert sorted(files) == sorted(COMMON_FILES + ['./csv_one_day_slicing_1.csv'])
 
         lines = files['./csv_one_day_slicing_1.csv'].splitlines(True)
         _header = lines.pop(0)

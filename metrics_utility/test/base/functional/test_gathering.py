@@ -10,7 +10,10 @@ import base.functional.collector_module2
 import base.functional.collector_module3
 
 from base.classes.analytics_collector import AnalyticsCollector
-from base.functional.helpers import assert_common_files, decode_csv_line, read_tarball
+from base.functional.helpers import decode_csv_line, read_tarball
+
+
+COMMON_FILES = ['./config.json', './data_collection_status.csv', './manifest.json']
 
 
 @pytest.fixture
@@ -40,9 +43,7 @@ def test_json_collections(collector):
 
     files = read_tarball(tgz_files[0])
 
-    assert_common_files(files)
-    assert './json_collection_1.json' in files.keys()
-    assert './json_collection_2.json' in files.keys()
+    assert sorted(files) == sorted(COMMON_FILES + ['./json_collection_1.json', './json_collection_2.json'])
 
     assert json.loads(files['./config.json']) == {'version': '1.0'}
     assert json.loads(files['./json_collection_1.json']) == {'json1': 'True'}
@@ -56,10 +57,14 @@ def test_small_csvs(collector):
 
     files = read_tarball(tgz_files[0])
 
-    assert_common_files(files)
-    assert './csv_collection_1.csv' in files.keys()
-    assert './csv_collection_2.csv' in files.keys()
-    assert './csv_collection_3.csv' in files.keys()
+    assert sorted(files) == sorted(
+        COMMON_FILES
+        + [
+            './csv_collection_1.csv',
+            './csv_collection_2.csv',
+            './csv_collection_3.csv',
+        ]
+    )
 
     # length defined by @registered function
     assert len(files['./csv_collection_1.csv']) == 100
@@ -80,18 +85,14 @@ def test_jsons_with_csvs_with_slicing(collector):
 
     assert len(tgz_files) == 3
 
+    expected = [
+        COMMON_FILES + ['./json_collection_1.json', './json_collection_2.json', './csv_slicing_1.csv'],
+        COMMON_FILES + ['./csv_slicing_2.csv'],
+        COMMON_FILES + ['./csv_slicing_2.csv'],
+    ]
     for i in range(len(tgz_files)):
         files = read_tarball(tgz_files[i])
-
-        assert_common_files(files)
-        if i == 0:
-            assert './json_collection_1.json' in files.keys()
-            assert './json_collection_2.json' in files.keys()
-            assert './csv_slicing_1.csv' in files.keys()
-        if i == 1:
-            assert './csv_slicing_2.csv' in files.keys()
-        if i == 2:
-            assert './csv_slicing_2.csv' in files.keys()
+        assert sorted(files) == sorted(expected[i])
 
 
 def test_one_csv_collection_splitted_by_size(collector):
@@ -102,9 +103,7 @@ def test_one_csv_collection_splitted_by_size(collector):
     for i in range(len(tgz_files)):
         files = read_tarball(tgz_files[i])
 
-        assert_common_files(files)
-        assert len(files.keys()) == 4
-        assert './big_table.csv' in files.keys()
+        assert sorted(files) == sorted(COMMON_FILES + ['./big_table.csv'])
         assert len(files['./big_table.csv']) == 1000
 
 
@@ -115,21 +114,14 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
 
     assert len(tgz_files) == 3
 
+    expected = [
+        COMMON_FILES + ['./big_table_2.csv', './csv_collection_1.csv'],
+        COMMON_FILES + ['./big_table_2.csv', './csv_collection_2.csv'],
+        COMMON_FILES + ['./big_table_2.csv'],
+    ]
     for i in range(len(tgz_files)):
         files = read_tarball(tgz_files[i])
-
-        assert_common_files(files)
-        if i == 0:
-            assert len(files.keys()) == 5
-            assert './big_table_2.csv' in files.keys()
-            assert './csv_collection_1.csv' in files.keys()
-        elif i == 1:
-            assert len(files.keys()) == 5
-            assert './big_table_2.csv' in files.keys()
-            assert './csv_collection_2.csv' in files.keys()
-        elif i == 2:
-            assert len(files.keys()) == 4
-            assert './big_table_2.csv' in files.keys()
+        assert sorted(files) == sorted(expected[i])
 
 
 def test_multiple_collections_and_distributions(collector):
@@ -143,56 +135,33 @@ def test_multiple_collections_and_distributions(collector):
 
     assert len(tgz_files) == 13
 
+    # Each file appears in a range of tarball indices:
+    #   file name                      indices
+    #   ./simple_json1.json            0
+    #   ./csv_no_slicing_1-2x.csv      0-1
+    #   ./csv_no_slicing_2-1x.csv      0
+    #   ./csv_no_slicing_3-10x.csv     0-9
+    #   ./csv_no_slicing_4-12x.csv     0-11
+    #   ./csv_with_slicing_1-5x.csv    0-4
+    #   ./csv_with_slicing_2-3x.csv    5-7
+    #   ./csv_with_slicing_3-2x.csv    8-9
+    #   ./csv_with_slicing_4-3x.csv    10-12
+    file_ranges = [
+        ('./simple_json1.json', 0, 0),
+        ('./csv_no_slicing_1-2x.csv', 0, 1),
+        ('./csv_no_slicing_2-1x.csv', 0, 0),
+        ('./csv_no_slicing_3-10x.csv', 0, 9),
+        ('./csv_no_slicing_4-12x.csv', 0, 11),
+        ('./csv_with_slicing_1-5x.csv', 0, 4),
+        ('./csv_with_slicing_2-3x.csv', 5, 7),
+        ('./csv_with_slicing_3-2x.csv', 8, 9),
+        ('./csv_with_slicing_4-3x.csv', 10, 12),
+    ]
+
     for i in range(len(tgz_files)):
+        expected = COMMON_FILES + [name for name, lo, hi in file_ranges if lo <= i <= hi]
         files = read_tarball(tgz_files[i])
-
-        assert_common_files(files)
-        if i == 0:
-            assert './simple_json1.json' in files.keys()
-        else:
-            assert './simple_json1.json' not in files.keys()
-
-        # CSVs with no slicing start at index 0
-        if 0 <= i <= 1:
-            assert './csv_no_slicing_1-2x.csv' in files.keys()
-        else:
-            assert './csv_no_slicing_1-2x.csv' not in files.keys()
-
-        if i == 0:
-            assert './csv_no_slicing_2-1x.csv' in files.keys()
-        else:
-            assert './csv_no_slicing_2-1x.csv' not in files.keys()
-
-        if 0 <= i <= 9:
-            assert './csv_no_slicing_3-10x.csv' in files.keys()
-        else:
-            assert './csv_no_slicing_3-10x.csv' not in files.keys()
-
-        if 0 <= i <= 11:
-            assert './csv_no_slicing_4-12x.csv' in files.keys()
-        else:
-            assert './csv_no_slicing_4-12x.csv' not in files.keys()
-
-        # CSVs with slicing start after index next to previous slice
-        if 0 <= i <= 4:
-            assert './csv_with_slicing_1-5x.csv' in files.keys()
-        else:
-            assert './csv_with_slicing_1-5x.csv' not in files.keys()
-
-        if 5 <= i <= 7:
-            assert './csv_with_slicing_2-3x.csv' in files.keys()
-        else:
-            assert './csv_with_slicing_2-3x.csv' not in files.keys()
-
-        if 8 <= i <= 9:
-            assert './csv_with_slicing_3-2x.csv' in files.keys()
-        else:
-            assert './csv_with_slicing_3-2x.csv' not in files.keys()
-
-        if 10 <= i <= 12:
-            assert './csv_with_slicing_4-3x.csv' in files.keys()
-        else:
-            assert './csv_with_slicing_4-3x.csv' not in files.keys()
+        assert sorted(files) == sorted(expected), f'tarball {i}'
 
 
 def test_manifest_and_status(collector):
@@ -203,8 +172,7 @@ def test_manifest_and_status(collector):
 
     files = read_tarball(tgz_files[0])
 
-    assert_common_files(files)
-    assert len(files.keys()) == 6
+    assert sorted(files) == sorted(COMMON_FILES + ['./json1.json', './json2.json', './json3.json'])
 
     assert json.loads(files['./manifest.json']) == {
         'config.json': '1.0',
