@@ -1,6 +1,6 @@
 import json
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from metrics_utility.library.collectors.controller.config import (
     _datetime_hook,
@@ -10,6 +10,7 @@ from metrics_utility.library.collectors.controller.config import (
     _version,
     config,
 )
+from metrics_utility.test.util import mock_cursor_db
 
 
 def test_version_existing_package():
@@ -86,10 +87,7 @@ def test_datetime_hook_with_non_datetime_string():
 def test_get_controller_settings():
     """Test _get_controller_settings retrieves settings from database."""
     # Create mock database
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     # Mock fetchall to return settings - use values that won't be affected by datetime parsing
     mock_cursor.fetchall.return_value = [
@@ -106,10 +104,7 @@ def test_get_controller_settings():
 
 def test_get_controller_settings_with_null_value():
     """Test _get_controller_settings handles NULL values."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchall.return_value = [
         ('INSTALL_UUID', '{"value": "test-uuid"}'),
@@ -124,10 +119,7 @@ def test_get_controller_settings_with_null_value():
 
 def test_get_controller_version():
     """Test _get_controller_version retrieves version from database."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchone.return_value = ('4.5.0',)
 
@@ -139,10 +131,7 @@ def test_get_controller_version():
 
 def test_get_controller_version_no_result():
     """Test _get_controller_version when no version is found."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchone.return_value = None
 
@@ -153,10 +142,7 @@ def test_get_controller_version_no_result():
 
 def test_get_controller_version_empty_string():
     """Test _get_controller_version when version is empty string."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchone.return_value = ('',)
 
@@ -167,10 +153,7 @@ def test_get_controller_version_empty_string():
 
 def test_config_collector_basic():
     """Test config collector with basic database."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     # Mock settings query
     mock_cursor.fetchall.return_value = [
@@ -202,10 +185,7 @@ def test_config_collector_basic():
 
 def test_config_collector_with_license():
     """Test config collector with license information."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     # Use numeric and boolean values that won't be parsed by _datetime_hook
     license_data = {
@@ -229,10 +209,7 @@ def test_config_collector_with_license():
 
 def test_config_collector_with_billing_provider_params():
     """Test config collector includes billing_provider_params."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchall.return_value = []
     mock_cursor.fetchone.return_value = ('4.5.0',)
@@ -248,10 +225,7 @@ def test_config_collector_with_billing_provider_params():
 
 def test_config_collector_platform_info():
     """Test config collector includes platform information."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchall.return_value = []
     mock_cursor.fetchone.return_value = ('4.5.0',)
@@ -270,10 +244,7 @@ def test_config_collector_platform_info():
 
 def test_config_collector_default_values():
     """Test config collector uses default values for missing license fields."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     # Empty license
     mock_cursor.fetchall.return_value = [('LICENSE', '{}')]

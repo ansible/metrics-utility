@@ -8,6 +8,7 @@ import sys
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -18,6 +19,29 @@ def utcdt(s):
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def mock_cursor_db():
+    """Build a mock db connection with a cursor context manager."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    return mock_db, mock_cursor
+
+
+def mock_copy_db(data_chunks):
+    """Build a mock db connection that yields data_chunks from cursor.copy().read().
+
+    data_chunks: list of bytes objects, each returned by successive read() calls.
+    A final None is appended automatically to signal EOF.
+    """
+    mock_db, mock_cursor = mock_cursor_db()
+    mock_copy = MagicMock()
+    mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
+    mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+    mock_copy.read.side_effect = [*data_chunks, None]
+    return mock_db, mock_cursor
 
 
 @contextmanager

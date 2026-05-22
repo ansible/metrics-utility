@@ -1,7 +1,6 @@
 """Test suite for collector utility helper functions."""
 
 from datetime import date, datetime
-from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
@@ -12,30 +11,7 @@ from metrics_utility.library.collectors.util import (
     date_where,
     ensure_functions,
 )
-from metrics_utility.test.util import utcdt
-
-
-def _mock_cursor_db():
-    """Build a mock db connection with a cursor context manager."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_db, mock_cursor
-
-
-def _mock_copy_db(data_chunks):
-    """Build a mock db connection that yields data_chunks from cursor.copy().read().
-
-    data_chunks: list of bytes objects, each returned by successive read() calls.
-    A final None is appended automatically to signal EOF.
-    """
-    mock_db, mock_cursor = _mock_cursor_db()
-    mock_copy = MagicMock()
-    mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-    mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
-    mock_copy.read.side_effect = [*data_chunks, None]
-    return mock_db, mock_cursor
+from metrics_utility.test.util import mock_copy_db, mock_cursor_db, utcdt
 
 
 class TestEnsureFunctions:
@@ -43,7 +19,7 @@ class TestEnsureFunctions:
 
     def test_executes_yaml_json_functions(self):
         """Test that SQL for custom functions is executed."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
 
         ensure_functions(mock_db)
 
@@ -55,7 +31,7 @@ class TestEnsureFunctions:
 
     def test_creates_parse_yaml_field(self):
         """Test that parse_yaml_field function is created."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
 
         ensure_functions(mock_db)
 
@@ -65,7 +41,7 @@ class TestEnsureFunctions:
 
     def test_creates_is_valid_json(self):
         """Test that is_valid_json function is created."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
 
         ensure_functions(mock_db)
 
@@ -75,7 +51,7 @@ class TestEnsureFunctions:
 
     def test_cursor_cleanup(self):
         """Test that cursor context manager is used properly."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
 
         ensure_functions(mock_db)
 
@@ -90,7 +66,7 @@ class TestCopyTableFiles:
     def test_writes_csv_content(self, tmp_path):
         """Test that CSV data from the db is written to a file."""
         csv_data = b'id,name\n1,Alice\n2,Bob\n'
-        mock_db, _ = _mock_copy_db([csv_data])
+        mock_db, _ = mock_copy_db([csv_data])
 
         result = _copy_table_files(mock_db, 'SELECT * FROM users', str(tmp_path / 'out'))
 
@@ -100,7 +76,7 @@ class TestCopyTableFiles:
 
     def test_file_at_expected_path(self, tmp_path):
         """Test that output file is created at the filespec path."""
-        mock_db, _ = _mock_copy_db([b'col\nval\n'])
+        mock_db, _ = mock_copy_db([b'col\nval\n'])
 
         filespec = str(tmp_path / 'test')
         result = _copy_table_files(mock_db, 'SELECT 1', filespec)
@@ -112,7 +88,7 @@ class TestCopyTableFiles:
         """Test that multiple read() chunks are concatenated into a single output."""
         chunk1 = b'id,name\n1,Alice\n'
         chunk2 = b'2,Bob\n3,Charlie\n'
-        mock_db, _ = _mock_copy_db([chunk1, chunk2])
+        mock_db, _ = mock_copy_db([chunk1, chunk2])
 
         result = _copy_table_files(mock_db, 'SELECT * FROM users', str(tmp_path / 'out'))
 
@@ -122,7 +98,7 @@ class TestCopyTableFiles:
 
     def test_copy_query_format(self, tmp_path):
         """Test that COPY query is formatted correctly."""
-        mock_db, mock_cursor = _mock_copy_db([])
+        mock_db, mock_cursor = mock_copy_db([])
 
         query = 'SELECT id, name FROM users WHERE active = true'
         _copy_table_files(mock_db, query, str(tmp_path / 'out'))
@@ -132,7 +108,7 @@ class TestCopyTableFiles:
 
     def test_keeps_empty_files(self, tmp_path):
         """Test that header-only output still produces a file (keep_empty=True)."""
-        mock_db, _ = _mock_copy_db([b'col1,col2\n'])
+        mock_db, _ = mock_copy_db([b'col1,col2\n'])
 
         result = _copy_table_files(mock_db, 'SELECT * FROM empty', str(tmp_path / 'out'))
 
@@ -146,7 +122,7 @@ class TestCopyTablePandas:
 
     def test_returns_dataframe(self):
         """Test that function returns pandas DataFrame."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('col1',), ('col2',)]
         mock_cursor.fetchall.return_value = [('val1', 'val2')]
 
@@ -156,7 +132,7 @@ class TestCopyTablePandas:
 
     def test_correct_column_names(self):
         """Test that DataFrame has correct column names from cursor.description."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('id',), ('username',), ('email',)]
         mock_cursor.fetchall.return_value = [(1, 'alice', 'alice@example.com')]
 
@@ -166,7 +142,7 @@ class TestCopyTablePandas:
 
     def test_correct_row_data(self):
         """Test that DataFrame contains correct row data from cursor.fetchall."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('id',), ('value',)]
         mock_cursor.fetchall.return_value = [
             (1, 'first'),
@@ -186,7 +162,7 @@ class TestCopyTablePandas:
 
     def test_empty_result(self):
         """Test that empty query result returns empty DataFrame."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('col1',), ('col2',)]
         mock_cursor.fetchall.return_value = []
 
@@ -198,7 +174,7 @@ class TestCopyTablePandas:
 
     def test_cursor_cleanup(self):
         """Test that cursor context manager is used properly."""
-        mock_db, mock_cursor = _mock_cursor_db()
+        mock_db, mock_cursor = mock_cursor_db()
         mock_cursor.description = [('id',)]
         mock_cursor.fetchall.return_value = [(1,)]
 

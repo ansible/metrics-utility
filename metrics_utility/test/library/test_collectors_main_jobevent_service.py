@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
+from metrics_utility.test.util import mock_cursor_db
 
 
 def test_main_jobevent_service_basic():
@@ -25,10 +26,7 @@ def test_main_jobevent_service_basic():
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_no_jobs_returns_none(mock_copy_pandas):
     """Test that collector returns empty CSV with headers when no jobs are found."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     # No jobs found
     mock_cursor.fetchall.return_value = []
@@ -55,10 +53,7 @@ def test_main_jobevent_service_no_jobs_returns_none(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_pandas):
     """Test that collector calls copy_table when jobs are found."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     # Mock jobs
     job_created1 = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
@@ -85,10 +80,7 @@ def test_main_jobevent_service_with_jobs_calls_copy_table(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     job_created = datetime.datetime(2024, 1, 15, 10, 30, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created)]
@@ -122,10 +114,7 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pandas):
     """Test that query uses job_id IN clause and builds hourly timestamp ranges."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     job_created1 = datetime.datetime(2024, 1, 15, 10, 30, 45, tzinfo=datetime.timezone.utc)
     job_created2 = datetime.datetime(2024, 1, 16, 14, 45, 30, tzinfo=datetime.timezone.utc)
@@ -168,10 +157,7 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pan
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
     """Test that initial jobs query uses correct parameters."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     mock_cursor.fetchall.return_value = []
 
@@ -194,10 +180,7 @@ def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
     """Test that query handles playbook_on_stats event specially."""
-    mock_db = MagicMock()
-    mock_cursor = MagicMock()
-    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db, mock_cursor = mock_cursor_db()
 
     job_created = datetime.datetime(2024, 1, 15, tzinfo=datetime.timezone.utc)
     mock_cursor.fetchall.return_value = [(100, job_created)]

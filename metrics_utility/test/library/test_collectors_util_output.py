@@ -10,6 +10,7 @@ from metrics_utility.library.collectors.util import (
     DataframeOutput,
     DictOutput,
 )
+from metrics_utility.test.util import mock_copy_db, mock_cursor_db
 
 
 class TestDictOutput:
@@ -53,10 +54,7 @@ class TestDataframeOutput:
     def test_sql_returns_dataframe(self):
         """Test that sql method returns pandas DataFrame."""
         # Create mock database and cursor
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = mock_cursor_db()
 
         # Setup cursor to return data
         mock_cursor.description = [('col1',), ('col2',)]
@@ -69,10 +67,7 @@ class TestDataframeOutput:
 
     def test_sql_with_valid_query(self):
         """Test that sql method executes query correctly."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = mock_cursor_db()
 
         mock_cursor.description = [('id',)]
         mock_cursor.fetchall.return_value = [(1,), (2,)]
@@ -85,10 +80,7 @@ class TestDataframeOutput:
 
     def test_sql_returns_correct_columns(self):
         """Test that DataFrame has correct columns from cursor description."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = mock_cursor_db()
 
         mock_cursor.description = [('name',), ('age',), ('email',)]
         mock_cursor.fetchall.return_value = [('Alice', 30, 'alice@example.com')]
@@ -100,10 +92,7 @@ class TestDataframeOutput:
 
     def test_sql_returns_correct_data(self):
         """Test that DataFrame contains correct row data."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = mock_cursor_db()
 
         mock_cursor.description = [('id',), ('value',)]
         mock_cursor.fetchall.return_value = [(1, 'a'), (2, 'b'), (3, 'c')]
@@ -119,10 +108,7 @@ class TestDataframeOutput:
 
     def test_sql_empty_result(self):
         """Test that empty query result returns empty DataFrame."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db, mock_cursor = mock_cursor_db()
 
         mock_cursor.description = [('col1',), ('col2',)]
         mock_cursor.fetchall.return_value = []
@@ -178,44 +164,22 @@ class TestCollectionOutput:
 
     def test_sql_creates_csv_files(self, tmp_path):
         """Test that sql method creates CSV files."""
-        # Create mock database and cursor with copy support
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
-
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
-
-        # Mock data reading
-        mock_copy.read.side_effect = [b'col1,col2\nval1,val2\n', None]
+        mock_db, mock_cursor = mock_copy_db([b'col1,col2\nval1,val2\n'])
 
         output = CollectionOutput(str(tmp_path))
         result = output.sql(mock_db, 'SELECT * FROM test')
 
-        # Should call cursor.copy with COPY command
         assert mock_cursor.copy.called
         copy_call_arg = mock_cursor.copy.call_args[0][0]
         assert 'COPY' in copy_call_arg
         assert 'TO STDOUT' in copy_call_arg
         assert 'CSV HEADER' in copy_call_arg
 
-        # Should return list of files
         assert isinstance(result, list)
 
     def test_sql_uses_full_path(self, tmp_path):
         """Test that sql method uses self.full_path for file location."""
-        mock_db = MagicMock()
-        mock_cursor = MagicMock()
-        mock_copy = MagicMock()
-
-        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
-        mock_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
-        mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
-
-        mock_copy.read.return_value = None
+        mock_db, _ = mock_copy_db([])
 
         test_path = str(tmp_path)
         output = CollectionOutput(test_path)
