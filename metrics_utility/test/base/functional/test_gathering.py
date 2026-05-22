@@ -20,7 +20,9 @@ def collector(mocker):
         collection_type=AnalyticsCollector.DRY_RUN,
     )
 
-    return collector
+    yield collector
+
+    collector._gather_cleanup()
 
 
 def test_missing_config(mocker, collector):
@@ -46,8 +48,6 @@ def test_json_collections(collector):
     assert json.loads(files['./json_collection_1.json']) == {'json1': 'True'}
     assert json.loads(files['./json_collection_2.json']) == {'json2': 'True'}
 
-    collector._gather_cleanup()
-
 
 def test_small_csvs(collector):
     tgz_files = collector.gather(subset=['config', 'csv_collection_1', 'csv_collection_2', 'csv_collection_3'])
@@ -65,8 +65,6 @@ def test_small_csvs(collector):
     assert len(files['./csv_collection_1.csv']) == 100
     assert len(files['./csv_collection_2.csv']) == 200
     assert len(files['./csv_collection_3.csv']) == 300
-
-    collector._gather_cleanup()
 
 
 def test_jsons_with_csvs_with_slicing(collector):
@@ -105,11 +103,9 @@ def test_one_csv_collection_splitted_by_size(collector):
         files = read_tarball(tgz_files[i])
 
         assert_common_files(files)
-        assert len(files.keys()) == 1 + _common_files_count()
+        assert len(files.keys()) == 1 + 3
         assert './big_table.csv' in files.keys()
         assert len(files['./big_table.csv']) == 1000
-
-    collector._gather_cleanup()
 
 
 def test_multiple_collections_multiple_tarballs(mocker, collector):
@@ -124,18 +120,16 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
 
         assert_common_files(files)
         if i == 0:
-            assert len(files.keys()) == 2 + _common_files_count()
+            assert len(files.keys()) == 2 + 3
             assert './big_table_2.csv' in files.keys()
             assert './csv_collection_1.csv' in files.keys()
         elif i == 1:
-            assert len(files.keys()) == 2 + _common_files_count()
+            assert len(files.keys()) == 2 + 3
             assert './big_table_2.csv' in files.keys()
             assert './csv_collection_2.csv' in files.keys()
         elif i == 2:
-            assert len(files.keys()) == 1 + _common_files_count()
+            assert len(files.keys()) == 1 + 3
             assert './big_table_2.csv' in files.keys()
-
-    collector._gather_cleanup()
 
 
 def test_multiple_collections_and_distributions(collector):
@@ -210,7 +204,7 @@ def test_manifest_and_status(collector):
     files = read_tarball(tgz_files[0])
 
     assert_common_files(files)
-    assert len(files.keys()) == 3 + _common_files_count()
+    assert len(files.keys()) == 3 + 3
 
     assert json.loads(files['./manifest.json']) == {
         'config.json': '1.0',
@@ -221,8 +215,6 @@ def test_manifest_and_status(collector):
     }
 
     _assert_data_collection_status(files['./data_collection_status.csv'])
-
-    collector._gather_cleanup()
 
 
 def _assert_data_collection_status(status_bytes):
@@ -248,7 +240,3 @@ def _assert_data_collection_status(status_bytes):
         files.pop(files.index(row[3]))
 
     assert len(files) == 0
-
-
-def _common_files_count():
-    return 3

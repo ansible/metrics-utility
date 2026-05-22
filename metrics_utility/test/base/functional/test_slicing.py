@@ -21,7 +21,9 @@ def collector(mocker):
         collection_type=AnalyticsCollector.DRY_RUN,
     )
 
-    return collector
+    yield collector
+
+    collector._gather_cleanup()
 
 
 def test_slices_by_date(collector):
