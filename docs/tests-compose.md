@@ -19,28 +19,31 @@ docker compose -f tools/docker/docker-compose.yaml exec postgres bash -c \
   'cat /docker-entrypoint-initdb.d/init-*.sql | psql -U awx -d postgres'
 
 # Run all gather tests
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/'
+docker compose -f tools/docker/docker-compose.yaml exec \
+  -e METRICS_UTILITY_DB_NAME=postgres \
+  -e METRICS_UTILITY_DB_USER=awx \
+  -e METRICS_UTILITY_DB_PASSWORD=awx \
+  -e METRICS_UTILITY_DB_HOST=postgres \
+  metrics-utility-env bash -c \
+  'uv run pytest -s -v metrics_utility/test/gather/'
 
 # Run a specific gather test
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
+docker compose -f tools/docker/docker-compose.yaml exec \
+  -e METRICS_UTILITY_DB_NAME=postgres \
+  -e METRICS_UTILITY_DB_USER=awx \
+  -e METRICS_UTILITY_DB_PASSWORD=awx \
+  -e METRICS_UTILITY_DB_HOST=postgres \
+  metrics-utility-env bash -c \
+  'uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
 
 # Run all tests (not just gather)
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v'
+docker compose -f tools/docker/docker-compose.yaml exec \
+  -e METRICS_UTILITY_DB_NAME=postgres \
+  -e METRICS_UTILITY_DB_USER=awx \
+  -e METRICS_UTILITY_DB_PASSWORD=awx \
+  -e METRICS_UTILITY_DB_HOST=postgres \
+  metrics-utility-env bash -c \
+  'uv run pytest -s -v'
 ```
 
 #### Using Podman (in CI mode to be able to run all tests)
@@ -51,26 +54,29 @@ podman compose -f tools/docker/docker-compose.yaml exec postgres bash -c \
   'cat /docker-entrypoint-initdb.d/init-*.sql | psql -U awx -d postgres'
 
 # Run all gather tests
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/'
+podman compose -f tools/docker/docker-compose.yaml exec \
+  -e METRICS_UTILITY_DB_NAME=postgres \
+  -e METRICS_UTILITY_DB_USER=awx \
+  -e METRICS_UTILITY_DB_PASSWORD=awx \
+  -e METRICS_UTILITY_DB_HOST=postgres \
+  metrics-utility-env bash -c \
+  'uv run pytest -s -v metrics_utility/test/gather/'
 
 # Run a specific gather test
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
+podman compose -f tools/docker/docker-compose.yaml exec \
+  -e METRICS_UTILITY_DB_NAME=postgres \
+  -e METRICS_UTILITY_DB_USER=awx \
+  -e METRICS_UTILITY_DB_PASSWORD=awx \
+  -e METRICS_UTILITY_DB_HOST=postgres \
+  metrics-utility-env bash -c \
+  'uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
 
 # Run all tests (not just gather)
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v'
+podman compose -f tools/docker/docker-compose.yaml exec \
+  -e METRICS_UTILITY_DB_NAME=postgres \
+  -e METRICS_UTILITY_DB_USER=awx \
+  -e METRICS_UTILITY_DB_PASSWORD=awx \
+  -e METRICS_UTILITY_DB_HOST=postgres \
+  metrics-utility-env bash -c \
+  'uv run pytest -s -v'
 ```

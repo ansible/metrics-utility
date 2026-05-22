@@ -147,8 +147,10 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Contributor's guide
 * [docs/awx.md](./docs/awx.md) - running against awx dev env
 * [docs/cli.md](./docs/cli.md) - CLI docs
+* [docs/collectors.md](./docs/collectors.md) - collector reference (tables, time range support)
 * [docs/environment.md](./docs/environment.md) - Environment variables
-* [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
+* [docs/old-readme.md](./docs/old-readme.md) - additional usage examples
+* [docs/partitions.md](./docs/partitions.md) - partition pruning analysis
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
 * [docs/vcpu.md](./docs/vcpu.md) - docs for the total workers vcpu collector
 * [metrics\_utility/library/](./metrics_utility/library/) - library documentation

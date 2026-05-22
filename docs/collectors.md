@@ -1,58 +1,11 @@
-# Metrics Utility Collectors: Database Tables and Partition Analysis
+# Metrics Utility Collectors
 
 **Last Updated**: May 2026
 
-## Overview
+All collectors in the metrics-utility library, including which database tables each queries and whether they support time range filtering.
 
-This document provides comprehensive documentation on all collectors in the metrics-utility library, including:
-- Which database tables each collector queries
-- Whether tables are partitioned
-- Partition key columns and structure
-- How collectors leverage partition pruning
-- Frequency of partition access
+See also [partitions.md](./partitions.md) for partition pruning analysis on `main_jobevent`.
 
-## Table of Contents
-
-1. [Partitioned Tables Overview](#partitioned-tables-overview)
-2. [Collector Documentation](#collector-documentation)
-3. [Partition Pruning Strategies](#partition-pruning-strategies)
-4. [Performance Considerations](#performance-considerations)
-
----
-
-## Partitioned Tables Overview
-
-### Tables with Hourly Partitions
-
-The following tables in Ansible Automation Platform Controller are partitioned by **hourly ranges** on the `job_created` column:
-
-| Table Name | Partition Key | Partition Type | Partition Naming Pattern |
-|------------|---------------|----------------|-------------------------|
-| `main_jobevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_jobevent_YYYYMMDD_HH` |
-
-**Note**: While other event tables (`main_adhoccommandevent`, `main_inventoryupdateevent`, `main_projectupdateevent`, `main_systemjobevent`) are also partitioned in the Controller database, **metrics-utility collectors do not currently access these tables**, so they are not documented here.
-
-### Partition Structure
-
-Each partition covers a **one-hour time range**:
-- **Format**: `YYYY-MM-DD HH:00:00+00` to `YYYY-MM-DD HH+1:00:00+00`
-- **Example**: `main_jobevent_20241219_17` covers `2024-12-19 17:00:00+00` to `2024-12-19 18:00:00+00`
-
-### Non-Partitioned Tables
-
-The following tables are **NOT partitioned**:
-- `main_executionenvironment`
-- `main_unifiedjob`
-- `main_jobhostsummary`
-- `main_host`
-- `main_inventory`
-- `main_organization`
-- `main_unifiedjobtemplate`
-- `main_indirectmanagednodeaudit`
-- `conf_setting`
-- `main_instance`
-
----
 
 ## Collector Documentation
 
@@ -65,10 +18,6 @@ The following tables are **NOT partitioned**:
 **Tables Accessed**:
 - `main_executionenvironment` (READ)
 
-**Partition Information**:
-- ❌ **Not partitioned**
-- No partition pruning needed
-
 **Query Pattern**:
 ```sql
 SELECT id, created, modified, description, image, managed, 
@@ -79,9 +28,6 @@ FROM main_executionenvironment
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
 - Collects all execution environments
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -99,11 +45,6 @@ FROM main_executionenvironment
 - `main_inventory` (READ) - LEFT JOIN
 - `main_organization` (READ) - LEFT JOIN
 - `main_unifiedjobtemplate` (READ) - LEFT JOIN for project info
-
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-- Uses index on `main_unifiedjob.finished` for filtering
-- Uses index on `main_jobhostsummary.job_id` for joining
 
 **Query Pattern**:
 ```sql
@@ -134,26 +75,17 @@ LEFT JOIN main_unifiedjob mu ON mu.id = mjs.job_id
 2. Then filters host summaries by `job_id` (uses index)
 3. Reduces data volume before expensive joins
 
-**Frequency**:
-- Run per collection window (typically daily)
-- Accesses only jobs finished in the specified time range
-
 ---
 
 ### 3. `main_jobevent_service`
 
 **File**: `metrics_utility/library/collectors/controller/main_jobevent_service.py`
 
-**Purpose**: Collects job events for jobs that finished within a time window. **This is the most partition-aware collector.**
+**Purpose**: Collects job events for jobs that finished within a time window. **This is the most partition-aware collector** — see [partitions.md](./partitions.md) for details.
 
 **Tables Accessed**:
 - `main_unifiedjob` (READ) - To get job IDs and `job_created` timestamps
 - `main_jobevent` (READ) - **PARTITIONED TABLE** - Filtered by `job_created` and `job_id`
-
-**Partition Information**:
-- ✅ **`main_jobevent` is PARTITIONED** by `job_created` (hourly partitions)
-- **Partition Key**: `job_created` (TIMESTAMPTZ)
-- **Partition Type**: RANGE partitioning (hourly)
 
 **Query Pattern**:
 ```sql
@@ -168,7 +100,6 @@ SELECT e.*
 FROM main_jobevent e
 WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19 18:00:00+00')
    OR (e.job_created >= '2024-12-19 18:00:00+00' AND e.job_created < '2024-12-19 19:00:00+00')
-   -- ... more hour ranges
   AND e.job_id IN (1, 2, 3, ...)
   AND e.event IN ('runner_on_ok', 'runner_on_failed', ...)
 ```
@@ -177,31 +108,6 @@ WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.finished` to find relevant jobs
 - Then filters `main_jobevent` by `job_created` (partition key) and `job_id`
-
-**Partition Pruning Strategy**:
-1. **Fetches jobs** finished in the time window (gets `job_id` and `job_created`)
-2. **Extracts unique hour boundaries** from `job_created` timestamps
-3. **Groups consecutive hours** into ranges to reduce OR clauses
-4. **Builds WHERE clause** with literal timestamp ranges for partition pruning
-5. **PostgreSQL can prune partitions** because it sees literal timestamp values
-
-**Example Partition Access**:
-- If jobs finished between `2024-12-19 17:30:00` and `2024-12-19 19:15:00`
-- Collector accesses partitions:
-  - `main_jobevent_20241219_17` (if any jobs created in hour 17)
-  - `main_jobevent_20241219_18` (if any jobs created in hour 18)
-  - `main_jobevent_20241219_19` (if any jobs created in hour 19)
-
-**Frequency**:
-- Run per collection window (typically daily)
-- Accesses **only the hourly partitions** that contain events for jobs finished in the time window
-- **Partition pruning significantly reduces scan cost** compared to scanning all partitions
-
-**Performance Notes**:
-- The collector explicitly optimizes for partition pruning by:
-  - Using literal timestamp values (not joins) in WHERE clause
-  - Grouping consecutive hours into ranges
-  - Filtering by both `job_created` (partition key) and `job_id`
 
 ---
 
@@ -220,10 +126,6 @@ WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19
 - `main_organization` (READ) - LEFT JOIN
 - `main_executionenvironment` (READ) - LEFT JOIN
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-- Uses indexes on `main_unifiedjob.created` and `main_unifiedjob.finished`
-
 **Query Pattern**:
 ```sql
 SELECT main_unifiedjob.*, ...
@@ -237,10 +139,6 @@ WHERE (main_unifiedjob.created >= 'since' AND main_unifiedjob.created < 'until')
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `created` OR `finished` timestamp (OR condition)
 
-**Frequency**:
-- Run per collection window (typically daily)
-- Accesses jobs that were either created or finished in the time window
-
 ---
 
 ### 5. `main_jobevent` (Legacy)
@@ -253,10 +151,6 @@ WHERE (main_unifiedjob.created >= 'since' AND main_unifiedjob.created < 'until')
 - `main_jobhostsummary` (READ) - Filtered by `modified` timestamp
 - `main_unifiedjob` (READ) - JOIN for `job_created`
 - `main_jobevent` (READ) - **PARTITIONED TABLE** - Joined via `job_created` and `job_id`
-
-**Partition Information**:
-- ✅ **`main_jobevent` is PARTITIONED** by `job_created` (hourly partitions)
-- **Partition Key**: `job_created` (TIMESTAMPTZ)
 
 **Query Pattern**:
 ```sql
@@ -278,14 +172,6 @@ WHERE e.event IN ('runner_on_ok', 'runner_on_failed', ...)
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `main_jobhostsummary.modified` timestamp
 
-**Partition Pruning**:
-- ⚠️ **Limited partition pruning** - Uses JOIN on `job_created` which may not enable optimal partition pruning
-- PostgreSQL may need to scan multiple partitions if the JOIN condition doesn't match partition boundaries exactly
-
-**Frequency**:
-- Run per collection window (typically daily)
-- **Note**: This collector is less efficient than `main_jobevent_service` for partition pruning
-
 **Recommendation**: Prefer `main_jobevent_service` over this collector for better partition pruning.
 
 ---
@@ -305,9 +191,6 @@ WHERE e.event IN ('runner_on_ok', 'runner_on_failed', ...)
 - `main_organization` (READ) - LEFT JOIN
 - `main_unifiedjobtemplate` (READ) - LEFT JOIN
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-
 **Query Pattern**:
 ```sql
 SELECT mjs.*, mu.*, mi.*, mo.*, ...
@@ -318,9 +201,6 @@ WHERE mjs.modified >= 'since' AND mjs.modified < 'until'
 **Time Range Support**:
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `main_jobhostsummary.modified` timestamp
-
-**Frequency**:
-- Run per collection window (typically daily)
 
 **Recommendation**: Prefer `job_host_summary_service` which filters by job `finished` timestamp for better alignment with job completion times.
 
@@ -336,9 +216,6 @@ WHERE mjs.modified >= 'since' AND mjs.modified < 'until'
 - `conf_setting` (READ) - Filtered by `key` IN (...)
 - `main_instance` (READ) - To get Controller version
 
-**Partition Information**:
-- ❌ **Not partitioned** (both tables are non-partitioned)
-
 **Query Pattern**:
 ```sql
 SELECT key, value FROM conf_setting WHERE key IN ('AUTHENTICATION_BACKENDS', 'INSTALL_UUID', ...)
@@ -349,9 +226,6 @@ SELECT version FROM main_instance WHERE enabled = true AND version IS NOT NULL O
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
 - Collects current configuration state
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -367,9 +241,6 @@ SELECT version FROM main_instance WHERE enabled = true AND version IS NOT NULL O
 - `main_organization` (READ) - LEFT JOIN
 - `main_unifiedjob` (READ) - LEFT JOIN for `last_job_id`
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-
 **Query Pattern**:
 ```sql
 SELECT main_host.*, main_inventory.*, main_organization.*, ...
@@ -380,9 +251,6 @@ WHERE enabled='t'
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
 - Collects all enabled hosts
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -398,9 +266,6 @@ WHERE enabled='t'
 - `main_organization` (READ) - LEFT JOIN
 - `main_unifiedjob` (READ) - LEFT JOIN
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-
 **Query Pattern**:
 ```sql
 SELECT main_host.*, ...
@@ -413,9 +278,6 @@ WHERE enabled='t'
 **Time Range Support**:
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `created` OR `modified` timestamp
-
-**Frequency**:
-- Run per collection window (typically daily)
 
 ---
 
@@ -433,9 +295,6 @@ WHERE enabled='t'
 - `main_organization` (READ) - LEFT JOIN
 - `main_unifiedjobtemplate` (READ) - LEFT JOIN
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-
 **Query Pattern**:
 ```sql
 SELECT main_indirectmanagednodeaudit.*, ...
@@ -448,9 +307,6 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `created` timestamp
 
-**Frequency**:
-- Run per collection window (typically daily)
-
 ---
 
 ### 11. `config_django`
@@ -462,14 +318,8 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 **Tables Accessed**:
 - None (uses AWX Django APIs directly)
 
-**Partition Information**:
-- ❌ **Not partitioned** (no direct DB queries)
-
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -482,14 +332,8 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 **Tables Accessed**:
 - `main_instance` (READ)
 
-**Partition Information**:
-- ❌ **Not partitioned**
-
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -505,15 +349,9 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `main_credential` (READ)
 - `main_credentialtype` (READ)
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-
 **Time Range Support**:
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.finished` timestamp
-
-**Frequency**:
-- Run per collection window (typically daily)
 
 ---
 
@@ -526,14 +364,8 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 **Tables Accessed**:
 - `dab_feature_flags_aapflag` (READ)
 
-**Partition Information**:
-- ❌ **Not partitioned**
-
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -546,14 +378,8 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 **Tables Accessed**:
 - PostgreSQL system tables (`pg_class`, `pg_inherits`, etc.) for metadata about `main_jobevent`, `main_unifiedjob`, `main_jobhostsummary`
 
-**Partition Information**:
-- ❌ **Not partitioned** (reads system catalog metadata)
-
 **Time Range Support**:
 - ❌ Does not support `since`/`until` parameters
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
 
 ---
 
@@ -566,15 +392,9 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 **Tables Accessed**:
 - `tasks_taskexecution` (READ, from metrics-service database)
 
-**Partition Information**:
-- ❌ **Not partitioned**
-
 **Time Range Support**:
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `started_at` timestamp
-
-**Frequency**:
-- Run per collection window (typically daily)
 
 ---
 
@@ -593,15 +413,9 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `main_unifiedjob_labels` (READ)
 - `main_jobhostsummary` (READ)
 
-**Partition Information**:
-- ❌ **Not partitioned** (all tables are non-partitioned)
-
 **Time Range Support**:
 - ✅ **Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.modified` timestamp
-
-**Frequency**:
-- Run per collection window (typically daily)
 
 ---
 
@@ -614,97 +428,30 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 **Tables Accessed**:
 - None (queries Prometheus HTTP API, not database)
 
-**Partition Information**:
-- ❌ **Not partitioned** (no DB queries)
-
 **Time Range Support**:
 - ❌ Automatically queries previous hour
-
-**Frequency**:
-- Typically run once per collection cycle (daily)
-
----
-
-## Partition Pruning Strategies
-
-### How Partition Pruning Works
-
-PostgreSQL can **prune partitions** (skip scanning irrelevant partitions) when:
-1. The WHERE clause contains **literal values** (not joins or functions) on the partition key
-2. The partition key column is used in range conditions (`>=`, `<`, `BETWEEN`)
-3. The query planner can statically determine which partitions to scan
-
-### Collector Partition Pruning Comparison
-
-| Collector | Partitioned Table | Partition Pruning Strategy | Efficiency |
-|-----------|-------------------|---------------------------|-------------|
-| `main_jobevent_service` | `main_jobevent` | ✅ **Optimal** - Uses literal timestamp ranges in WHERE clause | **High** - Accesses only relevant hourly partitions |
-| `main_jobevent` (legacy) | `main_jobevent` | ⚠️ **Limited** - Uses JOIN on `job_created` | **Medium** - May scan more partitions than necessary |
-
-### Best Practices for Partition-Aware Collectors
-
-1. **Use literal timestamp values** in WHERE clauses (not joins)
-2. **Group consecutive hours** into ranges to reduce OR clauses
-3. **Filter by partition key** (`job_created`) AND other filters (`job_id`, `event`)
-4. **Prefer `main_jobevent_service`** over `main_jobevent` for better partition pruning
-
----
-
-## Performance Considerations
-
-### Partition Access Frequency
-
-For a typical daily collection window (e.g., last 24 hours):
-
-| Collector | Partitioned Tables | Estimated Partitions Accessed |
-|-----------|-------------------|------------------------------|
-| `main_jobevent_service` | `main_jobevent` | **24 partitions** (one per hour) |
-| `main_jobevent` (legacy) | `main_jobevent` | **24-48 partitions** (may scan more due to JOIN) |
-
-### Index Usage
-
-All collectors leverage indexes where available:
-- `main_unifiedjob.finished` - Used by `job_host_summary_service` and `main_jobevent_service`
-- `main_unifiedjob.created` - Used by `unified_jobs` and `main_jobevent_service`
-- `main_jobhostsummary.job_id` - Used by `job_host_summary_service`
-- `main_jobhostsummary.modified` - Used by legacy collectors
-
-### Query Optimization Tips
-
-1. **Use service collectors** (`*_service.py`) over legacy collectors for better partition pruning
-2. **Narrow time windows** when possible to reduce partition scans
-3. **Monitor partition pruning** using `EXPLAIN ANALYZE` to verify only relevant partitions are scanned
-4. **Consider partition maintenance** - Ensure partitions exist for the time range being queried
 
 ---
 
 ## Summary Table
 
-| Collector | Tables | Partitioned? | Partition Key | Time Range Support | Recommended Usage |
-|-----------|--------|---------------|---------------|-------------------|-------------------|
-| `execution_environments` | `main_executionenvironment` | ❌ | N/A | ❌ | Daily snapshot |
-| `job_host_summary_service` | `main_unifiedjob`, `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization` | ❌ | N/A | ✅ | ✅ **Preferred** |
-| `main_jobevent_service` | `main_unifiedjob`, `main_jobevent` | ✅ | `job_created` (hourly) | ✅ | ✅ **Preferred** |
-| `unified_jobs` | `main_unifiedjob`, `main_unifiedjobtemplate`, `django_content_type`, `main_job`, `main_inventory`, `main_organization`, `main_executionenvironment` | ❌ | N/A | ✅ | ✅ **Preferred** |
-| `main_jobevent` (legacy) | `main_jobhostsummary`, `main_jobevent` | ✅ | `job_created` (hourly) | ✅ | ⚠️ Legacy |
-| `job_host_summary` (legacy) | `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ✅ | ⚠️ Legacy |
-| `config` | `conf_setting`, `main_instance` | ❌ | N/A | ❌ | Daily snapshot |
-| `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ❌ | Daily snapshot |
-| `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ✅ | Incremental |
-| `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | ❌ | N/A | ✅ | Incremental |
-| `config_django` | (AWX Django APIs) | ❌ | N/A | ❌ | Daily snapshot |
-| `controller_version_service` | `main_instance` | ❌ | N/A | ❌ | Daily snapshot |
-| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | ❌ | N/A | ✅ | Incremental |
-| `feature_flags_service` | `dab_feature_flags_aapflag` | ❌ | N/A | ❌ | Daily snapshot |
-| `table_metadata` | (PostgreSQL system tables) | ❌ | N/A | ❌ | Daily snapshot |
-| `task_executions_service` | `tasks_taskexecution` (metrics-service DB) | ❌ | N/A | ✅ | Incremental |
-| `dashboard_jobs` | `main_unifiedjob`, `main_job`, `main_unifiedjobtemplate`, `auth_user`, `main_project`, `main_unifiedjob_labels`, `main_jobhostsummary` | ❌ | N/A | ✅ | Incremental |
-| `total_workers_vcpu` | (Prometheus API) | ❌ | N/A | ❌ | Daily snapshot |
-
----
-
-## References
-
-- PostgreSQL Partition Pruning: https://www.postgresql.org/docs/current/ddl-partitioning.html#DDL-PARTITION-PRUNING
-- Collector Source Code: `metrics_utility/library/collectors/controller/`
-- Partition Schema: `tools/docker/latest.sql`
+| Collector | Tables | Partitioned? | Time Range | Usage |
+|-----------|--------|:---:|:---:|---|
+| `execution_environments` | `main_executionenvironment` | | | Daily snapshot |
+| `job_host_summary_service` | `main_unifiedjob`, `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization` | | ✅ | **Preferred** |
+| `main_jobevent_service` | `main_unifiedjob`, `main_jobevent` | ✅ | ✅ | **Preferred** |
+| `unified_jobs` | `main_unifiedjob`, `main_unifiedjobtemplate`, `django_content_type`, `main_job`, `main_inventory`, `main_organization`, `main_executionenvironment` | | ✅ | **Preferred** |
+| `main_jobevent` (legacy) | `main_jobhostsummary`, `main_jobevent` | ✅ | ✅ | Legacy |
+| `job_host_summary` (legacy) | `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization`, `main_unifiedjob` | | ✅ | Legacy |
+| `config` | `conf_setting`, `main_instance` | | | Daily snapshot |
+| `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | | Daily snapshot |
+| `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | ✅ | Incremental |
+| `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | | ✅ | Incremental |
+| `config_django` | (AWX Django APIs) | | | Daily snapshot |
+| `controller_version_service` | `main_instance` | | | Daily snapshot |
+| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | | ✅ | Incremental |
+| `feature_flags_service` | `dab_feature_flags_aapflag` | | | Daily snapshot |
+| `table_metadata` | (PostgreSQL system tables) | | | Daily snapshot |
+| `task_executions_service` | `tasks_taskexecution` (metrics-service DB) | | ✅ | Incremental |
+| `dashboard_jobs` | `main_unifiedjob`, `main_job`, `main_unifiedjobtemplate`, `auth_user`, `main_project`, `main_unifiedjob_labels`, `main_jobhostsummary` | | ✅ | Incremental |
+| `total_workers_vcpu` | (Prometheus API) | | | Daily snapshot |

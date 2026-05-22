@@ -1,64 +1,11 @@
-# AAP metrics-utility
+# AAP metrics-utility - usage examples
 
-The AAP metrics utility tool is a standalone CLI utility called `metrics-utility` which is intended to be installed to
-the system containing instance of the [Automation Controller](https://www.ansible.com/products/controller).
-It's an alternative command line tool for the Controller's CLI `awx-manage`.
-
-## Installation
-
-### Run from source
-
-Run as awx user, to have the python virtual env available:
-
-```shell
-cd ~
-git clone https://github.com/ansible/metrics-utility.git (or fetch the latest upstream commits)
-cd metrics-utility
-
-# Activate Automation Controller's Python virtual environment
-. /var/lib/awx/venv/awx/bin/activate
-
-# Install the dependecies
-pip install .
-
-# Set ENV VARs
-export METRICS_UTILITY_SHIP_TARGET=directory
-export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
-
-# Run the gather command
-python manage.py gather_automation_controller_billing_data --ship --until=10m
-```
+Pre-0.5 README, kept for additional usage examples. See [cli.md](./cli.md) for current CLI docs.
 
 
-### From GitHub repository
+## Available storage adapters
 
-Install as a root user (running this on older Controller envs can result in package conflicts):
-
-```shell
-# Download to any folder
-cd ~
-git clone https://github.com/ansible/metrics-utility.git
-
-# Activate Automation Controller's Python virtual environment
-. /var/lib/awx/venv/awx/bin/activate
-
-# Install the utility
-cd metrics-utility
-pip install .
-# Successfully installed metrics-utility
-
-which metrics-utility
-# /var/lib/awx/venv/awx/bin/metrics-utility
-
-# Move to /usr/bin (like awx-manage)
-mv /var/lib/awx/venv/awx/bin/metrics-utility /usr/bin/
-```
-
-## Available functionality
-
-### Available storage adapters
-
-#### Local directory
+### Local directory
 
 Storing datasets under a local directory. With using PVC on OpenShift deployments.
 
@@ -68,7 +15,7 @@ export METRICS_UTILITY_SHIP_TARGET=directory
 export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
 ```
 
-#### Object storage with S3 interface
+### Object storage with S3 interface
 
 Object storage with S3 like interface
 
@@ -89,7 +36,7 @@ export METRICS_UTILITY_BUCKET_SECRET_KEY=<secret_key>
 ```
 
 
-### Local data gathering
+## Local data gathering
 
 Set a storage adapter and path first, pick one from [Available storage adapters](#available-storage-adapters)
 
@@ -99,7 +46,7 @@ metrics-utility gather_automation_controller_billing_data --ship --until=10m
 ```
 
 
-### Pushing data periodically into console.redhat.com
+## Pushing data periodically into console.redhat.com
 
 This command will push new data into console.redhat.com, it automatically stores the last collected interval and will collect
 up to 4 week long gap. The --until option collects the data until 10 minutes ago, to give time for fresh data to be inserted

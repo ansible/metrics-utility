@@ -90,7 +90,6 @@ services:
         rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
 
         cd /app/metrics-utility/
-        sed -i '/HOST/s/localhost/postgres/' mock_awx/settings/__init__.py
 
         pip install uv
         uv sync
