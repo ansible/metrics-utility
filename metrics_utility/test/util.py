@@ -8,7 +8,7 @@ import sys
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
@@ -42,6 +42,17 @@ def mock_copy_db(data_chunks):
     mock_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
     mock_copy.read.side_effect = [*data_chunks, None]
     return mock_db, mock_cursor
+
+
+def mock_http_response(json_data=None, *, status_code=200, text=None):
+    """Build a mock HTTP response with status_code and optional json/text."""
+    response = Mock()
+    response.status_code = status_code
+    if json_data is not None:
+        response.json.return_value = json_data
+    if text is not None:
+        response.text = text
+    return response
 
 
 @contextmanager

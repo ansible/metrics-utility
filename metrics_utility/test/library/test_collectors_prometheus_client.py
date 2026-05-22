@@ -1,8 +1,9 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from metrics_utility.library.collectors.others.total_workers_vcpu import PrometheusClient
+from metrics_utility.test.util import mock_http_response
 
 
 def test_prometheus_client_init_basic():
@@ -54,13 +55,12 @@ def test_prometheus_client_headers():
 @patch('requests.Session.get')
 def test_query_success(mock_get):
     """Test successful Prometheus query."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        'status': 'success',
-        'data': {'result': [{'metric': {}, 'value': [1234567890, '42']}]},
-    }
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response(
+        {
+            'status': 'success',
+            'data': {'result': [{'metric': {}, 'value': [1234567890, '42']}]},
+        }
+    )
 
     client = PrometheusClient(url='http://localhost:9090')
     result = client.query('up')
@@ -72,10 +72,7 @@ def test_query_success(mock_get):
 @patch('requests.Session.get')
 def test_query_with_time_param(mock_get):
     """Test Prometheus query with time parameter."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     result = client.query('up', time_param=1234567890.5)
@@ -89,10 +86,7 @@ def test_query_with_time_param(mock_get):
 @patch('requests.Session.get')
 def test_query_http_error(mock_get):
     """Test query handling of HTTP errors."""
-    mock_response = Mock()
-    mock_response.status_code = 500
-    mock_response.text = 'Internal Server Error'
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response(status_code=500, text='Internal Server Error')
 
     client = PrometheusClient(url='http://localhost:9090')
 
@@ -103,10 +97,7 @@ def test_query_http_error(mock_get):
 @patch('requests.Session.get')
 def test_query_prometheus_api_error(mock_get):
     """Test query handling of Prometheus API errors."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'error', 'error': 'Query timeout'}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'error', 'error': 'Query timeout'})
 
     client = PrometheusClient(url='http://localhost:9090')
 
@@ -117,16 +108,15 @@ def test_query_prometheus_api_error(mock_get):
 @patch('requests.Session.get')
 def test_query_range_success(mock_get):
     """Test successful Prometheus range query."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        'status': 'success',
-        'data': {
-            'resultType': 'matrix',
-            'result': [{'metric': {}, 'values': [[1234567890, '10'], [1234567900, '20']]}],
-        },
-    }
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response(
+        {
+            'status': 'success',
+            'data': {
+                'resultType': 'matrix',
+                'result': [{'metric': {}, 'values': [[1234567890, '10'], [1234567900, '20']]}],
+            },
+        }
+    )
 
     client = PrometheusClient(url='http://localhost:9090')
     result = client.query_range('up', start_time=1234567890, end_time=1234568000)
@@ -139,10 +129,7 @@ def test_query_range_success(mock_get):
 @patch('requests.Session.get')
 def test_query_range_with_custom_step(mock_get):
     """Test range query with custom step parameter."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     client.query_range('up', start_time=1000, end_time=2000, step='1m')
@@ -155,10 +142,7 @@ def test_query_range_with_custom_step(mock_get):
 @patch('requests.Session.get')
 def test_query_range_default_step(mock_get):
     """Test that range query uses default step of 5m."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     client.query_range('up', start_time=1000, end_time=2000)
@@ -171,13 +155,12 @@ def test_query_range_default_step(mock_get):
 @patch('requests.Session.get')
 def test_get_current_value_success(mock_get):
     """Test get_current_value with successful query."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        'status': 'success',
-        'data': {'result': [{'metric': {}, 'value': [1234567890, '42.5']}]},
-    }
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response(
+        {
+            'status': 'success',
+            'data': {'result': [{'metric': {}, 'value': [1234567890, '42.5']}]},
+        }
+    )
 
     client = PrometheusClient(url='http://localhost:9090')
     value = client.get_current_value('up')
@@ -189,10 +172,7 @@ def test_get_current_value_success(mock_get):
 @patch('requests.Session.get')
 def test_get_current_value_empty_result(mock_get):
     """Test get_current_value when query returns empty result."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     value = client.get_current_value('up')
@@ -203,13 +183,12 @@ def test_get_current_value_empty_result(mock_get):
 @patch('requests.Session.get')
 def test_get_current_value_integer(mock_get):
     """Test get_current_value with integer value."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        'status': 'success',
-        'data': {'result': [{'metric': {}, 'value': [1234567890, '100']}]},
-    }
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response(
+        {
+            'status': 'success',
+            'data': {'result': [{'metric': {}, 'value': [1234567890, '100']}]},
+        }
+    )
 
     client = PrometheusClient(url='http://localhost:9090')
     value = client.get_current_value('metric_total')
@@ -221,10 +200,7 @@ def test_get_current_value_integer(mock_get):
 @patch('requests.Session.get')
 def test_query_url_construction(mock_get):
     """Test that query constructs correct URL."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     client.query('up')
@@ -237,10 +213,7 @@ def test_query_url_construction(mock_get):
 @patch('requests.Session.get')
 def test_query_range_url_construction(mock_get):
     """Test that query_range constructs correct URL."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     client.query_range('up', start_time=1000, end_time=2000)
@@ -253,10 +226,7 @@ def test_query_range_url_construction(mock_get):
 @patch('requests.Session.get')
 def test_query_timeout_parameter(mock_get):
     """Test that timeout is passed to requests."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090', timeout=45)
     client.query('up')
@@ -269,10 +239,7 @@ def test_query_timeout_parameter(mock_get):
 @patch('requests.Session.get')
 def test_query_with_complex_promql(mock_get):
     """Test query with complex PromQL expression."""
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
-    mock_get.return_value = mock_response
+    mock_get.return_value = mock_http_response({'status': 'success', 'data': {'result': []}})
 
     client = PrometheusClient(url='http://localhost:9090')
     complex_query = 'rate(http_requests_total{job="api"}[5m])'
