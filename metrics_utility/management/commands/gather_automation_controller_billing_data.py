@@ -25,6 +25,7 @@ VALID_COLLECTORS = {
     # main_jobevent is on by default when METRICS_UTILITY_OPTIONAL_COLLECTORS is not set
     'main_host',
     'main_host_daily',
+    'main_hostmetric',
     'main_indirectmanagednodeaudit',
     'main_jobevent',
     ## vcpu

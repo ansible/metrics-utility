@@ -15,6 +15,7 @@ from metrics_utility.library.collectors.controller.feature_flags_service import 
 from metrics_utility.library.collectors.controller.job_host_summary import job_host_summary
 from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
 from metrics_utility.library.collectors.controller.main_host import main_host, main_host_daily
+from metrics_utility.library.collectors.controller.main_hostmetric import main_hostmetric
 from metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
 from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
@@ -80,6 +81,15 @@ def cli_main_host_daily(since, until, output):
         raise CollectorDisabled('main_host_daily')
 
     collector = main_host_daily(db=connection, since=since, until=until)
+    return output.as_files(collector)
+
+
+@register('main_hostmetric', '1.0', output_format='csv', slicing=daily_slicing)
+def cli_main_hostmetric(since, until, output):
+    if 'main_hostmetric' not in get_optional_collectors():
+        raise CollectorDisabled('main_hostmetric')
+
+    collector = main_hostmetric(db=connection, since=since, until=until)
     return output.as_files(collector)
 
 

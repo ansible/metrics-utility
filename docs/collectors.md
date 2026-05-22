@@ -433,6 +433,35 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 
 ---
 
+### 19. `main_hostmetric`
+
+**File**: `metrics_utility/library/collectors/controller/main_hostmetric.py`
+
+**Purpose**: Collects host metric data (automation history, deletion status) joined with host facts. Used by the Renewal Guidance report.
+
+**Tables Accessed**:
+- `main_hostmetric` (READ) - Filtered by `last_automation` timestamp
+- `main_host` (READ) - LEFT JOIN for host variables and ansible facts
+
+**Query Pattern**:
+```sql
+SELECT main_hostmetric.hostname, COALESCE(main_host.id, 0) AS host_id,
+       main_hostmetric.first_automation, main_hostmetric.last_automation,
+       main_hostmetric.automated_counter, main_hostmetric.deleted_counter,
+       main_hostmetric.last_deleted, main_hostmetric.deleted,
+       main_host.ansible_facts->>'ansible_product_serial', ...
+FROM main_hostmetric
+LEFT JOIN main_host ON main_host.name = main_hostmetric.hostname
+WHERE main_hostmetric.last_automation >= 'since' AND main_hostmetric.last_automation < 'until'
+ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
+```
+
+**Time Range Support**:
+- ✅ **Supports `since`/`until` parameters**
+- Filters by `main_hostmetric.last_automation` timestamp
+
+---
+
 ## Summary Table
 
 | Collector | Tables | Partitioned? | Time Range | Usage |
@@ -446,6 +475,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 | `config` | `conf_setting`, `main_instance` | | | Daily snapshot |
 | `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | | Daily snapshot |
 | `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | ✅ | Incremental |
+| `main_hostmetric` | `main_hostmetric`, `main_host` | | ✅ | Renewal Guidance |
 | `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | | ✅ | Incremental |
 | `config_django` | (AWX Django APIs) | | | Daily snapshot |
 | `controller_version_service` | `main_instance` | | | Daily snapshot |
