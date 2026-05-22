@@ -1,8 +1,6 @@
-from unittest.mock import patch
-
 import pytest
 
-from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.exceptions import MissingRequiredEnvVar
 from metrics_utility.test.util import run_gather_int
 
 
@@ -15,28 +13,17 @@ unset = {
 }
 
 
-@patch('metrics_utility.management.commands.gather_automation_controller_billing_data.handle_env_validation')
-def expect_gather_error(env, klass, mocked):
-    mocked.return_value = env.get('METRICS_UTILITY_SHIP_TARGET')
-
-    with pytest.raises(klass) as e:
+def test_gather_bad_target():
+    with pytest.raises(MissingRequiredEnvVar) as e:
         run_gather_int(
-            {**unset, **env},
+            {
+                'METRICS_UTILITY_SHIP_TARGET': 'controller_db',
+            },
             {
                 'dry-run': True,
             },
         )
-    return e.value
-
-
-def test_gather_bad_target():
-    e = expect_gather_error(
-        {
-            'METRICS_UTILITY_SHIP_TARGET': 'controller_db',
-        },
-        BadShipTarget,
-    )
-    assert e.name == 'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var (controller_db), allowed values: crc, directory, s3'
+    assert 'Invalid METRICS_UTILITY_SHIP_TARGET: controller_db' in e.value.name
 
 
 def test_gather_crc(caplog):
@@ -56,13 +43,17 @@ def test_gather_crc(caplog):
 
 
 def test_gather_directory():
-    e = expect_gather_error(
-        {
-            'METRICS_UTILITY_SHIP_TARGET': 'directory',
-        },
-        MissingRequiredEnvVar,
-    )
-    assert e.name == 'Missing required env variable METRICS_UTILITY_SHIP_PATH - place for collected data'
+    with pytest.raises(MissingRequiredEnvVar) as e:
+        run_gather_int(
+            {
+                **unset,
+                'METRICS_UTILITY_SHIP_TARGET': 'directory',
+            },
+            {
+                'dry-run': True,
+            },
+        )
+    assert e.value.name == 'Missing required env variable METRICS_UTILITY_SHIP_PATH - place for collected data'
 
     run_gather_int(
         {
@@ -77,14 +68,18 @@ def test_gather_directory():
 
 
 def test_gather_s3():
-    e = expect_gather_error(
-        {
-            'METRICS_UTILITY_SHIP_TARGET': 's3',
-        },
-        MissingRequiredEnvVar,
-    )
+    with pytest.raises(MissingRequiredEnvVar) as e:
+        run_gather_int(
+            {
+                **unset,
+                'METRICS_UTILITY_SHIP_TARGET': 's3',
+            },
+            {
+                'dry-run': True,
+            },
+        )
     assert (
-        e.name == 'Missing some required env variables for S3 configuration, namely: '
+        e.value.name == 'Missing some required env variables for S3 configuration, namely: '
         'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, '
         'METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, '
         'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, '

@@ -3,7 +3,7 @@
 import pytest
 
 from metrics_utility.exceptions import MissingRequiredEnvVar
-from metrics_utility.management.validation import handle_crc_ship_target
+from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
 
 def test_handle_crc_ship_target_aws_billing_params(monkeypatch):
@@ -11,7 +11,7 @@ def test_handle_crc_ship_target_aws_billing_params(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
     monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
     monkeypatch.setenv('METRICS_UTILITY_RED_HAT_ORG_ID', '99900001')
-    config_params, ship_params = handle_crc_ship_target()
+    config_params, ship_params = Command._read_crc_env()
     assert config_params == {
         'billing_provider': 'aws',
         'billing_account_id': '123456789012',
@@ -25,4 +25,4 @@ def test_handle_crc_ship_target_aws_requires_billing_account_id(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
     monkeypatch.delenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', raising=False)
     with pytest.raises(MissingRequiredEnvVar, match='METRICS_UTILITY_BILLING_ACCOUNT_ID'):
-        handle_crc_ship_target()
+        Command._read_crc_env()
