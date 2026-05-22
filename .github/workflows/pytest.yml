@@ -86,9 +86,15 @@ jobs:
           sed -i '/USER/s/myuser/awx/' mock_awx/settings/__init__.py
           sed -i '/PASSWORD/s/mypassword/awx/' mock_awx/settings/__init__.py
 
+      - name: "Set up Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/mock-segment-server/go.mod
+
       - name: "Start mock Segment server"
         run: |
-          python tools/mock_segment_server.py &
+          go build -o /tmp/mock-segment-server ./tools/mock-segment-server/
+          /tmp/mock-segment-server &
           until curl -sf http://localhost:8765/requests > /dev/null; do sleep 1; done
 
       - name: "Run pytest"
