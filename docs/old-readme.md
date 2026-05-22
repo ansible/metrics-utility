@@ -12,7 +12,7 @@ Storing datasets under a local directory. With using PVC on OpenShift deployment
 ```
 # Set needed ENV VARs for data gathering
 export METRICS_UTILITY_SHIP_TARGET=directory
-export METRICS_UTILITY_SHIP_PATH=/awx_devel/awx-dev/metrics-utility/shipped_data/billing
+export METRICS_UTILITY_SHIP_PATH=/path/to/gathered/data
 ```
 
 ### Object storage with S3 interface
@@ -22,7 +22,7 @@ Object storage with S3 like interface
 ```
 # Set needed ENV VARs for data gathering
 export METRICS_UTILITY_SHIP_TARGET=s3
-export METRICS_UTILITY_SHIP_PATH=metrics-utility/shipped_data
+export METRICS_UTILITY_SHIP_PATH=metrics-utility/gathered-data
 
 # Define S3 config
 export METRICS_UTILITY_BUCKET_NAME=metrics-utility

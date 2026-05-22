@@ -3,36 +3,31 @@ import os
 
 from datetime import datetime
 
-import pytest
-
 from metrics_utility.test.util import run_gather_ext
 
 
-env_vars = {
-    'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
-    'METRICS_UTILITY_SHIP_TARGET': 'directory',
-    'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': '3',
-}
-
 uuid = '00000000-0000-0000-0000-000000000000'  # mock_awx INSTALL_UUID setting
 
-file_glob = f'./metrics_utility/test/test_data/data/*/*/*/{uuid}-*.tar.gz'
+
+def make_env(ship_path):
+    return {
+        'METRICS_UTILITY_SHIP_PATH': ship_path,
+        'METRICS_UTILITY_SHIP_TARGET': 'directory',
+        'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': '3',
+    }
+
+
+def make_glob(ship_path):
+    return f'{ship_path}/data/*/*/*/{uuid}-*.tar.gz'
 
 
 def validate_exists(file_glob):
     assert len(glob.glob(file_glob)) > 0
 
 
-@pytest.fixture
-def cleanup_glob():
-    yield
-    for file in glob.glob(file_glob):
-        os.remove(file)
-
-
-def test_larger_range(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-05'])
-    validate_exists(file_glob)
+def test_larger_range(ship_path):
+    result = run_gather_ext(make_env(ship_path), ['--ship', '--since=2024-01-01', '--until=2024-01-05'])
+    validate_exists(make_glob(ship_path))
 
     text = result.stderr + '\n' + result.stdout
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-05 00:00:00+00:00' in text
@@ -40,22 +35,21 @@ def test_larger_range(cleanup_glob):
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
 
 
-def test_smaller_range(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
-    validate_exists(file_glob)
+def test_smaller_range(ship_path):
+    result = run_gather_ext(make_env(ship_path), ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
+    validate_exists(make_glob(ship_path))
 
     text = result.stderr + '\n' + result.stdout
     assert 'Original since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-03 00:00:00+00:00' in text
 
 
-# test that it gathers only one file host scope optional collectors
-def test_only_host_scope(cleanup_glob):
-    new_env_vars = env_vars.copy()
-    new_env_vars['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_host'
-    new_env_vars['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '1'
+def test_only_host_scope(ship_path):
+    env = make_env(ship_path)
+    env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_host'
+    env['METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS'] = '1'
 
-    result = run_gather_ext(new_env_vars, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
+    result = run_gather_ext(env, ['--ship', '--since=2024-01-01', '--until=2024-01-03'])
 
     text = result.stderr + '\n' + result.stdout
 
@@ -76,7 +70,7 @@ def test_only_host_scope(cleanup_glob):
     day = f'{day:02d}'
 
     tarball = (
-        f'./metrics_utility/test/test_data/data/{year}/{month}/{day}/'
+        f'{ship_path}/data/{year}/{month}/{day}/'
         f'00000000-0000-0000-0000-000000000000-'
         f'{year}-{month}-{day}-235959+0000-'
         f'{year}-{month}-{day}-235959+0000-0-main_host.tar.gz'
@@ -85,18 +79,18 @@ def test_only_host_scope(cleanup_glob):
     assert os.path.exists(tarball)
 
 
-def test_since_only(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01'])
-    validate_exists(file_glob)
+def test_since_only(ship_path):
+    result = run_gather_ext(make_env(ship_path), ['--ship', '--since=2024-01-01'])
+    validate_exists(make_glob(ship_path))
 
     text = result.stderr + '\n' + result.stdout
     assert 'End of the collection interval set to 2024-01-04 00:00:00+00:00.' in text
     assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
 
 
-def test_no_since_no_until(cleanup_glob):
-    result = run_gather_ext(env_vars, ['--ship'])
-    validate_exists(file_glob)
+def test_no_since_no_until(ship_path):
+    result = run_gather_ext(make_env(ship_path), ['--ship'])
+    validate_exists(make_glob(ship_path))
 
     text = result.stderr + '\n' + result.stdout
     assert 'End of the collection interval set to ' in text

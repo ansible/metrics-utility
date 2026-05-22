@@ -1,6 +1,5 @@
 import csv
 import glob
-import os
 
 import pytest
 
@@ -8,15 +7,18 @@ from metrics_utility.test.gather.support.helpers import read_tarball
 from metrics_utility.test.util import _print_comparison, run_gather_ext
 
 
-env_vars = {
-    'METRICS_UTILITY_SHIP_PATH': './out',
-    'METRICS_UTILITY_SHIP_TARGET': 'directory',
-}
-
-# where to find the tar.gz (match jobhostsummary test layout)
 uuid = '00000000-0000-0000-0000-000000000000'
-file_glob = f'./out/*/{uuid}-*.tar.gz'
-file_paths = f'./out/data/2025/06/13/{uuid}-*.tar.gz'
+
+
+def make_env(ship_path):
+    return {
+        'METRICS_UTILITY_SHIP_PATH': ship_path,
+        'METRICS_UTILITY_SHIP_TARGET': 'directory',
+    }
+
+
+def make_paths(ship_path):
+    return f'{ship_path}/data/2025/06/13/{uuid}-*.tar.gz'
 
 
 def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_columns_names):
@@ -69,15 +71,6 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
     pytest.fail(f'{csv_filename} not found in any tarballs.')
 
 
-@pytest.fixture
-def cleanup_glob():
-    for file in glob.glob(file_glob):
-        os.remove(file)
-    yield
-    for file in glob.glob(file_glob):
-        os.remove(file)
-
-
 execution_environments_lines = [
     'id,created,modified,description,image,managed,created_by_id,credential_id,modified_by_id,organization_id,name,pull',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
@@ -99,15 +92,12 @@ execution_environments_skip_columns = [
 ]
 
 
-def test_execution_environments_command(cleanup_glob):
+def test_execution_environments_command(ship_path):
     """Build and validate execution_environments.csv contents in the generated tarball."""
-    # prepare env
-
-    test_env = env_vars.copy()
+    test_env = make_env(ship_path)
     test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
     test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'execution_environments'
 
-    # run the gather command
-    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-12', '--until=2025-06-14'])
+    run_gather_ext(test_env, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
-    validate_csv_in_tarballs(file_paths, 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)
+    validate_csv_in_tarballs(make_paths(ship_path), 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)

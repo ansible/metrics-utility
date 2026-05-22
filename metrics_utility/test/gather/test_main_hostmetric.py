@@ -1,21 +1,22 @@
 import csv
 import glob
-import os
-
-import pytest
 
 from metrics_utility.test.gather.support.helpers import read_tarball
 from metrics_utility.test.util import _print_comparison, run_gather_ext
 
 
-env_vars = {
-    'METRICS_UTILITY_SHIP_PATH': './out',
-    'METRICS_UTILITY_SHIP_TARGET': 'directory',
-}
-
 uuid = '00000000-0000-0000-0000-000000000000'
-file_glob = f'./out/*/{uuid}-*.tar.gz'
-file_paths = f'./out/data/2025/06/*/{uuid}-*.tar.gz'
+
+
+def make_env(ship_path):
+    return {
+        'METRICS_UTILITY_SHIP_PATH': ship_path,
+        'METRICS_UTILITY_SHIP_TARGET': 'directory',
+    }
+
+
+def make_paths(ship_path):
+    return f'{ship_path}/data/2025/06/*/{uuid}-*.tar.gz'
 
 
 def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_columns_names):
@@ -64,15 +65,6 @@ def validate_csv_in_tarballs(file_paths, csv_filename, expected_lines, skip_colu
             )
 
 
-@pytest.fixture
-def cleanup_glob():
-    for file in glob.glob(file_glob):
-        os.remove(file)
-    yield
-    for file in glob.glob(file_glob):
-        os.remove(file)
-
-
 main_hostmetric_lines = [
     (
         'hostname,host_id,first_automation,last_automation,automated_counter,'
@@ -99,11 +91,11 @@ main_hostmetric_skip_columns = [
 ]
 
 
-def test_main_hostmetric_command(cleanup_glob):
-    test_env = env_vars.copy()
+def test_main_hostmetric_command(ship_path):
+    test_env = make_env(ship_path)
     test_env['METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'] = 'true'
     test_env['METRICS_UTILITY_OPTIONAL_COLLECTORS'] = 'main_hostmetric'
 
-    run_gather_ext(test_env, ['--ship', '--force', '--since=2025-06-06', '--until=2025-06-13'])
+    run_gather_ext(test_env, ['--ship', '--since=2025-06-06', '--until=2025-06-13'])
 
-    validate_csv_in_tarballs(file_paths, 'main_hostmetric.csv', main_hostmetric_lines, main_hostmetric_skip_columns)
+    validate_csv_in_tarballs(make_paths(ship_path), 'main_hostmetric.csv', main_hostmetric_lines, main_hostmetric_skip_columns)
