@@ -2,7 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from metrics_utility.library.collectors.controller.main_host import main_host
+from metrics_utility.library.collectors.controller.main_host import main_host, main_host_daily
+from metrics_utility.test.util import utcdt
 
 
 def test_main_host_basic():
@@ -88,3 +89,25 @@ def test_main_host_uses_yaml_json_functions(mock_copy_pandas):
     # Should use helper functions for parsing YAML/JSON
     assert 'metrics_utility_is_valid_json' in query
     assert 'metrics_utility_parse_yaml_field' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_host_daily_basic(mock_copy_pandas):
+    """Test main_host_daily collector with since/until."""
+    mock_db = MagicMock()
+    mock_copy_pandas.return_value = pd.DataFrame()
+
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
+
+    instance = main_host_daily(db=mock_db, since=since, until=until)
+    result = instance.gather()
+
+    mock_copy_pandas.assert_called_once()
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
+
+    assert "enabled='t'" in query
+    assert 'main_host.created' in query
+    assert 'main_host.modified' in query
+    assert isinstance(result, pd.DataFrame)

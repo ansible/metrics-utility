@@ -169,7 +169,7 @@ class Collector:
         # case to know whether to use the bookkeeping settings variables to decide the start of
         # the interval.
         horizon = until - _timedelta
-        if since is not None and since < horizon:
+        if since is not None and since < horizon:  # pragma: no cover — prior clamping ensures since >= horizon
             since = horizon
             logger.warning(f'Start of the collection interval is more than {_max} days prior to {until}, setting to {horizon}.')
 

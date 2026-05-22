@@ -26,10 +26,11 @@ def test_parse_date_param():
         assert parse_date_param('2mo') == utcdt('2023-12-29')
         assert parse_date_param('3m') == utcdt('2024-02-29T13:56:00')
 
-    # ensure timezone
+    # ensure timezone (including bare zoneless datetime)
     assert parse_date_param('2mo').tzinfo == timezone.utc
     assert parse_date_param('3m').tzinfo == timezone.utc
     assert parse_date_param('2024-01-01').tzinfo == timezone.utc
+    assert parse_date_param('2024-01-01T12:00:00').tzinfo == timezone.utc
 
     # bare number invalid
     with pytest.raises(MetricsException):

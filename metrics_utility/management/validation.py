@@ -55,8 +55,4 @@ def parse_date_param(value, help_texts=None, name=None):
     except Exception as e:
         raise UnparsableParameter(f'{str(e)}: {help_text}')
 
-    # Set timezone to UTC when missing
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
-
     return parsed

@@ -153,6 +153,32 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pan
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_jobevent_service_null_job_created(mock_copy_pandas):
+    """Test that jobs with NULL job_created are skipped in hour boundary calculation."""
+    mock_db, mock_cursor = mock_cursor_db()
+
+    job_created = utcdt('2024-01-15T10:30:00')
+    mock_cursor.fetchall.return_value = [(100, job_created), (200, None)]
+    mock_copy_pandas.return_value = pd.DataFrame()
+
+    since = utcdt('2024-01-01')
+    until = utcdt('2024-02-01')
+
+    instance = main_jobevent_service(db=mock_db, since=since, until=until)
+    instance.gather()
+
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
+
+    # Both job IDs should be in the IN clause
+    assert '100' in query
+    assert '200' in query
+
+    # Only job 100's hour boundary should appear (job 200 has NULL created)
+    assert '2024-01-15T10:00:00+00:00' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
     """Test that initial jobs query uses correct parameters."""
     mock_db, mock_cursor = mock_cursor_db()

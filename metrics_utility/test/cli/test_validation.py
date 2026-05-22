@@ -98,6 +98,14 @@ def test_validate_ship_target_gather_invalid():
     assert 'Invalid METRICS_UTILITY_SHIP_TARGET' in e.name
 
 
+def test_validate_ship_target_empty():
+    env = {**CLEAN_ENV, 'METRICS_UTILITY_SHIP_TARGET': None}
+    with temporary_env(env):
+        with pytest.raises(MissingRequiredEnvVar) as exc:
+            Command()._read_env()
+        assert 'METRICS_UTILITY_SHIP_TARGET is empty' in exc.value.name
+
+
 def test_validate_ship_path_empty_raises():
     with temporary_env(CLEAN_ENV):
         with pytest.raises(MissingRequiredEnvVar) as excinfo:

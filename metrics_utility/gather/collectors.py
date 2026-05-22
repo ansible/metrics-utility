@@ -29,7 +29,7 @@ from metrics_utility.logger import logger
 
 try:
     from psycopg.errors import UndefinedTable
-except ImportError:
+except ImportError:  # pragma: no cover
 
     class UndefinedTable(Exception):
         pass
