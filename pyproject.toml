@@ -7,16 +7,16 @@ name = "metrics-utility"
 version = "0.8.0dev"
 description = "A metrics utility for Ansible"
 dependencies = [
-    "boto3==1.35.96",
-    "botocore==1.35.96",
-    "distro==1.9.0",
-    "django==5.2.7",
-    "kubernetes>=33.1.0",
-    "pandas>=2.2.3",
-    "psycopg==3.3.0",
-    "requests==2.32.5",
-    "segment-analytics-python>=2.3.4",
-    "setuptools==80.9.0",
+    "boto3~=1.35.96",
+    "botocore~=1.35.96",
+    "distro~=1.9.0",
+    "django~=5.2.7",
+    "kubernetes>=33.1.0",  # ~= can't express cross-major compat (33, 35, ...)
+    "pandas~=2.3",
+    "psycopg~=3.3.0",
+    "requests~=2.32.5",
+    "segment-analytics-python~=2.3.4",
+    "setuptools~=80.9.0",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -49,11 +49,10 @@ Changelog = "https://github.com/ansible/metrics-utility/blob/devel/CHANGELOG.md"
 
 [dependency-groups]
 dev = [
-
-    "pytest-cov>=6.0.0",
-    "pytest-mock>=3.14.0",
-    "pytest>=8.3.4",
-    "ruff>=0.9.2",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.15.1",
+    "pytest>=9.0.3",
+    "ruff>=0.15.14",
 ]
 
 # Do not uncomment the line below. setuptools_scm would override the version above.
