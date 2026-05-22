@@ -92,6 +92,7 @@ jobs:
           go-version-file: tools/mock-segment-server/go.mod
 
       - name: "Start mock Segment server"
+        timeout-minutes: 1
         run: |
           go build -C tools/mock-segment-server -o /tmp/mock-segment-server .
           /tmp/mock-segment-server &
