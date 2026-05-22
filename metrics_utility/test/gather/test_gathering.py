@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-import metrics_utility.test.gather.support.collector_module
+import metrics_utility.test.gather.support.collector_module1
 import metrics_utility.test.gather.support.collector_module2
 import metrics_utility.test.gather.support.collector_module3
 
@@ -19,7 +19,7 @@ COMMON_FILES = ['./config.json', './data_collection_status.csv', './manifest.jso
 @pytest.fixture
 def collector(mocker):
     collector = AnalyticsCollector(
-        collector_module=metrics_utility.test.gather.support.collector_module,
+        collector_module=metrics_utility.test.gather.support.collector_module1,
         collection_type=AnalyticsCollector.DRY_RUN,
     )
 
