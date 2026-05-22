@@ -1075,33 +1075,18 @@ def test_from_gather_to_json(cleanup_glob):
     with urllib.request.urlopen(f'{MOCK_SEGMENT_URL}/requests') as resp:
         captured = json.loads(resp.read())
 
-    assert len(captured) == len(chunks), (
-        f'Mock Segment server received {len(captured)} POST requests '
-        f'but expected {len(chunks)} (one per chunk)'
-    )
+    assert len(captured) == len(chunks), f'Mock Segment server received {len(captured)} POST requests but expected {len(chunks)} (one per chunk)'
 
     for i, req in enumerate(captured, 1):
         batch = req['body']['batch']
-        assert len(batch) == 1, (
-            f'Request {i}: expected 1 event per POST (sync_mode), got {len(batch)}'
-        )
+        assert len(batch) == 1, f'Request {i}: expected 1 event per POST (sync_mode), got {len(batch)}'
         event = batch[0]
         props = event['properties']
 
-        assert event['event'] == 'Metrics Artifact Upload', (
-            f'Request {i}: unexpected event name {event["event"]!r}'
-        )
-        assert props['artifact_name'] == 'anonymized_rollup', (
-            f'Request {i}: unexpected artifact_name {props["artifact_name"]!r}'
-        )
-        assert props['chunk_info']['total_chunks'] == len(chunks), (
-            f'Request {i}: total_chunks mismatch'
-        )
-        assert props['chunk_info']['chunk_number'] == i, (
-            f'Request {i}: chunk_number should be {i}, got {props["chunk_info"]["chunk_number"]}'
-        )
-        assert props['chunk_info']['chunk_size'] > 0, (
-            f'Request {i}: chunk_size should be positive'
-        )
+        assert event['event'] == 'Metrics Artifact Upload', f'Request {i}: unexpected event name {event["event"]!r}'
+        assert props['artifact_name'] == 'anonymized_rollup', f'Request {i}: unexpected artifact_name {props["artifact_name"]!r}'
+        assert props['chunk_info']['total_chunks'] == len(chunks), f'Request {i}: total_chunks mismatch'
+        assert props['chunk_info']['chunk_number'] == i, f'Request {i}: chunk_number should be {i}, got {props["chunk_info"]["chunk_number"]}'
+        assert props['chunk_info']['chunk_size'] > 0, f'Request {i}: chunk_size should be positive'
 
     print(f'✅ Segment: {len(chunks)} chunk(s) received and validated.')
