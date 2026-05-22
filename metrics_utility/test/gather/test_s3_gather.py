@@ -5,6 +5,9 @@ import pytest
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
+pytestmark = pytest.mark.filterwarnings('ignore:datetime.datetime.utcnow:DeprecationWarning:botocore')
+
+
 env_vars = {
     'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'myuseraccesskey',
     'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000'),  # or http://minio:9000

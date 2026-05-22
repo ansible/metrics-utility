@@ -69,7 +69,7 @@ def config_django(*, billing_provider_params={}, output=DictOutput()):
             'controller_version': get_awx_version(),
             'metrics_utility_version': _version('metrics-utility'),
             'platform': {
-                'dist': distro.linux_distribution(),
+                'dist': (distro.name(), distro.version(), distro.codename()),
                 'release': platform.release(),
                 'system': platform.system(),
                 'type': _get_install_type(),

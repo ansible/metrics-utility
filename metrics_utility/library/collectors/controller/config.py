@@ -84,7 +84,7 @@ def config(*, db=None, billing_provider_params={}, output=DictOutput()):
             'controller_version': _get_controller_version(db) or _version('awx'),
             'metrics_utility_version': _version('metrics-utility'),  # version from setup.cfg
             'platform': {
-                'dist': distro.linux_distribution(),
+                'dist': (distro.name(), distro.version(), distro.codename()),
                 'release': platform.release(),
                 'system': platform.system(),
                 'type': _get_install_type(),
