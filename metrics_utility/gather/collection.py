@@ -6,6 +6,7 @@ import tarfile
 
 from django.utils.timezone import now, timedelta
 
+from metrics_utility.exceptions import CollectorDisabled
 from metrics_utility.gather.utils import get_max_gather_period_days
 from metrics_utility.library.collectors.util import CollectionOutput
 from metrics_utility.logger import logger
@@ -34,6 +35,7 @@ class Collection:
         self.gathering_started_at = None
         self.gathering_finished_at = None
         self.gathering_successful = None
+        self.disabled = False
         self.last_gathered_entry = self.collector.last_gathered_entry_for(self.key)
 
         self.gather_kwargs = {}
@@ -95,6 +97,9 @@ class Collection:
             self._save_gathering(result)
 
             self.gathering_successful = True
+        except CollectorDisabled:
+            self.disabled = True
+            self.gathering_successful = False
         except Exception as e:
             logger.exception(f'Could not generate metric {self.filename}: {e}')
             self.gathering_successful = False

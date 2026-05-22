@@ -4,7 +4,7 @@ import os
 from django.db import connection
 from django.db.utils import ProgrammingError
 
-from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.exceptions import CollectorDisabled, MetricsException, MissingRequiredEnvVar
 from metrics_utility.gather.decorators import register
 from metrics_utility.gather.slicing import daily_slicing, until_slicing
 from metrics_utility.gather.utils import bool_from_env, get_optional_collectors
@@ -59,7 +59,7 @@ Some collectors will use them, others will not.
 def cli_job_host_summary(since, until, output):
     # enabled by default, disable using METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR=true
     if bool_from_env('METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR'):
-        return None
+        raise CollectorDisabled('job_host_summary')
 
     collector = job_host_summary(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -68,7 +68,7 @@ def cli_job_host_summary(since, until, output):
 @register('main_host', '1.0', output_format='csv', slicing=until_slicing)
 def cli_main_host(since, until, output):
     if 'main_host' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('main_host')
 
     collector = main_host(db=connection)
     return output.as_files(collector)
@@ -77,7 +77,7 @@ def cli_main_host(since, until, output):
 @register('main_host_daily', '1.0', output_format='csv', slicing=daily_slicing)
 def cli_main_host_daily(since, until, output):
     if 'main_host_daily' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('main_host_daily')
 
     collector = main_host_daily(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -86,7 +86,7 @@ def cli_main_host_daily(since, until, output):
 @register('main_indirectmanagednodeaudit', '1.0', output_format='csv', slicing=daily_slicing)
 def cli_main_indirectmanagednodeaudit(since, until, output):
     if 'main_indirectmanagednodeaudit' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('main_indirectmanagednodeaudit')
 
     # the table does not exist in 2.4, may be 2.6+
     try:
@@ -104,7 +104,7 @@ def cli_main_indirectmanagednodeaudit(since, until, output):
 @register('main_jobevent', '1.0', output_format='csv', slicing=daily_slicing)
 def cli_main_jobevent(since, until, output):
     if 'main_jobevent' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('main_jobevent')
 
     collector = main_jobevent(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -116,7 +116,7 @@ def cli_main_jobevent(since, until, output):
 @register('total_workers_vcpu', '1.0', output_format='json', slicing=until_slicing)
 def cli_total_workers_vcpu(since, until, output):
     if 'total_workers_vcpu' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('total_workers_vcpu')
 
     cluster_name = os.getenv('METRICS_UTILITY_CLUSTER_NAME')
     prometheus_url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
@@ -193,7 +193,7 @@ def cli_total_workers_vcpu(since, until, output):
 @register('controller_version_service', '1.4', output_format='csv', slicing=until_slicing)
 def cli_controller_version_service(since, until, output):
     if 'controller_version_service' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('controller_version_service')
 
     collector = controller_version_service(db=connection)
     return output.as_files(collector)
@@ -202,7 +202,7 @@ def cli_controller_version_service(since, until, output):
 @register('credentials_service', '1.4', output_format='csv', slicing=daily_slicing)
 def cli_credentials_service(since, until, output):
     if 'credentials_service' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('credentials_service')
 
     collector = credentials_service(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -211,7 +211,7 @@ def cli_credentials_service(since, until, output):
 @register('execution_environments', '1.4', output_format='csv', slicing=until_slicing)
 def cli_execution_environments(since, until, output):
     if 'execution_environments' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('execution_environments')
 
     collector = execution_environments(db=connection)
     return output.as_files(collector)
@@ -220,7 +220,7 @@ def cli_execution_environments(since, until, output):
 @register('job_host_summary_service', '1.4', output_format='csv', slicing=daily_slicing)
 def cli_job_host_summary_service(since, until, output):
     if 'job_host_summary_service' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('job_host_summary_service')
 
     collector = job_host_summary_service(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -229,7 +229,7 @@ def cli_job_host_summary_service(since, until, output):
 @register('main_jobevent_service', '1.4', output_format='csv', slicing=daily_slicing)
 def cli_main_jobevent_service(since, until, output):
     if 'main_jobevent_service' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('main_jobevent_service')
 
     collector = main_jobevent_service(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -238,7 +238,7 @@ def cli_main_jobevent_service(since, until, output):
 @register('table_metadata', '1.4', output_format='csv', slicing=until_slicing)
 def cli_table_metadata(since, until, output):
     if 'table_metadata' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('table_metadata')
 
     collector = table_metadata(db=connection)
     return output.as_files(collector)
@@ -247,7 +247,7 @@ def cli_table_metadata(since, until, output):
 @register('unified_jobs', '1.4', output_format='csv', slicing=daily_slicing)
 def cli_unified_jobs(since, until, output):
     if 'unified_jobs' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('unified_jobs')
 
     collector = unified_jobs(db=connection, since=since, until=until)
     return output.as_files(collector)
@@ -256,7 +256,7 @@ def cli_unified_jobs(since, until, output):
 @register('feature_flags_service', '1.4', output_format='csv', slicing=until_slicing)
 def cli_feature_flags_service(since, until, output):
     if 'feature_flags_service' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('feature_flags_service')
 
     collector = feature_flags_service(db=connection)
     return output.as_files(collector)
@@ -265,7 +265,7 @@ def cli_feature_flags_service(since, until, output):
 @register('dashboard_jobs', '1.0', output_format='json', slicing=daily_slicing)
 def cli_dashboard_jobs(since, until, output):
     if 'dashboard_jobs' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('dashboard_jobs')
 
     collector = dashboard_jobs(db=connection, since=since, until=until)
     return output.dict(collector.gather())
@@ -274,7 +274,7 @@ def cli_dashboard_jobs(since, until, output):
 @register('task_executions_service', '1.0', output_format='csv', slicing=daily_slicing)
 def cli_task_executions_service(since, until, output):
     if 'task_executions_service' not in get_optional_collectors():
-        return None
+        raise CollectorDisabled('task_executions_service')
 
     collector = task_executions_service(db=connection, since=since, until=until)
     return output.as_files(collector)

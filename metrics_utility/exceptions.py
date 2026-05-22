@@ -31,6 +31,12 @@ class NoAnalyticsCollected(MetricsException):
     pass
 
 
+class CollectorDisabled(MetricsException):
+    """Raised when a collector is not enabled in the current configuration."""
+
+    pass
+
+
 class UnparsableParameter(MetricsException):
     """Raised when a CLI parameter value cannot be parsed into the expected type."""
 

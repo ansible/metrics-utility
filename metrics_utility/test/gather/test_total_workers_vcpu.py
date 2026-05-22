@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
+from metrics_utility.exceptions import CollectorDisabled, MetricsException, MissingRequiredEnvVar
 from metrics_utility.gather.collectors import cli_total_workers_vcpu
 from metrics_utility.library.collectors.util import DictOutput
 from metrics_utility.test.util import temporary_env
@@ -11,12 +11,12 @@ from metrics_utility.test.util import temporary_env
 class TestTotalWorkersVcpu:
     """Test suite for the cli_total_workers_vcpu collector function."""
 
-    def test_returns_none_when_not_in_optional_collectors(self):
-        """Test that the function returns None when total_workers_vcpu is not in optional collectors."""
+    def test_raises_disabled_when_not_in_optional_collectors(self):
+        """Test that the function raises CollectorDisabled when total_workers_vcpu is not in optional collectors."""
         with patch('metrics_utility.gather.collectors.get_optional_collectors') as mock_get:
             mock_get.return_value = []
-            result = cli_total_workers_vcpu(None, None, DictOutput())
-            assert result is None
+            with pytest.raises(CollectorDisabled):
+                cli_total_workers_vcpu(None, None, DictOutput())
 
     def test_raises_missing_required_env_var_when_cluster_name_not_set(self):
         """Test that the function raises MissingRequiredEnvVar when METRICS_UTILITY_CLUSTER_NAME is not set."""

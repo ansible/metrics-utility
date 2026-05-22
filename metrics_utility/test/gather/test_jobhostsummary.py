@@ -158,7 +158,7 @@ def test_job_host_summary_disabled_by_env_var(cleanup_glob):
     rg = run_gather_ext(disabled_env_vars, ['--ship', '--since=2025-06-12', '--until=2025-06-14'])
 
     assert 'Progress info: Now gathering job_host_summary' in rg.stderr
-    assert 'Progress info: Skipping job_host_summary' in rg.stderr
+    assert 'Progress info: Disabled job_host_summary' in rg.stderr
 
     assert find_csv_in_tarballs(file_paths, 'job_host_summary.csv') is None, (
         'job_host_summary.csv should not be generated when collector is disabled.'
@@ -240,7 +240,8 @@ def main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', tra
 
         # Capture the status
         collection_name = getattr(self, 'filename', 'unknown')
-        collection_statuses[collection_name] = self.gathering_successful
+        if not self.disabled:
+            collection_statuses[collection_name] = self.gathering_successful
 
         return result
 
@@ -257,7 +258,10 @@ def main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', tra
 
     # Check collection statuses
     print('\nCollection statuses:')
-    expected_collections = {'job_host_summary.csv', 'main_jobevent.csv', 'main_host.csv'}
+    collector_list = [c.strip() for c in collectors.split(',') if c.strip()]
+    expected_collections = {'job_host_summary.csv'}
+    for c in collector_list:
+        expected_collections.add(f'{c}.csv')
     errors_found = []
 
     for collection_name, status in collection_statuses.items():

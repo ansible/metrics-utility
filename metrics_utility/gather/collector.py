@@ -129,9 +129,12 @@ class Collector:
     #
     def _calculate_collection_interval(self, since, until):
         _now = now()
+        _max = get_max_gather_period_days()
+        _timedelta = timedelta(days=_max)
+
         original_since = since
         original_until = until
-        logger.warning(f'Original since-until: {original_since} to {original_until}')
+        logger.info(f'Original since-until: {original_since} to {original_until}')
 
         # Make sure that the endpoints are not in the future.
         if until is not None and until > _now:
@@ -146,15 +149,15 @@ class Collector:
         # `since` parameter.
         if since is not None:
             if until is not None:
-                if until > since + timedelta(days=get_max_gather_period_days()):
-                    until = since + timedelta(days=get_max_gather_period_days())
-                    logger.warning(
-                        f'End of the collection interval is greater than {get_max_gather_period_days()} days from start, setting end to {until}.'
-                    )
+                if until > since + _timedelta:
+                    until = since + _timedelta
+                    logger.warning(f'End of the collection interval is greater than {_max} days from start, setting end to {until}.')
             else:  # until is None
-                until = min(since + timedelta(days=get_max_gather_period_days()), _now)
+                until = min(since + _timedelta, _now)
+                logger.info(f'End of the collection interval set to {until}.')
         elif until is None:
             until = _now
+            logger.info(f'End of the collection interval set to {until}.')
 
         # ensure since = until is valid and will not collect any data with timestamps
         if since and since > until:
@@ -165,18 +168,16 @@ class Collector:
         # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
         # case to know whether to use the bookkeeping settings variables to decide the start of
         # the interval.
-        horizon = until - timedelta(days=get_max_gather_period_days())
+        horizon = until - _timedelta
         if since is not None and since < horizon:
             since = horizon
-            logger.warning(
-                f'Start of the collection interval is more than {get_max_gather_period_days()} days prior to {until}, setting to {horizon}.'
-            )
+            logger.warning(f'Start of the collection interval is more than {_max} days prior to {until}, setting to {horizon}.')
 
         self.gather_since = since
         self.gather_until = until
         self.last_gather = horizon
 
-        logger.warning(f'Final since-until: {since} to {until}')
+        logger.info(f'Final since-until: {since or horizon} to {until}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
@@ -251,6 +252,7 @@ class Collector:
         """
 
         last_key = None
+        logged_status = set()
 
         for collection in self.collections['csv']:
             if last_key != collection.key:
@@ -259,8 +261,22 @@ class Collector:
 
             collection.gather()
 
-            if collection.is_empty() or not collection.gathering_successful:
-                logger.warning(f'Progress info: Skipping {collection.key}')
+            if collection.disabled:
+                if collection.key not in logged_status:
+                    logger.warning(f'Progress info: Disabled {collection.key}')
+                    logged_status.add(collection.key)
+                continue
+
+            if not collection.gathering_successful:
+                if collection.key not in logged_status:
+                    logger.warning(f'Progress info: Failed {collection.key}')
+                    logged_status.add(collection.key)
+                continue
+
+            if collection.is_empty():
+                if collection.key not in logged_status:
+                    logger.warning(f'Progress info: No data for {collection.key}')
+                    logged_status.add(collection.key)
                 continue
 
             # If collection has sub_collections (it means it collected more files)

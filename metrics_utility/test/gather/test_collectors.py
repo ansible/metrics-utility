@@ -1,7 +1,10 @@
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
+
 from django.db.utils import ProgrammingError
 
+from metrics_utility.exceptions import CollectorDisabled
 from metrics_utility.gather.collectors import (
     cli_main_indirectmanagednodeaudit,
 )
@@ -39,15 +42,11 @@ class TestMainIndirectManagedNodeAuditTable:
 
     @patch('metrics_utility.gather.collectors.get_optional_collectors')
     def test_main_indirectmanagednodeaudit_table_not_in_optional_collectors(self, mock_get_optional_collectors):
-        """Test returns None when collector is not in optional collectors"""
-        # Setup
+        """Test raises CollectorDisabled when collector is not in optional collectors"""
         mock_get_optional_collectors.return_value = {'other_collector'}
 
-        # Execute (output not used since function returns early)
-        result = cli_main_indirectmanagednodeaudit(since=None, until=None, output=None)
-
-        # Assert
-        assert result is None
+        with pytest.raises(CollectorDisabled):
+            cli_main_indirectmanagednodeaudit(since=None, until=None, output=None)
 
     @patch('metrics_utility.gather.collectors.logger')
     @patch('metrics_utility.gather.collectors.main_indirectmanagednodeaudit')

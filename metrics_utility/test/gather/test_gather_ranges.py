@@ -83,3 +83,22 @@ def test_only_host_scope(cleanup_glob):
     )
 
     assert os.path.exists(tarball)
+
+
+def test_since_only(cleanup_glob):
+    result = run_gather_ext(env_vars, ['--ship', '--since=2024-01-01'])
+    validate_exists(file_glob)
+
+    text = result.stderr + '\n' + result.stdout
+    assert 'End of the collection interval set to 2024-01-04 00:00:00+00:00.' in text
+    assert 'Final since-until: 2024-01-01 00:00:00+00:00 to 2024-01-04 00:00:00+00:00' in text
+
+
+def test_no_since_no_until(cleanup_glob):
+    result = run_gather_ext(env_vars, ['--ship'])
+    validate_exists(file_glob)
+
+    text = result.stderr + '\n' + result.stdout
+    assert 'End of the collection interval set to ' in text
+    assert 'Final since-until: ' in text
+    assert 'Final since-until: None' not in text
