@@ -1,4 +1,5 @@
 import datetime
+import shutil
 
 import pytest
 
@@ -26,7 +27,8 @@ def collector(mocker):
 
     yield collector
 
-    collector._gather_cleanup()
+    if collector.tmp_dir:
+        shutil.rmtree(collector.tmp_dir, ignore_errors=True)
 
 
 def test_slices_by_date(collector):

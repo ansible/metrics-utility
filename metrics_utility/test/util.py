@@ -2,6 +2,7 @@
 
 import csv
 import os
+import shutil
 import subprocess
 import sys
 
@@ -96,7 +97,12 @@ def run_gather_int(env, options):
     from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 
     with temporary_env(env):
-        Command().handle(**options)
+        try:
+            cmd = Command()
+            cmd.handle(**options)
+        finally:
+            if cmd and getattr(cmd, 'collector', None) and cmd.collector.tmp_dir:
+                shutil.rmtree(cmd.collector.tmp_dir, ignore_errors=True)
 
 
 def _parse_expected_csv(expected_lines):

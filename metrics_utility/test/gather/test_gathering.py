@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 
 from unittest.mock import patch
 
@@ -25,7 +26,8 @@ def collector(mocker):
 
     yield collector
 
-    collector._gather_cleanup()
+    if collector.tmp_dir:
+        shutil.rmtree(collector.tmp_dir, ignore_errors=True)
 
 
 def test_missing_config(mocker, collector):

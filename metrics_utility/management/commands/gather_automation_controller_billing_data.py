@@ -142,6 +142,8 @@ class Command(BaseCommand):
             collection_type=Collector.MANUAL_COLLECTION if options.get('ship') else Collector.DRY_RUN,
             ship_target=ship_target,
         )
+        # expose for test cleanup of tmp_dir
+        self.collector = collector
 
         tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params, ship_params=ship_params)
         if not tgzfiles:
