@@ -1,8 +1,7 @@
 """Test analytics collector stub used by functional tests."""
 
-from base.classes.package import Package
-
 from metrics_utility.gather.collector import Collector
+from metrics_utility.test.gather.support.package import Package
 
 
 class AnalyticsCollector(Collector):

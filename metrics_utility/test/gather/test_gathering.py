@@ -5,12 +5,12 @@ from unittest.mock import patch
 
 import pytest
 
-import base.functional.collector_module
-import base.functional.collector_module2
-import base.functional.collector_module3
+import metrics_utility.test.gather.support.collector_module
+import metrics_utility.test.gather.support.collector_module2
+import metrics_utility.test.gather.support.collector_module3
 
-from base.classes.analytics_collector import AnalyticsCollector
-from base.functional.helpers import decode_csv_line, read_tarball
+from metrics_utility.test.gather.support.analytics_collector import AnalyticsCollector
+from metrics_utility.test.gather.support.helpers import decode_csv_line, read_tarball
 
 
 COMMON_FILES = ['./config.json', './data_collection_status.csv', './manifest.json']
@@ -19,7 +19,7 @@ COMMON_FILES = ['./config.json', './data_collection_status.csv', './manifest.jso
 @pytest.fixture
 def collector(mocker):
     collector = AnalyticsCollector(
-        collector_module=base.functional.collector_module,
+        collector_module=metrics_utility.test.gather.support.collector_module,
         collection_type=AnalyticsCollector.DRY_RUN,
     )
 
@@ -108,7 +108,7 @@ def test_one_csv_collection_splitted_by_size(collector):
 
 
 def test_multiple_collections_multiple_tarballs(mocker, collector):
-    mocker.patch('base.classes.package.Package.MAX_DATA_SIZE', 1000)
+    mocker.patch('metrics_utility.test.gather.support.package.Package.MAX_DATA_SIZE', 1000)
 
     tgz_files = collector.gather(subset=['config', 'big_table_2', 'csv_collection_1', 'csv_collection_2'])
 
@@ -130,7 +130,7 @@ def test_multiple_collections_and_distributions(collector):
     - CSVs with no slicing start at index 0
     - CSVs with slicing start after index next to previous slice
     """
-    collector.collector_module = base.functional.collector_module3
+    collector.collector_module = metrics_utility.test.gather.support.collector_module3
     tgz_files = collector.gather()
 
     assert len(tgz_files) == 13
@@ -165,7 +165,7 @@ def test_multiple_collections_and_distributions(collector):
 
 
 def test_manifest_and_status(collector):
-    collector.collector_module = base.functional.collector_module2
+    collector.collector_module = metrics_utility.test.gather.support.collector_module2
     tgz_files = collector.gather()
 
     assert len(tgz_files) == 1

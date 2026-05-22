@@ -4,10 +4,10 @@ import pytest
 
 from django.utils.timezone import now, timedelta
 
-import base.functional.collector_module4_slicing
+import metrics_utility.test.gather.support.collector_module4_slicing
 
-from base.classes.analytics_collector import AnalyticsCollector
-from base.functional.helpers import decode_csv_line, read_tarball
+from metrics_utility.test.gather.support.analytics_collector import AnalyticsCollector
+from metrics_utility.test.gather.support.helpers import decode_csv_line, read_tarball
 
 
 COMMON_FILES = ['./config.json', './data_collection_status.csv', './manifest.json']
@@ -20,7 +20,7 @@ def collector(mocker):
     It's designed to use non-trivial slicing functions
     """
     collector = AnalyticsCollector(
-        collector_module=base.functional.collector_module4_slicing,
+        collector_module=metrics_utility.test.gather.support.collector_module4_slicing,
         collection_type=AnalyticsCollector.DRY_RUN,
     )
 

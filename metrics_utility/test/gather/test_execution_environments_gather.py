@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from metrics_utility.test.base.functional.helpers import read_tarball
+from metrics_utility.test.gather.support.helpers import read_tarball
 from metrics_utility.test.util import _print_comparison, run_gather_ext
 
 

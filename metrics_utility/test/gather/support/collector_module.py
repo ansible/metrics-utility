@@ -1,5 +1,5 @@
-from base.functional.helpers import simple_csv, trivial_slicing
 from metrics_utility.gather.decorators import register
+from metrics_utility.test.gather.support.helpers import simple_csv, trivial_slicing
 
 
 @register('config', '1.0')

@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from metrics_utility.gather.collection import Collection
-from metrics_utility.test.base.functional.helpers import read_tarball
+from metrics_utility.test.gather.support.helpers import read_tarball
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 

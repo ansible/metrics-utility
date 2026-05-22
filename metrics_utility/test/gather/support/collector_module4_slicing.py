@@ -1,9 +1,9 @@
-from base.functional.helpers import (
+from metrics_utility.gather.decorators import register
+from metrics_utility.test.gather.support.helpers import (
     TIMESTAMP_CSV_LINE_LENGTH,
     one_day_slicing,
     timestamp_csv,
 )
-from metrics_utility.gather.decorators import register
 
 
 @register('config', '1.0')
