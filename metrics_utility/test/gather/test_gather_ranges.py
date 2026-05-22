@@ -1,7 +1,7 @@
 import glob
 import os
 
-from metrics_utility.test.util import run_gather_ext, utcdt
+from metrics_utility.test.util import run_gather_ext
 
 
 uuid = '00000000-0000-0000-0000-000000000000'  # mock_awx INSTALL_UUID setting
@@ -59,20 +59,7 @@ def test_only_host_scope(ship_path):
     # Test uses --since=2024-01-01, --until=2024-01-03,
     # MAX_GATHER_PERIOD_DAYS=1 sets until to 2024-01-02,
     # then until_slicing uses 2024-01-02 - 1s
-    collection_date = utcdt('2024-01-01T23:59:59')
-    year = collection_date.year
-    month = collection_date.month
-    day = collection_date.day
-
-    month = f'{month:02d}'
-    day = f'{day:02d}'
-
-    tarball = (
-        f'{ship_path}/data/{year}/{month}/{day}/'
-        f'00000000-0000-0000-0000-000000000000-'
-        f'{year}-{month}-{day}-235959+0000-'
-        f'{year}-{month}-{day}-235959+0000-0-main_host.tar.gz'
-    )
+    tarball = f'{ship_path}/data/2024/01/01/00000000-0000-0000-0000-000000000000-2024-01-01-235959+0000-2024-01-01-235959+0000-0-main_host.tar.gz'
 
     assert os.path.exists(tarball)
 
