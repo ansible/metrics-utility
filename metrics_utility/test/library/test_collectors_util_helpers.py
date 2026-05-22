@@ -150,7 +150,7 @@ class TestCopyTableFiles:
 
             assert result == expected_files
 
-    def test_copy_query_format(self):
+    def test_copy_query_format(self, tmp_path):
         """Test that COPY query is formatted correctly."""
         mock_db = MagicMock()
         mock_cursor = MagicMock()
@@ -164,7 +164,7 @@ class TestCopyTableFiles:
         mock_copy.read.return_value = None
 
         query = 'SELECT id, name FROM users WHERE active = true'
-        _copy_table_files(mock_db, query, '/tmp/nowrites')
+        _copy_table_files(mock_db, query, str(tmp_path / 'out'))
 
         # Verify cursor.copy was called with correct COPY command
         copy_call_arg = mock_cursor.copy.call_args[0][0]
