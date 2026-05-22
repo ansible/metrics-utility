@@ -121,7 +121,11 @@ class Collection:
         if self.slicing:
             slices = self.slicing(self.key, last_gather, since=since, until=until)
         else:
-            slices = [(self._gather_since(), self.collector.gather_until)]
+            last_entry = max(
+                self.last_gathered_entry or self.collector.last_gather,
+                self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
+            )
+            slices = [(self.collector.gather_since or last_entry, self.collector.gather_until)]
 
         return slices
 
@@ -157,13 +161,6 @@ class Collection:
             updates_dict['keys'][key] = timestamp
         else:
             updates_dict['keys'][key] = max(previous, timestamp)
-
-    def _gather_since(self):
-        last_entry = max(
-            self.last_gathered_entry or self.collector.last_gather,
-            self.collector.gather_until - timedelta(days=get_max_gather_period_days()),
-        )
-        return self.collector.gather_since or last_entry
 
     def _save_gathering(self, data):
         if self.output_format == 'json':

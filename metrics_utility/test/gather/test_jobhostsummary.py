@@ -257,7 +257,6 @@ def main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', tra
         )
 
     # Check collection statuses
-    print('\nCollection statuses:')
     collector_list = [c.strip() for c in collectors.split(',') if c.strip()]
     expected_collections = {'job_host_summary.csv'}
     for c in collector_list:
@@ -265,9 +264,6 @@ def main_host_collection(cleanup_glob, collectors='main_jobevent,main_host', tra
     errors_found = []
 
     for collection_name, status in collection_statuses.items():
-        status_str = 'ok' if status else 'failed'
-        print(f'  {collection_name}: {status_str}')
-
         if not status:
             errors_found.append(f"Collection '{collection_name}' failed")
 
