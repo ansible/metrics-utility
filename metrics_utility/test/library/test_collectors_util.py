@@ -96,12 +96,12 @@ def test_collector_decorator_returns_list():
     def file_collector(*, output_dir):
         return [f'{output_dir}/file1.csv', f'{output_dir}/file2.csv']
 
-    instance = file_collector(output_dir='/tmp/test')
+    instance = file_collector(output_dir='/tmp/nowrites')
     result = instance.gather()
 
     assert isinstance(result, list)
     assert len(result) == 2
-    assert result[0] == '/tmp/test/file1.csv'
+    assert result[0] == '/tmp/nowrites/file1.csv'
 
 
 def test_collector_decorator_staticmethod():

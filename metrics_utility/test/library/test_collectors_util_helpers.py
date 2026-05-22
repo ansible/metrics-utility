@@ -146,7 +146,7 @@ class TestCopyTableFiles:
             MockSplitter.return_value = mock_splitter_instance
             mock_splitter_instance.file_list.return_value = expected_files
 
-            result = _copy_table_files(mock_db, 'SELECT * FROM test', '/tmp/test')
+            result = _copy_table_files(mock_db, 'SELECT * FROM test', '/tmp/nowrites')
 
             assert result == expected_files
 
@@ -164,7 +164,7 @@ class TestCopyTableFiles:
         mock_copy.read.return_value = None
 
         query = 'SELECT id, name FROM users WHERE active = true'
-        _copy_table_files(mock_db, query, '/tmp/test')
+        _copy_table_files(mock_db, query, '/tmp/nowrites')
 
         # Verify cursor.copy was called with correct COPY command
         copy_call_arg = mock_cursor.copy.call_args[0][0]
@@ -188,7 +188,7 @@ class TestCopyTableFiles:
             MockSplitter.return_value = mock_splitter_instance
             mock_splitter_instance.file_list.return_value = []
 
-            _copy_table_files(mock_db, 'SELECT * FROM empty', '/tmp/test')
+            _copy_table_files(mock_db, 'SELECT * FROM empty', '/tmp/nowrites')
 
             # Verify keep_empty=True was passed
             mock_splitter_instance.file_list.assert_called_once_with(keep_empty=True)

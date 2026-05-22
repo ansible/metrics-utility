@@ -140,39 +140,39 @@ class TestCollectionOutput:
 
     def test_init_stores_full_path(self):
         """Test that __init__ stores full_path."""
-        test_path = '/tmp/test_path'
+        test_path = '/tmp/nowrites'
         output = CollectionOutput(test_path)
         assert output.full_path == test_path
 
     def test_dict_inherits_from_dictoutput(self):
         """Test that dict method inherits from DictOutput."""
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         test_dict = {'key': 'value'}
         result = output.dict(test_dict)
         assert result == test_dict
 
     def test_files_returns_valid_list(self):
         """Test that files method returns list unchanged."""
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         test_list = ['file1.csv', 'file2.csv']
         result = output.files(test_list)
         assert result == test_list
 
     def test_files_returns_none_for_none(self):
         """Test that files method returns None for None input."""
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         result = output.files(None)
         assert result is None
 
     def test_files_raises_for_dict(self):
         """Test that files method raises exception for dict input."""
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         with pytest.raises(Exception, match='filenames must be a list, or None'):
             output.files({'key': 'value'})
 
     def test_files_raises_for_string(self):
         """Test that files method raises exception for string input."""
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         with pytest.raises(Exception, match='filenames must be a list, or None'):
             output.files('string')
 
@@ -231,7 +231,7 @@ class TestCollectionOutput:
         mock_collector = MagicMock()
         mock_collector.gather.return_value = {'result': 'data'}
 
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         result = output.as_dict(mock_collector)
 
         mock_collector.gather.assert_called_once_with(output=output)
@@ -243,7 +243,7 @@ class TestCollectionOutput:
         test_data = {'key1': 'value1', 'key2': 'value2'}
         mock_collector.gather.return_value = test_data
 
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         result = output.as_dict(mock_collector)
 
         assert result == test_data
@@ -253,7 +253,7 @@ class TestCollectionOutput:
         mock_collector = MagicMock()
         mock_collector.gather.return_value = ['file1.csv', 'file2.csv']
 
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         result = output.as_files(mock_collector)
 
         mock_collector.gather.assert_called_once_with(output=output)
@@ -262,10 +262,10 @@ class TestCollectionOutput:
     def test_as_files_returns_list(self):
         """Test that as_files returns list from collector."""
         mock_collector = MagicMock()
-        test_files = ['/tmp/file1.csv', '/tmp/file2.csv', '/tmp/file3.csv']
+        test_files = ['/tmp/nowrites/file1.csv', '/tmp/nowrites/file2.csv', '/tmp/nowrites/file3.csv']
         mock_collector.gather.return_value = test_files
 
-        output = CollectionOutput('/tmp/test')
+        output = CollectionOutput('/tmp/nowrites')
         result = output.as_files(mock_collector)
 
         assert result == test_files
