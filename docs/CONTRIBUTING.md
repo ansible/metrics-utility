@@ -89,7 +89,6 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
 To ensure consistency and maintainability, a PR should meet the following criteria:
 
 - PR has a descriptive title & description
-  - for example by following the pull request template (`.github/pull_request_template.md`)
 - Code should be properly formatted and linted - either by `pre-commit` or using `make lint` and `make fix`
     - The make commands run `uv run ruff ...`
     - Review the essential linter settings in [`pyproject.toml`](../pyproject.toml) to ensure compliance.
