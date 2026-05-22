@@ -187,17 +187,16 @@ def ensure_functions(db):
 
 
 def _copy_table_files(db, query, filespec):
-    file = CsvFileSplitter(filespec=filespec)
+    with CsvFileSplitter(filespec=filespec) as file:
+        with db.cursor() as cursor:
+            copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
 
-    with db.cursor() as cursor:
-        copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
+            with cursor.copy(copy_query) as copy:
+                while data := copy.read():
+                    byte_data = bytes(data)
+                    file.write(byte_data.decode())
 
-        with cursor.copy(copy_query) as copy:
-            while data := copy.read():
-                byte_data = bytes(data)
-                file.write(byte_data.decode())
-
-    return file.file_list(keep_empty=True)
+        return file.file_list(keep_empty=True)
 
 
 def _copy_table_pandas(db, query):

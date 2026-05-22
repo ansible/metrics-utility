@@ -64,14 +64,13 @@ def csv_generator(full_path, file_name, files_cnt, max_data_size, header, line):
         List of generated file paths.
     """
     file_path = get_file_path(full_path, file_name)
-    file = CsvFileSplitter(filespec=file_path, max_file_size=max_data_size)
+    with CsvFileSplitter(filespec=file_path, max_file_size=max_data_size) as file:
+        # create required number of files (decrease by headers - it's CSV)
+        file.write(header)
+        for _ in range(files_cnt * int(max_data_size / len(line)) - files_cnt):
+            file.write(line)
 
-    # create required number of files (decrease by headers - it's CSV)
-    file.write(header)
-    for _ in range(files_cnt * int(max_data_size / len(line)) - files_cnt):
-        file.write(line)
-
-    return file.file_list()
+        return file.file_list()
 
 
 def simple_csv(full_path, file_name, files_cnt, max_data_size):

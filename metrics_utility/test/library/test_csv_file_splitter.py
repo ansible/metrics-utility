@@ -173,37 +173,35 @@ def test_counter_tracking():
     """Test that counter properly tracks bytes written."""
     with tempfile.TemporaryDirectory() as tmpdir:
         filespec = os.path.join(tmpdir, 'test.csv')
-        splitter = CsvFileSplitter(filespec=filespec, max_file_size=1000)
+        with CsvFileSplitter(filespec=filespec, max_file_size=1000) as splitter:
+            assert splitter.counter == 0
 
-        assert splitter.counter == 0
+            header = 'col1,col2\n'
+            splitter.write(header)
 
-        header = 'col1,col2\n'
-        splitter.write(header)
+            # Counter should reflect header size
+            assert splitter.counter == len(header)
 
-        # Counter should reflect header size
-        assert splitter.counter == len(header)
+            data = 'a,b\n'
+            splitter.write(data)
 
-        data = 'a,b\n'
-        splitter.write(data)
-
-        # Counter should include both header and data
-        assert splitter.counter == len(header) + len(data)
+            # Counter should include both header and data
+            assert splitter.counter == len(header) + len(data)
 
 
 def test_files_list_tracking():
     """Test that files list is properly maintained."""
     with tempfile.TemporaryDirectory() as tmpdir:
         filespec = os.path.join(tmpdir, 'test.csv')
-        splitter = CsvFileSplitter(filespec=filespec, max_file_size=30)
+        with CsvFileSplitter(filespec=filespec, max_file_size=30) as splitter:
+            splitter.write('header\n')
 
-        splitter.write('header\n')
+            # Initially 1 file
+            assert len(splitter.files) == 1
 
-        # Initially 1 file
-        assert len(splitter.files) == 1
+            # Write data to force splits
+            for i in range(5):
+                splitter.write(f'data{i}\n')
 
-        # Write data to force splits
-        for i in range(5):
-            splitter.write(f'data{i}\n')
-
-        # Should have multiple files tracked
-        assert len(splitter.files) > 1
+            # Should have multiple files tracked
+            assert len(splitter.files) > 1

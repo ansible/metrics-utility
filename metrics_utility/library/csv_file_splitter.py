@@ -31,6 +31,13 @@ class CsvFileSplitter(io.StringIO):
         if self.header:
             self.counter += self.currentfile.write('{}\n'.format(self.header))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        if self.currentfile and not self.currentfile.closed:
+            self.currentfile.close()
+
     def file_list(self, keep_empty=False):
         """Returns list of written files"""
         self.currentfile.close()

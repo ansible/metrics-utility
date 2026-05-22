@@ -115,7 +115,8 @@ class TestCopyTableFiles:
 
         with patch('metrics_utility.library.collectors.util.CsvFileSplitter') as MockSplitter:
             mock_splitter_instance = MagicMock()
-            MockSplitter.return_value = mock_splitter_instance
+            MockSplitter.return_value.__enter__ = MagicMock(return_value=mock_splitter_instance)
+            MockSplitter.return_value.__exit__ = MagicMock(return_value=False)
             mock_splitter_instance.file_list.return_value = ['file1.csv']
 
             filespec = str(tmp_path / 'test')
@@ -143,7 +144,8 @@ class TestCopyTableFiles:
         with patch('metrics_utility.library.collectors.util.CsvFileSplitter') as MockSplitter:
             expected_files = ['file1.csv', 'file2.csv', 'file3.csv']
             mock_splitter_instance = MagicMock()
-            MockSplitter.return_value = mock_splitter_instance
+            MockSplitter.return_value.__enter__ = MagicMock(return_value=mock_splitter_instance)
+            MockSplitter.return_value.__exit__ = MagicMock(return_value=False)
             mock_splitter_instance.file_list.return_value = expected_files
 
             result = _copy_table_files(mock_db, 'SELECT * FROM test', '/tmp/nowrites')
@@ -185,7 +187,8 @@ class TestCopyTableFiles:
 
         with patch('metrics_utility.library.collectors.util.CsvFileSplitter') as MockSplitter:
             mock_splitter_instance = MagicMock()
-            MockSplitter.return_value = mock_splitter_instance
+            MockSplitter.return_value.__enter__ = MagicMock(return_value=mock_splitter_instance)
+            MockSplitter.return_value.__exit__ = MagicMock(return_value=False)
             mock_splitter_instance.file_list.return_value = []
 
             _copy_table_files(mock_db, 'SELECT * FROM empty', '/tmp/nowrites')
