@@ -5,8 +5,8 @@ from datetime import date, datetime
 import pandas as pd
 import pytest
 
+from metrics_utility.gather.output import _copy_table_files
 from metrics_utility.library.collectors.util import (
-    _copy_table_files,
     _copy_table_pandas,
     date_where,
     ensure_functions,

@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-from metrics_utility.library.csv_file_splitter import CsvFileSplitter
+from metrics_utility.gather.csv_file_splitter import CsvFileSplitter
 
 
 def test_basic_write():

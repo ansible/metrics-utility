@@ -122,7 +122,7 @@ def test_cli_config_fallback_to_db_config():
     from unittest.mock import MagicMock
 
     from metrics_utility.gather.collector import cli_config
-    from metrics_utility.library.collectors.util import CollectionOutput
+    from metrics_utility.gather.output import CollectionOutput
 
     output = CollectionOutput('/tmp')
 
