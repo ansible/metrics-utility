@@ -151,7 +151,7 @@ class Package:
                 self.manifest_data[collection.filename] = collection.version
         except Exception as e:
             logger.exception(f'Could not generate metric {collection.filename}: {e}')
-            return None
+            return
 
     def _config_to_tar(self, tar):
         if self.collector.config_collection is None:

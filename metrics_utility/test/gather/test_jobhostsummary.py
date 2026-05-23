@@ -3,6 +3,8 @@ import glob
 
 from unittest.mock import patch
 
+import pytest
+
 from metrics_utility.gather.collection import Collection
 from metrics_utility.test.gather.support.helpers import read_tarball
 from metrics_utility.test.util import run_gather_ext, run_gather_int
@@ -249,7 +251,7 @@ def main_host_collection(ship_path, collectors='main_jobevent,main_host', traili
             errors_found.append(f"Collection '{collection_name}' failed")
 
     if errors_found:
-        assert False, 'Found errors in collections:\n' + '\n'.join(errors_found)
+        pytest.fail('Found errors in collections:\n' + '\n'.join(errors_found))
 
     collected_names = set(collection_statuses.keys())
     missing_collections = expected_collections - collected_names
@@ -261,4 +263,4 @@ def main_host_collection(ship_path, collectors='main_jobevent,main_host', traili
                 break
 
     if missing_collections:
-        assert False, f'Expected collections were not found: {", ".join(missing_collections)}. Found: {", ".join(collected_names)}'
+        pytest.fail(f'Expected collections were not found: {", ".join(missing_collections)}. Found: {", ".join(collected_names)}')

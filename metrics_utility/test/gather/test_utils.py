@@ -96,7 +96,7 @@ def test_max_gather_period_days_1():
 
 def test_max_gather_period_days_raises_on_non_integer():
     with patch.dict('os.environ', {'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': 'not_a_number'}):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match='invalid literal'):
             get_max_gather_period_days()
 
 

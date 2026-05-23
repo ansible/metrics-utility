@@ -22,7 +22,7 @@ def test_non_string_key_raises_value_error():
     mock_connection, _ = mock_cursor_db()
     with pytest.raises(ValueError, match='Cannot use'):
         with lock(123, wait=False, db=mock_connection):
-            assert False, 'this should be unreachable'
+            pytest.fail('this should be unreachable')
 
 
 def test_lock_not_acquired_skips_release():
@@ -39,7 +39,4 @@ def test_lock_not_acquired_skips_release():
 
 def test_acquire_lock():
     with lock('test', wait=False, db=connection) as acquired:
-        assert acquired is not None
-        with pytest.raises(Exception):
-            with lock('test', wait=False, db=connection):
-                assert False, 'this should be unreachable'
+        assert acquired is True

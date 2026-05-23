@@ -1,7 +1,6 @@
 """Collector that queries Prometheus for total worker vCPU usage in the previous hour."""
 
-from datetime import datetime, timezone
-from typing import Optional, Tuple
+from datetime import UTC, datetime
 
 import requests
 
@@ -28,7 +27,7 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
         Dict with collection metadata and ``total_workers_vcpu``, or None if
         Prometheus has no data for the previous hour.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     current_ts = now.timestamp()
     prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
@@ -64,7 +63,7 @@ def total_workers_vcpu(*, cluster_name=None, metering_enabled=False, prometheus_
     return output.dict(info)
 
 
-def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
+def get_hour_boundaries(current_timestamp: float) -> tuple[float, float]:
     """Return the start and end timestamps of the hour preceding *current_timestamp*.
 
     Args:
@@ -81,7 +80,7 @@ def get_hour_boundaries(current_timestamp: float) -> Tuple[float, float]:
     return (previous_hour_start, previous_hour_end)
 
 
-def get_total_workers_cpu(prom, base_timestamp: float) -> Tuple[float, str]:
+def get_total_workers_cpu(prom, base_timestamp: float) -> tuple[float, str]:
     """Query Prometheus for the maximum total CPU cores during the previous hour.
 
     Args:
@@ -106,7 +105,7 @@ def timestamp_format(timestamp_val):
     Returns:
         String like ``'2024-01-15T14:00:00.000Z'``.
     """
-    return datetime.fromtimestamp(timestamp_val, timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+    return datetime.fromtimestamp(timestamp_val, UTC).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
 def get_cpu_timeline(prom, previous_hour_start, previous_hour_end: float) -> list:
@@ -138,9 +137,7 @@ def get_cpu_timeline(prom, previous_hour_start, previous_hour_end: float) -> lis
 
 
 class PrometheusClient:
-    """
-    Prometheus client with Kubernetes service account authentication support.
-    """
+    """Prometheus client with Kubernetes service account authentication support."""
 
     def __init__(self, url: str, timeout: int = 30, token=None, ca_cert_path=None):
         """Initialise the Prometheus client.
@@ -188,7 +185,7 @@ class PrometheusClient:
 
         return data
 
-    def query(self, query: str, time_param: Optional[float] = None) -> Optional[list]:
+    def query(self, query: str, time_param: float | None = None) -> list | None:
         """
         Execute instant PromQL query.
 
@@ -207,7 +204,7 @@ class PrometheusClient:
 
         return self._get(url, params).get('data', {}).get('result', [])
 
-    def query_range(self, query: str, start_time: float, end_time: float, step: str = '5m') -> Optional[dict]:
+    def query_range(self, query: str, start_time: float, end_time: float, step: str = '5m') -> dict | None:
         """
         Execute a range query against Prometheus.
         Args:
@@ -221,7 +218,7 @@ class PrometheusClient:
 
         return self._get(url, params)
 
-    def get_current_value(self, query: str) -> Optional[float]:
+    def get_current_value(self, query: str) -> float | None:
         """
         Get current value from an instant query.
 

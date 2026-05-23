@@ -1,6 +1,6 @@
 import pytest
 
-from metrics_utility.exceptions import MissingRequiredEnvVar
+from metrics_utility.exceptions import MissingRequiredEnvVarError
 from metrics_utility.test.util import run_gather_int
 
 
@@ -14,7 +14,7 @@ unset = {
 
 
 def test_gather_bad_target():
-    with pytest.raises(MissingRequiredEnvVar) as e:
+    with pytest.raises(MissingRequiredEnvVarError) as e:
         run_gather_int(
             {
                 'METRICS_UTILITY_SHIP_TARGET': 'controller_db',
@@ -43,7 +43,7 @@ def test_gather_crc(caplog):
 
 
 def test_gather_directory():
-    with pytest.raises(MissingRequiredEnvVar) as e:
+    with pytest.raises(MissingRequiredEnvVarError) as e:
         run_gather_int(
             {
                 **unset,
@@ -68,7 +68,7 @@ def test_gather_directory():
 
 
 def test_gather_s3():
-    with pytest.raises(MissingRequiredEnvVar) as e:
+    with pytest.raises(MissingRequiredEnvVarError) as e:
         run_gather_int(
             {
                 **unset,

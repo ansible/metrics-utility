@@ -6,7 +6,7 @@ import requests
 
 from awx.main.utils import get_awx_http_client_headers
 
-from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.exceptions import FailedToUploadPayloadError
 from metrics_utility.logger import logger
 
 
@@ -77,11 +77,11 @@ def ship(tar_path):
             timeout=(31, 31),
         )
         if r.status_code >= 300:
-            raise FailedToUploadPayload(f'SSO token request failed with status {r.status_code}, {r.text}')
+            raise FailedToUploadPayloadError(f'SSO token request failed with status {r.status_code}, {r.text}')
         try:
             access_token = r.json()['access_token']
         except (KeyError, ValueError) as e:
-            raise FailedToUploadPayload(f'SSO token response missing access_token: {e}, {r.text}') from e
+            raise FailedToUploadPayloadError(f'SSO token response missing access_token: {e}, {r.text}') from e
 
         headers = session.headers
         headers['authorization'] = f'Bearer {access_token}'
@@ -100,4 +100,4 @@ def ship(tar_path):
         )
 
     if response.status_code >= 300:
-        raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
+        raise FailedToUploadPayloadError(f'Upload failed with status {response.status_code}, {response.text}')

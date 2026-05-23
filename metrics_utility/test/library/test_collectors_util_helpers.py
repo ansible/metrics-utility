@@ -50,7 +50,7 @@ def test_ensure_functions_creates_is_valid_json():
 
 
 def test_ensure_functions_cursor_cleanup():
-    mock_db, mock_cursor = mock_cursor_db()
+    mock_db, _mock_cursor = mock_cursor_db()
 
     ensure_functions(mock_db)
 

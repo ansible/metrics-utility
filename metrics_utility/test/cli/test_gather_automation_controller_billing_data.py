@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from metrics_utility.exceptions import (
-    FailedToUploadPayload,
-    MetricsException,
-    MissingRequiredEnvVar,
-    NoAnalyticsCollected,
-    UnparsableParameter,
+    FailedToUploadPayloadError,
+    MetricsError,
+    MissingRequiredEnvVarError,
+    NoAnalyticsCollectedError,
+    UnparsableParameterError,
 )
 from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 from metrics_utility.test.util import temporary_env
@@ -36,9 +36,7 @@ def test_add_arguments_adds_expected_arguments(parser):
 
 
 def test_command_help(capsys):
-    """
-    Ensure that --help prints help text and exits cleanly.
-    """
+    """Ensure that --help prints help text and exits cleanly."""
     from argparse import ArgumentParser
 
     from metrics_utility.management.commands.gather_automation_controller_billing_data import (
@@ -62,15 +60,15 @@ def test_command_help(capsys):
 @pytest.mark.parametrize(
     'exc',
     [
-        MissingRequiredEnvVar('missing'),
-        FailedToUploadPayload('fail'),
-        UnparsableParameter('unparsable'),
+        MissingRequiredEnvVarError('missing'),
+        FailedToUploadPayloadError('fail'),
+        UnparsableParameterError('unparsable'),
     ],
 )
 def test_handle_known_exceptions(command_instance, exc):
     command_instance._read_env = lambda: (_ for _ in ()).throw(exc)
 
-    with pytest.raises(MetricsException):
+    with pytest.raises(MetricsError):
         command_instance.handle()
 
 
@@ -105,7 +103,7 @@ def test_handle_no_analytics_collected():
     mock_collector.gather.return_value = None
 
     with patch('metrics_utility.management.commands.gather_automation_controller_billing_data.Collector', return_value=mock_collector):
-        with pytest.raises(NoAnalyticsCollected):
+        with pytest.raises(NoAnalyticsCollectedError):
             cmd.handle(verbose=False, ship=False, since=None, until=None)
 
 

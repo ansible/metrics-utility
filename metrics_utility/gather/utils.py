@@ -1,8 +1,6 @@
 import json
 import os
 
-from typing import Dict
-
 from django.db import connection
 
 from metrics_utility.library.collectors.controller.config import _datetime_hook
@@ -14,10 +12,10 @@ def get_max_gather_period_days():
     Get the maximum gather period in days from environment variable.
     Defaults to 28 days if not set or invalid.
     """
-    MAX_GATHER_PERIOD_DAYS_DEFAULT = 28
+    default = 28
 
     try:
-        return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', str(MAX_GATHER_PERIOD_DAYS_DEFAULT)))
+        return int(os.getenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', str(default)))
     except (ValueError, TypeError):
         logger.error('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS can not be converted to an integer')
         # raise original exception
@@ -42,11 +40,10 @@ def bool_from_env(name, default=None):
     if s is None:
         return default
 
-    b = s.lower() in {'1', 'true'}
-    return b
+    return s.lower() in {'1', 'true'}
 
 
-def get_last_entries_from_db() -> Dict:
+def get_last_entries_from_db() -> dict:
     """
     Get AUTOMATION_ANALYTICS_LAST_ENTRIES directly from database.
 

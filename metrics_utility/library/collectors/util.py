@@ -129,9 +129,7 @@ def _copy_table_pandas(db, query):
         rows = cursor.fetchall()
 
         # Create DataFrame
-        df = pd.DataFrame(rows, columns=columns)
-
-    return df
+        return pd.DataFrame(rows, columns=columns)
 
 
 def _yaml_json_functions():

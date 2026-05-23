@@ -49,7 +49,7 @@ def test_slices_by_date(collector):
     while since < until:
         files = read_tarball(tgz_files[idx])
 
-        assert sorted(files) == sorted(COMMON_FILES + ['./csv_one_day_slicing_1.csv'])
+        assert sorted(files) == sorted([*COMMON_FILES, './csv_one_day_slicing_1.csv'])
 
         lines = files['./csv_one_day_slicing_1.csv'].splitlines(True)
         _header = lines.pop(0)
@@ -62,7 +62,7 @@ def test_slices_by_date(collector):
             int(row[3]),
             int(row[4]),
             int(row[5]),
-            tzinfo=datetime.timezone.utc,
+            tzinfo=datetime.UTC,
         )
         csv_until = datetime.datetime(
             int(row[6]),
@@ -71,7 +71,7 @@ def test_slices_by_date(collector):
             int(row[9]),
             int(row[10]),
             int(row[11]),
-            tzinfo=datetime.timezone.utc,
+            tzinfo=datetime.UTC,
         )
 
         assert csv_since == since

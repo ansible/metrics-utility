@@ -8,7 +8,7 @@ from importlib.metadata import version
 
 import django.core.management as management
 
-from metrics_utility.exceptions import MetricsException
+from metrics_utility.exceptions import MetricsError
 from metrics_utility.logger import logger
 
 
@@ -17,7 +17,7 @@ class ManagementUtility(management.ManagementUtility):
 
     Limits the exposed commands to
     ``gather_automation_controller_billing_data``, and surfaces
-    :class:`~metrics_utility.exceptions.MetricsException` errors as clean
+    :class:`~metrics_utility.exceptions.MetricsError` errors as clean
     log messages with a non-zero exit code.
     """
 
@@ -84,7 +84,7 @@ class ManagementUtility(management.ManagementUtility):
         """
         commands = {}
         path = os.path.join(os.path.dirname(__file__), 'management')
-        commands.update({name: 'metrics_utility' for name in management.find_commands(path)})
+        commands.update(dict.fromkeys(management.find_commands(path), 'metrics_utility'))
         return commands
 
     def run_subcommand(self, subcommand, argv):
@@ -96,7 +96,7 @@ class ManagementUtility(management.ManagementUtility):
         """
         try:
             self.fetch_command(subcommand).run_from_argv(argv)
-        except MetricsException as e:
+        except MetricsError as e:
             logger.error(e.name)
             exit(1)
         except Exception as e:

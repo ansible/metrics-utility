@@ -6,7 +6,7 @@ import tarfile
 
 from django.utils.timezone import now, timedelta
 
-from metrics_utility.exceptions import CollectorDisabled
+from metrics_utility.exceptions import CollectorDisabledError
 from metrics_utility.gather.output import CollectionOutput
 from metrics_utility.gather.utils import get_max_gather_period_days
 from metrics_utility.logger import logger
@@ -97,7 +97,7 @@ class Collection:
             self._save_gathering(result)
 
             self.gathering_successful = True
-        except CollectorDisabled:
+        except CollectorDisabledError:
             self.disabled = True
             self.gathering_successful = False
         except Exception as e:

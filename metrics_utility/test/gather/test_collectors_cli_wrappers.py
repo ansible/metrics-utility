@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metrics_utility.exceptions import CollectorDisabled
+from metrics_utility.exceptions import CollectorDisabledError
 from metrics_utility.gather.collectors import (
     cli_controller_version_service,
     cli_credentials_service,
@@ -55,7 +55,7 @@ def test_cli_job_host_summary_enabled(mock_conn, mock_lib):
 
 @patch('metrics_utility.gather.collectors.bool_from_env', return_value=True)
 def test_cli_job_host_summary_disabled(mock_bool):
-    with pytest.raises(CollectorDisabled):
+    with pytest.raises(CollectorDisabledError):
         cli_job_host_summary(since=since, until=until, output=_mock_output())
 
 
@@ -63,7 +63,7 @@ def test_cli_job_host_summary_disabled(mock_bool):
 
 
 @pytest.mark.parametrize(
-    'cli_fn,lib_name,key',
+    ('cli_fn', 'lib_name', 'key'),
     [
         (cli_main_host, 'main_host', 'main_host'),
         (cli_main_host_daily, 'main_host_daily', 'main_host_daily'),

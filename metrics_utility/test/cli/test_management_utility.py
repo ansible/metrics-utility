@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metrics_utility.exceptions import MetricsException
+from metrics_utility.exceptions import MetricsError
 from metrics_utility.management_utility import ManagementUtility
 
 
@@ -84,7 +84,7 @@ def test_fetch_command():
 
 def test_fetch_command_invalid(capsys):
     util = ManagementUtility(['manage.py'])
-    with pytest.raises(Exception):
+    with pytest.raises(Exception, match='nonexistent_command_xyz'):
         util.fetch_command('nonexistent_command_xyz')
 
 
@@ -106,7 +106,7 @@ def test_run_subcommand_metrics_exception():
 
     with patch.object(util, 'fetch_command') as mock_fetch:
         mock_cmd = mock_fetch.return_value
-        mock_cmd.run_from_argv.side_effect = MetricsException('test error')
+        mock_cmd.run_from_argv.side_effect = MetricsError('test error')
 
         with pytest.raises(SystemExit) as exc:
             util.run_subcommand('gather_automation_controller_billing_data', util.argv)

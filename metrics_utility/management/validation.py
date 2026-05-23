@@ -5,7 +5,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.exceptions import UnparsableParameter
+from metrics_utility.exceptions import UnparsableParameterError
 
 
 date_format_text = (
@@ -18,7 +18,7 @@ date_format_text = (
 
 # patchable in tests
 def now():
-    return datetime.datetime.now(datetime.timezone.utc)
+    return datetime.datetime.now(datetime.UTC)
 
 
 def startofday(dt):
@@ -38,7 +38,7 @@ def parse_date_param(value, help_texts=None, name=None):
     help_text = help_texts.get(name) if help_texts else ''
 
     if value.isdigit():
-        raise UnparsableParameter(f'Bare integers are not allowed for --{name}: {help_text}')
+        raise UnparsableParameterError(f'Bare integers are not allowed for --{name}: {help_text}')
 
     try:
         if match := re.fullmatch(r'(\d+)(d|day|days)', value):
@@ -51,8 +51,8 @@ def parse_date_param(value, help_texts=None, name=None):
             minutes_ago = int(match.group(1))
             parsed = now() - datetime.timedelta(minutes=minutes_ago)
         else:
-            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.timezone.utc)
+            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.UTC)
     except Exception as e:
-        raise UnparsableParameter(f'{str(e)}: {help_text}')
+        raise UnparsableParameterError(f'{str(e)}: {help_text}') from e
 
     return parsed

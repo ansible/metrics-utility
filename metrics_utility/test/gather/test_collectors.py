@@ -4,7 +4,7 @@ import pytest
 
 from django.db.utils import ProgrammingError
 
-from metrics_utility.exceptions import CollectorDisabled
+from metrics_utility.exceptions import CollectorDisabledError
 from metrics_utility.gather.collectors import (
     cli_main_indirectmanagednodeaudit,
 )
@@ -38,7 +38,7 @@ def test_main_indirectmanagednodeaudit_table_success(mock_connection, mock_get_o
 def test_main_indirectmanagednodeaudit_table_not_in_optional_collectors(mock_get_optional_collectors):
     mock_get_optional_collectors.return_value = {'other_collector'}
 
-    with pytest.raises(CollectorDisabled):
+    with pytest.raises(CollectorDisabledError):
         cli_main_indirectmanagednodeaudit(since=None, until=None, output=None)
 
 

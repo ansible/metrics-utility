@@ -3,9 +3,7 @@ from ..util import DataframeOutput, collector
 
 @collector
 def table_metadata(*, db=None, output=DataframeOutput()):
-    """
-    Collect row count and size information for main_jobevent (partitioned), main_unifiedjob (regular), and main_jobhostsummary (regular) tables.
-    """
+    """Collect row count and size information for main_jobevent, main_unifiedjob, and main_jobhostsummary tables."""
     query = """
         -- Partitioned table: sum n_live_tup from all partitions
         SELECT

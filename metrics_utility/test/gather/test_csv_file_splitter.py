@@ -23,7 +23,7 @@ def test_basic_write():
         assert os.path.exists(files[0])
 
         # Verify content
-        with open(files[0], 'r') as f:
+        with open(files[0]) as f:
             content = f.read()
             assert content == 'col1,col2,col3\na,b,c\nd,e,f\n'
 
@@ -54,7 +54,7 @@ def test_file_splitting():
 
         # Each file should have the header
         for fname in files:
-            with open(fname, 'r') as f:
+            with open(fname) as f:
                 first_line = f.readline()
                 assert first_line == 'col1,col2\n'
 
@@ -76,7 +76,7 @@ def test_header_preservation():
 
         # Verify all files have the header
         for fname in files:
-            with open(fname, 'r') as f:
+            with open(fname) as f:
                 assert f.readline() == header
 
 
@@ -165,7 +165,7 @@ def test_cycle_file():
 
         # Both should have the header
         for fname in files:
-            with open(fname, 'r') as f:
+            with open(fname) as f:
                 assert f.readline() == 'col1,col2\n'
 
 

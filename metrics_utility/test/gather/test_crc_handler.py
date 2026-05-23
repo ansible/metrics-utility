@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.exceptions import FailedToUploadPayloadError
 from metrics_utility.gather.package.crc_handler import (
     _get_rh_password,
     _get_rh_user,
@@ -131,7 +131,7 @@ def test_ship_sso_failure(mock_requests, tmp_path):
     tar_path.write_bytes(b'fake tar content')
 
     with temporary_env(CRC_ENV):
-        with pytest.raises(FailedToUploadPayload, match='SSO token request failed'):
+        with pytest.raises(FailedToUploadPayloadError, match='SSO token request failed'):
             ship(str(tar_path))
 
 
@@ -148,7 +148,7 @@ def test_ship_sso_missing_token(mock_requests, tmp_path):
     tar_path.write_bytes(b'fake tar content')
 
     with temporary_env(CRC_ENV):
-        with pytest.raises(FailedToUploadPayload, match='missing access_token'):
+        with pytest.raises(FailedToUploadPayloadError, match='missing access_token'):
             ship(str(tar_path))
 
 
@@ -171,7 +171,7 @@ def test_ship_upload_failure(mock_requests, tmp_path):
     tar_path.write_bytes(b'fake tar content')
 
     with temporary_env(CRC_ENV):
-        with pytest.raises(FailedToUploadPayload, match='Upload failed'):
+        with pytest.raises(FailedToUploadPayloadError, match='Upload failed'):
             ship(str(tar_path))
 
 

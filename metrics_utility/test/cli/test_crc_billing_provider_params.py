@@ -2,7 +2,7 @@
 
 import pytest
 
-from metrics_utility.exceptions import MissingRequiredEnvVar
+from metrics_utility.exceptions import MissingRequiredEnvVarError
 from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 from metrics_utility.test.util import temporary_env
 
@@ -24,26 +24,26 @@ def test_handle_crc_ship_target_aws_billing_params():
 
 
 def test_handle_crc_ship_target_aws_requires_billing_account_id():
-    """CRC + AWS raises MissingRequiredEnvVar when billing account ID env var is absent."""
+    """CRC + AWS raises MissingRequiredEnvVarError when billing account ID env var is absent."""
     with temporary_env(
         {
             'METRICS_UTILITY_BILLING_PROVIDER': 'aws',
             'METRICS_UTILITY_BILLING_ACCOUNT_ID': None,
         }
     ):
-        with pytest.raises(MissingRequiredEnvVar, match='METRICS_UTILITY_BILLING_ACCOUNT_ID'):
+        with pytest.raises(MissingRequiredEnvVarError, match='METRICS_UTILITY_BILLING_ACCOUNT_ID'):
             Command._read_crc_env()
 
 
 def test_handle_crc_ship_target_unsupported_provider_shows_value():
     """Unsupported provider error includes the actual value."""
     with temporary_env({'METRICS_UTILITY_BILLING_PROVIDER': 'gcp'}):
-        with pytest.raises(MissingRequiredEnvVar, match="'gcp'"):
+        with pytest.raises(MissingRequiredEnvVarError, match="'gcp'"):
             Command._read_crc_env()
 
 
 def test_handle_crc_ship_target_missing_provider():
     """Missing provider error shows None."""
     with temporary_env({'METRICS_UTILITY_BILLING_PROVIDER': None}):
-        with pytest.raises(MissingRequiredEnvVar, match='None'):
+        with pytest.raises(MissingRequiredEnvVarError, match='None'):
             Command._read_crc_env()

@@ -6,8 +6,8 @@ from argparse import RawDescriptionHelpFormatter
 from django.core.management.base import BaseCommand
 
 from metrics_utility.exceptions import (
-    MissingRequiredEnvVar,
-    NoAnalyticsCollected,
+    MissingRequiredEnvVarError,
+    NoAnalyticsCollectedError,
 )
 from metrics_utility.gather.collector import Collector
 from metrics_utility.logger import logger
@@ -65,9 +65,7 @@ CRC_ENV_VARS = [
 
 
 class Command(BaseCommand):
-    """
-    Gather Automation Controller billing data
-    """
+    """Gather Automation Controller billing data."""
 
     help = 'Gather Automation Controller billing data'
     help_texts = {
@@ -90,13 +88,13 @@ class Command(BaseCommand):
                     '    METRICS_UTILITY_SHIP_PATH (required): directory path for data collection and storage',
                     '',
                     '  Collection Configuration:',
-                    '    METRICS_UTILITY_CLUSTER_NAME (optional): cluster name for total_workers_vcpu collector (required when enabled)',  # noqa: E501
+                    '    METRICS_UTILITY_CLUSTER_NAME (optional): cluster name for total_workers_vcpu collector (required when enabled)',
                     '    METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX (optional): custom lock name for total_workers_vcpu collector',
-                    '    METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR (optional): disable job_host_summary collector',  # noqa: E501
-                    '    METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES (optional): skip updating last gather info from controller settings',  # noqa: E501
-                    '    METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS (optional): maximum length of collection interval in days (default: 28)',  # noqa: E501
+                    '    METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR (optional): disable job_host_summary collector',
+                    '    METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES (optional): skip updating last gather info from controller settings',
+                    '    METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS (optional): maximum length of collection interval in days (default: 28)',
                     '    METRICS_UTILITY_OPTIONAL_COLLECTORS (optional): optional collectors, comma-separated list',
-                    '    METRICS_UTILITY_USAGE_BASED_METERING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)',  # noqa: E501
+                    '    METRICS_UTILITY_USAGE_BASED_METERING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)',
                     '',
                     '  Billing Provider Configuration:',
                     '    METRICS_UTILITY_BILLING_ACCOUNT_ID (optional): AWS account ID for billing',
@@ -148,7 +146,7 @@ class Command(BaseCommand):
         tgzfiles = collector.gather(since=since, until=until, billing_provider_params=billing_provider_params, ship_params=ship_params)
         if not tgzfiles:
             logger.error('No analytics collected')
-            raise NoAnalyticsCollected('No analytics collected')
+            raise NoAnalyticsCollectedError('No analytics collected')
         logger.info('Analytics collected')
 
     def _read_env(self):
@@ -181,7 +179,7 @@ class Command(BaseCommand):
             errors.append(f'Invalid METRICS_UTILITY_SHIP_TARGET: {ship_target}. Valid values: {", ".join(VALID_SHIP_TARGETS)}')
 
         if errors:
-            raise MissingRequiredEnvVar('\n'.join(errors))
+            raise MissingRequiredEnvVarError('\n'.join(errors))
 
         # Read ship-target-specific configuration and warn about surplus env vars
         if ship_target == 'crc':
@@ -217,7 +215,7 @@ class Command(BaseCommand):
         params['ship_path'] = ship_path
 
         if missing:
-            raise MissingRequiredEnvVar(f'Missing required env variables: {", ".join(missing)}')
+            raise MissingRequiredEnvVarError(f'Missing required env variables: {", ".join(missing)}')
 
         return params
 
@@ -225,7 +223,7 @@ class Command(BaseCommand):
     def _read_crc_env():
         billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
         if billing_provider != 'aws':
-            raise MissingRequiredEnvVar(f'Unsupported METRICS_UTILITY_BILLING_PROVIDER: {billing_provider!r}, supported values are [aws].')
+            raise MissingRequiredEnvVarError(f'Unsupported METRICS_UTILITY_BILLING_PROVIDER: {billing_provider!r}, supported values are [aws].')
 
         missing = []
         billing_provider_params = {'billing_provider': billing_provider}
@@ -240,7 +238,7 @@ class Command(BaseCommand):
             billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
         if missing:
-            raise MissingRequiredEnvVar(f'Missing required env variables: {", ".join(missing)}')
+            raise MissingRequiredEnvVarError(f'Missing required env variables: {", ".join(missing)}')
 
         return billing_provider_params
 

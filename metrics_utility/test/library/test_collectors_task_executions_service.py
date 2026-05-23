@@ -1,6 +1,4 @@
-"""
-Unit tests for the task_executions_service collector.
-"""
+"""Unit tests for the task_executions_service collector."""
 
 from unittest.mock import MagicMock, patch
 
@@ -116,7 +114,7 @@ def test_task_executions_service_defaults_to_previous_day(mock_copy_pandas):
 
 
 @pytest.mark.parametrize(
-    'since,until',
+    ('since', 'until'),
     [
         (
             utcdt('2025-06-13'),

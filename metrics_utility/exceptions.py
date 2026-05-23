@@ -1,7 +1,7 @@
 """Custom exception hierarchy for metrics-utility."""
 
 
-class MetricsException(Exception):
+class MetricsError(Exception):
     """Base class for all metrics-utility exceptions."""
 
     def __init__(self, message):
@@ -13,31 +13,21 @@ class MetricsException(Exception):
         self.name = message
 
 
-class FailedToUploadPayload(MetricsException):
+class FailedToUploadPayloadError(MetricsError):
     """Raised when the HTTP upload of a tarball to the ingress API fails."""
 
-    pass
 
-
-class MissingRequiredEnvVar(MetricsException):
+class MissingRequiredEnvVarError(MetricsError):
     """Raised when one or more required environment variables are absent or invalid."""
 
-    pass
 
-
-class NoAnalyticsCollected(MetricsException):
+class NoAnalyticsCollectedError(MetricsError):
     """Raised when the collector produces no tarballs."""
 
-    pass
 
-
-class CollectorDisabled(MetricsException):
+class CollectorDisabledError(MetricsError):
     """Raised when a collector is not enabled in the current configuration."""
 
-    pass
 
-
-class UnparsableParameter(MetricsException):
+class UnparsableParameterError(MetricsError):
     """Raised when a CLI parameter value cannot be parsed into the expected type."""
-
-    pass

@@ -1,4 +1,4 @@
-"""CollectionOutput adapter – passed from the CLI layer into library collectors."""
+"""CollectionOutput adapter - passed from the CLI layer into library collectors."""
 
 import tempfile
 

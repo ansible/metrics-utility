@@ -1,6 +1,6 @@
 import pytest
 
-from metrics_utility.exceptions import UnparsableParameter
+from metrics_utility.exceptions import UnparsableParameterError
 from metrics_utility.test.util import run_gather_int
 
 
@@ -38,7 +38,7 @@ def test_invalid_gather_argument_format():
         for arg, err_arg in zip(args, arg_errors):
             cmd = Command()
 
-            e = handle_gather_exception(env_vars, {arg: bad_input}, UnparsableParameter)
+            e = handle_gather_exception(env_vars, {arg: bad_input}, UnparsableParameterError)
 
             assert (err_input or cmd.help_texts[arg]) in e.name
             assert err_arg in e.name

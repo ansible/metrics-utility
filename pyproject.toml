@@ -87,16 +87,26 @@ indent-style = "space"
 
 [tool.ruff.lint]
 extend-select = [
-# Essential PEP 8 errors (indentation, syntax)
-    "E",
-# PEP 8 warnings (whitespace, line breaks)
-    "W",
-# PEP 8 naming conventions
-#   "N",
-# Python syntax upgrades
-#   "UP",
-# Sort imports
-    "I",
+    "B007",  # Unused loop control variable
+    "B904",  # raise ... from err in except blocks
+    "C4",    # Unnecessary list/dict/set comprehension wrappers
+    "D200",  # Single-line docstring should fit on one line
+    "D405",  # Capitalize section names
+    "D417",  # Document all arguments
+    "E",     # PEP 8 errors (indentation, syntax)
+    "F",     # Pyflakes (unused imports, undefined names)
+    "I",     # Sort imports
+    "N",     # PEP 8 naming conventions
+    "PIE",   # Misc cleanups (unnecessary pass, ...)
+    "PT",    # Pytest best practices
+    "RET",   # Unnecessary else after return
+    "RUF002", # Ambiguous unicode characters
+    "RUF005", # Iterable unpacking instead of concatenation
+    "RUF059", # Unused unpacked variable
+    "RUF100", # Unused noqa directives
+    "T20",   # Flag print() calls
+    "UP",    # Python syntax upgrades
+    "W",     # PEP 8 warnings (whitespace, line breaks)
 ]
 
 [tool.ruff.lint.isort]

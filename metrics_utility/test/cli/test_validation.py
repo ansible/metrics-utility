@@ -1,6 +1,6 @@
 import pytest
 
-from metrics_utility.exceptions import MissingRequiredEnvVar
+from metrics_utility.exceptions import MissingRequiredEnvVarError
 from metrics_utility.management.commands.gather_automation_controller_billing_data import Command
 from metrics_utility.test.util import temporary_env
 
@@ -23,10 +23,10 @@ def read_env(extra=None):
 
 
 def read_env_error(extra=None):
-    """Call _read_env expecting MissingRequiredEnvVar, return the exception."""
+    """Call _read_env expecting MissingRequiredEnvVarError, return the exception."""
     env = {**CLEAN_ENV, 'METRICS_UTILITY_SHIP_TARGET': 'directory', **(extra or {})}
     with temporary_env(env):
-        with pytest.raises(MissingRequiredEnvVar) as exc:
+        with pytest.raises(MissingRequiredEnvVarError) as exc:
             Command()._read_env()
         return exc.value
 
@@ -101,14 +101,14 @@ def test_validate_ship_target_gather_invalid():
 def test_validate_ship_target_empty():
     env = {**CLEAN_ENV, 'METRICS_UTILITY_SHIP_TARGET': None}
     with temporary_env(env):
-        with pytest.raises(MissingRequiredEnvVar) as exc:
+        with pytest.raises(MissingRequiredEnvVarError) as exc:
             Command()._read_env()
         assert 'METRICS_UTILITY_SHIP_TARGET is empty' in exc.value.name
 
 
 def test_validate_ship_path_empty_raises():
     with temporary_env(CLEAN_ENV):
-        with pytest.raises(MissingRequiredEnvVar) as excinfo:
+        with pytest.raises(MissingRequiredEnvVarError) as excinfo:
             Command._read_ship_params('directory')
         assert 'METRICS_UTILITY_SHIP_PATH' in excinfo.value.name
 

@@ -31,12 +31,12 @@ def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOu
     # We are loading the finished jobs then we are filtering
     # for the job_created, this cannot be done by simple joins because
     # job_created is partitioned and partitions pruning dont work with joins
-    job_ids_set = set(job_id for job_id, _ in jobs)
+    job_ids_set = {job_id for job_id, _ in jobs}
 
     # Extract unique hour boundaries from job_created timestamps
     # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
     hour_boundaries = set()
-    for job_id, job_created in jobs:
+    for _job_id, job_created in jobs:
         # Skip jobs with NULL created timestamp (defensive programming)
         if job_created is None:
             continue

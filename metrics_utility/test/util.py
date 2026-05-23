@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, Mock
 
 import pytest
@@ -17,7 +17,7 @@ def utcdt(s):
     """Parse an ISO date/datetime string as UTC. Assumes UTC if no timezone given."""
     dt = datetime.fromisoformat(s)
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -105,8 +105,7 @@ def _run_ext(env, name, args):
     result = subprocess.run(
         [sys.executable, 'manage.py', name, *args],
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         env={**_db_env(), 'AWX_LOGGING_MODE': 'stdout', **env},
     )
 
@@ -228,7 +227,7 @@ def validate_dataframe(df, expected_lines, skip_columns_names):
     skip_columns_names: iterable of column names to skip comparison
     """
     expected_header, expected_data = _parse_expected_csv(expected_lines)
-    header, actual_data, text = _read_dataframe(df)
+    header, actual_data, _text = _read_dataframe(df)
 
     _validate_header(header, expected_header)
     _validate_row_count(actual_data, expected_data)

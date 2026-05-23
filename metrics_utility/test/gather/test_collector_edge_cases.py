@@ -68,7 +68,7 @@ def test_since_without_until(collector):
 
 
 def test_since_after_until_raises(collector):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match='later than the end'):
         collector.gather(subset=['config'], since=utcdt('2024-06-01'), until=utcdt('2024-01-01'))
 
 

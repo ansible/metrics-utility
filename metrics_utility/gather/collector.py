@@ -162,7 +162,7 @@ class Collector:
         # ensure since = until is valid and will not collect any data with timestamps
         if since and since > until:
             logger.warning('Start of the collection interval is later than the end, ignoring request.')
-            raise ValueError
+            raise ValueError('Start of the collection interval is later than the end')
 
         # `last_gather` is used as the fallback start of the interval when `since` is not
         # passed in — bookkeeping settings decide the actual start in that case.
@@ -288,7 +288,7 @@ class Collector:
             self._process_package(package, ship_params)
 
     def _process_packages(self, ship_params=None):
-        for group, packages in self.packages.items():
+        for _group, packages in self.packages.items():
             for package in packages:
                 self._process_package(package, ship_params)
 
@@ -368,11 +368,7 @@ class Collector:
         module_has_config = False
 
         for name, fnc in inspect.getmembers(self.collector_module):
-            if not (
-                inspect.isfunction(fnc)  # noqa
-                and hasattr(fnc, '_register_key_')  # noqa
-                and hasattr(fnc, '_register_output_format_')  # noqa
-            ):
+            if not (inspect.isfunction(fnc) and hasattr(fnc, '_register_key_') and hasattr(fnc, '_register_output_format_')):
                 continue
 
             if fnc._register_key_ == 'config':

@@ -45,7 +45,7 @@ def test_json_collections(collector):
 
     files = read_tarball(tgz_files[0])
 
-    assert sorted(files) == sorted(COMMON_FILES + ['./json_collection_1.json', './json_collection_2.json'])
+    assert sorted(files) == sorted([*COMMON_FILES, './json_collection_1.json', './json_collection_2.json'])
 
     assert json.loads(files['./config.json']) == {'version': '1.0'}
     assert json.loads(files['./json_collection_1.json']) == {'json1': 'True'}
@@ -59,14 +59,7 @@ def test_small_csvs(collector):
 
     files = read_tarball(tgz_files[0])
 
-    assert sorted(files) == sorted(
-        COMMON_FILES
-        + [
-            './csv_collection_1.csv',
-            './csv_collection_2.csv',
-            './csv_collection_3.csv',
-        ]
-    )
+    assert sorted(files) == sorted([*COMMON_FILES, './csv_collection_1.csv', './csv_collection_2.csv', './csv_collection_3.csv'])
 
     # length defined by @registered function
     assert len(files['./csv_collection_1.csv']) == 100
@@ -88,9 +81,9 @@ def test_jsons_with_csvs_with_slicing(collector):
     assert len(tgz_files) == 3
 
     expected = [
-        COMMON_FILES + ['./json_collection_1.json', './json_collection_2.json', './csv_slicing_1.csv'],
-        COMMON_FILES + ['./csv_slicing_2.csv'],
-        COMMON_FILES + ['./csv_slicing_2.csv'],
+        [*COMMON_FILES, './json_collection_1.json', './json_collection_2.json', './csv_slicing_1.csv'],
+        [*COMMON_FILES, './csv_slicing_2.csv'],
+        [*COMMON_FILES, './csv_slicing_2.csv'],
     ]
     for i in range(len(tgz_files)):
         files = read_tarball(tgz_files[i])
@@ -105,7 +98,7 @@ def test_one_csv_collection_splitted_by_size(collector):
     for i in range(len(tgz_files)):
         files = read_tarball(tgz_files[i])
 
-        assert sorted(files) == sorted(COMMON_FILES + ['./big_table.csv'])
+        assert sorted(files) == sorted([*COMMON_FILES, './big_table.csv'])
         assert len(files['./big_table.csv']) == 1000
 
 
@@ -117,9 +110,9 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
     assert len(tgz_files) == 3
 
     expected = [
-        COMMON_FILES + ['./big_table_2.csv', './csv_collection_1.csv'],
-        COMMON_FILES + ['./big_table_2.csv', './csv_collection_2.csv'],
-        COMMON_FILES + ['./big_table_2.csv'],
+        [*COMMON_FILES, './big_table_2.csv', './csv_collection_1.csv'],
+        [*COMMON_FILES, './big_table_2.csv', './csv_collection_2.csv'],
+        [*COMMON_FILES, './big_table_2.csv'],
     ]
     for i in range(len(tgz_files)):
         files = read_tarball(tgz_files[i])
@@ -174,7 +167,7 @@ def test_manifest_and_status(collector):
 
     files = read_tarball(tgz_files[0])
 
-    assert sorted(files) == sorted(COMMON_FILES + ['./json1.json', './json2.json', './json3.json'])
+    assert sorted(files) == sorted([*COMMON_FILES, './json1.json', './json2.json', './json3.json'])
 
     assert json.loads(files['./manifest.json']) == {
         'config.json': '1.0',
