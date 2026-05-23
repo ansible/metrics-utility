@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.0"]
+requires = ["setuptools>=82"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,16 +7,15 @@ name = "metrics-utility"
 version = "0.8.0dev"
 description = "A metrics utility for Ansible"
 dependencies = [
-    "boto3~=1.35.96",
-    "botocore~=1.35.96",
+    "boto3~=1.43.14",
+    "botocore~=1.43.14",
     "distro~=1.9.0",
-    "django~=5.2.7",
+    "django~=6.0.5",
     "kubernetes>=33.1.0",  # ~= can't express cross-major compat (33, 35, ...)
-    "pandas~=2.3",
-    "psycopg~=3.3.0",
-    "requests~=2.32.5",
-    "segment-analytics-python~=2.3.4",
-    "setuptools~=80.9.0",
+    "pandas~=3.0.3",
+    "psycopg~=3.3.4",
+    "requests~=2.34.2",
+    "segment-analytics-python~=2.3.6",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
