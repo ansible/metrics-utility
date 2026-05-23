@@ -8,14 +8,11 @@ version = "0.8.0dev"
 description = "A metrics utility for Ansible"
 dependencies = [
     "boto3~=1.43.14",
-    "botocore~=1.43.14",
     "distro~=1.9.0",
     "django~=6.0.5",
-    "kubernetes>=33.1.0",  # ~= can't express cross-major compat (33, 35, ...)
     "pandas~=3.0.3",
     "psycopg~=3.3.4",
     "requests~=2.34.2",
-    "segment-analytics-python~=2.3.6",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
