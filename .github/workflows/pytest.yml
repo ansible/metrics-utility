@@ -92,7 +92,7 @@ jobs:
           METRICS_UTILITY_DB_USER: "awx"
           METRICS_UTILITY_DB_PASSWORD: "awx"
         run: |
-          uv run pytest -s -v --cov=. --cov-branch --cov-report=xml
+          uv run pytest -s -v --cov --cov-branch --cov-report=xml
 
       - name: "Upload coverage to Codecov"
         uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354

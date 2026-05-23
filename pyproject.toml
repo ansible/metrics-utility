@@ -73,6 +73,10 @@ filterwarnings = [
     "ignore:datetime.datetime.utcnow:DeprecationWarning:botocore",
 ]
 
+[tool.coverage.run]
+source = ["metrics_utility"]
+omit = ["metrics_utility/test/*"]
+
 [tool.ruff]
 # Allow longer lines than ruff's default 88.
 line-length = 150

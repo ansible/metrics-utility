@@ -10,7 +10,7 @@ test:
 	uv run pytest -s -v
 
 coverage:
-	uv run pytest -s -v --cov=. --cov-report=html
+	uv run pytest -s -v --cov --cov-branch --cov-report=html --cov-report=xml
 
 lint:
 	uv run ruff check
