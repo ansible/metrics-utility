@@ -77,6 +77,20 @@ def temporary_env(new_env):
 # Running a command as an external command, to test we can
 
 
+def _db_env():
+    """Reconstruct METRICS_UTILITY_DB_* from Django settings so subprocesses connect to the same DB."""
+    from django.conf import settings
+
+    db = settings.DATABASES['default']
+    return {
+        'METRICS_UTILITY_DB_HOST': db['HOST'],
+        'METRICS_UTILITY_DB_PORT': db['PORT'],
+        'METRICS_UTILITY_DB_NAME': db['NAME'],
+        'METRICS_UTILITY_DB_USER': db['USER'],
+        'METRICS_UTILITY_DB_PASSWORD': db['PASSWORD'],
+    }
+
+
 def _run_ext(env, name, args):
     """Run a management command as a subprocess and fail the test on non-zero exit.
 
@@ -93,7 +107,7 @@ def _run_ext(env, name, args):
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env={'AWX_LOGGING_MODE': 'stdout', **env},
+        env={**_db_env(), 'AWX_LOGGING_MODE': 'stdout', **env},
     )
 
     status = result.returncode
