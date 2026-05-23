@@ -53,8 +53,7 @@ class ManagementUtility(management.ManagementUtility):
         commands = 'Commands: gather_automation_controller_billing_data'
         if commands_only:
             return commands
-        else:
-            return f'Usage: {os.path.basename(sys.argv[0])} <command> [options]\n{commands}'
+        return f'Usage: {os.path.basename(sys.argv[0])} <command> [options]\n{commands}'
 
     def fetch_command(self, subcommand):
         """Import and return the Command class for *subcommand*.

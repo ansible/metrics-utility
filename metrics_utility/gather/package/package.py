@@ -126,9 +126,9 @@ class Package:
         if self.collector.ship_target == 'crc':
             timestamp = self.collector.gather_until
             return f'{settings.SYSTEM_UUID}-{timestamp.strftime("%Y-%m-%d-%H%M%S%z")}'
-        else:
-            since, until = self._batch_since_and_until()
-            return f'{settings.INSTALL_UUID}-{since.strftime("%Y-%m-%d-%H%M%S%z")}-{until.strftime("%Y-%m-%d-%H%M%S%z")}'
+
+        since, until = self._batch_since_and_until()
+        return f'{settings.INSTALL_UUID}-{since.strftime("%Y-%m-%d-%H%M%S%z")}-{until.strftime("%Y-%m-%d-%H%M%S%z")}'
 
     def _batch_since_and_until(self):
         return self.collections[0].since, self.collections[0].until
@@ -157,9 +157,8 @@ class Package:
         if self.collector.config_collection is None:
             logger.error("'config' collector data is missing, and is required to ship.")
             return False
-        else:
-            self._collection_to_tar(tar, self.collector.config_collection)
 
+        self._collection_to_tar(tar, self.collector.config_collection)
         return True
 
     def _data_collection_status_to_tar(self, tar):
