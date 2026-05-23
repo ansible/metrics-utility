@@ -3,6 +3,7 @@ import os
 
 from django.db import connection
 from django.db.utils import ProgrammingError
+from psycopg.errors import UndefinedTable
 
 from metrics_utility.exceptions import CollectorDisabled, MetricsException, MissingRequiredEnvVar
 from metrics_utility.gather.decorators import register
@@ -25,14 +26,6 @@ from metrics_utility.library.collectors.dashboard.collectors import dashboard_jo
 from metrics_utility.library.collectors.others.total_workers_vcpu import total_workers_vcpu
 from metrics_utility.library.collectors.service.task_executions_service import task_executions_service
 from metrics_utility.logger import logger
-
-
-try:
-    from psycopg.errors import UndefinedTable
-except ImportError:  # pragma: no cover
-
-    class UndefinedTable(Exception):
-        pass
 
 
 """
