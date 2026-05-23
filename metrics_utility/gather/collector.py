@@ -164,20 +164,13 @@ class Collector:
             logger.warning('Start of the collection interval is later than the end, ignoring request.')
             raise ValueError
 
-        # The ultimate beginning of the interval needs to be compared to 28 days prior to
-        # `until`, but we want to keep `since` empty if it wasn't passed in because we use that
-        # case to know whether to use the bookkeeping settings variables to decide the start of
-        # the interval.
-        horizon = until - _timedelta
-        if since is not None and since < horizon:  # pragma: no cover — prior clamping ensures since >= horizon
-            since = horizon
-            logger.warning(f'Start of the collection interval is more than {_max} days prior to {until}, setting to {horizon}.')
-
+        # `last_gather` is used as the fallback start of the interval when `since` is not
+        # passed in — bookkeeping settings decide the actual start in that case.
         self.gather_since = since
         self.gather_until = until
-        self.last_gather = horizon
+        self.last_gather = until - _timedelta
 
-        logger.info(f'Final since-until: {since or horizon} to {until}')
+        logger.info(f'Final since-until: {since or self.last_gather} to {until}')
 
     def _find_available_package(self, group, key, requested_size=None):
         """Checks if there is a Package available for collection.
