@@ -25,6 +25,18 @@ def test_non_string_key_raises_value_error():
             assert False, 'this should be unreachable'
 
 
+def test_lock_not_acquired_skips_release():
+    mock_connection, mock_cursor = mock_cursor_db()
+    mock_cursor.execute.return_value = None
+    mock_cursor.fetchone.return_value = [False]
+
+    with lock('test_key', wait=False, db=mock_connection) as acquired:
+        assert acquired is False
+
+    # hashtext + acquire = 2 calls, no release
+    assert mock_cursor.execute.call_count == 2
+
+
 def test_acquire_lock():
     with lock('test', wait=False, db=connection) as acquired:
         assert acquired is not None

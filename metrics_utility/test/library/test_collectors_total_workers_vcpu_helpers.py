@@ -199,6 +199,24 @@ def test_get_cpu_timeline_sorted_by_timestamp():
     assert result[2]['cpu_sum'] == pytest.approx(18.0)
 
 
+def test_get_cpu_timeline_series_without_values():
+    mock_prom = MagicMock()
+    mock_response = {
+        'data': {
+            'result': [
+                {'metric': {'instance': 'node1'}},
+                {'values': [[1704067200, '16.0']]},
+            ]
+        }
+    }
+    mock_prom.query_range.return_value = mock_response
+
+    result = get_cpu_timeline(mock_prom, 1704067200.0, 1704070800.0)
+
+    assert len(result) == 1
+    assert result[0]['cpu_sum'] == pytest.approx(16.0)
+
+
 def test_get_cpu_timeline_multiple_series():
     mock_prom = MagicMock()
     mock_response = {

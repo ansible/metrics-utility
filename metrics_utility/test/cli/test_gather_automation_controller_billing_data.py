@@ -109,6 +109,22 @@ def test_handle_no_analytics_collected():
             cmd.handle(verbose=False, ship=False, since=None, until=None)
 
 
+def test_empty_optional_collectors():
+    env = {
+        'METRICS_UTILITY_SHIP_TARGET': 'directory',
+        'METRICS_UTILITY_SHIP_PATH': '/tmp',
+        'METRICS_UTILITY_OPTIONAL_COLLECTORS': '',
+        'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': None,
+    }
+    with temporary_env(env):
+        ship_target, _, _ = Command()._read_env()
+
+        from metrics_utility.gather.utils import get_optional_collectors
+
+        assert get_optional_collectors() == []
+    assert ship_target == 'directory'
+
+
 def test_warn_surplus_env_vars():
     env = {
         'METRICS_UTILITY_SHIP_TARGET': 'directory',
