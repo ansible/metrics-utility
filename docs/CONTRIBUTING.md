@@ -104,21 +104,27 @@ For **external contributors**, since you don't have write access, a maintainer w
 
 ## Setting up your development environment
 
-See the [README](../README.md#developer-setup) for prerequisities and the developer setup.
+See [docs/development.md](./development.md) for prerequisites and the developer setup.
 
 
 ## Documentation Contribution
 
-It is recommended to follow the following structure for documentation:
+Documentation lives in `docs/`, organized by topic:
 
 ```
 metrics-utility/
-├── README.md               # project overview & quick start
+├── README.md                  # project overview & doc index
 └── docs/
-    ├── foo.md
-    ├── bar.md
-    └── baz.md
+    ├── gather.md              # gather CLI reference & env vars
+    ├── build.md               # build_report CLI reference
+    ├── collectors.md          # collector reference
+    ├── partitions.md          # partition pruning analysis
+    ├── development.md         # dev environment & testing
+    ├── awx.md                 # running against awx dev env
+    └── CONTRIBUTING.md        # this file
 ```
+
+When adding a new doc, add it to the appropriate section (CLI, Development, or Other) in `README.md`.
 
 All documentation should be valid GitHub-flavored markdown.
 

@@ -4,6 +4,28 @@ This is a Python library for metrics-utility, exposing all the functionality in 
 
 It provides collectors, a CSV file splitter, and a helper for database locking.
 
+The library uses no env variables, and doesn't rely on Controller environment.
+The CLI is expected to use the library where possible, but is not limited to it.
+
+Example use:
+
+```python
+from metrics_utility.library.collectors.controller import config, main_jobevent
+from metrics_utility.library import lock
+
+db = ... # django.db.connection / psycopg 3
+
+with lock('my-unique-key', wait=False, db=db) as acquired:
+    if not acquired:
+        raise "too bad" # or use wait=True instead
+
+    # dict, will be converted to json
+    config_dict = config(db=db).gather()
+
+    # list of .csv filenames; since is included, until is excluded
+    job_csvs = main_jobevent(db=db, since=since, until=until).gather()
+```
+
 
 ### Abstractions
 

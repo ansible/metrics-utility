@@ -26,7 +26,7 @@ FROM main_executionenvironment
 ```
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 - Collects all execution environments
 
 ---
@@ -67,7 +67,7 @@ LEFT JOIN main_unifiedjob mu ON mu.id = mjs.job_id
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.finished` timestamp
 
 **Optimization Strategy**:
@@ -81,7 +81,7 @@ LEFT JOIN main_unifiedjob mu ON mu.id = mjs.job_id
 
 **File**: `metrics_utility/library/collectors/controller/main_jobevent_service.py`
 
-**Purpose**: Collects job events for jobs that finished within a time window. **This is the most partition-aware collector** — see [partitions.md](./partitions.md) for details.
+**Purpose**: Collects job events for jobs that finished within a time window. **This is the most partition-aware collector** - see [partitions.md](./partitions.md) for details.
 
 **Tables Accessed**:
 - `main_unifiedjob` (READ) - To get job IDs and `job_created` timestamps
@@ -105,7 +105,7 @@ WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.finished` to find relevant jobs
 - Then filters `main_jobevent` by `job_created` (partition key) and `job_id`
 
@@ -136,7 +136,7 @@ WHERE (main_unifiedjob.created >= 'since' AND main_unifiedjob.created < 'until')
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `created` OR `finished` timestamp (OR condition)
 
 ---
@@ -169,7 +169,7 @@ WHERE e.event IN ('runner_on_ok', 'runner_on_failed', ...)
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_jobhostsummary.modified` timestamp
 
 **Recommendation**: Prefer `main_jobevent_service` over this collector for better partition pruning.
@@ -199,7 +199,7 @@ WHERE mjs.modified >= 'since' AND mjs.modified < 'until'
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_jobhostsummary.modified` timestamp
 
 **Recommendation**: Prefer `job_host_summary_service` which filters by job `finished` timestamp for better alignment with job completion times.
@@ -224,7 +224,7 @@ SELECT version FROM main_instance WHERE enabled = true AND version IS NOT NULL O
 ```
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 - Collects current configuration state
 
 ---
@@ -249,7 +249,7 @@ WHERE enabled='t'
 ```
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 - Collects all enabled hosts
 
 ---
@@ -276,7 +276,7 @@ WHERE enabled='t'
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `created` OR `modified` timestamp
 
 ---
@@ -304,7 +304,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `created` timestamp
 
 ---
@@ -319,7 +319,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - None (uses AWX Django APIs directly)
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 
 ---
 
@@ -333,7 +333,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `main_instance` (READ)
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 
 ---
 
@@ -350,7 +350,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `main_credentialtype` (READ)
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.finished` timestamp
 
 ---
@@ -365,7 +365,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `dab_feature_flags_aapflag` (READ)
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 
 ---
 
@@ -379,7 +379,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - PostgreSQL system tables (`pg_class`, `pg_inherits`, etc.) for metadata about `main_jobevent`, `main_unifiedjob`, `main_jobhostsummary`
 
 **Time Range Support**:
-- ❌ Does not support `since`/`until` parameters
+- Does not support `since`/`until` parameters
 
 ---
 
@@ -393,7 +393,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `tasks_taskexecution` (READ, from metrics-service database)
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `started_at` timestamp
 
 ---
@@ -414,7 +414,7 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - `main_jobhostsummary` (READ)
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_unifiedjob.modified` timestamp
 
 ---
@@ -429,7 +429,9 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 - None (queries Prometheus HTTP API, not database)
 
 **Time Range Support**:
-- ❌ Automatically queries previous hour
+- Does not support `since`/`until` - automatically queries previous hour
+
+**Note**: The SaaS solution runs on ROSA HCP where all nodes are workers. If this collector is used for another solution, worker filtering must be implemented.
 
 ---
 
@@ -457,7 +459,7 @@ ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
 ```
 
 **Time Range Support**:
-- ✅ **Supports `since`/`until` parameters**
+- Supports `since`/`until` parameters**
 - Filters by `main_hostmetric.last_automation` timestamp
 
 ---
@@ -467,21 +469,33 @@ ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
 | Collector | Tables | Partitioned? | Time Range | Usage |
 |-----------|--------|:---:|:---:|---|
 | `execution_environments` | `main_executionenvironment` | | | Daily snapshot |
-| `job_host_summary_service` | `main_unifiedjob`, `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization` | | ✅ | **Preferred** |
-| `main_jobevent_service` | `main_unifiedjob`, `main_jobevent` | ✅ | ✅ | **Preferred** |
-| `unified_jobs` | `main_unifiedjob`, `main_unifiedjobtemplate`, `django_content_type`, `main_job`, `main_inventory`, `main_organization`, `main_executionenvironment` | | ✅ | **Preferred** |
-| `main_jobevent` (legacy) | `main_jobhostsummary`, `main_jobevent` | ✅ | ✅ | Legacy |
-| `job_host_summary` (legacy) | `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization`, `main_unifiedjob` | | ✅ | Legacy |
+| `job_host_summary_service` | `main_unifiedjob`, `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization` | | Yes | **Preferred** |
+| `main_jobevent_service` | `main_unifiedjob`, `main_jobevent` | Yes | Yes | **Preferred** |
+| `unified_jobs` | `main_unifiedjob`, `main_unifiedjobtemplate`, `django_content_type`, `main_job`, `main_inventory`, `main_organization`, `main_executionenvironment` | | Yes | **Preferred** |
+| `main_jobevent` (legacy) | `main_jobhostsummary`, `main_jobevent` | Yes | Yes | Legacy |
+| `job_host_summary` (legacy) | `main_jobhostsummary`, `main_host`, `main_job`, `main_unifiedjobtemplate`, `main_inventory`, `main_organization`, `main_unifiedjob` | | Yes | Legacy |
 | `config` | `conf_setting`, `main_instance` | | | Daily snapshot |
 | `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | | Daily snapshot |
-| `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | ✅ | Incremental |
-| `main_hostmetric` | `main_hostmetric`, `main_host` | | ✅ | Renewal Guidance |
-| `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | | ✅ | Incremental |
+| `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | | Yes | Incremental |
+| `main_hostmetric` | `main_hostmetric`, `main_host` | | Yes | Renewal Guidance |
+| `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | | Yes | Incremental |
 | `config_django` | (AWX Django APIs) | | | Daily snapshot |
 | `controller_version_service` | `main_instance` | | | Daily snapshot |
-| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | | ✅ | Incremental |
+| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | | Yes | Incremental |
 | `feature_flags_service` | `dab_feature_flags_aapflag` | | | Daily snapshot |
 | `table_metadata` | (PostgreSQL system tables) | | | Daily snapshot |
-| `task_executions_service` | `tasks_taskexecution` (metrics-service DB) | | ✅ | Incremental |
-| `dashboard_jobs` | `main_unifiedjob`, `main_job`, `main_unifiedjobtemplate`, `auth_user`, `main_project`, `main_unifiedjob_labels`, `main_jobhostsummary` | | ✅ | Incremental |
+| `task_executions_service` | `tasks_taskexecution` (metrics-service DB) | | Yes | Incremental |
+| `dashboard_jobs` | `main_unifiedjob`, `main_job`, `main_unifiedjobtemplate`, `auth_user`, `main_project`, `main_unifiedjob_labels`, `main_jobhostsummary` | | Yes | Incremental |
 | `total_workers_vcpu` | (Prometheus API) | | | Daily snapshot |
+
+
+## Adding a new collector
+
+When adding a new collector, update all of these:
+
+1. Library collector: `metrics_utility/library/collectors/controller/<name>.py` (or `service/`, `dashboard/`, `others/`)
+2. CLI wrapper: `metrics_utility/gather/collectors.py` (import + `@register` function)
+3. Valid collectors: `VALID_COLLECTORS` in `metrics_utility/management/commands/gather_automation_controller_billing_data.py`
+4. Dev gather script: `run-ccsp2-gather` (add to `METRICS_UTILITY_OPTIONAL_COLLECTORS`)
+5. Collector docs: this file (new section + summary table row)
+6. Library README: `metrics_utility/library/README.md` (collector list)

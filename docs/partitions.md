@@ -31,7 +31,7 @@ Only two collectors access `main_jobevent`:
 
 ### `main_jobevent_service` (Preferred)
 
-**Partition Pruning**: ✅ **Optimal** — uses literal timestamp ranges in WHERE clause.
+**Partition Pruning**: Optimal - uses literal timestamp ranges in WHERE clause.
 
 **Strategy**:
 1. Fetches jobs finished in the time window (gets `job_id` and `job_created`)
@@ -47,7 +47,7 @@ Only two collectors access `main_jobevent`:
 
 ### `main_jobevent` (Legacy)
 
-**Partition Pruning**: ⚠️ **Limited** — uses JOIN on `job_created` which may not enable optimal partition pruning. PostgreSQL may scan more partitions than necessary.
+**Partition Pruning**: Limited - uses JOIN on `job_created` which may not enable optimal partition pruning. PostgreSQL may scan more partitions than necessary.
 
 **Recommendation**: Prefer `main_jobevent_service`.
 
@@ -64,8 +64,8 @@ PostgreSQL can **prune partitions** (skip scanning irrelevant partitions) when:
 
 | Collector | Pruning Strategy | Efficiency |
 |-----------|-----------------|------------|
-| `main_jobevent_service` | ✅ Literal timestamp ranges in WHERE clause | **High** — only relevant hourly partitions |
-| `main_jobevent` (legacy) | ⚠️ JOIN on `job_created` | **Medium** — may scan extra partitions |
+| `main_jobevent_service` | Literal timestamp ranges in WHERE clause | **High** - only relevant hourly partitions |
+| `main_jobevent` (legacy) | JOIN on `job_created` | **Medium** - may scan extra partitions |
 
 ### Best Practices for Partition-Aware Collectors
 
@@ -90,17 +90,17 @@ For a typical daily collection window (last 24 hours):
 ### Index Usage
 
 All collectors leverage indexes where available:
-- `main_unifiedjob.finished` — used by `job_host_summary_service` and `main_jobevent_service`
-- `main_unifiedjob.created` — used by `unified_jobs` and `main_jobevent_service`
-- `main_jobhostsummary.job_id` — used by `job_host_summary_service`
-- `main_jobhostsummary.modified` — used by legacy collectors
+- `main_unifiedjob.finished` - used by `job_host_summary_service` and `main_jobevent_service`
+- `main_unifiedjob.created` - used by `unified_jobs` and `main_jobevent_service`
+- `main_jobhostsummary.job_id` - used by `job_host_summary_service`
+- `main_jobhostsummary.modified` - used by legacy collectors
 
 ### Query Optimization Tips
 
 1. **Use service collectors** (`*_service.py`) over legacy collectors for better partition pruning
 2. **Narrow time windows** when possible to reduce partition scans
 3. **Monitor partition pruning** using `EXPLAIN ANALYZE` to verify only relevant partitions are scanned
-4. **Consider partition maintenance** — ensure partitions exist for the time range being queried
+4. **Consider partition maintenance** - ensure partitions exist for the time range being queried
 
 ---
 
