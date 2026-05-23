@@ -100,6 +100,26 @@ def test_ship_exception():
         _cleanup(collector)
 
 
+# --- update_last_gathered_entries when shipping failed ---
+
+
+def test_update_last_gathered_entries_shipping_failed():
+    collector = _make_collector()
+    try:
+        pkg = Package(collector)
+        pkg.shipping_successful = False
+
+        mock_collection = MagicMock()
+        pkg.collections = [mock_collection]
+
+        updates = {'keys': {}, 'locked': set()}
+        pkg.update_last_gathered_entries(updates)
+
+        mock_collection.update_last_gathered_entries.assert_not_called()
+    finally:
+        _cleanup(collector)
+
+
 # --- make_tgz error paths ---
 
 
@@ -176,6 +196,27 @@ def test_config_to_tar_missing():
 
 
 # --- _data_collection_status_to_tar exception ---
+
+
+def test_data_collection_status_to_tar_no_timestamps():
+    collector = _make_collector()
+    try:
+        pkg = Package(collector)
+
+        mock_collection = MagicMock()
+        mock_collection.gathering_successful = True
+        mock_collection.gathering_started_at = None
+        mock_collection.gathering_finished_at = None
+        mock_collection.since = utcdt('2024-01-01')
+        mock_collection.until = utcdt('2024-01-02')
+        mock_collection.filename = 'test.csv'
+        pkg.collections = [mock_collection]
+
+        mock_tar = MagicMock()
+        pkg._data_collection_status_to_tar(mock_tar)
+        mock_tar.addfile.assert_called_once()
+    finally:
+        _cleanup(collector)
 
 
 def test_data_collection_status_to_tar_exception():

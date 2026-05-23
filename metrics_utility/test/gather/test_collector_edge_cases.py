@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from metrics_utility.gather.decorators import register
+from metrics_utility.gather.slicing import daily_slicing
 from metrics_utility.test.gather.support.analytics_collector import AnalyticsCollector
 from metrics_utility.test.util import temporary_env, utcdt
 
@@ -143,12 +144,12 @@ def _config(**kwargs):
     return {'version': '1.0'}
 
 
-@register('failing_csv', '1.0', output_format='csv')
+@register('failing_csv', '1.0', output_format='csv', slicing=daily_slicing)
 def _failing_csv(**kwargs):
     raise RuntimeError('boom')
 
 
-@register('empty_csv', '1.0', output_format='csv')
+@register('empty_csv', '1.0', output_format='csv', slicing=daily_slicing)
 def _empty_csv(*, output, **kwargs):
     return None
 
@@ -165,11 +166,11 @@ def _make_module(*fns):
 
 def test_csv_collection_failure(collector):
     collector.collector_module = _make_module(_config, _failing_csv)
-    tgz_files = collector.gather(since=utcdt('2024-01-01'), until=utcdt('2024-01-02'))
+    tgz_files = collector.gather(since=utcdt('2024-01-01'), until=utcdt('2024-01-03'))
     assert tgz_files is not None
 
 
 def test_csv_collection_empty(collector):
     collector.collector_module = _make_module(_config, _empty_csv)
-    tgz_files = collector.gather(since=utcdt('2024-01-01'), until=utcdt('2024-01-02'))
+    tgz_files = collector.gather(since=utcdt('2024-01-01'), until=utcdt('2024-01-03'))
     assert tgz_files is not None

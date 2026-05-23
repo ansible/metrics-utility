@@ -32,6 +32,19 @@ def _make_fn(key, output_format='json', slicing=None):
 # --- cleanup with sub_collections ---
 
 
+def test_cleanup_csv_no_filepath(collector):
+    fn = _make_fn('test_csv', output_format='csv')
+    collection = Collection(collector, fn)
+    collection.cleanup()
+
+
+def test_data_size_csv_file_missing(collector, tmp_path):
+    fn = _make_fn('test_csv', output_format='csv')
+    collection = Collection(collector, fn)
+    collection.data_filepath = str(tmp_path / 'nonexistent.csv')
+    assert collection.data_size() == 0
+
+
 def test_cleanup_sub_collections(collector, tmp_path):
     fn = _make_fn('test_csv', output_format='csv')
     collection = Collection(collector, fn)

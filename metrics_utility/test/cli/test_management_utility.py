@@ -128,6 +128,15 @@ def test_run_subcommand_generic_exception():
 # --- metrics_utility.__init__ ---
 
 
+def test_prepare_finds_awx_via_awx_path():
+    from metrics_utility import prepare
+
+    mock_spec = MagicMock()
+    with patch('metrics_utility.importlib.util.find_spec', side_effect=[None, mock_spec]):
+        with patch('metrics_utility.sys.path'):
+            prepare()
+
+
 def test_prepare_warns_about_db_env_vars(capsys):
     from metrics_utility import prepare
     from metrics_utility.test.util import temporary_env
