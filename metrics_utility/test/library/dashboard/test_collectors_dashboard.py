@@ -200,3 +200,147 @@ class TestCollectorsDashboard:
         for i, job in enumerate(result['results']):
             for key, value in expected_jobs[i].items():
                 assert job[key] == value, f"Mismatch for job {i + 1} field '{key}': {job[key]} != {value}"
+
+    def test_dashboard_jobs_batch_empty(self):
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.description = [('id',), ('name',)]
+        mock_cursor.__iter__.return_value = iter([])
+        self.mock_db.cursor.return_value = mock_cursor
+
+        collector = dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=100, batch_size=10000)
+        result = collector.gather()
+
+        assert result == {'count': 0, 'results': []}
+
+    @patch('metrics_utility.library.collectors.dashboard.collectors.get_jobs_batch_query')
+    @patch('metrics_utility.library.collectors.dashboard.collectors.get_job_labels_for_ids_query')
+    @patch('metrics_utility.library.collectors.dashboard.collectors.get_job_host_summaries_for_ids_query')
+    def test_dashboard_jobs_batch_uses_id_scoped_queries(self, mock_summaries_query, mock_labels_query, mock_batch_query):
+        mock_batch_query.return_value = ('SELECT 1', [])
+        mock_labels_query.return_value = ('SELECT 1', [])
+        mock_summaries_query.return_value = ('SELECT 1', [])
+
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.description = [
+            ('id',),
+            ('name',),
+            ('unified_job_template_id',),
+            ('organization_id',),
+            ('started',),
+            ('finished',),
+            ('status',),
+            ('elapsed',),
+            ('launched_by_id',),
+            ('launched_by_username',),
+            ('project_id',),
+            ('project_name',),
+            ('created',),
+            ('modified',),
+        ]
+        mock_cursor.__iter__.return_value = iter(
+            [
+                (
+                    1,
+                    'Job 1',
+                    1,
+                    1,
+                    datetime(2024, 1, 10),
+                    datetime(2024, 1, 10, 0, 5),
+                    'successful',
+                    decimal.Decimal('300.0'),
+                    1,
+                    'user',
+                    2,
+                    'proj',
+                    datetime(2024, 1, 10),
+                    datetime(2024, 1, 10),
+                ),
+            ]
+        )
+        self.mock_db.cursor.return_value = mock_cursor
+
+        collector = dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=0, batch_size=5000)
+        collector.gather()
+
+        mock_batch_query.assert_called_once_with(self.since, self.until, 0, 5000, date_field='modified')
+        mock_labels_query.assert_called_once_with([1])
+        mock_summaries_query.assert_called_once_with([1])
+
+    @patch('metrics_utility.library.collectors.dashboard.collectors._dashboard_job_labels')
+    @patch('metrics_utility.library.collectors.dashboard.collectors._dashboard_job_host_summaries')
+    @patch('metrics_utility.library.collectors.dashboard.collectors.get_jobs_query')
+    def test_dashboard_jobs_non_batched_uses_helpers(self, mock_jobs_query, mock_summaries, mock_labels):
+        mock_jobs_query.return_value = ('SELECT 1', [])
+        mock_labels.return_value = {}
+        mock_summaries.return_value = {}
+
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_cursor.description = [
+            ('id',),
+            ('name',),
+            ('unified_job_template_id',),
+            ('organization_id',),
+            ('started',),
+            ('finished',),
+            ('status',),
+            ('elapsed',),
+            ('launched_by_id',),
+            ('launched_by_username',),
+            ('project_id',),
+            ('project_name',),
+            ('created',),
+            ('modified',),
+        ]
+        # Provide one row so the early-return guard doesn't fire
+        mock_cursor.__iter__.return_value = iter(
+            [
+                (
+                    1,
+                    'Job 1',
+                    1,
+                    1,
+                    datetime(2024, 1, 10),
+                    datetime(2024, 1, 10, 0, 5),
+                    'successful',
+                    decimal.Decimal('300.0'),
+                    None,
+                    None,
+                    None,
+                    None,
+                    datetime(2024, 1, 10),
+                    datetime(2024, 1, 10),
+                ),
+            ]
+        )
+        self.mock_db.cursor.return_value = mock_cursor
+
+        collector = dashboard_jobs(since=self.since, until=self.until, db=self.mock_db)
+        collector.gather()
+
+        mock_labels.assert_called_once_with(self.since, self.until, self.mock_db, date_field='modified')
+        mock_summaries.assert_called_once_with(self.since, self.until, self.mock_db, date_field='modified')
+        mock_jobs_query.assert_called_once_with(self.since, self.until, date_field='modified')
+
+    def test_dashboard_jobs_raises_on_only_after_id(self):
+        """Passing after_id without batch_size must raise rather than silently run a full-window query."""
+        import pytest
+
+        with pytest.raises(ValueError, match='after_id and batch_size'):
+            dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=100).gather()
+
+    def test_dashboard_jobs_raises_on_only_batch_size(self):
+        """Passing batch_size without after_id must raise rather than silently ignore the batch intent."""
+        import pytest
+
+        with pytest.raises(ValueError, match='after_id and batch_size'):
+            dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, batch_size=5000).gather()
+
+    def test_dashboard_jobs_raises_on_zero_batch_size(self):
+        """batch_size=0 must raise — a zero-row page would loop forever."""
+        import pytest
+
+        with pytest.raises(ValueError, match='batch_size must be greater than 0'):
+            dashboard_jobs(since=self.since, until=self.until, db=self.mock_db, after_id=0, batch_size=0).gather()

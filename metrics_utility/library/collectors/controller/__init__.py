@@ -12,6 +12,7 @@ from .main_jobevent import main_jobevent
 from .main_jobevent_service import main_jobevent_service
 from .table_metadata import table_metadata
 from .unified_jobs import unified_jobs
+from .unified_jobs_dashboard import unified_jobs_dashboard
 
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     'main_jobevent_service',
     'table_metadata',
     'unified_jobs',
+    'unified_jobs_dashboard',
 ]
