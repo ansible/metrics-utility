@@ -10,7 +10,8 @@ def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOu
 
     Uses two optimizations for partition pruning:
     1. Hourly timestamp ranges in WHERE clause (literal values for partition pruning)
-    2. Direct job_id filtering in WHERE clause
+    2. Subquery against main_unifiedjob to filter by job_id without materialising
+       the full ID list in Python (avoids memory exhaustion and oversized IN clauses).
     """
 
     jobs_query = """
@@ -22,21 +23,17 @@ def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOu
           AND uj.finished < %(until)s
     """
 
-    # Fetch all jobs in the time window
+    # Fetch all jobs in the time window.
+    # We still need the job_created timestamps to compute hourly partition ranges
+    # (partition pruning does not work through joins, so literal timestamps are required).
     with db.cursor() as cursor:
         cursor.execute(jobs_query, {'since': since, 'until': until})
         jobs = cursor.fetchall()
 
-    # Extract unique job_ids
-    # We are loading the finished jobs then we are filtering
-    # for the job_created, this cannot be done by simple joins because
-    # job_created is partitioned and partitions pruning dont work with joins
-    job_ids_set = set(job_id for job_id, _ in jobs)
-
-    # Extract unique hour boundaries from job_created timestamps
-    # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
+    # Extract unique hour boundaries from job_created timestamps.
+    # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges.
     hour_boundaries = set()
-    for job_id, job_created in jobs:
+    for _job_id, job_created in jobs:
         # Skip jobs with NULL created timestamp (defensive programming)
         if job_created is None:
             continue
@@ -65,21 +62,30 @@ def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOu
         # Don't forget the last range
         ranges.append((range_start, range_end))
 
-    # Build WHERE clause with consolidated ranges for partition pruning
-    # PostgreSQL can see these literal timestamps and prune partitions accordingly
+    # Build WHERE clause with consolidated ranges for partition pruning.
+    # PostgreSQL can see these literal timestamps and prune partitions accordingly.
     or_clauses = []
     for range_start, range_end in ranges:
         or_clauses.append(f"(e.job_created >= '{range_start.isoformat()}'::timestamptz AND e.job_created < '{range_end.isoformat()}'::timestamptz)")
 
-    # Handle edge case: if no ranges, use FALSE to return empty result set
-    # This maintains valid SQL structure while returning 0 rows
+    # Handle edge case: if no ranges, use FALSE to return empty result set.
+    # This maintains valid SQL structure while returning 0 rows.
     timestamp_where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
 
-    # Build job_id IN clause
-    # Handle edge case: if no jobs, use FALSE to return empty result set with proper schema
-    if job_ids_set:
-        job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
-        job_id_where_clause = f'e.job_id IN ({job_ids_str})'
+    # Build job_id filter as a subquery instead of a Python-materialised IN list.
+    # This prevents memory exhaustion and avoids oversized query plans when hundreds
+    # of thousands of job IDs would otherwise be embedded in the SQL string.
+    # When no jobs exist in the window, fall back to FALSE so the schema is preserved.
+    if jobs:
+        since_iso = since.isoformat()
+        until_iso = until.isoformat()
+        job_id_where_clause = (
+            f"e.job_id IN ("
+            f"SELECT id FROM main_unifiedjob"
+            f" WHERE finished >= '{since_iso}'::timestamptz"
+            f"   AND finished < '{until_iso}'::timestamptz"
+            f")"
+        )
     else:
         job_id_where_clause = 'FALSE'
 

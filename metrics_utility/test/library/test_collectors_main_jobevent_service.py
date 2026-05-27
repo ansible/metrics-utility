@@ -120,8 +120,8 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pandas):
-    """Test that query uses job_id IN clause and builds hourly timestamp ranges."""
+def test_main_jobevent_service_builds_subquery_and_hourly_ranges(mock_copy_pandas):
+    """Test that query uses a subquery for job_id filtering and builds hourly timestamp ranges."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -141,9 +141,14 @@ def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pan
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Should use direct job_id IN clause (no temp table for read-only replica compatibility)
+    # Should use a subquery against main_unifiedjob instead of a literal IN list,
+    # so that job IDs are never materialised in Python memory.
     assert 'e.job_id IN (' in query
-    assert '100' in query or '200' in query  # Should contain job IDs
+    assert 'SELECT id FROM main_unifiedjob' in query
+    # Individual job IDs (100, 200) must NOT appear in the query – they come from
+    # the subquery at execution time, not from a Python-built string.
+    assert '100' not in query
+    assert '200' not in query
 
     # Should have hourly timestamp ranges (truncated to hour boundaries)
     # Job 1 at 10:30:45 -> hour range 10:00:00 to 11:00:00
