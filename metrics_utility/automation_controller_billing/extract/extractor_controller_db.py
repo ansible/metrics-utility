@@ -40,22 +40,18 @@ class ExtractorControllerDB:
             if since.tzinfo is None:
                 since = since.replace(tzinfo=datetime.UTC)
 
-            marker_cond = ''
+            marker = None
             while True:
-                cursor.execute(self.host_metric_query(since, marker_cond))
+                query, params = self.host_metric_query(since, marker)
+                cursor.execute(query, params)
                 host_metric = self.dict_fetchall(cursor)
 
                 # Marker based pagination
                 if len(host_metric) <= 0:
                     break
 
-                marker_cond = f"""
-                    AND CONCAT(main_hostmetric.hostname , '___', COALESCE(main_host.id, 0)) >
-                        '{list(host_metric)[-1]['hostname']}___{list(host_metric)[-1]['host_id']}'
-                    -- TODO wrong query, has to use several or conditions, but will it help with usage of index?
-                    -- AND main_hostmetric.hostname >= '{list(host_metric)[-1]['hostname']}'
-                    -- AND COALESCE(main_host.id, 0) > {list(host_metric)[-1]['host_id']}
-                """
+                last = list(host_metric)[-1]
+                marker = f"{last['hostname']}___{last['host_id']}"
 
                 host_metric = pd.DataFrame(host_metric)
 
@@ -111,17 +107,29 @@ class ExtractorControllerDB:
         """
         return query
 
-    def host_metric_query(self, since, marker_cond=''):
+    def host_metric_query(self, since, marker=None):
         """Build the host_metric SQL query with an optional keyset-pagination marker.
+
+        Uses parameterized queries to prevent SQL injection.
 
         Args:
             since: Inclusive lower bound timestamp (timezone-aware datetime).
-            marker_cond: Optional SQL fragment appended to the WHERE clause for
-                keyset pagination (default ``''`` returns all rows).
+            marker: Optional opaque cursor string (``'hostname___host_id'``) from the
+                last row of the previous page.  When provided, results are restricted
+                to rows whose concatenated ``hostname___host_id`` key sorts strictly
+                after this value.  Defaults to ``None``, which returns the first page.
 
         Returns:
-            SQL query string.
+            Tuple of ``(query_string, params_tuple)`` suitable for passing directly
+            to ``cursor.execute()``.
         """
+        if marker is not None:
+            marker_sql = 'AND CONCAT(main_hostmetric.hostname , \'___\', COALESCE(main_host.id, 0)) > %s'
+            params = (since, marker)
+        else:
+            marker_sql = ''
+            params = (since,)
+
         query = f"""
             SELECT main_hostmetric.hostname,
                    COALESCE(main_host.id, 0) AS host_id,
@@ -146,13 +154,13 @@ class ExtractorControllerDB:
 
             FROM main_hostmetric
             LEFT JOIN main_host ON main_host.name = main_hostmetric.hostname
-            WHERE (main_hostmetric.last_automation >= '{since.isoformat()}' {marker_cond})
+            WHERE (main_hostmetric.last_automation >= %s {marker_sql})
             ORDER BY CONCAT(main_hostmetric.hostname , '___', COALESCE(main_host.id, 0)) ASC
             -- ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
             LIMIT {self.limit()}
         """
 
-        return query
+        return query, params
 
     @staticmethod
     def limit():
