@@ -10,11 +10,12 @@ from django.conf import settings
 
 import metrics_utility.base as base
 
+from metrics_utility.automation_controller_billing.package.credential_config import CredentialConfig
 from metrics_utility.exceptions import FailedToUploadPayload
 from metrics_utility.logger import logger
 
 
-class PackageCRC(base.Package):
+class PackageCRC(CredentialConfig, base.Package):
     """Package that ships tarballs to Red Hat's CRC (console.redhat.com) ingress API.
 
     Uses service-account OAuth2 credentials to obtain a bearer token from the
@@ -33,17 +34,8 @@ class PackageCRC(base.Package):
     def get_sso_url(self):
         return os.getenv('METRICS_UTILITY_CRC_SSO_URL', 'https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token')
 
-    def get_ingress_url(self):
-        return os.getenv('METRICS_UTILITY_CRC_INGRESS_URL', 'https://console.redhat.com/api/ingress/v1/upload')
-
     def get_proxy_url(self):
         return os.getenv('METRICS_UTILITY_PROXY_URL')
-
-    def _get_rh_user(self):
-        return os.getenv('METRICS_UTILITY_SERVICE_ACCOUNT_ID')
-
-    def _get_rh_password(self):
-        return os.getenv('METRICS_UTILITY_SERVICE_ACCOUNT_SECRET')
 
     def _get_http_request_headers(self):
         return get_awx_http_client_headers()
