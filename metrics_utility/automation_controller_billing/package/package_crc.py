@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 
 import requests
 
@@ -18,13 +19,65 @@ class PackageCRC(base.Package):
     """Package that ships tarballs to Red Hat's CRC (console.redhat.com) ingress API.
 
     Uses service-account OAuth2 credentials to obtain a bearer token from the
-    SSO endpoint before uploading.
+    SSO endpoint before uploading.  The token is cached in an instance variable
+    and reused across uploads until it is within TOKEN_EXPIRY_BUFFER_SECONDS of
+    expiry, at which point a fresh token is fetched.
     """
 
     CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
     SHIPPING_AUTH_SERVICE_ACCOUNT = 'service-account'
+
+    # Refresh the cached token this many seconds before it actually expires so
+    # that in-flight uploads never use a token that is about to become invalid.
+    TOKEN_EXPIRY_BUFFER_SECONDS = 60
+
+    def __init__(self, collector):
+        super().__init__(collector)
+        self._cached_token = None
+        self._token_expiry = 0.0  # Unix timestamp after which the token must not be used
+
+    def _bearer(self):
+        """Return a valid OAuth2 bearer token, fetching a fresh one only when needed.
+
+        The token is cached as an instance variable.  A new token is requested
+        whenever the cached token is absent or will expire within
+        TOKEN_EXPIRY_BUFFER_SECONDS seconds.  If SSO is temporarily unavailable
+        and a cached (still-valid) token exists, that token is returned so that
+        uploads can continue without interruption.
+        """
+        now = time.monotonic()
+        if self._cached_token is not None and now < self._token_expiry:
+            return self._cached_token
+
+        sso_url = self.get_sso_url()
+        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+        data = {
+            'client_id': self._get_rh_user(),
+            'client_secret': self._get_rh_password(),
+            'grant_type': 'client_credentials',
+        }
+
+        try:
+            r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
+            r.raise_for_status()
+            payload = json.loads(r.content)
+            access_token = payload['access_token']
+            expires_in = int(payload.get('expires_in', 300))
+            self._cached_token = access_token
+            self._token_expiry = now + expires_in - self.TOKEN_EXPIRY_BUFFER_SECONDS
+            return self._cached_token
+        except Exception as exc:
+            if self._cached_token is not None:
+                # SSO is temporarily unavailable; reuse the cached token if it
+                # has not yet expired (ignoring the buffer window so we stay
+                # functional as long as possible).
+                logger.warning(
+                    f'Failed to refresh OAuth2 token ({exc}); reusing cached token.'
+                )
+                return self._cached_token
+            raise
 
     def _tarname_base(self):
         timestamp = self.collector.gather_until
@@ -82,18 +135,10 @@ class PackageCRC(base.Package):
     def _send_data(self, url, files, session):
         # TODO: move to base
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
-            sso_url = self.get_sso_url()
-            headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-
-            data = {'client_id': self._get_rh_user(), 'client_secret': self._get_rh_password(), 'grant_type': 'client_credentials'}
-
-            r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
-            access_token = json.loads(r.content)['access_token']
-
             #################################
             ## Query crc with bearer token
             headers = session.headers
-            headers['authorization'] = f'Bearer {access_token}'
+            headers['authorization'] = f'Bearer {self._bearer()}'
 
             proxies = {}
             if self.get_proxy_url():
