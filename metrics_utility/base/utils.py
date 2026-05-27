@@ -18,6 +18,36 @@ def get_max_gather_period_days():
         raise
 
 
+def get_dashboard_page_size():
+    """
+    Get the dashboard collector page size from environment variable.
+    Controls how many job rows are fetched per SQL query when paginating.
+    Defaults to 10000 if not set or invalid.
+    """
+    DASHBOARD_PAGE_SIZE_DEFAULT = 10000
+
+    try:
+        return int(os.getenv('METRICS_UTILITY_DASHBOARD_PAGE_SIZE', str(DASHBOARD_PAGE_SIZE_DEFAULT)))
+    except (ValueError, TypeError):
+        logger.error('METRICS_UTILITY_DASHBOARD_PAGE_SIZE can not be converted to an integer')
+        raise
+
+
+def get_max_dashboard_records():
+    """
+    Get the maximum number of dashboard job records to collect per run from environment variable.
+    Acts as a safety cap to prevent OOM errors on very large deployments.
+    Set to 0 (the default) to disable the limit and collect all records in the window.
+    """
+    MAX_DASHBOARD_RECORDS_DEFAULT = 0
+
+    try:
+        return int(os.getenv('METRICS_UTILITY_MAX_DASHBOARD_RECORDS', str(MAX_DASHBOARD_RECORDS_DEFAULT)))
+    except (ValueError, TypeError):
+        logger.error('METRICS_UTILITY_MAX_DASHBOARD_RECORDS can not be converted to an integer')
+        raise
+
+
 def get_optional_collectors():
     """
     Get the list of optional collectors from environment variable.
