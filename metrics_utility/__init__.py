@@ -2,6 +2,7 @@ import importlib.util
 import os
 import sys
 
+from metrics_utility.constants import DEFAULT_AWX_PATH
 from metrics_utility.management_utility import ManagementUtility
 
 
@@ -9,7 +10,7 @@ def prepare():
     """Tries to find awx modules. Either we're already in the venv, or it can be configured through AWX_PATH, or we fall back to the mock."""
     spec = importlib.util.find_spec('awx')
     if spec is None:
-        awx_path = os.getenv('AWX_PATH', '/awx_devel')
+        awx_path = DEFAULT_AWX_PATH
         sys.path.append(awx_path)
 
         spec = importlib.util.find_spec('awx')

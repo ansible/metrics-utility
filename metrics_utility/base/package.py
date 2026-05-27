@@ -8,6 +8,7 @@ from abc import abstractmethod
 
 import requests
 
+from metrics_utility.constants import CA_BUNDLE_PATH, HTTP_TIMEOUT, MAX_DATA_SIZE
 from metrics_utility.logger import logger
 
 from .collection_data_status import CollectionDataStatus
@@ -26,7 +27,7 @@ class Package:
     See the README.md and tests/functional/test_gathering.py to see how are packages used
     """
 
-    CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
+    CERT_PATH = CA_BUNDLE_PATH
     # i.e. "application/vnd.redhat.tower.tower_payload+tgz"
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.TODO+tgz'
 
@@ -43,7 +44,7 @@ class Package:
 
     Split large table dumps at dump time into a series of files.
     """
-    MAX_DATA_SIZE = 200 * 1048576
+    MAX_DATA_SIZE = MAX_DATA_SIZE
 
     def __init__(self, collector):
         self.collector = collector
@@ -230,10 +231,10 @@ class Package:
                 verify=self.CERT_PATH,
                 auth=(self._get_rh_user(), self._get_rh_password()),
                 headers=session.headers,
-                timeout=(31, 31),
+                timeout=HTTP_TIMEOUT,
             )
         else:
-            response = session.post(url, files=files, headers=session.headers, timeout=(31, 31))
+            response = session.post(url, files=files, headers=session.headers, timeout=HTTP_TIMEOUT)
 
         # Accept 2XX status_codes
         if response.status_code >= 300:

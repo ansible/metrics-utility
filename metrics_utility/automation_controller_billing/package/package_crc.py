@@ -10,6 +10,7 @@ from django.conf import settings
 
 import metrics_utility.base as base
 
+from metrics_utility.constants import CA_BUNDLE_PATH, DEFAULT_CRC_INGRESS_URL, DEFAULT_CRC_SSO_URL, HTTP_TIMEOUT
 from metrics_utility.exceptions import FailedToUploadPayload
 from metrics_utility.logger import logger
 
@@ -21,7 +22,7 @@ class PackageCRC(base.Package):
     SSO endpoint before uploading.
     """
 
-    CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
+    CERT_PATH = CA_BUNDLE_PATH
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
     SHIPPING_AUTH_SERVICE_ACCOUNT = 'service-account'
@@ -31,10 +32,10 @@ class PackageCRC(base.Package):
         return f'{settings.SYSTEM_UUID}-{timestamp.strftime("%Y-%m-%d-%H%M%S%z")}'
 
     def get_sso_url(self):
-        return os.getenv('METRICS_UTILITY_CRC_SSO_URL', 'https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token')
+        return DEFAULT_CRC_SSO_URL
 
     def get_ingress_url(self):
-        return os.getenv('METRICS_UTILITY_CRC_INGRESS_URL', 'https://console.redhat.com/api/ingress/v1/upload')
+        return DEFAULT_CRC_INGRESS_URL
 
     def get_proxy_url(self):
         return os.getenv('METRICS_UTILITY_PROXY_URL')
@@ -87,7 +88,7 @@ class PackageCRC(base.Package):
 
             data = {'client_id': self._get_rh_user(), 'client_secret': self._get_rh_password(), 'grant_type': 'client_credentials'}
 
-            r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
+            r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=HTTP_TIMEOUT)
             access_token = json.loads(r.content)['access_token']
 
             #################################
@@ -105,7 +106,7 @@ class PackageCRC(base.Package):
                 verify=self.CERT_PATH,
                 proxies=proxies,
                 headers=headers,
-                timeout=(31, 31),
+                timeout=HTTP_TIMEOUT,
             )
 
         elif self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
@@ -115,11 +116,11 @@ class PackageCRC(base.Package):
                 verify=self.CERT_PATH,
                 auth=(self._get_rh_user(), self._get_rh_password()),
                 headers=session.headers,
-                timeout=(31, 31),
+                timeout=HTTP_TIMEOUT,
             )
 
         else:
-            response = session.post(url, files=files, headers=session.headers, timeout=(31, 31))
+            response = session.post(url, files=files, headers=session.headers, timeout=HTTP_TIMEOUT)
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
