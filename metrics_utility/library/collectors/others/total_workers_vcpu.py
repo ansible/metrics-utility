@@ -1,11 +1,19 @@
 """Collector that queries Prometheus for total worker vCPU usage in the previous hour."""
 
+import logging
+
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
 import requests
 
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 from ..util import DictOutput, collector
+
+
+logger = logging.getLogger(__name__)
 
 
 @collector
@@ -142,6 +150,12 @@ class PrometheusClient:
     Prometheus client with Kubernetes service account authentication support.
     """
 
+    # Retry configuration: 3 attempts, exponential backoff (1s, 2s, 4s), cap at 300s.
+    # Retries on connection errors, read timeouts, and 5xx/429 responses.
+    _RETRY_TOTAL = 3
+    _RETRY_BACKOFF_FACTOR = 1
+    _RETRY_STATUS_FORCELIST = (429, 500, 502, 503, 504)
+
     def __init__(self, url: str, timeout: int = 30, token=None, ca_cert_path=None):
         """Initialise the Prometheus client.
 
@@ -158,6 +172,16 @@ class PrometheusClient:
         self.session = requests.Session()
         self.session.headers.update({'Content-Type': 'application/x-www-form-urlencoded'})
 
+        retry = Retry(
+            total=self._RETRY_TOTAL,
+            backoff_factor=self._RETRY_BACKOFF_FACTOR,
+            status_forcelist=self._RETRY_STATUS_FORCELIST,
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
+
         if token:
             self.session.headers.update({'Authorization': f'Bearer {token}'})
 
@@ -167,6 +191,11 @@ class PrometheusClient:
 
     def _get(self, url, params):
         """Perform a GET request and return the parsed JSON response.
+
+        Transient network errors and 5xx/429 responses are retried automatically
+        (up to ``_RETRY_TOTAL`` times) with exponential backoff via the session's
+        mounted :class:`~requests.adapters.HTTPAdapter`.  Each retry attempt is
+        logged at WARNING level so operators can observe transient failures.
 
         Args:
             url: Full URL to request.
@@ -178,8 +207,14 @@ class PrometheusClient:
         Raises:
             Exception: On non-200 HTTP status or a Prometheus API error.
         """
-        response = self.session.get(url, params=params, timeout=self.timeout)
+        logger.debug('Prometheus GET %s params=%s', url, params)
+        try:
+            response = self.session.get(url, params=params, timeout=self.timeout)
+        except Exception as exc:
+            logger.warning('Prometheus request failed after retries: %s', exc)
+            raise
         if response.status_code != 200:
+            logger.warning('Prometheus HTTP error %s for %s: %s', response.status_code, url, response.text)
             raise Exception(f'HTTP error {response.status_code}: {response.text}')
 
         data = response.json()

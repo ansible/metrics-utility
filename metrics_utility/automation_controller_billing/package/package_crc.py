@@ -7,11 +7,42 @@ import requests
 
 from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
 from metrics_utility.logger import logger
+
+
+# Retry settings for CRC HTTP calls.
+# 3 total attempts with exponential backoff (1s, 2s, 4s).
+# Retries are triggered on connection errors and 5xx/429 responses.
+_CRC_RETRY_TOTAL = 3
+_CRC_RETRY_BACKOFF_FACTOR = 1
+_CRC_RETRY_STATUS_FORCELIST = (429, 500, 502, 503, 504)
+
+
+def _make_retry_session():
+    """Return a :class:`requests.Session` pre-configured with exponential-backoff retry logic.
+
+    The adapter retries up to ``_CRC_RETRY_TOTAL`` times on connection errors,
+    read timeouts, and HTTP responses in ``_CRC_RETRY_STATUS_FORCELIST``.  Each
+    attempt is separated by an exponentially increasing delay
+    (``_CRC_RETRY_BACKOFF_FACTOR * 2 ** (attempt - 1)`` seconds).
+    """
+    retry = Retry(
+        total=_CRC_RETRY_TOTAL,
+        backoff_factor=_CRC_RETRY_BACKOFF_FACTOR,
+        status_forcelist=_CRC_RETRY_STATUS_FORCELIST,
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
 
 
 class PackageCRC(base.Package):
@@ -81,13 +112,30 @@ class PackageCRC(base.Package):
 
     def _send_data(self, url, files, session):
         # TODO: move to base
+        # Ensure the caller-supplied session has retry logic for the ingress upload.
+        _retry = Retry(
+            total=_CRC_RETRY_TOTAL,
+            backoff_factor=_CRC_RETRY_BACKOFF_FACTOR,
+            status_forcelist=_CRC_RETRY_STATUS_FORCELIST,
+            raise_on_status=False,
+        )
+        _adapter = HTTPAdapter(max_retries=_retry)
+        session.mount('http://', _adapter)
+        session.mount('https://', _adapter)
+
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             sso_url = self.get_sso_url()
             headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
             data = {'client_id': self._get_rh_user(), 'client_secret': self._get_rh_password(), 'grant_type': 'client_credentials'}
 
-            r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
+            retry_session = _make_retry_session()
+            logger.debug('Fetching SSO bearer token from %s', sso_url)
+            try:
+                r = retry_session.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
+            except Exception as exc:
+                logger.warning('SSO token fetch failed after retries: %s', exc)
+                raise
             access_token = json.loads(r.content)['access_token']
 
             #################################
