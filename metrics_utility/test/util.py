@@ -42,6 +42,13 @@ def temporary_env(new_env):
 
 # Running a command as an external command, to test we can
 
+_SUBPROCESS_BASE_ENV = {
+    'AWX_LOGGING_MODE': 'stdout',
+    'PYTHONDONTWRITEBYTECODE': '1',
+    'TZ': 'UTC',
+    'LANG': 'en_US.UTF-8',
+}
+
 
 def _run_ext(env, name, args):
     """Run a management command as a subprocess and fail the test on non-zero exit.
@@ -59,7 +66,7 @@ def _run_ext(env, name, args):
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        env={'AWX_LOGGING_MODE': 'stdout', **env},
+        env={**_SUBPROCESS_BASE_ENV, **env},
     )
 
     status = result.returncode
