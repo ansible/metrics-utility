@@ -76,6 +76,13 @@ def temporary_env(new_env):
 
 # Running a command as an external command, to test we can
 
+_SUBPROCESS_BASE_ENV = {
+    'AWX_LOGGING_MODE': 'stdout',
+    'LANG': 'en_US.UTF-8',
+    'PYTHONDONTWRITEBYTECODE': '1',
+    'TZ': 'UTC',
+}
+
 
 def _db_env():
     """Reconstruct METRICS_UTILITY_DB_* from Django settings so subprocesses connect to the same DB."""
@@ -106,7 +113,7 @@ def _run_ext(env, name, args):
         [sys.executable, 'manage.py', name, *args],
         text=True,
         capture_output=True,
-        env={**_db_env(), 'AWX_LOGGING_MODE': 'stdout', **env},
+        env={**_SUBPROCESS_BASE_ENV, **_db_env(), **env},
     )
 
     status = result.returncode
