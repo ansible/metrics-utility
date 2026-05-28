@@ -77,7 +77,6 @@ def temporary_env(new_env):
 # Running a command as an external command, to test we can
 
 _SUBPROCESS_BASE_ENV = {
-    'AWX_LOGGING_MODE': 'stdout',
     'LANG': 'en_US.UTF-8',
     'PYTHONDONTWRITEBYTECODE': '1',
     'TZ': 'UTC',
