@@ -40,6 +40,7 @@ class StorageSegment:
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')
+        self.host = settings.get('host')
 
         if not SEGMENT_AVAILABLE:
             logger.info('StorageSegment: segment module not installed. Analytics will be disabled.')
@@ -145,6 +146,14 @@ class StorageSegment:
         # Configure Segment client
         analytics.write_key = self.write_key
         analytics.debug = self.debug
+        # sync_mode makes each track() a blocking HTTP request instead of queuing to a
+        # background thread. Without it the SDK batches all chunks into one POST which
+        # can silently exceed Segment's 500 KB batch limit and drop events, returning
+        # HTTP 200 with no error callback fired.
+        analytics.sync_mode = True
+        # Allow redirecting to a mock server via the host= kwarg.
+        # Setting to None restores the SDK default (https://api.segment.io).
+        analytics.host = self.host or None
 
         max_size = self.REGULAR_MESSAGE_LIMIT
         chunks = self._split_into_chunks(dict, max_size)

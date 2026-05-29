@@ -2,6 +2,7 @@ import json
 import os
 import re
 import shutil
+import urllib.request
 
 import pandas as pd
 import pytest
@@ -18,6 +19,7 @@ from metrics_utility.library.collectors.controller import (
     table_metadata,
     unified_jobs,
 )
+from metrics_utility.library.storage.segment import StorageSegment
 from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
 from metrics_utility.test.util import utcdt
 
@@ -975,10 +977,14 @@ def _validate_all_data(json_data, statistics):
     print('✅ All data value assertions passed!')
 
 
+MOCK_SEGMENT_URL = 'http://localhost:8765'
+
+
 def test_from_gather_to_json(cleanup_glob):
     """
-    Test collecting data from collectors for two hourly intervals (10:00-11:00 and 11:00-12:00)
-    and computing anonymized rollup from raw data.
+    Full integration test: gather data from the DB, compute an anonymized rollup,
+    validate the JSON structure, then ship it to a mock Segment server and assert
+    that the correct number of chunked track events was received.
     """
     # Define collectors similar to run_no_events.py
     COLLECTORS = {
@@ -1041,9 +1047,8 @@ def test_from_gather_to_json(cleanup_glob):
     input_data = _prepare_input_data(results, collector_to_input_key)
 
     # Compute anonymized rollup from raw data
-    salt = 'salt'
     print('Computing anonymized rollup from collected data...')
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data)
     print('✓ Anonymized rollup computed successfully')
 
     # Save JSON output
@@ -1054,3 +1059,34 @@ def test_from_gather_to_json(cleanup_glob):
     # Validate all data
     statistics = json_data['statistics']
     _validate_all_data(json_data, statistics)
+
+    # --- Send to mock Segment server and validate the HTTP traffic ---
+    print(f'\nSending rollup to mock Segment server at {MOCK_SEGMENT_URL} ...')
+
+    # Clear any requests captured from previous test runs.
+    urllib.request.urlopen(f'{MOCK_SEGMENT_URL}/reset', timeout=10)
+
+    storage = StorageSegment(write_key='test-key', host=MOCK_SEGMENT_URL)
+    chunks = storage.put('anonymized_rollup', dict=json_data)
+
+    assert chunks, 'StorageSegment.put() should return a non-empty list of chunks'
+
+    # Fetch what the mock server captured.
+    with urllib.request.urlopen(f'{MOCK_SEGMENT_URL}/requests', timeout=10) as resp:
+        captured = json.loads(resp.read())
+
+    assert len(captured) == len(chunks), f'Mock Segment server received {len(captured)} POST requests but expected {len(chunks)} (one per chunk)'
+
+    for i, req in enumerate(captured, 1):
+        batch = req['body']['batch']
+        assert len(batch) == 1, f'Request {i}: expected 1 event per POST (sync_mode), got {len(batch)}'
+        event = batch[0]
+        props = event['properties']
+
+        assert event['event'] == 'Metrics Artifact Upload', f'Request {i}: unexpected event name {event["event"]!r}'
+        assert props['artifact_name'] == 'anonymized_rollup', f'Request {i}: unexpected artifact_name {props["artifact_name"]!r}'
+        assert props['chunk_info']['total_chunks'] == len(chunks), f'Request {i}: total_chunks mismatch'
+        assert props['chunk_info']['chunk_number'] == i, f'Request {i}: chunk_number should be {i}, got {props["chunk_info"]["chunk_number"]}'
+        assert props['chunk_info']['chunk_size'] > 0, f'Request {i}: chunk_size should be positive'
+
+    print(f'✅ Segment: {len(chunks)} chunk(s) received and validated.')

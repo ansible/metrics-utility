@@ -86,6 +86,18 @@ jobs:
           sed -i '/USER/s/myuser/awx/' mock_awx/settings/__init__.py
           sed -i '/PASSWORD/s/mypassword/awx/' mock_awx/settings/__init__.py
 
+      - name: "Set up Go"
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/mock-segment-server/go.mod
+
+      - name: "Start mock Segment server"
+        timeout-minutes: 1
+        run: |
+          go build -C tools/mock-segment-server -o /tmp/mock-segment-server .
+          /tmp/mock-segment-server &
+          until curl -sf http://localhost:8765/requests > /dev/null; do sleep 1; done
+
       - name: "Run pytest"
         env:
           METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
@@ -95,7 +107,15 @@ jobs:
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
         run: |
-          uv run pytest -s -v --cov=. --cov-report=xml
+          uv run pytest -s -v --cov=. --cov-branch --cov-report=xml
+
+      - name: "Upload coverage to Codecov"
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unit-tests
+          fail_ci_if_error: false
 
       - name: "Upload code coverage report"
         if: ${{ github.base_ref }}
