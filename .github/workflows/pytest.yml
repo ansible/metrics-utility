@@ -87,7 +87,7 @@ jobs:
           sed -i '/PASSWORD/s/mypassword/awx/' mock_awx/settings/__init__.py
 
       - name: "Set up Go"
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: tools/mock-segment-server/go.mod
 
