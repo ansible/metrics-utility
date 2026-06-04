@@ -231,6 +231,9 @@ def _upsert_conf_settings(key_value_pairs, error_context):
                          which caller failed (e.g. 'renewed Candlepin cert').
 
     Best-effort: failures are logged as errors but never propagate.
+
+    Note: Uses DELETE + INSERT instead of ON CONFLICT to avoid requiring a unique
+    constraint on the key column (which is missing in the AWX schema).
     """
     try:
         from django.db import connection, transaction
@@ -238,7 +241,10 @@ def _upsert_conf_settings(key_value_pairs, error_context):
         with transaction.atomic():
             with connection.cursor() as cursor:
                 for key, value in key_value_pairs:
-                    cursor.execute(_CONF_SETTING_UPSERT_SQL, [key, json.dumps(value)])
+                    # Delete existing row if present
+                    cursor.execute('DELETE FROM conf_setting WHERE key = %s', [key])
+                    # Insert new row
+                    cursor.execute('INSERT INTO conf_setting (created, modified, key, value) VALUES (NOW(), NOW(), %s, %s)', [key, json.dumps(value)])
         return True
     except Exception as e:
         logger.error(f'Could not save {error_context} to conf_setting: {e}')
