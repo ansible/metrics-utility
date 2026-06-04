@@ -133,8 +133,7 @@ class Command(BaseCommand):
             missing.append('username (pass --username or set SUBSCRIPTIONS_USERNAME in conf_setting)')
         if not password:
             missing.append('password (pass --password or set SUBSCRIPTIONS_PASSWORD in conf_setting)')
-        if not org:
-            missing.append('org (pass --org or ensure LICENSE.account_number is set in conf_setting)')
+        # Note: org is optional - will be discovered from user account if not provided
         if missing:
             for m in missing:
                 self.stderr.write(f'Missing required value: {m}')
@@ -163,6 +162,16 @@ class Command(BaseCommand):
         proxy = options.get('proxy') or os.getenv('METRICS_UTILITY_PROXY_URL')
 
         client = CandlepinClient(base_url=candlepin_url, candlepin_ca=candlepin_ca, proxy=proxy)
+
+        # If org is not provided, discover it from the user's account
+        if not org:
+            self.stdout.write('Attempting to discover org from user account ...')
+            try:
+                org = client.discover_org(username, password)
+                self.stdout.write(f'Discovered org: {org}')
+            except Exception as e:
+                self.stderr.write(f'Org discovery failed: {e}')
+                return False
 
         self.stdout.write(f'Registering with Candlepin at {candlepin_url} (org={org}) ...')
         try:

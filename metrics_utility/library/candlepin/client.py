@@ -51,6 +51,49 @@ class CandlepinClient:
     # Public API
     # ------------------------------------------------------------------
 
+    def discover_org(self, username, password):
+        """GET /users/{username}/owners — discover org key for the given user.
+
+        Args:
+            username: Red Hat subscription username.
+            password: Red Hat subscription password.
+
+        Returns:
+            String org key (e.g. '11009103').
+
+        Raises:
+            RuntimeError if no orgs are found or on network/API failure.
+        """
+        url = f'{self.base_url}/users/{username}/owners'
+        try:
+            resp = requests.get(
+                url,
+                auth=(username, password),
+                verify=self.verify,
+                proxies=self.proxies,
+                timeout=30,
+            )
+        except Exception as e:
+            raise RuntimeError(f'Candlepin discover_org network error: {e}') from e
+
+        if not resp.ok:
+            raise RuntimeError(f'Candlepin discover_org failed with status {resp.status_code}: {resp.text}')
+
+        try:
+            owners = resp.json()
+        except Exception as e:
+            raise RuntimeError(f'Candlepin discover_org: could not parse response JSON: {e}') from e
+
+        if not owners:
+            raise RuntimeError('Candlepin discover_org: no organizations found for this user')
+
+        org = owners[0].get('key')
+        if not org:
+            raise RuntimeError('Candlepin discover_org: first owner missing "key" field')
+
+        logger.info(f'Candlepin org discovered: {org}')
+        return org
+
     def register_consumer(self, username, password, org, install_uuid=None):
         """POST /consumers?owner={org} — register a new AAP consumer with basic auth.
 
