@@ -59,7 +59,7 @@ class CandlepinClient:
             password: Red Hat subscription password.
 
         Returns:
-            String org key (e.g. '11009103').
+            String org key (e.g. '1234567').
 
         Raises:
             RuntimeError if no orgs are found or on network/API failure.
