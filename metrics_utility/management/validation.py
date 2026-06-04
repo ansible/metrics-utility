@@ -285,8 +285,9 @@ def _fetch_registration_credentials_from_db():
             )
             rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
 
-        license_data = rows.get('LICENSE', {})
-        org = license_data.get('account_number') if isinstance(license_data, dict) else None
+        # NOTE: LICENSE.account_number is the Red Hat account number, NOT the Candlepin org key.
+        # These are two different identifiers. Return None to force org discovery via API.
+        org = None  # Force org discovery - account_number != org key
         return (
             rows.get(SUBSCRIPTIONS_USERNAME_SETTING_KEY),
             rows.get(SUBSCRIPTIONS_PASSWORD_SETTING_KEY),
