@@ -318,7 +318,8 @@ class TestSaveCandlepinCertToDb:
         mock_conn.__exit__ = MagicMock(return_value=False)
         with patch('django.db.connection.cursor', return_value=mock_conn):
             _save_candlepin_cert_to_db(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
-        assert mock_cursor.execute.call_count == 2
+        # 2 keys × 2 SQL statements each (DELETE + INSERT) = 4 total
+        assert mock_cursor.execute.call_count == 4
         calls = [c[0] for c in mock_cursor.execute.call_args_list]
         keys_updated = [c[1][0] for c in calls]
         assert CANDLEPIN_CERT_SETTING_KEY in keys_updated

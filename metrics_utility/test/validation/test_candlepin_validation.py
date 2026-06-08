@@ -285,7 +285,8 @@ class TestFetchRegistrationCredentialsFromDb:
             username, password, org, install_uuid = _fetch_registration_credentials_from_db()
         assert username == SAMPLE_USERNAME
         assert password == SAMPLE_PASSWORD
-        assert org == SAMPLE_ORG
+        # org is always None - it's discovered via API, not from LICENSE.account_number
+        assert org is None
         assert install_uuid == SAMPLE_INSTALL_UUID
 
     def test_extracts_account_number_from_license(self):
@@ -293,7 +294,8 @@ class TestFetchRegistrationCredentialsFromDb:
         mock_conn = _make_cursor_rows(rows)
         with patch('django.db.connection.cursor', return_value=mock_conn):
             _, _, org, _ = _fetch_registration_credentials_from_db()
-        assert org == '9999999'
+        # org is always None - it's discovered via API, not from LICENSE.account_number
+        assert org is None
 
     def test_org_is_none_when_license_missing(self):
         rows = [
@@ -342,8 +344,8 @@ class TestSaveCandlepinRegistrationToDb:
                 mock_atomic.return_value.__enter__ = MagicMock(return_value=None)
                 mock_atomic.return_value.__exit__ = MagicMock(return_value=False)
                 _save_candlepin_registration_to_db(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
-        # Three UPSERTs: cert, key, uuid
-        assert mock_cursor.execute.call_count == 3
+        # 3 keys × 2 SQL statements each (DELETE + INSERT) = 6 total
+        assert mock_cursor.execute.call_count == 6
 
     def test_logs_error_on_db_failure(self):
         with patch('django.db.connection.cursor', side_effect=Exception('DB error')):
@@ -370,6 +372,7 @@ class TestRegisterCandlepinConsumer:
         mock_conn = _make_cursor_rows(self._db_rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
                 with patch('metrics_utility.management.validation._save_candlepin_registration_to_db'):
                     cert, key, uuid_ = _register_candlepin_consumer()
@@ -381,6 +384,7 @@ class TestRegisterCandlepinConsumer:
         mock_conn = _make_cursor_rows(self._db_rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
                 with patch('metrics_utility.management.validation._save_candlepin_registration_to_db') as mock_save:
                     _register_candlepin_consumer()
@@ -406,20 +410,23 @@ class TestRegisterCandlepinConsumer:
             result = _register_candlepin_consumer()
         assert result == (None, None, None)
 
-    def test_returns_none_tuple_when_org_missing(self):
+    def test_returns_none_tuple_when_org_discovery_fails(self):
         rows = [
             (SUBSCRIPTIONS_USERNAME_SETTING_KEY, json.dumps(SAMPLE_USERNAME)),
             (SUBSCRIPTIONS_PASSWORD_SETTING_KEY, json.dumps(SAMPLE_PASSWORD)),
         ]
         mock_conn = _make_cursor_rows(rows)
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            result = _register_candlepin_consumer()
+            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.side_effect = RuntimeError('No orgs found')
+                result = _register_candlepin_consumer()
         assert result == (None, None, None)
 
     def test_returns_none_tuple_when_api_fails(self):
         mock_conn = _make_cursor_rows(self._db_rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
                 result = _register_candlepin_consumer()
         assert result == (None, None, None)
@@ -428,6 +435,7 @@ class TestRegisterCandlepinConsumer:
         mock_conn = _make_cursor_rows(self._db_rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
                 with patch('metrics_utility.management.validation.logger') as mock_log:
                     _register_candlepin_consumer()
@@ -444,6 +452,7 @@ class TestRegisterCandlepinConsumer:
         mock_conn = _make_cursor_rows(self._db_rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
                 with patch('metrics_utility.management.validation._save_candlepin_registration_to_db'):
                     _register_candlepin_consumer()

@@ -345,14 +345,19 @@ def _register_candlepin_consumer():
         )
         return None, None, None
 
-    if not org:
-        logger.warning('Candlepin registration is enabled but LICENSE.account_number is not available; skipping registration.')
-        return None, None, None
-
     candlepin_url = get_candlepin_url()
     candlepin_ca = get_candlepin_ca()
     proxy = os.getenv('METRICS_UTILITY_PROXY_URL')
     client = CandlepinClient(base_url=candlepin_url, candlepin_ca=candlepin_ca, proxy=proxy)
+
+    # Discover org if not available from LICENSE.account_number
+    if not org:
+        try:
+            org = client.discover_org(username, password)
+            logger.info(f'Discovered Candlepin org: {org}')
+        except Exception as e:
+            logger.warning(f'Could not discover Candlepin org: {e}; skipping registration.')
+            return None, None, None
 
     try:
         cert_pem, key_pem, consumer_uuid = client.register_consumer(username, password, org, install_uuid)
