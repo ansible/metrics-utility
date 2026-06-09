@@ -1,6 +1,7 @@
 """Validation helpers for metrics-utility management commands (gather and build)."""
 
 import datetime
+import json
 import os
 import re
 
@@ -76,6 +77,9 @@ VALID_COLLECTORS = {
 
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
+
+CANDLEPIN_CERT_SETTING_KEY = 'CANDLEPIN_CONSUMER_CERT'
+CANDLEPIN_KEY_SETTING_KEY = 'CANDLEPIN_CONSUMER_KEY'
 
 ship_path_description = 'place for collected data and built reports'
 
@@ -164,6 +168,33 @@ def handle_not_s3():
         logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="s3": {", ".join(surplus)}')
 
 
+def _fetch_candlepin_cert_from_db():
+    """Read Candlepin identity cert and key PEMs from conf_setting.
+
+    Returns:
+        Tuple of ``(cert_pem, key_pem)``, either of which may be None if absent
+        or on any DB error. Best-effort: failures are logged and never propagate.
+    """
+    keys = [CANDLEPIN_CERT_SETTING_KEY, CANDLEPIN_KEY_SETTING_KEY]
+    try:
+        from django.db import connection
+
+        placeholders = ', '.join(['%s'] * len(keys))
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})',
+                keys,
+            )
+            rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
+        return (
+            rows.get(CANDLEPIN_CERT_SETTING_KEY),
+            rows.get(CANDLEPIN_KEY_SETTING_KEY),
+        )
+    except Exception as e:
+        logger.warning(f'Could not fetch Candlepin cert from DB: {e}')
+        return None, None
+
+
 def handle_crc_ship_target():
     """Read and validate CRC-related billing provider environment variables.
 
@@ -195,6 +226,14 @@ def handle_crc_ship_target():
     if ship_path:
         allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
+
+    cert_pem, key_pem = _fetch_candlepin_cert_from_db()
+    if cert_pem and key_pem:
+        billing_provider_params['candlepin_cert_pem'] = cert_pem
+        billing_provider_params['candlepin_key_pem'] = key_pem
+        logger.info('Candlepin identity cert loaded from DB; mTLS will be attempted.')
+    else:
+        logger.info('No Candlepin identity cert found in DB; will use service account auth.')
 
     return billing_provider_params
 

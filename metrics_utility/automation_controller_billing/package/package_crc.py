@@ -11,20 +11,37 @@ from django.conf import settings
 import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
+from metrics_utility.library.candlepin.client import CandlepinClient
+from metrics_utility.library.candlepin.lifecycle import is_cert_valid as _is_cert_valid
 from metrics_utility.logger import logger
+
+
+__all__ = ['PackageCRC', '_is_cert_valid']
 
 
 class PackageCRC(base.Package):
     """Package that ships tarballs to Red Hat's CRC (console.redhat.com) ingress API.
 
-    Uses service-account OAuth2 credentials to obtain a bearer token from the
-    SSO endpoint before uploading.
+    Prefers Candlepin mTLS when a valid identity cert is available; falls back to
+    service-account OAuth2 credentials otherwise.
     """
 
     CERT_PATH = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
     PAYLOAD_CONTENT_TYPE = 'application/vnd.redhat.aap-billing-controller.aap_billing_controller_payload+tgz'
 
     SHIPPING_AUTH_SERVICE_ACCOUNT = 'service-account'
+
+    def __init__(self, collector):
+        super().__init__(collector)
+        self._resolved_auth_mode = None
+        self._temp_cert_path = None
+        self._temp_key_path = None
+
+    def _candlepin_cert_pem(self):
+        return (self.collector.billing_provider_params or {}).get('candlepin_cert_pem')
+
+    def _candlepin_key_pem(self):
+        return (self.collector.billing_provider_params or {}).get('candlepin_key_pem')
 
     def _tarname_base(self):
         timestamp = self.collector.gather_until
@@ -48,18 +65,60 @@ class PackageCRC(base.Package):
     def _get_http_request_headers(self):
         return get_awx_http_client_headers()
 
-    def shipping_auth_mode(self):
-        # TODO make this as a configuration so we can use this for local testing,
-        # for now, uncomment when testin locally in docker
-        # return self.SHIPPING_AUTH_IDENTITY
+    def _get_client_certificates(self):
+        if self._temp_cert_path and self._temp_key_path:
+            return (self._temp_cert_path, self._temp_key_path)
+        return super()._get_client_certificates()
 
-        return self.SHIPPING_AUTH_SERVICE_ACCOUNT
+    def ship(self):
+        if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
+            return super().ship()
+
+        try:
+            with CandlepinClient._temp_cert_files(self._candlepin_cert_pem(), self._candlepin_key_pem()) as (cert_path, key_path):
+                self._temp_cert_path = cert_path
+                self._temp_key_path = key_path
+                try:
+                    return super().ship()
+                except requests.exceptions.SSLError as e:
+                    if not self._get_rh_user() or not self._get_rh_password():
+                        raise FailedToUploadPayload(
+                            f'mTLS upload failed and no service account credentials are configured to fall back to '
+                            f'(METRICS_UTILITY_SERVICE_ACCOUNT_ID / METRICS_UTILITY_SERVICE_ACCOUNT_SECRET are not set). '
+                            f'Original SSL error: {e}'
+                        ) from e
+                    logger.error(f'mTLS upload failed ({e}); retrying with service account auth')
+                    self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
+                    self._temp_cert_path = None
+                    self._temp_key_path = None
+                    return super().ship()
+        finally:
+            self._temp_cert_path = None
+            self._temp_key_path = None
+
+    def shipping_auth_mode(self):
+        if self._resolved_auth_mode is not None:
+            return self._resolved_auth_mode
+
+        cert_pem = self._candlepin_cert_pem()
+        key_pem = self._candlepin_key_pem()
+        if cert_pem and key_pem and _is_cert_valid(cert_pem):
+            self._resolved_auth_mode = self.SHIPPING_AUTH_CERTIFICATES
+        else:
+            self._resolved_auth_mode = self.SHIPPING_AUTH_SERVICE_ACCOUNT
+
+        return self._resolved_auth_mode
 
     def is_shipping_configured(self):
-        # TODO: move to base, or children
-        ret = super()
+        ret = super().is_shipping_configured()
         if ret is False:
             return False
+
+        if self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
+            if not self.get_ingress_url():
+                logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
+                return False
+            return True
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             if not self.get_ingress_url():
@@ -80,7 +139,6 @@ class PackageCRC(base.Package):
         return True
 
     def _send_data(self, url, files, session):
-        # TODO: move to base
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             sso_url = self.get_sso_url()
             headers = {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -90,8 +148,6 @@ class PackageCRC(base.Package):
             r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
             access_token = json.loads(r.content)['access_token']
 
-            #################################
-            ## Query crc with bearer token
             headers = session.headers
             headers['authorization'] = f'Bearer {access_token}'
 
@@ -108,6 +164,17 @@ class PackageCRC(base.Package):
                 timeout=(31, 31),
             )
 
+        elif self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
+            proxies = {'https': self.get_proxy_url()} if self.get_proxy_url() else {}
+            response = session.post(
+                url,
+                files=files,
+                verify=self.CERT_PATH,
+                proxies=proxies,
+                headers=session.headers,
+                timeout=(31, 31),
+            )
+
         elif self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
             response = session.post(
                 url,
@@ -121,7 +188,6 @@ class PackageCRC(base.Package):
         else:
             response = session.post(url, files=files, headers=session.headers, timeout=(31, 31))
 
-        # Accept 2XX status_codes
         if response.status_code >= 300:
             raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
 

@@ -94,10 +94,13 @@ class Collector(base.Collector):
         if not super()._gather_config():
             return False
 
-        # Extend the config collection to contain billing specific info:
+        # Extend the config collection to contain billing specific info.
+        # Strip mTLS key material — only needed at ship time, never in the uploaded payload.
+        _SENSITIVE_BILLING_KEYS = {'candlepin_cert_pem', 'candlepin_key_pem'}
+        safe_billing_provider_params = {k: v for k, v in (self.billing_provider_params or {}).items() if k not in _SENSITIVE_BILLING_KEYS}
         config_collection = self.collections['config']
         data = json.loads(config_collection.data)
-        data['billing_provider_params'] = self.billing_provider_params
+        data['billing_provider_params'] = safe_billing_provider_params
         config_collection._save_gathering(data)
 
         return True
