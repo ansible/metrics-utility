@@ -80,6 +80,7 @@ VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
 CANDLEPIN_CERT_SETTING_KEY = 'CANDLEPIN_CONSUMER_CERT'
 CANDLEPIN_KEY_SETTING_KEY = 'CANDLEPIN_CONSUMER_KEY'
+CANDLEPIN_CONF_SETTING_QUERY = 'SELECT key, value FROM conf_setting WHERE key IN (%s, %s)'
 
 ship_path_description = 'place for collected data and built reports'
 
@@ -179,12 +180,8 @@ def _fetch_candlepin_cert_from_db():
     try:
         from django.db import connection
 
-        placeholders = ', '.join(['%s'] * len(keys))
         with connection.cursor() as cursor:
-            cursor.execute(
-                f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})',
-                keys,
-            )
+            cursor.execute(CANDLEPIN_CONF_SETTING_QUERY, keys)
             rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
         return (
             rows.get(CANDLEPIN_CERT_SETTING_KEY),

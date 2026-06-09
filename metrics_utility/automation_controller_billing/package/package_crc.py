@@ -11,7 +11,7 @@ from django.conf import settings
 import metrics_utility.base as base
 
 from metrics_utility.exceptions import FailedToUploadPayload
-from metrics_utility.library.candlepin.client import CandlepinClient
+from metrics_utility.library.candlepin.client import temp_cert_files
 from metrics_utility.library.candlepin.lifecycle import is_cert_valid as _is_cert_valid
 from metrics_utility.logger import logger
 
@@ -75,7 +75,7 @@ class PackageCRC(base.Package):
             return super().ship()
 
         try:
-            with CandlepinClient._temp_cert_files(self._candlepin_cert_pem(), self._candlepin_key_pem()) as (cert_path, key_path):
+            with temp_cert_files(self._candlepin_cert_pem(), self._candlepin_key_pem()) as (cert_path, key_path):
                 self._temp_cert_path = cert_path
                 self._temp_key_path = key_path
                 try:
@@ -139,6 +139,7 @@ class PackageCRC(base.Package):
         return True
 
     def _send_data(self, url, files, session):
+        # TODO: move to base
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_SERVICE_ACCOUNT:
             sso_url = self.get_sso_url()
             headers = {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -148,6 +149,8 @@ class PackageCRC(base.Package):
             r = requests.post(sso_url, headers=headers, data=data, verify=self.CERT_PATH, timeout=(31, 31))
             access_token = json.loads(r.content)['access_token']
 
+            #################################
+            ## Query crc with bearer token
             headers = session.headers
             headers['authorization'] = f'Bearer {access_token}'
 
@@ -188,6 +191,7 @@ class PackageCRC(base.Package):
         else:
             response = session.post(url, files=files, headers=session.headers, timeout=(31, 31))
 
+        # Accept 2XX status_codes
         if response.status_code >= 300:
             raise FailedToUploadPayload(f'Upload failed with status {response.status_code}, {response.text}')
 
