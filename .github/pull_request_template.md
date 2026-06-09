@@ -5,8 +5,8 @@ Dont forget to link back issue to PR.
 > **Failure to notify downstream stakeholders (such as the Analytics team) of schema or version changes can result in outages and loss of revenue.**
 >
 > Please notify stakeholders to disseminate the change correctly, most notably the **Analytics HCC service**.
-> A crtical ticket to track the change prior to promotion.
-> The change should not be merged until depedancies have been updated.
+> A critical ticket to track the change prior to promotion.
+> The change should not be merged until dependencies have been updated.
 
 ## Description
 
