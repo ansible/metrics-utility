@@ -6,7 +6,7 @@ Dont forget to link back issue to PR.
 >
 > Please notify stakeholders to disseminate the change correctly, most notably the **Analytics HCC service**.
 > A critical ticket to track the change prior to promotion.
-> The change should not be merged until dependancies have been updated.
+> The change should not be merged until dependencies have been updated.
 
 ## Description
 
