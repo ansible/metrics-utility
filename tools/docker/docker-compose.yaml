@@ -110,6 +110,16 @@ services:
       MOCK_SEGMENT_PORT: "8765"
       MOCK_SEGMENT_OUTPUT: "/tmp/segment/requests.jsonl"
 
+  mock-prometheus:
+    build:
+      context: ../mock-prometheus-server
+    container_name: mock-prometheus
+    ports:
+      - "9090:9090"
+    environment:
+      MOCK_PROMETHEUS_PORT: "9090"
+      MOCK_PROMETHEUS_CPU_VALUE: "16"
+
   metrics-utility-env:
     build:
       context: .
