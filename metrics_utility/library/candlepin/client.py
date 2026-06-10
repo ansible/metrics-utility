@@ -51,17 +51,53 @@ class CandlepinClient:
     # Public API
     # ------------------------------------------------------------------
 
+    def discover_org(self, username, password):
+        """GET /users/{username}/owners — discover the Candlepin org key for this user.
+
+        Calls the Candlepin API to list the organisations the user belongs to and
+        returns the key of the first one.  Matches the approach used in AWX PR #16388.
+
+        Args:
+            username: Red Hat subscription username.
+            password: Red Hat subscription password.
+
+        Returns:
+            str: The org key on success, None on any failure (failure is logged as a warning).
+        """
+        url = f'{self.base_url}/users/{username}/owners'
+        try:
+            resp = requests.get(url, auth=(username, password), verify=self.verify, proxies=self.proxies, timeout=30)
+            resp.raise_for_status()
+            owners = resp.json()
+            if not owners:
+                logger.warning(f'No organizations found for user {username}')
+                return None
+            if len(owners) > 1:
+                logger.warning(f'User {username} belongs to {len(owners)} organizations; using first: {owners[0].get("key")}')
+            org = owners[0].get('key')
+            if not org:
+                logger.warning(f'Organization key missing in first owner entry for user {username}')
+                return None
+            logger.info(f'Discovered Candlepin org for user {username}: {org}')
+            return org
+        except requests.exceptions.RequestException as e:
+            logger.warning(f'Failed to discover organization for user {username}: {e}')
+            return None
+        except Exception as e:
+            logger.warning(f'Unexpected error discovering organization for user {username}: {e}')
+            return None
+
     def register_consumer(self, username, password, org, install_uuid=None):
         """POST /consumers?owner={org} — register a new AAP consumer with basic auth.
 
-        Uses the customer's Red Hat subscription credentials (SUBSCRIPTIONS_USERNAME /
-        SUBSCRIPTIONS_PASSWORD from AWX conf_setting) to register this controller
+        Uses the customer's Red Hat subscription credentials to register this controller
         instance as a Candlepin consumer and obtain an identity certificate for mTLS.
+        Obtain the org key first via discover_org() if it is not already known.
 
         Args:
-            username:     Red Hat subscription username (from SUBSCRIPTIONS_USERNAME).
-            password:     Red Hat subscription password (from SUBSCRIPTIONS_PASSWORD).
-            org:          Candlepin owner/org key (from LICENSE.account_number).
+            username:     Red Hat subscription username.
+            password:     Red Hat subscription password.
+            org:          Candlepin owner/org key (discovered via discover_org() if absent).
             install_uuid: AWX INSTALL_UUID used as the consumer's aap.instance_uuid
                           fact; falls back to a random UUID if not provided.
 

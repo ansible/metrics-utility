@@ -53,50 +53,49 @@ def _make_db_cursor(rows):
 
 
 class TestFetchRegistrationCredentialsFromDb:
-    _USERNAME_KEY = 'SUBSCRIPTIONS_USERNAME'
-    _PASSWORD_KEY = 'SUBSCRIPTIONS_PASSWORD'
-
-    def _rows(self, username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG, install_uuid=SAMPLE_INSTALL_UUID):
+    def _rows(self, username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, install_uuid=SAMPLE_INSTALL_UUID):
         import json
 
         return [
-            (self._USERNAME_KEY, json.dumps(username)),
-            (self._PASSWORD_KEY, json.dumps(password)),
-            ('LICENSE', json.dumps({'account_number': org, 'license_type': 'enterprise'})),
+            ('SUBSCRIPTIONS_USERNAME', json.dumps(username)),
+            ('SUBSCRIPTIONS_PASSWORD', json.dumps(password)),
             ('INSTALL_UUID', json.dumps(install_uuid)),
         ]
 
-    def test_returns_all_fields_when_present(self):
+    def test_returns_username_password_install_uuid(self):
         mock_conn = _make_db_cursor(self._rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            username, password, org, install_uuid = _fetch_registration_credentials_from_db()
+            username, password, install_uuid = _fetch_registration_credentials_from_db()
         assert username == SAMPLE_USERNAME
         assert password == SAMPLE_PASSWORD
-        assert org == SAMPLE_ORG
         assert install_uuid == SAMPLE_INSTALL_UUID
 
-    def test_extracts_account_number_from_license(self):
+    def test_prefers_redhat_username_over_subscriptions(self):
         import json
 
-        rows = [('LICENSE', json.dumps({'account_number': '9999999', 'other': 'ignored'}))]
+        rows = [
+            ('REDHAT_USERNAME', json.dumps('rh-user')),
+            ('REDHAT_PASSWORD', json.dumps('rh-pass')),
+            ('SUBSCRIPTIONS_USERNAME', json.dumps('sub-user')),
+            ('SUBSCRIPTIONS_PASSWORD', json.dumps('sub-pass')),
+            ('INSTALL_UUID', json.dumps(SAMPLE_INSTALL_UUID)),
+        ]
         mock_conn = _make_db_cursor(rows)
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            _, _, org, _ = _fetch_registration_credentials_from_db()
-        assert org == '9999999'
+            username, password, _ = _fetch_registration_credentials_from_db()
+        assert username == 'rh-user'
+        assert password == 'rh-pass'
 
-    def test_org_is_none_when_license_missing(self):
-        import json
-
-        rows = [(self._USERNAME_KEY, json.dumps(SAMPLE_USERNAME)), (self._PASSWORD_KEY, json.dumps(SAMPLE_PASSWORD))]
-        mock_conn = _make_db_cursor(rows)
+    def test_falls_back_to_subscriptions_when_redhat_absent(self):
+        mock_conn = _make_db_cursor(self._rows())
         with patch('django.db.connection.cursor', return_value=mock_conn):
-            _, _, org, _ = _fetch_registration_credentials_from_db()
-        assert org is None
+            username, password, _ = _fetch_registration_credentials_from_db()
+        assert username == SAMPLE_USERNAME
 
     def test_returns_none_tuple_on_db_error(self):
         with patch('django.db.connection.cursor', side_effect=Exception('DB down')):
             result = _fetch_registration_credentials_from_db()
-        assert result == (None, None, None, None)
+        assert result == (None, None, None)
 
     def test_logs_warning_on_db_error(self):
         with patch('django.db.connection.cursor', side_effect=Exception('timeout')):
@@ -114,60 +113,52 @@ class TestResolveRegistrationCredentials:
     def test_returns_env_vars_when_set(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_RH_USERNAME', SAMPLE_USERNAME)
         monkeypatch.setenv('METRICS_UTILITY_RH_PASSWORD', SAMPLE_PASSWORD)
-        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local')
 
-        username, password, org, _ = _resolve_registration_credentials()
+        username, password, _ = _resolve_registration_credentials()
         assert username == SAMPLE_USERNAME
         assert password == SAMPLE_PASSWORD
-        assert org == SAMPLE_ORG
 
     def test_returns_none_when_env_vars_absent_and_storage_is_local(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_RH_USERNAME', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_RH_PASSWORD', raising=False)
-        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local')
 
         with patch('metrics_utility.management.validation._fetch_registration_credentials_from_db') as mock_db:
-            username, password, org, _ = _resolve_registration_credentials()
+            username, password, _ = _resolve_registration_credentials()
 
         mock_db.assert_not_called()
         assert username is None
         assert password is None
-        assert org is None
 
     def test_falls_back_to_db_when_storage_is_db_and_env_vars_absent(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_RH_USERNAME', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_RH_PASSWORD', raising=False)
-        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'db')
 
         with patch(
             'metrics_utility.management.validation._fetch_registration_credentials_from_db',
-            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, SAMPLE_INSTALL_UUID),
+            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_INSTALL_UUID),
         ) as mock_db:
-            username, password, org, install_uuid = _resolve_registration_credentials()
+            username, password, install_uuid = _resolve_registration_credentials()
 
         mock_db.assert_called_once()
         assert username == SAMPLE_USERNAME
-        assert org == SAMPLE_ORG
+        assert install_uuid == SAMPLE_INSTALL_UUID
 
     def test_env_vars_take_priority_over_db(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_RH_USERNAME', 'env-user')
         monkeypatch.setenv('METRICS_UTILITY_RH_PASSWORD', 'env-pass')
-        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', 'env-org')
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'db')
 
         with patch(
             'metrics_utility.management.validation._fetch_registration_credentials_from_db',
-            return_value=('db-user', 'db-pass', 'db-org', None),
+            return_value=('db-user', 'db-pass', None),
         ):
-            username, password, org, _ = _resolve_registration_credentials()
+            username, password, _ = _resolve_registration_credentials()
 
-        # env vars should win
         assert username == 'env-user'
         assert password == 'env-pass'
-        assert org == 'env-org'
 
 
 # ---------------------------------------------------------------------------
@@ -176,80 +167,88 @@ class TestResolveRegistrationCredentials:
 
 
 class TestRegisterCandlepinConsumer:
-    def test_returns_cert_key_uuid_on_success(self):
+    def _patch_creds(self, username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, install_uuid=None):
+        return patch('metrics_utility.management.validation._resolve_registration_credentials', return_value=(username, password, install_uuid))
+
+    def test_returns_cert_key_uuid_on_success(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._resolve_registration_credentials',
-            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, SAMPLE_INSTALL_UUID),
-        ):
+        with self._patch_creds():
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
                 cert, key, uuid_ = _register_candlepin_consumer(mock_store)
         assert cert == SAMPLE_NEW_CERT
         assert key == SAMPLE_NEW_KEY
         assert uuid_ == CONSUMER_UUID
 
-    def test_calls_store_save_registration_on_success(self):
+    def test_calls_store_save_registration_on_success(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._resolve_registration_credentials',
-            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, None),
-        ):
+        with self._patch_creds():
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
                 _register_candlepin_consumer(mock_store)
         mock_store.save_registration.assert_called_once_with(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
 
+    def test_uses_env_var_org_without_discovery(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', 'override-org')
+        mock_store = _make_mock_store()
+        with self._patch_creds():
+            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
+                _register_candlepin_consumer(mock_store)
+        MockClient.return_value.discover_org.assert_not_called()
+
     def test_returns_none_tuple_when_username_missing(self):
         mock_store = _make_mock_store()
-        with patch('metrics_utility.management.validation._resolve_registration_credentials', return_value=(None, SAMPLE_PASSWORD, SAMPLE_ORG, None)):
+        with self._patch_creds(username=None):
             result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)
 
     def test_returns_none_tuple_when_password_missing(self):
         mock_store = _make_mock_store()
-        with patch('metrics_utility.management.validation._resolve_registration_credentials', return_value=(SAMPLE_USERNAME, None, SAMPLE_ORG, None)):
+        with self._patch_creds(password=None):
             result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)
 
-    def test_returns_none_tuple_when_org_missing(self):
+    def test_returns_none_tuple_when_org_discovery_fails(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._resolve_registration_credentials', return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None, None)
-        ):
-            result = _register_candlepin_consumer(mock_store)
-        assert result == (None, None, None)
-
-    def test_returns_none_tuple_when_api_fails(self):
-        mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._resolve_registration_credentials',
-            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, None),
-        ):
+        with self._patch_creds():
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = None
+                result = _register_candlepin_consumer(mock_store)
+        assert result == (None, None, None)
+
+    def test_returns_none_tuple_when_api_fails(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
+        mock_store = _make_mock_store()
+        with self._patch_creds():
+            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
                 result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)
 
-    def test_logs_error_when_api_fails(self):
+    def test_logs_error_when_api_fails(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._resolve_registration_credentials',
-            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, None),
-        ):
+        with self._patch_creds():
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
                 with patch('metrics_utility.management.validation.logger') as mock_log:
                     _register_candlepin_consumer(mock_store)
         mock_log.error.assert_called_once()
 
-    def test_never_raises(self):
+    def test_never_raises(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._resolve_registration_credentials',
-            return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, None),
-        ):
+        with self._patch_creds():
             with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
                 MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
                 result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)

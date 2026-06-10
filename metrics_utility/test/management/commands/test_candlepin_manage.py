@@ -84,12 +84,11 @@ def _run(subcommand, *extra_args, **kwargs):
 class TestRegisterSubcommand:
     def test_registers_and_prints_cert_info(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         mock_store = _make_mock_store()
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
-                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None, None)
-            ):
+            with patch('metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None)):
                 with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
                     MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
                     with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
@@ -101,12 +100,11 @@ class TestRegisterSubcommand:
 
     def test_saves_via_store_on_success(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         mock_store = _make_mock_store()
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
-                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None, None)
-            ):
+            with patch('metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None)):
                 with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
                     MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
                     with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
@@ -116,12 +114,11 @@ class TestRegisterSubcommand:
 
     def test_dry_run_skips_save(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         mock_store = _make_mock_store()
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
-                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None, None)
-            ):
+            with patch('metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None)):
                 with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
                     MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
                     with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
@@ -144,18 +141,33 @@ class TestRegisterSubcommand:
 
     def test_force_re_registers_when_cert_exists(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
-                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None, None)
-            ):
+            with patch('metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None)):
                 with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
                     MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
                     with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_NEW_CERT_INFO):
                         _, _, exit_code = _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, org=SAMPLE_ORG, force=True)
 
         MockClient.return_value.register_consumer.assert_called_once()
+        assert exit_code == 0
+
+    def test_discovers_org_when_no_org_flag_or_env(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
+        mock_store = _make_mock_store()
+
+        with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
+            with patch('metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, None, None)):
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.discover_org.return_value = SAMPLE_ORG
+                    MockClient.return_value.register_consumer.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+                    with patch('metrics_utility.management.commands.candlepin_manage.parse_cert', return_value=SAMPLE_CERT_INFO):
+                        _, _, exit_code = _run('register', username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD)
+
+        MockClient.return_value.discover_org.assert_called_once()
         assert exit_code == 0
 
     def test_reads_credentials_from_env_when_no_cli_args(self, monkeypatch):
@@ -180,8 +192,7 @@ class TestRegisterSubcommand:
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
             with patch(
-                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials',
-                return_value=(None, SAMPLE_PASSWORD, SAMPLE_ORG, None),
+                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, SAMPLE_PASSWORD, None)
             ):
                 _, stderr, exit_code = _run('register')
 
@@ -193,35 +204,39 @@ class TestRegisterSubcommand:
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
             with patch(
-                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials',
-                return_value=(SAMPLE_USERNAME, None, SAMPLE_ORG, None),
+                'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(SAMPLE_USERNAME, None, None)
             ):
                 _, stderr, exit_code = _run('register')
 
         assert exit_code != 0
         assert 'password' in stderr
 
-    def test_exits_nonzero_when_org_missing(self, monkeypatch):
+    def test_exits_nonzero_when_org_discovery_fails(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
             with patch(
                 'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials',
-                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None, None),
+                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None),
             ):
-                _, stderr, exit_code = _run('register')
+                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
+                    MockClient.return_value.discover_org.return_value = None
+                    _, stderr, exit_code = _run('register')
 
         assert exit_code != 0
-        assert 'org' in stderr
+        assert 'org' in stderr.lower()
 
     def test_exits_nonzero_when_api_fails(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         mock_store = _make_mock_store()
 
         with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
             with patch(
                 'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials',
-                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_ORG, None),
+                return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None),
             ):
                 with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
                     MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')

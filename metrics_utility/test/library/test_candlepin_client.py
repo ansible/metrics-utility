@@ -442,3 +442,87 @@ class TestRegisterConsumer:
                 client.register_consumer('user', 'pass', 'org')
         mock_log.info.assert_called_once()
         assert self.SAMPLE_UUID in mock_log.info.call_args[0][0]
+
+
+class TestDiscoverOrg:
+    def _mock_owners_response(self, owners):
+        resp = MagicMock()
+        resp.json.return_value = owners
+        resp.raise_for_status = MagicMock()
+        return resp
+
+    def test_returns_org_key_from_first_owner(self):
+        client = CandlepinClient()
+        owners = [{'key': 'my-org', 'displayName': 'My Org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)):
+            org = client.discover_org('user', 'pass')
+        assert org == 'my-org'
+
+    def test_returns_first_org_when_multiple_exist(self):
+        client = CandlepinClient()
+        owners = [{'key': 'first-org'}, {'key': 'second-org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)):
+            org = client.discover_org('user', 'pass')
+        assert org == 'first-org'
+
+    def test_logs_warning_when_multiple_orgs(self):
+        client = CandlepinClient()
+        owners = [{'key': 'first-org'}, {'key': 'second-org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)):
+            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+                client.discover_org('user', 'pass')
+        mock_log.warning.assert_called_once()
+        assert 'first-org' in mock_log.warning.call_args[0][0]
+
+    def test_returns_none_when_no_owners(self):
+        client = CandlepinClient()
+        with patch('requests.get', return_value=self._mock_owners_response([])):
+            org = client.discover_org('user', 'pass')
+        assert org is None
+
+    def test_returns_none_when_key_missing_in_owner(self):
+        client = CandlepinClient()
+        owners = [{'displayName': 'No Key Org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)):
+            org = client.discover_org('user', 'pass')
+        assert org is None
+
+    def test_returns_none_on_request_exception(self):
+        import requests as req
+
+        client = CandlepinClient()
+        with patch('requests.get', side_effect=req.exceptions.ConnectionError('refused')):
+            org = client.discover_org('user', 'pass')
+        assert org is None
+
+    def test_returns_none_on_http_error(self):
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.raise_for_status.side_effect = Exception('401 Unauthorized')
+        with patch('requests.get', return_value=resp):
+            org = client.discover_org('user', 'pass')
+        assert org is None
+
+    def test_calls_correct_endpoint(self):
+        client = CandlepinClient(base_url='https://sub.example.com/subscription')
+        owners = [{'key': 'org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)) as mock_get:
+            client.discover_org('testuser', 'testpass')
+        url = mock_get.call_args[0][0]
+        assert url == 'https://sub.example.com/subscription/users/testuser/owners'
+
+    def test_uses_basic_auth(self):
+        client = CandlepinClient()
+        owners = [{'key': 'org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)) as mock_get:
+            client.discover_org('myuser', 'mypass')
+        assert mock_get.call_args[1]['auth'] == ('myuser', 'mypass')
+
+    def test_logs_info_on_success(self):
+        client = CandlepinClient()
+        owners = [{'key': 'discovered-org'}]
+        with patch('requests.get', return_value=self._mock_owners_response(owners)):
+            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+                client.discover_org('user', 'pass')
+        mock_log.info.assert_called_once()
+        assert 'discovered-org' in mock_log.info.call_args[0][0]

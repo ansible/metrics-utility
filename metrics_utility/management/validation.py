@@ -83,7 +83,10 @@ VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
 # AWX conf_setting keys for the subscription credentials used for DB-backed registration.
-# These are set by AWX when the customer configures their Red Hat subscription.
+# AWX sets these when the customer configures their Red Hat subscription.
+# Priority matches AWX PR #16388: REDHAT_USERNAME/PASSWORD first, then SUBSCRIPTIONS_*.
+_REDHAT_USERNAME_SETTING_KEY = 'REDHAT_USERNAME'
+_REDHAT_PASSWORD_SETTING_KEY = 'REDHAT_PASSWORD'
 _SUBSCRIPTIONS_USERNAME_SETTING_KEY = 'SUBSCRIPTIONS_USERNAME'
 _SUBSCRIPTIONS_PASSWORD_SETTING_KEY = 'SUBSCRIPTIONS_PASSWORD'
 
@@ -182,11 +185,24 @@ def handle_not_s3():
 def _fetch_registration_credentials_from_db():
     """Read Candlepin registration credentials from AWX conf_setting (DB-backend fallback).
 
-    Reads SUBSCRIPTIONS_USERNAME, SUBSCRIPTIONS_PASSWORD, LICENSE.account_number,
-    and INSTALL_UUID.  Returns (username, password, org, install_uuid), any of which
-    may be None.  Best-effort: failures are logged as warnings and never propagate.
+    Credential priority matches AWX PR #16388:
+      1. REDHAT_USERNAME / REDHAT_PASSWORD
+      2. SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD
+
+    The org key is NOT read from the DB — it is discovered dynamically via
+    CandlepinClient.discover_org() (GET /users/{username}/owners) so that customers
+    do not need to know or configure their org key manually.
+
+    Returns (username, password, install_uuid), any of which may be None.
+    Best-effort: failures are logged as warnings and never propagate.
     """
-    keys = [_SUBSCRIPTIONS_USERNAME_SETTING_KEY, _SUBSCRIPTIONS_PASSWORD_SETTING_KEY, 'LICENSE', 'INSTALL_UUID']
+    keys = [
+        _REDHAT_USERNAME_SETTING_KEY,
+        _REDHAT_PASSWORD_SETTING_KEY,
+        _SUBSCRIPTIONS_USERNAME_SETTING_KEY,
+        _SUBSCRIPTIONS_PASSWORD_SETTING_KEY,
+        'INSTALL_UUID',
+    ]
     try:
         from django.db import connection
 
@@ -198,44 +214,42 @@ def _fetch_registration_credentials_from_db():
             )
             rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
 
-        license_data = rows.get('LICENSE', {})
-        org = license_data.get('account_number') if isinstance(license_data, dict) else None
-        return (
-            rows.get(_SUBSCRIPTIONS_USERNAME_SETTING_KEY),
-            rows.get(_SUBSCRIPTIONS_PASSWORD_SETTING_KEY),
-            org,
-            rows.get('INSTALL_UUID'),
-        )
+        username = rows.get(_REDHAT_USERNAME_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_USERNAME_SETTING_KEY)
+        password = rows.get(_REDHAT_PASSWORD_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_PASSWORD_SETTING_KEY)
+        return username, password, rows.get('INSTALL_UUID')
     except Exception as e:
         logger.warning(f'Could not fetch Candlepin registration credentials from DB: {e}')
-        return None, None, None, None
+        return None, None, None
 
 
 def _resolve_registration_credentials():
     """Resolve Candlepin registration credentials for standalone or DB-backed deployments.
 
-    Priority:
-      1. METRICS_UTILITY_RH_USERNAME / METRICS_UTILITY_RH_PASSWORD / METRICS_UTILITY_CANDLEPIN_ORG
-         (env vars — always checked first; work without any database).
-      2. If storage=db and any value is still missing, fall back to AWX conf_setting
-         (SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD / LICENSE.account_number).
+    The org key is NOT returned here — it is discovered dynamically from the Candlepin
+    API (GET /users/{username}/owners) inside _register_candlepin_consumer(), unless the
+    operator has set METRICS_UTILITY_CANDLEPIN_ORG explicitly as an override.
 
-    Returns (username, password, org, install_uuid), any of which may be None.
+    Credential priority:
+      1. METRICS_UTILITY_RH_USERNAME / METRICS_UTILITY_RH_PASSWORD env vars
+         (standalone, no database required).
+      2. If storage=db and env vars are absent: AWX conf_setting
+         (REDHAT_USERNAME/PASSWORD first, then SUBSCRIPTIONS_USERNAME/PASSWORD,
+         matching the priority order in AWX PR #16388).
+
+    Returns (username, password, install_uuid), any of which may be None.
     """
     username = os.getenv('METRICS_UTILITY_RH_USERNAME')
     password = os.getenv('METRICS_UTILITY_RH_PASSWORD')
-    org = os.getenv('METRICS_UTILITY_CANDLEPIN_ORG')
     install_uuid = None
 
     storage = os.getenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local').strip().lower()
-    if (not username or not password or not org) and storage == 'db':
-        db_username, db_password, db_org, db_install_uuid = _fetch_registration_credentials_from_db()
+    if (not username or not password) and storage == 'db':
+        db_username, db_password, db_install_uuid = _fetch_registration_credentials_from_db()
         username = username or db_username
         password = password or db_password
-        org = org or db_org
         install_uuid = db_install_uuid
 
-    return username, password, org, install_uuid
+    return username, password, install_uuid
 
 
 def _register_candlepin_consumer(store):
@@ -244,29 +258,21 @@ def _register_candlepin_consumer(store):
     Called from handle_crc_ship_target() when no cert is found and
     METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED is set.
 
-    Reads credentials via _resolve_registration_credentials() (env vars first,
-    DB fallback when storage=db), then calls POST /consumers on Candlepin and
-    persists the result via store.save_registration().
+    Resolves credentials from env vars (or DB fallback when storage=db), then
+    discovers the org via GET /users/{username}/owners unless METRICS_UTILITY_CANDLEPIN_ORG
+    is set as an explicit override.  Persists the result via store.save_registration().
 
     Returns (cert_pem, key_pem, consumer_uuid) on success, (None, None, None)
     on any failure.  Best-effort: logs errors but never propagates.
     """
-    username, password, org, install_uuid = _resolve_registration_credentials()
+    username, password, install_uuid = _resolve_registration_credentials()
 
     if not username or not password:
         logger.warning(
             'Candlepin registration is enabled but credentials are not configured. '
             'Set METRICS_UTILITY_RH_USERNAME / METRICS_UTILITY_RH_PASSWORD, '
-            'or use METRICS_UTILITY_CANDLEPIN_STORAGE=db with SUBSCRIPTIONS_USERNAME / '
-            'SUBSCRIPTIONS_PASSWORD in conf_setting.'
-        )
-        return None, None, None
-
-    if not org:
-        logger.warning(
-            'Candlepin registration is enabled but no org key is configured. '
-            'Set METRICS_UTILITY_CANDLEPIN_ORG, '
-            'or use METRICS_UTILITY_CANDLEPIN_STORAGE=db with LICENSE.account_number in conf_setting.'
+            'or use METRICS_UTILITY_CANDLEPIN_STORAGE=db with REDHAT_USERNAME / REDHAT_PASSWORD '
+            'or SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD in conf_setting.'
         )
         return None, None, None
 
@@ -274,6 +280,14 @@ def _register_candlepin_consumer(store):
     candlepin_ca = get_candlepin_ca()
     proxy = os.getenv('METRICS_UTILITY_PROXY_URL')
     client = CandlepinClient(base_url=candlepin_url, candlepin_ca=candlepin_ca, proxy=proxy)
+
+    # Org key: use explicit override if set, otherwise discover via Candlepin API.
+    org = os.getenv('METRICS_UTILITY_CANDLEPIN_ORG') or client.discover_org(username, password)
+    if not org:
+        logger.warning(
+            'Could not determine Candlepin org key. Set METRICS_UTILITY_CANDLEPIN_ORG, or ensure credentials have access to a Candlepin organisation.'
+        )
+        return None, None, None
 
     try:
         cert_pem, key_pem, consumer_uuid = client.register_consumer(username, password, org, install_uuid)

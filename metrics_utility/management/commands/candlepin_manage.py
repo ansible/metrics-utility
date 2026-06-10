@@ -123,28 +123,29 @@ class Command(BaseCommand):
 
         Priority: CLI flags > METRICS_UTILITY_RH_* env vars > DB conf_setting (when storage=db).
 
-        Returns ``(username, password, org, install_uuid)`` on success, or ``None``
-        if any required field is missing (errors are written to ``self.stderr``).
+        The org key is NOT validated here — it is resolved in _handle_register() by
+        calling client.discover_org() when no --org flag or METRICS_UTILITY_CANDLEPIN_ORG
+        override is present.
+
+        Returns ``(username, password, install_uuid)`` on success, or ``None``
+        if username or password cannot be resolved.
         """
-        env_username, env_password, env_org, db_install_uuid = _resolve_registration_credentials()
+        env_username, env_password, db_install_uuid = _resolve_registration_credentials()
 
         username = options.get('username') or env_username
         password = options.get('password') or env_password
-        org = options.get('org') or env_org
 
         missing = []
         if not username:
             missing.append('username (pass --username or set METRICS_UTILITY_RH_USERNAME)')
         if not password:
             missing.append('password (pass --password or set METRICS_UTILITY_RH_PASSWORD)')
-        if not org:
-            missing.append('org (pass --org or set METRICS_UTILITY_CANDLEPIN_ORG)')
         if missing:
             for m in missing:
                 self.stderr.write(f'Missing required value: {m}')
             return None
 
-        return username, password, org, db_install_uuid
+        return username, password, db_install_uuid
 
     def _handle_register(self, options):
         dry_run = options['dry_run']
@@ -158,17 +159,30 @@ class Command(BaseCommand):
             self.stdout.write('A Candlepin identity certificate is already stored. Use --force to re-register and replace it.')
             return True
 
-        # Resolve credentials.
+        # Resolve credentials (username + password only — org comes next).
         resolved = self._resolve_and_validate_credentials(options)
         if resolved is None:
             return False
-        username, password, org, db_install_uuid = resolved
+        username, password, db_install_uuid = resolved
 
         candlepin_url = options.get('candlepin_url') or get_candlepin_url()
         candlepin_ca = options.get('candlepin_ca') or get_candlepin_ca()
         proxy = options.get('proxy') or os.getenv('METRICS_UTILITY_PROXY_URL')
 
         client = CandlepinClient(base_url=candlepin_url, candlepin_ca=candlepin_ca, proxy=proxy)
+
+        # Org key: CLI flag or env var override; otherwise discover via Candlepin API.
+        org = options.get('org') or os.getenv('METRICS_UTILITY_CANDLEPIN_ORG')
+        if not org:
+            self.stdout.write('No --org provided; discovering org from Candlepin ...')
+            org = client.discover_org(username, password)
+        if not org:
+            self.stderr.write(
+                'Could not determine Candlepin org key. '
+                'Pass --org, set METRICS_UTILITY_CANDLEPIN_ORG, '
+                'or ensure the credentials have access to a Candlepin organisation.'
+            )
+            return False
 
         self.stdout.write(f'Registering with Candlepin at {candlepin_url} (org={org}) ...')
         try:
