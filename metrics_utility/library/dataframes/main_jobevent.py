@@ -80,7 +80,7 @@ class DataframeMainJobevent(BaseTraditional):
         Returns:
             Two-part collection name string, or None.
         """
-        if x is None:
+        if not isinstance(x, str):
             return None
 
         if m := re.match(COLLECTION_REGEXP, x):
@@ -98,7 +98,7 @@ class DataframeMainJobevent(BaseTraditional):
         Returns:
             Normalised role name (collection or standalone), or None.
         """
-        if x is None:
+        if not isinstance(x, str):
             return None
 
         if collection_role := re.match(COLLECTION_REGEXP, x):
