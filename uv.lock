@@ -717,7 +717,7 @@ dev = [
 requires-dist = [
     { name = "boto3", specifier = "==1.35.96" },
     { name = "botocore", specifier = "==1.35.96" },
-    { name = "cryptography", specifier = "==48.0.0" },
+    { name = "cryptography", specifier = ">=44.0.1" },
     { name = "distro", specifier = "==1.9.0" },
     { name = "django", specifier = "==5.2.7" },
     { name = "kubernetes", specifier = ">=33.1.0" },

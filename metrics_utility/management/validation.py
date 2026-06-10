@@ -390,10 +390,11 @@ def _load_candlepin_cert(store):
 
 
 def _warn_if_cert_expiring(cert_pem):
-    """Log a warning when the cert is within 30 days of expiry."""
+    """Log a warning when the cert is within the renewal threshold of expiry."""
     try:
         info = parse_cert(cert_pem)
-        if info['days_remaining'] < 30:
+        threshold = get_renewal_days()
+        if info['days_remaining'] < threshold:
             logger.warning(
                 f'Candlepin cert expires in {info["days_remaining"]} day(s). Run candlepin_manage renew or ensure Controller cert renewal is active.'
             )

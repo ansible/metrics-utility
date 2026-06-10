@@ -140,7 +140,7 @@ class PackageCRC(base.Package):
             return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
-            if not self._get_cert_ingress_url():
+            if not self.get_ingress_url():
                 logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set (needed to derive cert. upload URL)')
                 return False
             return True
