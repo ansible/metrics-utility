@@ -2041,12 +2041,16 @@ def validate_data_collection_status(file_path):
     # Since comparison with nan is tricky, let's use a different approach
     # We'll convert nan values to a string for comparison
     def normalize_for_comparison(d):
-        """Normalize a dictionary for comparison by converting nan to string."""
+        """Normalize a dictionary for comparison by converting nan/NaT to string."""
+        import pandas as _pd
+
         result = {}
         for k, v in d.items():
             if isinstance(v, dict):
                 result[k] = normalize_for_comparison(v)
             elif isinstance(v, float) and math.isnan(v):
+                result[k] = 'NAN_VALUE'
+            elif v is _pd.NaT:
                 result[k] = 'NAN_VALUE'
             else:
                 result[k] = v
@@ -2120,7 +2124,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         2: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2129,7 +2133,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         3: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2138,7 +2142,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         4: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2147,7 +2151,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         5: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2156,7 +2160,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         6: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2174,7 +2178,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         8: {
             'CSV filename': 'main_host.csv',
@@ -2183,7 +2187,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         9: {
             'CSV filename': 'main_host.csv',
@@ -2192,7 +2196,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         10: {
             'CSV filename': 'main_host.csv',
@@ -2201,7 +2205,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         11: {
             'CSV filename': 'main_host.csv',
@@ -2219,7 +2223,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         13: {
             'CSV filename': 'main_host.csv',
@@ -2228,7 +2232,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0, 1),
+            'Time since previous collection': datetime.timedelta(seconds=1),
         },
         14: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2237,7 +2241,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-08 00:00:00'),
             'Filter until': Timestamp('2025-07-08 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0, 2),
+            'Time since previous collection': datetime.timedelta(seconds=2),
         },
         15: {
             'CSV filename': 'job_host_summary.csv',
@@ -2246,7 +2250,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         16: {
             'CSV filename': 'job_host_summary.csv',
@@ -2255,7 +2259,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.datetime(1900, 1, 1, 0, 0),
+            'Time since previous collection': datetime.timedelta(days=1),
         },
         17: {
             'CSV filename': 'job_host_summary.csv',
@@ -2264,7 +2268,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         18: {
             'CSV filename': 'job_host_summary.csv',
@@ -2273,7 +2277,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         19: {
             'CSV filename': 'job_host_summary.csv',
@@ -2282,7 +2286,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         20: {
             'CSV filename': 'job_host_summary.csv',
@@ -2291,7 +2295,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         21: {
             'CSV filename': 'job_host_summary.csv',
@@ -2300,7 +2304,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         22: {
             'CSV filename': 'main_host.csv',
@@ -2309,7 +2313,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.datetime(1900, 1, 1, 0, 0),
+            'Time since previous collection': datetime.timedelta(days=1),
         },
         23: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2318,7 +2322,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-09 00:00:00'),
             'Filter until': Timestamp('2025-07-09 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.datetime(1900, 1, 1, 0, 0),
+            'Time since previous collection': datetime.timedelta(days=1),
         },
         24: {
             'CSV filename': 'job_host_summary.csv',
@@ -2327,7 +2331,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 00:00:00'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         25: {
             'CSV filename': 'job_host_summary.csv',
@@ -2336,7 +2340,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 00:00:00'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         26: {
             'CSV filename': 'job_host_summary.csv',
@@ -2345,7 +2349,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 00:00:00'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         27: {
             'CSV filename': 'job_host_summary.csv',
@@ -2354,7 +2358,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 00:00:00'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.datetime(1900, 1, 1, 0, 0),
+            'Time since previous collection': datetime.timedelta(days=1),
         },
         28: {
             'CSV filename': 'main_host.csv',
@@ -2363,7 +2367,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 00:00:00'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.datetime(1900, 1, 1, 0, 0),
+            'Time since previous collection': datetime.timedelta(days=1),
         },
         29: {
             'CSV filename': 'main_indirectmanagednodeaudit.csv',
@@ -2372,7 +2376,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 00:00:00'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.datetime(1900, 1, 1, 0, 0),
+            'Time since previous collection': datetime.timedelta(days=1),
         },
         30: {
             'CSV filename': 'job_host_summary.csv',
@@ -2381,7 +2385,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 01:00:42'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
         31: {
             'CSV filename': 'job_host_summary.csv',
@@ -2390,7 +2394,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 01:00:42'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(1, 0, 42),
+            'Time since previous collection': datetime.timedelta(hours=1, seconds=42),
         },
         32: {
             'CSV filename': 'job_host_summary.csv',
@@ -2399,7 +2403,7 @@ def validate_data_collection_status(file_path):
             'Filter since': Timestamp('2025-07-10 01:00:42'),
             'Filter until': Timestamp('2025-07-10 23:59:59'),
             'Status': 'ok',
-            'Time since previous collection': datetime.time(0, 0),
+            'Time since previous collection': datetime.timedelta(0),
         },
     }
 
