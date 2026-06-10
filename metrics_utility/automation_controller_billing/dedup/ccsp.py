@@ -2,6 +2,8 @@
 
 from collections import defaultdict
 
+import pandas as pd
+
 
 class DedupCCSP:
     """CCSP host deduplication engine.
@@ -87,7 +89,7 @@ class DedupCCSP:
 
             if serials:
                 for serial in serials:
-                    if serial:
+                    if serial is not None and not pd.isna(serial):
                         serial_to_hosts[serial].add(host)
                         if serial not in serial_to_first:
                             serial_to_first[serial] = host
