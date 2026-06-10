@@ -16,9 +16,10 @@ Thin REST client for the Candlepin subscription service API. All post-registrati
 
 | Method | Endpoint | Auth | Purpose |
 |---|---|---|---|
-| `register_consumer` | `POST /consumers?owner={org}` | Basic (username/password) | Register this AAP instance; returns `(cert_pem, key_pem, consumer_uuid)` |
-| `checkin` | `PUT /consumers/{uuid}` | mTLS | Reset inactivity timer; best-effort, never raises |
-| `regenerate_cert` | `POST /consumers/{uuid}` | mTLS | Force certificate renewal; raises `RuntimeError` on failure |
+| `discover_org(username, password)` | `GET /users/{username}/owners` | Basic | Discover the Candlepin org key; returns the first owner's `key`. Warns if multiple orgs found. |
+| `register_consumer(username, password, org, ...)` | `POST /consumers?owner={org}` | Basic | Register this AAP instance; returns `(cert_pem, key_pem, consumer_uuid)` |
+| `checkin(consumer_uuid, cert_pem, key_pem)` | `PUT /consumers/{uuid}` | mTLS | Reset inactivity timer; best-effort, never raises |
+| `regenerate_cert(consumer_uuid, cert_pem, key_pem)` | `POST /consumers/{uuid}` | mTLS | Force certificate renewal; raises `RuntimeError` on failure |
 
 TLS server verification is enabled by default. Pass `candlepin_ca` for a custom CA bundle (e.g. `/etc/rhsm/ca/redhat-uep.pem`) or `verify_tls=False` only in test environments. Proxy support normalises the supplied URL for both `https` and `http` keys.
 
@@ -44,7 +45,7 @@ Certificate inspection and lifecycle orchestration.
 
 ---
 
-### `metrics_utility/library/candlepin/store.py` — storage abstraction *(new in final commit)*
+### `metrics_utility/library/candlepin/store.py` — storage abstraction
 
 Provides a backend-agnostic interface for persisting the Candlepin consumer cert, key, and UUID.
 
@@ -65,9 +66,11 @@ Reads/writes `cert.pem`, `key.pem`, `uuid.txt` from a configurable directory.
 - `load()` returns `(None, None, None)` if files are absent; never raises
 - Works with no database connection — the default for standalone deployments
 
-#### `DBCandlepinStore` (opt-in)
+#### `DBCandlepinStore` — read-only view of AWX `conf_setting`
 
-Reads/writes via the AWX `conf_setting` PostgreSQL table. Key names match what AWX PR [ansible/awx#16388](https://github.com/ansible/awx/pull/16388) (merged) writes:
+Used to **seed** the local store on first run. metrics-utility reads the cert that the AWX Controller already registered with Candlepin and caches it locally for subsequent runs.
+
+Key names match what AWX PR [ansible/awx#16388](https://github.com/ansible/awx/pull/16388) (merged) writes:
 
 | Field | Key name |
 |---|---|
@@ -75,7 +78,7 @@ Reads/writes via the AWX `conf_setting` PostgreSQL table. Key names match what A
 | Private key PEM | `CANDLEPIN_KEY_PEM` |
 | Consumer UUID | `CANDLEPIN_CONSUMER_UUID` |
 
-All DB operations are best-effort: errors are logged and never propagate.
+`save_registration()` and `save_cert()` are **intentionally not implemented** — the future write target is a metrics-utility-specific database (not AWX `conf_setting`), which is out of scope for this branch.
 
 #### `get_candlepin_store()` factory
 
@@ -90,30 +93,49 @@ METRICS_UTILITY_CANDLEPIN_STORAGE=db      # use AWX conf_setting table
 
 ### `metrics_utility/management/validation.py`
 
-Refactored the Candlepin section of `handle_crc_ship_target()` to use the storage abstraction and standalone-friendly credential resolution.
+Refactored the Candlepin section of `handle_crc_ship_target()` to use the storage abstraction and standalone-friendly credential/org resolution.
 
-**Credential resolution** — new `_resolve_registration_credentials()`:
+**Data flow — cert sourcing:**
+
+```
+handle_crc_ship_target()
+  1. LocalCandlepinStore.load()           ← try local files first
+  2. If empty → DBCandlepinStore.load()   ← seed from AWX conf_setting
+               → LocalCandlepinStore.save_registration()  ← cache locally
+  3. Subsequent runs use local files only (no DB needed)
+```
+
+**Credential resolution** — `_resolve_registration_credentials()`:
 
 | Priority | Source |
 |---|---|
-| 1st | `METRICS_UTILITY_RH_USERNAME` / `METRICS_UTILITY_RH_PASSWORD` / `METRICS_UTILITY_CANDLEPIN_ORG` env vars |
-| 2nd (storage=db only) | `SUBSCRIPTIONS_USERNAME` / `SUBSCRIPTIONS_PASSWORD` / `LICENSE.account_number` from AWX `conf_setting` |
+| 1st | `METRICS_UTILITY_RH_USERNAME` / `METRICS_UTILITY_RH_PASSWORD` env vars |
+| 2nd (`storage=db` only) | `REDHAT_USERNAME` / `REDHAT_PASSWORD` from AWX `conf_setting` |
+| 3rd (`storage=db` only) | `SUBSCRIPTIONS_USERNAME` / `SUBSCRIPTIONS_PASSWORD` from AWX `conf_setting` |
 
-**`handle_crc_ship_target()` flow:**
+Returns `(username, password, install_uuid)` — **no org**. Org is always resolved separately.
 
-1. Load cert/key/UUID from configured store
-2. If no cert and `METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED` → attempt auto-registration via `_register_candlepin_consumer(store)`
-3. If cert loaded, log a warning when fewer than 30 days remain
-4. If `METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED` → run `_run_candlepin_lifecycle(cert, key, uuid, store)` (check-in + renewal)
-5. Inject `candlepin_cert_pem` / `candlepin_key_pem` into `billing_provider_params` for upload
+**Org resolution** — inside `_register_candlepin_consumer()`:
 
-All DB-specific helpers (`_fetch_candlepin_lifecycle_from_db`, `_upsert_conf_settings`, `_save_candlepin_cert_to_db`, `_save_candlepin_registration_to_db`) are removed from `validation.py` and absorbed into `DBCandlepinStore`.
+1. Check `METRICS_UTILITY_CANDLEPIN_ORG` env var (explicit override, skips API call)
+2. Otherwise call `client.discover_org(username, password)` → `GET /users/{username}/owners`
+
+This matches the approach in AWX PR #16388: the org key is never stored anywhere, it is discovered live from the Candlepin API.
+
+**`handle_crc_ship_target()` full flow:**
+
+1. Load cert/key/UUID from local store
+2. If local empty → seed from AWX `conf_setting` and cache locally
+3. If still no cert and `METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED` → auto-register
+4. If cert loaded and fewer than 30 days remain → log a warning
+5. If `METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED` → check-in + renewal via `_run_candlepin_lifecycle()`
+6. Inject `candlepin_cert_pem` / `candlepin_key_pem` into `billing_provider_params` for upload
 
 ---
 
 ### `metrics_utility/management/commands/candlepin_manage.py`
 
-Django management command for manual Candlepin operations. Updated to use `get_candlepin_store()` and `_resolve_registration_credentials()`.
+Django management command for manual Candlepin operations. Uses `get_candlepin_store()` and the same org-discovery flow as the automatic path.
 
 **Subcommands:**
 
@@ -126,7 +148,7 @@ uv run ./manage.py candlepin_manage renew    [--candlepin-url URL] [--candlepin-
                                              [--proxy URL] [--force] [--dry-run]
 ```
 
-Credential resolution for `register`: CLI flags → `METRICS_UTILITY_RH_*` env vars → AWX `conf_setting` (when `storage=db`).
+For `register`: if `--org` is not supplied and `METRICS_UTILITY_CANDLEPIN_ORG` is not set, the command calls `client.discover_org()` automatically and prints the discovered org before registering.
 
 ---
 
@@ -148,11 +170,11 @@ Credential resolution for `register`: CLI flags → `METRICS_UTILITY_RH_*` env v
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `METRICS_UTILITY_CANDLEPIN_STORAGE` | `local` | Storage backend: `local` (filesystem) or `db` (AWX conf_setting) |
+| `METRICS_UTILITY_CANDLEPIN_STORAGE` | `local` | Storage backend: `local` (filesystem) or `db` (AWX conf_setting read-only seed) |
 | `METRICS_UTILITY_CANDLEPIN_CERT_DIR` | `/etc/metrics-utility/candlepin/` | Directory for local cert/key/UUID files |
 | `METRICS_UTILITY_RH_USERNAME` | — | Red Hat subscription username for standalone registration |
 | `METRICS_UTILITY_RH_PASSWORD` | — | Red Hat subscription password for standalone registration |
-| `METRICS_UTILITY_CANDLEPIN_ORG` | — | Candlepin owner/org key for standalone registration |
+| `METRICS_UTILITY_CANDLEPIN_ORG` | — | Candlepin owner/org key override (discovered automatically if not set) |
 
 **Existing env vars (unchanged):**
 
@@ -163,7 +185,7 @@ Credential resolution for `register`: CLI flags → `METRICS_UTILITY_RH_*` env v
 | `METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS` | `30` | Days before expiry to trigger proactive renewal |
 | `METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED` | *(unset)* | Enable auto-registration on gather runs |
 | `METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED` | *(unset)* | Enable check-in and renewal on gather runs |
-| `METRICS_UTILITY_CRC_INGRESS_URL` | `https://console.redhat.com/api/ingress/v1/upload` | Base ingress URL (cert. subdomain derived automatically) |
+| `METRICS_UTILITY_CRC_INGRESS_URL` | `https://console.redhat.com/api/ingress/v1/upload` | Base ingress URL (`cert.` subdomain derived automatically for mTLS) |
 
 ---
 
@@ -178,24 +200,36 @@ Credential resolution for `register`: CLI flags → `METRICS_UTILITY_RH_*` env v
 
 ---
 
-## Auth flow during upload
+## Full data flow
 
 ```
-gather run
-  └── handle_crc_ship_target()
-        ├── store.load()                     ← local files or conf_setting
-        ├── [opt] register_consumer()        ← if REGISTRATION_ENABLED and no cert
-        ├── [warn] near-expiry log           ← if days_remaining < 30
-        ├── [opt] run_candlepin_lifecycle()  ← if LIFECYCLE_ENABLED: check-in + renewal
-        └── inject cert/key into billing_provider_params
+First run (local store empty, AWX DB accessible):
+  handle_crc_ship_target()
+    └── LocalCandlepinStore.load()  → (None, None, None)
+    └── DBCandlepinStore.load()     → (cert, key, uuid) from conf_setting
+    └── LocalCandlepinStore.save_registration()  → write to disk
 
-  PackageCRC.ship()
-        ├── shipping_auth_mode() == CERTIFICATES
-        │     └── write cert/key to secure temp files (0600)
-        │           └── POST to cert.console.redhat.com (mTLS)
-        │                 └── on SSLError → fallback to service-account OAuth2
-        └── shipping_auth_mode() == SERVICE_ACCOUNT
-              └── POST to SSO → bearer token → POST to console.redhat.com
+Subsequent runs (local store populated):
+  handle_crc_ship_target()
+    └── LocalCandlepinStore.load()  → (cert, key, uuid) — no DB needed
+    └── [opt] near-expiry warning   ← if days_remaining < 30
+    └── [opt] run_candlepin_lifecycle()  ← LIFECYCLE_ENABLED: check-in + renewal
+    └── inject cert/key into billing_provider_params
+
+PackageCRC.ship()
+    ├── shipping_auth_mode() == CERTIFICATES
+    │     └── write cert/key to secure temp files (0600)
+    │           └── POST to cert.console.redhat.com (mTLS)
+    │                 └── on SSLError → fallback to service-account OAuth2
+    └── shipping_auth_mode() == SERVICE_ACCOUNT
+          └── POST to SSO → bearer token → POST to console.redhat.com
+
+Manual registration (candlepin_manage register):
+    ├── Resolve credentials: CLI flags → env vars → DB (when storage=db)
+    ├── Resolve org: --org flag → METRICS_UTILITY_CANDLEPIN_ORG → discover_org()
+    │                              GET /users/{username}/owners
+    ├── POST /consumers → (cert, key, uuid)
+    └── LocalCandlepinStore.save_registration()
 ```
 
 ---
@@ -204,18 +238,32 @@ gather run
 
 | Test file | What is covered |
 |---|---|
-| `test/library/test_candlepin_store.py` *(new)* | `LocalCandlepinStore`: load, atomic writes, 0600/0700 permissions, env var override. `DBCandlepinStore`: load, save_registration, save_cert, key name correctness. `get_candlepin_store()` factory. |
-| `test/library/test_candlepin_client.py` | `CandlepinClient`: construction, TLS/proxy config, `_temp_cert_files`, `checkin`, `regenerate_cert`, `register_consumer` |
+| `test/library/test_candlepin_store.py` *(new)* | `LocalCandlepinStore`: load, atomic writes, 0600/0700 permissions, env var override, roundtrip. `DBCandlepinStore`: load, save stubs (not implemented), key name correctness vs AWX. `get_candlepin_store()` factory. |
+| `test/library/test_candlepin_client.py` | `CandlepinClient`: construction, TLS/proxy config, `_temp_cert_files`, `discover_org` (11 tests), `checkin`, `regenerate_cert`, `register_consumer` |
 | `test/library/test_candlepin_lifecycle.py` | `parse_cert`, `is_cert_valid` (fixed roundtrip), `needs_renewal`, `run_candlepin_lifecycle`, `_run_candlepin_lifecycle` (store arg), `handle_crc_ship_target` lifecycle wiring |
-| `test/validation/test_candlepin_validation.py` | `_fetch_registration_credentials_from_db`, `_resolve_registration_credentials` (env vs DB priority), `_register_candlepin_consumer` (store arg), `_run_candlepin_lifecycle` (store arg), `handle_crc_ship_target` (cert injection, registration/lifecycle flags, near-expiry warning) |
-| `test/management/commands/test_candlepin_manage.py` | `candlepin_manage register` and `renew`: store mock, env-var credential resolution, dry-run, --force, API failure handling |
+| `test/validation/test_candlepin_validation.py` | `_fetch_registration_credentials_from_db` (REDHAT_* priority), `_resolve_registration_credentials` (env vs DB), `_register_candlepin_consumer` (org discovery, env override, store arg), `_run_candlepin_lifecycle` (store arg), `handle_crc_ship_target` (AWX seeding, cert injection, registration/lifecycle flags, near-expiry warning) |
+| `test/management/commands/test_candlepin_manage.py` | `candlepin_manage register`: store mock, env-var creds, org discovery, org env override, dry-run, --force, API failure. `candlepin_manage renew`: checkin, renewal, dry-run, placeholder UUID, API failure. |
 | `test/gather/test_package_crc.py` | `PackageCRC`: auth-mode selection, mTLS ship path, SSLError fallback, temp-file cleanup, `_get_cert_ingress_url` transformation |
+
+**Total: 170 Candlepin tests, all passing.**
 
 ---
 
 ## Dependencies
 
-`cryptography==48.0.0` added to `pyproject.toml` for X.509 certificate parsing (`x509.load_pem_x509_certificate`, `cert.not_valid_after_utc`).
+`cryptography==48.0.0` pinned in `pyproject.toml` for X.509 certificate parsing (`x509.load_pem_x509_certificate`, `cert.not_valid_after_utc`).
+
+---
+
+## Design decisions
+
+| Decision | Rationale |
+|---|---|
+| Local filesystem as default storage | MU must run without a DB connection. Local files are simple, inspectable, and work in all deployment topologies. |
+| `DBCandlepinStore` read-only | Writing Candlepin material back to AWX `conf_setting` would be wrong. Future DB writes will target a separate metrics-utility-specific DB. |
+| Org discovered via API, never stored | Matches AWX PR #16388. The `GET /users/{username}/owners` call is cheap and always returns the correct current org, with no risk of stale data. `METRICS_UTILITY_CANDLEPIN_ORG` remains as an override for air-gapped environments. |
+| AWX DB seeding on first run | When MU runs alongside a Controller that has already registered with Candlepin, MU can bootstrap itself from the existing cert without manual intervention. |
+| `cert.` subdomain derived dynamically | Matches AWX approach (`_get_cert_upload_url()`). No separate env var needed — the mTLS endpoint is always `cert.{configured_hostname}`. |
 
 ---
 
