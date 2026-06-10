@@ -317,6 +317,69 @@ class TestRunCandlepinLifecyclePlaceholderUUID:
 # ---------------------------------------------------------------------------
 
 
+class TestHandleCrcShipTargetAwxSeeding:
+    """When local store is empty, cert should be seeded from AWX conf_setting."""
+
+    @pytest.fixture(autouse=True)
+    def set_required_env(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
+        monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local')
+
+    def test_seeds_local_store_from_awx_db_when_local_is_empty(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_CERT_DIR', str(tmp_path))
+        mock_awx = MagicMock()
+        mock_awx.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+
+        with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                params = handle_crc_ship_target()
+
+        assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
+        assert params['candlepin_key_pem'] == SAMPLE_KEY_PEM
+        assert (tmp_path / 'cert.pem').exists(), 'cert should have been written to local store'
+
+    def test_does_not_seed_when_local_store_already_has_cert(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_CERT_DIR', str(tmp_path))
+        (tmp_path / 'cert.pem').write_text(SAMPLE_CERT_PEM)
+        (tmp_path / 'key.pem').write_text(SAMPLE_KEY_PEM)
+        (tmp_path / 'uuid.txt').write_text(CONSUMER_UUID)
+
+        mock_awx = MagicMock()
+        with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                params = handle_crc_ship_target()
+
+        mock_awx.load.assert_not_called()
+        assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
+
+    def test_falls_back_gracefully_when_awx_db_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_CERT_DIR', str(tmp_path))
+        mock_awx = MagicMock()
+        mock_awx.load.return_value = (None, None, None)
+
+        with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
+            params = handle_crc_ship_target()
+
+        assert 'candlepin_cert_pem' not in params
+
+    def test_does_not_seed_when_storage_is_db(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'db')
+        mock_db_store = MagicMock()
+        mock_db_store.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+
+        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_db_store):
+            with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDBClass:
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    handle_crc_ship_target()
+
+        MockDBClass.assert_not_called()
+
+
 class TestHandleCrcShipTargetCandlepin:
     @pytest.fixture(autouse=True)
     def set_required_env(self, monkeypatch):

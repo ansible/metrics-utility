@@ -153,22 +153,19 @@ _DB_CERT_KEY = 'CANDLEPIN_CERT_PEM'
 _DB_KEY_KEY = 'CANDLEPIN_KEY_PEM'
 _DB_UUID_KEY = 'CANDLEPIN_CONSUMER_UUID'
 
-_UPSERT_SQL = """
-    INSERT INTO conf_setting (created, modified, key, value)
-    VALUES (NOW(), NOW(), %s, %s)
-    ON CONFLICT (key) DO UPDATE
-        SET value = EXCLUDED.value,
-            modified = NOW()
-"""
-
 
 class DBCandlepinStore(CandlepinStore):
-    """Reads/writes the Candlepin cert/key/UUID via the AWX conf_setting table.
+    """Read-only view of the Candlepin cert/key/UUID from the AWX conf_setting table.
 
-    Uses the same UPSERT pattern as the rest of the codebase.
-    DB key names match what AWX PR #16388 (merged) writes:
+    Used to **seed** the local store: metrics-utility reads the cert that the AWX
+    Controller registered with Candlepin and caches it locally for use during uploads.
+
+    Key names match what AWX PR #16388 (merged) writes to conf_setting:
         CANDLEPIN_CERT_PEM, CANDLEPIN_KEY_PEM, CANDLEPIN_CONSUMER_UUID.
-    All operations are best-effort: DB errors are logged and never propagated.
+
+    Write methods (save_registration, save_cert) are intentionally not implemented.
+    Writing Candlepin material back to a DB is future scope and will target a
+    metrics-utility-specific database — not the AWX conf_setting table.
     """
 
     def load(self):
@@ -192,36 +189,20 @@ class DBCandlepinStore(CandlepinStore):
             logger.warning(f'Candlepin DB store: could not fetch from conf_setting: {e}')
             return None, None, None
 
-    def _upsert(self, key_value_pairs, error_context):
-        try:
-            from django.db import connection, transaction
-
-            with transaction.atomic():
-                with connection.cursor() as cursor:
-                    for key, value in key_value_pairs:
-                        cursor.execute(_UPSERT_SQL, [key, json.dumps(value)])
-            return True
-        except Exception as e:
-            logger.error(f'Candlepin DB store: could not save {error_context} to conf_setting: {e}')
-            return False
-
     def save_registration(self, cert_pem, key_pem, consumer_uuid):
-        ok = self._upsert(
-            [(_DB_CERT_KEY, cert_pem), (_DB_KEY_KEY, key_pem), (_DB_UUID_KEY, consumer_uuid)],
-            error_context='Candlepin registration',
+        # Writing to a metrics-utility-specific DB is future scope (not yet implemented).
+        logger.warning(
+            'DBCandlepinStore.save_registration is not implemented. '
+            'Use METRICS_UTILITY_CANDLEPIN_STORAGE=local to persist the cert on the filesystem.'
         )
-        if ok:
-            logger.info(f'Candlepin registration saved to conf_setting (uuid={consumer_uuid}).')
-        return ok
+        return False
 
     def save_cert(self, cert_pem, key_pem):
-        ok = self._upsert(
-            [(_DB_CERT_KEY, cert_pem), (_DB_KEY_KEY, key_pem)],
-            error_context='renewed Candlepin cert',
+        # Writing to a metrics-utility-specific DB is future scope (not yet implemented).
+        logger.warning(
+            'DBCandlepinStore.save_cert is not implemented. Use METRICS_UTILITY_CANDLEPIN_STORAGE=local to persist the cert on the filesystem.'
         )
-        if ok:
-            logger.info('Renewed Candlepin cert and key saved to conf_setting.')
-        return ok
+        return False
 
 
 # ---------------------------------------------------------------------------

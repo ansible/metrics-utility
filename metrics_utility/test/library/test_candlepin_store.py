@@ -194,34 +194,27 @@ class TestDBCandlepinStoreLoad:
 
 
 class TestDBCandlepinStoreSaveRegistration:
-    def test_upserts_three_rows(self):
-        mock_conn, mock_cursor = _make_db_cursor([])
-        mock_tx = MagicMock()
-        mock_tx.__enter__ = MagicMock(return_value=None)
-        mock_tx.__exit__ = MagicMock(return_value=False)
-        with patch('django.db.connection.cursor', return_value=mock_conn):
-            with patch('django.db.transaction.atomic', return_value=mock_tx):
-                ok = DBCandlepinStore().save_registration(SAMPLE_CERT, SAMPLE_KEY, SAMPLE_UUID)
-        assert ok is True
-        assert mock_cursor.execute.call_count == 3
-
-    def test_returns_false_on_db_error(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('DB down')):
-            ok = DBCandlepinStore().save_registration(SAMPLE_CERT, SAMPLE_KEY, SAMPLE_UUID)
+    def test_returns_false_not_implemented(self):
+        ok = DBCandlepinStore().save_registration(SAMPLE_CERT, SAMPLE_KEY, SAMPLE_UUID)
         assert ok is False
+
+    def test_logs_warning_not_implemented(self):
+        with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+            DBCandlepinStore().save_registration(SAMPLE_CERT, SAMPLE_KEY, SAMPLE_UUID)
+        mock_log.warning.assert_called_once()
+        assert 'not implemented' in mock_log.warning.call_args[0][0]
 
 
 class TestDBCandlepinStoreSaveCert:
-    def test_upserts_two_rows(self):
-        mock_conn, mock_cursor = _make_db_cursor([])
-        mock_tx = MagicMock()
-        mock_tx.__enter__ = MagicMock(return_value=None)
-        mock_tx.__exit__ = MagicMock(return_value=False)
-        with patch('django.db.connection.cursor', return_value=mock_conn):
-            with patch('django.db.transaction.atomic', return_value=mock_tx):
-                ok = DBCandlepinStore().save_cert(SAMPLE_CERT, SAMPLE_KEY)
-        assert ok is True
-        assert mock_cursor.execute.call_count == 2
+    def test_returns_false_not_implemented(self):
+        ok = DBCandlepinStore().save_cert(SAMPLE_CERT, SAMPLE_KEY)
+        assert ok is False
+
+    def test_logs_warning_not_implemented(self):
+        with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+            DBCandlepinStore().save_cert(SAMPLE_CERT, SAMPLE_KEY)
+        mock_log.warning.assert_called_once()
+        assert 'not implemented' in mock_log.warning.call_args[0][0]
 
 
 # ---------------------------------------------------------------------------

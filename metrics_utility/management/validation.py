@@ -11,7 +11,7 @@ from metrics_utility.base.utils import bool_from_env
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.library.candlepin.client import CandlepinClient
 from metrics_utility.library.candlepin.lifecycle import get_candlepin_ca, get_candlepin_url, get_renewal_days, parse_cert, run_candlepin_lifecycle
-from metrics_utility.library.candlepin.store import get_candlepin_store
+from metrics_utility.library.candlepin.store import DBCandlepinStore, LocalCandlepinStore, get_candlepin_store
 from metrics_utility.logger import logger
 
 
@@ -360,6 +360,17 @@ def handle_crc_ship_target():
 
     store = get_candlepin_store()
     cert_pem, key_pem, consumer_uuid = store.load()
+
+    # If the local store is empty, try to seed it from the AWX Controller database.
+    # The Controller registers with Candlepin and stores the resulting cert in
+    # conf_setting; metrics-utility reads it from there and caches it locally so
+    # subsequent runs work without any database connection.
+    if not cert_pem and isinstance(store, LocalCandlepinStore):
+        awx_cert, awx_key, awx_uuid = DBCandlepinStore().load()
+        if awx_cert and awx_key:
+            logger.info('Seeding local Candlepin cert from AWX conf_setting.')
+            store.save_registration(awx_cert, awx_key, awx_uuid or '')
+            cert_pem, key_pem, consumer_uuid = awx_cert, awx_key, awx_uuid
 
     # If no cert exists yet, attempt initial registration when enabled.
     if (not cert_pem or not key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED'):
