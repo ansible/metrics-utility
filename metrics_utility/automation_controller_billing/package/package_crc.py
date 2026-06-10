@@ -3,6 +3,8 @@
 import json
 import os
 
+from urllib.parse import urlparse, urlunparse
+
 import requests
 
 from awx.main.utils import get_awx_http_client_headers
@@ -49,6 +51,26 @@ class PackageCRC(base.Package):
 
     def get_ingress_url(self):
         return os.getenv('METRICS_UTILITY_CRC_INGRESS_URL', 'https://console.redhat.com/api/ingress/v1/upload')
+
+    def _get_cert_ingress_url(self):
+        """Return the mTLS ingress URL, prepending 'cert.' to the hostname if needed.
+
+        The CRC ingress endpoint for certificate-based (mTLS) uploads uses the
+        cert. subdomain (e.g. cert.console.redhat.com) rather than the standard
+        console.redhat.com used for service-account auth.  This matches the approach
+        used in AWX PR #16388 and is required by AAP-73765 AC.
+        """
+        url = self.get_ingress_url()
+        try:
+            parsed = urlparse(url)
+            if parsed.hostname and not parsed.hostname.startswith('cert.'):
+                netloc = f'cert.{parsed.hostname}'
+                if parsed.port:
+                    netloc = f'{netloc}:{parsed.port}'
+                return urlunparse(parsed._replace(netloc=netloc))
+            return url
+        except Exception:
+            return url
 
     def get_proxy_url(self):
         return os.getenv('METRICS_UTILITY_PROXY_URL')
@@ -118,8 +140,8 @@ class PackageCRC(base.Package):
             return False
 
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
-            if not self.get_ingress_url():
-                logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set')
+            if not self._get_cert_ingress_url():
+                logger.error('METRICS_UTILITY_CRC_INGRESS_URL is not set (needed to derive cert. upload URL)')
                 return False
             return True
 
@@ -171,10 +193,11 @@ class PackageCRC(base.Package):
             )
 
         elif self.shipping_auth_mode() == self.SHIPPING_AUTH_CERTIFICATES:
-            # session.cert is already set by base ship(); just POST with server cert verification.
+            # session.cert is already set by base ship() via _get_client_certificates().
+            # Use the cert. subdomain URL required for mTLS uploads (AAP-73765).
             proxies = {'https': self.get_proxy_url()} if self.get_proxy_url() else {}
             response = session.post(
-                url,
+                self._get_cert_ingress_url(),
                 files=files,
                 verify=self.CERT_PATH,
                 proxies=proxies,

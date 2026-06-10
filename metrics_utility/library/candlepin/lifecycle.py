@@ -61,19 +61,25 @@ def is_cert_valid(cert_pem: str) -> bool:
     Logs a warning (suitable for operator visibility) when the cert is not yet
     valid, expired, or unparseable, then returns False so the caller can fall
     back to service-account authentication.
+
+    Uses cert.not_valid_before_utc / not_valid_after_utc directly to avoid
+    the datetime.fromisoformat() ISO-string roundtrip, which fails on Python ≤ 3.10
+    when the isoformat() output contains a UTC offset suffix.
     """
     try:
-        info = parse_cert(cert_pem)
+        data = cert_pem.encode('utf-8') if isinstance(cert_pem, str) else cert_pem
+        cert = x509.load_pem_x509_certificate(data)
         now = datetime.now(timezone.utc)
-        not_before = datetime.fromisoformat(info['not_before'])
-        if now < not_before:
-            logger.warning(f'Candlepin cert is not yet valid (not_before={info["not_before"]}); falling back to service account auth')
+        if now < cert.not_valid_before_utc:
+            logger.warning(
+                f'Candlepin cert is not yet valid (not_before={cert.not_valid_before_utc.isoformat()}); falling back to service account auth'
+            )
             return False
-        if info['days_remaining'] < 0:
-            logger.warning(f'Candlepin cert expired at {info["not_after"]}; falling back to service account auth')
+        if now > cert.not_valid_after_utc:
+            logger.warning(f'Candlepin cert expired at {cert.not_valid_after_utc.isoformat()}; falling back to service account auth')
             return False
         return True
-    except ValueError as e:
+    except Exception as e:
         logger.warning(f'Could not parse Candlepin cert: {e}')
         return False
 

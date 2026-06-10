@@ -1,14 +1,6 @@
-"""
-Unit tests for:
-  - metrics_utility.library.candlepin.lifecycle  (parse_cert, needs_renewal, run_candlepin_lifecycle)
-  - metrics_utility.management.validation         (_fetch_candlepin_lifecycle_from_db,
-                                                   _save_candlepin_cert_to_db,
-                                                   _run_candlepin_lifecycle,
-                                                   handle_crc_ship_target lifecycle wiring)
-"""
+"""Tests for metrics_utility.library.candlepin.lifecycle and the validation.py orchestration wrapper."""
 
 import datetime
-import json
 
 from datetime import timezone
 from unittest.mock import MagicMock, patch
@@ -22,18 +14,16 @@ from cryptography.x509.oid import NameOID
 
 from metrics_utility.library.candlepin.lifecycle import needs_renewal, parse_cert, run_candlepin_lifecycle
 from metrics_utility.management.validation import (
-    CANDLEPIN_CERT_SETTING_KEY,
-    CANDLEPIN_KEY_SETTING_KEY,
-    CANDLEPIN_UUID_SETTING_KEY,
-    _fetch_candlepin_lifecycle_from_db,
+    CANDLEPIN_UUID_PLACEHOLDER,
     _run_candlepin_lifecycle,
-    _save_candlepin_cert_to_db,
     handle_crc_ship_target,
 )
 
 
 CONSUMER_UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 
+SAMPLE_CERT_PEM = '-----BEGIN CERTIFICATE-----\nMIIBtest\n-----END CERTIFICATE-----\n'
+SAMPLE_KEY_PEM = '-----BEGIN RSA PRIVATE KEY-----\nMIIEtest\n-----END RSA PRIVATE KEY-----\n'
 SAMPLE_NEW_CERT = '-----BEGIN CERTIFICATE-----\nnewcert==\n-----END CERTIFICATE-----\n'
 SAMPLE_NEW_KEY = '-----BEGIN RSA PRIVATE KEY-----\nnewkey==\n-----END RSA PRIVATE KEY-----\n'
 
@@ -84,6 +74,14 @@ def expiring_cert_and_key():
 @pytest.fixture
 def expired_cert_and_key():
     return _generate_cert(expired=True)
+
+
+def _make_mock_store(cert_pem=None, key_pem=None, uuid=None):
+    store = MagicMock()
+    store.load.return_value = (cert_pem, key_pem, uuid)
+    store.save_registration.return_value = True
+    store.save_cert.return_value = True
+    return store
 
 
 # ---------------------------------------------------------------------------
@@ -150,10 +148,9 @@ class TestNeedsRenewal:
         cert_pem, _ = expired_cert_and_key
         assert needs_renewal(cert_pem, 30) is True
 
-    def test_boundary_exactly_at_threshold(self, valid_cert_and_key):
+    def test_boundary_exactly_at_threshold(self):
         cert_pem, _ = _generate_cert(days_until_expiry=30)
-        result = needs_renewal(cert_pem, 30)
-        assert result is True
+        assert needs_renewal(cert_pem, 30) is True
 
     def test_raises_on_invalid_pem(self):
         with pytest.raises(ValueError):
@@ -161,7 +158,7 @@ class TestNeedsRenewal:
 
 
 # ---------------------------------------------------------------------------
-# run_candlepin_lifecycle
+# run_candlepin_lifecycle (library-level)
 # ---------------------------------------------------------------------------
 
 
@@ -194,7 +191,7 @@ class TestRunCandlepinLifecycle:
             instance = MockClient.return_value
             instance.checkin.return_value = True
             instance.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
-            result_cert, result_key = run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
+            run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
         instance.regenerate_cert.assert_called_once()
 
     def test_checkin_failure_does_not_abort(self, valid_cert_and_key):
@@ -237,133 +234,43 @@ class TestRunCandlepinLifecycle:
 
 
 # ---------------------------------------------------------------------------
-# _fetch_candlepin_lifecycle_from_db
-# ---------------------------------------------------------------------------
-
-
-def _make_cursor_rows(rows):
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    return mock_conn
-
-
-SAMPLE_CERT_PEM = '-----BEGIN CERTIFICATE-----\nMIIBtest\n-----END CERTIFICATE-----\n'
-SAMPLE_KEY_PEM = '-----BEGIN RSA PRIVATE KEY-----\nMIIEtest\n-----END RSA PRIVATE KEY-----\n'
-
-
-class TestFetchCandlepinLifecycleFromDb:
-    def test_returns_all_three_when_present(self):
-        rows = [
-            (CANDLEPIN_CERT_SETTING_KEY, json.dumps(SAMPLE_CERT_PEM)),
-            (CANDLEPIN_KEY_SETTING_KEY, json.dumps(SAMPLE_KEY_PEM)),
-            (CANDLEPIN_UUID_SETTING_KEY, json.dumps(CONSUMER_UUID)),
-        ]
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows(rows)):
-            cert, key, uuid = _fetch_candlepin_lifecycle_from_db()
-        assert cert == SAMPLE_CERT_PEM
-        assert key == SAMPLE_KEY_PEM
-        assert uuid == CONSUMER_UUID
-
-    def test_returns_none_when_uuid_missing(self):
-        rows = [
-            (CANDLEPIN_CERT_SETTING_KEY, json.dumps(SAMPLE_CERT_PEM)),
-            (CANDLEPIN_KEY_SETTING_KEY, json.dumps(SAMPLE_KEY_PEM)),
-        ]
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows(rows)):
-            cert, key, uuid = _fetch_candlepin_lifecycle_from_db()
-        assert cert == SAMPLE_CERT_PEM
-        assert uuid is None
-
-    def test_returns_none_none_none_on_db_error(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('DB down')):
-            cert, key, uuid = _fetch_candlepin_lifecycle_from_db()
-        assert cert is None
-        assert key is None
-        assert uuid is None
-
-    def test_queries_all_three_setting_keys(self):
-        mock_conn = _make_cursor_rows([])
-        with patch('django.db.connection.cursor', return_value=mock_conn):
-            _fetch_candlepin_lifecycle_from_db()
-        args = mock_conn.__enter__.return_value.execute.call_args[0][1]
-        assert CANDLEPIN_CERT_SETTING_KEY in args
-        assert CANDLEPIN_KEY_SETTING_KEY in args
-        assert CANDLEPIN_UUID_SETTING_KEY in args
-
-    def test_skips_empty_value_rows(self):
-        rows = [
-            (CANDLEPIN_CERT_SETTING_KEY, ''),
-            (CANDLEPIN_KEY_SETTING_KEY, json.dumps(SAMPLE_KEY_PEM)),
-            (CANDLEPIN_UUID_SETTING_KEY, json.dumps(CONSUMER_UUID)),
-        ]
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows(rows)):
-            cert, key, uuid = _fetch_candlepin_lifecycle_from_db()
-        assert cert is None
-        assert key == SAMPLE_KEY_PEM
-
-
-# ---------------------------------------------------------------------------
-# _save_candlepin_cert_to_db
-# ---------------------------------------------------------------------------
-
-
-class TestSaveCandlepinCertToDb:
-    def test_executes_upsert_for_cert_and_key(self):
-        mock_cursor = MagicMock()
-        mock_conn = MagicMock()
-        mock_conn.__enter__ = MagicMock(return_value=mock_cursor)
-        mock_conn.__exit__ = MagicMock(return_value=False)
-        with patch('django.db.connection.cursor', return_value=mock_conn):
-            _save_candlepin_cert_to_db(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
-        assert mock_cursor.execute.call_count == 2
-        calls = [c[0] for c in mock_cursor.execute.call_args_list]
-        keys_updated = [c[1][0] for c in calls]
-        assert CANDLEPIN_CERT_SETTING_KEY in keys_updated
-        assert CANDLEPIN_KEY_SETTING_KEY in keys_updated
-
-    def test_does_not_raise_on_db_error(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('DB error')):
-            _save_candlepin_cert_to_db(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
-
-    def test_logs_error_on_db_failure(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('DB error')):
-            with patch('metrics_utility.management.validation.logger') as mock_log:
-                _save_candlepin_cert_to_db(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
-        mock_log.error.assert_called_once()
-        assert 'Candlepin' in mock_log.error.call_args[0][0]
-
-
-# ---------------------------------------------------------------------------
-# _run_candlepin_lifecycle (validation.py orchestration wrapper)
+# _run_candlepin_lifecycle (validation.py orchestration wrapper — takes store)
 # ---------------------------------------------------------------------------
 
 
 class TestRunCandlepinLifecycleValidation:
-    def test_skips_lifecycle_when_uuid_missing(self, valid_cert_and_key):
+    def test_skips_lifecycle_when_uuid_is_none(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
         with patch('metrics_utility.management.validation.run_candlepin_lifecycle') as mock_lc:
-            result = _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid=None)
+            result = _run_candlepin_lifecycle(cert_pem, key_pem, None, mock_store)
         mock_lc.assert_not_called()
         assert result == (cert_pem, key_pem)
 
-    def test_logs_warning_when_uuid_missing(self, valid_cert_and_key):
+    def test_skips_lifecycle_when_uuid_is_placeholder(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
-        with patch('metrics_utility.management.validation.run_candlepin_lifecycle'):
-            with patch('metrics_utility.management.validation.logger') as mock_log:
-                _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid=None)
+        mock_store = _make_mock_store()
+        with patch('metrics_utility.management.validation.run_candlepin_lifecycle') as mock_lc:
+            result = _run_candlepin_lifecycle(cert_pem, key_pem, CANDLEPIN_UUID_PLACEHOLDER, mock_store)
+        mock_lc.assert_not_called()
+        assert result == (cert_pem, key_pem)
+
+    def test_logs_warning_when_uuid_absent(self, valid_cert_and_key):
+        cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
+        with patch('metrics_utility.management.validation.logger') as mock_log:
+            _run_candlepin_lifecycle(cert_pem, key_pem, None, mock_store)
         mock_log.warning.assert_called_once()
 
     def test_calls_run_candlepin_lifecycle_with_correct_args(self, valid_cert_and_key, monkeypatch):
         cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_URL', 'https://sub.example.com')
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', '45')
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_CA', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_PROXY_URL', raising=False)
         with patch('metrics_utility.management.validation.run_candlepin_lifecycle', return_value=(cert_pem, key_pem)) as mock_lc:
-            _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
+            _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, mock_store)
         mock_lc.assert_called_once_with(
             cert_pem,
             key_pem,
@@ -374,31 +281,33 @@ class TestRunCandlepinLifecycleValidation:
             proxy=None,
         )
 
-    def test_saves_cert_to_db_when_renewed(self, valid_cert_and_key):
+    def test_saves_cert_via_store_when_renewed(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
         with patch('metrics_utility.management.validation.run_candlepin_lifecycle', return_value=(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)):
-            with patch('metrics_utility.management.validation._save_candlepin_cert_to_db') as mock_save:
-                _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
-        mock_save.assert_called_once_with(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
+            _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, mock_store)
+        mock_store.save_cert.assert_called_once_with(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
 
     def test_does_not_save_when_cert_unchanged(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
         with patch('metrics_utility.management.validation.run_candlepin_lifecycle', return_value=(cert_pem, key_pem)):
-            with patch('metrics_utility.management.validation._save_candlepin_cert_to_db') as mock_save:
-                _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
-        mock_save.assert_not_called()
+            _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, mock_store)
+        mock_store.save_cert.assert_not_called()
 
     def test_returns_original_cert_on_lifecycle_exception(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
         with patch('metrics_utility.management.validation.run_candlepin_lifecycle', side_effect=RuntimeError('Candlepin down')):
-            result = _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
+            result = _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, mock_store)
         assert result == (cert_pem, key_pem)
 
     def test_logs_error_on_lifecycle_exception(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
+        mock_store = _make_mock_store()
         with patch('metrics_utility.management.validation.run_candlepin_lifecycle', side_effect=RuntimeError('Candlepin down')):
             with patch('metrics_utility.management.validation.logger') as mock_log:
-                _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
+                _run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, mock_store)
         mock_log.error.assert_called_once()
 
 
@@ -415,41 +324,40 @@ class TestHandleCrcShipTargetLifecycleWiring:
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
 
-    def _rows_with_uuid(self):
-        return [
-            (CANDLEPIN_CERT_SETTING_KEY, json.dumps(SAMPLE_CERT_PEM)),
-            (CANDLEPIN_KEY_SETTING_KEY, json.dumps(SAMPLE_KEY_PEM)),
-            (CANDLEPIN_UUID_SETTING_KEY, json.dumps(CONSUMER_UUID)),
-        ]
-
     def test_lifecycle_not_called_when_flag_disabled(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'false')
-        rows = self._rows_with_uuid()
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows(rows)):
-            with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
-                handle_crc_ship_target()
+        mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
+        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
+                    handle_crc_ship_target()
         mock_lc.assert_not_called()
 
     def test_lifecycle_called_when_flag_enabled(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
-        rows = self._rows_with_uuid()
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows(rows)):
-            with patch('metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)) as mock_lc:
-                handle_crc_ship_target()
-        mock_lc.assert_called_once_with(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
+        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                with patch(
+                    'metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
+                ) as mock_lc:
+                    handle_crc_ship_target()
+        mock_lc.assert_called_once_with(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID, mock_store)
 
     def test_renewed_cert_injected_into_billing_params(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
-        rows = self._rows_with_uuid()
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows(rows)):
-            with patch('metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)):
-                params = handle_crc_ship_target()
+        mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
+        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                with patch('metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)):
+                    params = handle_crc_ship_target()
         assert params['candlepin_cert_pem'] == SAMPLE_NEW_CERT
         assert params['candlepin_key_pem'] == SAMPLE_NEW_KEY
 
-    def test_lifecycle_skipped_when_no_cert_in_db(self, monkeypatch):
+    def test_lifecycle_skipped_when_no_cert_in_store(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows([])):
+        mock_store = _make_mock_store()
+        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
             with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
                 params = handle_crc_ship_target()
         mock_lc.assert_not_called()
@@ -457,7 +365,8 @@ class TestHandleCrcShipTargetLifecycleWiring:
 
     def test_billing_provider_params_always_present(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
-        with patch('django.db.connection.cursor', return_value=_make_cursor_rows([])):
+        mock_store = _make_mock_store()
+        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
             params = handle_crc_ship_target()
         assert params['billing_provider'] == 'aws'
         assert params['billing_account_id'] == '123456789012'
