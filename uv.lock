@@ -340,7 +340,7 @@ requires-dist = [
     { name = "distro", specifier = "==1.9.0" },
     { name = "django", specifier = "==5.2.7" },
     { name = "kubernetes", specifier = ">=33.1.0" },
-    { name = "openpyxl", specifier = "==3.1.5" },
+    { name = "openpyxl", specifier = "~=3.1.5" },
     { name = "pandas", specifier = "~=3.0" },
     { name = "psycopg", specifier = "==3.3.0" },
     { name = "requests", specifier = "==2.32.5" },
