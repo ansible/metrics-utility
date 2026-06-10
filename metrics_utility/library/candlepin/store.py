@@ -174,11 +174,9 @@ class DBCandlepinStore(CandlepinStore):
             from django.db import connection
 
             placeholders = ', '.join(['%s'] * len(all_keys))
+            query = 'SELECT key, value FROM conf_setting WHERE key IN (' + placeholders + ')'
             with connection.cursor() as cursor:
-                cursor.execute(
-                    f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})',
-                    all_keys,
-                )
+                cursor.execute(query, all_keys)
                 rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
             return (
                 rows.get(_DB_CERT_KEY),

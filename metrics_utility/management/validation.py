@@ -207,11 +207,9 @@ def _fetch_registration_credentials_from_db():
         from django.db import connection
 
         placeholders = ', '.join(['%s'] * len(keys))
+        query = 'SELECT key, value FROM conf_setting WHERE key IN (' + placeholders + ')'
         with connection.cursor() as cursor:
-            cursor.execute(
-                f'SELECT key, value FROM conf_setting WHERE key IN ({placeholders})',
-                keys,
-            )
+            cursor.execute(query, keys)
             rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
 
         username = rows.get(_REDHAT_USERNAME_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_USERNAME_SETTING_KEY)
@@ -340,12 +338,8 @@ def _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid, store):
     return new_cert_pem, new_key_pem
 
 
-def handle_crc_ship_target():
-    """Read and validate CRC-related billing provider environment variables.
-
-    Returns:
-        Dict with ``'billing_provider'`` and optionally ``'billing_account_id'``,
-        ``'red_hat_org_id'``, ``'candlepin_cert_pem'``, and ``'candlepin_key_pem'``.
+def _build_billing_provider_params():
+    """Validate and build the billing provider parameters dict.
 
     Raises:
         :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If a required
@@ -366,13 +360,15 @@ def handle_crc_ship_target():
     if red_hat_org_id:
         billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
-    # only used for the other modes
-    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
-    if ship_path:
-        allowed = '", "'.join(['controller_db', 'directory', 's3'])
-        logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
+    return billing_provider_params
 
-    store = get_candlepin_store()
+
+def _load_candlepin_cert(store):
+    """Load the Candlepin cert from *store*, seeding or registering as needed.
+
+    Returns:
+        Tuple ``(cert_pem, key_pem, consumer_uuid)`` — any may be None.
+    """
     cert_pem, key_pem, consumer_uuid = store.load()
 
     # If the local store is empty, try to seed it from the AWX Controller database.
@@ -387,25 +383,50 @@ def handle_crc_ship_target():
             cert_pem, key_pem, consumer_uuid = awx_cert, awx_key, awx_uuid
 
     # If no cert exists yet, attempt initial registration when enabled.
-    if (not cert_pem or not key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED'):
+    if not (cert_pem and key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED'):
         cert_pem, key_pem, consumer_uuid = _register_candlepin_consumer(store)
 
-    if cert_pem and key_pem:
-        # Warn if the cert is approaching expiry so operators have visibility.
-        try:
-            info = parse_cert(cert_pem)
-            if info['days_remaining'] < 30:
-                logger.warning(
-                    f'Candlepin cert expires in {info["days_remaining"]} day(s). '
-                    'Run candlepin_manage renew or ensure Controller cert renewal is active.'
-                )
-        except Exception:
-            pass
+    return cert_pem, key_pem, consumer_uuid
 
-        # Run lifecycle management (check-in + proactive renewal) when enabled.
+
+def _warn_if_cert_expiring(cert_pem):
+    """Log a warning when the cert is within 30 days of expiry."""
+    try:
+        info = parse_cert(cert_pem)
+        if info['days_remaining'] < 30:
+            logger.warning(
+                f'Candlepin cert expires in {info["days_remaining"]} day(s). Run candlepin_manage renew or ensure Controller cert renewal is active.'
+            )
+    except Exception:
+        pass
+
+
+def handle_crc_ship_target():
+    """Read and validate CRC-related billing provider environment variables.
+
+    Returns:
+        Dict with ``'billing_provider'`` and optionally ``'billing_account_id'``,
+        ``'red_hat_org_id'``, ``'candlepin_cert_pem'``, and ``'candlepin_key_pem'``.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If a required
+            billing variable is missing or has an unsupported value.
+    """
+    billing_provider_params = _build_billing_provider_params()
+
+    # only used for the other modes
+    ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
+    if ship_path:
+        allowed = '", "'.join(['controller_db', 'directory', 's3'])
+        logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
+
+    store = get_candlepin_store()
+    cert_pem, key_pem, consumer_uuid = _load_candlepin_cert(store)
+
+    if cert_pem and key_pem:
+        _warn_if_cert_expiring(cert_pem)
         if bool_from_env('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED'):
             cert_pem, key_pem = _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid, store)
-
         billing_provider_params['candlepin_cert_pem'] = cert_pem
         billing_provider_params['candlepin_key_pem'] = key_pem
         logger.info('Candlepin identity cert loaded; mTLS will be attempted.')
