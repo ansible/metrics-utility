@@ -176,5 +176,24 @@ def get_renewal_days():
         return RENEWAL_DAYS_DEFAULT
 
 
+_RHSM_CA_PATHS = [
+    '/etc/rhsm/ca/redhat-uep.pem',
+    '/etc/rhsm/ca/redhat-entitlement-authority.pem',
+]
+
+
 def get_candlepin_ca():
-    return os.getenv('METRICS_UTILITY_CANDLEPIN_CA') or None
+    """Return the CA bundle path for Candlepin TLS verification.
+
+    Resolution order:
+      1. METRICS_UTILITY_CANDLEPIN_CA env var (explicit override)
+      2. First of the well-known RHSM CA paths that exists on disk
+      3. None (falls back to the system CA store)
+    """
+    explicit = os.getenv('METRICS_UTILITY_CANDLEPIN_CA')
+    if explicit:
+        return explicit
+    for path in _RHSM_CA_PATHS:
+        if os.path.isfile(path):
+            return path
+    return None

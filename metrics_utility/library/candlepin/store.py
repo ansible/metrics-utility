@@ -9,7 +9,6 @@ Provides two backends:
 Select the backend via the METRICS_UTILITY_CANDLEPIN_STORAGE env var (default: 'local').
 """
 
-import json
 import os
 import tempfile
 
@@ -189,13 +188,17 @@ class DBCandlepinStore(CandlepinStore):
     def load(self):
         all_keys = [_DB_CERT_KEY, _DB_KEY_KEY, _DB_UUID_KEY]
         try:
-            from django.db import connection
+            from awx.conf.models import Setting
+            from awx.main.utils.encryption import decrypt_field, is_encrypted
 
-            placeholders = ', '.join(['%s'] * len(all_keys))
-            query = 'SELECT key, value FROM conf_setting WHERE key IN (' + placeholders + ')'
-            with connection.cursor() as cursor:
-                cursor.execute(query, all_keys)
-                rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
+            rows = {}
+            for setting in Setting.objects.filter(key__in=all_keys):
+                value = setting.value
+                if value is None:
+                    continue
+                if is_encrypted(value):
+                    value = decrypt_field(setting, 'value')
+                rows[setting.key] = value
             return (
                 rows.get(_DB_CERT_KEY),
                 rows.get(_DB_KEY_KEY),
