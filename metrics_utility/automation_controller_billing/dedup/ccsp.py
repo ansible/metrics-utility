@@ -86,7 +86,7 @@ class DedupCCSP:
             host = row['host_name']
             serials = row['serials']
 
-            if isinstance(serials, Iterable) and not isinstance(serials, (str, bytes)):
+            if isinstance(serials, Iterable):
                 for serial in serials:
                     if isinstance(serial, str) and serial:
                         serial_to_hosts[serial].add(host)
