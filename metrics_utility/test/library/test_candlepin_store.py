@@ -1,6 +1,6 @@
 """Tests for metrics_utility.library.candlepin.store — both LocalCandlepinStore and DBCandlepinStore."""
 
-import json
+import sys
 
 from unittest.mock import MagicMock, patch
 
@@ -149,43 +149,112 @@ class TestLocalCandlepinStoreEnvVar:
 # ---------------------------------------------------------------------------
 
 
-def _make_db_cursor(rows):
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    return mock_conn, mock_cursor
+def _make_mock_setting(key, value):
+    s = MagicMock()
+    s.key = key
+    s.value = value
+    return s
+
+
+def _awx_modules(settings=None, is_encrypted_fn=None, decrypt_field_fn=None):
+    """Return a sys.modules patch dict that stubs out awx dependencies."""
+    mock_setting_cls = MagicMock()
+    mock_setting_cls.objects.filter.return_value = settings or []
+
+    mock_encryption = MagicMock()
+    mock_encryption.is_encrypted = is_encrypted_fn or (lambda v: False)
+    mock_encryption.decrypt_field = decrypt_field_fn or (lambda obj, field: obj.value)
+
+    mock_awx_conf_models = MagicMock()
+    mock_awx_conf_models.Setting = mock_setting_cls
+
+    return {
+        'awx': MagicMock(),
+        'awx.conf': MagicMock(),
+        'awx.conf.models': mock_awx_conf_models,
+        'awx.main': MagicMock(),
+        'awx.main.utils': MagicMock(),
+        'awx.main.utils.encryption': mock_encryption,
+    }
 
 
 class TestDBCandlepinStoreLoad:
     def test_returns_cert_key_uuid_when_all_present(self):
-        rows = [
-            (_DB_CERT_KEY, json.dumps(SAMPLE_CERT)),
-            (_DB_KEY_KEY, json.dumps(SAMPLE_KEY)),
-            (_DB_UUID_KEY, json.dumps(SAMPLE_UUID)),
+        settings = [
+            _make_mock_setting(_DB_CERT_KEY, SAMPLE_CERT),
+            _make_mock_setting(_DB_KEY_KEY, SAMPLE_KEY),
+            _make_mock_setting(_DB_UUID_KEY, SAMPLE_UUID),
         ]
-        mock_conn, _ = _make_db_cursor(rows)
-        with patch('django.db.connection.cursor', return_value=mock_conn):
+        with patch.dict(sys.modules, _awx_modules(settings=settings)):
+            cert, key, uuid = DBCandlepinStore().load()
+        assert cert == SAMPLE_CERT
+        assert key == SAMPLE_KEY
+        assert uuid == SAMPLE_UUID
+
+    def test_decrypts_encrypted_values(self):
+        encrypted_cert = '$encrypted$UTF8$AESCBC$abc123'
+        encrypted_key = '$encrypted$UTF8$AESCBC$def456'
+        settings = [
+            _make_mock_setting(_DB_CERT_KEY, encrypted_cert),
+            _make_mock_setting(_DB_KEY_KEY, encrypted_key),
+            _make_mock_setting(_DB_UUID_KEY, SAMPLE_UUID),
+        ]
+
+        def fake_is_encrypted(v):
+            return v.startswith('$encrypted$')
+
+        def fake_decrypt_field(obj, field):
+            return {'$encrypted$UTF8$AESCBC$abc123': SAMPLE_CERT, '$encrypted$UTF8$AESCBC$def456': SAMPLE_KEY}[obj.value]
+
+        with patch.dict(
+            sys.modules,
+            _awx_modules(
+                settings=settings,
+                is_encrypted_fn=fake_is_encrypted,
+                decrypt_field_fn=fake_decrypt_field,
+            ),
+        ):
             cert, key, uuid = DBCandlepinStore().load()
         assert cert == SAMPLE_CERT
         assert key == SAMPLE_KEY
         assert uuid == SAMPLE_UUID
 
     def test_returns_none_none_none_when_no_rows(self):
-        mock_conn, _ = _make_db_cursor([])
-        with patch('django.db.connection.cursor', return_value=mock_conn):
+        with patch.dict(sys.modules, _awx_modules(settings=[])):
             cert, key, uuid = DBCandlepinStore().load()
         assert cert is None
         assert key is None
         assert uuid is None
 
     def test_returns_none_on_db_error(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('DB down')):
+        mock_setting_cls = MagicMock()
+        mock_setting_cls.objects.filter.side_effect = Exception('DB down')
+        mock_awx_conf_models = MagicMock()
+        mock_awx_conf_models.Setting = mock_setting_cls
+        modules = {
+            'awx': MagicMock(),
+            'awx.conf': MagicMock(),
+            'awx.conf.models': mock_awx_conf_models,
+            'awx.main': MagicMock(),
+            'awx.main.utils': MagicMock(),
+            'awx.main.utils.encryption': MagicMock(),
+        }
+        with patch.dict(sys.modules, modules):
             cert, key, uuid = DBCandlepinStore().load()
         assert cert is None
         assert key is None
         assert uuid is None
+
+    def test_skips_none_values(self):
+        settings = [
+            _make_mock_setting(_DB_CERT_KEY, None),
+            _make_mock_setting(_DB_UUID_KEY, SAMPLE_UUID),
+        ]
+        with patch.dict(sys.modules, _awx_modules(settings=settings)):
+            cert, key, uuid = DBCandlepinStore().load()
+        assert cert is None
+        assert key is None
+        assert uuid == SAMPLE_UUID
 
     def test_uses_correct_key_names_matching_awx(self):
         assert _DB_CERT_KEY == 'CANDLEPIN_CERT_PEM'
