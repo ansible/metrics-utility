@@ -118,7 +118,7 @@ class DataframeContentUsage(Base):
         Returns:
             Two-part collection name string, or None.
         """
-        if x is None:
+        if not isinstance(x, str):
             return None
 
         m = re.match(DataframeContentUsage.collection_regexp(), x)
@@ -138,7 +138,7 @@ class DataframeContentUsage(Base):
         Returns:
             Normalised role name string, or None.
         """
-        if x is None:
+        if not isinstance(x, str):
             return None
 
         collection_role = re.match(DataframeContentUsage.collection_regexp(), x)
