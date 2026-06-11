@@ -376,6 +376,14 @@ def _load_candlepin_cert(store):
     # conf_setting; metrics-utility reads it from there and caches it locally so
     # subsequent runs work without any database connection.
     if not cert_pem and isinstance(store, LocalCandlepinStore):
+        if not store.is_writable():
+            logger.warning(
+                f'Candlepin cert dir {store.cert_dir} is not writable by the current process; '
+                'skipping cert-based auth and falling back to service account or basic auth. '
+                'Set METRICS_UTILITY_CANDLEPIN_CERT_DIR to a writable path to enable mTLS.'
+            )
+            return None, None, None
+
         awx_cert, awx_key, awx_uuid = DBCandlepinStore().load()
         if awx_cert and awx_key:
             logger.info('Seeding local Candlepin cert from AWX conf_setting.')

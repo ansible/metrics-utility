@@ -3,8 +3,6 @@
 from collections import defaultdict
 from collections.abc import Iterable
 
-import pandas as pd
-
 
 class DedupCCSP:
     """CCSP host deduplication engine.

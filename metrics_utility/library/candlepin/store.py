@@ -11,6 +11,7 @@ Select the backend via the METRICS_UTILITY_CANDLEPIN_STORAGE env var (default: '
 
 import json
 import os
+import tempfile
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -52,13 +53,13 @@ class CandlepinStore(ABC):
 # Local filesystem backend
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CERT_DIR = '/etc/metrics-utility/candlepin'
+_DEFAULT_CERT_DIR = '/var/lib/awx/candlepin-certs'
 
 
 class LocalCandlepinStore(CandlepinStore):
     """Stores cert.pem, key.pem, and uuid.txt in a configurable directory.
 
-    The directory defaults to /etc/metrics-utility/candlepin/ and can be
+    The directory defaults to /var/lib/awx/candlepin-certs/ and can be
     overridden with METRICS_UTILITY_CANDLEPIN_CERT_DIR.  Files are created
     with mode 0o600; the directory itself is created with mode 0o700.
     All writes are atomic: content is written to a .tmp sibling then
@@ -117,6 +118,23 @@ class LocalCandlepinStore(CandlepinStore):
             return True
         except Exception as e:
             logger.error(f'Candlepin local store: could not write {path}: {e}')
+            return False
+
+    # -- access probe ---------------------------------------------------------
+
+    def is_writable(self):
+        """Return True if the cert directory can be created and written to.
+
+        Attempts a real probe write rather than os.access() to avoid false
+        positives from ACLs or setuid environments.
+        """
+        try:
+            self.cert_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=self.cert_dir, prefix='.probe-', delete=True):
+                pass
+            return True
+        except Exception as e:
+            logger.debug(f'Candlepin local store: write probe failed for {self.cert_dir}: {e}')
             return False
 
     # -- interface ------------------------------------------------------------
