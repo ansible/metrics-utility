@@ -1,6 +1,7 @@
 """CCSP deduplication logic for billing dataframes."""
 
 from collections import defaultdict
+from collections.abc import Iterable
 
 import pandas as pd
 
@@ -87,9 +88,9 @@ class DedupCCSP:
             host = row['host_name']
             serials = row['serials']
 
-            if serials:
+            if isinstance(serials, Iterable):
                 for serial in serials:
-                    if serial is not None and not pd.isna(serial):
+                    if isinstance(serial, str) and serial:
                         serial_to_hosts[serial].add(host)
                         if serial not in serial_to_first:
                             serial_to_first[serial] = host

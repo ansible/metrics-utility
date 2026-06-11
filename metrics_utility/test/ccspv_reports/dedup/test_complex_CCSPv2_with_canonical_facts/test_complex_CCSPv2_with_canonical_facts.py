@@ -2042,15 +2042,13 @@ def validate_data_collection_status(file_path):
     # We'll convert nan values to a string for comparison
     def normalize_for_comparison(d):
         """Normalize a dictionary for comparison by converting nan/NaT to string."""
-        import pandas as _pd
-
         result = {}
         for k, v in d.items():
             if isinstance(v, dict):
                 result[k] = normalize_for_comparison(v)
             elif isinstance(v, float) and math.isnan(v):
                 result[k] = 'NAN_VALUE'
-            elif v is _pd.NaT:
+            elif v is pandas.NaT:
                 result[k] = 'NAN_VALUE'
             else:
                 result[k] = v
