@@ -10,7 +10,14 @@ from dateutil.relativedelta import relativedelta
 from metrics_utility.base.utils import bool_from_env
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.library.candlepin.client import CandlepinClient
-from metrics_utility.library.candlepin.lifecycle import get_candlepin_ca, get_candlepin_url, get_renewal_days, parse_cert, run_candlepin_lifecycle
+from metrics_utility.library.candlepin.lifecycle import (
+    get_candlepin_ca,
+    get_candlepin_url,
+    get_renewal_days,
+    is_cert_valid,
+    parse_cert,
+    run_candlepin_lifecycle,
+)
 from metrics_utility.library.candlepin.store import DBCandlepinStore, LocalCandlepinStore, get_candlepin_store
 from metrics_utility.logger import logger
 
@@ -410,6 +417,35 @@ def _warn_if_cert_expiring(cert_pem):
         pass
 
 
+def _load_cert_from_controller_db():
+    """Try to load a valid Candlepin cert directly from the AWX Controller conf_setting table.
+
+    The Controller (AWX PR #16388) manages its own Candlepin lifecycle — registration,
+    check-in, and renewal. When a cert is present and valid in the Controller DB,
+    metrics-utility should use it directly and skip its own lifecycle so the two
+    systems do not run parallel check-ins or competing renewals.
+
+    Returns:
+        Tuple ``(cert_pem, key_pem, consumer_uuid)`` if a valid cert is found,
+        or ``(None, None, None)`` if the DB is unavailable, empty, or the cert
+        is expired / unparseable.
+    """
+    try:
+        cert_pem, key_pem, consumer_uuid = DBCandlepinStore().load()
+    except Exception as e:
+        logger.debug(f'Controller DB cert lookup failed: {e}')
+        return None, None, None
+
+    if not cert_pem or not key_pem:
+        return None, None, None
+
+    if not is_cert_valid(cert_pem):
+        logger.warning('Candlepin cert found in controller DB but it is expired or invalid; falling back to local store.')
+        return None, None, None
+
+    return cert_pem, key_pem, consumer_uuid
+
+
 def handle_crc_ship_target():
     """Read and validate CRC-related billing provider environment variables.
 
@@ -429,6 +465,21 @@ def handle_crc_ship_target():
         allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
+    # Prefer the cert already managed by the AWX Controller (AWX PR #16388).
+    # The Controller owns registration, check-in, and renewal; when its cert is
+    # present and valid, use it directly and skip the metrics-utility lifecycle to
+    # avoid duplicate check-ins or competing renewals.
+    cert_pem, key_pem, consumer_uuid = _load_cert_from_controller_db()
+    if cert_pem and key_pem:
+        _warn_if_cert_expiring(cert_pem)
+        billing_provider_params['candlepin_cert_pem'] = cert_pem
+        billing_provider_params['candlepin_key_pem'] = key_pem
+        logger.info('Candlepin identity cert loaded from controller DB; mTLS will be attempted.')
+        return billing_provider_params
+
+    # Fallback: use the configured local store with the metrics-utility lifecycle.
+    # This path runs when the Controller DB is unavailable or has no cert (e.g.
+    # standalone deployments without AWX PR #16388).
     store = get_candlepin_store()
     cert_pem, key_pem, consumer_uuid = _load_candlepin_cert(store)
 

@@ -12,6 +12,7 @@ import pytest
 from metrics_utility.management.validation import (
     CANDLEPIN_UUID_PLACEHOLDER,
     _fetch_registration_credentials_from_db,
+    _load_cert_from_controller_db,
     _register_candlepin_consumer,
     _resolve_registration_credentials,
     _run_candlepin_lifecycle,
@@ -317,7 +318,12 @@ class TestRunCandlepinLifecyclePlaceholderUUID:
 
 
 class TestHandleCrcShipTargetAwxSeeding:
-    """When local store is empty, cert should be seeded from AWX conf_setting."""
+    """When local store is empty, cert should be seeded from AWX conf_setting.
+
+    These tests patch _load_cert_from_controller_db to return None so they
+    remain focused on the local-store seeding path, not the DB-first path
+    (which is covered separately in TestHandleCrcShipTargetDbFirst).
+    """
 
     @pytest.fixture(autouse=True)
     def set_required_env(self, monkeypatch):
@@ -334,9 +340,10 @@ class TestHandleCrcShipTargetAwxSeeding:
         mock_awx = MagicMock()
         mock_awx.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
 
-        with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                params = handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    params = handle_crc_ship_target()
 
         assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
         assert params['candlepin_key_pem'] == SAMPLE_KEY_PEM
@@ -349,9 +356,10 @@ class TestHandleCrcShipTargetAwxSeeding:
         (tmp_path / 'uuid.txt').write_text(CONSUMER_UUID)
 
         mock_awx = MagicMock()
-        with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                params = handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    params = handle_crc_ship_target()
 
         mock_awx.load.assert_not_called()
         assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
@@ -361,8 +369,9 @@ class TestHandleCrcShipTargetAwxSeeding:
         mock_awx = MagicMock()
         mock_awx.load.return_value = (None, None, None)
 
-        with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
-            params = handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.DBCandlepinStore', return_value=mock_awx):
+                params = handle_crc_ship_target()
 
         assert 'candlepin_cert_pem' not in params
 
@@ -371,10 +380,11 @@ class TestHandleCrcShipTargetAwxSeeding:
         mock_db_store = MagicMock()
         mock_db_store.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
 
-        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_db_store):
-            with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDBClass:
-                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                    handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_db_store):
+                with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDBClass:
+                    with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                        handle_crc_ship_target()
 
         MockDBClass.assert_not_called()
 
@@ -388,6 +398,12 @@ class TestHandleCrcShipTargetCandlepin:
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED', raising=False)
+        # Always bypass the DB-first path so these tests cover the local-store fallback.
+        self._no_db_first = patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None))
+        self._no_db_first.start()
+
+    def teardown_method(self):
+        self._no_db_first.stop()
 
     def test_injects_cert_and_key_when_store_has_both(self):
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
@@ -502,3 +518,128 @@ class TestHandleCrcShipTargetCandlepin:
                 with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
                     handle_crc_ship_target()
         mock_lc.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _load_cert_from_controller_db — unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestLoadCertFromControllerDb:
+    def test_returns_cert_when_db_has_valid_cert(self):
+        with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDB:
+            MockDB.return_value.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            with patch('metrics_utility.management.validation.is_cert_valid', return_value=True):
+                cert, key, uuid = _load_cert_from_controller_db()
+        assert cert == SAMPLE_CERT_PEM
+        assert key == SAMPLE_KEY_PEM
+        assert uuid == CONSUMER_UUID
+
+    def test_returns_none_when_db_empty(self):
+        with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDB:
+            MockDB.return_value.load.return_value = (None, None, None)
+            cert, key, uuid = _load_cert_from_controller_db()
+        assert cert is None
+        assert key is None
+        assert uuid is None
+
+    def test_returns_none_when_cert_invalid(self):
+        with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDB:
+            MockDB.return_value.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            with patch('metrics_utility.management.validation.is_cert_valid', return_value=False):
+                cert, key, uuid = _load_cert_from_controller_db()
+        assert cert is None
+
+    def test_logs_warning_when_cert_invalid(self):
+        with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDB:
+            MockDB.return_value.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            with patch('metrics_utility.management.validation.is_cert_valid', return_value=False):
+                with patch('metrics_utility.management.validation.logger') as mock_log:
+                    _load_cert_from_controller_db()
+        mock_log.warning.assert_called_once()
+
+    def test_returns_none_on_db_exception(self):
+        with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDB:
+            MockDB.return_value.load.side_effect = Exception('DB down')
+            cert, key, uuid = _load_cert_from_controller_db()
+        assert cert is None
+        assert key is None
+        assert uuid is None
+
+
+# ---------------------------------------------------------------------------
+# handle_crc_ship_target — DB-first path tests
+# ---------------------------------------------------------------------------
+
+
+class TestHandleCrcShipTargetDbFirst:
+    """When the controller DB has a valid cert, it is used directly and
+    the metrics-utility lifecycle (check-in / renewal) is skipped."""
+
+    @pytest.fixture(autouse=True)
+    def set_required_env(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
+        monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local')
+
+    def test_uses_db_cert_when_controller_has_valid_cert(self):
+        with patch(
+            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        ):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                params = handle_crc_ship_target()
+        assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
+        assert params['candlepin_key_pem'] == SAMPLE_KEY_PEM
+
+    def test_skips_lifecycle_when_db_cert_present(self):
+        with patch(
+            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        ):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
+                    handle_crc_ship_target()
+        mock_lc.assert_not_called()
+
+    def test_skips_local_store_when_db_cert_present(self):
+        mock_store = _make_mock_store()
+        with patch(
+            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        ):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    handle_crc_ship_target()
+        mock_store.load.assert_not_called()
+
+    def test_logs_controller_db_source_when_db_cert_used(self):
+        with patch(
+            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        ):
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                with patch('metrics_utility.management.validation.logger') as mock_log:
+                    handle_crc_ship_target()
+        info_msgs = [str(c) for c in mock_log.info.call_args_list]
+        assert any('controller DB' in m for m in info_msgs)
+
+    def test_falls_back_to_local_store_when_db_empty(self):
+        mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    params = handle_crc_ship_target()
+        assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
+        mock_store.load.assert_called_once()
+
+    def test_lifecycle_runs_in_fallback_path(self):
+        mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    with patch(
+                        'metrics_utility.management.validation._run_candlepin_lifecycle',
+                        return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM),
+                    ) as mock_lc:
+                        handle_crc_ship_target()
+        mock_lc.assert_called_once()
