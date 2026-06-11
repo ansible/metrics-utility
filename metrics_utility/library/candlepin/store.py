@@ -130,8 +130,8 @@ class LocalCandlepinStore(CandlepinStore):
         """
         try:
             self.cert_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-            with tempfile.NamedTemporaryFile(dir=self.cert_dir, prefix='.probe-', delete=True):
-                pass
+            with tempfile.NamedTemporaryFile(dir=self.cert_dir, prefix='.probe-', delete=True) as f:
+                f.write(b'')
             return True
         except Exception as e:
             logger.debug(f'Candlepin local store: write probe failed for {self.cert_dir}: {e}')
