@@ -71,7 +71,7 @@ def test_dataframe_to_csv_files_large_splitting():
                 'name': [f'user_{i:05d}' for i in range(1000)],
                 'description': ['This is a longer description field that takes up more space'] * 1000,
                 'value': [i * 1.5 for i in range(1000)],
-                'timestamp': pd.date_range('2024-01-01', periods=1000, freq='H'),
+                'timestamp': pd.date_range('2024-01-01', periods=1000, freq='h'),
             }
         )
 
