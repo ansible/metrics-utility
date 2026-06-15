@@ -219,7 +219,8 @@ jobs:
           METRICS_SERVICE_DATABASES__default__NAME: metrics_service
           METRICS_SERVICE_DATABASES__default__OPTIONS__sslmode: disable
           METRICS_SERVICE_DATABASES__awx__HOST: localhost
-          METRICS_SERVICE_DATABASES__awx__PASSWORD: mypassword
+          METRICS_SERVICE_DATABASES__awx__USER: awx
+          METRICS_SERVICE_DATABASES__awx__PASSWORD: awx
           DJANGO_SETTINGS_MODULE: metrics_service.settings
           METRICS_SERVICE_MODE: test
         run: |
