@@ -198,7 +198,7 @@ services:
       metrics-service-init:
         condition: service_completed_successfully
     profiles: ["service"]
-    entrypoint: /app/scripts/entrypoint-web.sh
+    entrypoint: python manage.py runserver 0.0.0.0:8000
     ports:
       - "${METRICS_SERVICE_PORT:-8000}:8000"
 
@@ -210,7 +210,7 @@ services:
       metrics-service-init:
         condition: service_completed_successfully
     profiles: ["service"]
-    entrypoint: /app/scripts/entrypoint-dispatcherd.sh
+    entrypoint: python manage.py run_dispatcherd --workers=4 --log-level=DEBUG
     environment:
       <<: *metrics-service-env
       METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
@@ -224,7 +224,7 @@ services:
       metrics-service-init:
         condition: service_completed_successfully
     profiles: ["service"]
-    entrypoint: /app/scripts/entrypoint-scheduler.sh
+    entrypoint: python manage.py run_task_scheduler --log-level=DEBUG --check-interval=60
     environment:
       <<: *metrics-service-env
       METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
