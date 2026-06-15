@@ -80,12 +80,6 @@ jobs:
           mc admin policy attach local readwrite --user=mynewuser
           mc admin accesskey create local mynewuser --access-key myuseraccesskey --secret-key myusersecretkey
 
-      - name: "Patch mock_awx postgres config"
-        run: |
-          sed -i '/NAME/s/awx/postgres/' mock_awx/settings/__init__.py
-          sed -i '/USER/s/myuser/awx/' mock_awx/settings/__init__.py
-          sed -i '/PASSWORD/s/mypassword/awx/' mock_awx/settings/__init__.py
-
       - name: "Set up Go"
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
@@ -109,6 +103,9 @@ jobs:
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
+          METRICS_UTILITY_DB_NAME: "postgres"
+          METRICS_UTILITY_DB_USER: "awx"
+          METRICS_UTILITY_DB_PASSWORD: "awx"
           MOCK_SEGMENT_URL: "http://localhost:8765"
           MOCK_PROMETHEUS_URL: "http://localhost:9090"
         run: |

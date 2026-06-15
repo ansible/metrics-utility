@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Task Dashboard - Metrics Service</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .task-card {
+                transition: all 0.3s ease;
+            }
+            .task-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            }
+            .status-indicator {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+                display: inline-block;
+                margin-right: 8px;
+            }
+            .status-running { background-color: #10b981; }
+            .status-pending { background-color: #f59e0b; }
+            .status-completed { background-color: #6b7280; }
+            .status-failed { background-color: #ef4444; }
+            .status-cancelled { background-color: #6b7280; }
+        </style>
+    </head>
+    <body class="bg-gray-50 min-h-screen">
+        <!-- Login Form -->
+        <div id="login-section" class="min-h-screen flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">Task Dashboard</h1>
+                <p class="text-gray-600 mb-6">Connect to your local Metrics Service API</p>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="api-url" class="block text-sm font-medium text-gray-700 mb-1">API Base URL</label>
+                        <input
+                            type="text"
+                            id="api-url"
+                            value="http://localhost:8000/api/v1/"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input
+                            type="text"
+                            id="username"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input
+                            type="password"
+                            id="password"
+                            required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div id="login-error" class="hidden text-sm text-red-600 bg-red-50 p-3 rounded"></div>
+                    <button
+                        type="submit"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                    >
+                        Connect
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard (hidden until login) -->
+        <div id="dashboard-section" class="hidden">
+            <div class="container mx-auto px-4 py-8">
+                <!-- Header -->
+                <div class="mb-8 flex justify-between items-start">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 mb-2">Task Dashboard</h1>
+                        <p class="text-gray-600">Monitor and manage your background tasks</p>
+                    </div>
+                    <button
+                        onclick="logout()"
+                        class="text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded px-3 py-1"
+                    >
+                        Disconnect
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-green-100 rounded-lg">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Running</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="running-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-yellow-100 rounded-lg">
+                                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Pending</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="pending-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-blue-100 rounded-lg">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Completed</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="completed-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <div class="flex items-center">
+                            <div class="p-2 bg-red-100 rounded-lg">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Failed</p>
+                                <p class="text-2xl font-semibold text-gray-900" id="failed-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Task Button -->
+                <div class="mb-6">
+                    <button
+                        id="add-task-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200"
+                    >
+                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add New Task
+                    </button>
+                </div>
+
+                <!-- Task Lists -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Running Tasks -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">Running Tasks</h2>
+                            <p class="text-sm text-gray-600">Tasks currently being executed</p>
+                        </div>
+                        <div class="p-6">
+                            <div id="running-tasks" class="space-y-4">
+                                <div class="text-center text-gray-500 py-8">
+                                    <p>No running tasks</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pending Tasks -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-xl font-semibold text-gray-900">Pending Tasks</h2>
+                            <p class="text-sm text-gray-600">Tasks scheduled to run</p>
+                        </div>
+                        <div class="p-6">
+                            <div id="pending-tasks" class="space-y-4">
+                                <div class="text-center text-gray-500 py-8">
+                                    <p>No pending tasks</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- All Tasks Table -->
+                <div class="mt-8 bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-xl font-semibold text-gray-900">All Tasks</h2>
+                        <p class="text-sm text-gray-600">Complete task history and management</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Function</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-tasks-table" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Details Modal -->
+        <div id="task-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-medium text-gray-900" id="task-details-title">Task Details</h3>
+                        <button type="button" onclick="hideTaskDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mt-4">
+                        <div id="task-details-content" class="text-sm text-gray-700"></div>
+                    </div>
+                    <div class="flex justify-end mt-6 space-x-3">
+                        <button type="button" onclick="hideTaskDetailsModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Task Modal -->
+        <div id="add-task-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+            <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Add New Task</h3>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Left side: Form -->
+                        <div>
+                            <form id="add-task-form" class="space-y-4">
+                                <div>
+                                    <label for="task-name" class="block text-sm font-medium text-gray-700 mb-1">Task Name</label>
+                                    <input type="text" id="task-name" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                </div>
+
+                                <div>
+                                    <label for="task-function" class="block text-sm font-medium text-gray-700 mb-1">Function</label>
+                                    <select id="task-function" name="function_name" required onchange="onFunctionChange()" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                        <option value="">Select a function...</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="task-data" class="block text-sm font-medium text-gray-700 mb-1">Task Data (JSON)</label>
+                                    <textarea id="task-data" name="task_data" rows="4" placeholder='{"key": "value"}' class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                                    <div class="mt-1">
+                                        <button type="button" onclick="useExample()" id="use-example-btn" class="hidden text-xs text-blue-600 hover:text-blue-800">Use Example</button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="scheduled-time" class="block text-sm font-medium text-gray-700 mb-1">Scheduled Time (Optional)</label>
+                                    <input type="datetime-local" id="scheduled-time" name="scheduled_time" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    <p class="text-xs text-gray-500 mt-1">Leave empty for cron or immediate execution</p>
+                                </div>
+
+                                <div id="cron-options">
+                                    <label for="cron-expression" class="block text-sm font-medium text-gray-700 mb-1">Cron Expression (Optional)</label>
+                                    <input type="text" id="cron-expression" name="cron_expression" placeholder="0 2 * * * (daily at 2 AM)" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" />
+                                    <div class="mt-1 flex flex-wrap gap-1">
+                                        <button type="button" onclick="setCronExample('0 * * * *')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Hourly</button>
+                                        <button type="button" onclick="setCronExample('0 0 * * *')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Daily</button>
+                                        <button type="button" onclick="setCronExample('0 0 * * 0')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Weekly</button>
+                                        <button type="button" onclick="setCronExample('0 0 1 * *')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Monthly</button>
+                                        <button type="button" onclick="setCronExample('')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Clear</button>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Format: minute hour day_of_month month day_of_week</p>
+                                    <p class="text-xs text-gray-500 mt-1">Leave empty for scheduled or immediate execution</p>
+                                </div>
+
+                                <div class="flex justify-end space-x-3 pt-4">
+                                    <button type="button" id="cancel-task-btn" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
+                                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Create Task</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Right side: Function Documentation -->
+                        <div id="function-docs" class="hidden">
+                            <div class="bg-gray-50 rounded-lg p-4 h-full overflow-y-auto max-h-96">
+                                <h4 class="font-medium text-gray-900 mb-2">Function Documentation</h4>
+                                <div id="function-description" class="text-sm text-gray-700 mb-4"></div>
+                                <div id="function-parameters" class="hidden">
+                                    <h5 class="font-medium text-gray-900 mb-2">Parameters</h5>
+                                    <div id="parameters-list" class="space-y-2 mb-4"></div>
+                                </div>
+                                <div id="function-examples" class="hidden">
+                                    <h5 class="font-medium text-gray-900 mb-2">Examples</h5>
+                                    <div id="examples-list" class="space-y-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let API_BASE_URL = '';
+            let authHeader = '';
+            let refreshInterval;
+
+            // --- Auth ---
+
+            document.getElementById('login-form').addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const url = document.getElementById('api-url').value.replace(/\/?$/, '/');
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                const errorEl = document.getElementById('login-error');
+
+                authHeader = 'Basic ' + btoa(username + ':' + password);
+
+                try {
+                    const response = await fetch(url + 'tasks/?limit=1', {
+                        headers: { 'Authorization': authHeader },
+                    });
+
+                    if (response.ok) {
+                        API_BASE_URL = url;
+                        errorEl.classList.add('hidden');
+                        document.getElementById('login-section').classList.add('hidden');
+                        document.getElementById('dashboard-section').classList.remove('hidden');
+                        initDashboard();
+                    } else if (response.status === 401 || response.status === 403) {
+                        authHeader = '';
+                        errorEl.textContent = 'Invalid credentials or insufficient permissions.';
+                        errorEl.classList.remove('hidden');
+                    } else {
+                        errorEl.textContent = `API error: HTTP ${response.status} ${response.statusText}`;
+                        errorEl.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    authHeader = '';
+                    errorEl.textContent = `Connection failed: ${error.message}. Is the dev server running?`;
+                    errorEl.classList.remove('hidden');
+                }
+            });
+
+            function logout() {
+                if (refreshInterval) clearInterval(refreshInterval);
+                authHeader = '';
+                API_BASE_URL = '';
+                document.getElementById('dashboard-section').classList.add('hidden');
+                document.getElementById('login-section').classList.remove('hidden');
+            }
+
+            function apiFetch(url, options = {}) {
+                const headers = { 'Authorization': authHeader, ...(options.headers || {}) };
+                return fetch(url, { ...options, headers });
+            }
+
+            // --- HTML escaping ---
+
+            function escapeHtml(str) {
+                if (str == null) return '';
+                return String(str)
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#039;');
+            }
+
+            class RawHtml {
+                constructor(str) { this.str = str; }
+                toString() { return this.str; }
+            }
+
+            function html(strings, ...values) {
+                let result = strings[0];
+                for (let i = 0; i < values.length; i++) {
+                    const val = values[i];
+                    if (val instanceof RawHtml) {
+                        result += val.str;
+                    } else if (Array.isArray(val)) {
+                        result += val.map(v => v instanceof RawHtml ? v.str : escapeHtml(v)).join('');
+                    } else {
+                        result += escapeHtml(val);
+                    }
+                    result += strings[i + 1];
+                }
+                return new RawHtml(result);
+            }
+
+            // --- Dashboard init ---
+
+            function initDashboard() {
+                loadAvailableFunctions();
+                refreshData();
+                startAutoRefresh();
+
+                document.getElementById('add-task-btn').addEventListener('click', showAddTaskModal);
+                document.getElementById('cancel-task-btn').addEventListener('click', hideAddTaskModal);
+                document.getElementById('add-task-form').addEventListener('submit', handleAddTask);
+            }
+
+            function showAddTaskModal() {
+                document.getElementById('add-task-modal').classList.remove('hidden');
+            }
+
+            function hideAddTaskModal() {
+                document.getElementById('add-task-modal').classList.add('hidden');
+                document.getElementById('add-task-form').reset();
+                document.getElementById('function-docs').classList.add('hidden');
+                document.getElementById('use-example-btn').classList.add('hidden');
+            }
+
+            function setCronExample(cronExpr) {
+                document.getElementById('cron-expression').value = cronExpr;
+            }
+
+            // --- Available Functions ---
+
+            let availableFunctions = [];
+
+            async function loadAvailableFunctions() {
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/available_functions/`);
+                    const data = await response.json();
+                    availableFunctions = data.functions;
+
+                    const select = document.getElementById('task-function');
+                    select.innerHTML = '<option value="">Select a function...</option>';
+
+                    const categories = {};
+                    for (const func of data.functions) {
+                        if (!categories[func.category]) {
+                            categories[func.category] = [];
+                        }
+                        categories[func.category].push(func);
+                    }
+
+                    for (const category of Object.keys(categories).sort()) {
+                        const optgroup = document.createElement('optgroup');
+                        optgroup.label = category;
+
+                        for (const func of categories[category]) {
+                            const option = document.createElement('option');
+                            option.value = func.name;
+                            option.textContent = `${func.name} - ${func.description}`;
+                            optgroup.appendChild(option);
+                        }
+
+                        select.appendChild(optgroup);
+                    }
+                } catch (error) {
+                    console.error('Error loading functions:', error);
+                }
+            }
+
+            function onFunctionChange() {
+                const selectedFunction = document.getElementById('task-function').value;
+                const docsPanel = document.getElementById('function-docs');
+
+                if (!selectedFunction) {
+                    docsPanel.classList.add('hidden');
+                    return;
+                }
+
+                const func = availableFunctions.find(f => f.name === selectedFunction);
+                if (!func) return;
+
+                docsPanel.classList.remove('hidden');
+
+                document.getElementById('function-description').innerHTML =
+                    html`<div class="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                        <p class="font-medium text-blue-900">${func.category}</p>
+                        <p class="text-blue-800">${func.description}</p>
+                    </div>`;
+
+                const parametersSection = document.getElementById('function-parameters');
+                const parametersList = document.getElementById('parameters-list');
+
+                if (Object.keys(func.parameters).length === 0) {
+                    parametersSection.classList.add('hidden');
+                } else {
+                    parametersSection.classList.remove('hidden');
+                    parametersList.innerHTML = Object.entries(func.parameters).map(([name, param]) => {
+                        const required = param.required ? html`<span class="text-red-500">*</span>` : '';
+                        const defaultValue = param.default === undefined ? '' : html` (default: ${JSON.stringify(param.default)})`;
+                        const typeInfo = param.type ? html`<span class="text-xs text-gray-500">${param.type}${defaultValue}</span>` : '';
+
+                        return html`
+                            <div class="bg-white p-2 rounded border">
+                                <div class="font-medium text-sm">${name}${required} ${typeInfo}</div>
+                                <div class="text-xs text-gray-600">${param.description || 'No description'}</div>
+                                ${param.choices ? html`<div class="text-xs text-blue-600">Choices: ${param.choices.join(', ')}</div>` : ''}
+                                ${param.items ? html`<div class="text-xs text-blue-600">Items: ${param.items.join(', ')}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                const examplesSection = document.getElementById('function-examples');
+                const examplesList = document.getElementById('examples-list');
+                const useExampleBtn = document.getElementById('use-example-btn');
+
+                if (func.examples && func.examples.length > 0) {
+                    examplesSection.classList.remove('hidden');
+                    useExampleBtn.classList.remove('hidden');
+
+                    examplesList.innerHTML = func.examples.map((example, index) => html`
+                        <div class="bg-white p-2 rounded border">
+                            <div class="font-medium text-sm mb-1">${example.name}</div>
+                            <pre class="text-xs bg-gray-100 p-2 rounded overflow-x-auto cursor-pointer" onclick="copyExample(${index})" title="Click to copy to Task Data">${JSON.stringify(example.data, null, 2)}</pre>
+                        </div>
+                    `).join('');
+                } else {
+                    examplesSection.classList.add('hidden');
+                    useExampleBtn.classList.add('hidden');
+                }
+            }
+
+            function copyExample(index) {
+                const selectedFunction = document.getElementById('task-function').value;
+                const func = availableFunctions.find(f => f.name === selectedFunction);
+
+                if (func && func.examples[index]) {
+                    document.getElementById('task-data').value = JSON.stringify(func.examples[index].data, null, 2);
+                }
+            }
+
+            function useExample() {
+                copyExample(0);
+            }
+
+            // --- Task Creation ---
+
+            function buildTaskData(formData) {
+                const taskData = {
+                    name: formData.get('name'),
+                    function_name: formData.get('function_name'),
+                    cron_expression: formData.get('cron_expression') || null,
+                    scheduled_time: formData.get('scheduled_time') || null,
+                };
+
+                const taskDataJson = formData.get('task_data');
+                if (taskDataJson) {
+                    taskData.task_data = JSON.parse(taskDataJson);
+                }
+
+                return taskData;
+            }
+
+            async function getErrorMessage(response) {
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        errorMessage = JSON.stringify(errorData, null, 2);
+                    } else {
+                        const errorText = await response.text();
+                        errorMessage = errorText || errorMessage;
+                    }
+                } catch (parseError) {
+                    console.warn('Could not parse error response:', parseError);
+                }
+                return errorMessage;
+            }
+
+            async function handleAddTask(event) {
+                event.preventDefault();
+
+                const formData = new FormData(event.target);
+
+                try {
+                    const taskData = buildTaskData(formData);
+
+                    const response = await apiFetch(`${API_BASE_URL}tasks/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(taskData)
+                    });
+
+                    if (response.ok) {
+                        hideAddTaskModal();
+                        refreshData();
+                        alert('Task created successfully!');
+                    } else {
+                        const errorMessage = await getErrorMessage(response);
+                        alert('Error creating task:\n' + errorMessage);
+                    }
+                } catch (error) {
+                    console.error('Error creating task:', error);
+                    alert('Error creating task: ' + error.message);
+                }
+            }
+
+            // --- Data Loading ---
+
+            async function refreshData() {
+                await Promise.all([
+                    loadTaskStats(),
+                    loadRunningTasks(),
+                    loadPendingTasks(),
+                    loadAllTasks(),
+                ]);
+            }
+
+            async function loadTaskStats() {
+                try {
+                    const [runningResp, pendingResp, completedResp, failedResp] = await Promise.all([
+                        apiFetch(`${API_BASE_URL}tasks/?status=running&limit=1`),
+                        apiFetch(`${API_BASE_URL}tasks/?status=pending&limit=1`),
+                        apiFetch(`${API_BASE_URL}tasks/?status=completed&limit=1`),
+                        apiFetch(`${API_BASE_URL}tasks/?status=failed&limit=1`)
+                    ]);
+
+                    const [runningData, pendingData, completedData, failedData] = await Promise.all([
+                        runningResp.json(),
+                        pendingResp.json(),
+                        completedResp.json(),
+                        failedResp.json()
+                    ]);
+
+                    updateStatsDisplay({
+                        running: runningData.count || 0,
+                        pending: pendingData.count || 0,
+                        completed: completedData.count || 0,
+                        failed: failedData.count || 0
+                    });
+                } catch (error) {
+                    console.error('Error loading task stats:', error);
+                    showStatsError();
+                }
+            }
+
+            function updateStatsDisplay(stats) {
+                document.getElementById('running-count').textContent = stats.running;
+                document.getElementById('pending-count').textContent = stats.pending;
+                document.getElementById('completed-count').textContent = stats.completed;
+                document.getElementById('failed-count').textContent = stats.failed;
+            }
+
+            function showStatsError() {
+                for (const id of ['running-count', 'pending-count', 'completed-count', 'failed-count']) {
+                    document.getElementById(id).textContent = '?';
+                }
+            }
+
+            async function loadRunningTasks() {
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/running/`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const tasks = await response.json();
+                    renderTaskList('running-tasks', tasks, 'No running tasks');
+                } catch (error) {
+                    console.error('Error loading running tasks:', error);
+                    renderTaskList('running-tasks', [], 'Error loading running tasks');
+                }
+            }
+
+            async function loadPendingTasks() {
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/pending/`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const tasks = await response.json();
+                    renderTaskList('pending-tasks', tasks, 'No pending tasks');
+                } catch (error) {
+                    console.error('Error loading pending tasks:', error);
+                    renderTaskList('pending-tasks', [], 'Error loading pending tasks');
+                }
+            }
+
+            async function loadAllTasks() {
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/?limit=50`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    renderTaskTable(data.results || data);
+                } catch (error) {
+                    console.error('Error loading all tasks:', error);
+                    renderTaskTable([]);
+                }
+            }
+
+            // --- Rendering ---
+
+            function renderTaskList(containerId, tasks, emptyMessage) {
+                const container = document.getElementById(containerId);
+
+                if (tasks.length === 0) {
+                    container.innerHTML = html`
+                        <div class="text-center text-gray-500 py-8">
+                            <p>${emptyMessage}</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = tasks.map(task => html`
+                        <div class="task-card bg-gray-50 rounded-lg p-4 border-l-4 border-${getStatusColor(task.status)}-500">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h3 class="font-medium text-gray-900">
+                                        ${task.name}
+                                        ${task.is_system_task ? html`<span class="ml-1 text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">SYSTEM</span>` : ''}
+                                    </h3>
+                                    <p class="text-sm text-gray-600 mt-1">${task.function_name}</p>
+                                    <div class="flex items-center mt-2">
+                                        <span class="status-indicator status-${task.status}"></span>
+                                        <span class="text-sm text-gray-500">${task.status}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right text-sm text-gray-500">
+                                    ${getTaskTimeDisplay(task)}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            function renderTaskTable(tasks) {
+                const tbody = document.getElementById('all-tasks-table');
+
+                if (tasks.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No tasks found</td></tr>';
+                } else {
+                    tbody.innerHTML = tasks.map(task => html`
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">
+                                    ${task.name}
+                                    ${task.is_system_task ? html`<span class="ml-1 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">SYSTEM</span>` : ''}
+                                </div>
+                                <div class="text-sm text-gray-500">${task.function_name}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${getStatusColor(task.status)}-100 text-${getStatusColor(task.status)}-800">
+                                    ${task.status}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${task.function_name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDateTime(task.created)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${task.cron_expression ? html`<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">${task.cron_expression}</span>` : ""}
+                                ${task.scheduled_time ? formatDateTime(task.scheduled_time) : ""}
+                                ${!task.cron_expression && !task.scheduled_time ? "Immediate" : ""}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div class="flex space-x-2">
+                                    ${task.can_retry ? html`<button onclick="retryTask(${task.id})" class="text-blue-600 hover:text-blue-900">Retry</button>` : ''}
+                                    ${task.status === 'pending' || task.status === 'running' ? html`<button onclick="cancelTask(${task.id})" class="text-red-600 hover:text-red-900">Cancel</button>` : ''}
+                                    ${html`<button onclick="viewTaskDetails(${task.id})" class="text-gray-600 hover:text-gray-900">Details</button>`}
+                                    ${task.can_delete ?
+                                        html`<button onclick="deleteTask(${task.id})" class="text-red-600 hover:text-red-900">Delete</button>` :
+                                        html`<span class="text-gray-400 cursor-not-allowed" title="System task - protected from deletion">Protected</span>`
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            // --- Task Actions ---
+
+            async function retryTask(taskId) {
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/${taskId}/retry/`, {
+                        method: 'POST',
+                    });
+
+                    if (response.ok) {
+                        refreshData();
+                        alert('Task queued for retry');
+                    } else {
+                        const errorMessage = await getErrorMessage(response);
+                        alert('Error retrying task: ' + errorMessage);
+                    }
+                } catch (error) {
+                    alert('Error retrying task: ' + error.message);
+                }
+            }
+
+            async function cancelTask(taskId) {
+                if (!confirm('Are you sure you want to cancel this task?')) return;
+
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/${taskId}/cancel/`, {
+                        method: 'POST',
+                    });
+
+                    if (response.ok) {
+                        refreshData();
+                        alert('Task cancelled');
+                    } else {
+                        const errorMessage = await getErrorMessage(response);
+                        alert('Error cancelling task: ' + errorMessage);
+                    }
+                } catch (error) {
+                    alert('Error cancelling task: ' + error.message);
+                }
+            }
+
+            async function deleteTask(taskId) {
+                if (!confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
+
+                try {
+                    const response = await apiFetch(`${API_BASE_URL}tasks/${taskId}/`, {
+                        method: 'DELETE',
+                    });
+
+                    if (response.ok) {
+                        refreshData();
+                        alert('Task deleted successfully');
+                    } else {
+                        const errorMessage = await getErrorMessage(response);
+                        alert('Error deleting task: ' + errorMessage);
+                    }
+                } catch (error) {
+                    alert('Error deleting task: ' + error.message);
+                }
+            }
+
+            async function viewTaskDetails(taskId) {
+                try {
+                    const [taskResponse, execResponse] = await Promise.all([
+                        apiFetch(`${API_BASE_URL}tasks/${taskId}/`),
+                        apiFetch(`${API_BASE_URL}tasks/executions/?task=${taskId}`),
+                    ]);
+                    const task = await taskResponse.json();
+
+                    let executions = [];
+                    try {
+                        const execData = await execResponse.json();
+                        executions = Array.isArray(execData.results) ? execData.results : Array.isArray(execData) ? execData : [];
+                    } catch (e) {
+                        console.error('Failed to load executions:', e);
+                    }
+
+                    document.getElementById('task-details-title').textContent = `Task Details - ${task.name}`;
+
+                    let content = '';
+                    content += html`
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-2">Basic Information</h4>
+                                    <div class="bg-gray-50 p-3 rounded text-sm">
+                                        <div class="mb-1"><span class="font-medium">Name:</span> ${task.name}</div>
+                                        <div class="mb-1"><span class="font-medium">Function:</span> ${task.function_name}</div>
+                                        ${task.is_system_task ? html`<div class="mb-1"><span class="font-medium">Type:</span> <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">SYSTEM TASK</span></div>` : ''}
+                                        <div class="mb-1">
+                                            <span class="font-medium">Status:</span>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-${getStatusColor(task.status)}-100 text-${getStatusColor(task.status)}-800">
+                                                ${task.status}
+                                            </span>
+                                        </div>
+                                        <div><span class="font-medium">Attempts:</span> ${task.attempts}/${task.max_attempts}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-gray-900 mb-2">Timing</h4>
+                                    <div class="bg-gray-50 p-3 rounded text-sm">
+                                        <div class="mb-1"><span class="font-medium">Created:</span> ${formatDateTime(task.created)}</div>
+                                        ${task.scheduled_time ? html`<div class="mb-1"><span class="font-medium">Scheduled:</span> ${formatDateTime(task.scheduled_time)}</div>` : ''}
+                                        ${task.started_at ? html`<div class="mb-1"><span class="font-medium">Started:</span> ${formatDateTime(task.started_at)}</div>` : ''}
+                                        ${task.completed_at ? html`<div class="mb-1"><span class="font-medium">Completed:</span> ${formatDateTime(task.completed_at)}</div>` : ''}
+                                        ${task.duration ? html`<div><span class="font-medium">Duration:</span> ${task.duration.toFixed(3)}s</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                    `;
+
+                    if (task.task_data && Object.keys(task.task_data).length > 0) {
+                        content += html`
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-2">Task Data</h4>
+                                <div class="bg-gray-50 p-3 rounded">
+                                    <pre class="text-xs text-gray-700 whitespace-pre-wrap">${JSON.stringify(task.task_data, null, 2)}</pre>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    if (task.result_data && Object.keys(task.result_data).length > 0) {
+                        content += html`
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-2">Result Data</h4>
+                                <div class="bg-green-50 p-3 rounded">
+                                    <pre class="text-xs text-gray-700 whitespace-pre-wrap">${JSON.stringify(task.result_data, null, 2)}</pre>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    if (task.error_message) {
+                        content += html`
+                            <div>
+                                <h4 class="font-medium text-red-900 mb-2">Error Message</h4>
+                                <div class="bg-red-50 p-3 rounded">
+                                    <p class="text-sm text-red-700">${task.error_message}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    content += html`<div>
+                            <h4 class="font-medium text-gray-900 mb-2">Executions (${String(executions.length)})</h4>`;
+
+                    if (executions.length === 0) {
+                        content += '<div class="bg-gray-50 p-3 rounded text-sm text-gray-500">No executions recorded</div>';
+                    } else {
+                        content += `
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Completed</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Worker</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">`;
+
+                        for (const exec of executions) {
+                            const duration = exec.execution_time_seconds != null
+                                ? exec.execution_time_seconds.toFixed(3) + 's'
+                                : '-';
+
+                            let details;
+                            if (exec.error_message) {
+                                const truncated = exec.error_message.substring(0, 80) + (exec.error_message.length > 80 ? '...' : '');
+                                details = html`<span class="text-red-600" title="${exec.error_message}">${truncated}</span>`;
+                            } else if (exec.result_data && Object.keys(exec.result_data).length > 0) {
+                                const resultStr = JSON.stringify(exec.result_data);
+                                const truncated = resultStr.substring(0, 80) + (resultStr.length > 80 ? '...' : '');
+                                details = html`<span class="text-gray-600" title="${resultStr}">${truncated}</span>`;
+                            } else {
+                                details = html`<span class="text-gray-400">-</span>`;
+                            }
+
+                            content += html`
+                                <tr>
+                                    <td class="px-3 py-2 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-${getStatusColor(exec.status)}-100 text-${getStatusColor(exec.status)}-800">
+                                            ${exec.status}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-500">${exec.started_at ? formatDateTime(exec.started_at) : '-'}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-500">${exec.completed_at ? formatDateTime(exec.completed_at) : '-'}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-500">${duration}</td>
+                                    <td class="px-3 py-2 whitespace-nowrap text-gray-500">${exec.worker_id || '-'}</td>
+                                    <td class="px-3 py-2 text-xs max-w-xs truncate">${details}</td>
+                                </tr>`;
+                        }
+
+                        content += `
+                                    </tbody>
+                                </table>
+                            </div>`;
+                    }
+
+                    content += '</div></div>';
+
+                    document.getElementById('task-details-content').innerHTML = content;
+                    document.getElementById('task-details-modal').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error loading task details:', error);
+                    alert('Error loading task details: ' + error.message);
+                }
+            }
+
+            function hideTaskDetailsModal() {
+                document.getElementById('task-details-modal').classList.add('hidden');
+            }
+
+            // --- Utilities ---
+
+            function getStatusColor(status) {
+                const colors = {
+                    'running': 'green',
+                    'pending': 'yellow',
+                    'completed': 'blue',
+                    'failed': 'red',
+                    'cancelled': 'gray'
+                };
+                return colors[status] || 'gray';
+            }
+
+            function formatDateTime(dateString) {
+                return new Date(dateString).toLocaleString();
+            }
+
+            function getTaskTimeDisplay(task) {
+                if (task.cron_expression) return html`${task.cron_expression}`;
+                if (task.scheduled_time) return html`${formatDateTime(task.scheduled_time)}`;
+                return html`Now`;
+            }
+
+            function startAutoRefresh() {
+                refreshInterval = setInterval(refreshData, 5000);
+            }
+
+            // Keyboard support
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    const taskDetailsModal = document.getElementById('task-details-modal');
+                    if (!taskDetailsModal.classList.contains('hidden')) {
+                        hideTaskDetailsModal();
+                    }
+
+                    const addTaskModal = document.getElementById('add-task-modal');
+                    if (!addTaskModal.classList.contains('hidden')) {
+                        hideAddTaskModal();
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>

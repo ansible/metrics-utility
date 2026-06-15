@@ -1,3 +1,20 @@
+x-metrics-service: &metrics-service
+  build:
+    context: ../../../metrics-service
+    dockerfile: Dockerfile.dev
+  volumes:
+    - ../../../metrics-service:/app:z
+    - /app/.venv
+  tmpfs:
+    - /app/metrics_service.egg-info:mode=01777
+  environment: &metrics-service-env
+    METRICS_SERVICE_MODE: development
+    METRICS_SERVICE_DATABASES__default__HOST: postgres
+    METRICS_SERVICE_DATABASES__default__PASSWORD: metrics_service
+    METRICS_SERVICE_DATABASES__awx__HOST: postgres
+    METRICS_SERVICE_DATABASES__awx__USER: awx
+    METRICS_SERVICE_DATABASES__awx__PASSWORD: awx
+
 services:
   minio:
     image: "mirror.gcr.io/minio/minio"
@@ -97,7 +114,6 @@ services:
         rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
 
         cd /app/metrics-utility/
-        sed -i '/HOST/s/localhost/postgres/' mock_awx/settings/__init__.py
 
         pip install uv
         uv sync
@@ -159,3 +175,75 @@ services:
 
         tail -f /dev/null
       '
+
+  metrics-service-init:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+    profiles: ["service", "pytest-svc"]
+    entrypoint: /app/scripts/init.sh
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
+      METRICS_SERVICE_DASHBOARD_COLLECTION__COLLECTION_SCHEDULE_CRON: "*/5 * * * *"
+
+  metrics-service-web:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: /app/scripts/entrypoint-web.sh
+    ports:
+      - "${METRICS_SERVICE_PORT:-8000}:8000"
+
+  metrics-service-dispatcher:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: /app/scripts/entrypoint-dispatcherd.sh
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
+      METRICS_SERVICE_DASHBOARD_COLLECTION__COLLECTION_SCHEDULE_CRON: "*/5 * * * *"
+
+  metrics-service-scheduler:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: /app/scripts/entrypoint-scheduler.sh
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
+
+  metrics-service-pytest:
+    <<: *metrics-service
+    depends_on:
+      minio-setup:
+        condition: service_started
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["pytest-svc"]
+    working_dir: /app
+    entrypoint: |
+      sh -c '
+        set -e
+        uv sync
+        uv run pytest -s -v
+      '
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_MODE: test
