@@ -96,7 +96,7 @@ services:
     volumes:
       - ../..:/app_ro
     tmpfs:
-      - /app:rw,exec,mode=0755,uid=1001
+      - /app:rw,exec,mode=0755
     working_dir: /app
     profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
@@ -111,7 +111,9 @@ services:
     entrypoint: |
       sh -c '
         set -e
-        rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
+        # mirror.gcr.io/python has no rsync, use tar to copy with excludes
+        mkdir -p /app/metrics-utility
+        tar -c --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=build --exclude=dist -C /app_ro . | tar -x -C /app/metrics-utility
 
         cd /app/metrics-utility/
 
