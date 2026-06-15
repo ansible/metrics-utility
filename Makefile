@@ -24,6 +24,7 @@ fix:
 compose:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) up
 
+# NOTE: --exit-code-from would be nice here but crashes podman-compose 1.5.0
 compose-pytest:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile pytest up
 
