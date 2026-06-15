@@ -181,7 +181,7 @@ services:
     depends_on:
       postgres-wait:
         condition: service_completed_successfully
-    profiles: ["service", "pytest-svc"]
+    profiles: ["service"]
     entrypoint: /app/scripts/init.sh
     environment:
       <<: *metrics-service-env
@@ -230,11 +230,7 @@ services:
   metrics-service-pytest:
     <<: *metrics-service
     depends_on:
-      minio-setup:
-        condition: service_started
       postgres-wait:
-        condition: service_completed_successfully
-      metrics-service-init:
         condition: service_completed_successfully
     profiles: ["pytest-svc"]
     working_dir: /app

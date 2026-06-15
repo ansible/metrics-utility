@@ -21,8 +21,8 @@ the metrics-service checkout at `../metrics-service` (sibling repos).
 # Option A — shared compose (from metrics-utility)
 make compose
 
-# Option B — standalone (from metrics-service)
-cd ../metrics-service && docker-compose up -d postgres
+# Option B — from metrics-service
+cd ../metrics-service && make compose
 ```
 
 **For the API benchmark, also start the web server and dispatcherd:**
@@ -372,7 +372,7 @@ Phase 3: One day collection ...
 
 ## Troubleshooting
 
-- **postgres not running** — `docker-compose up -d postgres` / `docker-compose ps`
+- **postgres not running** — `make compose` (from either repo)
 - **`JobData` table missing** — run `python manage.py migrate`
 - **Feature flag error** — verify `METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION=true`
 - **`fill_data.py` — scripts directory not found** — ensure `metrics-service` is checked out at `../metrics-service`
