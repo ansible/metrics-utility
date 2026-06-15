@@ -1,7 +1,6 @@
 """Validation helpers for metrics-utility management commands (gather and build)."""
 
 import datetime
-import json
 import os
 import re
 
@@ -211,13 +210,17 @@ def _fetch_registration_credentials_from_db():
         'INSTALL_UUID',
     ]
     try:
-        from django.db import connection
+        from awx.conf.models import Setting
+        from awx.main.utils.encryption import decrypt_field, is_encrypted
 
-        placeholders = ', '.join(['%s'] * len(keys))
-        query = 'SELECT key, value FROM conf_setting WHERE key IN (' + placeholders + ')'
-        with connection.cursor() as cursor:
-            cursor.execute(query, keys)
-            rows = {key: json.loads(value) for key, value in cursor.fetchall() if value}
+        rows = {}
+        for setting in Setting.objects.filter(key__in=keys):
+            value = setting.value
+            if value is None:
+                continue
+            if is_encrypted(value):
+                value = decrypt_field(setting, 'value')
+            rows[setting.key] = value
 
         username = rows.get(_REDHAT_USERNAME_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_USERNAME_SETTING_KEY)
         password = rows.get(_REDHAT_PASSWORD_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_PASSWORD_SETTING_KEY)
