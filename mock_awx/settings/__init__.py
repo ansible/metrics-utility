@@ -5,8 +5,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('METRICS_UTILITY_DB_NAME', 'awx'),
-        'USER': os.getenv('METRICS_UTILITY_DB_USER', 'myuser'),
-        'PASSWORD': os.getenv('METRICS_UTILITY_DB_PASSWORD', 'mypassword'),
+        'USER': os.getenv('METRICS_UTILITY_DB_USER', 'awx'),
+        'PASSWORD': os.getenv('METRICS_UTILITY_DB_PASSWORD', 'awx'),
         'HOST': os.getenv('METRICS_UTILITY_DB_HOST', 'localhost'),
         'PORT': os.getenv('METRICS_UTILITY_DB_PORT', '5432'),
     },
