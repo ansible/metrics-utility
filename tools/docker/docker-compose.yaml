@@ -6,7 +6,7 @@ x-metrics-service: &metrics-service
     - ../../../metrics-service:/app:z
     - /app/.venv
   tmpfs:
-    - /app/metrics_service.egg-info:mode=01777
+    - /app/metrics_service.egg-info:mode=0777
   environment: &metrics-service-env
     METRICS_SERVICE_MODE: development
     METRICS_SERVICE_DATABASES__default__HOST: postgres
@@ -239,6 +239,7 @@ services:
     entrypoint: |
       sh -c '
         set -e
+        git config --global --add safe.directory /app
         uv sync
         uv run pytest -s -v
       '
