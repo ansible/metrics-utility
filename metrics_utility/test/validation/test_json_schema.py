@@ -117,7 +117,7 @@ def generated_total_workers_vcpu_with_schema(request, cleanup_glob):
     tarballs = glob.glob(file_glob)
     assert len(tarballs) > 0, f'No tarballs found matching {file_glob}'
 
-    total_workers_vcpu_version = "1.0"
+    total_workers_vcpu_version = '1.0'
 
     for tarball_path in tarballs:
         with tarfile.open(tarball_path, 'r:gz') as tar:
@@ -190,8 +190,8 @@ def generated_job_host_summary(request, cleanup_glob):
     tarballs = glob.glob(file_glob)
     assert len(tarballs) > 0, f'No tarballs found matching {file_glob}'
 
-    job_host_summary_version = "1.2"
-    
+    job_host_summary_version = '1.2'
+
     for tarball_path in tarballs:
         with tarfile.open(tarball_path, 'r:gz') as tar:
             try:
