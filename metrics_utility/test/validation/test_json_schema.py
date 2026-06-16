@@ -130,7 +130,7 @@ def generated_total_workers_vcpu_with_schema(request, cleanup_glob):
             schema = _load_schema(request, f'total_workers_vcpu-{total_workers_vcpu_version}.jsonschema')
             return vcpu, schema
 
-    pytest.fail(f'total_workers_vcpu-{total_workers_vcpu_version}.json not found in any tarball')
+    pytest.fail('total_workers_vcpu.json not found in any tarball')
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -205,7 +205,7 @@ def generated_job_host_summary(request, cleanup_glob):
                 schema = _load_schema(request, f'job_host_summary-{job_host_summary_version}.jsonschema')
                 return data, schema
 
-    pytest.fail(f'job_host_summary-{job_host_summary_version}.csv with data not found in any tarball')
+    pytest.fail('job_host_summary.csv with data not found in any tarball')
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
