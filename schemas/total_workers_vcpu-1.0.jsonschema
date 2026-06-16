@@ -15,10 +15,13 @@
       "type": "string"
     },
     "cluster_name": {
-      "type": ["string", "null"]
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
     },
     "total_workers_vcpu": {
-      "type": "integer"
+      "type": "integer",
+      "minimum": 0
     }
   }
 }
