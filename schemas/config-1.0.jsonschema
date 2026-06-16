@@ -104,7 +104,7 @@
       "type": ["integer", "null"]
     },
     "license_date": {
-      "type": ["string", "null"]
+      "type": "integer"
     },
     "license_expiry": {
       "type": "integer"
