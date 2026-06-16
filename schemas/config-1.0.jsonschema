@@ -71,7 +71,7 @@
     },
     "pendo_tracking": {
       "type": "string",
-      "enum": ["on", "off"]
+      "enum": ["on", "off", "detailed"]
     },
     "subscription_usage_model": {
       "type": "string"

@@ -71,7 +71,7 @@
     },
     "pendo_tracking": {
       "type": ["string", "null"],
-      "enum": ["on", "off"]
+      "enum": ["on", "off", "detailed", null]
     },
     "subscription_usage_model": {
       "type": ["string", "null"]
@@ -111,7 +111,7 @@
     },
     "license_type": {
       "type": ["string", "null"],
-      "enum": ["none", "open", "UNLICENSED", "trial", "enterprise", "developer"]
+      "enum": ["none", "open", "UNLICENSED", "trial", "enterprise", "developer", null]
     },
     "pool_id": {
       "type": ["string", "null"]

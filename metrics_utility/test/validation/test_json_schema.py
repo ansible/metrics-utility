@@ -117,6 +117,8 @@ def generated_total_workers_vcpu_with_schema(request, cleanup_glob):
     tarballs = glob.glob(file_glob)
     assert len(tarballs) > 0, f'No tarballs found matching {file_glob}'
 
+    total_workers_vcpu_version = "1.0"
+
     for tarball_path in tarballs:
         with tarfile.open(tarball_path, 'r:gz') as tar:
             try:
@@ -125,10 +127,10 @@ def generated_total_workers_vcpu_with_schema(request, cleanup_glob):
                 continue
             assert vcpu_member is not None, 'total_workers_vcpu.json not found in tarball'
             vcpu = json.load(vcpu_member)
-            schema = _load_schema(request, 'total_workers_vcpu.jsonschema')
+            schema = _load_schema(request, f'total_workers_vcpu-{total_workers_vcpu_version}.jsonschema')
             return vcpu, schema
 
-    pytest.fail('total_workers_vcpu.json not found in any tarball')
+    pytest.fail(f'total_workers_vcpu-{total_workers_vcpu_version}.json not found in any tarball')
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
@@ -188,6 +190,8 @@ def generated_job_host_summary(request, cleanup_glob):
     tarballs = glob.glob(file_glob)
     assert len(tarballs) > 0, f'No tarballs found matching {file_glob}'
 
+    job_host_summary_version = "1.2"
+    
     for tarball_path in tarballs:
         with tarfile.open(tarball_path, 'r:gz') as tar:
             try:
@@ -198,10 +202,10 @@ def generated_job_host_summary(request, cleanup_glob):
             reader = csv.DictReader(io.TextIOWrapper(member))
             data = list(reader)
             if len(data) > 0:
-                schema = _load_schema(request, 'job_host_summary.jsonschema')
+                schema = _load_schema(request, f'job_host_summary-{job_host_summary_version}.jsonschema')
                 return data, schema
 
-    pytest.fail('job_host_summary.csv with data not found in any tarball')
+    pytest.fail(f'job_host_summary-{job_host_summary_version}.csv with data not found in any tarball')
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
