@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "data_collection_status.jsonschema",
+  "title": "Metrics Utility Data Collection Status",
+  "description": "Per-collection gathering status for each file in a tarball. Converted from CSV (one row per collection) to a JSON array of objects.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "required": [
+      "collection_start_timestamp",
+      "since",
+      "until",
+      "file_name",
+      "status",
+      "elapsed"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "collection_start_timestamp": {
+        "type": "datetime"
+      },
+      "since": {
+        "type": "datetime"
+      },
+      "until": {
+        "type": "datetime"
+      },
+      "file_name": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*\\.(json|csv)$"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["ok", "failed"]
+      },
+      "elapsed": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      }
+    }
+  }
+}
