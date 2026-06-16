@@ -2,7 +2,7 @@ name: Schema Change Review
 
 on:
   pull_request_target:
-    types: [opened, ready_for_review]
+    types: [opened, ready_for_review, synchronize]
     paths:
       - 'schemas/**'
 
@@ -18,11 +18,14 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'dmzoneill', 'AparnaKarve'];
+            const author = context.payload.pull_request.user.login;
+            const filtered_reviewers = allReviewers.filter(reviewer => reviewer !== author);
             await github.rest.pulls.requestReviewers({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
-              reviewers: ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'dmzoneill', 'AparnaKarve']
+              reviewers: filtered_reviewers
             });
             await github.rest.issues.createComment({
               owner: context.repo.owner,
