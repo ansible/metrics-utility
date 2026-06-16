@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "manifest.jsonschema",
+  "title": "Metrics Utility Tarball Manifest",
+  "description": "Version map for every file in a metrics utility tarball. Each key is a filename present in the tarball and each value is the schema version of that file's contents.",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z][a-z0-9_]*\\.(json|csv)$"
+  },
+  "additionalProperties": {
+    "type": "string",
+    "pattern": "^[0-9]+\\.[0-9]+$",
+    "description": "Schema version of this file's contents."
+  },
+  "required": [
+    "config.json",
+    "data_collection_status.csv"
+  ]
+}
