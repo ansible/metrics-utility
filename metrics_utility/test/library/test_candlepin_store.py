@@ -316,3 +316,36 @@ class TestGetCandlepinStore:
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'DB')
         store = get_candlepin_store()
         assert isinstance(store, DBCandlepinStore)
+
+
+# ---------------------------------------------------------------------------
+# LocalCandlepinStore._write_file — error branch (lines 118-120)
+# ---------------------------------------------------------------------------
+
+
+class TestLocalStoreWriteFileError:
+    def test_returns_false_and_logs_error_when_write_fails(self, tmp_path):
+        store = LocalCandlepinStore(cert_dir=str(tmp_path))
+        target = tmp_path / 'cert.pem'
+        with patch('pathlib.Path.write_text', side_effect=OSError('disk full')):
+            with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+                result = store._write_file(target, 'content')
+        assert result is False
+        mock_log.error.assert_called_once()
+        assert 'could not write' in mock_log.error.call_args[0][0]
+
+
+# ---------------------------------------------------------------------------
+# LocalCandlepinStore.is_writable — exception branch (lines 135-137)
+# ---------------------------------------------------------------------------
+
+
+class TestLocalStoreIsWritableException:
+    def test_returns_false_and_logs_debug_when_mkdir_fails(self, tmp_path):
+        store = LocalCandlepinStore(cert_dir=str(tmp_path / 'noaccess'))
+        with patch('pathlib.Path.mkdir', side_effect=PermissionError('denied')):
+            with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+                result = store.is_writable()
+        assert result is False
+        mock_log.debug.assert_called_once()
+        assert 'write probe failed' in mock_log.debug.call_args[0][0]

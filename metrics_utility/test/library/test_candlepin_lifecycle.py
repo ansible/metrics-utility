@@ -12,7 +12,14 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
-from metrics_utility.library.candlepin.lifecycle import needs_renewal, parse_cert, run_candlepin_lifecycle
+from metrics_utility.library.candlepin.lifecycle import (
+    get_candlepin_ca,
+    get_renewal_days,
+    is_cert_valid,
+    needs_renewal,
+    parse_cert,
+    run_candlepin_lifecycle,
+)
 from metrics_utility.management.validation import (
     CANDLEPIN_UUID_PLACEHOLDER,
     _run_candlepin_lifecycle,
@@ -370,3 +377,140 @@ class TestHandleCrcShipTargetLifecycleWiring:
             params = handle_crc_ship_target()
         assert params['billing_provider'] == 'aws'
         assert params['billing_account_id'] == '123456789012'
+
+
+# ---------------------------------------------------------------------------
+# is_cert_valid — not-yet-valid branch (lines 74-77)
+# ---------------------------------------------------------------------------
+
+
+class TestIsCertValidNotYetValid:
+    def test_returns_false_for_future_cert(self):
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        now = datetime.datetime.now(timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'future')]))
+            .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'future')]))
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now + datetime.timedelta(days=1))
+            .not_valid_after(now + datetime.timedelta(days=365))
+            .sign(key, hashes.SHA256())
+        )
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+        assert is_cert_valid(cert_pem) is False
+
+    def test_logs_warning_for_future_cert(self):
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        now = datetime.datetime.now(timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'future')]))
+            .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'future')]))
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now + datetime.timedelta(days=1))
+            .not_valid_after(now + datetime.timedelta(days=365))
+            .sign(key, hashes.SHA256())
+        )
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
+        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+            is_cert_valid(cert_pem)
+        mock_log.warning.assert_called_once()
+        assert 'not yet valid' in mock_log.warning.call_args[0][0]
+
+
+# ---------------------------------------------------------------------------
+# run_candlepin_lifecycle — renewed cert unparseable (line 148)
+# ---------------------------------------------------------------------------
+
+
+class TestRunLifecycleRenewalSuccessLog:
+    def test_logs_info_with_new_serial_after_successful_renewal(self, expiring_cert_and_key):
+        cert_pem, key_pem = expiring_cert_and_key
+        # Generate a real cert so parse_cert succeeds and line 148 (success log) is hit.
+        new_cert_pem, new_key_pem = _generate_cert(expired=False, days_until_expiry=365)
+        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+            instance = MockClient.return_value
+            instance.checkin.return_value = True
+            instance.regenerate_cert.return_value = (new_cert_pem, new_key_pem)
+            with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+                result_cert, result_key = run_candlepin_lifecycle(cert_pem, key_pem, 'uuid', renewal_days=30)
+
+        assert result_cert == new_cert_pem
+        info_calls = ' '.join(str(c) for c in mock_log.info.call_args_list)
+        assert 'renewed' in info_calls
+
+
+class TestRunLifecycleRenewedCertUnparseable:
+    def test_logs_warning_when_renewed_cert_unparseable(self, expiring_cert_and_key):
+        cert_pem, key_pem = expiring_cert_and_key
+        mock_client = MagicMock()
+        mock_client.checkin.return_value = True
+        mock_client.regenerate_cert.return_value = ('not-a-cert', 'not-a-key')
+
+        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient', return_value=mock_client):
+            with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+                run_candlepin_lifecycle(cert_pem, key_pem, 'uuid', renewal_days=400)
+
+        warning_calls = [str(call) for call in mock_log.warning.call_args_list]
+        assert any('could not parse renewed cert' in c for c in warning_calls)
+
+
+# ---------------------------------------------------------------------------
+# get_renewal_days — invalid / negative value (lines 172, 174-176)
+# ---------------------------------------------------------------------------
+
+
+class TestGetRenewalDays:
+    def test_returns_default_when_env_not_set(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', raising=False)
+        assert get_renewal_days() == 30
+
+    def test_returns_parsed_value_when_valid(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', '45')
+        assert get_renewal_days() == 45
+
+    def test_returns_default_and_logs_warning_for_non_integer(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', 'abc')
+        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+            result = get_renewal_days()
+        assert result == 30
+        mock_log.warning.assert_called_once()
+
+    def test_returns_default_and_logs_warning_for_zero(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', '0')
+        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+            result = get_renewal_days()
+        assert result == 30
+        mock_log.warning.assert_called_once()
+
+    def test_returns_default_and_logs_warning_for_negative(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', '-5')
+        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+            result = get_renewal_days()
+        assert result == 30
+        mock_log.warning.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# get_candlepin_ca — explicit env var and RHSM path branches (lines 195, 198)
+# ---------------------------------------------------------------------------
+
+
+class TestGetCandlepinCa:
+    def test_returns_env_var_when_set(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_CA', '/custom/ca.pem')
+        assert get_candlepin_ca() == '/custom/ca.pem'
+
+    def test_returns_rhsm_path_when_file_exists(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_CA', raising=False)
+        with patch('os.path.isfile', side_effect=lambda p: p == '/etc/rhsm/ca/redhat-uep.pem'):
+            result = get_candlepin_ca()
+        assert result == '/etc/rhsm/ca/redhat-uep.pem'
+
+    def test_returns_none_when_no_ca_available(self, monkeypatch):
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_CA', raising=False)
+        with patch('os.path.isfile', return_value=False):
+            assert get_candlepin_ca() is None

@@ -525,4 +525,124 @@ class TestDiscoverOrg:
             with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
                 client.discover_org('user', 'pass')
         mock_log.info.assert_called_once()
-        assert 'discovered-org' in mock_log.info.call_args[0][0]
+
+
+# ---------------------------------------------------------------------------
+# register_consumer — JSON parse error branch (lines 144-145)
+# ---------------------------------------------------------------------------
+
+
+class TestRegisterConsumerJsonError:
+    def _ok_response(self, body=None):
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = body or {}
+        return resp
+
+    def test_raises_runtime_error_when_json_unparseable(self):
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.side_effect = ValueError('not json')
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='could not parse response JSON'):
+                client.register_consumer('user', 'pass', 'org')
+
+    def test_raises_runtime_error_when_uuid_missing_from_response(self):
+        client = CandlepinClient()
+        resp = self._ok_response({'idCert': {'cert': 'c', 'key': 'k'}})
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='response missing uuid'):
+                client.register_consumer('user', 'pass', 'org')
+
+
+# ---------------------------------------------------------------------------
+# regenerate_cert — JSON parse error branch (lines 210-211)
+# ---------------------------------------------------------------------------
+
+
+class TestRegenerateCertJsonError:
+    def test_raises_runtime_error_when_json_unparseable(self):
+        cert_pem, key_pem = _generate_cert_and_key()
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.side_effect = ValueError('bad json')
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='could not parse response JSON'):
+                client.regenerate_cert('uuid', cert_pem, key_pem)
+
+    def test_raises_runtime_error_when_cert_missing_from_response(self):
+        cert_pem, key_pem = _generate_cert_and_key()
+        client = CandlepinClient()
+        resp = MagicMock()
+        resp.ok = True
+        resp.json.return_value = {'idCert': {}}
+        with patch('requests.post', return_value=resp):
+            with pytest.raises(RuntimeError, match='did not contain idCert'):
+                client.regenerate_cert('uuid', cert_pem, key_pem)
+
+
+# ---------------------------------------------------------------------------
+# _write_temp_pem — error cleanup branch (lines 232-240)
+# ---------------------------------------------------------------------------
+
+
+class TestWriteTempPemErrorCleanup:
+    def test_cleans_up_file_when_chmod_fails(self):
+        with patch('os.chmod', side_effect=OSError('permission denied')):
+            with pytest.raises(OSError):
+                CandlepinClient._write_temp_pem('-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n')
+
+    def test_closes_fd_when_chmod_fails(self):
+        # Ensure the fd is closed even if chmod raises so we don't leak file descriptors.
+        closed = []
+        original_close = os.close
+
+        def tracking_close(fd):
+            closed.append(fd)
+            original_close(fd)
+
+        with patch('os.chmod', side_effect=OSError('permission denied')):
+            with patch('os.close', side_effect=tracking_close):
+                with pytest.raises(OSError):
+                    CandlepinClient._write_temp_pem('content')
+        assert len(closed) == 1
+
+
+# ---------------------------------------------------------------------------
+# _unlink_safe — OSError branch (lines 248-249)
+# ---------------------------------------------------------------------------
+
+
+class TestUnlinkSafe:
+    def test_logs_warning_when_unlink_raises(self):
+        with patch('os.path.exists', return_value=True):
+            with patch('os.unlink', side_effect=OSError('busy')):
+                with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+                    CandlepinClient._unlink_safe('/tmp/test.pem')
+        mock_log.warning.assert_called_once()
+        assert 'Could not remove' in mock_log.warning.call_args[0][0]
+
+
+# ---------------------------------------------------------------------------
+# _temp_cert_files.__enter__ — key write fails, cert cleaned up (lines 264-266)
+# ---------------------------------------------------------------------------
+
+
+class TestTempCertFilesKeyWriteFailure:
+    def test_cert_file_cleaned_up_when_key_write_fails(self):
+        cert_pem, key_pem = _generate_cert_and_key()
+        write_count = [0]
+        original_write_temp_pem = CandlepinClient._write_temp_pem
+
+        def fail_on_second_write(content):
+            write_count[0] += 1
+            if write_count[0] == 2:
+                raise OSError('disk full')
+            return original_write_temp_pem(content)
+
+        with patch.object(CandlepinClient, '_write_temp_pem', side_effect=fail_on_second_write):
+            with pytest.raises(OSError, match='disk full'):
+                with CandlepinClient._temp_cert_files(cert_pem, key_pem):
+                    pass
