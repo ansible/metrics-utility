@@ -51,9 +51,6 @@
     "controller_url_base": {
       "type": "string"
     },
-    "test_value": {
-      "type": "string"
-    },
     "external_logger_enabled": {
       "type": "boolean"
     },
