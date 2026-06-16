@@ -83,7 +83,7 @@
       "type": ["integer", "null"]
     },
     "automated_since": {
-      "type": ["string", "null"]
+      "type": ["integer", "null"]
     },
     "compliant": {
       "type": ["boolean", "null"]
@@ -92,10 +92,10 @@
       "type": ["integer", "null"]
     },
     "date_expired": {
-      "type": ["string", "null"]
+      "type": ["boolean", "null"]
     },
     "date_warning": {
-      "type": ["string", "null"]
+      "type": ["boolean", "null"]
     },
     "free_instances": {
       "type": ["integer", "null"]
