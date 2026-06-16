@@ -13,20 +13,27 @@ jobs:
       pull-requests: write
       contents: read
       issues: write
-    steps:
-      - name: Request schema review
-        uses: actions/github-script@v7
-        with:
-          script: |
+  steps:
+    - name: Request schema review
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'dmzoneill', 'AparnaKarve'];
+          const prAuthor = context.payload.pull_request.user.login;
+          const reviewers = allReviewers.filter(reviewer => reviewer !== prAuthor);
+          
+          if (reviewers.length > 0) {
             await github.rest.pulls.requestReviewers({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.payload.pull_request.number,
-              reviewers: ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'dmzoneill', 'AparnaKarve']
+              reviewers: reviewers
             });
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: "⚠️ This PR modifies files in `schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/pr-preview/pr-1463/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
-            });
+          }
+            
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.payload.pull_request.number,
+            body: "⚠️ This PR modifies files in `schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must review."
+          });
