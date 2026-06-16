@@ -2,7 +2,7 @@ name: Schema Change Review
 
 on:
   pull_request_target:
-    types: [opened, ready_for_review, edited]
+    types: [opened, ready_for_review, edited, synchronize]
     paths:
       - 'schemas/**'
 
