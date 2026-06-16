@@ -15,5 +15,6 @@
   "required": [
     "config.json",
     "data_collection_status.csv"
+
   ]
 }
