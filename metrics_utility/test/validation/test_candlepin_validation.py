@@ -5,6 +5,8 @@ test_candlepin_store.py.  This file covers the higher-level orchestration functi
 and handle_crc_ship_target() integration.
 """
 
+import sys
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -39,13 +41,33 @@ def _make_mock_store(cert_pem=None, key_pem=None, uuid=None):
     return store
 
 
-def _make_db_cursor(rows):
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_conn = MagicMock()
-    mock_conn.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_conn.__exit__ = MagicMock(return_value=False)
-    return mock_conn
+def _make_mock_setting(key, value):
+    s = MagicMock()
+    s.key = key
+    s.value = value
+    return s
+
+
+def _awx_cred_modules(settings=None, is_encrypted_fn=None, decrypt_field_fn=None):
+    """Return a sys.modules patch dict stubbing out awx dependencies for credential tests."""
+    mock_setting_cls = MagicMock()
+    mock_setting_cls.objects.filter.return_value = settings or []
+
+    mock_encryption = MagicMock()
+    mock_encryption.is_encrypted = is_encrypted_fn or (lambda v: False)
+    mock_encryption.decrypt_field = decrypt_field_fn or (lambda obj, field: obj.value)
+
+    mock_awx_conf_models = MagicMock()
+    mock_awx_conf_models.Setting = mock_setting_cls
+
+    return {
+        'awx': MagicMock(),
+        'awx.conf': MagicMock(),
+        'awx.conf.models': mock_awx_conf_models,
+        'awx.main': MagicMock(),
+        'awx.main.utils': MagicMock(),
+        'awx.main.utils.encryption': mock_encryption,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -54,52 +76,84 @@ def _make_db_cursor(rows):
 
 
 class TestFetchRegistrationCredentialsFromDb:
-    def _rows(self, username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, install_uuid=SAMPLE_INSTALL_UUID):
-        import json
-
+    def _settings(self, username=SAMPLE_USERNAME, password=SAMPLE_PASSWORD, install_uuid=SAMPLE_INSTALL_UUID):
         return [
-            ('SUBSCRIPTIONS_USERNAME', json.dumps(username)),
-            ('SUBSCRIPTIONS_PASSWORD', json.dumps(password)),
-            ('INSTALL_UUID', json.dumps(install_uuid)),
+            _make_mock_setting('SUBSCRIPTIONS_USERNAME', username),
+            _make_mock_setting('SUBSCRIPTIONS_PASSWORD', password),
+            _make_mock_setting('INSTALL_UUID', install_uuid),
         ]
 
     def test_returns_username_password_install_uuid(self):
-        mock_conn = _make_db_cursor(self._rows())
-        with patch('django.db.connection.cursor', return_value=mock_conn):
+        with patch.dict(sys.modules, _awx_cred_modules(settings=self._settings())):
             username, password, install_uuid = _fetch_registration_credentials_from_db()
         assert username == SAMPLE_USERNAME
         assert password == SAMPLE_PASSWORD
         assert install_uuid == SAMPLE_INSTALL_UUID
 
     def test_prefers_redhat_username_over_subscriptions(self):
-        import json
-
-        rows = [
-            ('REDHAT_USERNAME', json.dumps('rh-user')),
-            ('REDHAT_PASSWORD', json.dumps('rh-pass')),
-            ('SUBSCRIPTIONS_USERNAME', json.dumps('sub-user')),
-            ('SUBSCRIPTIONS_PASSWORD', json.dumps('sub-pass')),
-            ('INSTALL_UUID', json.dumps(SAMPLE_INSTALL_UUID)),
+        settings = [
+            _make_mock_setting('REDHAT_USERNAME', 'rh-user'),
+            _make_mock_setting('REDHAT_PASSWORD', 'rh-pass'),
+            _make_mock_setting('SUBSCRIPTIONS_USERNAME', 'sub-user'),
+            _make_mock_setting('SUBSCRIPTIONS_PASSWORD', 'sub-pass'),
+            _make_mock_setting('INSTALL_UUID', SAMPLE_INSTALL_UUID),
         ]
-        mock_conn = _make_db_cursor(rows)
-        with patch('django.db.connection.cursor', return_value=mock_conn):
+        with patch.dict(sys.modules, _awx_cred_modules(settings=settings)):
             username, password, _ = _fetch_registration_credentials_from_db()
         assert username == 'rh-user'
         assert password == 'rh-pass'
 
     def test_falls_back_to_subscriptions_when_redhat_absent(self):
-        mock_conn = _make_db_cursor(self._rows())
-        with patch('django.db.connection.cursor', return_value=mock_conn):
+        with patch.dict(sys.modules, _awx_cred_modules(settings=self._settings())):
             username, password, _ = _fetch_registration_credentials_from_db()
         assert username == SAMPLE_USERNAME
 
+    def test_decrypts_encrypted_password(self):
+        settings = [
+            _make_mock_setting('SUBSCRIPTIONS_USERNAME', SAMPLE_USERNAME),
+            _make_mock_setting('SUBSCRIPTIONS_PASSWORD', '$encrypted$UTF8$AESCBC$cipher'),
+            _make_mock_setting('INSTALL_UUID', SAMPLE_INSTALL_UUID),
+        ]
+        modules = _awx_cred_modules(
+            settings=settings,
+            is_encrypted_fn=lambda v: v.startswith('$encrypted$'),
+            decrypt_field_fn=lambda obj, field: SAMPLE_PASSWORD if '$cipher' in obj.value else obj.value,
+        )
+        with patch.dict(sys.modules, modules):
+            _, password, _ = _fetch_registration_credentials_from_db()
+        assert password == SAMPLE_PASSWORD
+
     def test_returns_none_tuple_on_db_error(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('DB down')):
+        mock_setting_cls = MagicMock()
+        mock_setting_cls.objects.filter.side_effect = Exception('DB down')
+        mock_awx_conf_models = MagicMock()
+        mock_awx_conf_models.Setting = mock_setting_cls
+        modules = {
+            'awx': MagicMock(),
+            'awx.conf': MagicMock(),
+            'awx.conf.models': mock_awx_conf_models,
+            'awx.main': MagicMock(),
+            'awx.main.utils': MagicMock(),
+            'awx.main.utils.encryption': MagicMock(),
+        }
+        with patch.dict(sys.modules, modules):
             result = _fetch_registration_credentials_from_db()
         assert result == (None, None, None)
 
     def test_logs_warning_on_db_error(self):
-        with patch('django.db.connection.cursor', side_effect=Exception('timeout')):
+        mock_setting_cls = MagicMock()
+        mock_setting_cls.objects.filter.side_effect = Exception('timeout')
+        mock_awx_conf_models = MagicMock()
+        mock_awx_conf_models.Setting = mock_setting_cls
+        modules = {
+            'awx': MagicMock(),
+            'awx.conf': MagicMock(),
+            'awx.conf.models': mock_awx_conf_models,
+            'awx.main': MagicMock(),
+            'awx.main.utils': MagicMock(),
+            'awx.main.utils.encryption': MagicMock(),
+        }
+        with patch.dict(sys.modules, modules):
             with patch('metrics_utility.management.validation.logger') as mock_log:
                 _fetch_registration_credentials_from_db()
         mock_log.warning.assert_called_once()
