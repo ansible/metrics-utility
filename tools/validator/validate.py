@@ -20,6 +20,14 @@ SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / 'schemas'
 REQUIRED_FILES = {'config.json', 'manifest.json'}
 DCS_FILE = 'data_collection_status.csv'
 
+BILLING_FILES = {
+    'manifest.json',
+    'config.json',
+    'data_collection_status.csv',
+    'job_host_summary.csv',
+    'total_workers_vcpu.json',
+}
+
 VERSION_RE = re.compile(r'^\d+\.\d+$')
 
 
@@ -85,7 +93,7 @@ def parse_csv_to_dicts(raw_bytes):
 INDIRECT_RENAME = {'indirect_nodes.csv': 'main_indirectmanagednodeaudit.csv'}
 
 
-def validate_tarball(tarball_path, verbose, skip_dcs, aliases=None):
+def validate_tarball(tarball_path, verbose, skip_dcs, aliases, strict_billing):
     errors = []
     skipped = []
     passed = []
@@ -195,6 +203,11 @@ def validate_tarball(tarball_path, verbose, skip_dcs, aliases=None):
             if filename == 'manifest.json':
                 continue
 
+            if strict_billing and (filename.endswith('.csv') or filename.endswith('.json')):
+                if filename not in BILLING_FILES:
+                    fail(f'{filename}: not accepted by the billing controller pipeline')
+                    continue
+
             old_name = reverse_aliases.get(filename)
             version = manifest.get(filename) or (manifest.get(old_name) if old_name else None)
 
@@ -256,6 +269,7 @@ def main():
     parser.add_argument(
         '--skip-indirect-rename', action='store_true', help='allow indirect_nodes.csv -> main_indirectmanagednodeaudit.csv rename in old tarballs'
     )
+    parser.add_argument('--strict-billing-files', action='store_true', help='fail on csv/json files not accepted by the billing controller pipeline')
     parser.add_argument('tarballs', nargs='+', metavar='TARBALL', help='tarball(s) to validate')
     args = parser.parse_args()
 
@@ -268,7 +282,9 @@ def main():
             any_failure = True
             continue
 
-        errors, skipped, passed, warnings = validate_tarball(tarball, args.verbose, args.skip_data_collection_status, aliases)
+        errors, skipped, passed, warnings = validate_tarball(
+            tarball, args.verbose, args.skip_data_collection_status, aliases, args.strict_billing_files
+        )
 
         label = os.path.basename(tarball)
 
