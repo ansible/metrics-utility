@@ -9,7 +9,7 @@
 // Utility endpoints:
 //
 //	GET  /requests  – return all captured requests as a JSON array
-//	GET  /reset     – clear the captured request list
+//	POST /reset     – clear the captured request list and restore default config
 //	GET  /config    – return current configuration
 //	POST /config    – update configuration (e.g. {"cpu_value": "24", "empty_result": true})
 //
@@ -278,25 +278,6 @@ func handleConfigPost(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, `{"ok":true}`)
 }
 
-func router(w http.ResponseWriter, r *http.Request) {
-	switch {
-	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/query":
-		handleQuery(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/api/v1/query_range":
-		handleQueryRange(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/requests":
-		handleRequests(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/reset":
-		handleReset(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/config":
-		handleConfigGet(w, r)
-	case r.Method == http.MethodPost && r.URL.Path == "/config":
-		handleConfigPost(w, r)
-	default:
-		http.NotFound(w, r)
-	}
-}
-
 func envOrDefault(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -313,11 +294,17 @@ func main() {
 	addr := ":" + *port
 	log.Printf("Mock Prometheus server listening on http://0.0.0.0%s", addr)
 	log.Printf("Inspect via: GET http://localhost%s/requests", addr)
-	log.Printf("Reset via:   GET http://localhost%s/reset", addr)
+	log.Printf("Reset via:   POST http://localhost%s/reset", addr)
 	log.Printf("Config via:  GET/POST http://localhost%s/config", addr)
 
-	http.HandleFunc("/", router)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/query", handleQuery)
+	mux.HandleFunc("GET /api/v1/query_range", handleQueryRange)
+	mux.HandleFunc("GET /requests", handleRequests)
+	mux.HandleFunc("POST /reset", handleReset)
+	mux.HandleFunc("GET /config", handleConfigGet)
+	mux.HandleFunc("POST /config", handleConfigPost)
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }

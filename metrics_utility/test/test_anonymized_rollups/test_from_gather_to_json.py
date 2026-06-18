@@ -903,7 +903,7 @@ def _validate_all_data(json_data, statistics):
     print('✅ All data value assertions passed!')
 
 
-MOCK_SEGMENT_URL = 'http://localhost:8765'
+MOCK_SEGMENT_URL = os.getenv('MOCK_SEGMENT_URL', 'http://localhost:8765')
 
 
 def test_from_gather_to_json(cleanup_glob):
@@ -990,7 +990,8 @@ def test_from_gather_to_json(cleanup_glob):
     print(f'\nSending rollup to mock Segment server at {MOCK_SEGMENT_URL} ...')
 
     # Clear any requests captured from previous test runs.
-    urllib.request.urlopen(f'{MOCK_SEGMENT_URL}/reset', timeout=10)
+    req = urllib.request.Request(f'{MOCK_SEGMENT_URL}/reset', method='POST')
+    urllib.request.urlopen(req, timeout=10)
 
     storage = StorageSegment(write_key='test-key', host=MOCK_SEGMENT_URL)
     chunks = storage.put('anonymized_rollup', dict=json_data)

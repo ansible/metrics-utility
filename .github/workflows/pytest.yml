@@ -106,6 +106,8 @@ jobs:
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
+          MOCK_SEGMENT_URL: "http://localhost:8765"
+          MOCK_PROMETHEUS_URL: "http://localhost:9090"
         run: |
           uv run pytest -s -v --cov=. --cov-branch --cov-report=xml
 

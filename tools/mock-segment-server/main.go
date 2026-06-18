@@ -1,17 +1,16 @@
 // Mock Segment HTTP server for integration tests.
 //
-// Accepts any POST request, returns {"success":true} with HTTP 200, and appends
-// each request body as a JSONL line (with a UTC timestamp) to an output file.
+// Accepts any POST request, returns {"success":true} with HTTP 200, and
+// captures each request body in memory.
 //
 // Utility endpoints:
 //
-//	GET /requests  – return all captured requests as a JSON array
-//	GET /reset     – clear the in-memory list and truncate the output file
+//	GET  /requests – return all captured requests as a JSON array
+//	POST /reset    – clear the captured request list
 //
-// Configuration (flags override env vars):
+// Configuration:
 //
-//	--port   / MOCK_SEGMENT_PORT    TCP port (default: 8765)
-//	--output / MOCK_SEGMENT_OUTPUT  JSONL output file path (default: /tmp/mock_segment.jsonl)
+//	--port / MOCK_SEGMENT_PORT  TCP port (default: 8765)
 package main
 
 import (
@@ -33,9 +32,8 @@ type record struct {
 }
 
 var (
-	mu         sync.Mutex
-	captured   []record
-	outputFile string
+	mu       sync.Mutex
+	captured []record
 )
 
 func handlePost(w http.ResponseWriter, r *http.Request) {
@@ -53,12 +51,6 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 
 	mu.Lock()
 	captured = append(captured, rec)
-	if f, ferr := os.OpenFile(outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644); ferr == nil {
-		line, _ := json.Marshal(rec)
-		f.Write(line)
-		f.Write([]byte("\n"))
-		f.Close()
-	}
 	mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -77,24 +69,10 @@ func handleRequests(w http.ResponseWriter, _ *http.Request) {
 func handleReset(w http.ResponseWriter, _ *http.Request) {
 	mu.Lock()
 	captured = nil
-	os.WriteFile(outputFile, []byte{}, 0o644)
 	mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, `{"reset":true}`)
-}
-
-func router(w http.ResponseWriter, r *http.Request) {
-	switch {
-	case r.Method == http.MethodPost:
-		handlePost(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/requests":
-		handleRequests(w, r)
-	case r.Method == http.MethodGet && r.URL.Path == "/reset":
-		handleReset(w, r)
-	default:
-		http.NotFound(w, r)
-	}
 }
 
 func envOrDefault(key, fallback string) string {
@@ -106,19 +84,18 @@ func envOrDefault(key, fallback string) string {
 
 func main() {
 	port := flag.String("port", envOrDefault("MOCK_SEGMENT_PORT", "8765"), "TCP port to listen on")
-	output := flag.String("output", envOrDefault("MOCK_SEGMENT_OUTPUT", "/tmp/mock_segment.jsonl"), "JSONL output file")
 	flag.Parse()
-
-	outputFile = *output
 
 	addr := ":" + *port
 	log.Printf("Mock Segment server listening on http://0.0.0.0%s", addr)
-	log.Printf("Captured requests written to: %s", outputFile)
 	log.Printf("Inspect via: GET http://localhost%s/requests", addr)
-	log.Printf("Reset via:   GET http://localhost%s/reset", addr)
+	log.Printf("Reset via:   POST http://localhost%s/reset", addr)
 
-	http.HandleFunc("/", router)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /reset", handleReset)
+	mux.HandleFunc("GET /requests", handleRequests)
+	mux.HandleFunc("POST /", handlePost)
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }

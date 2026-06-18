@@ -1,9 +1,7 @@
-"""Integration tests for PrometheusClient against the mock-prometheus-server container.
-
-These tests require the mock-prometheus service to be running (via `make compose`).
-"""
+"""Integration tests for PrometheusClient against the mock-prometheus-server container."""
 
 import json
+import os
 import urllib.request
 
 import pytest
@@ -15,25 +13,12 @@ from metrics_utility.library.collectors.others.total_workers_vcpu import (
 )
 
 
-MOCK_PROMETHEUS_URL = 'http://localhost:9090'
-
-
-def is_mock_prometheus_available():
-    try:
-        urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/config', timeout=2)
-        return True
-    except Exception:
-        return False
-
-
-requires_mock_prometheus = pytest.mark.skipif(
-    not is_mock_prometheus_available(),
-    reason='mock-prometheus server not running (start with `make compose`)',
-)
+MOCK_PROMETHEUS_URL = os.getenv('MOCK_PROMETHEUS_URL', 'http://localhost:9090')
 
 
 def reset_mock():
-    urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/reset', timeout=5)
+    req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/reset', method='POST')
+    urllib.request.urlopen(req, timeout=5)
 
 
 def configure_mock(**kwargs):
@@ -48,7 +33,6 @@ def get_captured_requests():
         return json.loads(resp.read())
 
 
-@requires_mock_prometheus
 class TestPrometheusClientIntegration:
     def setup_method(self):
         reset_mock()
@@ -106,7 +90,6 @@ class TestPrometheusClientIntegration:
         assert value is None
 
 
-@requires_mock_prometheus
 class TestVcpuHelpersIntegration:
     def setup_method(self):
         reset_mock()
