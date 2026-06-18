@@ -4,7 +4,7 @@ on:
   pull_request_target:
     types: [opened, ready_for_review, synchronize, edited]
     paths:
-      - 'schemas/**'
+      - 'metrics_utility/schemas/**'
 
 jobs:
   request-review:
@@ -31,5 +31,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: "⚠️ This PR modifies files in `schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/pr-preview/pr-1463/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
+              body: "⚠️ This PR modifies files in `metrics_utility/schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/pr-preview/pr-1463/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
             });
