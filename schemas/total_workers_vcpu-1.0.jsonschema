@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "total_workers_vcpu.jsonschema",
+  "title": "Metrics Utility Total Workers vCPU",
+  "description": "vCPU snapshot written to the tarball by the CLI wrapper. Contains the end-of-hour timestamp, cluster name, and total vCPU count.",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "cluster_name",
+    "total_workers_vcpu"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "timestamp": {
+      "type": "string"
+    },
+    "cluster_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "total_workers_vcpu": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

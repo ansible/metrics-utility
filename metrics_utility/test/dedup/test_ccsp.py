@@ -263,6 +263,56 @@ class TestDedupCCSP:
         assert 'main_host' in result
         assert result['main_host'] is None
 
+    def test_df_to_mapping_nan_float_serials(self, mock_dataframes, base_extra_params):
+        """Regression: pandas 3.0 stores missing serials as float('nan'), not None.
+
+        Before the fix, bool(float('nan')) is True so NaN passed the old `if serial:` guard,
+        causing all no-serial hosts to be bucketed together under serial_to_hosts[nan] and
+        mapped to one canonical hostname.  After the fix, NaN serials must be ignored.
+        """
+        dedup = DedupCCSP(mock_dataframes, base_extra_params)
+
+        df = pd.DataFrame(
+            {
+                'host_name': ['host1', 'host2', 'host3'],
+                'serials': [[float('nan')], [float('nan')], ['real-serial']],
+            }
+        )
+
+        result = dedup.df_to_mapping(df)
+
+        # host1 and host2 have no real serial — they must NOT be merged together
+        assert 'host1' not in result or result.get('host1') == 'host1'
+        assert 'host2' not in result or result.get('host2') == 'host2'
+        # host3 has a real serial and maps to itself
+        assert result.get('host3') == 'host3'
+        # The NaN sentinel must never appear as a key in the mapping
+        for key in result:
+            assert isinstance(key, str), f'Expected string serial key, got {type(key)}: {key!r}'
+
+    def test_df_to_mapping_empty_string_serials(self, mock_dataframes, base_extra_params):
+        """Empty-string serials must not be used as canonical keys.
+
+        compute_serial() returns None for missing data, but defensively ensure that
+        an empty string — which would be falsy and semantically meaningless — is also
+        filtered out rather than grouping unrelated hosts.
+        """
+        dedup = DedupCCSP(mock_dataframes, base_extra_params)
+
+        df = pd.DataFrame(
+            {
+                'host_name': ['host1', 'host2', 'host3'],
+                'serials': [[''], [''], ['valid-serial']],
+            }
+        )
+
+        result = dedup.df_to_mapping(df)
+
+        # host1 and host2 share only an empty serial — must NOT be merged
+        assert 'host1' not in result or result.get('host1') == 'host1'
+        assert 'host2' not in result or result.get('host2') == 'host2'
+        assert result.get('host3') == 'host3'
+
     def test_run_experimental_preserves_data_collection_status(self, mock_dataframes, base_extra_params):
         """Test that experimental mode preserves data_collection_status without dedup."""
         # Create sample host data

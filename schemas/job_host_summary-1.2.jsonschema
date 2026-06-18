@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "job_host_summary.jsonschema",
+  "title": "Metrics Utility Job Host Summary",
+  "description": "Per-job host execution results for v1 billing. Converted from CSV (one row per job-host pair) to a JSON array of objects.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "created",
+      "modified",
+      "host_name",
+      "host_remote_id",
+      "ansible_host_variable",
+      "ansible_connection_variable",
+      "changed",
+      "dark",
+      "failures",
+      "ok",
+      "processed",
+      "skipped",
+      "failed",
+      "ignored",
+      "rescued",
+      "job_created",
+      "job_remote_id",
+      "job_template_remote_id",
+      "job_template_name",
+      "inventory_remote_id",
+      "inventory_name",
+      "organization_remote_id",
+      "organization_name",
+      "project_remote_id",
+      "project_name"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "created": {
+        "type": "datetime"
+      },
+      "modified": {
+        "type": "datetime"
+      },
+      "host_name": {
+        "type": "string"
+      },
+      "host_remote_id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "ansible_host_variable": {
+        "type": "string"
+      },
+      "ansible_connection_variable": {
+        "type": "string"
+      },
+      "changed": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "dark": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "failures": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "ok": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "processed": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "skipped": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "failed": {
+        "type": "string",
+        "enum": ["t", "f"]
+      },
+      "ignored": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "rescued": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "job_created": {
+        "type": "datetime"
+      },
+      "job_remote_id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "job_template_remote_id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "job_template_name": {
+        "type": "string"
+      },
+      "inventory_remote_id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "inventory_name": {
+        "type": "string"
+      },
+      "organization_remote_id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "organization_name": {
+        "type": "string"
+      },
+      "project_remote_id": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "project_name": {
+        "type": "string"
+      }
+    }
+  }
+}

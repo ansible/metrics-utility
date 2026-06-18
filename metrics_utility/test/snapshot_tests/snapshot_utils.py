@@ -1,4 +1,3 @@
-import copy
 import json
 import os
 import re
@@ -15,6 +14,7 @@ import openpyxl
 import openpyxl.utils
 
 from metrics_utility.logger import logger
+from metrics_utility.test.util import _SUBPROCESS_BASE_ENV
 
 
 warnings.filterwarnings('ignore', category=ResourceWarning)
@@ -160,8 +160,7 @@ def run_snapshot_definition(data: DataShape) -> str:
     Returns:
         str: The path to the generated .xlsx file, or an empty string if it could not be determined.
     """
-    env_vars = copy.deepcopy(data['env_vars'])
-    env_vars['AWX_LOGGING_MODE'] = 'stdout'
+    env_vars = {**_SUBPROCESS_BASE_ENV, **data['env_vars']}
 
     params = [sys.executable]
     params.extend(data['params'])

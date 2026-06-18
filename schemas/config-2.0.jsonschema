@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "config-2.0.jsonschema",
+  "title": "Metrics Utility Config (v2.0)",
+  "description": "Controller configuration, license, and version information collected by the config collector. In v2.0, all fields except platform and billing_provider_params are nullable.",
+  "type": "object",
+  "required": [
+    "authentication_backends",
+    "controller_url_base",
+    "external_logger_enabled",
+    "external_logger_type",
+    "install_uuid",
+    "instance_uuid",
+    "logging_aggregators",
+    "pendo_tracking",
+    "subscription_usage_model",
+    "account_number",
+    "automated_instances",
+    "automated_since",
+    "compliant",
+    "current_instances",
+    "date_expired",
+    "date_warning",
+    "free_instances",
+    "grace_period_remaining",
+    "license_date",
+    "license_expiry",
+    "license_type",
+    "pool_id",
+    "product_name",
+    "satellite",
+    "sku",
+    "subscription_id",
+    "subscription_name",
+    "support_level",
+    "total_licensed_instances",
+    "trial",
+    "usage",
+    "valid_key",
+    "billing_provider_params",
+    "controller_version",
+    "metrics_utility_version",
+    "platform"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "authentication_backends": {
+      "type": ["array", "null"],
+      "items": { "type": "string" }
+    },
+    "controller_url_base": {
+      "type": ["string", "null"]
+    },
+    "external_logger_enabled": {
+      "type": ["boolean", "null"]
+    },
+    "external_logger_type": {
+      "type": ["string", "null"]
+    },
+    "install_uuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "instance_uuid": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "logging_aggregators": {
+      "type": ["array", "null"],
+      "items": { "type": "string" }
+    },
+    "pendo_tracking": {
+      "type": ["string", "null"],
+      "enum": ["on", "off", "detailed", null]
+    },
+    "subscription_usage_model": {
+      "type": ["string", "null"]
+    },
+    "account_number": {
+      "type": ["string", "integer", "null"]
+    },
+    "automated_instances": {
+      "type": ["integer", "null"]
+    },
+    "automated_since": {
+      "type": ["integer", "null"]
+    },
+    "compliant": {
+      "type": ["boolean", "null"]
+    },
+    "current_instances": {
+      "type": ["integer", "null"]
+    },
+    "date_expired": {
+      "type": ["boolean", "null"]
+    },
+    "date_warning": {
+      "type": ["boolean", "null"]
+    },
+    "free_instances": {
+      "type": ["integer", "null"]
+    },
+    "grace_period_remaining": {
+      "type": ["integer", "null"]
+    },
+    "license_date": {
+      "type": ["integer", "null"]
+    },
+    "license_expiry": {
+      "type": ["integer", "null"]
+    },
+    "license_type": {
+      "type": ["string", "null"],
+      "enum": ["none", "open", "UNLICENSED", "trial", "enterprise", "developer", null]
+    },
+    "pool_id": {
+      "type": ["string", "null"]
+    },
+    "product_name": {
+      "type": ["string", "null"]
+    },
+    "satellite": {
+      "type": ["boolean", "null"]
+    },
+    "sku": {
+      "type": ["string", "null"]
+    },
+    "subscription_id": {
+      "type": ["string", "null"]
+    },
+    "subscription_name": {
+      "type": ["string", "null"]
+    },
+    "support_level": {
+      "type": ["string", "null"]
+    },
+    "total_licensed_instances": {
+      "type": ["integer", "null"]
+    },
+    "trial": {
+      "type": ["boolean", "null"]
+    },
+    "usage": {
+      "type": ["string", "null"]
+    },
+    "valid_key": {
+      "type": ["boolean", "null"]
+    },
+    "billing_provider_params": {
+      "type": "object"
+    },
+    "controller_version": {
+      "type": ["string", "null"]
+    },
+    "metrics_utility_version": {
+      "type": ["string", "null"]
+    },
+    "platform": {
+      "type": "object",
+      "required": ["dist", "release", "system", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "dist": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "release": {
+          "type": "string"
+        },
+        "system": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["openshift", "k8s", "traditional"]
+        }
+      }
+    }
+  }
+}
