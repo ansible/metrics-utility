@@ -8,14 +8,13 @@
 //	GET  /requests – return all captured requests as a JSON array
 //	POST /reset    – clear the captured request list
 //
-// Configuration:
+// Configuration (env vars):
 //
-//	--port / MOCK_SEGMENT_PORT  TCP port (default: 8765)
+//	MOCK_SEGMENT_PORT  TCP port (default: 8765)
 package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -83,10 +82,7 @@ func envOrDefault(key, fallback string) string {
 }
 
 func main() {
-	port := flag.String("port", envOrDefault("MOCK_SEGMENT_PORT", "8765"), "TCP port to listen on")
-	flag.Parse()
-
-	addr := ":" + *port
+	addr := ":" + envOrDefault("MOCK_SEGMENT_PORT", "8765")
 	log.Printf("Mock Segment server listening on http://0.0.0.0%s", addr)
 	log.Printf("Inspect via: GET http://localhost%s/requests", addr)
 	log.Printf("Reset via:   POST http://localhost%s/reset", addr)

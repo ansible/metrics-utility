@@ -13,9 +13,9 @@
 //	GET  /config    – return current configuration
 //	POST /config    – update configuration (e.g. {"cpu_value": "24", "empty_result": true})
 //
-// Configuration:
+// Configuration (env vars):
 //
-//	--port / MOCK_PROMETHEUS_PORT  TCP port (default: 9090)
+//	MOCK_PROMETHEUS_PORT  TCP port (default: 9090)
 //
 // CPU values default to ["16"] and can be changed at runtime via POST /config.
 // POST /config accepts both "cpu_value": "16" and "cpu_value": ["16","32"].
@@ -23,7 +23,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -286,12 +285,9 @@ func envOrDefault(key, fallback string) string {
 }
 
 func main() {
-	port := flag.String("port", envOrDefault("MOCK_PROMETHEUS_PORT", "9090"), "TCP port to listen on")
-	flag.Parse()
-
 	cfg = defaultConfig
 
-	addr := ":" + *port
+	addr := ":" + envOrDefault("MOCK_PROMETHEUS_PORT", "9090")
 	log.Printf("Mock Prometheus server listening on http://0.0.0.0%s", addr)
 	log.Printf("Inspect via: GET http://localhost%s/requests", addr)
 	log.Printf("Reset via:   POST http://localhost%s/reset", addr)
