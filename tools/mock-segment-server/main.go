@@ -32,7 +32,7 @@ type record struct {
 
 var (
 	mu       sync.Mutex
-	captured []record
+	captured = []record{}
 )
 
 func handlePost(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +67,7 @@ func handleRequests(w http.ResponseWriter, _ *http.Request) {
 
 func handleReset(w http.ResponseWriter, _ *http.Request) {
 	mu.Lock()
-	captured = nil
+	captured = []record{}
 	mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")

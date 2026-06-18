@@ -67,7 +67,7 @@ var defaultConfig = config{CPUValues: []string{"16"}}
 
 var (
 	mu       sync.Mutex
-	captured []record
+	captured = []record{}
 	cfg      config
 )
 
@@ -239,7 +239,7 @@ func handleRequests(w http.ResponseWriter, _ *http.Request) {
 
 func handleReset(w http.ResponseWriter, _ *http.Request) {
 	mu.Lock()
-	captured = nil
+	captured = []record{}
 	cfg = defaultConfig
 	mu.Unlock()
 
