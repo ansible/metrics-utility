@@ -118,7 +118,6 @@ services:
       - "9090:9090"
     environment:
       MOCK_PROMETHEUS_PORT: "9090"
-      MOCK_PROMETHEUS_CPU_VALUE: "16"
 
   metrics-utility-env:
     build:

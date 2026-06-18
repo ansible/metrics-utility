@@ -156,3 +156,25 @@ class TestVcpuHelpersIntegration:
         value = client.get_current_value('sum(machine_cpu_cores)')
 
         assert value == pytest.approx(32.0)
+
+    def test_range_query_varying_values(self):
+        configure_mock(cpu_value=['8', '16', '24'])
+
+        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        start = 1700000000.0
+        end = 1700000600.0  # 10 minutes later
+        result = client.query_range('sum(machine_cpu_cores)', start_time=start, end_time=end, step='5m')
+
+        values = result['data']['result'][0]['values']
+        assert len(values) == 3
+        assert float(values[0][1]) == pytest.approx(8.0)
+        assert float(values[1][1]) == pytest.approx(16.0)
+        assert float(values[2][1]) == pytest.approx(24.0)
+
+    def test_instant_query_returns_last_value_from_list(self):
+        configure_mock(cpu_value=['8', '16', '24'])
+
+        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        value = client.get_current_value('sum(machine_cpu_cores)')
+
+        assert value == pytest.approx(24.0)

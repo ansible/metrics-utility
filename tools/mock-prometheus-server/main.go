@@ -13,10 +13,12 @@
 //	GET  /config    – return current configuration
 //	POST /config    – update configuration (e.g. {"cpu_value": "24", "empty_result": true})
 //
-// Configuration (flags override env vars):
+// Configuration:
 //
-//	--port      / MOCK_PROMETHEUS_PORT       TCP port (default: 9090)
-//	--cpu-value / MOCK_PROMETHEUS_CPU_VALUE  Value returned for queries (default: 16)
+//	--port / MOCK_PROMETHEUS_PORT  TCP port (default: 9090)
+//
+// CPU values default to ["16"] and can be changed at runtime via POST /config.
+// POST /config accepts both "cpu_value": "16" and "cpu_value": ["16","32"].
 package main
 
 import (
@@ -39,10 +41,30 @@ type record struct {
 	Params    map[string]string `json:"params"`
 }
 
-type config struct {
-	CPUValue    string `json:"cpu_value"`
-	EmptyResult bool   `json:"empty_result"`
+type stringOrSlice []string
+
+func (s *stringOrSlice) UnmarshalJSON(data []byte) error {
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*s = arr
+		return nil
+	}
+
+	var single string
+	if err := json.Unmarshal(data, &single); err == nil {
+		*s = []string{single}
+		return nil
+	}
+
+	return fmt.Errorf("cpu_value must be a string or array of strings")
 }
+
+type config struct {
+	CPUValues   stringOrSlice `json:"cpu_value"`
+	EmptyResult bool          `json:"empty_result"`
+}
+
+var defaultConfig = config{CPUValues: []string{"16"}}
 
 var (
 	mu       sync.Mutex
@@ -134,6 +156,8 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	cpuVal := c.CPUValues[len(c.CPUValues)-1]
+
 	json.NewEncoder(w).Encode(map[string]any{
 		"status": "success",
 		"data": map[string]any{
@@ -141,7 +165,7 @@ func handleQuery(w http.ResponseWriter, r *http.Request) {
 			"result": []any{
 				map[string]any{
 					"metric": map[string]any{},
-					"value":  []any{ts, c.CPUValue},
+					"value":  []any{ts, cpuVal},
 				},
 			},
 		},
@@ -187,7 +211,8 @@ func handleQueryRange(w http.ResponseWriter, r *http.Request) {
 		if ts > end {
 			break
 		}
-		values = append(values, []any{ts, c.CPUValue})
+		cpuVal := c.CPUValues[i%len(c.CPUValues)]
+		values = append(values, []any{ts, cpuVal})
 	}
 
 	json.NewEncoder(w).Encode(map[string]any{
@@ -216,6 +241,7 @@ func handleRequests(w http.ResponseWriter, _ *http.Request) {
 func handleReset(w http.ResponseWriter, _ *http.Request) {
 	mu.Lock()
 	captured = nil
+	cfg = defaultConfig
 	mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -242,8 +268,8 @@ func handleConfigPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mu.Lock()
-	if update.CPUValue != "" {
-		cfg.CPUValue = update.CPUValue
+	if len(update.CPUValues) > 0 {
+		cfg.CPUValues = update.CPUValues
 	}
 	cfg.EmptyResult = update.EmptyResult
 	mu.Unlock()
@@ -280,14 +306,12 @@ func envOrDefault(key, fallback string) string {
 
 func main() {
 	port := flag.String("port", envOrDefault("MOCK_PROMETHEUS_PORT", "9090"), "TCP port to listen on")
-	cpuValue := flag.String("cpu-value", envOrDefault("MOCK_PROMETHEUS_CPU_VALUE", "16"), "CPU value to return in query results")
 	flag.Parse()
 
-	cfg = config{CPUValue: *cpuValue}
+	cfg = defaultConfig
 
 	addr := ":" + *port
 	log.Printf("Mock Prometheus server listening on http://0.0.0.0%s", addr)
-	log.Printf("CPU value: %s", cfg.CPUValue)
 	log.Printf("Inspect via: GET http://localhost%s/requests", addr)
 	log.Printf("Reset via:   GET http://localhost%s/reset", addr)
 	log.Printf("Config via:  GET/POST http://localhost%s/config", addr)
