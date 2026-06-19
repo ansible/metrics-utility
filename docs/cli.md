@@ -17,7 +17,7 @@ The standalone mode is currently used only for development & testing. It does no
     - install the right RPM
     - run utility using `metrics-utility ...`.
   - **In standalone mode**:
-    - make sure to run `docker compose -f tools/docker/docker-compose.yaml up` if you need the database or minio,
+    - make sure to run `make compose` if you need the database or minio,
     - or set `METRICS_UTILITY_DB_*` env vars correctly,
     - run utility using `uv run python manage.py ...`.
 

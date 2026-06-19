@@ -24,3 +24,13 @@ uv run pytest -s -v  # everything
 
 The container's environment variables (`METRICS_UTILITY_DB_HOST`, etc.) are already
 configured to connect to the compose postgres -- no manual patching needed.
+
+
+## metrics-service tests
+
+```bash
+make compose-pytest-svc
+```
+
+Runs the metrics-service test suite using the local metrics-utility checkout (via editable install).
+Requires a `../metrics-service` checkout. This also runs in CI.
