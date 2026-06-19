@@ -1,11 +1,11 @@
 import glob
-import os
 import tarfile
 
 from datetime import datetime
 
 import pytest
 
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import run_gather_ext
 
 
@@ -28,8 +28,7 @@ def validate_exists(file_glob):
 @pytest.fixture
 def cleanup_glob():
     yield
-    for file in glob.glob(file_glob):
-        os.remove(file)
+    _cleanup_glob(file_glob)
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')

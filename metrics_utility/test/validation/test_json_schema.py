@@ -2,7 +2,6 @@ import csv
 import glob
 import io
 import json
-import os
 import tarfile
 
 from datetime import datetime
@@ -11,6 +10,7 @@ from importlib.resources import files
 import jsonschema
 import pytest
 
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import run_gather_int
 
 
@@ -48,8 +48,8 @@ def _generate_and_extract(member_path, extra_env=None):
 
 @pytest.fixture
 def cleanup_glob():
-    for file in glob.glob(file_glob):
-        os.remove(file)
+    yield
+    _cleanup_glob(file_glob)
 
 
 @pytest.fixture
