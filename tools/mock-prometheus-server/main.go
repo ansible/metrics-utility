@@ -193,8 +193,20 @@ func handleQueryRange(w http.ResponseWriter, r *http.Request) {
 	endStr := r.URL.Query().Get("end")
 	stepStr := r.URL.Query().Get("step")
 
-	start, _ := strconv.ParseFloat(startStr, 64)
-	end, _ := strconv.ParseFloat(endStr, 64)
+	start, err := strconv.ParseFloat(startStr, 64)
+	if err != nil {
+		http.Error(w, "invalid start", http.StatusBadRequest)
+		return
+	}
+	end, err := strconv.ParseFloat(endStr, 64)
+	if err != nil {
+		http.Error(w, "invalid end", http.StatusBadRequest)
+		return
+	}
+	if end < start {
+		http.Error(w, "end must be >= start", http.StatusBadRequest)
+		return
+	}
 
 	stepSecs := 300.0 // default 5m
 	if stepStr != "" {
@@ -202,8 +214,16 @@ func handleQueryRange(w http.ResponseWriter, r *http.Request) {
 			stepSecs = parsed
 		}
 	}
+	if stepSecs <= 0 {
+		http.Error(w, "step must be > 0", http.StatusBadRequest)
+		return
+	}
 
 	count := int(math.Floor((end-start)/stepSecs)) + 1
+	if count > 10000 {
+		http.Error(w, "range too large", http.StatusBadRequest)
+		return
+	}
 	values := make([][]any, 0, count)
 	for i := 0; i < count; i++ {
 		ts := start + float64(i)*stepSecs
