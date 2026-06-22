@@ -110,7 +110,12 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=None, ou
     # Combine all WHERE conditions
     where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause}) AND ({event_type_where_clause})'
 
-    limit_clause = f'LIMIT {int(row_limit)}' if row_limit is not None else ''
+    if row_limit is not None:
+        row_limit = int(row_limit)
+        if row_limit <= 0:
+            raise ValueError(f'row_limit must be a positive integer, got {row_limit}')
+
+    limit_clause = f'LIMIT {row_limit}' if row_limit is not None else ''
 
     # Final event query
     # - WHERE clause filters by job_id and enables partition pruning via literal hour boundaries
