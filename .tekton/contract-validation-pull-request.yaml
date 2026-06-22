@@ -1,0 +1,47 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: contract-validation-on-pull-request
+  namespace: aap-aa-contract-tenant
+  annotations:
+    pipelinesascode.tekton.dev/on-cel-expression: >-
+      event == "pull_request" && target_branch == "devel"
+    pipelinesascode.tekton.dev/max-keep-runs: "3"
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
+    build.appstudio.openshift.io/repo: >-
+      https://github.com/ansible/metrics-utility?rev={{revision}}
+    build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
+    build.appstudio.redhat.com/target_branch: '{{target_branch}}'
+  labels:
+    appstudio.openshift.io/application: contract-validation
+    appstudio.openshift.io/component: contract-validation
+    pipelines.appstudio.openshift.io/type: build
+spec:
+  params:
+    - name: git-url
+      value: '{{source_url}}'
+    - name: revision
+      value: '{{revision}}'
+    - name: output-image
+      value: >-
+        quay.io/redhat-user-workloads/aap-aa-contract-tenant/contract-validation/contract-validation:on-pr-{{revision}}
+    - name: image-expires-after
+      value: 5d
+    - name: build-platforms
+      value:
+        - linux/x86_64
+    - name: dockerfile
+      value: Dockerfile.contract-validation
+    - name: build-args
+      value:
+        - METRICS_UTILITY_REF={{revision}}
+  pipelineRef:
+    params:
+      - name: name
+        value: docker-build-multi-platform-oci-ta
+      - name: bundle
+        value: quay.io/konflux-ci/tekton-catalog/pipeline-docker-build-multi-platform-oci-ta:latest
+      - name: kind
+        value: pipeline
+    resolver: bundles

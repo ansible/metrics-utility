@@ -1,0 +1,24 @@
+FROM registry.access.redhat.com/ubi9/python-312
+
+USER 0
+RUN yum install -y postgresql git && yum clean all
+RUN wget https://certs.corp.redhat.com/certs/2022-IT-Root-CA.pem -P /etc/pki/ca-trust/source/anchors/ && \
+    update-ca-trust extract
+ENV REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+
+USER 1001
+
+ARG METRICS_UTILITY_REF=devel
+
+WORKDIR /opt/app-root/src
+RUN git clone --depth 1 https://gitlab.cee.redhat.com/automation-analytics/automation-analytics-backend.git .
+
+RUN pip install --upgrade pip && pip install pipenv==2026.6.1
+RUN pip config set global.extra-index-url "https://nexus.corp.redhat.com/repository/cqt-pypi/simple"
+RUN pip config set global.trusted-host "nexus.corp.redhat.com"
+RUN pipenv install --deploy --ignore-pipfile --system
+RUN pipenv install --dev --ignore-pipfile --system
+RUN pip install --no-deps git+https://github.com/ansible/metrics-utility.git@${METRICS_UTILITY_REF}
+
+EXPOSE 8080
+CMD ["./launcher"]
