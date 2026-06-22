@@ -116,6 +116,7 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
         template_count: Number of job templates to create
         start_date: Start of the date range for job timestamps
         end_date: End of the date range for job timestamps
+        no_events: Skip generating job events entirely
     """
     print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job, {template_count} templates ===')
 
