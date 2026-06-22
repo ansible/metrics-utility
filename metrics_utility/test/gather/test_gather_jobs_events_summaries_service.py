@@ -591,6 +591,64 @@ def test_main_jobevent_service_command(cleanup_glob):
     validate_dataframe(df, main_jobevent_service_lines, main_jobevent_service_skip_columns)
 
 
+def test_main_jobevent_service_row_limit(caplog):
+    """Integration test: row_limit caps the number of events fetched from the real DB."""
+    import logging
+
+    since = utcdt('2025-06-12')
+    until = utcdt('2025-06-14')
+
+    # The fixture contains 30 events; a limit of 2 must cap the result.
+    collector_instance = main_jobevent_service(db=connection, since=since, until=until, row_limit=2)
+    with caplog.at_level(logging.WARNING, logger='metrics_utility.library.collectors.controller.main_jobevent_service'):
+        df = collector_instance.gather()
+
+    assert df is not None, 'main_jobevent_service returned None'
+    assert len(df) == 2, f'Expected exactly 2 rows with row_limit=2, got {len(df)}'
+
+    # Schema must be intact even when truncated
+    expected_columns = [
+        'id',
+        'created',
+        'modified',
+        'job_created',
+        'job_finished',
+        'ansible_version',
+        'uuid',
+        'parent_uuid',
+        'event',
+        'task_action',
+        'resolved_action',
+        'resolved_role',
+        'duration',
+        'start',
+        'end',
+        'task_uuid',
+        'ignore_errors',
+        'failed',
+        'changed',
+        'playbook',
+        'play',
+        'task',
+        'role',
+        'job_remote_id',
+        'job_id',
+        'host_remote_id',
+        'host_id',
+        'host_name',
+        'warnings',
+        'deprecations',
+        'playbook_on_stats',
+        'job_failed',
+        'job_started',
+    ]
+    assert list(df.columns) == expected_columns, f'Unexpected columns: {list(df.columns)}'
+
+    # Truncation warning must be emitted when limit is reached
+    warning_messages = [r.message for r in caplog.records if r.levelno == logging.WARNING]
+    assert any('row limit reached' in str(m) for m in warning_messages), 'Expected a row-limit warning in the logs, but none was found'
+
+
 execution_environments_lines = [
     'id,created,modified,description,image,managed,created_by_id,credential_id,modified_by_id,organization_id,name,pull',
     '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'

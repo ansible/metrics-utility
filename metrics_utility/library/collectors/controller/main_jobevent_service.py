@@ -1,10 +1,15 @@
+import logging
+
 from datetime import timedelta
 
 from ..util import DataframeOutput, collector
 
 
+logger = logging.getLogger(__name__)
+
+
 @collector
-def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOutput()):
+def main_jobevent_service(*, db=None, since=None, until=None, row_limit=None, output=DataframeOutput()):
     """
     Collects job events for jobs that finished in the given time window.
 
@@ -105,8 +110,11 @@ def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOu
     # Combine all WHERE conditions
     where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause}) AND ({event_type_where_clause})'
 
+    limit_clause = f'LIMIT {int(row_limit)}' if row_limit is not None else ''
+
     # Final event query
     # - WHERE clause filters by job_id and enables partition pruning via literal hour boundaries
+    # - LIMIT clause caps total rows when row_limit is set (statistical sample; partial data is acceptable)
     query = f"""
         SELECT
             e.id,
@@ -158,6 +166,17 @@ def main_jobevent_service(*, db=None, since=None, until=None, output=DataframeOu
         ) AS ed
         LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
         WHERE {where_clause}
+        {limit_clause}
     """
 
-    return output.sql(db, query)
+    df = output.sql(db, query)
+
+    if row_limit is not None and len(df) >= row_limit:
+        logger.warning(
+            'main_jobevent_service: row limit reached (%d rows). '
+            'Events beyond the limit were not collected for this window. '
+            'Increase METRICS_SERVICE_JOBEVENT_ROW_LIMIT if fuller coverage is needed.',
+            row_limit,
+        )
+
+    return df
