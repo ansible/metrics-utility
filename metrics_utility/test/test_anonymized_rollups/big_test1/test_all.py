@@ -58,18 +58,10 @@ from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymi
 
 @pytest.fixture(scope='module')
 def cleanup_test_data():
-    """Clean up test directories before and after all tests in this module."""
+    yield
     out_dir = './out'
-
-    # Cleanup before tests
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
-
-    yield  # Run all tests
-
-    # Cleanup after all tests (commented out for debugging)
-    # if os.path.exists(out_dir):
-    #     shutil.rmtree(out_dir)
 
 
 def create_csv_file(data_list, csv_path):
