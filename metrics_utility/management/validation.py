@@ -1,10 +1,23 @@
+"""Validation helpers for metrics-utility management commands (gather and build)."""
+
 import datetime
 import os
 import re
 
 from dateutil.relativedelta import relativedelta
 
+from metrics_utility.base.utils import bool_from_env
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
+from metrics_utility.library.candlepin.client import CandlepinClient
+from metrics_utility.library.candlepin.lifecycle import (
+    get_candlepin_ca,
+    get_candlepin_url,
+    get_renewal_days,
+    is_cert_valid,
+    parse_cert,
+    run_candlepin_lifecycle,
+)
+from metrics_utility.library.candlepin.store import DBCandlepinStore, LocalCandlepinStore, get_candlepin_store
 from metrics_utility.logger import logger
 
 
@@ -75,10 +88,32 @@ VALID_COLLECTORS = {
 VALID_SHIP_TARGET_BUILD = {'directory', 's3', 'controller_db'}
 VALID_SHIP_TARGET_GATHER = {'directory', 's3', 'crc'}
 
+# AWX conf_setting keys for the subscription credentials used for DB-backed registration.
+# AWX sets these when the customer configures their Red Hat subscription.
+# Priority matches AWX PR #16388: REDHAT_USERNAME/PASSWORD first, then SUBSCRIPTIONS_*.
+_REDHAT_USERNAME_SETTING_KEY = 'REDHAT_USERNAME'
+_REDHAT_PASSWORD_SETTING_KEY = 'REDHAT_PASSWORD'
+_SUBSCRIPTIONS_USERNAME_SETTING_KEY = 'SUBSCRIPTIONS_USERNAME'
+_SUBSCRIPTIONS_PASSWORD_SETTING_KEY = 'SUBSCRIPTIONS_PASSWORD'
+
+# Placeholder UUID written by the AAP DB seed / migration before a real consumer is
+# registered.  Treat it the same as an absent UUID so we never attempt a Candlepin
+# lifecycle call with a non-functional consumer identity.
+CANDLEPIN_UUID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000'
+
 ship_path_description = 'place for collected data and built reports'
 
 
 def handle_directory_ship_target():
+    """Read and validate METRICS_UTILITY_SHIP_PATH for directory mode.
+
+    Returns:
+        Dict with ``'ship_path'`` key.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If the
+            environment variable is not set.
+    """
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
 
     if not ship_path:
@@ -88,6 +123,16 @@ def handle_directory_ship_target():
 
 
 def handle_s3_ship_target():
+    """Read and validate all S3-related environment variables.
+
+    Returns:
+        Dict with ``'ship_path'``, ``'bucket_name'``, ``'bucket_endpoint'``,
+        ``'bucket_region'``, ``'bucket_access_key'``, and ``'bucket_secret_key'``.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If any required
+            S3 variable is missing.
+    """
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     bucket_name = os.getenv('METRICS_UTILITY_BUCKET_NAME')
     bucket_endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT')
@@ -125,6 +170,7 @@ def handle_s3_ship_target():
 
 
 def handle_not_s3():
+    """Warn if S3 environment variables are set while the ship target is not ``'s3'``."""
     surplus = []
 
     if os.getenv('METRICS_UTILITY_BUCKET_ACCESS_KEY'):
@@ -142,7 +188,173 @@ def handle_not_s3():
         logger.warning(f'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="s3": {", ".join(surplus)}')
 
 
-def handle_crc_ship_target():
+def _fetch_registration_credentials_from_db():
+    """Read Candlepin registration credentials from AWX conf_setting (DB-backend fallback).
+
+    Credential priority matches AWX PR #16388:
+      1. REDHAT_USERNAME / REDHAT_PASSWORD
+      2. SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD
+
+    The org key is NOT read from the DB — it is discovered dynamically via
+    CandlepinClient.discover_org() (GET /users/{username}/owners) so that customers
+    do not need to know or configure their org key manually.
+
+    Returns (username, password, install_uuid), any of which may be None.
+    Best-effort: failures are logged as warnings and never propagate.
+    """
+    keys = [
+        _REDHAT_USERNAME_SETTING_KEY,
+        _REDHAT_PASSWORD_SETTING_KEY,
+        _SUBSCRIPTIONS_USERNAME_SETTING_KEY,
+        _SUBSCRIPTIONS_PASSWORD_SETTING_KEY,
+        'INSTALL_UUID',
+    ]
+    try:
+        from awx.conf.models import Setting
+        from awx.main.utils.encryption import decrypt_field, is_encrypted
+
+        rows = {}
+        for setting in Setting.objects.filter(key__in=keys):
+            value = setting.value
+            if value is None:
+                continue
+            if is_encrypted(value):
+                value = decrypt_field(setting, 'value')
+            rows[setting.key] = value
+
+        username = rows.get(_REDHAT_USERNAME_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_USERNAME_SETTING_KEY)
+        password = rows.get(_REDHAT_PASSWORD_SETTING_KEY) or rows.get(_SUBSCRIPTIONS_PASSWORD_SETTING_KEY)
+        return username, password, rows.get('INSTALL_UUID')
+    except Exception as e:
+        logger.warning(f'Could not fetch Candlepin registration credentials from DB: {e}')
+        return None, None, None
+
+
+def _resolve_registration_credentials():
+    """Resolve Candlepin registration credentials for standalone or DB-backed deployments.
+
+    The org key is NOT returned here — it is discovered dynamically from the Candlepin
+    API (GET /users/{username}/owners) inside _register_candlepin_consumer(), unless the
+    operator has set METRICS_UTILITY_CANDLEPIN_ORG explicitly as an override.
+
+    Credential priority:
+      1. METRICS_UTILITY_RH_USERNAME / METRICS_UTILITY_RH_PASSWORD env vars
+         (standalone, no database required).
+      2. If storage=db and env vars are absent: AWX conf_setting
+         (REDHAT_USERNAME/PASSWORD first, then SUBSCRIPTIONS_USERNAME/PASSWORD,
+         matching the priority order in AWX PR #16388).
+
+    Returns (username, password, install_uuid), any of which may be None.
+    """
+    username = os.getenv('METRICS_UTILITY_RH_USERNAME')
+    password = os.getenv('METRICS_UTILITY_RH_PASSWORD')
+    install_uuid = None
+
+    storage = os.getenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local').strip().lower()
+    if (not username or not password) and storage == 'db':
+        db_username, db_password, db_install_uuid = _fetch_registration_credentials_from_db()
+        username = username or db_username
+        password = password or db_password
+        install_uuid = db_install_uuid
+
+    return username, password, install_uuid
+
+
+def _register_candlepin_consumer(store):
+    """Register a new Candlepin consumer and persist the cert via *store*.
+
+    Called from handle_crc_ship_target() when no cert is found and
+    METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED is set.
+
+    Resolves credentials from env vars (or DB fallback when storage=db), then
+    discovers the org via GET /users/{username}/owners unless METRICS_UTILITY_CANDLEPIN_ORG
+    is set as an explicit override.  Persists the result via store.save_registration().
+
+    Returns (cert_pem, key_pem, consumer_uuid) on success, (None, None, None)
+    on any failure.  Best-effort: logs errors but never propagates.
+    """
+    username, password, install_uuid = _resolve_registration_credentials()
+
+    if not username or not password:
+        logger.warning(
+            'Candlepin registration is enabled but credentials are not configured. '
+            'Set METRICS_UTILITY_RH_USERNAME / METRICS_UTILITY_RH_PASSWORD, '
+            'or use METRICS_UTILITY_CANDLEPIN_STORAGE=db with REDHAT_USERNAME / REDHAT_PASSWORD '
+            'or SUBSCRIPTIONS_USERNAME / SUBSCRIPTIONS_PASSWORD in conf_setting.'
+        )
+        return None, None, None
+
+    candlepin_url = get_candlepin_url()
+    candlepin_ca = get_candlepin_ca()
+    proxy = os.getenv('METRICS_UTILITY_PROXY_URL')
+    client = CandlepinClient(base_url=candlepin_url, candlepin_ca=candlepin_ca, proxy=proxy)
+
+    # Org key: use explicit override if set, otherwise discover via Candlepin API.
+    org = os.getenv('METRICS_UTILITY_CANDLEPIN_ORG') or client.discover_org(username, password)
+    if not org:
+        logger.warning(
+            'Could not determine Candlepin org key. Set METRICS_UTILITY_CANDLEPIN_ORG, or ensure credentials have access to a Candlepin organisation.'
+        )
+        return None, None, None
+
+    try:
+        cert_pem, key_pem, consumer_uuid = client.register_consumer(username, password, org, install_uuid)
+    except Exception as e:
+        logger.error(f'Candlepin consumer registration failed: {e}')
+        return None, None, None
+
+    store.save_registration(cert_pem, key_pem, consumer_uuid)
+    return cert_pem, key_pem, consumer_uuid
+
+
+def _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid, store):
+    """Orchestrate Candlepin check-in and proactive cert renewal.
+
+    Called from handle_crc_ship_target() when METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED
+    is set.  Returns the (possibly renewed) (cert_pem, key_pem) tuple.  If renewal
+    fails the original cert is returned so the caller can still attempt mTLS (which
+    then falls back to service-account auth via the SSLError handler in PackageCRC.ship()).
+    """
+    if not consumer_uuid or consumer_uuid == CANDLEPIN_UUID_PLACEHOLDER:
+        logger.warning(
+            'Candlepin lifecycle is enabled but CANDLEPIN_CONSUMER_UUID is absent '
+            '(or still contains the placeholder value); '
+            'skipping check-in and renewal.'
+        )
+        return cert_pem, key_pem
+
+    candlepin_url = get_candlepin_url()
+    renewal_days = get_renewal_days()
+    candlepin_ca = get_candlepin_ca()
+    proxy = os.getenv('METRICS_UTILITY_PROXY_URL')
+
+    try:
+        new_cert_pem, new_key_pem = run_candlepin_lifecycle(
+            cert_pem,
+            key_pem,
+            consumer_uuid,
+            candlepin_url=candlepin_url,
+            renewal_days=renewal_days,
+            candlepin_ca=candlepin_ca,
+            proxy=proxy,
+        )
+    except Exception as e:
+        logger.error(f'Candlepin lifecycle failed: {e}; proceeding with existing cert')
+        return cert_pem, key_pem
+
+    if new_cert_pem != cert_pem or new_key_pem != key_pem:
+        store.save_cert(new_cert_pem, new_key_pem)
+
+    return new_cert_pem, new_key_pem
+
+
+def _build_billing_provider_params():
+    """Validate and build the billing provider parameters dict.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If a required
+            billing variable is missing or has an unsupported value.
+    """
     billing_provider = os.getenv('METRICS_UTILITY_BILLING_PROVIDER')
     red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')
 
@@ -158,11 +370,131 @@ def handle_crc_ship_target():
     if red_hat_org_id:
         billing_provider_params['red_hat_org_id'] = red_hat_org_id
 
+    return billing_provider_params
+
+
+def _load_candlepin_cert(store):
+    """Load the Candlepin cert from *store*, seeding or registering as needed.
+
+    Returns:
+        Tuple ``(cert_pem, key_pem, consumer_uuid)`` — any may be None.
+    """
+    cert_pem, key_pem, consumer_uuid = store.load()
+
+    # If the local store is empty, try to seed it from the AWX Controller database.
+    # The Controller registers with Candlepin and stores the resulting cert in
+    # conf_setting; metrics-utility reads it from there and caches it locally so
+    # subsequent runs work without any database connection.
+    if not cert_pem and isinstance(store, LocalCandlepinStore):
+        if not store.is_writable():
+            logger.warning(
+                f'Candlepin cert dir {store.cert_dir} is not writable by the current process; '
+                'skipping cert-based auth and falling back to service account or basic auth. '
+                'Set METRICS_UTILITY_CANDLEPIN_CERT_DIR to a writable path to enable mTLS.'
+            )
+            return None, None, None
+
+        awx_cert, awx_key, awx_uuid = DBCandlepinStore().load()
+        if awx_cert and awx_key:
+            logger.info('Seeding local Candlepin cert from AWX conf_setting.')
+            store.save_registration(awx_cert, awx_key, awx_uuid or '')
+            cert_pem, key_pem, consumer_uuid = awx_cert, awx_key, awx_uuid
+
+    # If no cert exists yet, attempt initial registration when enabled.
+    if not (cert_pem and key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED', default=True):
+        cert_pem, key_pem, consumer_uuid = _register_candlepin_consumer(store)
+
+    return cert_pem, key_pem, consumer_uuid
+
+
+def _warn_if_cert_expiring(cert_pem):
+    """Log a warning when the cert is within the renewal threshold of expiry."""
+    try:
+        info = parse_cert(cert_pem)
+        threshold = get_renewal_days()
+        if info['days_remaining'] < threshold:
+            logger.warning(
+                f'Candlepin cert expires in {info["days_remaining"]} day(s). Run candlepin_manage renew or ensure Controller cert renewal is active.'
+            )
+    except Exception:
+        pass
+
+
+def _load_cert_from_controller_db():
+    """Try to load a valid Candlepin cert directly from the AWX Controller conf_setting table.
+
+    The Controller (AWX PR #16388) manages its own Candlepin lifecycle — registration,
+    check-in, and renewal. When a cert is present and valid in the Controller DB,
+    metrics-utility should use it directly and skip its own lifecycle so the two
+    systems do not run parallel check-ins or competing renewals.
+
+    Returns:
+        Tuple ``(cert_pem, key_pem, consumer_uuid)`` if a valid cert is found,
+        or ``(None, None, None)`` if the DB is unavailable, empty, or the cert
+        is expired / unparseable.
+    """
+    try:
+        cert_pem, key_pem, consumer_uuid = DBCandlepinStore().load()
+    except Exception as e:
+        logger.debug(f'Controller DB cert lookup failed: {e}')
+        return None, None, None
+
+    if not cert_pem or not key_pem:
+        return None, None, None
+
+    if not is_cert_valid(cert_pem):
+        logger.warning('Candlepin cert found in controller DB but it is expired or invalid; falling back to local store.')
+        return None, None, None
+
+    return cert_pem, key_pem, consumer_uuid
+
+
+def handle_crc_ship_target():
+    """Read and validate CRC-related billing provider environment variables.
+
+    Returns:
+        Dict with ``'billing_provider'`` and optionally ``'billing_account_id'``,
+        ``'red_hat_org_id'``, ``'candlepin_cert_pem'``, and ``'candlepin_key_pem'``.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If a required
+            billing variable is missing or has an unsupported value.
+    """
+    billing_provider_params = _build_billing_provider_params()
+
     # only used for the other modes
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     if ship_path:
         allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
+
+    # Prefer the cert already managed by the AWX Controller (AWX PR #16388).
+    # The Controller owns registration, check-in, and renewal; when its cert is
+    # present and valid, use it directly and skip the metrics-utility lifecycle to
+    # avoid duplicate check-ins or competing renewals.
+    cert_pem, key_pem, consumer_uuid = _load_cert_from_controller_db()
+    if cert_pem and key_pem:
+        _warn_if_cert_expiring(cert_pem)
+        billing_provider_params['candlepin_cert_pem'] = cert_pem
+        billing_provider_params['candlepin_key_pem'] = key_pem
+        logger.info('Candlepin identity cert loaded from controller DB; mTLS will be attempted.')
+        return billing_provider_params
+
+    # Fallback: use the configured local store with the metrics-utility lifecycle.
+    # This path runs when the Controller DB is unavailable or has no cert (e.g.
+    # standalone deployments without AWX PR #16388).
+    store = get_candlepin_store()
+    cert_pem, key_pem, consumer_uuid = _load_candlepin_cert(store)
+
+    if cert_pem and key_pem:
+        _warn_if_cert_expiring(cert_pem)
+        if bool_from_env('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', default=True):
+            cert_pem, key_pem = _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid, store)
+        billing_provider_params['candlepin_cert_pem'] = cert_pem
+        billing_provider_params['candlepin_key_pem'] = key_pem
+        logger.info('Candlepin identity cert loaded; mTLS will be attempted.')
+    else:
+        logger.info('No Candlepin identity cert found; will use service account auth.')
 
     return billing_provider_params
 
@@ -388,6 +720,7 @@ def handle_env_validation(method: str):
 
 
 def handle_not_crc():
+    """Warn if CRC environment variables are set while the ship target is not ``'crc'``."""
     surplus = []
 
     if os.getenv('METRICS_UTILITY_BILLING_ACCOUNT_ID'):
@@ -403,14 +736,45 @@ def handle_not_crc():
 
 # patchable in tests
 def now():
+    """Return the current local datetime (patchable in tests).
+
+    Returns:
+        :class:`datetime.datetime` representing the current moment.
+    """
     return datetime.datetime.now()
 
 
 def startofday(dt):
+    """Return *dt* with the time component reset to midnight.
+
+    Args:
+        dt: A :class:`datetime.datetime` instance.
+
+    Returns:
+        The same date at 00:00:00.000000.
+    """
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def parse_date_param(value, help_texts={None: ''}, name=None):
+    """Parse a human-friendly date string into a timezone-aware datetime.
+
+    Supported formats: ISO date (``2023-12-20``), ``Nd``/``Ndays`` (N days ago,
+    start of day), ``Nmo``/``Nmonths`` (N months ago, start of day), or
+    ``Nm``/``Nminutes`` (N minutes ago).
+
+    Args:
+        value: The string to parse, or None/empty to return None.
+        help_texts: Dict mapping parameter names to help text shown in errors.
+        name: The parameter name (used as a key into *help_texts* and in error messages).
+
+    Returns:
+        A timezone-aware :class:`datetime.datetime`, or None if *value* is empty.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the string
+            cannot be parsed.
+    """
     if not value:
         return None
 
@@ -453,6 +817,14 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
 
 
 def validate_ccsp_params(options):
+    """Validate CLI option combinations specific to CCSP/CCSPv2 report types.
+
+    Args:
+        options: Dict of parsed CLI options.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
+    """
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
@@ -471,6 +843,19 @@ def validate_ccsp_params(options):
 
 
 def validate_renewal_params(options, help_texts):
+    """Validate CLI option combinations specific to the RENEWAL_GUIDANCE report type.
+
+    Args:
+        options: Dict of parsed CLI options.
+        help_texts: Dict mapping parameter names to their help strings.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
+        :exc:`~metrics_utility.exceptions.MissingRequiredParameter`: If ``--since``
+            is not provided.
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If ``--ephemeral``
+            has an unsupported format.
+    """
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
@@ -492,6 +877,19 @@ def validate_renewal_params(options, help_texts):
 
 
 def parse_since_until(options, help_texts):
+    """Parse ``--since`` and ``--until`` options and validate their ordering.
+
+    Args:
+        options: Dict of parsed CLI options.
+        help_texts: Dict mapping parameter names to their help strings.
+
+    Returns:
+        Tuple of ``(since, until)`` as timezone-aware datetimes (either may be None).
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If ``--until`` is
+            earlier than ``--since``.
+    """
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
 
@@ -505,6 +903,15 @@ def parse_since_until(options, help_texts):
 
 
 def validate_build_params(options, help_texts):
+    """Dispatch to the report-type-specific validation function and parse since/until.
+
+    Args:
+        options: Dict of parsed CLI options.
+        help_texts: Dict mapping parameter names to their help strings.
+
+    Returns:
+        Tuple of ``(since, until)`` datetimes (either may be None).
+    """
     report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     if not report_type:
         return None, None
@@ -519,6 +926,18 @@ def validate_build_params(options, help_texts):
 
 
 def parse_number_of_days(date_option):
+    """Convert an ephemeral duration string (e.g. ``'3months'``, ``'5days'``) to an integer day count.
+
+    Args:
+        date_option: String with a numeric prefix and a unit suffix (``d``/``day``/``days``
+            or ``mo``/``month``/``months``), or None/empty.
+
+    Returns:
+        Integer number of days, or None if *date_option* is empty.
+
+    Raises:
+        :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the format is not recognised.
+    """
     if not date_option:
         return None
 
