@@ -1,7 +1,6 @@
 import json
 
 import pandas as pd
-import pytest
 
 from django.db import connection
 
@@ -85,7 +84,7 @@ def _deep_compare(obj1, obj2, path=''):
     return True, None
 
 
-def test_json_serialization_roundtrip(cleanup_glob):
+def test_json_serialization_roundtrip():
     """
     Test that calling all collectors, then calling rollup prepare,
     serializing to JSON and parsing back results in matching data.
@@ -170,9 +169,3 @@ def test_json_serialization_roundtrip(cleanup_glob):
         except Exception as e:
             print(f'  ❌ {collector_name}: Error during test - {e}')
             raise
-
-
-@pytest.fixture
-def cleanup_glob():
-    """Fixture placeholder for consistency with other tests."""
-    yield
