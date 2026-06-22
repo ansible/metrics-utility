@@ -1,11 +1,8 @@
-import logging
-
 from datetime import timedelta
 
+from metrics_utility.logger import logger
+
 from ..util import DataframeOutput, collector
-
-
-logger = logging.getLogger(__name__)
 
 
 @collector
