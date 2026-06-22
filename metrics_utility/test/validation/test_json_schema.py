@@ -2,15 +2,15 @@ import csv
 import glob
 import io
 import json
-import os
-import pathlib
 import tarfile
 
 from datetime import datetime
+from importlib.resources import files
 
 import jsonschema
 import pytest
 
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import run_gather_int
 
 
@@ -26,10 +26,8 @@ uuid = '00000000-0000-0000-0000-000000000000'
 file_glob = f'./metrics_utility/test/test_data/data/{year}/*/*/{uuid}-*.tar.gz'
 
 
-def _load_schema(request, filename):
-    schemas_dir = pathlib.Path(request.config.rootpath).joinpath('schemas')
-    with open(schemas_dir.joinpath(filename)) as f:
-        return json.load(f)
+def _load_schema(filename):
+    return json.loads(files('metrics_utility.schemas').joinpath(filename).read_text())
 
 
 def _generate_and_extract(member_path, extra_env=None):
@@ -50,13 +48,13 @@ def _generate_and_extract(member_path, extra_env=None):
 
 @pytest.fixture
 def cleanup_glob():
-    for file in glob.glob(file_glob):
-        os.remove(file)
+    yield
+    _cleanup_glob(file_glob)
 
 
 @pytest.fixture
-def manifest_schema(request):
-    return _load_schema(request, 'manifest.jsonschema')
+def manifest_schema():
+    return _load_schema('manifest.jsonschema')
 
 
 @pytest.fixture
@@ -70,7 +68,7 @@ def test_manifest_schema_validation(manifest_schema, generated_manifest):
 
 
 @pytest.fixture
-def generated_config_with_schema(request, cleanup_glob):
+def generated_config_with_schema(cleanup_glob):
     run_gather_int(
         env_vars,
         {'ship': True, 'since': '2025-06-12', 'until': '2025-06-14'},
@@ -87,7 +85,7 @@ def generated_config_with_schema(request, cleanup_glob):
         config_version = manifest.get('config.json')
         assert config_version is not None, 'config.json not listed in manifest'
 
-        schema = _load_schema(request, f'config-{config_version}.jsonschema')
+        schema = _load_schema(f'config-{config_version}.jsonschema')
 
         config_member = tar.extractfile('./config.json')
         assert config_member is not None, 'config.json not found in tarball'
@@ -103,7 +101,7 @@ def test_config_schema_validation(generated_config_with_schema):
 
 
 @pytest.fixture
-def generated_total_workers_vcpu_with_schema(request, cleanup_glob):
+def generated_total_workers_vcpu_with_schema(cleanup_glob):
     vcpu_env = {
         'METRICS_UTILITY_OPTIONAL_COLLECTORS': 'total_workers_vcpu',
         'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
@@ -127,7 +125,7 @@ def generated_total_workers_vcpu_with_schema(request, cleanup_glob):
                 continue
             assert vcpu_member is not None, 'total_workers_vcpu.json not found in tarball'
             vcpu = json.load(vcpu_member)
-            schema = _load_schema(request, f'total_workers_vcpu-{total_workers_vcpu_version}.jsonschema')
+            schema = _load_schema(f'total_workers_vcpu-{total_workers_vcpu_version}.jsonschema')
             return vcpu, schema
 
     pytest.fail('total_workers_vcpu.json not found in any tarball')
@@ -140,7 +138,7 @@ def test_total_workers_vcpu_schema_validation(generated_total_workers_vcpu_with_
 
 
 @pytest.fixture
-def generated_data_collection_status(request, cleanup_glob):
+def generated_data_collection_status(cleanup_glob):
     run_gather_int(
         env_vars,
         {'ship': True, 'since': '2025-06-12', 'until': '2025-06-14'},
@@ -155,7 +153,7 @@ def generated_data_collection_status(request, cleanup_glob):
         reader = csv.DictReader(io.TextIOWrapper(member))
         data = list(reader)
 
-    schema = _load_schema(request, 'data_collection_status.jsonschema')
+    schema = _load_schema('data_collection_status.jsonschema')
     return data, schema
 
 
@@ -181,7 +179,7 @@ def test_data_collection_status_schema_validation(generated_data_collection_stat
 
 
 @pytest.fixture
-def generated_job_host_summary(request, cleanup_glob):
+def generated_job_host_summary(cleanup_glob):
     run_gather_int(
         env_vars,
         {'ship': True, 'since': '2025-06-12', 'until': '2025-06-14'},
@@ -202,7 +200,7 @@ def generated_job_host_summary(request, cleanup_glob):
             reader = csv.DictReader(io.TextIOWrapper(member))
             data = list(reader)
             if len(data) > 0:
-                schema = _load_schema(request, f'job_host_summary-{job_host_summary_version}.jsonschema')
+                schema = _load_schema(f'job_host_summary-{job_host_summary_version}.jsonschema')
                 return data, schema
 
     pytest.fail('job_host_summary.csv with data not found in any tarball')

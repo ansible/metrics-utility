@@ -15,7 +15,7 @@ from pathlib import Path
 import jsonschema
 
 
-SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / 'schemas'
+SCHEMAS_DIR = Path(__file__).resolve().parent.parent.parent / 'metrics_utility' / 'schemas'
 
 REQUIRED_FILES = {'config.json', 'manifest.json'}
 DCS_FILE = 'data_collection_status.csv'

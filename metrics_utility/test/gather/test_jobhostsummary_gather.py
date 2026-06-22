@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from metrics_utility.base.collection import Collection
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import run_gather_ext, run_gather_int
 
 
@@ -165,8 +166,7 @@ skip_columns = {
 @pytest.fixture
 def cleanup_glob():
     yield
-    for file in glob.glob(file_glob):
-        os.remove(file)
+    _cleanup_glob(file_glob)
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
