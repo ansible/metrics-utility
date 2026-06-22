@@ -1,5 +1,6 @@
 """Test utilities: command runners, environment helpers, and fixture generators."""
 
+import glob
 import os
 import random
 import subprocess
@@ -19,6 +20,19 @@ def utcdt(s):
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def cleanup_glob(file_glob):
+    """Remove files matching a glob pattern and their empty parent directories."""
+    dirs = set()
+    for file in glob.glob(file_glob):
+        os.remove(file)
+        dirs.add(os.path.dirname(file))
+    for d in dirs:
+        try:
+            os.removedirs(d)
+        except OSError:
+            pass
 
 
 @contextmanager
