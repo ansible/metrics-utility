@@ -12,6 +12,7 @@ This test:
 
 import json
 import os
+import shutil
 
 import pytest
 
@@ -20,12 +21,10 @@ from metrics_utility.library.storage.segment import StorageSegment
 
 @pytest.fixture(scope='function')
 def cleanup_test_data():
-    """Clean up test directories before and after test.
-
-    Note: Cleanup is disabled to allow data persistence for validation.
-    Uncomment the cleanup code below if you want to clean up test data.
-    """
-    yield  # Run test
+    yield
+    out_dir = './out/test_report_splitting'
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
 
 
 def _create_statistics_dict(num_modules, num_jobs):
