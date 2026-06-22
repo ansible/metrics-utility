@@ -358,7 +358,6 @@ def phase2_snapshots(
 def phase3_merge(
     hourly_rollups: Dict[str, List[Any]],
     snapshot_rollups: Dict[str, Any],
-    collect_events: bool,
 ) -> Tuple[Dict[str, Any], Dict[str, float]]:
     """
     Merge all hourly rollups per collector, then call base().
@@ -615,7 +614,7 @@ def main():
     snapshot_rollups, snapshot_timing = phase2_snapshots(db, service_db, since, until)
 
     # Phase 3 – merge rollups
-    daily_json, merge_timing = phase3_merge(hourly_rollups, snapshot_rollups, collect_events)
+    daily_json, merge_timing = phase3_merge(hourly_rollups, snapshot_rollups)
 
     # Phase 4 – anonymize
     anonymized, anon_elapsed = phase4_anonymize(daily_json)
