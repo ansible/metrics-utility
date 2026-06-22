@@ -12,19 +12,20 @@ This test:
 
 import json
 import os
-import shutil
 
 import pytest
 
 from metrics_utility.library.storage.segment import StorageSegment
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
+
+
+file_glob = './out/test_report_splitting/*.json'
 
 
 @pytest.fixture(scope='function')
 def cleanup_test_data():
     yield
-    out_dir = './out/test_report_splitting'
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
+    _cleanup_glob(file_glob)
 
 
 def _create_statistics_dict(num_modules, num_jobs):
