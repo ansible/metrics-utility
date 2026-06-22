@@ -5,7 +5,7 @@ import argparse
 import random
 import uuid
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from helpers import (
     create_credentials,
@@ -208,20 +208,34 @@ if __name__ == '__main__':
     parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
     parser.add_argument('--template-count', type=int, default=10, help='Number of job templates to create (default: 10)')
     parser.add_argument(
-        '--date', type=str, default=None, help='Constrain jobs to a single day (e.g. 2024-01-25). Default spreads across all of January 2024'
+        '--since',
+        type=str,
+        default=None,
+        help='Start of the datetime range for job timestamps (e.g. "2024-01-01" or "2024-01-01 03:00:00"). Default: 2024-01-01 00:00:00',
+    )
+    parser.add_argument(
+        '--until',
+        type=str,
+        default=None,
+        help='End of the datetime range for job timestamps (e.g. "2024-01-02" or "2024-01-01 06:00:00"). Default: 2024-01-31 23:59:59',
     )
     parser.add_argument('--no-events', action='store_true', default=False, help='Skip generating job events')
 
     args = parser.parse_args()
 
-    # Override date range if --date is provided
-    if args.date:
-        date = datetime.fromisoformat(args.date)
-        start_date = date.replace(hour=0, minute=0, second=0, microsecond=0)
-        end_date = (date + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        start_date = datetime(2024, 1, 1, 0, 0, 0)
-        end_date = datetime(2024, 1, 31, 23, 59, 59)
+    def _parse_dt(value, default):
+        if value is None:
+            return default
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            parser.error(f'Invalid datetime format: {value!r}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS')
+
+    start_date = _parse_dt(args.since, datetime(2024, 1, 1, 0, 0, 0))
+    end_date = _parse_dt(args.until, datetime(2024, 1, 31, 23, 59, 59))
+
+    if start_date >= end_date:
+        parser.error(f'--since ({start_date}) must be before --until ({end_date})')
 
     fill_perf_db_data(
         host_count=args.host_count,
