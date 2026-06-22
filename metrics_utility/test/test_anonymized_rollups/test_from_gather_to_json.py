@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import shutil
 import urllib.request
 
 import pandas as pd
@@ -21,6 +20,7 @@ from metrics_utility.library.collectors.controller import (
 )
 from metrics_utility.library.storage.segment import StorageSegment
 from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import utcdt
 
 
@@ -836,19 +836,13 @@ def _validate_controller_versions(json_data):
     )
 
 
+file_glob = './out/rollups/2025/06/13/anonymized_*.json'
+
+
 @pytest.fixture
 def cleanup_glob():
-    out_dir = './out'
-
-    # --- Cleanup before test ---
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
-
-    yield  # Run your test
-
-    # --- Cleanup after test ---
-    # if os.path.exists(out_dir):
-    #    shutil.rmtree(out_dir)
+    yield
+    _cleanup_glob(file_glob)
 
 
 def _collect_time_series_data(collector_func, collector_name, time_intervals, db):
@@ -913,7 +907,8 @@ def _prepare_input_data(results, collector_to_input_key):
 
 def _save_json_output(json_data, since, until):
     """Save JSON data to the expected output path."""
-    json_path = f'./out/rollups/{since.year}/{since.month}/{since.day}/anonymized_{since.strftime("%Y-%m-%d")}_{until.strftime("%Y-%m-%d")}.json'
+    since_s, until_s = since.strftime('%Y-%m-%d'), until.strftime('%Y-%m-%d')
+    json_path = f'./out/rollups/{since.year}/{since.month:02d}/{since.day:02d}/anonymized_{since_s}_{until_s}.json'
 
     # create the dir
     os.makedirs(os.path.dirname(json_path), exist_ok=True)
