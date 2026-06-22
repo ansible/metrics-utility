@@ -1,6 +1,5 @@
 import csv
 import glob
-import os
 
 import pytest
 
@@ -11,6 +10,7 @@ from metrics_utility.library.collectors.controller.job_host_summary_service impo
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import run_gather_ext, utcdt
 
 
@@ -194,11 +194,8 @@ def validate_dataframe(df, expected_lines, skip_columns_names):
 
 @pytest.fixture
 def cleanup_glob():
-    for file in glob.glob(file_glob):
-        os.remove(file)
     yield
-    for file in glob.glob(file_glob):
-        os.remove(file)
+    _cleanup_glob(file_glob)
 
 
 jobs_lines = [
