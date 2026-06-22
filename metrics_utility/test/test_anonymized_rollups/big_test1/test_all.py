@@ -59,9 +59,9 @@ from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymi
 @pytest.fixture(scope='module')
 def cleanup_test_data():
     yield
-    out_dir = './out'
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
+    for d in ['./out/data/2024/01/15', './out/rollups/2024/01/15']:
+        if os.path.exists(d):
+            shutil.rmtree(d)
 
 
 def create_csv_file(data_list, csv_path):
