@@ -290,8 +290,14 @@ def _build_statistics(
     playbooks_total: int,
     execution_environments_total: Any,
     has_events: bool = True,
+    indirect_managed_nodes: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
     """Build statistics dictionary with rollup_period_ prefix for all fields."""
+    # Calculate indirect node count
+    indirect_nodes_total = 0
+    if indirect_managed_nodes:
+        indirect_nodes_total = indirect_managed_nodes.get('indirect_nodes_total', 0)
+
     statistics = {
         # from execution_environments
         'rollup_period_execution_environments_total': execution_environments_total,
@@ -314,6 +320,8 @@ def _build_statistics(
         'rollup_period_successful_hosts_total': host_summary_totals['successful_hosts_total'],
         'rollup_period_failed_hosts_total': host_summary_totals['failed_hosts_total'],
         'rollup_period_unreachable_hosts_total': host_summary_totals['unreachable_hosts_total'],
+        # from indirect_managed_nodes
+        'rollup_period_indirect_managed_nodes_total': indirect_nodes_total,
     }
 
     # Only include event-related fields if there are events
@@ -454,6 +462,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     controller_version_root = data.get('controller_version', [])
     feature_flags_root = data.get('feature_flags', [])
     task_executions_root = data.get('task_executions', [])
+    indirect_managed_nodes_root = data.get('indirect_managed_nodes', {})
 
     # Extract data structures
     credentials_list: List[str] = _as_list(credentials_root)
@@ -487,6 +496,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         playbooks_total,
         execution_environments_total,
         has_events,
+        indirect_managed_nodes_root,
     )
 
     # Extract arrays and collections
@@ -533,6 +543,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'controller_versions': controller_versions,
         'feature_flags': _as_list(feature_flags_root),
         'observability_by_tasks': _as_list(task_executions_root),
+        'indirect_managed_nodes': indirect_managed_nodes_root.get('indirect_node_ids', []) if indirect_managed_nodes_root else [],
     }
 
     # Only include event-related arrays if there are events
@@ -555,6 +566,7 @@ def anonymize_rollups(
     *,
     feature_flags_rollup=None,
     task_executions_rollup=None,
+    indirect_managed_nodes_rollup=None,
 ):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
@@ -569,6 +581,7 @@ def anonymize_rollups(
         controller_version_rollup: Controller version statistics
         feature_flags_rollup: Enabled feature flags list (optional, keyword-only)
         task_executions_rollup: Task execution observability statistics (optional, keyword-only)
+        indirect_managed_nodes_rollup: Indirect managed nodes statistics (optional, keyword-only)
 
     Returns:
         Flattened and anonymized rollup data
@@ -583,6 +596,7 @@ def anonymize_rollups(
         'controller_version': controller_version_rollup,
         'feature_flags': feature_flags_rollup or [],
         'task_executions': task_executions_rollup or [],
+        'indirect_managed_nodes': indirect_managed_nodes_rollup or {},
     }
 
     # First flatten the nested structure
