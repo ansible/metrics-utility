@@ -17,7 +17,7 @@ dependencies = [
     "pandas~=3.0",
     "psycopg==3.3.0",
     "requests==2.34.2",
-    "segment-analytics-python>=2.3.4",
+    "segment-analytics-python>=2.3.6",
     "setuptools==80.9.0",
 ]
 requires-python = ">=3.12"

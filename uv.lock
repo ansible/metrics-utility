@@ -750,7 +750,7 @@ requires-dist = [
     { name = "pandas", specifier = "~=3.0" },
     { name = "psycopg", specifier = "==3.3.0" },
     { name = "requests", specifier = "==2.34.2" },
-    { name = "segment-analytics-python", specifier = ">=2.3.4" },
+    { name = "segment-analytics-python", specifier = ">=2.3.6" },
     { name = "setuptools", specifier = "==80.9.0" },
 ]
 
