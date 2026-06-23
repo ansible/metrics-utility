@@ -92,8 +92,9 @@ from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
 # Constants
 # ---------------------------------------------------------------------------
 
-# Default mirrors METRICS_SERVICE_JOBEVENT_ROW_LIMIT in metrics-service settings.
+# Defaults mirror METRICS_SERVICE_JOBEVENT_ROW_LIMIT / _JOBS_PER_BATCH in metrics-service / collector.
 DEFAULT_JOBEVENT_ROW_LIMIT = 1_000_000
+DEFAULT_JOBEVENT_JOB_LIMIT = 10_000
 
 DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
 DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
@@ -210,6 +211,7 @@ def phase1_hourly(
     db,
     collect_events: bool,
     row_limit: int = DEFAULT_JOBEVENT_ROW_LIMIT,
+    job_limit: int = DEFAULT_JOBEVENT_JOB_LIMIT,
 ) -> Tuple[Dict[str, List[Any]], Dict[str, Dict[str, float]]]:
     """
     For each hour: collect → prepare → store hourly rollup JSON.
@@ -240,7 +242,10 @@ def phase1_hourly(
                 continue
 
             # --- collect ---
-            extra = {'row_limit': row_limit} if collector_name == 'main_jobevent_service' else {}
+            if collector_name == 'main_jobevent_service':
+                extra = {'row_limit': row_limit, 'job_limit': job_limit}
+            else:
+                extra = {}
             t0 = time.time()
             try:
                 df = cfg['collector'](db=db, since=hour_since, until=hour_until, **extra).gather()
@@ -264,7 +269,11 @@ def phase1_hourly(
             prepare_elapsed = time.time() - t0
             timing[collector_name]['prepare'] += prepare_elapsed
 
-            note = f'row limit reached ({row_limit:,})' if collector_name == 'main_jobevent_service' and rows >= row_limit else ''
+            note = (
+                f'row limit reached ({row_limit:,})'
+                if collector_name == 'main_jobevent_service' and row_limit is not None and rows >= row_limit
+                else ''
+            )
             row = (
                 f'  {collector_name:<{COL_NAME}}  {rows:>{COL_ROWS},}'
                 f'  {fmt_time(collect_elapsed):>{COL_TIME}}  {fmt_time(prepare_elapsed):>{COL_TIME}}  {note}'
@@ -573,6 +582,13 @@ def main():
         metavar='N',
         help=f'Max event rows fetched per hourly window (default: {DEFAULT_JOBEVENT_ROW_LIMIT:,})',
     )
+    parser.add_argument(
+        '--max-jobs',
+        type=int,
+        default=DEFAULT_JOBEVENT_JOB_LIMIT,
+        metavar='N',
+        help=f'Max finished jobs processed per hourly window (default: {DEFAULT_JOBEVENT_JOB_LIMIT:,})',
+    )
     args = parser.parse_args()
 
     total_start = time.time()
@@ -592,12 +608,14 @@ def main():
         shutil.rmtree(out_dir, ignore_errors=True)
 
     row_limit = args.max_events
+    job_limit = args.max_jobs
 
     print(f'Range     : {since}  →  {until}')
     print(f'Hours     : {len(intervals)}')
     print(f'Events    : {"enabled" if collect_events else "disabled (--no-events)"}')
     if collect_events:
         print(f'Max events: {row_limit:,} rows per hour  (--max-events)')
+        print(f'Max jobs  : {job_limit:,} jobs per hour   (--max-jobs)')
 
     db = connection
 
@@ -608,7 +626,7 @@ def main():
         service_db = None
 
     # Phase 1 – hourly collect + prepare
-    hourly_rollups, hourly_timing = phase1_hourly(intervals, db, collect_events, row_limit)
+    hourly_rollups, hourly_timing = phase1_hourly(intervals, db, collect_events, row_limit, job_limit)
 
     # Phase 2 – snapshot/daily collectors
     snapshot_rollups, snapshot_timing = phase2_snapshots(db, service_db, since, until)

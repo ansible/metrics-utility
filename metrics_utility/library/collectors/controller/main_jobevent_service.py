@@ -6,28 +6,41 @@ from ..util import DataframeOutput, collector
 
 
 @collector
-def main_jobevent_service(*, db=None, since=None, until=None, row_limit=None, output=DataframeOutput()):
+def main_jobevent_service(*, db=None, since=None, until=None, row_limit=1_000_000, job_limit=10_000, output=DataframeOutput()):
     """
     Collects job events for jobs that finished in the given time window.
 
     Uses two optimizations for partition pruning:
     1. Hourly timestamp ranges in WHERE clause (literal values for partition pruning)
     2. Direct job_id filtering in WHERE clause
+
+    job_limit caps the number of jobs processed per window (sorted by job_created,
+    oldest first) to keep the IN clause manageable. row_limit caps total event rows.
     """
 
-    jobs_query = """
+    job_limit_clause = 'LIMIT %(job_limit)s' if job_limit is not None else ''
+    jobs_query = f"""
         SELECT
             uj.id AS job_id,
             uj.created AS job_created
         FROM main_unifiedjob uj
         WHERE uj.finished >= %(since)s
           AND uj.finished < %(until)s
+        ORDER BY uj.created
+        {job_limit_clause}
     """
 
-    # Fetch all jobs in the time window
     with db.cursor() as cursor:
-        cursor.execute(jobs_query, {'since': since, 'until': until})
+        cursor.execute(jobs_query, {'since': since, 'until': until, 'job_limit': job_limit})
         jobs = cursor.fetchall()
+
+    if job_limit is not None and len(jobs) >= job_limit:
+        logger.info(
+            'main_jobevent_service: job limit reached (>= %d jobs in window). '
+            'Jobs beyond the limit were not collected for this window. '
+            'Increase METRICS_SERVICE_JOBEVENT_JOB_LIMIT if fuller coverage is needed.',
+            job_limit,
+        )
 
     # Extract unique job_ids
     # We are loading the finished jobs then we are filtering
