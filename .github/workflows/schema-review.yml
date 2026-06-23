@@ -18,7 +18,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
-            const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie'];
+            const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'AparnaKarve', 'dmzoneill'];
             const author = context.payload.pull_request.user.login;
             const filtered_reviewers = allReviewers.filter(reviewer => reviewer !== author);
             await github.rest.pulls.requestReviewers({
@@ -31,5 +31,24 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.payload.pull_request.number,
-              body: "⚠️ This PR modifies files in `metrics_utility/schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/pr-preview/pr-1463/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
+              body: "⚠️ This PR modifies files in `metrics-utility/schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
             });
+
+      - name: Send Slack notification
+        run: |
+          curl -X POST "${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json' \
+            -d @- <<EOF
+          {
+            "text": "Files changed in \`${{ github.repository }}\` by ${{ github.actor }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Schema files changed* in <${{ github.event.pull_request.html_url }}|PR #${{ github.event.pull_request.number }}>\n*By:* ${{ github.actor }}\n*Branch:* \`${{ github.ref_name }}\`"
+                }
+              }
+            ]
+          }
+          EOF
