@@ -6,7 +6,7 @@ from ..util import DataframeOutput, collector
 
 
 @collector
-def main_jobevent_service(*, db=None, since=None, until=None, row_limit=1_000_000, job_limit=10_000, output=DataframeOutput()):
+def main_jobevent_service(*, db=None, since=None, until=None, row_limit=400_000, job_limit=2_000, output=DataframeOutput()):
     """
     Collects job events for jobs that finished in the given time window.
 

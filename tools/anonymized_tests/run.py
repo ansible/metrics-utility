@@ -93,8 +93,8 @@ from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
 # ---------------------------------------------------------------------------
 
 # Defaults mirror METRICS_SERVICE_JOBEVENT_ROW_LIMIT / _JOBS_PER_BATCH in metrics-service / collector.
-DEFAULT_JOBEVENT_ROW_LIMIT = 1_000_000
-DEFAULT_JOBEVENT_JOB_LIMIT = 10_000
+DEFAULT_JOBEVENT_ROW_LIMIT = 400_000
+DEFAULT_JOBEVENT_JOB_LIMIT = 2_000
 
 DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
 DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
