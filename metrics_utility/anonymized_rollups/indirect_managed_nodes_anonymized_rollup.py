@@ -1,10 +1,7 @@
 """Anonymized rollup for indirect managed node audit collector data."""
 
-import pandas as pd
-
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
-from metrics_utility.metric_utils import INDIRECT
 
 
 class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
@@ -15,29 +12,55 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         self.collector_names = ['main_indirectmanagednodeaudit']
 
     def prepare(self, dataframe):
-        """Transform raw indirect node audit data, adding managed_node_type tag.
+        """Transform raw indirect node audit data for deduplication.
 
-        Injects managed_node_type = INDIRECT constant to tag all records as
-        indirectly-managed nodes for downstream billing/rollup processing.
+        Extracts unique host_remote_ids for daily deduplication and billing count.
 
-        Returns JSON-serializable dictionary for storage in HourlyMetricsCollection.
+        Returns JSON-serializable dictionary with deduplicated host IDs and total count.
         """
         dataframe = self._convert_id_columns_to_strings(dataframe)
 
         if dataframe.empty:
-            return {}
+            return {
+                'indirect_node_ids': [],
+                'indirect_nodes_total': 0,
+            }
 
-        dataframe['managed_node_type'] = INDIRECT
+        # Extract unique host_remote_ids for deduplication
+        if 'host_remote_id' in dataframe.columns:
+            indirect_node_ids = sorted(set(dataframe['host_remote_id'].dropna()))
+        else:
+            indirect_node_ids = []
 
-        # Convert DataFrame to dict and handle datetime serialization
-        records = dataframe.to_dict(orient='records')
+        return sanitize_json(
+            {
+                'indirect_node_ids': indirect_node_ids,
+                'indirect_nodes_total': len(indirect_node_ids),
+            }
+        )
 
-        # Convert pandas Timestamp objects to ISO format strings
-        for record in records:
-            for key, value in record.items():
-                if pd.isna(value):
-                    record[key] = None
-                elif hasattr(value, 'isoformat'):
-                    record[key] = value.isoformat()
+    def merge(self, data_all, data_new):
+        """Merge two indirect node rollups by deduplicating host IDs.
 
-        return sanitize_json(records)
+        Combines indirect_node_ids from multiple hourly collections,
+        maintaining uniqueness for accurate daily billing counts.
+
+        Args:
+            data_all: Accumulated data from previous merges (or None for first merge)
+            data_new: New data to merge in
+
+        Returns:
+            Merged dictionary with deduplicated indirect_node_ids and updated total
+        """
+        if data_all is None:
+            return data_new
+
+        # Merge and deduplicate indirect_node_ids
+        ids_all = set(data_all.get('indirect_node_ids', []))
+        ids_new = set(data_new.get('indirect_node_ids', []))
+        indirect_node_ids = sorted(ids_all.union(ids_new))
+
+        return {
+            'indirect_node_ids': indirect_node_ids,
+            'indirect_nodes_total': len(indirect_node_ids),
+        }

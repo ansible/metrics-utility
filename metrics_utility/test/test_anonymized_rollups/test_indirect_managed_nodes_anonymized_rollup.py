@@ -1,15 +1,12 @@
-from datetime import UTC, datetime
-
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import (
     IndirectManagedNodesAnonymizedRollup,
 )
-from metrics_utility.metric_utils import INDIRECT
 
 
-def test_prepare_adds_managed_node_type_tag():
-    """Test that prepare() adds managed_node_type = INDIRECT to all records."""
+def test_prepare_extracts_unique_host_ids():
+    """Test that prepare() extracts and deduplicates host_remote_ids."""
     rollup = IndirectManagedNodesAnonymizedRollup()
 
     data = pd.DataFrame(
@@ -17,16 +14,14 @@ def test_prepare_adds_managed_node_type_tag():
             'id': [1, 2, 3],
             'host_name': ['host1', 'host2', 'host3'],
             'host_remote_id': ['remote1', 'remote2', 'remote3'],
-            'created': [datetime(2024, 1, 1, tzinfo=UTC)] * 3,
         }
     )
 
     result = rollup.prepare(data)
 
-    assert isinstance(result, list)
-    assert len(result) == 3
-    assert all('managed_node_type' in record for record in result)
-    assert all(record['managed_node_type'] == INDIRECT for record in result)
+    assert isinstance(result, dict)
+    assert result['indirect_node_ids'] == ['remote1', 'remote2', 'remote3']
+    assert result['indirect_nodes_total'] == 3
 
 
 def test_prepare_handles_empty_dataframe():
@@ -37,64 +32,76 @@ def test_prepare_handles_empty_dataframe():
 
     result = rollup.prepare(empty_data)
 
-    assert result == {}
+    assert result == {'indirect_node_ids': [], 'indirect_nodes_total': 0}
 
 
-def test_prepare_converts_timestamps_to_iso():
-    """Test that prepare() converts pandas Timestamp objects to ISO strings."""
+def test_prepare_deduplicates_host_ids():
+    """Test that prepare() deduplicates duplicate host_remote_ids."""
     rollup = IndirectManagedNodesAnonymizedRollup()
 
     data = pd.DataFrame(
         {
-            'id': [1],
-            'created': [pd.Timestamp('2024-01-01 12:00:00', tz='UTC')],
+            'id': [1, 2, 3, 4],
+            'host_name': ['host1', 'host2', 'host1', 'host3'],
+            'host_remote_id': ['remote1', 'remote2', 'remote1', 'remote3'],
         }
     )
 
     result = rollup.prepare(data)
 
-    assert isinstance(result, list)
-    assert len(result) == 1
-    assert isinstance(result[0]['created'], str)
-    assert result[0]['created'] == '2024-01-01T12:00:00+00:00'
+    assert result['indirect_node_ids'] == ['remote1', 'remote2', 'remote3']
+    assert result['indirect_nodes_total'] == 3
 
 
-def test_prepare_handles_nan_values():
-    """Test that prepare() converts NaN values to None."""
-    rollup = IndirectManagedNodesAnonymizedRollup()
-
-    data = pd.DataFrame(
-        {
-            'id': [1],
-            'host_name': ['host1'],
-            'optional_field': [pd.NA],
-        }
-    )
-
-    result = rollup.prepare(data)
-
-    assert isinstance(result, list)
-    assert result[0]['optional_field'] is None
-
-
-def test_prepare_converts_id_columns_to_strings():
-    """Test that _convert_id_columns_to_strings is called."""
+def test_prepare_handles_missing_host_remote_id():
+    """Test that prepare() handles DataFrames without host_remote_id column."""
     rollup = IndirectManagedNodesAnonymizedRollup()
 
     data = pd.DataFrame(
         {
             'id': [1, 2],
-            'job_id': [100, 200],
-            'host_id': [10, 20],
+            'host_name': ['host1', 'host2'],
         }
     )
 
     result = rollup.prepare(data)
 
-    assert isinstance(result, list)
-    assert all(isinstance(record['id'], str) for record in result)
-    assert all(isinstance(record['job_id'], str) for record in result)
-    assert all(isinstance(record['host_id'], str) for record in result)
+    assert result['indirect_node_ids'] == []
+    assert result['indirect_nodes_total'] == 0
+
+
+def test_merge_combines_host_ids():
+    """Test that merge() deduplicates host IDs across multiple hourly collections."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data_all = {
+        'indirect_node_ids': ['remote1', 'remote2'],
+        'indirect_nodes_total': 2,
+    }
+
+    data_new = {
+        'indirect_node_ids': ['remote2', 'remote3'],
+        'indirect_nodes_total': 2,
+    }
+
+    result = rollup.merge(data_all, data_new)
+
+    assert result['indirect_node_ids'] == ['remote1', 'remote2', 'remote3']
+    assert result['indirect_nodes_total'] == 3
+
+
+def test_merge_handles_none():
+    """Test that merge() handles None for first merge."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data_new = {
+        'indirect_node_ids': ['remote1', 'remote2'],
+        'indirect_nodes_total': 2,
+    }
+
+    result = rollup.merge(None, data_new)
+
+    assert result == data_new
 
 
 def test_rollup_name():
