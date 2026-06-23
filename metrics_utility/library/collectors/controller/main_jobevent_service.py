@@ -95,8 +95,6 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=None, ou
         'runner_item_on_failed',
         'runner_on_unreachable',
         'runner_item_on_unreachable',
-        'runner_on_skipped',
-        'runner_item_on_skipped',
         # job annotations
         'warning',
         'deprecated',
@@ -174,7 +172,7 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=None, ou
     df = output.sql(db, query)
 
     if row_limit is not None and len(df) >= row_limit:
-        logger.warning(
+        logger.info(
             'main_jobevent_service: row limit reached (%d rows). '
             'Events beyond the limit were not collected for this window. '
             'Increase METRICS_SERVICE_JOBEVENT_ROW_LIMIT if fuller coverage is needed.',

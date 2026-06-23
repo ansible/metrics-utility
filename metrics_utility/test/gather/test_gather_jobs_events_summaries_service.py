@@ -600,7 +600,7 @@ def test_main_jobevent_service_row_limit(caplog):
 
     # The fixture contains 30 events; a limit of 2 must cap the result.
     collector_instance = main_jobevent_service(db=connection, since=since, until=until, row_limit=2)
-    with caplog.at_level(logging.WARNING, logger='metrics_utility.library.collectors.controller.main_jobevent_service'):
+    with caplog.at_level(logging.INFO, logger='metrics_utility.logger'):
         df = collector_instance.gather()
 
     assert df is not None, 'main_jobevent_service returned None'
@@ -644,9 +644,9 @@ def test_main_jobevent_service_row_limit(caplog):
     ]
     assert list(df.columns) == expected_columns, f'Unexpected columns: {list(df.columns)}'
 
-    # Truncation warning must be emitted when limit is reached
-    warning_messages = [r.message for r in caplog.records if r.levelno == logging.WARNING]
-    assert any('row limit reached' in str(m) for m in warning_messages), 'Expected a row-limit warning in the logs, but none was found'
+    # Truncation info must be emitted when limit is reached
+    info_messages = [r.message for r in caplog.records if r.levelno == logging.INFO]
+    assert any('row limit reached' in str(m) for m in info_messages), 'Expected a row-limit info log, but none was found'
 
 
 execution_environments_lines = [
