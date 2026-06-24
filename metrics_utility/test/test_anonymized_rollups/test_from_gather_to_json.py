@@ -14,6 +14,7 @@ from metrics_utility.library.collectors.controller import (
     execution_environments,
     feature_flags_service,
     job_host_summary_service,
+    main_indirectmanagednodeaudit,
     main_jobevent_service,
     table_metadata,
     unified_jobs,
@@ -54,6 +55,9 @@ def _validate_top_level_structure(json_data):
     assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
     assert 'feature_flags' in json_data, "Missing 'feature_flags' at top level"
     assert 'observability_by_tasks' in json_data, "Missing 'observability_by_tasks' at top level"
+    assert 'indirect_managed_nodes' not in json_data, (
+        'indirect_managed_nodes IDs must not appear at the top level — only the count goes in statistics'
+    )
 
 
 def _validate_statistics_structure(statistics):
@@ -86,6 +90,7 @@ def _validate_statistics_structure(statistics):
         'rollup_period_task_skipped_total',
         'rollup_period_task_unreachable_total',
         'rollup_period_task_ignored_total',
+        'rollup_period_indirect_managed_nodes_all_total',
     ]
     for field in required_fields:
         assert field in statistics, f"Missing '{field}' in statistics"
@@ -920,6 +925,22 @@ def _save_json_output(json_data, since, until):
         json.dump(json_data, f, indent=4)
 
 
+def _validate_indirect_managed_nodes(json_data, statistics):
+    """Validate indirect managed node count and confirm IDs are not in the output."""
+    print('--- Validating indirect_managed_nodes data values ---')
+    assert isinstance(statistics['rollup_period_indirect_managed_nodes_all_total'], int), (
+        'rollup_period_indirect_managed_nodes_all_total should be an integer'
+    )
+    # 10:00h window: host_ids 1, 2 (2 unique)
+    # 11:00h window: host_ids 2, 3 (2 is a duplicate, 3 is new)
+    # Unique across both windows: 1, 2, 3 = 3
+    assert statistics['rollup_period_indirect_managed_nodes_all_total'] == 3, (
+        f'Expected 3 unique indirect managed nodes (host_ids 1,2,3 deduplicated across windows), '
+        f'got {statistics["rollup_period_indirect_managed_nodes_all_total"]}'
+    )
+    assert 'indirect_managed_nodes' not in json_data, 'Host IDs must not be included in the final JSON payload (privacy requirement)'
+
+
 def _validate_all_data(json_data, statistics):
     """Run all validation checks on the json_data."""
     # Validate structure
@@ -971,6 +992,7 @@ def _validate_all_data(json_data, statistics):
     _validate_controller_versions(json_data)
     _validate_jobs_by_controller_version(json_data, statistics)
     _validate_feature_flags(json_data)
+    _validate_indirect_managed_nodes(json_data, statistics)
 
     print('✅ All data value assertions passed!')
 
@@ -1014,6 +1036,10 @@ def test_from_gather_to_json(cleanup_glob):
             'func': feature_flags_service,
             'needs_since_until': False,  # snapshot collector
         },
+        'main_indirectmanagednodeaudit': {
+            'func': main_indirectmanagednodeaudit,
+            'needs_since_until': True,
+        },
     }
 
     # Define two hourly intervals: 10:00-11:00 and 11:00-12:00
@@ -1032,6 +1058,7 @@ def test_from_gather_to_json(cleanup_glob):
         'table_metadata': 'table_metadata',
         'controller_version_service': 'controller_version',
         'feature_flags_service': 'feature_flags',
+        'main_indirectmanagednodeaudit': 'indirect_managed_nodes',
     }
 
     # Collect data from all collectors
