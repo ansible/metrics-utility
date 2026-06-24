@@ -195,12 +195,12 @@ func handleQueryRange(w http.ResponseWriter, r *http.Request) {
 
 	start, err := strconv.ParseFloat(startStr, 64)
 	if err != nil {
-		http.Error(w, "invalid start", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("invalid start: %v", err), http.StatusBadRequest)
 		return
 	}
 	end, err := strconv.ParseFloat(endStr, 64)
 	if err != nil {
-		http.Error(w, "invalid end", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("invalid end: %v", err), http.StatusBadRequest)
 		return
 	}
 	if end < start {
@@ -221,7 +221,7 @@ func handleQueryRange(w http.ResponseWriter, r *http.Request) {
 
 	count := int(math.Floor((end-start)/stepSecs)) + 1
 	if count > 10000 {
-		http.Error(w, "range too large", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("range too large: %d points (max 10000)", count), http.StatusBadRequest)
 		return
 	}
 	values := make([][]any, 0, count)
@@ -282,7 +282,7 @@ func handleConfigPost(w http.ResponseWriter, r *http.Request) {
 
 	var update config
 	if err := json.Unmarshal(body, &update); err != nil {
-		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("invalid JSON: %v", err), http.StatusBadRequest)
 		return
 	}
 
