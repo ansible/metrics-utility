@@ -38,18 +38,10 @@ from metrics_utility.test.test_anonymized_rollups.test_jobs_anonymized_rollups i
 
 @pytest.fixture(scope='module')
 def cleanup_test_data():
-    """Clean up test directories before and after all tests in this module."""
-    out_dir = './out'
-
-    # Cleanup before tests
-    if os.path.exists(out_dir):
-        shutil.rmtree(out_dir)
-
-    yield  # Run all tests
-
-    # Cleanup after all tests (commented out for debugging)
-    # if os.path.exists(out_dir):
-    #     shutil.rmtree(out_dir)
+    yield
+    for d in ['./out/data/2025/06/13', './out/rollups/2025/06/13']:
+        if os.path.exists(d):
+            shutil.rmtree(d)
 
 
 def _create_csv_files_from_split_data(data_dir, jobs, events, execution_environments, jobhostsummary, credentials):

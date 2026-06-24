@@ -16,16 +16,16 @@ import os
 import pytest
 
 from metrics_utility.library.storage.segment import StorageSegment
+from metrics_utility.test.util import cleanup_glob as _cleanup_glob
+
+
+file_glob = './out/test_report_splitting/*.json'
 
 
 @pytest.fixture(scope='function')
 def cleanup_test_data():
-    """Clean up test directories before and after test.
-
-    Note: Cleanup is disabled to allow data persistence for validation.
-    Uncomment the cleanup code below if you want to clean up test data.
-    """
-    yield  # Run test
+    yield
+    _cleanup_glob(file_glob)
 
 
 def _create_statistics_dict(num_modules, num_jobs):
