@@ -441,7 +441,7 @@ def validate_module_stats(result):
     """Validate module statistics."""
     module_stats = result['module_stats']
     assert isinstance(module_stats, list)
-    assert len(module_stats) == 6
+    assert len(module_stats) == 2
     assert result['statistics']['rollup_period_modules_total'] == 6
 
     required_fields = [
@@ -466,7 +466,7 @@ def validate_collection_stats(result):
     """Validate collection statistics."""
     collection_stats = result['collection_stats']
     assert isinstance(collection_stats, list)
-    assert len(collection_stats) == 3
+    assert len(collection_stats) == 1
 
     required_fields = [
         'collection_name',

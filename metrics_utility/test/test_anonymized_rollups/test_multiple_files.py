@@ -257,7 +257,7 @@ def _validate_job_host_summary(jobs_list, result):
 
 def _validate_events_modules(result):
     """Validate events modules section."""
-    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
+    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
     assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
     assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
     assert result['statistics']['rollup_period_warnings_total'] == 2, (
@@ -281,7 +281,7 @@ def _validate_events_modules(result):
 
     module_stats = result['module_stats']
     assert isinstance(module_stats, list), 'module_stats should be a list'
-    assert len(module_stats) == 7, 'Should have stats for all 7 modules'
+    assert len(module_stats) == 6, 'Should have stats for all 6 modules'
 
     win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
     assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
@@ -308,7 +308,7 @@ def _validate_events_modules(result):
 
     collection_stats = result['collection_stats']
     assert isinstance(collection_stats, list), 'collection_stats should be a list'
-    assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
+    assert len(collection_stats) == 6, 'Should have stats for all 6 collections'
 
     windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
     assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
@@ -326,43 +326,25 @@ def _validate_events_modules(result):
 def _validate_jobs_by_installed_collections_versions(result):
     """Validate collections versions section.
 
-    Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is unknown →
-    anonymised to Custom/Custom.  All timing/template/inventory/ansible_version stats should match
-    the per-collection rollup values calculated from jobs 1-4 and 6 (job 5 filtered – no finished).
+    Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is unknown
+    and is removed from jobs_by_installed_collections_versions.  All timing/template/inventory/
+    ansible_version stats should match the per-collection rollup values calculated from jobs 1-4
+    and 6 (job 5 filtered – no finished).
     """
     jobs_by_installed_collections_versions = result['jobs_by_installed_collections_versions']
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
     cv = {(c['collection'], c['version']): c for c in jobs_by_installed_collections_versions}
 
-    # --- jobs_total counts (unchanged from before) ---
-    assert cv.get(('Custom', 'Custom'))['jobs_total'] == 5, f'Expected Custom Custom (ansible.builtin) in 5 jobs, got {cv.get(("Custom", "Custom"))}'
+    # --- jobs_total counts ---
     assert cv.get(('community.general', '1.0.0'))['jobs_total'] == 2
     assert cv.get(('community.general', '2.0.0'))['jobs_total'] == 2
     assert cv.get(('community.general', '3.0.0'))['jobs_total'] == 1
     assert cv.get(('ansible.windows', '1.0.0'))['jobs_total'] == 1
     assert cv.get(('community.aws', '1.5.0'))['jobs_total'] == 1
 
-    assert len(jobs_by_installed_collections_versions) == 6, (
-        f'Expected 6 unique collection-version pairs, got {len(jobs_by_installed_collections_versions)}'
+    assert len(jobs_by_installed_collections_versions) == 5, (
+        f'Expected 5 unique collection-version pairs, got {len(jobs_by_installed_collections_versions)}'
     )
-
-    # --- Custom/Custom (ansible.builtin 2.9.10, 5 jobs) ---
-    # jobs 1(s,3s,0s) 2(f,5s,2s) 3(s,7s,4s) 4(s,2s,1s) 6(f,NaN,NaN,never-started)
-    custom = cv[('Custom', 'Custom')]
-    assert custom['jobs_failed_total'] == 2
-    assert custom['jobs_successful_total'] == 3
-    assert custom['jobs_never_started_total'] == 1
-    assert custom['jobs_duration_total_seconds'] == pytest.approx(17.0)  # 3+5+7+2; job6 NaN
-    assert custom['jobs_successful_duration_total_seconds'] == pytest.approx(12.0)  # 3+7+2
-    assert custom['jobs_failed_duration_total_seconds'] == pytest.approx(5.0)  # job2
-    assert custom['job_duration_maximum_seconds'] == pytest.approx(7.0)
-    assert custom['job_duration_minimum_seconds'] == pytest.approx(2.0)
-    assert custom['job_waiting_time_total_seconds'] == pytest.approx(7.0)  # 0+2+4+1
-    assert custom['job_waiting_time_maximum_seconds'] == pytest.approx(4.0)
-    assert custom['job_waiting_time_minimum_seconds'] == pytest.approx(0.0)
-    assert custom['templates_total'] == 3  # T1, T2, T3
-    assert custom['inventories_total'] == 3
-    assert custom['ansible_versions'] == ['2.10.0', '2.11.0', '2.12.0', '2.14.0', '2.9.0']
 
     # --- community.general 1.0.0 (jobs 1, 4 – both successful) ---
     cg1 = cv[('community.general', '1.0.0')]
