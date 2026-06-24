@@ -383,6 +383,7 @@ class TestHandleCrcShipTargetAwxSeeding:
     def set_required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
@@ -448,6 +449,7 @@ class TestHandleCrcShipTargetCandlepin:
     def set_required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
@@ -634,6 +636,7 @@ class TestHandleCrcShipTargetDbFirst:
     def set_required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
