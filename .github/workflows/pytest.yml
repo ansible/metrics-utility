@@ -136,7 +136,7 @@ jobs:
           path: pr_number.txt
 
       - name: "Send code coverage report to Sonar Cloud (on push)"
-        uses: SonarSource/sonarqube-scan-action@c7ee0f9df90b7aa20e8dcf9695dcfe2e7da5b4f2 # v7
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         if: ${{ ! github.base_ref }}
         env:
           SONAR_HOST_URL: https://sonarcloud.io
