@@ -10,7 +10,6 @@ Snapshot collectors (run once):
 
 Hourly collectors (run 24x):
     job_host_summary_service, unified_jobs, credentials_service, main_jobevent_service
-    (note: main_jobevent_service is disabled in production by default)
 
 """
 
@@ -56,7 +55,7 @@ HOURLY_COLLECTOR_TYPES = [
     'job_host_summary_service',
     'unified_jobs',
     'credentials_service',
-    'main_jobevent_service',  # disabled in production by default; included for perf testing
+    'main_jobevent_service',
 ]
 
 
