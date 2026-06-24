@@ -32,6 +32,7 @@ from metrics_utility.library.collectors.controller import (
     execution_environments,
     feature_flags_service,
     job_host_summary_service,
+    main_indirectmanagednodeaudit,
     main_jobevent_service,
     table_metadata,
     unified_jobs,
@@ -204,6 +205,12 @@ def compute_anonymized_rollup(db, since, until, service_db=None):
         except Exception as e:
             logger.error(f'Failed to gather task_executions data: {e}')
 
+    indirect_managed_nodes_data = []
+    try:
+        indirect_managed_nodes_data = main_indirectmanagednodeaudit(db=db, since=since, until=until).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather indirect_managed_nodes data: {e}')
+
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
@@ -214,6 +221,7 @@ def compute_anonymized_rollup(db, since, until, service_db=None):
         'controller_version': controller_version_data,
         'feature_flags': feature_flags_data,
         'task_executions': task_executions_data,
+        'indirect_managed_nodes': indirect_managed_nodes_data,
     }
 
     # load data for each collector
