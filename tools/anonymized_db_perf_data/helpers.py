@@ -7,6 +7,422 @@ from datetime import timedelta
 from modules import MODULES
 
 
+# ---------------------------------------------------------------------------
+# Realistic event_data['res'] generation
+# ---------------------------------------------------------------------------
+
+_COMMAND_MODULES = frozenset(
+    {
+        'ansible.builtin.command',
+        'ansible.builtin.shell',
+        'cisco.ios.ios_command',
+        'cisco.iosxr.iosxr_config',
+        'cisco.nxos.nxos_config',
+    }
+)
+_PACKAGE_MODULES = frozenset(
+    {
+        'ansible.builtin.yum',
+        'ansible.builtin.apt',
+        'ansible.builtin.dnf',
+        'ansible.builtin.package',
+        'community.general.npm',
+        'redhat.satellite.repository',
+    }
+)
+_FILE_MODULES = frozenset(
+    {
+        'ansible.builtin.copy',
+        'ansible.builtin.template',
+        'ansible.builtin.file',
+        'ansible.builtin.fetch',
+        'ansible.builtin.get_url',
+        'ansible.builtin.lineinfile',
+        'ansible.builtin.stat',
+    }
+)
+_SERVICE_MODULES = frozenset(
+    {
+        'ansible.builtin.service',
+        'ansible.builtin.systemd',
+        'ansible.builtin.cron',
+        'ansible.posix.mount',
+    }
+)
+_CLOUD_MODULES = frozenset(
+    {
+        'amazon.aws.ec2_instance',
+        'amazon.aws.s3_bucket',
+        'amazon.aws.ec2_vpc_subnet',
+        'amazon.aws.ec2_security_group',
+        'amazon.aws.rds_instance',
+        'amazon.aws.iam_role',
+        'azure.azcollection.azure_rm_virtualmachine',
+        'azure.azcollection.azure_rm_storageaccount',
+        'azure.azcollection.azure_rm_networkinterface',
+        'azure.azcollection.azure_rm_securitygroup',
+        'google.cloud.gcp_compute_instance',
+        'google.cloud.gcp_storage_bucket',
+        'google.cloud.gcp_compute_disk',
+        'vmware.vmware_rest.vcenter_vm',
+        'vmware.vmware_rest.vcenter_datastore',
+    }
+)
+_DB_MODULES = frozenset(
+    {
+        'community.mysql.mysql_db',
+        'community.mysql.mysql_user',
+        'community.mysql.mysql_replication',
+        'community.postgresql.postgresql_db',
+        'community.postgresql.postgresql_user',
+        'community.postgresql.postgresql_query',
+    }
+)
+_CONTAINER_MODULES = frozenset(
+    {
+        'community.general.docker_container',
+        'community.general.docker_image',
+        'community.general.docker_network',
+        'community.docker.docker_container',
+        'community.docker.docker_compose',
+        'community.docker.docker_swarm',
+        'community.kubernetes.k8s',
+        'community.kubernetes.helm',
+        'community.kubernetes.k8s_info',
+    }
+)
+
+# Typical stdout line templates for command/shell output
+_STDOUT_LINE_TEMPLATES = [
+    'Processing item {i} of {total}...',
+    '[INFO] Step {i}: completed successfully',
+    'OK: package-{i}.noarch already installed',
+    'Checking dependency {i}... done',
+    '/usr/lib/systemd/system/service-{i}.service: enabled',
+    'warning: rpmts_HdrFromFdno: Header V4 RSA/SHA256 Signature, key ID fd431d51: NOKEY',
+    'Resolving dependencies... {i}%',
+    'Transaction check: {i} packages',
+    '  --> Running transaction check',
+    '  ---> Package python3-{i}.x86_64 1.{i}.0-1.el9 will be installed',
+    'Install  {i} Packages',
+    'Upgraded:  package-lib-{i}.x86_64 1.{i}.0',
+    'Complete!',
+    'Loaded plugins: fastestmirror, langpacks',
+    'Loading mirror speeds from cached hostfile',
+    ' * base: mirror.example.com',
+    ' * extras: extras.example.com',
+    'Resolving Dependencies',
+    '--> Running transaction check',
+    '---> Package {i} will be installed',
+    'Nothing to do',
+    'Metadata cache created.',
+    '[{i}/{total}] Verifying : python3-module-{i}.noarch',
+]
+
+_PACKAGE_NAMES = [
+    'httpd',
+    'nginx',
+    'python3',
+    'openssl',
+    'curl',
+    'wget',
+    'git',
+    'vim',
+    'tmux',
+    'rsync',
+    'tar',
+    'gzip',
+    'bzip2',
+    'unzip',
+    'zip',
+    'lsof',
+    'strace',
+    'tcpdump',
+    'nmap',
+    'iptables',
+    'firewalld',
+    'selinux-policy',
+    'policycoreutils',
+    'audit',
+    'sssd',
+    'krb5-workstation',
+    'samba',
+    'nfs-utils',
+    'autofs',
+    'bind',
+    'dhcp',
+    'postfix',
+    'dovecot',
+    'sendmail',
+    'mutt',
+    'procmail',
+    'spamassassin',
+    'postgresql',
+    'mysql',
+    'mariadb',
+    'redis',
+    'memcached',
+    'mongodb',
+    'java-17-openjdk',
+    'nodejs',
+    'ruby',
+    'perl',
+    'php',
+    'golang',
+    'ansible',
+    'puppet',
+    'chef',
+    'salt',
+    'terraform',
+    'docker',
+    'podman',
+]
+
+_SYSTEMD_STATES = ['active', 'inactive', 'failed', 'activating', 'deactivating']
+_SYSTEMD_SUBSTATES = ['running', 'dead', 'failed', 'start', 'stop', 'exited']
+
+
+_NOISE_LEVELS = ['small', 'medium', 'large']
+_NOISE_WEIGHTS = [0.50, 0.35, 0.15]  # 50% small, 35% medium, 15% large
+
+
+def _pick_noise_level(rng):
+    """Pick a noise level randomly, weighted towards smaller sizes."""
+    r = rng.random()
+    cumulative = 0.0
+    for level, weight in zip(_NOISE_LEVELS, _NOISE_WEIGHTS):
+        cumulative += weight
+        if r < cumulative:
+            return level
+    return _NOISE_LEVELS[-1]
+
+
+def _noise_line_count(rng, noise_level):
+    """Return stdout line count scaled by noise level with some random variance."""
+    base = {'small': 20, 'medium': 200, 'large': 2000}[noise_level]
+    return int(rng.uniform(0.5, 1.5) * base)
+
+
+def _generate_stdout_lines(rng, count):
+    """Generate realistic-looking stdout lines."""
+    lines = []
+    for i in range(count):
+        tpl = _STDOUT_LINE_TEMPLATES[rng.randint(0, len(_STDOUT_LINE_TEMPLATES) - 1)]
+        line = tpl.format(i=i + 1, total=count)
+        lines.append(line)
+    return lines
+
+
+def _res_command(rng, noise_level):
+    lines = _generate_stdout_lines(rng, _noise_line_count(rng, noise_level))
+    stdout = '\n'.join(lines)
+    return {
+        'rc': 0,
+        'cmd': 'systemctl list-units --type=service --state=running',
+        'stdout': stdout,
+        'stderr': '',
+        'stdout_lines': lines,
+        'stderr_lines': [],
+        'delta': '0:00:00.{:06d}'.format(rng.randint(10000, 999999)),
+        'start': '2024-01-15 10:00:00.000000',
+        'end': '2024-01-15 10:00:00.500000',
+    }
+
+
+def _res_package(rng, noise_level):
+    pkg_count = _noise_line_count(rng, noise_level) // 5
+    pkg_count = max(1, pkg_count)
+    names = [rng.choice(_PACKAGE_NAMES) for _ in range(pkg_count)]
+    results = [f'Installed: {name}-{rng.randint(1, 9)}.{rng.randint(0, 99)}.{rng.randint(0, 9)}-1.el9.noarch' for name in names]
+    dep_count = pkg_count * 3
+    results += [
+        f'Dependency Installed: python3-{rng.choice(_PACKAGE_NAMES)}-{rng.randint(1, 5)}.{rng.randint(0, 9)}.0-1.el9.noarch' for _ in range(dep_count)
+    ]
+    return {
+        'rc': 0,
+        'results': results,
+        'msg': '',
+        'changed': True,
+    }
+
+
+def _res_file(rng):
+    checksum = ''.join(['{:02x}'.format(rng.randint(0, 255)) for _ in range(20)])
+    return {
+        'dest': f'/etc/app/config-{rng.randint(1, 100)}.conf',
+        'src': f'/tmp/ansible-tmp-{rng.randint(100000, 999999)}/source',
+        'md5sum': checksum[:32],
+        'checksum': checksum,
+        'size': rng.randint(512, 65536),
+        'uid': 0,
+        'gid': 0,
+        'mode': '0644',
+        'owner': 'root',
+        'group': 'root',
+        'secontext': 'system_u:object_r:etc_t:s0',
+        'diff': {
+            'before': {'path': f'/etc/app/config-{rng.randint(1, 100)}.conf'},
+            'after': {'path': f'/etc/app/config-{rng.randint(1, 100)}.conf'},
+        },
+    }
+
+
+def _res_service(rng):
+    name = rng.choice(['nginx', 'httpd', 'sshd', 'firewalld', 'crond', 'auditd', 'rsyslog'])
+    state = rng.choice(_SYSTEMD_STATES)
+    substate = rng.choice(_SYSTEMD_SUBSTATES)
+    return {
+        'name': name,
+        'state': state,
+        'status': {
+            'ActiveState': state,
+            'SubState': substate,
+            'Id': f'{name}.service',
+            'Description': f'{name.capitalize()} HTTP Server',
+            'ExecMainPID': str(rng.randint(1000, 99999)),
+            'ExecMainStartTimestamp': 'Mon 2024-01-15 10:00:00 UTC',
+            'FragmentPath': f'/usr/lib/systemd/system/{name}.service',
+            'LoadState': 'loaded',
+            'MainPID': str(rng.randint(1000, 99999)),
+            'MemoryCurrent': str(rng.randint(10000000, 500000000)),
+            'NRestarts': str(rng.randint(0, 5)),
+            'TasksCurrent': str(rng.randint(1, 50)),
+            'Type': 'simple',
+            'UnitFileState': 'enabled',
+        },
+    }
+
+
+def _res_cloud(rng, noise_level):
+    count = _noise_line_count(rng, noise_level) // 20
+    count = max(1, count)
+    instances = []
+    for _ in range(count):
+        instances.append(
+            {
+                'instance_id': 'i-{:017x}'.format(rng.randint(0, 2**64)),
+                'instance_type': rng.choice(['t3.micro', 't3.small', 'm5.large', 'c5.xlarge', 'r5.2xlarge']),
+                'state': rng.choice(['running', 'stopped', 'terminated', 'pending']),
+                'private_ip_address': '{}.{}.{}.{}'.format(*[rng.randint(10, 254) for _ in range(4)]),
+                'public_ip_address': '{}.{}.{}.{}'.format(*[rng.randint(1, 254) for _ in range(4)]),
+                'tags': {
+                    'Name': f'perf-test-{rng.randint(1000, 9999)}',
+                    'Environment': rng.choice(['dev', 'staging', 'prod']),
+                    'Owner': 'ansible-automation',
+                },
+                'launch_time': '2024-01-15T10:00:00+00:00',
+                'vpc_id': 'vpc-{:08x}'.format(rng.randint(0, 2**32)),
+                'subnet_id': 'subnet-{:08x}'.format(rng.randint(0, 2**32)),
+            }
+        )
+    return {'instances': instances, 'changed': True}
+
+
+def _res_db(rng):
+    return {
+        'db': rng.choice(['app_db', 'metrics_db', 'users_db', 'analytics_db']),
+        'executed': True,
+        'changed': rng.choice([True, False]),
+        'query_result': [{'id': i, 'name': f'record_{i}', 'value': rng.randint(1, 1000)} for i in range(rng.randint(1, 20))],
+        'rowcount': rng.randint(0, 100),
+    }
+
+
+def _res_container(rng, noise_level):
+    count = _noise_line_count(rng, noise_level) // 10
+    count = max(1, count)
+    return {
+        'container': {
+            'Id': '{:064x}'.format(rng.randint(0, 2**256)),
+            'Name': f'/app-container-{rng.randint(1, 999)}',
+            'State': {
+                'Status': rng.choice(['running', 'exited', 'created']),
+                'Running': rng.choice([True, False]),
+                'Pid': rng.randint(1000, 99999),
+                'ExitCode': 0,
+                'StartedAt': '2024-01-15T10:00:00.000000000Z',
+            },
+            'NetworkSettings': {
+                'IPAddress': '{}.{}.{}.{}'.format(*[rng.randint(172, 192) for _ in range(4)]),
+                'Ports': {f'{rng.randint(3000, 9000)}/tcp': [{'HostIp': '0.0.0.0', 'HostPort': str(rng.randint(3000, 9000))}]},
+            },
+            'Mounts': [{'Source': f'/data/vol-{i}', 'Destination': f'/app/data-{i}', 'Mode': 'rw'} for i in range(count)],
+        },
+        'changed': True,
+    }
+
+
+def _res_generic(rng, noise_level):
+    count = _noise_line_count(rng, noise_level) // 10
+    count = max(1, count)
+    return {
+        'changed': rng.choice([True, False]),
+        'msg': 'Task completed successfully',
+        'result': {f'key_{i}': f'value_{rng.randint(1, 10000)}' for i in range(count)},
+        'rc': 0,
+    }
+
+
+def generate_res(module, rng):
+    """Return a realistic res dict for event_data based on module type.
+
+    Noise level (small/medium/large) is picked randomly per call, weighted
+    towards smaller sizes (50% small, 35% medium, 15% large) to match the
+    distribution seen in real controller deployments.
+    """
+    noise_level = _pick_noise_level(rng)
+    if module in _COMMAND_MODULES:
+        return _res_command(rng, noise_level)
+    if module in _PACKAGE_MODULES:
+        return _res_package(rng, noise_level)
+    if module in _FILE_MODULES:
+        return _res_file(rng)
+    if module in _SERVICE_MODULES:
+        return _res_service(rng)
+    if module in _CLOUD_MODULES:
+        return _res_cloud(rng, noise_level)
+    if module in _DB_MODULES:
+        return _res_db(rng)
+    if module in _CONTAINER_MODULES:
+        return _res_container(rng, noise_level)
+    return _res_generic(rng, noise_level)
+
+
+def _patch_res_for_outcome(res, event_type, failed, changed):
+    """Patch a res dict so its outcome fields agree with the emitted event.
+
+    generate_res() always produces a success-shaped payload; this function
+    overwrites the relevant keys so that rc/failed/changed/skipped/unreachable
+    are consistent with the actual event_type and outcome flags.
+    """
+    res = dict(res)  # shallow copy — don't mutate the shared task-level dict
+    if event_type in ('runner_on_failed', 'runner_item_on_failed'):
+        res['rc'] = 1
+        res['failed'] = True
+        res['changed'] = False
+        res.pop('skipped', None)
+        res.pop('unreachable', None)
+    elif event_type in ('runner_on_unreachable', 'runner_item_on_unreachable'):
+        res['rc'] = 1
+        res['unreachable'] = True
+        res['changed'] = False
+        res.pop('failed', None)
+        res.pop('skipped', None)
+    elif event_type in ('runner_on_skipped', 'runner_item_on_skipped'):
+        res['skipped'] = True
+        res['changed'] = False
+        res.pop('failed', None)
+        res.pop('unreachable', None)
+    else:
+        # runner_on_ok / runner_on_async_ok / runner_item_on_ok
+        res['rc'] = 0
+        res['changed'] = changed
+        res.pop('failed', None)
+        res.pop('skipped', None)
+        res.pop('unreachable', None)
+    return res
+
+
 # Database connection will be imported from Django after prepare() is called
 _db_connection = None
 
@@ -622,7 +1038,8 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     - Each task has one module, but different outcomes per host
     - Mix of success, failed, skipped, unreachable events
     - Some hosts retry (failed then ok with same task_uuid)
-    - Dictionary data in event_data (duration, timestamps, etc.)
+    - Realistic event_data['res'] payload (noise level picked randomly per task)
+    - ~40% of tasks run inside a role (produces role_stats in rollup output)
 
     Structure: task -> host -> outcome
     Each task runs the same module on all hosts, but each host can have different outcome.
@@ -668,20 +1085,22 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
         end = start + timedelta(seconds=task_duration)
         task_start_time = end  # Next task starts when this one ends
 
-        # Build event_data JSON with required dictionary fields
-        event_data = json.dumps(
-            {
-                'task_action': module,
-                'resolved_action': module,
-                'task': task_name,
-                'play': 'Main Play',
-                'task_uuid': task_uuid,
-                'duration': task_duration,
-                'start': start.isoformat(),
-                'end': end.isoformat(),
-                'ignore_errors': False,
-            }
-        ).replace("'", "''")  # Escape single quotes for SQL
+        # Role: ~40% of tasks run inside a role; consistent across all hosts for this task
+        task_role = generate_role(rng)
+
+        # Base res payload for this task — outcome fields are patched per event below
+        task_res_base = generate_res(module, rng)
+        task_event_data_base = {
+            'task_action': module,
+            'resolved_action': module,
+            'task': task_name,
+            'play': 'Main Play',
+            'task_uuid': task_uuid,
+            'duration': task_duration,
+            'start': start.isoformat(),
+            'end': end.isoformat(),
+            'ignore_errors': False,
+        }
 
         # Loop over hosts - each host gets different outcome for this task
         for host_idx, host_id in enumerate(host_ids, 1):
@@ -712,27 +1131,72 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
                 else:
                     events_for_host = [('runner_on_unreachable', True, False)]
 
-            # Create events for this host
+            # Create events for this host — res is patched to match each outcome
             for event_type, failed, changed in events_for_host:
                 counter += 1
+                res = _patch_res_for_outcome(task_res_base, event_type, failed, changed)
+                event_data_dict = {**task_event_data_base, 'res': res}
+                event_data = json.dumps(event_data_dict).replace("'", "''")
                 values.append(
                     f"('{job_created_str}', '{job_created_str}', '{event_type}', '{event_data}', {str(failed).upper()}, "
-                    f"{str(changed).upper()}, '{host_name}', 'Main Play', '', '{task_name}', "
+                    f"{str(changed).upper()}, '{host_name}', 'Main Play', '{task_role}', '{task_name}', "
                     f"{counter}, {host_id}, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0, '{job_created_str}')"
                 )
 
-    # Insert into main_jobevent (partitioned table, requires job_created)
-    sql = f"""
+    # Insert in batches to avoid oversized SQL statements with large JSON payloads
+    _INSERT_BATCH_SIZE = 500
+    insert_sql = """
     INSERT INTO main_jobevent (
         created, modified, event, event_data, failed,
         changed, host_name, play, role, task,
         counter, host_id, job_id, uuid, parent_uuid,
         end_line, playbook, start_line, stdout, verbosity, job_created
     )
-    VALUES {','.join(values)};
+    VALUES {rows};
     """
-    run(sql)
+    for batch_start in range(0, len(values), _INSERT_BATCH_SIZE):
+        batch = values[batch_start : batch_start + _INSERT_BATCH_SIZE]
+        run(insert_sql.format(rows=','.join(batch)))
+
     print(f'Created {len(values)} job events ({task_count} tasks x {host_count} hosts)')
+
+
+# Roles in namespace.collection.rolename (collection role) or namespace.rolename (standalone role) format.
+# extract_role_name() recognises both; collection roles also produce collection_source lookups.
+_ROLES = [
+    # Collection roles — will also appear in collection_stats
+    'redhat.rhel_system_roles.network',
+    'redhat.rhel_system_roles.selinux',
+    'redhat.rhel_system_roles.timesync',
+    'redhat.rhel_system_roles.firewall',
+    'redhat.rhel_system_roles.storage',
+    'ansible.posix.acl',
+    'community.general.docker',
+    'community.mysql.server',
+    'community.postgresql.server',
+    'community.grafana.grafana',
+    'community.kubernetes.helm',
+    'amazon.aws.iam',
+    'azure.azcollection.vm',
+    # Standalone roles — namespace.rolename
+    'geerlingguy.apache',
+    'geerlingguy.nginx',
+    'geerlingguy.mysql',
+    'geerlingguy.java',
+    'debops.nginx',
+    'debops.postgresql',
+    'debops.docker',
+    'elastic.elasticsearch',
+]
+# Probability that a given task is executed inside a role (rest run at play level)
+_ROLE_PROBABILITY = 0.40
+
+
+def generate_role(rng):
+    """Return a role name for a task, or empty string if the task is not in a role."""
+    if rng.random() < _ROLE_PROBABILITY:
+        return rng.choice(_ROLES)
+    return ''
 
 
 _COLLECTION_NAMESPACES = ['ansible', 'community', 'redhat', 'amazon', 'google', 'azure', 'cisco', 'f5', 'netapp', 'vmware']

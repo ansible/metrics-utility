@@ -112,7 +112,8 @@ def test_anonymize_data_known_collection_unchanged():
     assert data['jobs_by_installed_collections_versions'][0]['version'] == '1.5.0'
 
 
-def test_anonymize_data_empty_collection_name_becomes_custom():
+def test_anonymize_data_unknown_installed_collection_removed():
+    """Unknown/empty collection names should be removed, not renamed to 'Custom'."""
     data = {
         'jobs_by_installed_collections_versions': [
             {
@@ -123,12 +124,11 @@ def test_anonymize_data_empty_collection_name_becomes_custom():
         ],
     }
     anonymize_data(data)
-    row = data['jobs_by_installed_collections_versions'][0]
-    assert row['collection'] == 'Custom'
-    assert row['version'] == 'Custom'
+    assert data['jobs_by_installed_collections_versions'] == []
 
 
-def test_anonymize_data_pd_na_collection_does_not_raise():
+def test_anonymize_data_pd_na_collection_removed():
+    """pd.NA collection name should be removed from jobs_by_installed_collections_versions."""
     data = {
         'jobs_by_installed_collections_versions': [
             {
@@ -139,9 +139,46 @@ def test_anonymize_data_pd_na_collection_does_not_raise():
         ],
     }
     anonymize_data(data)
-    row = data['jobs_by_installed_collections_versions'][0]
-    assert row['collection'] == 'Custom'
-    assert row['version'] == 'Custom'
+    assert data['jobs_by_installed_collections_versions'] == []
+
+
+def test_anonymize_data_custom_module_stats_removed():
+    """module_stats entries with collection_source == 'Custom' should be removed."""
+    data = {
+        'module_stats': [
+            {'module_name': 'my_module', 'collection_name': 'my.col', 'collection_source': 'Custom', 'total': 5},
+            {'module_name': 'ansible.builtin.copy', 'collection_name': 'ansible.builtin', 'collection_source': 'certified', 'total': 10},
+        ],
+    }
+    anonymize_data(data)
+    assert len(data['module_stats']) == 1
+    assert data['module_stats'][0]['collection_source'] == 'certified'
+
+
+def test_anonymize_data_custom_collection_stats_removed():
+    """collection_stats entries with collection_source == 'Custom' should be removed."""
+    data = {
+        'collection_stats': [
+            {'collection_name': 'my.col', 'collection_source': 'Custom', 'total': 3},
+            {'collection_name': 'ansible.posix', 'collection_source': 'certified', 'total': 7},
+        ],
+    }
+    anonymize_data(data)
+    assert len(data['collection_stats']) == 1
+    assert data['collection_stats'][0]['collection_name'] == 'ansible.posix'
+
+
+def test_anonymize_data_custom_role_stats_removed():
+    """role_stats entries with collection_source == 'Custom' should be removed."""
+    data = {
+        'role_stats': [
+            {'role': 'my_role', 'collection_name': 'my.col', 'collection_source': 'Custom', 'total': 2},
+            {'role': 'network', 'collection_name': 'redhat.rhel_system_roles', 'collection_source': 'certified', 'total': 8},
+        ],
+    }
+    anonymize_data(data)
+    assert len(data['role_stats']) == 1
+    assert data['role_stats'][0]['collection_source'] == 'certified'
 
 
 # ---------------------------------------------------------------------------

@@ -75,13 +75,9 @@ def create_anonymized_object(rollup_name: str):
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
-def _anonymize_custom_items(items: List[Dict[str, Any]], fields: List[str]) -> None:
-    """Set each field to 'Custom' on items whose collection_source is 'Custom'."""
-    for item in items:
-        if item and item.get('collection_source') == 'Custom':
-            for field in fields:
-                if item.get(field):
-                    item[field] = 'Custom'
+def _remove_custom_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return a new list with all items whose collection_source is 'Custom' removed."""
+    return [item for item in items if item and item.get('collection_source') != 'Custom']
 
 
 def _load_known_collections() -> Dict[str, Any]:
@@ -93,13 +89,9 @@ def _load_known_collections() -> Dict[str, Any]:
         return {}
 
 
-def _anonymize_installed_collections_versions(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> None:
-    """Replace collection/version with 'Custom' for any collection not in the known list."""
-    for item in items:
-        if item and 'collection' in item:
-            if _installed_collection_name_is_unknown(item.get('collection', ''), known_collections):
-                item['collection'] = 'Custom'
-                item['version'] = 'Custom'
+def _remove_unknown_installed_collections(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return a new list with installed-collection entries not in the known whitelist removed."""
+    return [item for item in items if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)]
 
 
 def anonymize_data(data):
@@ -107,8 +99,9 @@ def anonymize_data(data):
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
 
-    For items with collection_source == 'Custom', replaces module names, collection names,
-    and role names with the string "Custom" instead of hashing them.
+    For items with collection_source == 'Custom', removes their entries from
+    module_stats, collection_stats, and role_stats entirely so private names
+    never appear in the outbound payload.
 
     Args:
         data: Flattened data structure with keys:
@@ -124,13 +117,14 @@ def anonymize_data(data):
     if not data or not isinstance(data, dict):
         return
 
-    _anonymize_custom_items(data.get('module_stats') or [], ['module_name', 'collection_name'])
-    _anonymize_custom_items(data.get('collection_stats') or [], ['collection_name'])
-    _anonymize_custom_items(data.get('role_stats') or [], ['role', 'collection_name'])
-    _anonymize_installed_collections_versions(
-        data.get('jobs_by_installed_collections_versions') or [],
-        _load_known_collections(),
-    )
+    for key in ('module_stats', 'collection_stats', 'role_stats'):
+        if key in data:
+            data[key] = _remove_custom_items(data[key] or [])
+    if 'jobs_by_installed_collections_versions' in data:
+        data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(
+            data['jobs_by_installed_collections_versions'] or [],
+            _load_known_collections(),
+        )
 
 
 def _normalize_ansible_version_key(ansible_version: Any) -> str:
