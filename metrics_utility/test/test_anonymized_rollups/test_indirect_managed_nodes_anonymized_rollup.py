@@ -104,6 +104,31 @@ def test_merge_handles_none():
     assert result == data_new
 
 
+def test_base_returns_count_only_no_ids():
+    """Test that base() returns only the count, never host IDs."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = {
+        'indirect_node_ids': ['remote1', 'remote2', 'remote3'],
+        'indirect_nodes_total': 3,
+    }
+
+    result = rollup.base(data)
+
+    assert result == {'json': {'indirect_nodes_total': 3}}
+    assert 'indirect_node_ids' not in result['json']
+
+
+def test_base_handles_none():
+    """Test that base() returns zero count when no data."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    result = rollup.base(None)
+
+    assert result == {'json': {'indirect_nodes_total': 0}}
+    assert 'indirect_node_ids' not in result['json']
+
+
 def test_rollup_name():
     """Test that rollup has correct name."""
     rollup = IndirectManagedNodesAnonymizedRollup()
