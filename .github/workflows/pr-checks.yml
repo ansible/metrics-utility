@@ -7,6 +7,20 @@ jobs:
   pr-checks:
     runs-on: ubuntu-latest
     steps:
+      - name: "Check PR target"
+        env:
+          BASE_REPO: ${{ github.event.pull_request.base.repo.full_name }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [[ "$BASE_REPO" == "ansible/metrics-utility" && "$BASE_BRANCH" == "devel" ]]; then
+            echo "✓ PR targets devel on upstream"
+          elif [[ "$BASE_BRANCH" == stable-* ]]; then
+            echo "✓ PR targets $BASE_BRANCH"
+          else
+            echo "::error::PRs should target devel on ansible/metrics-utility or a stable-* branch"
+            exit 1
+          fi
+
       - name: "Checkout metrics-utility (${{ github.ref }})"
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
