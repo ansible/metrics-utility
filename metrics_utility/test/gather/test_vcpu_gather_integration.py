@@ -62,12 +62,12 @@ def _configure_mock(**kwargs):
     data = json.dumps(kwargs).encode()
     req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/config', data=data, method='POST')
     req.add_header('Content-Type', 'application/json')
-    urllib.request.urlopen(req, timeout=5)
+    urllib.request.urlopen(req)
 
 
 def _reset_mock():
     req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/reset', method='POST')
-    urllib.request.urlopen(req, timeout=5)
+    urllib.request.urlopen(req)
 
 
 @pytest.fixture
@@ -133,7 +133,7 @@ def test_vcpu_gather_validates_against_schema(mock_exists, mock_open, cleanup_gl
     assert 'total_workers_vcpu.json' in manifest_data
 
     # verify Prometheus was actually called (instant + range query)
-    with urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/requests', timeout=5) as resp:
+    with urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/requests') as resp:
         captured = json.loads(resp.read())
     paths = [r['path'] for r in captured]
     assert '/api/v1/query' in paths

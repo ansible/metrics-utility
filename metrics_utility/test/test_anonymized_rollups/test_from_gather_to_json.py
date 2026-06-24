@@ -991,7 +991,7 @@ def test_from_gather_to_json(cleanup_glob):
 
     # Clear any requests captured from previous test runs.
     req = urllib.request.Request(f'{MOCK_SEGMENT_URL}/reset', method='POST')
-    urllib.request.urlopen(req, timeout=10)
+    urllib.request.urlopen(req)
 
     storage = StorageSegment(write_key='test-key', host=MOCK_SEGMENT_URL)
     chunks = storage.put('anonymized_rollup', dict=json_data)
@@ -999,7 +999,7 @@ def test_from_gather_to_json(cleanup_glob):
     assert chunks, 'StorageSegment.put() should return a non-empty list of chunks'
 
     # Fetch what the mock server captured.
-    with urllib.request.urlopen(f'{MOCK_SEGMENT_URL}/requests', timeout=10) as resp:
+    with urllib.request.urlopen(f'{MOCK_SEGMENT_URL}/requests') as resp:
         captured = json.loads(resp.read())
 
     assert len(captured) == len(chunks), f'Mock Segment server received {len(captured)} POST requests but expected {len(chunks)} (one per chunk)'

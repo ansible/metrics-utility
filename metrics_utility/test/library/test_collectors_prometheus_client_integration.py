@@ -18,18 +18,18 @@ MOCK_PROMETHEUS_URL = os.getenv('MOCK_PROMETHEUS_URL', 'http://localhost:9090')
 
 def reset_mock():
     req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/reset', method='POST')
-    urllib.request.urlopen(req, timeout=5)
+    urllib.request.urlopen(req)
 
 
 def configure_mock(**kwargs):
     data = json.dumps(kwargs).encode()
     req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/config', data=data, method='POST')
     req.add_header('Content-Type', 'application/json')
-    urllib.request.urlopen(req, timeout=5)
+    urllib.request.urlopen(req)
 
 
 def get_captured_requests():
-    with urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/requests', timeout=5) as resp:
+    with urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/requests') as resp:
         return json.loads(resp.read())
 
 
