@@ -5,8 +5,8 @@ from metrics_utility.logger import logger
 from ..util import DataframeOutput, collector
 
 
-_DEFAULT_JOB_LIMIT = 2_000
-_DEFAULT_ROW_LIMIT = 400_000
+_DEFAULT_JOB_LIMIT = 1_000
+_DEFAULT_ROW_LIMIT = 200_000
 
 _RELEVANT_EVENTS = [
     'runner_on_ok',
