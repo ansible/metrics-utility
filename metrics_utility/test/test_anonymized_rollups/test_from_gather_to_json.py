@@ -865,8 +865,8 @@ def _validate_all_data(json_data, statistics):
         'Should have 2 modules total (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
     )
     assert statistics['rollup_period_unique_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
-    assert len(json_data['module_stats']) == 1, 'Should have 1 module stat (Custom modules removed)'
-    assert len(json_data['collection_stats']) == 1, 'Should have 1 collection stat (Custom collections removed, only a10.acos_axapi)'
+    assert len(json_data['module_stats']) == 2, 'Should have 2 module stats (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
+    assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
 
     # Note: module_stats and collection_stats validations will need updates for 6 jobs total
     # (3 from 10:00 hour + 3 from 11:00 hour)

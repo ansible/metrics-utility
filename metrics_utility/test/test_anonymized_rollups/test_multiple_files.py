@@ -326,24 +326,25 @@ def _validate_events_modules(result):
 def _validate_jobs_by_installed_collections_versions(result):
     """Validate collections versions section.
 
-    Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is unknown
-    and is removed from jobs_by_installed_collections_versions.  All timing/template/inventory/
-    ansible_version stats should match the per-collection rollup values calculated from jobs 1-4
-    and 6 (job 5 filtered – no finished).
+    Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is a known
+    certified collection and is kept in jobs_by_installed_collections_versions.  All timing/
+    template/inventory/ansible_version stats should match the per-collection rollup values
+    calculated from jobs 1-4 and 6 (job 5 filtered – no finished).
     """
     jobs_by_installed_collections_versions = result['jobs_by_installed_collections_versions']
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
     cv = {(c['collection'], c['version']): c for c in jobs_by_installed_collections_versions}
 
     # --- jobs_total counts ---
+    assert cv.get(('ansible.builtin', '2.9.10'))['jobs_total'] == 5
     assert cv.get(('community.general', '1.0.0'))['jobs_total'] == 2
     assert cv.get(('community.general', '2.0.0'))['jobs_total'] == 2
     assert cv.get(('community.general', '3.0.0'))['jobs_total'] == 1
     assert cv.get(('ansible.windows', '1.0.0'))['jobs_total'] == 1
     assert cv.get(('community.aws', '1.5.0'))['jobs_total'] == 1
 
-    assert len(jobs_by_installed_collections_versions) == 5, (
-        f'Expected 5 unique collection-version pairs, got {len(jobs_by_installed_collections_versions)}'
+    assert len(jobs_by_installed_collections_versions) == 6, (
+        f'Expected 6 unique collection-version pairs (ansible.builtin now kept), got {len(jobs_by_installed_collections_versions)}'
     )
 
     # --- community.general 1.0.0 (jobs 1, 4 – both successful) ---
