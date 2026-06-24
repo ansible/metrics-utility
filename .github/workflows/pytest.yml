@@ -91,12 +91,15 @@ jobs:
         with:
           go-version-file: tools/mock-segment-server/go.mod
 
-      - name: "Start mock Segment server"
+      - name: "Start mock servers"
         timeout-minutes: 1
         run: |
           go build -C tools/mock-segment-server -o /tmp/mock-segment-server .
+          go build -C tools/mock-prometheus-server -o /tmp/mock-prometheus-server .
           /tmp/mock-segment-server &
+          /tmp/mock-prometheus-server &
           until curl -sf http://localhost:8765/requests > /dev/null; do sleep 1; done
+          until curl -sf http://localhost:9090/requests > /dev/null; do sleep 1; done
 
       - name: "Run pytest"
         env:
@@ -106,6 +109,8 @@ jobs:
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
           METRICS_UTILITY_DB_HOST: "localhost"
+          MOCK_SEGMENT_URL: "http://localhost:8765"
+          MOCK_PROMETHEUS_URL: "http://localhost:9090"
         run: |
           uv run pytest -s -v --cov=. --cov-branch --cov-report=xml
 

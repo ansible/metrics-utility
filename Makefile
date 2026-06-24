@@ -24,7 +24,7 @@ compose:
 	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml up
 
 clean:
-	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml down -v
+	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml down -v --rmi local
 
 psql:
 	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx
@@ -33,7 +33,7 @@ pcompose:
 	podman-compose -f tools/docker/docker-compose.yaml up
 
 pclean:
-	podman-compose -f tools/docker/docker-compose.yaml down -v
+	podman-compose -f tools/docker/docker-compose.yaml down -v --rmi local
 
 ppsql:
 	podman-compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx

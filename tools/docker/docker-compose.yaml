@@ -72,6 +72,10 @@ services:
         condition: service_completed_successfully
       postgres-wait:
         condition: service_completed_successfully
+      mock-segment:
+        condition: service_started
+      mock-prometheus:
+        condition: service_started
     volumes:
       - ../..:/app_ro
     tmpfs:
@@ -85,6 +89,8 @@ services:
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
       METRICS_UTILITY_DB_HOST: "postgres"
+      MOCK_SEGMENT_URL: "http://mock-segment:8765"
+      MOCK_PROMETHEUS_URL: "http://mock-prometheus:9090"
     entrypoint: |
       sh -c '
         set -e
@@ -105,11 +111,17 @@ services:
     container_name: mock-segment
     ports:
       - "8765:8765"
-    tmpfs:
-      - /tmp/segment:rw,mode=1777
     environment:
       MOCK_SEGMENT_PORT: "8765"
-      MOCK_SEGMENT_OUTPUT: "/tmp/segment/requests.jsonl"
+
+  mock-prometheus:
+    build:
+      context: ../mock-prometheus-server
+    container_name: mock-prometheus
+    ports:
+      - "9090:9090"
+    environment:
+      MOCK_PROMETHEUS_PORT: "9090"
 
   metrics-utility-env:
     build:
