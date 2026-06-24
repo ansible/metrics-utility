@@ -315,7 +315,7 @@ def _build_statistics(
         'rollup_period_failed_hosts_total': host_summary_totals['failed_hosts_total'],
         'rollup_period_unreachable_hosts_total': host_summary_totals['unreachable_hosts_total'],
         # from indirect_managed_nodes
-        'rollup_period_indirect_managed_nodes_total': indirect_nodes_total,
+        'rollup_period_indirect_managed_nodes_all_total': indirect_nodes_total,
     }
 
     # Only include event-related fields if there are events

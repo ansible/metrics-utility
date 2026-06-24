@@ -92,7 +92,7 @@ def _validate_statistics_structure(statistics):
         'rollup_period_task_skipped_total',
         'rollup_period_task_unreachable_total',
         'rollup_period_task_ignored_total',
-        'rollup_period_indirect_managed_nodes_total',
+        'rollup_period_indirect_managed_nodes_all_total',
     ]
     for field in required_fields:
         assert field in statistics, f"Missing '{field}' in statistics"
@@ -849,15 +849,15 @@ def _save_json_output(json_data, since, until):
 def _validate_indirect_managed_nodes(json_data, statistics):
     """Validate indirect managed node count and confirm IDs are not in the output."""
     print('--- Validating indirect_managed_nodes data values ---')
-    assert isinstance(statistics['rollup_period_indirect_managed_nodes_total'], int), (
-        'rollup_period_indirect_managed_nodes_total should be an integer'
+    assert isinstance(statistics['rollup_period_indirect_managed_nodes_all_total'], int), (
+        'rollup_period_indirect_managed_nodes_all_total should be an integer'
     )
     # 10:00h window: host_ids 1, 2 (2 unique)
     # 11:00h window: host_ids 2, 3 (2 is a duplicate, 3 is new)
     # Unique across both windows: 1, 2, 3 = 3
-    assert statistics['rollup_period_indirect_managed_nodes_total'] == 3, (
+    assert statistics['rollup_period_indirect_managed_nodes_all_total'] == 3, (
         f'Expected 3 unique indirect managed nodes (host_ids 1,2,3 deduplicated across windows), '
-        f'got {statistics["rollup_period_indirect_managed_nodes_total"]}'
+        f'got {statistics["rollup_period_indirect_managed_nodes_all_total"]}'
     )
     assert 'indirect_managed_nodes' not in json_data, 'Host IDs must not be included in the final JSON payload (privacy requirement)'
 
