@@ -75,13 +75,9 @@ def create_anonymized_object(rollup_name: str):
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
-def _anonymize_custom_items(items: List[Dict[str, Any]], fields: List[str]) -> None:
-    """Set each field to 'Custom' on items whose collection_source is 'Custom'."""
-    for item in items:
-        if item and item.get('collection_source') == 'Custom':
-            for field in fields:
-                if item.get(field):
-                    item[field] = 'Custom'
+def _remove_custom_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return a new list with all items whose collection_source is 'Custom' removed."""
+    return [item for item in items if item and item.get('collection_source') != 'Custom']
 
 
 def _load_known_collections() -> Dict[str, Any]:
@@ -93,13 +89,9 @@ def _load_known_collections() -> Dict[str, Any]:
         return {}
 
 
-def _anonymize_installed_collections_versions(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> None:
-    """Replace collection/version with 'Custom' for any collection not in the known list."""
-    for item in items:
-        if item and 'collection' in item:
-            if _installed_collection_name_is_unknown(item.get('collection', ''), known_collections):
-                item['collection'] = 'Custom'
-                item['version'] = 'Custom'
+def _remove_unknown_installed_collections(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return a new list with installed-collection entries not in the known whitelist removed."""
+    return [item for item in items if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)]
 
 
 def anonymize_data(data):
@@ -124,10 +116,10 @@ def anonymize_data(data):
     if not data or not isinstance(data, dict):
         return
 
-    _anonymize_custom_items(data.get('module_stats') or [], ['module_name', 'collection_name'])
-    _anonymize_custom_items(data.get('collection_stats') or [], ['collection_name'])
-    _anonymize_custom_items(data.get('role_stats') or [], ['role', 'collection_name'])
-    _anonymize_installed_collections_versions(
+    data['module_stats'] = _remove_custom_items(data.get('module_stats') or [])
+    data['collection_stats'] = _remove_custom_items(data.get('collection_stats') or [])
+    data['role_stats'] = _remove_custom_items(data.get('role_stats') or [])
+    data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(
         data.get('jobs_by_installed_collections_versions') or [],
         _load_known_collections(),
     )

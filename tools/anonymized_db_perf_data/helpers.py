@@ -388,6 +388,41 @@ def generate_res(module, rng):
     return _res_generic(rng, noise_level)
 
 
+def _patch_res_for_outcome(res, event_type, failed, changed):
+    """Patch a res dict so its outcome fields agree with the emitted event.
+
+    generate_res() always produces a success-shaped payload; this function
+    overwrites the relevant keys so that rc/failed/changed/skipped/unreachable
+    are consistent with the actual event_type and outcome flags.
+    """
+    res = dict(res)  # shallow copy — don't mutate the shared task-level dict
+    if event_type in ('runner_on_failed', 'runner_item_on_failed'):
+        res['rc'] = 1
+        res['failed'] = True
+        res['changed'] = False
+        res.pop('skipped', None)
+        res.pop('unreachable', None)
+    elif event_type in ('runner_on_unreachable', 'runner_item_on_unreachable'):
+        res['rc'] = 1
+        res['unreachable'] = True
+        res['changed'] = False
+        res.pop('failed', None)
+        res.pop('skipped', None)
+    elif event_type in ('runner_on_skipped', 'runner_item_on_skipped'):
+        res['skipped'] = True
+        res['changed'] = False
+        res.pop('failed', None)
+        res.pop('unreachable', None)
+    else:
+        # runner_on_ok / runner_on_async_ok / runner_item_on_ok
+        res['rc'] = 0
+        res['changed'] = changed
+        res.pop('failed', None)
+        res.pop('skipped', None)
+        res.pop('unreachable', None)
+    return res
+
+
 # Database connection will be imported from Django after prepare() is called
 _db_connection = None
 
@@ -1053,9 +1088,9 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
         # Role: ~40% of tasks run inside a role; consistent across all hosts for this task
         task_role = generate_role(rng)
 
-        # Build event_data JSON with required dictionary fields + realistic res payload
-        res = generate_res(module, rng)
-        event_data_dict = {
+        # Base res payload for this task — outcome fields are patched per event below
+        task_res_base = generate_res(module, rng)
+        task_event_data_base = {
             'task_action': module,
             'resolved_action': module,
             'task': task_name,
@@ -1065,9 +1100,7 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
             'start': start.isoformat(),
             'end': end.isoformat(),
             'ignore_errors': False,
-            'res': res,
         }
-        event_data = json.dumps(event_data_dict).replace("'", "''")  # Escape single quotes for SQL
 
         # Loop over hosts - each host gets different outcome for this task
         for host_idx, host_id in enumerate(host_ids, 1):
@@ -1098,26 +1131,33 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
                 else:
                     events_for_host = [('runner_on_unreachable', True, False)]
 
-            # Create events for this host
+            # Create events for this host — res is patched to match each outcome
             for event_type, failed, changed in events_for_host:
                 counter += 1
+                res = _patch_res_for_outcome(task_res_base, event_type, failed, changed)
+                event_data_dict = {**task_event_data_base, 'res': res}
+                event_data = json.dumps(event_data_dict).replace("'", "''")
                 values.append(
                     f"('{job_created_str}', '{job_created_str}', '{event_type}', '{event_data}', {str(failed).upper()}, "
                     f"{str(changed).upper()}, '{host_name}', 'Main Play', '{task_role}', '{task_name}', "
                     f"{counter}, {host_id}, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0, '{job_created_str}')"
                 )
 
-    # Insert into main_jobevent (partitioned table, requires job_created)
-    sql = f"""
+    # Insert in batches to avoid oversized SQL statements with large JSON payloads
+    _INSERT_BATCH_SIZE = 500
+    insert_sql = """
     INSERT INTO main_jobevent (
         created, modified, event, event_data, failed,
         changed, host_name, play, role, task,
         counter, host_id, job_id, uuid, parent_uuid,
         end_line, playbook, start_line, stdout, verbosity, job_created
     )
-    VALUES {','.join(values)};
+    VALUES {rows};
     """
-    run(sql)
+    for batch_start in range(0, len(values), _INSERT_BATCH_SIZE):
+        batch = values[batch_start : batch_start + _INSERT_BATCH_SIZE]
+        run(insert_sql.format(rows=','.join(batch)))
+
     print(f'Created {len(values)} job events ({task_count} tasks x {host_count} hosts)')
 
 
