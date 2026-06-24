@@ -5,8 +5,88 @@ from metrics_utility.logger import logger
 from ..util import DataframeOutput, collector
 
 
+_DEFAULT_JOB_LIMIT = 2_000
+_DEFAULT_ROW_LIMIT = 400_000
+
+_RELEVANT_EVENTS = [
+    'runner_on_ok',
+    'runner_on_async_ok',
+    'runner_item_on_ok',
+    'runner_on_failed',
+    'runner_on_async_failed',
+    'runner_item_on_failed',
+    'runner_on_unreachable',
+    'runner_item_on_unreachable',
+    # job annotations
+    'warning',
+    'deprecated',
+]
+
+
+def _normalize_limit(value, default, name):
+    """
+    Coerce *value* to a usable integer limit.
+
+    - Non-integer / uncastable  → fall back to *default* (warning logged)
+    - Negative                  → fall back to *default* (warning logged)
+    - Zero                      → None  (means "no limit")
+    - Positive                  → used as-is
+    """
+    if value is None:
+        return value
+    try:
+        value = int(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            'main_jobevent_service: invalid %s %r, falling back to default %d.',
+            name,
+            value,
+            default,
+        )
+        return default
+    if value < 0:
+        logger.warning(
+            'main_jobevent_service: negative %s %d, falling back to default %d.',
+            name,
+            value,
+            default,
+        )
+        return default
+    return None if value == 0 else value
+
+
+def _build_job_created_ranges(jobs):
+    """
+    Return a list of (range_start, range_end) tuples covering all non-NULL
+    job_created timestamps, merged into consecutive-hour runs.
+
+    e.g. hours [01, 02, 03, 06, 10] → [(01, 04), (06, 07), (10, 11)]
+    """
+    hour_boundaries = set()
+    for _job_id, job_created in jobs:
+        if job_created is None:
+            continue
+        hour_boundaries.add(job_created.replace(minute=0, second=0, microsecond=0))
+
+    ranges = []
+    for hour in sorted(hour_boundaries):
+        if ranges and hour == ranges[-1][1]:
+            ranges[-1] = (ranges[-1][0], hour + timedelta(hours=1))
+        else:
+            ranges.append((hour, hour + timedelta(hours=1)))
+    return ranges
+
+
+def _build_timestamp_where(ranges):
+    """Build a SQL OR-clause for partition pruning from a list of hour ranges."""
+    if not ranges:
+        return 'FALSE'
+    clauses = [f"(e.job_created >= '{rs.isoformat()}'::timestamptz AND e.job_created < '{re.isoformat()}'::timestamptz)" for rs, re in ranges]
+    return ' OR '.join(clauses)
+
+
 @collector
-def main_jobevent_service(*, db=None, since=None, until=None, row_limit=400_000, job_limit=2_000, output=DataframeOutput()):
+def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT_ROW_LIMIT, job_limit=_DEFAULT_JOB_LIMIT, output=DataframeOutput()):
     """
     Collects job events for jobs that finished in the given time window.
 
@@ -17,6 +97,9 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=400_000,
     job_limit caps the number of jobs processed per window (sorted by job_created,
     oldest first) to keep the IN clause manageable. row_limit caps total event rows.
     """
+
+    job_limit = _normalize_limit(job_limit, _DEFAULT_JOB_LIMIT, 'job_limit')
+    row_limit = _normalize_limit(row_limit, _DEFAULT_ROW_LIMIT, 'row_limit')
 
     job_limit_clause = 'LIMIT %(job_limit)s' if job_limit is not None else ''
     jobs_query = f"""
@@ -42,92 +125,23 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=400_000,
             job_limit,
         )
 
-    # Extract unique job_ids
-    # We are loading the finished jobs then we are filtering
-    # for the job_created, this cannot be done by simple joins because
-    # job_created is partitioned and partitions pruning dont work with joins
-    job_ids_set = set(job_id for job_id, _ in jobs)
+    # We are loading the finished jobs then we are filtering for job_created;
+    # this cannot be done by simple joins because job_created is partitioned
+    # and partition pruning does not work with joins.
+    job_ids_set = {job_id for job_id, _ in jobs}
+    job_id_where_clause = f'e.job_id IN ({",".join(str(j) for j in job_ids_set)})' if job_ids_set else 'FALSE'
 
-    # Extract unique hour boundaries from job_created timestamps
-    # This reduces potentially 100K timestamps down to ~100-1000 hourly ranges
-    hour_boundaries = set()
-    for job_id, job_created in jobs:
-        # Skip jobs with NULL created timestamp (defensive programming)
-        if job_created is None:
-            continue
-        # Truncate to hour boundary (matching partition boundaries)
-        hour_start = job_created.replace(minute=0, second=0, microsecond=0)
-        hour_boundaries.add(hour_start)
+    ranges = _build_job_created_ranges(jobs)
+    timestamp_where_clause = _build_timestamp_where(ranges)
 
-    # Sort hours for range grouping
-    sorted_hours = sorted(hour_boundaries)
-
-    # Group consecutive hours into ranges to reduce OR clauses
-    # e.g., hours [0,1,2,5,6,10] → ranges [(0,3), (5,7), (10,11)]
-    ranges = []
-    if sorted_hours:
-        range_start = sorted_hours[0]
-        range_end = sorted_hours[0] + timedelta(hours=1)
-
-        for hour in sorted_hours[1:]:
-            if hour == range_end:  # Consecutive hour - extend current range
-                range_end = hour + timedelta(hours=1)
-            else:  # Gap found - save current range and start new one
-                ranges.append((range_start, range_end))
-                range_start = hour
-                range_end = hour + timedelta(hours=1)
-
-        # Don't forget the last range
-        ranges.append((range_start, range_end))
-
-    # Build WHERE clause with consolidated ranges for partition pruning
-    # PostgreSQL can see these literal timestamps and prune partitions accordingly
-    or_clauses = []
-    for range_start, range_end in ranges:
-        or_clauses.append(f"(e.job_created >= '{range_start.isoformat()}'::timestamptz AND e.job_created < '{range_end.isoformat()}'::timestamptz)")
-
-    # Handle edge case: if no ranges, use FALSE to return empty result set
-    # This maintains valid SQL structure while returning 0 rows
-    timestamp_where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
-
-    # Build job_id IN clause
-    # Handle edge case: if no jobs, use FALSE to return empty result set with proper schema
-    if job_ids_set:
-        job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
-        job_id_where_clause = f'e.job_id IN ({job_ids_str})'
-    else:
-        job_id_where_clause = 'FALSE'
-
-    # Filter for only the event types that are used in analysis
-    relevant_events = [
-        'runner_on_ok',
-        'runner_on_async_ok',
-        'runner_item_on_ok',
-        'runner_on_failed',
-        'runner_on_async_failed',
-        'runner_item_on_failed',
-        'runner_on_unreachable',
-        'runner_item_on_unreachable',
-        # job annotations
-        'warning',
-        'deprecated',
-    ]
-    event_types_str = ','.join(f"'{event}'" for event in relevant_events)
-    event_type_where_clause = f'e.event IN ({event_types_str})'
-
-    # Combine all WHERE conditions
-    where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause}) AND ({event_type_where_clause})'
-
-    if row_limit is not None:
-        row_limit = int(row_limit)
-        if row_limit <= 0:
-            raise ValueError(f'row_limit must be a positive integer, got {row_limit}')
+    event_types_str = ','.join(f"'{e}'" for e in _RELEVANT_EVENTS)
+    where_clause = f'({timestamp_where_clause}) AND ({job_id_where_clause}) AND (e.event IN ({event_types_str}))'
 
     limit_clause = f'LIMIT {row_limit}' if row_limit is not None else ''
 
-    # Final event query
-    # - WHERE clause filters by job_id and enables partition pruning via literal hour boundaries
-    # - LIMIT clause caps total rows when row_limit is set (statistical sample; partial data is acceptable)
+    # WHERE clause filters by job_id and enables partition pruning via literal
+    # hour boundaries. LIMIT caps total rows (statistical sample; partial data
+    # is acceptable for analytics).
     query = f"""
         SELECT
             e.id,
