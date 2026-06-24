@@ -468,6 +468,12 @@ def handle_crc_ship_target():
         allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
+    # Master flag to disable all Candlepin functionality (cert loading, registration, lifecycle).
+    # When disabled, metrics-utility will use service account auth only.
+    if not bool_from_env('METRICS_UTILITY_CANDLEPIN_ENABLED', default=False):
+        logger.info('Candlepin disabled; using service account auth only.')
+        return billing_provider_params
+
     # Prefer the cert already managed by the AWX Controller (AWX PR #16388).
     # The Controller owns registration, check-in, and renewal; when its cert is
     # present and valid, use it directly and skip the metrics-utility lifecycle to
