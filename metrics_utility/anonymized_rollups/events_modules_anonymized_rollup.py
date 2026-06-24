@@ -470,15 +470,41 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             role=('role', 'first'),
         )
 
-    def _get_common_aggregation(self):
-        """Get common aggregation dictionary for stats computation."""
+    def _get_common_aggregation(self, task_summary):
+        """Get common aggregation dictionary for stats computation.
+
+        Per-job metrics (counts, durations, started flag) are computed over unique
+        job_ids within each group.  Without deduplication, a job running the same
+        module in N different tasks would inflate every job-level counter by N.
+        Task-level metrics (task_ok_total, task_failed_total, …) are correct sums
+        and are left unchanged.
+        """
+        job_failed = task_summary['job_failed']
+
+        def _unique_job_sum(col_name):
+            """Return a lambda that sums col_name over one row per unique job_id."""
+            col = task_summary[col_name]
+
+            def agg(x):
+                return col.loc[x[~x.duplicated()].index].sum()
+
+            return agg
+
+        def _unique_job_na_count(col_name):
+            col = task_summary[col_name]
+
+            def agg(x):
+                return col.loc[x[~x.duplicated()].index].isna().sum()
+
+            return agg
+
         return {
             'jobs_total': ('job_id', 'nunique'),
-            'jobs_successful_total': ('job_failed', lambda x: (~x).sum()),
-            'jobs_failed_total': ('job_failed', 'sum'),
-            'jobs_duration_total_seconds': ('job_duration_seconds', 'sum'),
-            'jobs_waiting_time_total_seconds': ('job_waiting_time_seconds', 'sum'),
-            'jobs_never_started_total': ('job_started', lambda x: x.isna().sum()),
+            'jobs_successful_total': ('job_id', lambda x: x[~job_failed.loc[x.index]].nunique()),
+            'jobs_failed_total': ('job_id', lambda x: x[job_failed.loc[x.index]].nunique()),
+            'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds')),
+            'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds')),
+            'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started')),
             'host_ids': ('host_ids', lambda x: set().union(*[s for s in x.dropna() if isinstance(s, set)])),
             'task_ok_total': ('task_clean_success', 'sum'),
             'task_ok_with_retries_total': ('task_success_with_reruns', 'sum'),
@@ -487,8 +513,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'task_skipped_total': ('task_skipped', 'sum'),
             'task_failed_and_ignored_total': ('task_failed_and_ignored', 'sum'),
             'jobs_failed_because_of_module_failure_total': ('job_id_that_contained_failed_task', 'nunique'),
-            'jobs_successful_duration_total_seconds': ('jobs_successful_duration_total_seconds', 'sum'),
-            'jobs_failed_duration_total_seconds': ('jobs_failed_duration_total_seconds', 'sum'),
+            'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds')),
+            'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds')),
             'warnings_total': ('warnings_total', 'sum'),
             'deprecations_total': ('deprecations_total', 'sum'),
             'processed_events_total': ('processed_events_total', 'sum'),
@@ -509,7 +535,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _compute_all_stats(self, task_summary):
         """Compute module_stats, collection_stats, and role_stats."""
-        common_aggregation = self._get_common_aggregation()
+        common_aggregation = self._get_common_aggregation(task_summary)
 
         module_stats = task_summary.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             **common_aggregation

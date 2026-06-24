@@ -116,13 +116,14 @@ def anonymize_data(data):
     if not data or not isinstance(data, dict):
         return
 
-    data['module_stats'] = _remove_custom_items(data.get('module_stats') or [])
-    data['collection_stats'] = _remove_custom_items(data.get('collection_stats') or [])
-    data['role_stats'] = _remove_custom_items(data.get('role_stats') or [])
-    data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(
-        data.get('jobs_by_installed_collections_versions') or [],
-        _load_known_collections(),
-    )
+    for key in ('module_stats', 'collection_stats', 'role_stats'):
+        if key in data:
+            data[key] = _remove_custom_items(data[key] or [])
+    if 'jobs_by_installed_collections_versions' in data:
+        data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(
+            data['jobs_by_installed_collections_versions'] or [],
+            _load_known_collections(),
+        )
 
 
 def _normalize_ansible_version_key(ansible_version: Any) -> str:
