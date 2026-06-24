@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import timedelta
 
 from metrics_utility.logger import logger
@@ -55,6 +56,40 @@ def _normalize_limit(value, default, name):
     return None if value == 0 else value
 
 
+def _select_jobs_by_partition_density(all_jobs, job_limit):
+    """
+    Select up to *job_limit* jobs, prioritising partitions (job_created hours)
+    with the most jobs.
+
+    Whole partitions are taken in descending order of size until the budget is
+    exhausted; if the next partition would exceed the budget, it is partially
+    filled with as many jobs as remain.  Partitions with NULL job_created are
+    treated as lowest priority.
+
+    Returns the selected list of (job_id, job_created) tuples.
+    """
+    # Group by job_created hour (= partition key)
+    partition_map = defaultdict(list)
+    for job_id, job_created in all_jobs:
+        hour = job_created.replace(minute=0, second=0, microsecond=0) if job_created else None
+        partition_map[hour].append((job_id, job_created))
+
+    # Densest partitions first; NULL hour goes last
+    sorted_partitions = sorted(
+        partition_map.items(),
+        key=lambda kv: (kv[0] is None, -len(kv[1])),
+    )
+
+    selected = []
+    for _hour, partition_jobs in sorted_partitions:
+        if job_limit is not None and len(selected) >= job_limit:
+            break
+        remaining = (job_limit - len(selected)) if job_limit is not None else len(partition_jobs)
+        selected.extend(partition_jobs[:remaining])
+
+    return selected
+
+
 def _build_job_created_ranges(jobs):
     """
     Return a list of (range_start, range_end) tuples covering all non-NULL
@@ -90,44 +125,42 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
     """
     Collects job events for jobs that finished in the given time window.
 
-    Uses two optimizations for partition pruning:
-    1. Hourly timestamp ranges in WHERE clause (literal values for partition pruning)
-    2. Direct job_id filtering in WHERE clause
-
-    job_limit caps the number of jobs processed per window (sorted by job_created,
-    oldest first) to keep the IN clause manageable. row_limit caps total event rows.
+    Jobs are selected by prioritising job_created partitions with the most jobs
+    (densest partitions first), so the event query scans as few partitions as
+    possible.  job_limit caps total jobs; row_limit caps total event rows.
     """
 
     job_limit = _normalize_limit(job_limit, _DEFAULT_JOB_LIMIT, 'job_limit')
     row_limit = _normalize_limit(row_limit, _DEFAULT_ROW_LIMIT, 'row_limit')
 
-    job_limit_clause = 'LIMIT %(job_limit)s' if job_limit is not None else ''
-    jobs_query = f"""
+    # Fetch ALL jobs in the window — selection/prioritisation is done in Python
+    jobs_query = """
         SELECT
             uj.id AS job_id,
             uj.created AS job_created
         FROM main_unifiedjob uj
         WHERE uj.finished >= %(since)s
           AND uj.finished < %(until)s
-        ORDER BY uj.created
-        {job_limit_clause}
     """
 
     with db.cursor() as cursor:
-        cursor.execute(jobs_query, {'since': since, 'until': until, 'job_limit': job_limit})
-        jobs = cursor.fetchall()
+        cursor.execute(jobs_query, {'since': since, 'until': until})
+        all_jobs = cursor.fetchall()
 
-    if job_limit is not None and len(jobs) >= job_limit:
+    # Select jobs prioritising dense job_created partitions to minimise the
+    # number of partitions the event query must scan.
+    jobs = _select_jobs_by_partition_density(all_jobs, job_limit)
+
+    if job_limit is not None and len(all_jobs) > job_limit:
         logger.info(
-            'main_jobevent_service: job limit reached (>= %d jobs in window). '
-            'Jobs beyond the limit were not collected for this window. '
-            'Increase METRICS_SERVICE_JOBEVENT_JOB_LIMIT if fuller coverage is needed.',
-            job_limit,
+            'main_jobevent_service: job limit reached (%d jobs in window, selected %d '
+            'from densest partitions). Increase METRICS_SERVICE_JOBEVENT_JOB_LIMIT '
+            'if fuller coverage is needed.',
+            len(all_jobs),
+            len(jobs),
         )
 
-    # We are loading the finished jobs then we are filtering for job_created;
-    # this cannot be done by simple joins because job_created is partitioned
-    # and partition pruning does not work with joins.
+    # Build event query filters
     job_ids_set = {job_id for job_id, _ in jobs}
     job_id_where_clause = f'e.job_id IN ({",".join(str(j) for j in job_ids_set)})' if job_ids_set else 'FALSE'
 
@@ -139,9 +172,6 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
 
     limit_clause = f'LIMIT {row_limit}' if row_limit is not None else ''
 
-    # WHERE clause filters by job_id and enables partition pruning via literal
-    # hour boundaries. LIMIT caps total rows (statistical sample; partial data
-    # is acceptable for analytics).
     query = f"""
         SELECT
             e.id,
