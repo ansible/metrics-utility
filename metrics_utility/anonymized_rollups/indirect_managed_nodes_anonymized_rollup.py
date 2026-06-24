@@ -39,6 +39,19 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             }
         )
 
+    def base(self, data):
+        """Return final rollup payload with count only (no host IDs for privacy).
+
+        Args:
+            data: Accumulated dict from merge() calls, or None if no data.
+
+        Returns:
+            Dict with 'json' key containing the final rollup data.
+        """
+        if data is None:
+            return {'json': {'indirect_node_ids': [], 'indirect_nodes_total': 0}}
+        return {'json': data}
+
     def merge(self, data_all, data_new):
         """Merge two indirect node rollups by deduplicating host IDs.
 

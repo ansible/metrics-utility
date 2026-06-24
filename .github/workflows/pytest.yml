@@ -36,7 +36,7 @@ jobs:
 
       - name: "Import SQL dump"
         run: |
-          cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags}.sql | sudo su - postgres -c psql
+          cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
 
       - name: "Pull minio"
         run: |
@@ -181,7 +181,7 @@ jobs:
 
       - name: "Import SQL dump"
         run: |
-          cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags}.sql | sudo su - postgres -c psql
+          cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
 
       - name: "Clone metrics-service"
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6

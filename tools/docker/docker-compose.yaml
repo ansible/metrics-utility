@@ -50,6 +50,7 @@ services:
       - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql
       - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-6-main_jobhostsummary.sql
       - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-7-dab_feature_flags.sql
+      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-8-main_indirectmanagednodeaudit.sql
 
   postgres-wait:
     image: "mirror.gcr.io/postgres"
