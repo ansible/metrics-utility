@@ -148,9 +148,22 @@ uv run ./manage.py gather_automation_controller_billing_data --help
 uv run ./manage.py build_report --help
 ```
 
+`make compose-pytest` runs the test suite inside docker compose (also used in CI),
+`make compose-env` starts an interactive container with deps installed for manual testing.
+
 `make clean` resets the docker environment,
 `make lint` & `make fix` run the linters & formatters,
 `make psql` runs psql in the postgres container.
+
+See [docs/tests-compose.md](./docs/tests-compose.md) for more on running tests inside docker compose.
+
+
+### metrics-service
+
+`make compose-service` runs the full metrics-service stack locally (web, dispatcher, scheduler),
+`make compose-pytest-svc` runs the metrics-service test suite with the local metrics-utility checkout.
+
+Both require a `../metrics-service` checkout.
 
 
 ### Tests
@@ -161,8 +174,6 @@ Some tests depend on a running postgres & minio instance - run `make compose` to
 `make coverage` produces a coverage report.
 
 Use `uv run pytest -s -v` for running tests with verbose output, also accepts test filenames.
-
-See [docs/tests-compose.md](./docs/tests-compose.md) to run the tests inside the docker compose environment.
 
 
 ## Documentation
@@ -175,6 +186,7 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Contributor's guide
 * [docs/awx.md](./docs/awx.md) - running against awx dev env
 * [docs/cli.md](./docs/cli.md) - CLI docs
+* [docs/collectors-and-partitions.md](./docs/collectors-and-partitions.md) - collectors overview and adding new ones
 * [docs/environment.md](./docs/environment.md) - Environment variables
 * [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
@@ -182,8 +194,10 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [metrics\_utility/library/](./metrics_utility/library/) - library documentation
 * [tools/anonymized\_db\_perf\_data/](./tools/anonymized_db_perf_data/) - perf test data for anonymization
 * [tools/collections/](./tools/collections/) - scripts for pulling list of collections from galaxy & automation hub
+* [tools/dashboard\_perf/](./tools/dashboard_perf/) - metrics-service dashboard collection benchmarks
 * [tools/docker/](./tools/docker/) - docker compose environment & mock awx data
 * [tools/perf/](./tools/perf/) - perf test data generator and scripts for build report
+* [tools/service\_perf/](./tools/service_perf/) - metrics-service API & task benchmarks
 * [tools/testathon/](./tools/testathon/) - data generator for testing
 
 Please follow our [Contributor's Guide](./docs/CONTRIBUTING.md) for details on submitting changes and documentation standards.

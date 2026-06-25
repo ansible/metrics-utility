@@ -1,7 +1,8 @@
-CONTAINER_ENGINE ?= docker
+COMPOSE_CMD ?= $(shell command -v podman-compose 2>/dev/null || echo "docker compose")
+COMPOSE_FILE = tools/docker/docker-compose.yaml
 
 help:
-	@echo help sync test coverage lint fix compose clean psql
+	@echo help sync test coverage lint fix compose compose-pytest compose-env compose-service compose-pytest-svc clean psql
 
 sync:
 	uv run sync
@@ -10,7 +11,7 @@ test:
 	uv run pytest -s -v
 
 coverage:
-	uv run pytest -s -v --cov=. --cov-report=html
+	uv run pytest -s -v --cov --cov-branch --cov-report=html --cov-report=xml
 
 lint:
 	uv run ruff check
@@ -21,22 +22,26 @@ fix:
 	uv run ruff format
 
 compose:
-	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml up
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) up
+
+# NOTE: --exit-code-from would be nice here but crashes podman-compose 1.5.0
+compose-pytest:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile pytest up
+
+compose-env:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile env up -d
+
+compose-service:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile service up
+
+compose-pytest-svc:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile pytest-svc up
 
 clean:
-	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml down -v --rmi local
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) down -v --rmi local
 
 psql:
-	${CONTAINER_ENGINE} compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx
-
-pcompose:
-	podman-compose -f tools/docker/docker-compose.yaml up
-
-pclean:
-	podman-compose -f tools/docker/docker-compose.yaml down -v --rmi local
-
-ppsql:
-	podman-compose -f tools/docker/docker-compose.yaml exec postgres psql -U awx
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) exec postgres psql -U awx
 
 
-.PHONY: help sync test coverage lint fix compose clean psql pcompose pclean ppsql
+.PHONY: help sync test coverage lint fix compose compose-pytest compose-env compose-service compose-pytest-svc clean psql

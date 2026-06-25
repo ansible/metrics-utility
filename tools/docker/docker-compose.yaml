@@ -1,3 +1,20 @@
+x-metrics-service: &metrics-service
+  build:
+    context: ../../../metrics-service
+    dockerfile: Dockerfile.dev
+  volumes:
+    - ../../../metrics-service:/app:z
+    - /app/.venv
+  tmpfs:
+    - /app/metrics_service.egg-info:mode=0777
+  environment: &metrics-service-env
+    METRICS_SERVICE_MODE: development
+    METRICS_SERVICE_DATABASES__default__HOST: postgres
+    METRICS_SERVICE_DATABASES__default__PASSWORD: metrics_service
+    METRICS_SERVICE_DATABASES__awx__HOST: postgres
+    METRICS_SERVICE_DATABASES__awx__USER: awx
+    METRICS_SERVICE_DATABASES__awx__PASSWORD: awx
+
 services:
   minio:
     image: "mirror.gcr.io/minio/minio"
@@ -79,7 +96,7 @@ services:
     volumes:
       - ../..:/app_ro
     tmpfs:
-      - /app:rw,exec,mode=0755,uid=1001
+      - /app:rw,exec,mode=0755
     working_dir: /app
     profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
@@ -94,10 +111,11 @@ services:
     entrypoint: |
       sh -c '
         set -e
-        rsync -a --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=/build --exclude=/dist /app_ro/ /app/metrics-utility/
+        # mirror.gcr.io/python has no rsync, use tar to copy with excludes
+        mkdir -p /app/metrics-utility
+        tar -c --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=build --exclude=dist -C /app_ro . | tar -x -C /app/metrics-utility
 
         cd /app/metrics-utility/
-        sed -i '/HOST/s/localhost/postgres/' mock_awx/settings/__init__.py
 
         pip install uv
         uv sync
@@ -159,3 +177,72 @@ services:
 
         tail -f /dev/null
       '
+
+  metrics-service-init:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: /app/scripts/init.sh
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
+      METRICS_SERVICE_DASHBOARD_COLLECTION__COLLECTION_SCHEDULE_CRON: "*/5 * * * *"
+
+  metrics-service-web:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "${METRICS_SERVICE_PORT:-8000}:8000"
+
+  metrics-service-dispatcher:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: python manage.py run_dispatcherd --workers=4 --log-level=DEBUG
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
+      METRICS_SERVICE_DASHBOARD_COLLECTION__COLLECTION_SCHEDULE_CRON: "*/5 * * * *"
+
+  metrics-service-scheduler:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      metrics-service-init:
+        condition: service_completed_successfully
+    profiles: ["service"]
+    entrypoint: python manage.py run_task_scheduler --log-level=DEBUG --check-interval=60
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
+
+  metrics-service-pytest:
+    <<: *metrics-service
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+    profiles: ["pytest-svc"]
+    working_dir: /app
+    entrypoint: |
+      sh -c '
+        set -e
+        git config --global --add safe.directory /app
+        uv sync
+        uv run pytest -s -v
+      '
+    environment:
+      <<: *metrics-service-env
+      METRICS_SERVICE_MODE: test
