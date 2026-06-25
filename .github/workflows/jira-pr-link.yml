@@ -1,0 +1,132 @@
+name: "Jira PR Link"
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  jira-pr-link:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Extract Jira ticket from PR"
+        id: jira
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          TICKET=$(echo "$PR_TITLE" | grep -oP 'AAP-\d+' | head -1 || true)
+
+          if [[ -z "$TICKET" ]]; then
+            TICKET=$(echo "$PR_BODY" | grep -oP 'AAP-\d+' | head -1 || true)
+          fi
+
+          if [[ -z "$TICKET" ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "ticket=$TICKET" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Check commit messages for ticket"
+        if: steps.jira.outputs.found == 'false'
+        id: commit-check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          TICKETS=$(gh pr view "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --json commits \
+              --jq '[.commits[] | .messageHeadline + " " + .messageBody] | join("\n")' \
+              | grep -oP 'AAP-\d+' | sort -u || true)
+
+          TICKET=$(echo "$TICKETS" | head -1)
+
+          if [[ -z "$TICKET" ]]; then
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "ticket=$TICKET" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Comment on PR if ticket is missing"
+        if: steps.jira.outputs.found == 'false' && steps.commit-check.outputs.found == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          MARKER="<!-- jira-pr-link-bot -->"
+          BODY="${MARKER}
+          No Jira ticket was found in the PR title, description, or commit message. To link this PR to a Jira issue, add the ticket number to the title, e.g. \`[AAP-12345] Your PR title\`."
+
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -1 || true)
+
+          if [[ -n "$COMMENT_ID" ]]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" \
+              -X PATCH -f body="$BODY" || echo "::warning::Failed to update missing-ticket comment"
+          else
+            gh pr comment "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --body "$BODY" || echo "::warning::Failed to post missing-ticket comment"
+          fi
+
+      - name: "Update Jira Git Pull Request field"
+        id: jira-update
+        if: steps.jira.outputs.found == 'true' || steps.commit-check.outputs.found == 'true'
+        env:
+          JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.BOT_JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.BOT_JIRA_API_TOKEN }}
+          JIRA_PR_FIELD_ID: "customfield_10875"
+          TICKET: ${{ steps.jira.outputs.ticket || steps.commit-check.outputs.ticket }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          if [[ -z "$JIRA_BASE_URL" || -z "$JIRA_USER_EMAIL" || -z "$JIRA_API_TOKEN" ]]; then
+            echo "::warning::JIRA_BASE_URL, BOT_JIRA_EMAIL, and BOT_JIRA_API_TOKEN must be configured"
+            exit 0
+          fi
+
+          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -X PUT \
+            -H "Content-Type: application/json" \
+            -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+            "${JIRA_BASE_URL}/rest/api/2/issue/${TICKET}" \
+            -d "{\"fields\": {\"${JIRA_PR_FIELD_ID}\": \"${PR_URL}\"}}") || true
+
+          if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
+            echo "Updated ${TICKET} Git Pull Request field with ${PR_URL}"
+            echo "linked=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Failed to update Jira ticket ${TICKET} (HTTP ${HTTP_CODE})"
+          fi
+
+      - name: "Comment on PR with linked ticket"
+        if: steps.jira-update.outputs.linked == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TICKET: ${{ steps.jira.outputs.ticket || steps.commit-check.outputs.ticket }}
+        run: |
+          MARKER="<!-- jira-pr-link-bot -->"
+          BODY="${MARKER}
+          This PR has been automatically linked to ${TICKET} in Jira."
+
+          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+            --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -1 || true)
+
+          if [[ -n "$COMMENT_ID" ]]; then
+            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" \
+              -X PATCH -f body="$BODY" || echo "::warning::Failed to update linked-ticket comment"
+          else
+            gh pr comment "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --body "$BODY" || echo "::warning::Failed to post linked-ticket comment"
+          fi
+
