@@ -67,14 +67,11 @@ def main_jobevent_service_partition(*, db=None, since=None, until=None, row_limi
     The since-until window must span exactly one hour; a ValueError is raised otherwise.
     """
     if since is None or until is None:
-        raise ValueError(
-            "main_jobevent_service_partition: both since and until must be provided"
-        )
+        raise ValueError('main_jobevent_service_partition: both since and until must be provided')
 
     if until - since != _ONE_HOUR:
         raise ValueError(
-            f"main_jobevent_service_partition: since-until window must be exactly one hour, "
-            f"got {until - since} (since={since}, until={until})"
+            f'main_jobevent_service_partition: since-until window must be exactly one hour, got {until - since} (since={since}, until={until})'
         )
 
     row_limit = _normalize_row_limit(row_limit)
