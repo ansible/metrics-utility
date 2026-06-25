@@ -1,0 +1,6 @@
+{
+    "feature_flags": [
+        "FEATURE_ANALYTICS_ENABLED",
+        "FEATURE_INDIRECT_NODE_COUNTING_ENABLED"
+    ]
+}

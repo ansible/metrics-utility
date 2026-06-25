@@ -1,0 +1,29 @@
+{
+    "statistics": {
+        "rollup_period_execution_environments_total": 2,
+        "rollup_period_EE_default_total": 1,
+        "rollup_period_EE_custom_total": 1,
+        "rollup_period_jobs_total": 0,
+        "rollup_period_jobs_successful": 0,
+        "rollup_period_jobs_failed": 0,
+        "rollup_period_jobs_duration_all_statuses_seconds": 0,
+        "rollup_period_jobs_successful_duration_total_seconds": 0,
+        "rollup_period_jobs_failed_duration_total_seconds": 0,
+        "rollup_period_organizations_total": 0,
+        "rollup_period_forks_total": 0,
+        "rollup_period_templates_total": 0,
+        "rollup_period_inventories_total": 0,
+        "rollup_period_unique_hosts_total": 0,
+        "rollup_period_job_host_pairs_total": 0,
+        "rollup_period_successful_hosts_total": 0,
+        "rollup_period_failed_hosts_total": 0,
+        "rollup_period_unreachable_hosts_total": 0,
+        "rollup_period_indirect_managed_nodes_total": 0,
+        "rollup_period_tasks_total": 0,
+        "rollup_period_task_ok_total": 0,
+        "rollup_period_task_failed_total": 0,
+        "rollup_period_task_skipped_total": 0,
+        "rollup_period_task_unreachable_total": 0,
+        "rollup_period_task_ignored_total": 0
+    }
+}
