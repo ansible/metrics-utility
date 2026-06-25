@@ -689,7 +689,8 @@ class TestHandleCrcShipTargetDbFirst:
         assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
         mock_store.load.assert_called_once()
 
-    def test_lifecycle_runs_in_fallback_path(self):
+    def test_lifecycle_runs_in_fallback_path(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
         with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
             with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
