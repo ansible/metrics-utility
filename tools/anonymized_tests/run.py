@@ -23,13 +23,15 @@ Phase 5 – Output:
   ./out/segment/chunk_*.json
 
 Usage:
-  python run.py [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--no-events]
+  python run.py [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--no-events] [--event-collector {finished,created}]
 
 Examples:
   python run.py
   python run.py --since "2024-01-01" --until "2024-01-02"
   python run.py --since "2024-01-01 01:00:00" --until "2024-01-01 04:00:00"
   python run.py --no-events
+  python run.py --event-collector finished
+  python run.py --event-collector created
 """
 
 import argparse
@@ -81,6 +83,7 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     feature_flags_service,
     job_host_summary_service,
     main_jobevent_service,
+    main_jobevent_service_partition,
     table_metadata,
     unified_jobs_dashboard,
 )
@@ -99,6 +102,12 @@ DEFAULT_JOBEVENT_JOB_LIMIT = 1_000
 DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
 DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
 
+# Maps --event-collector choice → HOURLY_COLLECTORS key
+EVENT_COLLECTOR_MAP = {
+    'finished': 'main_jobevent_service',
+    'created': 'main_jobevent_service_partition',
+}
+
 # Hourly collector registry – mirrors collect_hourly_metrics.py
 # Order matches production schedule (:05, :10, :15, :20).
 HOURLY_COLLECTORS: Dict[str, Dict[str, Any]] = {
@@ -116,6 +125,10 @@ HOURLY_COLLECTORS: Dict[str, Dict[str, Any]] = {
     },
     'main_jobevent_service': {
         'collector': main_jobevent_service,
+        'rollup': EventModulesAnonymizedRollup,
+    },
+    'main_jobevent_service_partition': {
+        'collector': main_jobevent_service_partition,
         'rollup': EventModulesAnonymizedRollup,
     },
 }
@@ -236,7 +249,8 @@ def phase1_hourly(
         print(f'  {"-" * COL_NAME}  {"-" * COL_ROWS}  {"-" * COL_TIME}  {"-" * COL_TIME}  ----')
 
         for collector_name, cfg in HOURLY_COLLECTORS.items():
-            if collector_name == 'main_jobevent_service' and not collect_events:
+            _is_events = collector_name in ('main_jobevent_service', 'main_jobevent_service_partition')
+            if _is_events and not collect_events:
                 print(f'  {collector_name:<{COL_NAME}}  {"–":>{COL_ROWS}}  {"–":>{COL_TIME}}  {"–":>{COL_TIME}}  skipped (--no-events)')
                 hourly_rollups[collector_name].append(None)
                 continue
@@ -244,6 +258,8 @@ def phase1_hourly(
             # --- collect ---
             if collector_name == 'main_jobevent_service':
                 extra = {'row_limit': row_limit, 'job_limit': job_limit}
+            elif collector_name == 'main_jobevent_service_partition':
+                extra = {'row_limit': row_limit}
             else:
                 extra = {}
             t0 = time.time()
@@ -269,11 +285,7 @@ def phase1_hourly(
             prepare_elapsed = time.time() - t0
             timing[collector_name]['prepare'] += prepare_elapsed
 
-            note = (
-                f'row limit reached ({row_limit:,})'
-                if collector_name == 'main_jobevent_service' and row_limit is not None and rows >= row_limit
-                else ''
-            )
+            note = f'row limit reached ({row_limit:,})' if _is_events and row_limit is not None and rows >= row_limit else ''
             row = (
                 f'  {collector_name:<{COL_NAME}}  {rows:>{COL_ROWS},}'
                 f'  {fmt_time(collect_elapsed):>{COL_TIME}}  {fmt_time(prepare_elapsed):>{COL_TIME}}  {note}'
@@ -436,17 +448,23 @@ def phase3_merge(
     return daily_json, timing
 
 
-def phase4_anonymize(daily_json: Dict[str, Any]) -> Tuple[Any, float]:
+def phase4_anonymize(daily_json: Dict[str, Any], active_events_collector: str) -> Tuple[Any, float]:
     """
-    Call anonymize_rollups() with merged daily data.
-    Mirrors daily_anonymize_and_prepare task.
+    Call anonymize_rollups() with the rollup from *active_events_collector*.
+
+    Both events collectors run during phase 1 for performance comparison, but only
+    the one chosen via --event-collector feeds the final anonymized report.
+
+    Returns:
+        result   – anonymized data (or None on error)
+        elapsed  – seconds taken
     """
     _section('Phase 4 – Anonymize (daily_anonymize_and_prepare)')
 
     t0 = time.time()
     try:
         result = anonymize_rollups(
-            events_modules_rollup=daily_json.get('main_jobevent_service', {}),
+            events_modules_rollup=daily_json.get(active_events_collector, {}),
             execution_environments_rollup=daily_json.get('execution_environments', {}),
             jobs_rollup=daily_json.get('unified_jobs', {}),
             job_host_summary_rollup=daily_json.get('job_host_summary_service', {}),
@@ -458,10 +476,10 @@ def phase4_anonymize(daily_json: Dict[str, Any]) -> Tuple[Any, float]:
         )
         result = sanitize_json(result)
         elapsed = time.time() - t0
-        print(f'  anonymize_rollups: done  ({fmt_time(elapsed)})')
+        print(f'  anonymize_rollups [{active_events_collector}]: done  ({fmt_time(elapsed)})')
     except Exception as exc:
         elapsed = time.time() - t0
-        print(f'  anonymize_rollups: ERROR: {exc}')
+        print(f'  anonymize_rollups [{active_events_collector}]: ERROR: {exc}')
         import traceback
 
         traceback.print_exc()
@@ -573,7 +591,20 @@ def main():
     parser.add_argument(
         '--no-events',
         action='store_true',
-        help='Skip main_jobevent_service (events collector)',
+        help='Skip both events collectors',
+    )
+    parser.add_argument(
+        '--event-collector',
+        choices=['finished', 'created'],
+        default='created',
+        dest='event_collector',
+        help=(
+            'Which events collector feeds the final report. '
+            'Both collectors always run for performance comparison. '
+            '"finished" uses main_jobevent_service (queries by job finished time); '
+            '"created" uses main_jobevent_service_partition (queries by job_created partition key). '
+            '(default: created)'
+        ),
     )
     parser.add_argument(
         '--max-events',
@@ -601,6 +632,7 @@ def main():
 
     intervals = hourly_intervals(since, until)
     collect_events = not args.no_events
+    active_events_collector = EVENT_COLLECTOR_MAP[args.event_collector]
 
     # Clean output dir
     out_dir = './out'
@@ -610,12 +642,13 @@ def main():
     row_limit = args.max_events
     job_limit = args.max_jobs
 
-    print(f'Range     : {since}  →  {until}')
-    print(f'Hours     : {len(intervals)}')
-    print(f'Events    : {"enabled" if collect_events else "disabled (--no-events)"}')
+    print(f'Range           : {since}  →  {until}')
+    print(f'Hours           : {len(intervals)}')
+    print(f'Events          : {"enabled" if collect_events else "disabled (--no-events)"}')
     if collect_events:
-        print(f'Max events: {row_limit:,} rows per hour  (--max-events)')
-        print(f'Max jobs  : {job_limit:,} jobs per hour   (--max-jobs)')
+        print(f'Event collector : {args.event_collector}  ({active_events_collector})')
+        print(f'Max events      : {row_limit:,} rows per hour  (--max-events)')
+        print(f'Max jobs        : {job_limit:,} jobs per hour   (--max-jobs)')
 
     db = connection
 
@@ -634,8 +667,8 @@ def main():
     # Phase 3 – merge rollups
     daily_json, merge_timing = phase3_merge(hourly_rollups, snapshot_rollups)
 
-    # Phase 4 – anonymize
-    anonymized, anon_elapsed = phase4_anonymize(daily_json)
+    # Phase 4 – anonymize (active events collector feeds the report; both ran for perf)
+    anonymized, anon_elapsed = phase4_anonymize(daily_json, active_events_collector)
 
     # Phase 5 – write output
     phase5_output(anonymized)
