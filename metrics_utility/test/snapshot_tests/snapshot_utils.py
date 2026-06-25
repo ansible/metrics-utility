@@ -14,7 +14,7 @@ import openpyxl
 import openpyxl.utils
 
 from metrics_utility.logger import logger
-from metrics_utility.test.util import _SUBPROCESS_BASE_ENV
+from metrics_utility.test.util import _SUBPROCESS_BASE_ENV, _db_env
 
 
 warnings.filterwarnings('ignore', category=ResourceWarning)
@@ -160,7 +160,7 @@ def run_snapshot_definition(data: DataShape) -> str:
     Returns:
         str: The path to the generated .xlsx file, or an empty string if it could not be determined.
     """
-    env_vars = {**_SUBPROCESS_BASE_ENV, **data['env_vars']}
+    env_vars = {**_SUBPROCESS_BASE_ENV, **_db_env(), **data['env_vars']}
 
     params = [sys.executable]
     params.extend(data['params'])
@@ -170,8 +170,7 @@ def run_snapshot_definition(data: DataShape) -> str:
         result = subprocess.run(
             params,
             text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             env=env_vars,
         )
 

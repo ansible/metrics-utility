@@ -57,10 +57,24 @@ def temporary_env(new_env):
 # Running a command as an external command, to test we can
 
 _SUBPROCESS_BASE_ENV = {
+    'LANG': 'en_US.UTF-8',
     'PYTHONDONTWRITEBYTECODE': '1',
     'TZ': 'UTC',
-    'LANG': 'en_US.UTF-8',
 }
+
+
+def _db_env():
+    """Reconstruct METRICS_UTILITY_DB_* from Django settings so subprocesses connect to the same DB."""
+    from django.conf import settings
+
+    db = settings.DATABASES['default']
+    return {
+        'METRICS_UTILITY_DB_HOST': db['HOST'],
+        'METRICS_UTILITY_DB_PORT': db['PORT'],
+        'METRICS_UTILITY_DB_NAME': db['NAME'],
+        'METRICS_UTILITY_DB_USER': db['USER'],
+        'METRICS_UTILITY_DB_PASSWORD': db['PASSWORD'],
+    }
 
 
 def _run_ext(env, name, args):
@@ -77,9 +91,8 @@ def _run_ext(env, name, args):
     result = subprocess.run(
         [sys.executable, 'manage.py', name, *args],
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env={**_SUBPROCESS_BASE_ENV, **env},
+        capture_output=True,
+        env={**_SUBPROCESS_BASE_ENV, **_db_env(), **env},
     )
 
     status = result.returncode

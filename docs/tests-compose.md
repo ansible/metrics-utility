@@ -1,76 +1,36 @@
 # Running tests inside the docker compose environment
 
-You can also run pytest inside a container too - to run all tests once, you can `docker compose -f tools/docker/docker-compose.yaml --profile=pytest up`. You use also `podman`.
-
-For more flexibility, use:
-
-```
-(host) $ docker compose -f tools/docker/docker-compose.yaml --profile=env up -d  # runs a metrics-utility-env container with python & uv set up
-(host) $ docker exec -it metrics-utility-env /bin/sh # (wait for postgres & minio containers to start before running)
-(container) $ uv run pytest -vv metrics_utility/test/ccspv_reports/test_complex_CCSP_with_scope.py # 1 test
-(container) $ uv run pytest -vv metrics_utility/test/ccspv_reports # all ccsp tests
-```
-
-#### Using Docker (in CI mode to be able to run all tests)
+## One-shot (run all tests once)
 
 ```bash
-# Ensure SQL data is loaded (only needed once after starting containers)
-docker compose -f tools/docker/docker-compose.yaml exec postgres bash -c \
-  'cat /docker-entrypoint-initdb.d/init-*.sql | psql -U awx -d postgres'
-
-# Run all gather tests
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/'
-
-# Run a specific gather test
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
-
-# Run all tests (not just gather)
-docker compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v'
+make compose-pytest
 ```
 
-#### Using Podman (in CI mode to be able to run all tests)
+## Interactive (run specific tests)
 
 ```bash
-# Ensure SQL data is loaded (only needed once after starting containers)
-podman compose -f tools/docker/docker-compose.yaml exec postgres bash -c \
-  'cat /docker-entrypoint-initdb.d/init-*.sql | psql -U awx -d postgres'
+make compose-env  # starts a metrics-utility-env container with python & uv set up
 
-# Run all gather tests
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/'
+# wait for postgres & minio containers to start, then:
+docker exec -it metrics-utility-env /bin/sh
+# or: podman exec -it metrics-utility-env /bin/sh
 
-# Run a specific gather test
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v metrics_utility/test/gather/test_jobhostsummary_gather.py::test_command'
-
-# Run all tests (not just gather)
-podman compose -f tools/docker/docker-compose.yaml exec metrics-utility-env bash -c \
-  'sed -i "/NAME/s/awx/postgres/" mock_awx/settings/__init__.py && \
-   sed -i "/USER/s/myuser/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/PASSWORD/s/mypassword/awx/" mock_awx/settings/__init__.py && \
-   sed -i "/HOST.*localhost/s/localhost/postgres/" mock_awx/settings/__init__.py && \
-   uv run pytest -s -v'
+# inside the container:
+uv run pytest -vv metrics_utility/test/ccspv_reports/test_complex_CCSP_with_scope.py  # 1 test
+uv run pytest -vv metrics_utility/test/ccspv_reports  # all ccsp tests
+uv run pytest -s -v metrics_utility/test/gather/  # all gather tests
+uv run pytest -s -v  # everything
 ```
+
+The container's environment variables (`METRICS_UTILITY_DB_HOST`, etc.) are already
+configured to connect to the compose postgres -- no manual patching needed.
+
+
+## metrics-service tests
+
+```bash
+make compose-pytest-svc
+```
+
+Runs the metrics-service test suite using the local metrics-utility checkout (via editable install).
+Requires a `../metrics-service` checkout. This also runs in CI.
