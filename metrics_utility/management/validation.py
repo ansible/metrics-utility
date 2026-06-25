@@ -401,7 +401,7 @@ def _load_candlepin_cert(store):
             cert_pem, key_pem, consumer_uuid = awx_cert, awx_key, awx_uuid
 
     # If no cert exists yet, attempt initial registration when enabled.
-    if not (cert_pem and key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED', default=True):
+    if not (cert_pem and key_pem) and bool_from_env('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED', default=False):
         cert_pem, key_pem, consumer_uuid = _register_candlepin_consumer(store)
 
     return cert_pem, key_pem, consumer_uuid
@@ -468,6 +468,12 @@ def handle_crc_ship_target():
         allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
+    # Master flag to disable all Candlepin functionality (cert loading, registration, lifecycle).
+    # When disabled, metrics-utility will use service account auth only.
+    if not bool_from_env('METRICS_UTILITY_CANDLEPIN_ENABLED', default=False):
+        logger.info('Candlepin disabled; using service account auth only.')
+        return billing_provider_params
+
     # Prefer the cert already managed by the AWX Controller (AWX PR #16388).
     # The Controller owns registration, check-in, and renewal; when its cert is
     # present and valid, use it directly and skip the metrics-utility lifecycle to
@@ -488,7 +494,7 @@ def handle_crc_ship_target():
 
     if cert_pem and key_pem:
         _warn_if_cert_expiring(cert_pem)
-        if bool_from_env('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', default=True):
+        if bool_from_env('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', default=False):
             cert_pem, key_pem = _run_candlepin_lifecycle(cert_pem, key_pem, consumer_uuid, store)
         billing_provider_params['candlepin_cert_pem'] = cert_pem
         billing_provider_params['candlepin_key_pem'] = key_pem

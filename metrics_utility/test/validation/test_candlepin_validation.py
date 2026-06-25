@@ -371,6 +371,46 @@ class TestRunCandlepinLifecyclePlaceholderUUID:
 # ---------------------------------------------------------------------------
 
 
+class TestHandleCrcShipTargetDisabled:
+    """When METRICS_UTILITY_CANDLEPIN_ENABLED is False (default), all Candlepin
+    functionality is disabled and handle_crc_ship_target returns early."""
+
+    @pytest.fixture(autouse=True)
+    def set_required_env(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
+        monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ENABLED', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
+        monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
+
+    def test_returns_billing_params_only_when_disabled(self):
+        """When Candlepin is disabled, only billing params are returned (no certs)."""
+        params = handle_crc_ship_target()
+        assert params['billing_provider'] == 'aws'
+        assert params['billing_account_id'] == '123456789012'
+        assert 'candlepin_cert_pem' not in params
+        assert 'candlepin_key_pem' not in params
+
+    def test_does_not_load_from_db_when_disabled(self):
+        """When Candlepin is disabled, DB cert loading is skipped."""
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db') as mock_db:
+            handle_crc_ship_target()
+        mock_db.assert_not_called()
+
+    def test_does_not_load_from_local_store_when_disabled(self):
+        """When Candlepin is disabled, local store loading is skipped."""
+        with patch('metrics_utility.management.validation.get_candlepin_store') as mock_store:
+            handle_crc_ship_target()
+        mock_store.assert_not_called()
+
+    def test_logs_disabled_message(self):
+        """When Candlepin is disabled, an info message is logged."""
+        with patch('metrics_utility.management.validation.logger') as mock_logger:
+            handle_crc_ship_target()
+        info_msgs = [str(c) for c in mock_logger.info.call_args_list]
+        assert any('Candlepin disabled' in m and 'service account' in m for m in info_msgs)
+
+
 class TestHandleCrcShipTargetAwxSeeding:
     """When local store is empty, cert should be seeded from AWX conf_setting.
 
@@ -383,6 +423,7 @@ class TestHandleCrcShipTargetAwxSeeding:
     def set_required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
@@ -448,6 +489,7 @@ class TestHandleCrcShipTargetCandlepin:
     def set_required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
@@ -634,6 +676,7 @@ class TestHandleCrcShipTargetDbFirst:
     def set_required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', raising=False)
@@ -686,7 +729,8 @@ class TestHandleCrcShipTargetDbFirst:
         assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
         mock_store.load.assert_called_once()
 
-    def test_lifecycle_runs_in_fallback_path(self):
+    def test_lifecycle_runs_in_fallback_path(self, monkeypatch):
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
         with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
             with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):

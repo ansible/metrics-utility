@@ -328,36 +328,40 @@ class TestHandleCrcShipTargetLifecycleWiring:
     def required_env(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_BILLING_PROVIDER', 'aws')
         monkeypatch.setenv('METRICS_UTILITY_BILLING_ACCOUNT_ID', '123456789012')
+        monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ENABLED', 'true')
         monkeypatch.delenv('METRICS_UTILITY_RED_HAT_ORG_ID', raising=False)
         monkeypatch.delenv('METRICS_UTILITY_SHIP_PATH', raising=False)
 
     def test_lifecycle_not_called_when_flag_disabled(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'false')
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
-        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
-                    handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
+                        handle_crc_ship_target()
         mock_lc.assert_not_called()
 
     def test_lifecycle_called_when_flag_enabled(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
-        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                with patch(
-                    'metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
-                ) as mock_lc:
-                    handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    with patch(
+                        'metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM)
+                    ) as mock_lc:
+                        handle_crc_ship_target()
         mock_lc.assert_called_once_with(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID, mock_store)
 
     def test_renewed_cert_injected_into_billing_params(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED', 'true')
         mock_store = _make_mock_store(cert_pem=SAMPLE_CERT_PEM, key_pem=SAMPLE_KEY_PEM, uuid=CONSUMER_UUID)
-        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                with patch('metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)):
-                    params = handle_crc_ship_target()
+        with patch('metrics_utility.management.validation._load_cert_from_controller_db', return_value=(None, None, None)):
+            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
+                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                    with patch('metrics_utility.management.validation._run_candlepin_lifecycle', return_value=(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)):
+                        params = handle_crc_ship_target()
         assert params['candlepin_cert_pem'] == SAMPLE_NEW_CERT
         assert params['candlepin_key_pem'] == SAMPLE_NEW_KEY
 
