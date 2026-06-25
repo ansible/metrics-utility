@@ -79,6 +79,18 @@ docker exec tools_postgres_1 psql -n awx -c 'select app, max(name) from django_m
 
 ### extract schema
 
+Automated script using our compose postgres and uv (no awx containers needed):
+
+```bash
+tools/docker/extract-awx-schema.sh [AWX_DIR] [--force]
+```
+
+Defaults to `../awx` relative to the metrics-utility repo root. Requires the awx repo to be on `devel` and up to date with `origin/devel` (use `--force` to override).
+
+The script strips pg-version-dependent output (version comments, `\restrict`, `transaction_timeout`, named NOT NULL constraints) to keep diffs stable across postgres upgrades.
+
+Manual alternative (inside awx docker compose):
+
 ```bash
 cd metrics-utility/tools/docker
 docker exec tools_postgres_1 pg_dump -s awx > latest.sql
