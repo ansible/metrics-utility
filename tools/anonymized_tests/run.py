@@ -30,8 +30,9 @@ Examples:
   python run.py --since "2024-01-01" --until "2024-01-02"
   python run.py --since "2024-01-01 01:00:00" --until "2024-01-01 04:00:00"
   python run.py --no-events
-  python run.py --event-collector finished
-  python run.py --event-collector created
+  python run.py --event-date-diff 30mins
+  python run.py --event-date-diff 2hours
+  python run.py --event-date-diff 1days
 """
 
 import argparse
@@ -102,12 +103,6 @@ DEFAULT_JOBEVENT_JOB_LIMIT = 1_000
 DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
 DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
 
-# Maps --event-collector choice → HOURLY_COLLECTORS key
-EVENT_COLLECTOR_MAP = {
-    'finished': 'main_jobevent_service',
-    'created': 'main_jobevent_service_partition',
-}
-
 # Hourly collector registry – mirrors collect_hourly_metrics.py
 # Order matches production schedule (:05, :10, :15, :20).
 HOURLY_COLLECTORS: Dict[str, Dict[str, Any]] = {
@@ -172,6 +167,25 @@ def parse_datetime(dt_str: str) -> datetime:
     raise ValueError(f'Cannot parse datetime: {dt_str!r}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS')
 
 
+def parse_event_date_diff(value: str) -> timedelta:
+    """Parse --event-date-diff value into a timedelta.
+
+    Accepted formats: {N}mins, {N}hours, {N}days  (N is a positive integer).
+    """
+    import re
+
+    m = re.fullmatch(r'(\d+)(mins|hours|days)', value.strip())
+    if not m:
+        raise ValueError(f'Cannot parse --event-date-diff {value!r}. Use {{N}}mins, {{N}}hours, or {{N}}days (e.g. 30mins, 2hours, 1days).')
+    n = int(m.group(1))
+    unit = m.group(2)
+    if unit == 'mins':
+        return timedelta(minutes=n)
+    if unit == 'hours':
+        return timedelta(hours=n)
+    return timedelta(days=n)
+
+
 def hourly_intervals(since: datetime, until: datetime) -> List[Tuple[datetime, datetime]]:
     """Split [since, until) into 1-hour windows."""
     intervals = []
@@ -225,9 +239,13 @@ def phase1_hourly(
     collect_events: bool,
     row_limit: int = DEFAULT_JOBEVENT_ROW_LIMIT,
     job_limit: int = DEFAULT_JOBEVENT_JOB_LIMIT,
+    event_date_diff: Optional[timedelta] = None,
 ) -> Tuple[Dict[str, List[Any]], Dict[str, Dict[str, float]]]:
     """
     For each hour: collect → prepare → store hourly rollup JSON.
+
+    event_date_diff, when set, shifts the since/until window backwards for
+    main_jobevent_service_partition only (other collectors are unaffected).
 
     Returns:
         hourly_rollups  – {collector_name: [prepared_json, ...]}  one entry per hour
@@ -258,13 +276,20 @@ def phase1_hourly(
             # --- collect ---
             if collector_name == 'main_jobevent_service':
                 extra = {'row_limit': row_limit, 'job_limit': job_limit}
+                c_since, c_until = hour_since, hour_until
             elif collector_name == 'main_jobevent_service_partition':
                 extra = {'row_limit': row_limit}
+                if event_date_diff is not None:
+                    c_since = hour_since - event_date_diff
+                    c_until = hour_until - event_date_diff
+                else:
+                    c_since, c_until = hour_since, hour_until
             else:
                 extra = {}
+                c_since, c_until = hour_since, hour_until
             t0 = time.time()
             try:
-                df = cfg['collector'](db=db, since=hour_since, until=hour_until, **extra).gather()
+                df = cfg['collector'](db=db, since=c_since, until=c_until, **extra).gather()
             except Exception as exc:
                 print(f'  {collector_name:<{COL_NAME}}  {"ERROR":>{COL_ROWS}}  {fmt_time(time.time() - t0):>{COL_TIME}}  {"–":>{COL_TIME}}  {exc}')
                 hourly_rollups[collector_name].append(None)
@@ -285,7 +310,12 @@ def phase1_hourly(
             prepare_elapsed = time.time() - t0
             timing[collector_name]['prepare'] += prepare_elapsed
 
-            note = f'row limit reached ({row_limit:,})' if _is_events and row_limit is not None and rows >= row_limit else ''
+            if _is_events and row_limit is not None and rows >= row_limit:
+                note = f'row limit reached ({row_limit:,})'
+            elif collector_name == 'main_jobevent_service_partition' and event_date_diff is not None:
+                note = f'window shifted -{event_date_diff}  ({c_since.strftime("%H:%M")}–{c_until.strftime("%H:%M")} UTC)'
+            else:
+                note = ''
             row = (
                 f'  {collector_name:<{COL_NAME}}  {rows:>{COL_ROWS},}'
                 f'  {fmt_time(collect_elapsed):>{COL_TIME}}  {fmt_time(prepare_elapsed):>{COL_TIME}}  {note}'
@@ -448,78 +478,90 @@ def phase3_merge(
     return daily_json, timing
 
 
-def phase4_anonymize(daily_json: Dict[str, Any], active_events_collector: str) -> Tuple[Any, float]:
+def phase4_anonymize(daily_json: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[str, float]]:
     """
-    Call anonymize_rollups() with the rollup from *active_events_collector*.
+    Run anonymize_rollups() once per events-collector pipeline.
 
-    Both events collectors run during phase 1 for performance comparison, but only
-    the one chosen via --event-collector feeds the final anonymized report.
+    Each events collector (main_jobevent_service, main_jobevent_service_partition)
+    produces an independent anonymized result. All non-events rollup data is shared.
 
     Returns:
-        result   – anonymized data (or None on error)
-        elapsed  – seconds taken
+        results  – {events_collector_name: anonymized_data | None}
+        timings  – {events_collector_name: elapsed_seconds}
     """
     _section('Phase 4 – Anonymize (daily_anonymize_and_prepare)')
 
-    t0 = time.time()
-    try:
-        result = anonymize_rollups(
-            events_modules_rollup=daily_json.get(active_events_collector, {}),
-            execution_environments_rollup=daily_json.get('execution_environments', {}),
-            jobs_rollup=daily_json.get('unified_jobs', {}),
-            job_host_summary_rollup=daily_json.get('job_host_summary_service', {}),
-            credentials_rollup=daily_json.get('credentials_service', {}),
-            table_metadata_rollup=daily_json.get('table_metadata', {}),
-            controller_version_rollup=daily_json.get('controller_version_service', {}),
-            feature_flags_rollup=daily_json.get('feature_flags_service', {}),
-            task_executions_rollup=daily_json.get('task_executions_service', {}),
-        )
-        result = sanitize_json(result)
-        elapsed = time.time() - t0
-        print(f'  anonymize_rollups [{active_events_collector}]: done  ({fmt_time(elapsed)})')
-    except Exception as exc:
-        elapsed = time.time() - t0
-        print(f'  anonymize_rollups [{active_events_collector}]: ERROR: {exc}')
-        import traceback
+    shared_kwargs = dict(
+        execution_environments_rollup=daily_json.get('execution_environments', {}),
+        jobs_rollup=daily_json.get('unified_jobs', {}),
+        job_host_summary_rollup=daily_json.get('job_host_summary_service', {}),
+        credentials_rollup=daily_json.get('credentials_service', {}),
+        table_metadata_rollup=daily_json.get('table_metadata', {}),
+        controller_version_rollup=daily_json.get('controller_version_service', {}),
+        feature_flags_rollup=daily_json.get('feature_flags_service', {}),
+        task_executions_rollup=daily_json.get('task_executions_service', {}),
+    )
 
-        traceback.print_exc()
-        result = None
+    results: Dict[str, Any] = {}
+    timings: Dict[str, float] = {}
 
-    return result, elapsed
+    for events_collector in ('main_jobevent_service', 'main_jobevent_service_partition'):
+        t0 = time.time()
+        try:
+            result = anonymize_rollups(
+                events_modules_rollup=daily_json.get(events_collector, {}),
+                **shared_kwargs,
+            )
+            result = sanitize_json(result)
+            elapsed = time.time() - t0
+            print(f'  [{events_collector}] anonymize_rollups: done  ({fmt_time(elapsed)})')
+        except Exception as exc:
+            elapsed = time.time() - t0
+            print(f'  [{events_collector}] anonymize_rollups: ERROR: {exc}')
+            import traceback
+
+            traceback.print_exc()
+            result = None
+        results[events_collector] = result
+        timings[events_collector] = elapsed
+
+    return results, timings
 
 
-def phase5_output(json_data: Any) -> None:
-    """Save final JSON and split into Segment chunks."""
-    if json_data is None:
-        print('  Skipped (no data)')
-        return
-
+def phase5_output(results: Dict[str, Any]) -> None:
+    """Save one anonymized JSON + Segment chunks per events-collector pipeline."""
     _section('Phase 5 – Output')
 
-    out_dir = './out'
-    json_path = os.path.join(out_dir, 'anonymized_rollup.json')
-    os.makedirs(out_dir, exist_ok=True)
-
-    with open(json_path, 'w') as f:
-        json.dump(json_data, f, indent=4)
-    print(f'  Final JSON saved to: {json_path}')
-
-    # Split into Segment chunks
     storage_segment = StorageSegment()
-    chunks = storage_segment._split_into_chunks(json_data, storage_segment.REGULAR_MESSAGE_LIMIT)
-    print(f'  Segment chunks: {len(chunks)}  (limit {storage_segment.REGULAR_MESSAGE_LIMIT / 1024:.0f} KB each)')
 
-    segment_dir = os.path.join(out_dir, 'segment')
-    os.makedirs(segment_dir, exist_ok=True)
+    for pipeline, json_data in results.items():
+        print(f'\n  Pipeline: {pipeline}')
+        if json_data is None:
+            print('    Skipped (no data)')
+            continue
 
-    for i, chunk in enumerate(chunks, 1):
-        chunk_size = storage_segment._calculate_size(chunk)
-        chunk_key = next(iter(chunk), 'unknown')
-        chunk_path = f'{segment_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
-        with open(chunk_path, 'w') as f:
-            json.dump(chunk, f, indent=4)
-        items = f' ({len(chunk[chunk_key])} items)' if isinstance(chunk.get(chunk_key), list) else ''
-        print(f'  Chunk {i:3d}/{len(chunks)}: {chunk_key}  {chunk_size:,} bytes{items}  → {chunk_path}')
+        pipeline_dir = os.path.join('./out', pipeline)
+        json_path = os.path.join(pipeline_dir, 'anonymized_rollup.json')
+        os.makedirs(pipeline_dir, exist_ok=True)
+
+        with open(json_path, 'w') as f:
+            json.dump(json_data, f, indent=4)
+        print(f'    Final JSON saved to: {json_path}')
+
+        chunks = storage_segment._split_into_chunks(json_data, storage_segment.REGULAR_MESSAGE_LIMIT)
+        print(f'    Segment chunks: {len(chunks)}  (limit {storage_segment.REGULAR_MESSAGE_LIMIT / 1024:.0f} KB each)')
+
+        segment_dir = os.path.join(pipeline_dir, 'segment')
+        os.makedirs(segment_dir, exist_ok=True)
+
+        for i, chunk in enumerate(chunks, 1):
+            chunk_size = storage_segment._calculate_size(chunk)
+            chunk_key = next(iter(chunk), 'unknown')
+            chunk_path = f'{segment_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
+            with open(chunk_path, 'w') as f:
+                json.dump(chunk, f, indent=4)
+            items = f' ({len(chunk[chunk_key])} items)' if isinstance(chunk.get(chunk_key), list) else ''
+            print(f'    Chunk {i:3d}/{len(chunks)}: {chunk_key}  {chunk_size:,} bytes{items}  → {chunk_path}')
 
 
 # ---------------------------------------------------------------------------
@@ -532,7 +574,7 @@ def print_time_summary(
     hourly_timing: Dict[str, Dict[str, float]],
     snapshot_timing: Dict[str, Dict[str, float]],
     merge_timing: Dict[str, float],
-    anon_elapsed: float,
+    anon_timings: Dict[str, float],
     total_elapsed: float,
 ) -> None:
     _section('Time Summary')
@@ -562,7 +604,9 @@ def print_time_summary(
         print(f'  {name:<35}  {fmt_time(t["collect"]):>10}  {"(once)":>10}  {fmt_time(t["prepare"]):>10}  {"(once)":>10}  {fmt_time(merge):>10}')
 
     print()
-    print(f'  {"anonymize_rollups":<35}  {"":>10}  {"":>10}  {"":>10}  {"":>10}  {fmt_time(anon_elapsed):>10}')
+    for pipeline, elapsed in anon_timings.items():
+        label = f'anonymize [{pipeline}]'
+        print(f'  {label:<35}  {"":>10}  {"":>10}  {"":>10}  {"":>10}  {fmt_time(elapsed):>10}')
     print()
     print(f'  Hours processed : {num_hours}')
     print(f'  Total elapsed   : {fmt_time(total_elapsed)}')
@@ -594,19 +638,6 @@ def main():
         help='Skip both events collectors',
     )
     parser.add_argument(
-        '--event-collector',
-        choices=['finished', 'created'],
-        default='created',
-        dest='event_collector',
-        help=(
-            'Which events collector feeds the final report. '
-            'Both collectors always run for performance comparison. '
-            '"finished" uses main_jobevent_service (queries by job finished time); '
-            '"created" uses main_jobevent_service_partition (queries by job_created partition key). '
-            '(default: created)'
-        ),
-    )
-    parser.add_argument(
         '--max-events',
         type=int,
         default=DEFAULT_JOBEVENT_ROW_LIMIT,
@@ -620,6 +651,18 @@ def main():
         metavar='N',
         help=f'Max finished jobs processed per hourly window (default: {DEFAULT_JOBEVENT_JOB_LIMIT:,})',
     )
+    parser.add_argument(
+        '--event-date-diff',
+        type=str,
+        default=None,
+        metavar='DIFF',
+        dest='event_date_diff',
+        help=(
+            'Shift the since/until window backwards for main_jobevent_service_partition only. '
+            'Format: {N}mins, {N}hours, or {N}days (e.g. 30mins, 2hours, 1days). '
+            'All other collectors are unaffected.'
+        ),
+    )
     args = parser.parse_args()
 
     total_start = time.time()
@@ -632,7 +675,7 @@ def main():
 
     intervals = hourly_intervals(since, until)
     collect_events = not args.no_events
-    active_events_collector = EVENT_COLLECTOR_MAP[args.event_collector]
+    event_date_diff = parse_event_date_diff(args.event_date_diff) if args.event_date_diff else None
 
     # Clean output dir
     out_dir = './out'
@@ -646,9 +689,10 @@ def main():
     print(f'Hours           : {len(intervals)}')
     print(f'Events          : {"enabled" if collect_events else "disabled (--no-events)"}')
     if collect_events:
-        print(f'Event collector : {args.event_collector}  ({active_events_collector})')
         print(f'Max events      : {row_limit:,} rows per hour  (--max-events)')
         print(f'Max jobs        : {job_limit:,} jobs per hour   (--max-jobs)')
+        if event_date_diff is not None:
+            print(f'Event date diff : -{event_date_diff}  (partition collector window shifted back)')
 
     db = connection
 
@@ -659,7 +703,7 @@ def main():
         service_db = None
 
     # Phase 1 – hourly collect + prepare
-    hourly_rollups, hourly_timing = phase1_hourly(intervals, db, collect_events, row_limit, job_limit)
+    hourly_rollups, hourly_timing = phase1_hourly(intervals, db, collect_events, row_limit, job_limit, event_date_diff)
 
     # Phase 2 – snapshot/daily collectors
     snapshot_rollups, snapshot_timing = phase2_snapshots(db, service_db, since, until)
@@ -667,10 +711,10 @@ def main():
     # Phase 3 – merge rollups
     daily_json, merge_timing = phase3_merge(hourly_rollups, snapshot_rollups)
 
-    # Phase 4 – anonymize (active events collector feeds the report; both ran for perf)
-    anonymized, anon_elapsed = phase4_anonymize(daily_json, active_events_collector)
+    # Phase 4 – anonymize (one report per events-collector pipeline)
+    anonymized, anon_timings = phase4_anonymize(daily_json)
 
-    # Phase 5 – write output
+    # Phase 5 – write output (one subdirectory per pipeline)
     phase5_output(anonymized)
 
     # Time summary
@@ -679,7 +723,7 @@ def main():
         hourly_timing,
         snapshot_timing,
         merge_timing,
-        anon_elapsed,
+        anon_timings,
         time.time() - total_start,
     )
 
