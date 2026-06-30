@@ -1,5 +1,3 @@
-import datetime
-
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -10,27 +8,21 @@ from metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit
 def test_main_indirectmanagednodeaudit_basic():
     """Test main_indirectmanagednodeaudit collector basic functionality."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
 
     assert hasattr(instance, 'gather')
     assert hasattr(instance, 'kwargs')
     assert instance.kwargs['db'] == mock_db
-    assert instance.kwargs['since'] == since
-    assert instance.kwargs['until'] == until
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_pandas):
     """Test that main_indirectmanagednodeaudit calls copy_table."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
     mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2], 'canonical_facts': ['{}', '{}']})
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     result = instance.gather()
 
     mock_copy_pandas.assert_called_once()
@@ -42,35 +34,12 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_main_indirectmanagednodeaudit_query_contains_time_range(mock_copy_pandas):
-    """Test that the query includes the time range."""
-    mock_db = MagicMock()
-    since = datetime.datetime(2024, 3, 15, 10, 30, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 3, 16, 18, 45, tzinfo=datetime.timezone.utc)
-    mock_copy_pandas.return_value = pd.DataFrame()
-
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
-    instance.gather()
-
-    call_args = mock_copy_pandas.call_args
-    query = call_args[0][1]
-
-    # Query should contain time boundaries using created field
-    assert '2024-03-15' in query
-    assert '2024-03-16' in query
-    assert 'main_indirectmanagednodeaudit.created >=' in query
-    assert 'main_indirectmanagednodeaudit.created <' in query
-
-
-@patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_indirectmanagednodeaudit_query_structure(mock_copy_pandas):
-    """Test that the SQL query has expected structure."""
+    """Test that the SQL query has expected structure and no date filter."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=since, until=until)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     instance.gather()
 
     call_args = mock_copy_pandas.call_args
@@ -88,3 +57,7 @@ def test_main_indirectmanagednodeaudit_query_structure(mock_copy_pandas):
     assert 'facts' in query
     assert 'events' in query
     assert 'task_runs' in query or 'count' in query
+
+    # Snapshot collector: no date range filter on created
+    assert 'main_indirectmanagednodeaudit.created >=' not in query
+    assert 'main_indirectmanagednodeaudit.created <' not in query

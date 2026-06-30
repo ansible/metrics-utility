@@ -852,11 +852,10 @@ def _validate_indirect_managed_nodes(json_data, statistics):
     assert isinstance(statistics['rollup_period_indirect_managed_nodes_all_total'], int), (
         'rollup_period_indirect_managed_nodes_all_total should be an integer'
     )
-    # 10:00h window: host_ids 1, 2 (2 unique)
-    # 11:00h window: host_ids 2, 3 (2 is a duplicate, 3 is new)
-    # Unique across both windows: 1, 2, 3 = 3
+    # Snapshot of full table: 4 records, host_ids 1, 2, 2, 3
+    # prepare() deduplicates within the snapshot to 3 unique host_ids (1, 2, 3)
     assert statistics['rollup_period_indirect_managed_nodes_all_total'] == 3, (
-        f'Expected 3 unique indirect managed nodes (host_ids 1,2,3 deduplicated across windows), '
+        f'Expected 3 unique indirect managed nodes (host_ids 1,2,3 deduplicated in prepare()), '
         f'got {statistics["rollup_period_indirect_managed_nodes_all_total"]}'
     )
     assert 'indirect_managed_nodes' not in json_data, 'Host IDs must not be included in the final JSON payload (privacy requirement)'
@@ -965,7 +964,7 @@ def test_from_gather_to_json(cleanup_glob):
         },
         'main_indirectmanagednodeaudit': {
             'func': main_indirectmanagednodeaudit,
-            'needs_since_until': True,
+            'needs_since_until': False,  # snapshot collector
         },
     }
 

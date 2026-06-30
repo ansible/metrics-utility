@@ -70,28 +70,8 @@ def test_prepare_handles_missing_host_remote_id():
     assert result['indirect_nodes_total'] == 0
 
 
-def test_merge_combines_host_ids():
-    """Test that merge() deduplicates host IDs across multiple hourly collections."""
-    rollup = IndirectManagedNodesAnonymizedRollup()
-
-    data_all = {
-        'indirect_node_ids': ['remote1', 'remote2'],
-        'indirect_nodes_total': 2,
-    }
-
-    data_new = {
-        'indirect_node_ids': ['remote2', 'remote3'],
-        'indirect_nodes_total': 2,
-    }
-
-    result = rollup.merge(data_all, data_new)
-
-    assert result['indirect_node_ids'] == ['remote1', 'remote2', 'remote3']
-    assert result['indirect_nodes_total'] == 3
-
-
-def test_merge_handles_none():
-    """Test that merge() handles None for first merge."""
+def test_merge_returns_data_new():
+    """Test that merge() passes through the snapshot batch unchanged."""
     rollup = IndirectManagedNodesAnonymizedRollup()
 
     data_new = {

@@ -34,7 +34,7 @@ class TestMainIndirectManagedNodeAuditTable:
 
         # Assert
         assert result == ['test_file.csv']
-        mock_main_indirectmanagednodeaudit.assert_called_once_with(db=mock_connection, since=since, until=until)
+        mock_main_indirectmanagednodeaudit.assert_called_once_with(db=mock_connection)
         mock_output.as_files.assert_called_once_with(mock_collector)
 
     @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')

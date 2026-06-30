@@ -1,22 +1,20 @@
 """Collector for indirect managed node audit records from the Controller database."""
 
-from ..util import DataframeOutput, collector, date_where
+from ..util import DataframeOutput, collector
 
 
 @collector
-def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=DataframeOutput()):
-    """Collect indirect managed node audit records within the given time window.
+def main_indirectmanagednodeaudit(*, db=None, output=DataframeOutput()):
+    """Collect all indirect managed node audit records (full-table snapshot).
 
     Args:
         db: Django database connection.
-        since: Inclusive start datetime for the ``created`` filter.
-        until: Exclusive end datetime for the ``created`` filter.
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
     Returns:
         pandas DataFrame with indirect node audit fields, or list of CSV paths.
     """
-    query = f"""
+    query = """
         SELECT
             main_indirectmanagednodeaudit.id,
             main_indirectmanagednodeaudit.created as created,
@@ -42,8 +40,6 @@ def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=Dat
         LEFT JOIN main_inventory ON main_inventory.id = main_indirectmanagednodeaudit.inventory_id
         LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
         LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project ON main_unifiedjobtemplate_project.id = main_job.project_id
-        WHERE {date_where('main_indirectmanagednodeaudit.created', since, until)}
-        ORDER BY main_indirectmanagednodeaudit.created ASC
     """
 
     return output.sql(db, query)
