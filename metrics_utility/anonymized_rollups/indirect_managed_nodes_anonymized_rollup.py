@@ -53,27 +53,16 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         return {'json': {'indirect_nodes_total': data.get('indirect_nodes_total', 0)}}
 
     def merge(self, data_all, data_new):
-        """Merge two indirect node rollups by deduplicating host IDs.
+        """Pass through the snapshot batch unchanged.
 
-        Combines indirect_node_ids from multiple hourly collections,
-        maintaining uniqueness for accurate daily billing counts.
+        With a daily snapshot collector there is only one batch per day,
+        so cross-batch merging is not needed.
 
         Args:
-            data_all: Accumulated data from previous merges (or None for first merge)
-            data_new: New data to merge in
+            data_all: Unused (always None for snapshot collectors)
+            data_new: Prepared data from the single snapshot batch
 
         Returns:
-            Merged dictionary with deduplicated indirect_node_ids and updated total
+            data_new unchanged
         """
-        if data_all is None:
-            return data_new
-
-        # Merge and deduplicate indirect_node_ids
-        ids_all = set(data_all.get('indirect_node_ids', []))
-        ids_new = set(data_new.get('indirect_node_ids', []))
-        indirect_node_ids = sorted(ids_all.union(ids_new))
-
-        return {
-            'indirect_node_ids': indirect_node_ids,
-            'indirect_nodes_total': len(indirect_node_ids),
-        }
+        return data_new
