@@ -138,14 +138,14 @@ def cli_main_host_daily(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_indirectmanagednodeaudit', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_indirectmanagednodeaudit', '1.0', format='csv', fnc_slicing=until_slicing)
 def cli_main_indirectmanagednodeaudit(since, until, output):
     if 'main_indirectmanagednodeaudit' not in get_optional_collectors():
         return None
 
     # the table does not exist in 2.4, may be 2.6+
     try:
-        collector = main_indirectmanagednodeaudit(db=connection, since=since, until=until)
+        collector = main_indirectmanagednodeaudit(db=connection)
         return output.as_files(collector)
     except (ProgrammingError, UndefinedTable) as e:
         logger.warning(
