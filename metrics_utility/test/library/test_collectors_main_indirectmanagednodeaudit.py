@@ -56,7 +56,7 @@ def test_main_indirectmanagednodeaudit_query_structure(mock_copy_pandas):
     assert 'canonical_facts' in query
     assert 'facts' in query
     assert 'events' in query
-    assert 'task_runs' in query or 'count' in query
+    assert 'task_runs' in query
 
     # Snapshot collector: no date range filter on created
     assert 'main_indirectmanagednodeaudit.created >=' not in query
