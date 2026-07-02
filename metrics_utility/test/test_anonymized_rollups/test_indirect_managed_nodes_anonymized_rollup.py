@@ -4,6 +4,7 @@ import pandas as pd
 
 from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import (
     IndirectManagedNodesAnonymizedRollup,
+    _extract_collection_names,
 )
 
 
@@ -291,6 +292,92 @@ def test_base_handles_none():
     result = rollup.base(None)
 
     assert result == {'json': {'indirect_nodes_total': 0, 'by_collection': []}}
+
+
+def test_extract_collection_names_with_nan():
+    """_extract_collection_names returns empty set for NaN (float) input."""
+    assert _extract_collection_names(float('nan')) == set()
+
+
+def test_extract_collection_names_with_invalid_json():
+    """_extract_collection_names returns empty set for malformed JSON."""
+    assert _extract_collection_names('not valid json') == set()
+
+
+def test_extract_collection_names_with_unsupported_type():
+    """_extract_collection_names returns empty set for unsupported types."""
+    assert _extract_collection_names(42) == set()
+
+
+def test_extract_collection_names_skips_non_fqcn():
+    """_extract_collection_names skips entries that are not valid FQCNs."""
+    result = _extract_collection_names('["cisco.ios.ios_command", "builtin_module"]')
+    assert result == {'cisco.ios'}
+
+
+def test_prepare_skips_nan_host_name():
+    """prepare() skips rows where host_name is NaN."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = _make_dataframe(
+        [
+            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'},
+        ]
+    )
+    data.loc[len(data)] = {
+        'id': 99,
+        'host_name': float('nan'),
+        'host_remote_id': None,
+        'organization_name': 'OrgA',
+        'events': '["cisco.ios.ios_config"]',
+    }
+
+    result = rollup.prepare(data)
+
+    assert result['indirect_nodes_total'] == 1
+    assert len(result['groups']) == 1
+
+
+def test_prepare_defaults_missing_organization_name():
+    """prepare() defaults to empty string when organization_name is missing."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = pd.DataFrame(
+        [
+            {
+                'id': 1,
+                'host_name': 'host1',
+                'host_remote_id': None,
+                'events': '["cisco.ios.ios_command"]',
+            },
+        ]
+    )
+
+    result = rollup.prepare(data)
+
+    assert result['indirect_nodes_total'] == 1
+    assert '||cisco.ios' in result['groups']
+
+
+def test_merge_with_none_data_new():
+    """merge(data_all, None) returns data_all unchanged."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data_all = {
+        'groups': {
+            'OrgA||cisco.ios': {
+                'organization_name': 'OrgA',
+                'collection_name': 'cisco.ios',
+                'host_names': ['host1'],
+                'host_count': 1,
+            },
+        },
+        'indirect_nodes_total': 1,
+    }
+
+    result = rollup.merge(data_all, None)
+
+    assert result == data_all
 
 
 def test_rollup_name():

@@ -2,6 +2,8 @@
 
 import json
 
+import pandas as pd
+
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import (
@@ -81,7 +83,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
 
         for _, row in dataframe.iterrows():
             host_name = row.get('host_name')
-            if host_name is None or (isinstance(host_name, float) and host_name != host_name):
+            if pd.isna(host_name):
                 continue
 
             host_name = str(host_name)
