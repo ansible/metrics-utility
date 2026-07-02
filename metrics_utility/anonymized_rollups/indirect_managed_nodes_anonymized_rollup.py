@@ -33,7 +33,7 @@ def _extract_collection_names(events_value):
     if isinstance(events_value, str):
         try:
             events_list = json.loads(events_value)
-        except (json.JSONDecodeError, ValueError):
+        except ValueError:
             return set()
     elif isinstance(events_value, list):
         events_list = events_value
