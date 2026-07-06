@@ -57,9 +57,8 @@ def _validate_top_level_structure(json_data):
     assert 'controller_versions' in json_data, "Missing 'controller_versions' at top level"
     assert 'feature_flags' in json_data, "Missing 'feature_flags' at top level"
     assert 'observability_by_tasks' in json_data, "Missing 'observability_by_tasks' at top level"
-    assert 'indirect_managed_nodes' not in json_data, (
-        'indirect_managed_nodes IDs must not appear at the top level — only the count goes in statistics'
-    )
+    assert 'indirect_nodes_by_collection' in json_data, "Missing 'indirect_nodes_by_collection' at top level"
+    assert 'indirect_managed_nodes' not in json_data, 'indirect_managed_nodes raw data must not appear at the top level'
 
 
 def _validate_statistics_structure(statistics):
@@ -847,18 +846,28 @@ def _save_json_output(json_data, since, until):
 
 
 def _validate_indirect_managed_nodes(json_data, statistics):
-    """Validate indirect managed node count and confirm IDs are not in the output."""
+    """Validate indirect managed node count and grouped output."""
     print('--- Validating indirect_managed_nodes data values ---')
     assert isinstance(statistics['rollup_period_indirect_managed_nodes_all_total'], int), (
         'rollup_period_indirect_managed_nodes_all_total should be an integer'
     )
-    # Snapshot of full table: 4 records, host_ids 1, 2, 2, 3
-    # prepare() deduplicates within the snapshot to 3 unique host_ids (1, 2, 3)
+    # Daily collection of 4 records across 2 hourly intervals:
+    #   cisco-switch-01 -> cisco.ios (2 FQCNs)
+    #   cisco-switch-02 -> azure.azcollection, then cisco.ios in second interval
+    #   cisco-switch-03 -> azure.azcollection + cisco.ios (2 FQCNs)
+    # Total unique host_names: 3 (cisco-switch-01, -02, -03)
     assert statistics['rollup_period_indirect_managed_nodes_all_total'] == 3, (
-        f'Expected 3 unique indirect managed nodes (host_ids 1,2,3 deduplicated in prepare()), '
-        f'got {statistics["rollup_period_indirect_managed_nodes_all_total"]}'
+        f'Expected 3 unique indirect managed nodes (3 unique host_names), got {statistics["rollup_period_indirect_managed_nodes_all_total"]}'
     )
-    assert 'indirect_managed_nodes' not in json_data, 'Host IDs must not be included in the final JSON payload (privacy requirement)'
+
+    by_c = json_data.get('indirect_nodes_by_collection', [])
+    assert isinstance(by_c, list), 'indirect_nodes_by_collection should be a list'
+
+    for group in by_c:
+        assert 'host_names' not in group, 'host_names must not appear in anonymized output (privacy)'
+        assert 'organization_name' not in group, 'organization_name must not appear in anonymized output (privacy)'
+        assert 'collection_name' in group
+        assert 'host_count' in group
 
 
 def _validate_all_data(json_data, statistics):
@@ -964,7 +973,7 @@ def test_from_gather_to_json(cleanup_glob):
         },
         'main_indirectmanagednodeaudit': {
             'func': main_indirectmanagednodeaudit,
-            'needs_since_until': False,  # snapshot collector
+            'needs_since_until': True,
         },
     }
 

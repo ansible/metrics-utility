@@ -207,7 +207,7 @@ def compute_anonymized_rollup(db, since, until, service_db=None):
 
     indirect_managed_nodes_data = []
     try:
-        indirect_managed_nodes_data = main_indirectmanagednodeaudit(db=db).gather()
+        indirect_managed_nodes_data = main_indirectmanagednodeaudit(db=db, since=since, until=until).gather()
     except Exception as e:
         logger.error(f'Failed to gather indirect_managed_nodes data: {e}')
 
