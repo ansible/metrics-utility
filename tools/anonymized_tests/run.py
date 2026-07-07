@@ -86,8 +86,8 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     execution_environments,
     feature_flags_service,
     job_host_summary_service,
-    main_jobevent_service,
     main_jobevent_created_service,
+    main_jobevent_service,
     table_metadata,
     unified_jobs_dashboard,
 )

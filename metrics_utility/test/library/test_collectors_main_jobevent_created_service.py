@@ -11,6 +11,7 @@ from metrics_utility.library.collectors.controller.main_jobevent_created_service
     main_jobevent_created_service,
 )
 
+
 _UTC = datetime.timezone.utc
 
 _SINCE = datetime.datetime(2025, 6, 13, 10, 0, 0, tzinfo=_UTC)
@@ -227,11 +228,13 @@ def test_normalize_row_limit_zero_returns_none():
 
 def test_normalize_row_limit_negative_falls_back_to_default():
     from metrics_utility.library.collectors.controller.main_jobevent_created_service import _DEFAULT_ROW_LIMIT
+
     assert _normalize_row_limit(-1) == _DEFAULT_ROW_LIMIT
 
 
 def test_normalize_row_limit_invalid_string_falls_back_to_default():
     from metrics_utility.library.collectors.controller.main_jobevent_created_service import _DEFAULT_ROW_LIMIT
+
     assert _normalize_row_limit('bad') == _DEFAULT_ROW_LIMIT
 
 
