@@ -23,16 +23,19 @@ Phase 5 – Output:
   ./out/segment/chunk_*.json
 
 Usage:
-  python run.py [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--no-events] [--event-collector {finished,created}]
+  python run.py [--since YYYY-MM-DD] [--until YYYY-MM-DD] [--no-events] [--event-hours-diff N]
+
+  --event-hours-diff N  shift the main_jobevent_created_service window N hours back.
+                        0 = current hour (default, no shift), 1 = last hour, 2 = two hours ago, …
 
 Examples:
   python run.py
   python run.py --since "2024-01-01" --until "2024-01-02"
   python run.py --since "2024-01-01 01:00:00" --until "2024-01-01 04:00:00"
   python run.py --no-events
-  python run.py --event-date-diff 30mins
-  python run.py --event-date-diff 2hours
-  python run.py --event-date-diff 1days
+  python run.py --event-hours-diff 0
+  python run.py --event-hours-diff 1
+  python run.py --event-hours-diff 3
 """
 
 import argparse
@@ -167,23 +170,18 @@ def parse_datetime(dt_str: str) -> datetime:
     raise ValueError(f'Cannot parse datetime: {dt_str!r}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS')
 
 
-def parse_event_date_diff(value: str) -> timedelta:
-    """Parse --event-date-diff value into a timedelta.
+def parse_event_hours_diff(value: str) -> int:
+    """Parse --event-hours-diff value into a non-negative integer.
 
-    Accepted formats: {N}mins, {N}hours, {N}days  (N is a positive integer).
+    0 = current hour (no shift), 1 = one hour back, etc.
     """
-    import re
-
-    m = re.fullmatch(r'(\d+)(mins|hours|days)', value.strip())
-    if not m:
-        raise ValueError(f'Cannot parse --event-date-diff {value!r}. Use {{N}}mins, {{N}}hours, or {{N}}days (e.g. 30mins, 2hours, 1days).')
-    n = int(m.group(1))
-    unit = m.group(2)
-    if unit == 'mins':
-        return timedelta(minutes=n)
-    if unit == 'hours':
-        return timedelta(hours=n)
-    return timedelta(days=n)
+    try:
+        n = int(value)
+    except ValueError:
+        raise ValueError(f'Cannot parse --event-hours-diff {value!r}. Expected a non-negative integer (e.g. 0, 1, 3).')
+    if n < 0:
+        raise ValueError(f'--event-hours-diff must be >= 0, got {n}.')
+    return n
 
 
 def hourly_intervals(since: datetime, until: datetime) -> List[Tuple[datetime, datetime]]:
@@ -239,13 +237,14 @@ def phase1_hourly(
     collect_events: bool,
     row_limit: int = DEFAULT_JOBEVENT_ROW_LIMIT,
     job_limit: int = DEFAULT_JOBEVENT_JOB_LIMIT,
-    event_date_diff: Optional[timedelta] = None,
+    event_hours_diff: Optional[int] = None,
 ) -> Tuple[Dict[str, List[Any]], Dict[str, Dict[str, float]]]:
     """
     For each hour: collect → prepare → store hourly rollup JSON.
 
-    event_date_diff, when set, shifts the since/until window backwards for
-    main_jobevent_created_service only (other collectors are unaffected).
+    event_hours_diff, when set to a positive integer, shifts the since/until
+    window backwards by that many hours for main_jobevent_created_service only
+    (other collectors are unaffected). 0 means no shift (current hour).
 
     Returns:
         hourly_rollups  – {collector_name: [prepared_json, ...]}  one entry per hour
@@ -279,9 +278,9 @@ def phase1_hourly(
                 c_since, c_until = hour_since, hour_until
             elif collector_name == 'main_jobevent_created_service':
                 extra = {'row_limit': row_limit}
-                if event_date_diff is not None:
-                    c_since = hour_since - event_date_diff
-                    c_until = hour_until - event_date_diff
+                if event_hours_diff:
+                    c_since = hour_since - timedelta(hours=event_hours_diff)
+                    c_until = hour_until - timedelta(hours=event_hours_diff)
                 else:
                     c_since, c_until = hour_since, hour_until
             else:
@@ -312,8 +311,8 @@ def phase1_hourly(
 
             if _is_events and row_limit is not None and rows >= row_limit:
                 note = f'row limit reached ({row_limit:,})'
-            elif collector_name == 'main_jobevent_created_service' and event_date_diff is not None:
-                note = f'window shifted -{event_date_diff}  ({c_since.strftime("%H:%M")}–{c_until.strftime("%H:%M")} UTC)'
+            elif collector_name == 'main_jobevent_created_service' and event_hours_diff:
+                note = f'window shifted -{event_hours_diff}h  ({c_since.strftime("%H:%M")}–{c_until.strftime("%H:%M")} UTC)'
             else:
                 note = ''
             row = (
@@ -652,14 +651,14 @@ def main():
         help=f'Max finished jobs processed per hourly window (default: {DEFAULT_JOBEVENT_JOB_LIMIT:,})',
     )
     parser.add_argument(
-        '--event-date-diff',
-        type=str,
+        '--event-hours-diff',
+        type=int,
         default=None,
-        metavar='DIFF',
-        dest='event_date_diff',
+        metavar='N',
+        dest='event_hours_diff',
         help=(
-            'Shift the since/until window backwards for main_jobevent_created_service only. '
-            'Format: {N}mins, {N}hours, or {N}days (e.g. 30mins, 2hours, 1days). '
+            'Shift the since/until window backwards by N hours for main_jobevent_created_service only. '
+            '0 = current hour (no shift), 1 = last hour, 2 = two hours ago, etc. '
             'All other collectors are unaffected.'
         ),
     )
@@ -675,7 +674,7 @@ def main():
 
     intervals = hourly_intervals(since, until)
     collect_events = not args.no_events
-    event_date_diff = parse_event_date_diff(args.event_date_diff) if args.event_date_diff else None
+    event_hours_diff = parse_event_hours_diff(str(args.event_hours_diff)) if args.event_hours_diff is not None else None
 
     # Clean output dir
     out_dir = './out'
@@ -691,8 +690,8 @@ def main():
     if collect_events:
         print(f'Max events      : {row_limit:,} rows per hour  (--max-events)')
         print(f'Max jobs        : {job_limit:,} jobs per hour   (--max-jobs)')
-        if event_date_diff is not None:
-            print(f'Event date diff : -{event_date_diff}  (partition collector window shifted back)')
+        if event_hours_diff:
+            print(f'Event hours diff: -{event_hours_diff}h  (created collector window shifted back)')
 
     db = connection
 
@@ -703,7 +702,7 @@ def main():
         service_db = None
 
     # Phase 1 – hourly collect + prepare
-    hourly_rollups, hourly_timing = phase1_hourly(intervals, db, collect_events, row_limit, job_limit, event_date_diff)
+    hourly_rollups, hourly_timing = phase1_hourly(intervals, db, collect_events, row_limit, job_limit, event_hours_diff)
 
     # Phase 2 – snapshot/daily collectors
     snapshot_rollups, snapshot_timing = phase2_snapshots(db, service_db, since, until)

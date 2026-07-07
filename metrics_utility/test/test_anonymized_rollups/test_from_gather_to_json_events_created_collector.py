@@ -5,12 +5,12 @@ from metrics_utility.library.collectors.controller import main_jobevent_created_
 from metrics_utility.test.util import utcdt
 
 
-def test_events_partition_collector_two_hours():
+def test_events_created_collector_two_hours():
     """
     Collect job events separately for each hourly partition, run the rollup
     prepare → merge → base pipeline, and assert the result.
 
-    Data seeded by main_jobhostsummary.sql produces two partitions:
+    Data seeded by main_jobevent.sql produces two partitions:
       - main_jobevent_20250613_10  (2025-06-13 10:00 – 11:00)
       - main_jobevent_20250613_11  (2025-06-13 11:00 – 12:00)
 
