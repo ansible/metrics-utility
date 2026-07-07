@@ -39,14 +39,14 @@ def _normalize_row_limit(value):
         value = int(value)
     except (TypeError, ValueError):
         logger.warning(
-            'main_jobevent_service_partition: invalid row_limit %r, falling back to default %d.',
+            'main_jobevent_created_service: invalid row_limit %r, falling back to default %d.',
             value,
             _DEFAULT_ROW_LIMIT,
         )
         return _DEFAULT_ROW_LIMIT
     if value < 0:
         logger.warning(
-            'main_jobevent_service_partition: negative row_limit %d, falling back to default %d.',
+            'main_jobevent_created_service: negative row_limit %d, falling back to default %d.',
             value,
             _DEFAULT_ROW_LIMIT,
         )
@@ -55,7 +55,7 @@ def _normalize_row_limit(value):
 
 
 @collector
-def main_jobevent_service_partition(*, db=None, since=None, until=None, row_limit=_DEFAULT_ROW_LIMIT, output=DataframeOutput()):
+def main_jobevent_created_service(*, db=None, since=None, until=None, row_limit=_DEFAULT_ROW_LIMIT, output=DataframeOutput()):
     """
     Collects job events for a single hourly partition by filtering directly on job_created.
 
@@ -67,11 +67,11 @@ def main_jobevent_service_partition(*, db=None, since=None, until=None, row_limi
     The since-until window must span exactly one hour; a ValueError is raised otherwise.
     """
     if since is None or until is None:
-        raise ValueError('main_jobevent_service_partition: both since and until must be provided')
+        raise ValueError('main_jobevent_created_service: both since and until must be provided')
 
     if until - since != _ONE_HOUR:
         raise ValueError(
-            f'main_jobevent_service_partition: since-until window must be exactly one hour, got {until - since} (since={since}, until={until})'
+            f'main_jobevent_created_service: since-until window must be exactly one hour, got {until - since} (since={since}, until={until})'
         )
 
     row_limit = _normalize_row_limit(row_limit)
@@ -139,7 +139,7 @@ def main_jobevent_service_partition(*, db=None, since=None, until=None, row_limi
 
     if row_limit is not None and len(df) >= row_limit:
         logger.info(
-            'main_jobevent_service_partition: row limit reached (%d rows). '
+            'main_jobevent_created_service: row limit reached (%d rows). '
             'Events beyond the limit were not collected for this partition. '
             'Increase METRICS_SERVICE_JOBEVENT_ROW_LIMIT if fuller coverage is needed.',
             len(df),

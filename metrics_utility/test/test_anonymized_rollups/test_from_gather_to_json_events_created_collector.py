@@ -1,7 +1,7 @@
 from django.db import connection
 
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
-from metrics_utility.library.collectors.controller import main_jobevent_service_partition
+from metrics_utility.library.collectors.controller import main_jobevent_created_service
 from metrics_utility.test.util import utcdt
 
 
@@ -40,7 +40,7 @@ def test_events_partition_collector_two_hours():
     rollup = EventModulesAnonymizedRollup()
 
     # --- Collection 1: 10:00 – 11:00 hour (partition main_jobevent_20250613_10) ---
-    df_10 = main_jobevent_service_partition(
+    df_10 = main_jobevent_created_service(
         db=connection,
         since=utcdt('2025-06-13T10:00:00'),
         until=utcdt('2025-06-13T11:00:00'),
@@ -54,7 +54,7 @@ def test_events_partition_collector_two_hours():
     assert prepared_10['deprecations_total'] == 1
 
     # --- Collection 2: 11:00 – 12:00 hour (partition main_jobevent_20250613_11) ---
-    df_11 = main_jobevent_service_partition(
+    df_11 = main_jobevent_created_service(
         db=connection,
         since=utcdt('2025-06-13T11:00:00'),
         until=utcdt('2025-06-13T12:00:00'),

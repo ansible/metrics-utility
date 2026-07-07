@@ -84,7 +84,7 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     feature_flags_service,
     job_host_summary_service,
     main_jobevent_service,
-    main_jobevent_service_partition,
+    main_jobevent_created_service,
     table_metadata,
     unified_jobs_dashboard,
 )
@@ -122,8 +122,8 @@ HOURLY_COLLECTORS: Dict[str, Dict[str, Any]] = {
         'collector': main_jobevent_service,
         'rollup': EventModulesAnonymizedRollup,
     },
-    'main_jobevent_service_partition': {
-        'collector': main_jobevent_service_partition,
+    'main_jobevent_created_service': {
+        'collector': main_jobevent_created_service,
         'rollup': EventModulesAnonymizedRollup,
     },
 }
@@ -245,7 +245,7 @@ def phase1_hourly(
     For each hour: collect → prepare → store hourly rollup JSON.
 
     event_date_diff, when set, shifts the since/until window backwards for
-    main_jobevent_service_partition only (other collectors are unaffected).
+    main_jobevent_created_service only (other collectors are unaffected).
 
     Returns:
         hourly_rollups  – {collector_name: [prepared_json, ...]}  one entry per hour
@@ -267,7 +267,7 @@ def phase1_hourly(
         print(f'  {"-" * COL_NAME}  {"-" * COL_ROWS}  {"-" * COL_TIME}  {"-" * COL_TIME}  ----')
 
         for collector_name, cfg in HOURLY_COLLECTORS.items():
-            _is_events = collector_name in ('main_jobevent_service', 'main_jobevent_service_partition')
+            _is_events = collector_name in ('main_jobevent_service', 'main_jobevent_created_service')
             if _is_events and not collect_events:
                 print(f'  {collector_name:<{COL_NAME}}  {"–":>{COL_ROWS}}  {"–":>{COL_TIME}}  {"–":>{COL_TIME}}  skipped (--no-events)')
                 hourly_rollups[collector_name].append(None)
@@ -277,7 +277,7 @@ def phase1_hourly(
             if collector_name == 'main_jobevent_service':
                 extra = {'row_limit': row_limit, 'job_limit': job_limit}
                 c_since, c_until = hour_since, hour_until
-            elif collector_name == 'main_jobevent_service_partition':
+            elif collector_name == 'main_jobevent_created_service':
                 extra = {'row_limit': row_limit}
                 if event_date_diff is not None:
                     c_since = hour_since - event_date_diff
@@ -312,7 +312,7 @@ def phase1_hourly(
 
             if _is_events and row_limit is not None and rows >= row_limit:
                 note = f'row limit reached ({row_limit:,})'
-            elif collector_name == 'main_jobevent_service_partition' and event_date_diff is not None:
+            elif collector_name == 'main_jobevent_created_service' and event_date_diff is not None:
                 note = f'window shifted -{event_date_diff}  ({c_since.strftime("%H:%M")}–{c_until.strftime("%H:%M")} UTC)'
             else:
                 note = ''
@@ -482,7 +482,7 @@ def phase4_anonymize(daily_json: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[s
     """
     Run anonymize_rollups() once per events-collector pipeline.
 
-    Each events collector (main_jobevent_service, main_jobevent_service_partition)
+    Each events collector (main_jobevent_service, main_jobevent_created_service)
     produces an independent anonymized result. All non-events rollup data is shared.
 
     Returns:
@@ -505,7 +505,7 @@ def phase4_anonymize(daily_json: Dict[str, Any]) -> Tuple[Dict[str, Any], Dict[s
     results: Dict[str, Any] = {}
     timings: Dict[str, float] = {}
 
-    for events_collector in ('main_jobevent_service', 'main_jobevent_service_partition'):
+    for events_collector in ('main_jobevent_service', 'main_jobevent_created_service'):
         t0 = time.time()
         try:
             result = anonymize_rollups(
@@ -658,7 +658,7 @@ def main():
         metavar='DIFF',
         dest='event_date_diff',
         help=(
-            'Shift the since/until window backwards for main_jobevent_service_partition only. '
+            'Shift the since/until window backwards for main_jobevent_created_service only. '
             'Format: {N}mins, {N}hours, or {N}days (e.g. 30mins, 2hours, 1days). '
             'All other collectors are unaffected.'
         ),
