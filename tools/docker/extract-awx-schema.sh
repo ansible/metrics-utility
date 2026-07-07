@@ -55,7 +55,13 @@ echo "Starting compose postgres..."
 $COMPOSE_CMD -f docker-compose.yaml up -d postgres
 
 echo "Waiting for postgres..."
-until $COMPOSE_CMD -f docker-compose.yaml exec postgres pg_isready -U awx 2>/dev/null; do
+retries=0
+until $COMPOSE_CMD -f docker-compose.yaml exec -T postgres pg_isready -U awx 2>/dev/null; do
+  retries=$((retries + 1))
+  if [ "$retries" -ge 15 ]; then
+    echo "Error: postgres did not become ready after 30s"
+    exit 1
+  fi
   sleep 2
 done
 
@@ -65,8 +71,7 @@ trap 'rm -rf "$TMPDIR"' EXIT
 echo "Installing AWX dependencies in $AWX_DIR/.venv ..."
 cd "$AWX_DIR"
 uv venv .venv 2>/dev/null || true
-# Filter out uwsgi (needs crypt.h) — not needed for migrations
-grep -v '^uwsgi==' requirements/requirements.txt > "$TMPDIR/awx-requirements-filtered.txt"
+sed '/^uwsgi==/d' requirements/requirements.txt > "$TMPDIR/awx-requirements-filtered.txt"
 uv pip install --python .venv/bin/python \
   -r "$TMPDIR/awx-requirements-filtered.txt" \
   -r requirements/requirements_git.txt \

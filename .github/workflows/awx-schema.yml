@@ -7,17 +7,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  update-schema:
+  extract-schema:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      awx_sha: ${{ steps.extract.outputs.awx_sha }}
     steps:
       - name: "Checkout metrics-utility"
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: "Checkout AWX"
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           repository: ansible/awx
           ref: devel
@@ -56,7 +56,7 @@ jobs:
         run: |
           uv venv /tmp/awx-venv
           # Filter out uwsgi (needs crypt.h) — not needed for migrations
-          grep -v '^uwsgi==' requirements/requirements.txt > /tmp/awx-requirements-filtered.txt
+          sed '/^uwsgi==/d' requirements/requirements.txt > /tmp/awx-requirements-filtered.txt
           uv pip install --python /tmp/awx-venv/bin/python \
             -r /tmp/awx-requirements-filtered.txt \
             -r requirements/requirements_git.txt \
@@ -87,6 +87,7 @@ jobs:
           /tmp/awx-venv/bin/awx-manage migrate --noinput
 
       - name: "Extract schema"
+        id: extract
         run: |
           AWX_SHA="$(git -C awx rev-parse --short HEAD)"
           pg_dump -s -U awx -h localhost awx \
@@ -101,7 +102,7 @@ jobs:
             `# strip trailing blank lines` \
             | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' \
             > tools/docker/latest.sql
-          echo "AWX_SHA=$AWX_SHA" >> "$GITHUB_ENV"
+          echo "awx_sha=$AWX_SHA" >> "$GITHUB_OUTPUT"
 
       - name: "Check for changes"
         id: diff
@@ -115,14 +116,38 @@ jobs:
             git diff --stat tools/docker/latest.sql
           fi
 
-      - name: "Create pull request"
+      - name: "Upload schema"
         if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: awx-schema
+          path: tools/docker/latest.sql
+
+  create-pr:
+    needs: extract-schema
+    if: needs.extract-schema.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: "Checkout metrics-utility"
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: "Download schema"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: awx-schema
+          path: tools/docker
+
+      - name: "Create pull request"
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           branch: awx-schema-update
-          commit-message: "update AWX schema dump (${{ env.AWX_SHA }})"
-          title: "update AWX schema dump (${{ env.AWX_SHA }})"
+          commit-message: "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
+          title: "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
           body: |
-            Automated AWX schema update from `ansible/awx@devel` at commit `${{ env.AWX_SHA }}`.
+            Automated AWX schema update from `ansible/awx@devel` at commit `${{ needs.extract-schema.outputs.awx_sha }}`.
 
             Please review the schema diff for any changes relevant to metrics-utility.
