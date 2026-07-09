@@ -1,0 +1,153 @@
+name: "AWX schema update"
+
+on:
+  schedule:
+    # Monday 7:17 UTC
+    - cron: "17 7 * * 1"
+  workflow_dispatch:
+
+jobs:
+  extract-schema:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+      awx_sha: ${{ steps.extract.outputs.awx_sha }}
+    steps:
+      - name: "Checkout metrics-utility"
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: "Checkout AWX"
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          repository: ansible/awx
+          ref: devel
+          path: awx
+
+      - name: "Install uv"
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+
+      - name: "Set up Python"
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: "Set up postgresql"
+        run: |
+          sudo apt install postgresql postgresql-client
+          sudo systemctl start postgresql.service
+
+      - name: "Wait for postgresql"
+        timeout-minutes: 1
+        run: |
+          until pg_isready; do
+            sleep 4
+          done
+
+      - name: "Create awx database user"
+        run: |
+          cat tools/docker/roles.sql | sudo su - postgres -c psql
+
+      - name: "Create awx database"
+        run: |
+          sudo su - postgres -c "psql -c 'CREATE DATABASE awx OWNER awx;'"
+
+      - name: "Install AWX dependencies"
+        working-directory: awx
+        run: |
+          uv venv /tmp/awx-venv
+          # Filter out uwsgi (needs crypt.h) — not needed for migrations
+          sed '/^uwsgi==/d' requirements/requirements.txt > /tmp/awx-requirements-filtered.txt
+          uv pip install --python /tmp/awx-venv/bin/python \
+            -r /tmp/awx-requirements-filtered.txt \
+            -r requirements/requirements_git.txt \
+            -r requirements/requirements_dev.txt
+          uv pip install --python /tmp/awx-venv/bin/python -e .
+
+      - name: "Run AWX migrations"
+        working-directory: awx
+        run: |
+          TMPDIR="$(mktemp -d)"
+          cat > "$TMPDIR/database.py" << 'DBEOF'
+          DATABASES = {
+              'default': {
+                  'ATOMIC_REQUESTS': True,
+                  'ENGINE': 'django.db.backends.postgresql',
+                  'NAME': 'awx',
+                  'USER': 'awx',
+                  'PASSWORD': 'awx',
+                  'HOST': 'localhost',
+                  'PORT': '5432',
+              }
+          }
+          DBEOF
+          # AWX_SETTINGS_DIR: point AWX at our database.py override
+          # AWX_LOGGING_MODE: avoid file logging to /var/log/tower/
+          AWX_SETTINGS_DIR="$TMPDIR" \
+          AWX_LOGGING_MODE=stdout \
+          /tmp/awx-venv/bin/awx-manage migrate --noinput
+
+      - name: "Extract schema"
+        id: extract
+        run: |
+          AWX_SHA="$(git -C awx rev-parse --short HEAD)"
+          pg_dump -s -U awx -h localhost awx \
+            `# strip pg_dump version comments — they change with postgres upgrades` \
+            | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d' \
+            `# strip pg18+ security directives and settings not present in older versions` \
+            | sed '/^\\restrict /d; /^\\unrestrict/d; /^SET transaction_timeout/d' \
+            `# strip pg18+ named NOT NULL constraints back to plain NOT NULL` \
+            | sed 's/ CONSTRAINT [a-z_]*_not_null[0-9]* NOT NULL/ NOT NULL/g' \
+            `# collapse consecutive blank lines left by the above removals` \
+            | cat -s \
+            `# strip trailing blank lines` \
+            | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' \
+            > tools/docker/latest.sql
+          echo "awx_sha=$AWX_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: "Check for changes"
+        id: diff
+        run: |
+          if git diff --quiet tools/docker/latest.sql; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No schema changes detected."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Schema changes detected:"
+            git diff --stat tools/docker/latest.sql
+          fi
+
+      - name: "Upload schema"
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: awx-schema
+          path: tools/docker/latest.sql
+
+  create-pr:
+    needs: extract-schema
+    if: needs.extract-schema.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: "Checkout metrics-utility"
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: "Download schema"
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: awx-schema
+          path: tools/docker
+
+      - name: "Create pull request"
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: awx-schema-update
+          commit-message: "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
+          title: "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
+          body: |
+            Automated AWX schema update from `ansible/awx@devel` at commit `${{ needs.extract-schema.outputs.awx_sha }}`.
+
+            Please review the schema diff for any changes relevant to metrics-utility.
