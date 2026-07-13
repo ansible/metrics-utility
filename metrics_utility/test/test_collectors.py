@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, Mock, patch
 
-from django.db.utils import ProgrammingError
+import pytest
+
+from django.db.utils import OperationalError, ProgrammingError
 
 from metrics_utility.automation_controller_billing.collectors import (
     cli_main_indirectmanagednodeaudit,
@@ -114,3 +116,27 @@ class TestMainIndirectManagedNodeAuditTable:
             ' Falling back to behavior without indirect managed node audit data.',
             specific_error,
         )
+
+    @patch('metrics_utility.automation_controller_billing.collectors.main_indirectmanagednodeaudit')
+    @patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors')
+    @patch('metrics_utility.automation_controller_billing.collectors.connection')
+    def test_main_indirectmanagednodeaudit_operational_error_propagates(
+        self,
+        mock_connection,
+        mock_get_optional_collectors,
+        mock_main_indirectmanagednodeaudit,
+    ):
+        """OperationalError (e.g. connection refused) is not caught and propagates up.
+
+        This is distinct from ProgrammingError (missing table), which is caught and logged.
+        """
+        mock_get_optional_collectors.return_value = {'main_indirectmanagednodeaudit'}
+        mock_main_indirectmanagednodeaudit.side_effect = OperationalError('connection refused')
+
+        since = Mock()
+        since.isoformat.return_value = '2024-01-01T00:00:00'
+        until = Mock()
+        until.isoformat.return_value = '2024-01-02T00:00:00'
+
+        with pytest.raises(OperationalError):
+            cli_main_indirectmanagednodeaudit(since=since, until=until, output=None)
