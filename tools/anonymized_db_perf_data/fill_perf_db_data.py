@@ -11,6 +11,7 @@ from helpers import (
     create_credentials,
     create_execution_environments,
     create_hosts,
+    create_indirect_managed_node_audits,
     create_instance,
     create_inventory,
     create_job,
@@ -36,10 +37,13 @@ def print_counts():
     jhs_count = result[0][0] if result else 0
     result = run('SELECT COUNT(*) FROM main_jobevent;')
     event_count = result[0][0] if result else 0
+    result = run('SELECT COUNT(*) FROM main_indirectmanagednodeaudit;')
+    indirect_count = result[0][0] if result else 0
     print(f'Total hosts: {host_count}')
     print(f'Total jobs: {job_count}')
     print(f'Total job host summaries: {jhs_count}')
     print(f'Total job events: {event_count}')
+    print(f'Total indirect managed node audit records: {indirect_count}')
 
 
 def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffix=None):
@@ -104,7 +108,9 @@ def fill_init_data(host_count=10, task_count=50, template_count=10, unique_suffi
     }
 
 
-def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=10, start_date=None, end_date=None, no_events=False):
+def fill_perf_db_data(
+    host_count=10, job_count=5, task_count=50, template_count=10, start_date=None, end_date=None, no_events=False, indirect_count=100
+):
     """Fill the database with performance test data.
 
     Note: This function does NOT clean existing data. Use clean_all_data.py to clean before filling.
@@ -117,15 +123,29 @@ def fill_perf_db_data(host_count=10, job_count=5, task_count=50, template_count=
         start_date: Start of the date range for job timestamps
         end_date: End of the date range for job timestamps
         no_events: Skip generating job events entirely
+        indirect_count: Number of indirect managed node audit records to create
     """
-    print(f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job, {template_count} templates ===')
+    print(
+        f'=== Configuration: {host_count} hosts, {job_count} jobs, {task_count} tasks/job, '
+        f'{template_count} templates, {indirect_count} indirect nodes ==='
+    )
 
     create_jobevent_partitions(start_date, end_date)
 
     init_data = fill_init_data(host_count=host_count, task_count=task_count, template_count=template_count)
 
+    job_ids = []
     for i in range(job_count):
-        fill_job(init_data, i, start_date, end_date, no_events=no_events)
+        job_id = fill_job(init_data, i, start_date, end_date, no_events=no_events)
+        job_ids.append(job_id)
+
+    create_indirect_managed_node_audits(
+        job_ids=job_ids,
+        host_ids=init_data['host_ids'],
+        inventory_id=init_data['inventory_id'],
+        org_id=init_data['org_id'],
+        indirect_count=indirect_count,
+    )
 
     print_counts()
 
@@ -169,7 +189,7 @@ def fill_job(init_data, job_index, start_date, end_date, no_events=False):
     create_job_credentials(job_id, init_data['credential_ids'])
     if not no_events:
         fill_jobevent(init_data, job_id, job_index, job_created)
-    return
+    return job_id
 
 
 if __name__ == '__main__':
@@ -220,6 +240,7 @@ if __name__ == '__main__':
         help='End of the datetime range for job timestamps (e.g. "2024-01-02" or "2024-01-01 06:00:00"). Default: 2024-01-31 23:59:59',
     )
     parser.add_argument('--no-events', action='store_true', default=False, help='Skip generating job events')
+    parser.add_argument('--indirect-count', type=int, default=100, help='Number of indirect managed node audit records to create (default: 100)')
 
     args = parser.parse_args()
 
@@ -245,4 +266,5 @@ if __name__ == '__main__':
         start_date=start_date,
         end_date=end_date,
         no_events=args.no_events,
+        indirect_count=args.indirect_count,
     )

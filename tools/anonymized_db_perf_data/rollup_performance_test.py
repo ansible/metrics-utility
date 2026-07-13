@@ -33,6 +33,7 @@ from django.db import connection  # noqa: E402
 from metrics_utility.library.collectors.controller import (  # noqa: E402
     execution_environments,
     job_host_summary_service,
+    main_indirectmanagednodeaudit,
     main_jobevent_service,
     unified_jobs,
 )
@@ -150,6 +151,12 @@ def main():
         all_metrics.append(metrics)
         collector_data['main_jobevent_service'] = data
 
+    # Test main_indirectmanagednodeaudit
+    metrics, data = run_task('main_indirectmanagednodeaudit', lambda: main_indirectmanagednodeaudit(db=connection).gather())
+    if metrics:
+        all_metrics.append(metrics)
+        collector_data['main_indirectmanagednodeaudit'] = data
+
     # Test rollup computation
     print('\n' + '=' * 60)
     print('PHASE 2: Testing Rollup Computation')
@@ -177,6 +184,8 @@ def main():
     job_count = cursor.fetchone()[0]
     cursor.execute('SELECT COUNT(*) FROM main_jobevent;')
     event_count = cursor.fetchone()[0]
+    cursor.execute('SELECT COUNT(*) FROM main_indirectmanagednodeaudit;')
+    indirect_count = cursor.fetchone()[0]
 
     # Print summary
     print('\n' + '=' * 60)
@@ -222,7 +231,8 @@ def main():
         f.write(f'- **Test Period:** {since.strftime("%Y-%m-%d")} to {until.strftime("%Y-%m-%d")}\n')
         f.write(f'- **Total Jobs:** {job_count:,}\n')
         f.write(f'- **Total Hosts:** {host_count:,}\n')
-        f.write(f'- **Total Events:** {event_count:,}\n\n')
+        f.write(f'- **Total Events:** {event_count:,}\n')
+        f.write(f'- **Total Indirect Node Audit Records:** {indirect_count:,}\n\n')
 
         f.write('## Performance Results\n\n')
         f.write('### Individual Task Performance\n\n')
