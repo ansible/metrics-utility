@@ -496,6 +496,15 @@ def run(sql_script):
 # =============================================================================
 
 
+def delete_indirect_managed_node_audits():
+    """Delete all indirect managed node audit records."""
+    sql = """
+    DELETE FROM main_indirectmanagednodeaudit;
+    """
+    print('Deleting main_indirectmanagednodeaudit...')
+    return run(sql)
+
+
 def delete_job_events():
     """Delete all job events."""
     sql = """
@@ -636,7 +645,7 @@ def delete_all():
     """
     Delete all data from tables in correct order (respecting foreign key constraints).
 
-    Order: job_events -> job_host_summaries -> jobs ->
+    Order: indirect_managed_node_audits -> job_events -> job_host_summaries -> jobs ->
            unified_job_credentials (many-to-many) -> unified_jobs ->
            unified_job_template_credentials (many-to-many) ->
            job_templates -> projects -> unified_job_templates ->
@@ -645,6 +654,7 @@ def delete_all():
     """
     print('=== Deleting all performance test data ===')
 
+    delete_indirect_managed_node_audits()
     delete_job_events()
     delete_job_host_summaries()
     delete_jobs()
@@ -1293,6 +1303,52 @@ def create_instance(version='4.5.0', node_type='control'):
     if instance_id is None:
         raise RuntimeError('Failed to create main_instance row')
     return instance_id
+
+
+def create_indirect_managed_node_audits(job_ids, host_ids, inventory_id, org_id, indirect_count=100, unique_suffix=None):
+    """Create indirect managed node audit records spread across the given jobs.
+
+    Args:
+        job_ids: List of job IDs to distribute records across
+        host_ids: List of host IDs to reference (cycling, nullable)
+        inventory_id: Inventory ID for all records
+        org_id: Organization ID for all records
+        indirect_count: Total number of audit records to create
+        unique_suffix: Optional suffix embedded in host names to avoid collisions across runs
+    """
+    if not job_ids:
+        print('No job IDs provided; skipping indirect managed node audit creation.')
+        return []
+
+    suffix = f'-{unique_suffix}' if unique_suffix else ''
+    print(f'Creating {indirect_count} indirect managed node audit records across {len(job_ids)} jobs...')
+
+    values = []
+    for i in range(indirect_count):
+        job_id = job_ids[i % len(job_ids)]
+        host_id_sql = str(host_ids[i % len(host_ids)]) if host_ids else 'NULL'
+        host_name = f'indirect-host-{i}{suffix}.example.com'
+        canonical_facts = json.dumps({'fqdn': host_name}).replace("'", "''")
+        values.append(
+            f'(NOW(), NOW(), {job_id}, {org_id}, {inventory_id}, {host_id_sql}, '
+            f"'{host_name}', '{canonical_facts}'::jsonb, '{{}}'::jsonb, '[]'::jsonb, 1)"
+        )
+
+    _INSERT_BATCH_SIZE = 500
+    insert_sql = """
+    INSERT INTO main_indirectmanagednodeaudit
+        (created, modified, job_id, organization_id, inventory_id, host_id,
+         name, canonical_facts, facts, events, count)
+    VALUES {rows}
+    RETURNING id;
+    """
+    ids = []
+    for batch_start in range(0, len(values), _INSERT_BATCH_SIZE):
+        batch = values[batch_start : batch_start + _INSERT_BATCH_SIZE]
+        output = run(insert_sql.format(rows=','.join(batch)))
+        ids.extend(parse_ids(output) if output else [])
+    print(f'Created {len(ids)} indirect managed node audit records')
+    return ids
 
 
 if __name__ == '__main__':

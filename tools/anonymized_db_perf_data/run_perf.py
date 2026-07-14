@@ -69,10 +69,14 @@ def print_counts():
     cursor.execute('SELECT COUNT(*) FROM main_jobevent;')
     event_count = cursor.fetchone()[0]
 
+    cursor.execute('SELECT COUNT(*) FROM main_indirectmanagednodeaudit;')
+    indirect_count = cursor.fetchone()[0]
+
     print(f'Total hosts: {host_count}')
     print(f'Total jobs: {job_count}')
     print(f'Total job host summaries: {jhs_count}')
     print(f'Total job events: {event_count}')
+    print(f'Total indirect node audit records: {indirect_count}')
     print()
 
 

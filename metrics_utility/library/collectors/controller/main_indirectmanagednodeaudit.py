@@ -5,12 +5,16 @@ from ..util import DataframeOutput, collector, date_where
 
 @collector
 def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=DataframeOutput()):
-    """Collect indirect managed node audit records for jobs finished in the time window.
+    """Collect indirect managed node audit records.
+
+    When since and until are omitted the query returns all records (full-table
+    snapshot). Pass since/until to restrict results to a specific time window
+    based on the related job's finished timestamp.
 
     Args:
         db: Django database connection.
-        since: Inclusive start datetime for the job ``finished`` filter.
-        until: Exclusive end datetime for the job ``finished`` filter.
+        since: Optional inclusive start datetime for the job ``finished`` filter.
+        until: Optional exclusive end datetime for the job ``finished`` filter.
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
     Returns:
