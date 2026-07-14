@@ -52,17 +52,6 @@ def _make_group_key(organization_name, collection_name):
     return f'{organization_name}{GROUP_KEY_SEPARATOR}{collection_name}'
 
 
-def _aggregate_by_key(groups, key_field):
-    """Aggregate host names across groups by a single field (org or collection)."""
-    aggregated = {}
-    for group in groups.values():
-        key = group[key_field]
-        if key not in aggregated:
-            aggregated[key] = set()
-        aggregated[key].update(group.get('host_names', []))
-    return {k: {'host_names': sorted(v), 'host_count': len(v)} for k, v in sorted(aggregated.items())}
-
-
 class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
     """Rollup processor for main_indirectmanagednodeaudit collector data.
 
@@ -87,7 +76,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe = self._convert_id_columns_to_strings(dataframe)
 
         if dataframe.empty:
-            return {'groups': {}, 'by_organizations': [], 'by_collections': [], 'indirect_nodes_total': 0}
+            return {'groups': {}, 'indirect_nodes_total': 0}
 
         groups = {}
         all_host_names = set()
@@ -120,17 +109,9 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             group['host_names'] = sorted(group['host_names'])
             group['host_count'] = len(group['host_names'])
 
-        agg_by_org = _aggregate_by_key(groups, 'organization_name')
-        agg_by_coll = _aggregate_by_key(groups, 'collection_name')
-
-        by_organizations = [{'organization_name': k, 'host_count': v['host_count']} for k, v in agg_by_org.items()]
-        by_collections = [{'collection_name': k, 'host_count': v['host_count']} for k, v in agg_by_coll.items()]
-
         return sanitize_json(
             {
                 'groups': groups,
-                'by_organizations': by_organizations,
-                'by_collections': by_collections,
                 'indirect_nodes_total': len(all_host_names),
             }
         )
@@ -209,12 +190,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             group['host_count'] = len(group['host_names'])
             all_host_names.update(group['host_names'])
 
-        agg_by_org = _aggregate_by_key(merged_groups, 'organization_name')
-        agg_by_coll = _aggregate_by_key(merged_groups, 'collection_name')
-
         return {
             'groups': merged_groups,
-            'by_organizations': [{'organization_name': k, 'host_count': v['host_count']} for k, v in agg_by_org.items()],
-            'by_collections': [{'collection_name': k, 'host_count': v['host_count']} for k, v in agg_by_coll.items()],
             'indirect_nodes_total': len(all_host_names),
         }
