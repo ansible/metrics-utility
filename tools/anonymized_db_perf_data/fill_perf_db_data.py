@@ -145,6 +145,7 @@ def fill_perf_db_data(
         inventory_id=init_data['inventory_id'],
         org_id=init_data['org_id'],
         indirect_count=indirect_count,
+        unique_suffix=init_data['unique_suffix'],
     )
 
     print_counts()

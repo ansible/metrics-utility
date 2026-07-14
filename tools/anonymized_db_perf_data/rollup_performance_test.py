@@ -3,7 +3,7 @@
 Test anonymized rollup performance by running each task separately.
 
 Measures time and memory for:
-- Each collector (execution_environments, unified_jobs, job_host_summary, main_jobevent)
+- Each collector (execution_environments, unified_jobs, job_host_summary, main_jobevent, main_indirectmanagednodeaudit)
 - Rollup computation
 
 Usage:
@@ -167,6 +167,7 @@ def main():
         'unified_jobs': collector_data['unified_jobs'],
         'job_host_summary': collector_data['job_host_summary_service'],
         'main_jobevent': collector_data['main_jobevent_service'],
+        'indirect_managed_nodes': collector_data.get('main_indirectmanagednodeaudit', []),
     }
 
     metrics, _ = run_task(

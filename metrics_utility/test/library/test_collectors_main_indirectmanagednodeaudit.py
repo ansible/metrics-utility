@@ -14,13 +14,11 @@ def test_main_indirectmanagednodeaudit_basic():
     """Test main_indirectmanagednodeaudit collector basic functionality."""
     mock_db = MagicMock()
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=SINCE, until=UNTIL)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
 
     assert hasattr(instance, 'gather')
     assert hasattr(instance, 'kwargs')
     assert instance.kwargs['db'] == mock_db
-    assert instance.kwargs['since'] == SINCE
-    assert instance.kwargs['until'] == UNTIL
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
@@ -29,7 +27,7 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_pandas):
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2], 'canonical_facts': ['{}', '{}']})
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=SINCE, until=UNTIL)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     result = instance.gather()
 
     mock_copy_pandas.assert_called_once()
@@ -41,12 +39,12 @@ def test_main_indirectmanagednodeaudit_calls_copy_table(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_main_indirectmanagednodeaudit_query_has_date_filter(mock_copy_pandas):
-    """Test that the SQL query filters by main_unifiedjob.finished when since/until are provided."""
+def test_main_indirectmanagednodeaudit_query_columns_and_joins(mock_copy_pandas):
+    """Test that the SQL query selects all expected columns and joins."""
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=SINCE, until=UNTIL)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     instance.gather()
 
     call_args = mock_copy_pandas.call_args
@@ -63,18 +61,14 @@ def test_main_indirectmanagednodeaudit_query_has_date_filter(mock_copy_pandas):
     assert 'events' in query
     assert 'task_runs' in query
 
-    assert 'main_unifiedjob.finished' in query
-    assert '>=' in query
-    assert '<' in query
-
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_indirectmanagednodeaudit_no_date_filter_when_none(mock_copy_pandas):
-    """Test that passing since=None, until=None produces WHERE true (no filtering)."""
+    """Test that omitting since/until produces WHERE true (full-table scan)."""
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=None, until=None)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     instance.gather()
 
     call_args = mock_copy_pandas.call_args
@@ -82,6 +76,23 @@ def test_main_indirectmanagednodeaudit_no_date_filter_when_none(mock_copy_pandas
 
     assert 'WHERE' in query
     assert 'true' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_indirectmanagednodeaudit_query_has_date_filter(mock_copy_pandas):
+    """Test that the SQL query filters by main_unifiedjob.finished when since/until are provided."""
+    mock_db = MagicMock()
+    mock_copy_pandas.return_value = pd.DataFrame()
+
+    instance = main_indirectmanagednodeaudit(db=mock_db, since=SINCE, until=UNTIL)
+    instance.gather()
+
+    call_args = mock_copy_pandas.call_args
+    query = call_args[0][1]
+
+    assert 'main_unifiedjob.finished' in query
+    assert '>=' in query
+    assert '<' in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
@@ -114,7 +125,7 @@ def test_main_indirectmanagednodeaudit_null_join_references(mock_copy_pandas):
         }
     )
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=SINCE, until=UNTIL)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     result = instance.gather()
 
     assert isinstance(result, pd.DataFrame)
@@ -155,7 +166,7 @@ def test_main_indirectmanagednodeaudit_orphaned_records(mock_copy_pandas):
         }
     )
 
-    instance = main_indirectmanagednodeaudit(db=mock_db, since=SINCE, until=UNTIL)
+    instance = main_indirectmanagednodeaudit(db=mock_db)
     result = instance.gather()
 
     assert isinstance(result, pd.DataFrame)
