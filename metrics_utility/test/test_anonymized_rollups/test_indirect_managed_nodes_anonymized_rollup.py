@@ -54,7 +54,7 @@ def test_prepare_handles_empty_dataframe():
 
     result = rollup.prepare(pd.DataFrame())
 
-    assert result == {'groups': {}, 'by_organizations': [], 'by_collections': [], 'indirect_nodes_total': 0}
+    assert result == {'groups': {}, 'indirect_nodes_total': 0}
 
 
 def test_prepare_deduplicates_hosts_within_group():
@@ -137,87 +137,6 @@ def test_prepare_handles_events_as_list():
     assert result['groups']['OrgA||cisco.ios']['host_count'] == 1
 
 
-def test_prepare_by_organizations_summary():
-    """prepare() includes by_organizations list with deduplicated host counts."""
-    rollup = IndirectManagedNodesAnonymizedRollup()
-
-    data = _make_dataframe(
-        [
-            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'},
-            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["azure.azcollection.azure_rm_vm"]'},
-            {'host_name': 'host2', 'organization_name': 'OrgB', 'events': '["cisco.ios.ios_config"]'},
-        ]
-    )
-
-    result = rollup.prepare(data)
-
-    by_orgs = result['by_organizations']
-    assert by_orgs == [
-        {'organization_name': 'OrgA', 'host_count': 1},
-        {'organization_name': 'OrgB', 'host_count': 1},
-    ]
-
-
-def test_prepare_by_collections_summary():
-    """prepare() includes by_collections list with deduplicated host counts."""
-    rollup = IndirectManagedNodesAnonymizedRollup()
-
-    data = _make_dataframe(
-        [
-            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'},
-            {'host_name': 'host2', 'organization_name': 'OrgB', 'events': '["cisco.ios.ios_config"]'},
-            {'host_name': 'host3', 'organization_name': 'OrgA', 'events': '["azure.azcollection.azure_rm_vm"]'},
-        ]
-    )
-
-    result = rollup.prepare(data)
-
-    by_colls = result['by_collections']
-    assert by_colls == [
-        {'collection_name': 'azure.azcollection', 'host_count': 1},
-        {'collection_name': 'cisco.ios', 'host_count': 2},
-    ]
-
-
-def test_merge_includes_by_organizations_and_by_collections():
-    """merge() result includes by_organizations and by_collections summaries."""
-    rollup = IndirectManagedNodesAnonymizedRollup()
-
-    data_all = {
-        'groups': {
-            'OrgA||cisco.ios': {
-                'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
-                'host_names': ['host1'],
-                'host_count': 1,
-            },
-        },
-        'indirect_nodes_total': 1,
-    }
-
-    data_new = {
-        'groups': {
-            'OrgB||cisco.ios': {
-                'organization_name': 'OrgB',
-                'collection_name': 'cisco.ios',
-                'host_names': ['host2'],
-                'host_count': 1,
-            },
-        },
-        'indirect_nodes_total': 1,
-    }
-
-    result = rollup.merge(data_all, data_new)
-
-    assert result['by_organizations'] == [
-        {'organization_name': 'OrgA', 'host_count': 1},
-        {'organization_name': 'OrgB', 'host_count': 1},
-    ]
-    assert result['by_collections'] == [
-        {'collection_name': 'cisco.ios', 'host_count': 2},
-    ]
-
-
 def test_merge_unions_host_names():
     """merge() unions host name sets across two batches."""
     rollup = IndirectManagedNodesAnonymizedRollup()
@@ -275,7 +194,7 @@ def test_merge_with_none_data_all():
 
 
 def test_base_strips_pii():
-    """base() output does not contain host_names, organization_name, or by_organizations."""
+    """base() output does not contain host_names or organization_name."""
     rollup = IndirectManagedNodesAnonymizedRollup()
 
     data = {
@@ -287,12 +206,6 @@ def test_base_strips_pii():
                 'host_count': 2,
             },
         },
-        'by_organizations': [
-            {'organization_name': 'OrgA', 'host_count': 2},
-        ],
-        'by_collections': [
-            {'collection_name': 'cisco.ios', 'host_count': 2},
-        ],
         'indirect_nodes_total': 2,
     }
 
@@ -300,7 +213,6 @@ def test_base_strips_pii():
 
     assert 'json' in result
     output = result['json']
-    assert 'by_organizations' not in output
     assert 'groups' not in output
     assert 'host_names' not in output
     for group in output['by_collection']:
