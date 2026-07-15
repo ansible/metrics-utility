@@ -41,7 +41,10 @@ _RUNNER_EVENTS = frozenset([
     'runner_item_on_unreachable',
 ])
 _ANNOTATION_EVENTS = frozenset(['warning', 'deprecated'])
-_RELEVANT_EVENTS = _RUNNER_EVENTS | _ANNOTATION_EVENTS
+# Only runner events reach the per-module groupby.  Annotation events
+# (warning/deprecated) are counted separately in _count_initial_statistics
+# BEFORE filtering, so they never need to pass through the pipeline.
+_RELEVANT_EVENTS = _RUNNER_EVENTS
 
 
 def _normalize_stats_item(item: dict) -> None:

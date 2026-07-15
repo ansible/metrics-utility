@@ -155,8 +155,7 @@ def _validate_module_stats_structure(json_data):
         assert 'collection_source' in module_stat
         assert 'collection' in module_stat
         assert 'jobs_total' in module_stat
-        assert 'unique_hosts_total' in module_stat
-        assert 'processed_events_total' in module_stat
+        assert 'events_processed_total' in module_stat
         assert 'ansible_versions' in module_stat, 'Each module_stat should have ansible_versions field'
         assert isinstance(module_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -169,7 +168,7 @@ def _validate_collection_stats_structure(json_data):
         assert 'collection' in collection_stat
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
-        assert 'processed_events_total' in collection_stat
+        assert 'events_processed_total' in collection_stat
         assert 'ansible_versions' in collection_stat, 'Each collection_stat should have ansible_versions field'
         assert isinstance(collection_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -247,11 +246,9 @@ def _validate_module_stats_values(json_data):
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
     assert a10_module['jobs_total'] == 3, 'Should have 3 jobs using a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['unique_hosts_total'] == 2, 'Should have 2 hosts for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['task_ok_total'] == 6, 'Should have 6 successful tasks for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
-    assert a10_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['task_failed_total'] == 0, 'Should have 0 failures for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['processed_events_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['runner_on_ok_total'] == 6, 'Should have 6 ok events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['events_processed_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
     assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
     assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
     assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
@@ -273,9 +270,8 @@ def _validate_collection_stats_values(json_data):
     assert len(a10_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
     for version in a10_collection['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
-    assert a10_collection['task_ok_total'] == 6, 'a10.acos_axapi collection should have 6 successful tasks'
-    assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
+    assert a10_collection['runner_on_ok_total'] == 6, 'a10.acos_axapi collection should have 6 ok events'
+    assert a10_collection['events_processed_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
@@ -470,13 +466,11 @@ def _validate_module_stats_values_multi_hour(json_data):
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
     # 6 jobs total
     assert a10_module['jobs_total'] == 6, 'Should have 6 jobs using a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['unique_hosts_total'] == 2, 'Should have 2 hosts for a10.acos_axapi.a10_slb_virtual_server'
-    # 6 jobs × 2 hosts = 12 successful tasks
-    assert a10_module['task_ok_total'] == 12, 'Should have 12 successful tasks for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
-    assert a10_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['task_failed_total'] == 0, 'Should have 0 failures for a10.acos_axapi.a10_slb_virtual_server'
+    # 6 jobs × 2 hosts = 12 ok events
+    assert a10_module['runner_on_ok_total'] == 12, 'Should have 12 ok events for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
+    assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
     # 6 jobs × 2 hosts = 12 processed events
-    assert a10_module['processed_events_total'] == 12, 'Should have 12 processed events for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
+    assert a10_module['events_processed_total'] == 12, 'Should have 12 processed events for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
     assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
     assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
     assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
@@ -499,11 +493,10 @@ def _validate_collection_stats_values_multi_hour(json_data):
     assert len(a10_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
     for version in a10_collection['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert a10_collection['unique_hosts_total'] == 2, 'a10.acos_axapi collection should have 2 hosts'
-    # 6 jobs × 2 hosts = 12 successful tasks
-    assert a10_collection['task_ok_total'] == 12, 'a10.acos_axapi collection should have 12 successful tasks'
+    # 6 jobs × 2 hosts = 12 ok events
+    assert a10_collection['runner_on_ok_total'] == 12, 'a10.acos_axapi collection should have 12 ok events'
     # 6 jobs × 2 hosts = 12 processed events
-    assert a10_collection['processed_events_total'] == 12, 'a10.acos_axapi collection should have 12 processed events (6 jobs × 2 hosts)'
+    assert a10_collection['events_processed_total'] == 12, 'a10.acos_axapi collection should have 12 processed events (6 jobs × 2 hosts)'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
@@ -588,8 +581,8 @@ def _validate_cross_section_consistency(json_data, statistics):
     """Validate cross-section data consistency."""
     print('--- Validating cross-section data consistency ---')
     for module_stat in json_data['module_stats']:
-        assert module_stat['unique_hosts_total'] <= statistics['rollup_period_unique_hosts_automated_total'], (
-            f'Module {module_stat["module_name"][:50]} hosts should not exceed total automated hosts'
+        assert module_stat['jobs_total'] <= statistics['rollup_period_jobs_total'], (
+            f'Module {module_stat["module_name"][:50]} jobs_total should not exceed total jobs'
         )
 
 

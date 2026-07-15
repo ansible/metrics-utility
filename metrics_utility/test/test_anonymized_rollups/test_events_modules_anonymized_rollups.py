@@ -439,7 +439,8 @@ def test_events_modules_aggregations_basic():
         'maintenance.yml': 1,
     }
 
-    assert result['hosts_automated_total'] == 9
+    # host 8 only has a runner_on_skipped event which is excluded from analysis by design
+    assert result['hosts_automated_total'] == 8
 
     # collection stats assertions (current aggregation schema)
     coll_by_name = {row['collection']: row for row in result['collection_stats']}
@@ -457,7 +458,7 @@ def test_events_modules_aggregations_basic():
     # Verify a specific role has stats (ansible.windows.win_copy_role)
     if 'ansible.windows.win_copy_role' in stats_by_role:
         win_copy_role_stats = stats_by_role['ansible.windows.win_copy_role']
-        assert win_copy_role_stats['tasks_total'] > 0
+        assert win_copy_role_stats['events_processed_total'] > 0
         assert 'jobs_total' in win_copy_role_stats
         # Verify collection_name and collection_source are present
         assert 'collection' in win_copy_role_stats, 'role_stats should have collection field'
@@ -482,126 +483,97 @@ def test_events_modules_aggregations_basic():
         )
 
     # ansible.windows.win_copy (certified)
+    # Events: Job1/H1 failed+ok (retry), Job2/H3 ok, Job4/H5 failed+ok (retry) → 5 events
     copy_stats = stats_by_module['ansible.windows.win_copy']
     assert copy_stats['collection_source'] == 'certified'
-    assert copy_stats['task_ok_total'] == 1
-    assert copy_stats['task_ok_with_retries_total'] == 2
-    assert copy_stats['task_failed_total'] == 0
-    assert copy_stats['task_failed_and_ignored_total'] == 0
-    assert copy_stats['task_skipped_total'] == 0
-    assert copy_stats['task_unreachable_total'] == 0
-    assert copy_stats['tasks_total'] == 3
+    assert copy_stats['runner_on_ok_total'] == 3      # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
+    assert copy_stats['runner_on_failed_total'] == 2  # Job1/H1 failed, Job4/H5 failed
+    assert copy_stats['runner_on_failed_ignored_total'] == 0
+    assert copy_stats['runner_on_unreachable_total'] == 0
+    assert copy_stats['runner_on_async_ok_total'] == 0
+    assert copy_stats['runner_on_async_failed_total'] == 0
+    assert copy_stats['runner_item_on_ok_total'] == 0
+    assert copy_stats['runner_item_on_failed_total'] == 0
+    assert copy_stats['runner_item_on_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['jobs_never_started_total'] == 0
-    assert copy_stats['unique_hosts_total'] == 3
-    assert copy_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert (
-        copy_stats['processed_events_total'] == 5
-    )  # Job 1 Host 1: 2 events (failed, ok), Job 2 Host 3: 1 event (ok), Job 4 Host 5: 2 events (failed, ok)
+    assert copy_stats['events_processed_total'] == 5
     assert 'ansible_versions' in copy_stats, 'Should have ansible_versions field'
     assert isinstance(copy_stats['ansible_versions'], list), 'ansible_versions should be a list'
 
     # ansible.netcommon.cli_config (certified)
+    # Events: Job1/H4 unreachable, Job3/H3 item_ok → 2 events
     template_stats = stats_by_module['ansible.netcommon.cli_config']
     assert template_stats['collection_source'] == 'certified'
-    assert template_stats['task_ok_total'] == 1
-    assert template_stats['task_ok_with_retries_total'] == 0
-    assert template_stats['task_failed_total'] == 0
-    assert template_stats['task_failed_and_ignored_total'] == 0
-    assert template_stats['task_skipped_total'] == 0
-    assert template_stats['task_unreachable_total'] == 1
-    assert template_stats['tasks_total'] == 2
+    assert template_stats['runner_on_ok_total'] == 0
+    assert template_stats['runner_on_failed_total'] == 0
+    assert template_stats['runner_on_unreachable_total'] == 1
+    assert template_stats['runner_item_on_ok_total'] == 1
     assert template_stats['jobs_total'] == 2
     assert template_stats['jobs_never_started_total'] == 0
-    assert template_stats['unique_hosts_total'] == 2
-    assert template_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert template_stats['processed_events_total'] == 2  # Job 1 Host 4: 1 event (unreachable), Job 3 Host 3: 1 event (item_ok)
+    assert template_stats['events_processed_total'] == 2
     assert 'ansible_versions' in template_stats, 'Should have ansible_versions field'
     assert isinstance(template_stats['ansible_versions'], list), 'ansible_versions should be a list'
 
     # ansible.posix.firewalld (certified)
+    # Events: Job3/H1 ok, Job4/H4 failed → 2 events
     firewalld_stats = stats_by_module['ansible.posix.firewalld']
     assert firewalld_stats['collection_source'] == 'certified'
-    assert firewalld_stats['task_ok_total'] == 1
-    assert firewalld_stats['task_ok_with_retries_total'] == 0
-    assert firewalld_stats['task_failed_total'] == 1
-    assert firewalld_stats['task_failed_and_ignored_total'] == 0
-    assert firewalld_stats['task_skipped_total'] == 0
-    assert firewalld_stats['task_unreachable_total'] == 0
-    assert firewalld_stats['tasks_total'] == 2
+    assert firewalld_stats['runner_on_ok_total'] == 1
+    assert firewalld_stats['runner_on_failed_total'] == 1
+    assert firewalld_stats['runner_on_failed_ignored_total'] == 0
+    assert firewalld_stats['runner_on_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['jobs_never_started_total'] == 0
-    assert firewalld_stats['unique_hosts_total'] == 2
-    assert firewalld_stats['jobs_failed_because_of_module_failure_total'] == 1
-    assert firewalld_stats['processed_events_total'] == 2  # Job 3 Host 1: 1 event (ok), Job 4 Host 4: 1 event (failed)
+    assert firewalld_stats['events_processed_total'] == 2
 
     # community.aws.ec2 (community)
+    # Events: Job3/H2 ok, Job4/H6 ok, Job4/H7 failed(ignored) → 3 events
+    # Job4/H8 runner_on_skipped is excluded from analysis by design
     ec2_stats = stats_by_module['community.aws.ec2']
     assert ec2_stats['collection_source'] == 'community'
-    assert ec2_stats['task_ok_total'] == 2
-    assert ec2_stats['task_ok_with_retries_total'] == 0
-    assert ec2_stats['task_failed_total'] == 0
-    assert ec2_stats['task_failed_and_ignored_total'] == 1
-    assert ec2_stats['task_skipped_total'] == 1
-    assert ec2_stats['task_unreachable_total'] == 0
-    assert ec2_stats['tasks_total'] == 4
+    assert ec2_stats['runner_on_ok_total'] == 2
+    assert ec2_stats['runner_on_failed_total'] == 0
+    assert ec2_stats['runner_on_failed_ignored_total'] == 1   # Job4/H7 ignore_errors=True
+    assert ec2_stats['runner_on_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['jobs_never_started_total'] == 0
-    assert ec2_stats['unique_hosts_total'] == 4
-    assert ec2_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert (
-        ec2_stats['processed_events_total'] == 4
-    )  # Job 3 Host 2: 1 event (ok), Job 4 Host 6: 1 event (ok), Job 4 Host 7: 1 event (failed), Job 4 Host 8: 1 event (skipped)
+    assert ec2_stats['events_processed_total'] == 3  # skipped event is excluded
 
     # community.general.yum (community)
+    # Events: Job1/H2 failed, Job2/H2 async_failed, Job5/H9 failed → 3 events
     yum_stats = stats_by_module['community.general.yum']
     assert yum_stats['collection_source'] == 'community'
-    assert yum_stats['task_ok_total'] == 0
-    assert yum_stats['task_ok_with_retries_total'] == 0
-    assert yum_stats['task_failed_total'] == 3
-    assert yum_stats['task_failed_and_ignored_total'] == 0
-    assert yum_stats['task_skipped_total'] == 0
-    assert yum_stats['task_unreachable_total'] == 0
-    assert yum_stats['tasks_total'] == 3
+    assert yum_stats['runner_on_ok_total'] == 0
+    assert yum_stats['runner_on_failed_total'] == 2       # Job1/H2, Job5/H9
+    assert yum_stats['runner_on_failed_ignored_total'] == 0
+    assert yum_stats['runner_on_async_failed_total'] == 1  # Job2/H2
     assert yum_stats['jobs_total'] == 3
-    assert yum_stats['jobs_never_started_total'] == 1
-    assert yum_stats['unique_hosts_total'] == 2
-    assert yum_stats['jobs_failed_because_of_module_failure_total'] == 3
-    assert (
-        yum_stats['processed_events_total'] == 3
-    )  # Job 1 Host 2: 1 event (failed), Job 2 Host 2: 1 event (async_failed), Job 5 Host 9: 1 event (failed)
+    assert yum_stats['jobs_never_started_total'] == 1      # Job5 has job_started=None
+    assert yum_stats['events_processed_total'] == 3
 
     # community.mongodb.insert (community)
+    # Events: Job1/H3 async_ok, Job2/H1 failed+ok (retry) → 3 events
     mongo_stats = stats_by_module['community.mongodb.insert']
     assert mongo_stats['collection_source'] == 'community'
-    assert mongo_stats['task_ok_total'] == 1
-    assert mongo_stats['task_ok_with_retries_total'] == 1
-    assert mongo_stats['task_failed_total'] == 0
-    assert mongo_stats['task_failed_and_ignored_total'] == 0
-    assert mongo_stats['task_skipped_total'] == 0
-    assert mongo_stats['task_unreachable_total'] == 0
-    assert mongo_stats['tasks_total'] == 2
+    assert mongo_stats['runner_on_ok_total'] == 1           # Job2/H1 ok
+    assert mongo_stats['runner_on_failed_total'] == 1       # Job2/H1 failed
+    assert mongo_stats['runner_on_failed_ignored_total'] == 0
+    assert mongo_stats['runner_on_async_ok_total'] == 1     # Job1/H3 async_ok
+    assert mongo_stats['runner_on_async_failed_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['jobs_never_started_total'] == 0
-    assert mongo_stats['unique_hosts_total'] == 2
-    assert mongo_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert mongo_stats['processed_events_total'] == 3  # Job 1 Host 3: 1 event (async_ok), Job 2 Host 1: 2 events (failed, ok)
+    assert mongo_stats['events_processed_total'] == 3
 
     # custom.user.collection (Custom)
+    # Events: Job1/H1 ok → 1 event
     custom_stats = stats_by_module['custom.user.collection']
     assert custom_stats['collection_source'] == 'Custom'
-    assert custom_stats['task_ok_total'] == 1
-    assert custom_stats['task_ok_with_retries_total'] == 0
-    assert custom_stats['task_failed_total'] == 0
-    assert custom_stats['task_failed_and_ignored_total'] == 0
-    assert custom_stats['task_skipped_total'] == 0
-    assert custom_stats['task_unreachable_total'] == 0
-    assert custom_stats['tasks_total'] == 1
+    assert custom_stats['runner_on_ok_total'] == 1
+    assert custom_stats['runner_on_failed_total'] == 0
     assert custom_stats['jobs_total'] == 1
     assert custom_stats['jobs_never_started_total'] == 0
-    assert custom_stats['unique_hosts_total'] == 1
-    assert custom_stats['jobs_failed_because_of_module_failure_total'] == 0
-    assert custom_stats['processed_events_total'] == 1  # Job 1 Host 1: 1 event (ok)
+    assert custom_stats['events_processed_total'] == 1
 
     # collection_stats assertions
 
@@ -610,19 +582,13 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['collection_source'] == 'certified'
     assert netcommon_coll['jobs_total'] == 2
     assert netcommon_coll['jobs_never_started_total'] == 0
-    assert netcommon_coll['unique_hosts_total'] == 2
     assert netcommon_coll['jobs_duration_total_seconds'] == pytest.approx(1320.0)
     assert netcommon_coll['jobs_waiting_time_total_seconds'] == pytest.approx(360.0)
     assert netcommon_coll['jobs_failed_total'] == 1
-    assert netcommon_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert netcommon_coll['task_ok_total'] == 1
-    assert netcommon_coll['task_ok_with_retries_total'] == 0
-    assert netcommon_coll['task_failed_total'] == 0
-    assert netcommon_coll['task_failed_and_ignored_total'] == 0
-    assert netcommon_coll['task_skipped_total'] == 0
-    assert netcommon_coll['task_unreachable_total'] == 1
-    assert netcommon_coll['tasks_total'] == 2
-    assert netcommon_coll['processed_events_total'] == 2  # Same as cli_config module (2 events)
+    assert netcommon_coll['runner_on_ok_total'] == 0
+    assert netcommon_coll['runner_on_unreachable_total'] == 1
+    assert netcommon_coll['runner_item_on_ok_total'] == 1
+    assert netcommon_coll['events_processed_total'] == 2
     assert 'ansible_versions' in netcommon_coll, 'Should have ansible_versions field'
     assert isinstance(netcommon_coll['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -631,114 +597,76 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['collection_source'] == 'certified'
     assert posix_coll['jobs_total'] == 2
     assert posix_coll['jobs_never_started_total'] == 0
-    assert posix_coll['unique_hosts_total'] == 2
     assert posix_coll['jobs_duration_total_seconds'] == pytest.approx(1380.0)
     assert posix_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert posix_coll['jobs_failed_total'] == 1
-    assert posix_coll['jobs_failed_because_of_module_failure_total'] == 1
-    assert posix_coll['task_ok_total'] == 1
-    assert posix_coll['task_ok_with_retries_total'] == 0
-    assert posix_coll['task_failed_total'] == 1
-    assert posix_coll['task_failed_and_ignored_total'] == 0
-    assert posix_coll['task_skipped_total'] == 0
-    assert posix_coll['task_unreachable_total'] == 0
-    assert posix_coll['tasks_total'] == 2
-    assert posix_coll['processed_events_total'] == 2  # Same as firewalld module (2 events)
+    assert posix_coll['runner_on_ok_total'] == 1
+    assert posix_coll['runner_on_failed_total'] == 1
+    assert posix_coll['events_processed_total'] == 2
 
     # ansible.windows
     windows_coll = coll_by_name['ansible.windows']
     assert windows_coll['collection_source'] == 'certified'
     assert windows_coll['jobs_total'] == 3
     assert windows_coll['jobs_never_started_total'] == 0
-    assert windows_coll['unique_hosts_total'] == 3
     assert windows_coll['jobs_duration_total_seconds'] == pytest.approx(2100.0)
     assert windows_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert windows_coll['jobs_failed_total'] == 3
-    assert windows_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert windows_coll['task_ok_total'] == 1
-    assert windows_coll['task_ok_with_retries_total'] == 2
-    assert windows_coll['task_failed_total'] == 0
-    assert windows_coll['task_failed_and_ignored_total'] == 0
-    assert windows_coll['task_skipped_total'] == 0
-    assert windows_coll['task_unreachable_total'] == 0
-    assert windows_coll['tasks_total'] == 3
-    assert windows_coll['processed_events_total'] == 5  # Same as win_copy module (5 events)
+    assert windows_coll['runner_on_ok_total'] == 3
+    assert windows_coll['runner_on_failed_total'] == 2
+    assert windows_coll['runner_on_failed_ignored_total'] == 0
+    assert windows_coll['events_processed_total'] == 5
 
     # community.aws
     aws_coll = coll_by_name['community.aws']
     assert aws_coll['collection_source'] == 'community'
     assert aws_coll['jobs_total'] == 2
     assert aws_coll['jobs_never_started_total'] == 0
-    assert aws_coll['unique_hosts_total'] == 4
     assert aws_coll['jobs_duration_total_seconds'] == pytest.approx(1380.0)
     assert aws_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert aws_coll['jobs_failed_total'] == 1
-    assert aws_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert aws_coll['task_ok_total'] == 2
-    assert aws_coll['task_ok_with_retries_total'] == 0
-    assert aws_coll['task_failed_total'] == 0
-    assert aws_coll['task_failed_and_ignored_total'] == 1
-    assert aws_coll['task_skipped_total'] == 1
-    assert aws_coll['task_unreachable_total'] == 0
-    assert aws_coll['tasks_total'] == 4
-    assert aws_coll['processed_events_total'] == 4  # Same as ec2 module (4 events)
+    assert aws_coll['runner_on_ok_total'] == 2
+    assert aws_coll['runner_on_failed_total'] == 0
+    assert aws_coll['runner_on_failed_ignored_total'] == 1
+    assert aws_coll['events_processed_total'] == 3  # skipped event excluded
 
     # community.general
     general_coll = coll_by_name['community.general']
     assert general_coll['collection_source'] == 'community'
     assert general_coll['jobs_total'] == 3
     assert general_coll['jobs_never_started_total'] == 1
-    assert general_coll['unique_hosts_total'] == 2
     assert general_coll['jobs_duration_total_seconds'] == pytest.approx(1500.0)
     assert general_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
     assert general_coll['jobs_failed_total'] == 3
-    assert general_coll['jobs_failed_because_of_module_failure_total'] == 3
-    assert general_coll['task_ok_total'] == 0
-    assert general_coll['task_ok_with_retries_total'] == 0
-    assert general_coll['task_failed_total'] == 3
-    assert general_coll['task_failed_and_ignored_total'] == 0
-    assert general_coll['task_skipped_total'] == 0
-    assert general_coll['task_unreachable_total'] == 0
-    assert general_coll['tasks_total'] == 3
-    assert general_coll['processed_events_total'] == 3  # Same as yum module (3 events)
+    assert general_coll['runner_on_ok_total'] == 0
+    assert general_coll['runner_on_failed_total'] == 2
+    assert general_coll['runner_on_async_failed_total'] == 1
+    assert general_coll['events_processed_total'] == 3
 
     # community.mongodb
     mongodb_coll = coll_by_name['community.mongodb']
     assert mongodb_coll['collection_source'] == 'community'
     assert mongodb_coll['jobs_total'] == 2
     assert mongodb_coll['jobs_never_started_total'] == 0
-    assert mongodb_coll['unique_hosts_total'] == 2
     assert mongodb_coll['jobs_duration_total_seconds'] == pytest.approx(1500.0)
     assert mongodb_coll['jobs_waiting_time_total_seconds'] == pytest.approx(300.0)
     assert mongodb_coll['jobs_failed_total'] == 2
-    assert mongodb_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert mongodb_coll['task_ok_total'] == 1
-    assert mongodb_coll['task_ok_with_retries_total'] == 1
-    assert mongodb_coll['task_failed_total'] == 0
-    assert mongodb_coll['task_failed_and_ignored_total'] == 0
-    assert mongodb_coll['task_skipped_total'] == 0
-    assert mongodb_coll['task_unreachable_total'] == 0
-    assert mongodb_coll['tasks_total'] == 2
-    assert mongodb_coll['processed_events_total'] == 3  # Same as insert module (3 events)
+    assert mongodb_coll['runner_on_ok_total'] == 1
+    assert mongodb_coll['runner_on_failed_total'] == 1
+    assert mongodb_coll['runner_on_async_ok_total'] == 1
+    assert mongodb_coll['events_processed_total'] == 3
 
     # custom.user
     custom_coll = coll_by_name['custom.user']
     assert custom_coll['collection_source'] == 'Custom'
     assert custom_coll['jobs_total'] == 1
     assert custom_coll['jobs_never_started_total'] == 0
-    assert custom_coll['unique_hosts_total'] == 1
     assert custom_coll['jobs_duration_total_seconds'] == pytest.approx(540.0)
     assert custom_coll['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)
     assert custom_coll['jobs_failed_total'] == 1
-    assert custom_coll['jobs_failed_because_of_module_failure_total'] == 0
-    assert custom_coll['task_ok_total'] == 1
-    assert custom_coll['task_ok_with_retries_total'] == 0
-    assert custom_coll['task_failed_total'] == 0
-    assert custom_coll['task_failed_and_ignored_total'] == 0
-    assert custom_coll['task_skipped_total'] == 0
-    assert custom_coll['task_unreachable_total'] == 0
-    assert custom_coll['tasks_total'] == 1
-    assert custom_coll['processed_events_total'] == 1  # Same as collection module (1 event)
+    assert custom_coll['runner_on_ok_total'] == 1
+    assert custom_coll['runner_on_failed_total'] == 0
+    assert custom_coll['events_processed_total'] == 1
 
     # Verify warnings_total and deprecations_total
     # We added 2 warning events (job 1 and job 2) and 1 deprecated event (job 3)

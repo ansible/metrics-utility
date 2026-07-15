@@ -440,16 +440,15 @@ def validate_module_stats(result):
         'module',
         'collection',
         'jobs_total',
-        'unique_hosts_total',
-        'processed_events_total',
+        'events_processed_total',
         'ansible_versions',
     ]
 
     for module in module_stats:
         for field in required_fields:
             assert field in module
-        assert isinstance(module['processed_events_total'], (int, float))
-        assert module['processed_events_total'] > 0
+        assert isinstance(module['events_processed_total'], (int, float))
+        assert module['events_processed_total'] > 0
 
     validate_ansible_versions_in_list(module_stats, 'module')
 
@@ -464,15 +463,15 @@ def validate_collection_stats(result):
         'collection',
         'collection_source',
         'jobs_total',
-        'processed_events_total',
+        'events_processed_total',
         'ansible_versions',
     ]
 
     for collection in collection_stats:
         for field in required_fields:
             assert field in collection
-        assert isinstance(collection['processed_events_total'], (int, float))
-        assert collection['processed_events_total'] > 0
+        assert isinstance(collection['events_processed_total'], (int, float))
+        assert collection['events_processed_total'] > 0
 
     validate_ansible_versions_in_list(collection_stats, 'collection')
 
@@ -489,15 +488,14 @@ def validate_role_stats(result):
         'collection',
         'collection_source',
         'jobs_total',
-        'tasks_total',
-        'processed_events_total',
+        'events_processed_total',
     ]
 
     for role_stat in role_stats:
         for field in required_fields:
             assert field in role_stat
-        assert isinstance(role_stat['processed_events_total'], (int, float))
-        assert role_stat['processed_events_total'] > 0
+        assert isinstance(role_stat['events_processed_total'], (int, float))
+        assert role_stat['events_processed_total'] > 0
 
     # Verify that at least one role has a known collection_source
     known_collection_roles = [r for r in role_stats if r.get('collection_source') != 'Custom']
