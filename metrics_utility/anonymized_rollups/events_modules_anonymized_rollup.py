@@ -140,7 +140,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'jobs_duration_total_seconds',
         'jobs_waiting_time_total_seconds',
         'jobs_never_started_total',
-        'jobs_failed_because_of_module_failure_total',
         'jobs_successful_duration_total_seconds',
         'jobs_failed_duration_total_seconds',
         'runner_on_ok_total',
@@ -155,9 +154,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'warnings_total',
         'deprecations_total',
         'events_processed_total',
-        'unique_hosts_total',
     ]
-    _LIST_COLS = ['host_ids', 'ansible_versions']
+    _LIST_COLS = ['ansible_versions']
 
     def __init__(self):
         super().__init__('events_modules')
@@ -206,9 +204,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if item_all and item_new:
             self._merge_numeric_columns(item_all, item_new, merged_item)
             self._merge_list_columns(item_all, item_new, merged_item)
-
-        if 'host_ids' in merged_item:
-            merged_item['unique_hosts_total'] = len(merged_item['host_ids'])
 
         return merged_item
 
@@ -346,22 +341,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe['job_waiting_time_seconds'] = (dataframe['job_started'] - dataframe['job_created']).dt.total_seconds()
         return dataframe
 
-    def _mark_module_failure_flag(self, dataframe):
-        """Mark events that represent a module failure contributing to a failed job.
-
-        Used to compute jobs_failed_because_of_module_failure_total: the number of
-        unique jobs where the module produced a non-ignored task-level failure AND
-        the job itself failed.  Loop item failures (runner_item_on_failed) are
-        intentionally excluded because the task-level runner_on_failed already
-        captures the same job-failure signal for loop tasks.
-        """
-        dataframe['is_module_failure_in_failed_job'] = (
-            dataframe['event'].isin(['runner_on_failed', 'runner_on_async_failed'])
-            & ~dataframe['ignore_errors']
-            & dataframe['job_failed']
-        )
-        return dataframe
-
     @staticmethod
     def _parse_and_check_json_array(x):
         """Parse JSON array (string, list, or dict) and return True if it contains items."""
@@ -417,7 +396,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'job_waiting_time_seconds',
             'event',
             'ignore_errors',
-            'is_module_failure_in_failed_job',
             'is_warning',
             'is_deprecation',
             'ansible_version',
@@ -461,10 +439,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds')),
             'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds')),
             'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started')),
-            'jobs_failed_because_of_module_failure_total': (
-                'job_id',
-                lambda x: x[dataframe.loc[x.index, 'is_module_failure_in_failed_job']].nunique(),
-            ),
             'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds')),
             'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds')),
             # Sync task-level event counts
@@ -489,7 +463,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
             'events_processed_total': ('event', 'size'),
-            'host_ids': ('host_id', lambda x: set(x.dropna())),
             'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
         }
 
@@ -500,12 +473,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = dataframe.groupby(
             ['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
         ).agg(**common_aggregation)
-        module_stats['unique_hosts_total'] = module_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         collection_stats = dataframe.groupby(
             ['collection_name', 'collection_source'], as_index=False, observed=True
         ).agg(**common_aggregation)
-        collection_stats['unique_hosts_total'] = collection_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         dataframe['role_collection_name'] = (
             dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
@@ -517,7 +488,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             ['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True
         ).agg(**common_aggregation)
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
-        role_stats['unique_hosts_total'] = role_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         return module_stats, collection_stats, role_stats
 
@@ -570,7 +540,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _convert_stats_to_json(self, module_stats, collection_stats, role_stats):
         """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
-            self._convert_list_columns_to_json_format(df, 'host_ids')
             self._convert_list_columns_to_json_format(df, 'ansible_versions')
             self._convert_categorical_columns_to_string(df)
 
@@ -594,7 +563,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe = self._prepare_basic_columns(dataframe)
         dataframe = self._extract_collection_info(dataframe)
         dataframe = self._compute_job_metrics(dataframe)
-        dataframe = self._mark_module_failure_flag(dataframe)
         dataframe = self._parse_warnings_deprecations(dataframe)
         dataframe = self._filter_and_select_columns(dataframe)
 
