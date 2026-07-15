@@ -497,14 +497,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _compute_unique_metadata(self, dataframe):
         """Compute unique_modules, modules_per_playbook, and unique_hosts."""
-        unique_modules = sorted(list(set(dataframe['module_name'].dropna().unique())))
+        unique_modules = sorted(dataframe['module_name'].dropna().unique())
 
         modules_per_playbook = {}
         for playbook in dataframe['playbook'].dropna().unique():
-            modules_in_playbook = sorted(list(set(dataframe[dataframe['playbook'] == playbook]['module_name'].dropna().unique())))
+            modules_in_playbook = sorted(dataframe[dataframe['playbook'] == playbook]['module_name'].dropna().unique())
             modules_per_playbook[playbook] = modules_in_playbook
 
-        unique_hosts = sorted(list(set(dataframe['host_id'].dropna().unique())))
+        unique_hosts = sorted(dataframe['host_id'].dropna().unique())
 
         return unique_modules, modules_per_playbook, unique_hosts
 
