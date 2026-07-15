@@ -130,7 +130,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     Loop item-level events (runner_item_on_*):
         runner_item_on_ok_total, runner_item_on_failed_total,
-        runner_item_on_unreachable_total
+        runner_item_on_failed_ignored_total, runner_item_on_unreachable_total
 
     For a loop with partial item failures the task-level runner_on_failed and
     the item-level runner_item_on_failed are in separate counters, so consumers
@@ -155,6 +155,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'runner_on_async_failed_total',
         'runner_item_on_ok_total',
         'runner_item_on_failed_total',
+        'runner_item_on_failed_ignored_total',
         'runner_item_on_unreachable_total',
         'warnings_total',
         'deprecations_total',
@@ -465,7 +466,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'runner_on_async_failed_total': ('event', lambda x: (x == 'runner_on_async_failed').sum()),
             # Loop item-level event counts
             'runner_item_on_ok_total': ('event', lambda x: (x == 'runner_item_on_ok').sum()),
-            'runner_item_on_failed_total': ('event', lambda x: (x == 'runner_item_on_failed').sum()),
+            'runner_item_on_failed_total': (
+                'event',
+                lambda x: ((x == 'runner_item_on_failed') & ~ignore_errors.loc[x.index]).sum(),
+            ),
+            'runner_item_on_failed_ignored_total': (
+                'event',
+                lambda x: ((x == 'runner_item_on_failed') & ignore_errors.loc[x.index]).sum(),
+            ),
             'runner_item_on_unreachable_total': ('event', lambda x: (x == 'runner_item_on_unreachable').sum()),
             # Module-level annotations (from event_data.res, distinct from top-level warning events)
             'warnings_total': ('is_warning', 'sum'),
