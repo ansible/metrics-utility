@@ -282,7 +282,7 @@ def _validate_events_modules(result):
     assert win_copy['collection_source'] == 'certified'
     assert win_copy['collection'] == 'ansible.windows'
     assert win_copy['jobs_total'] == 3
-    assert win_copy['runner_on_ok_total'] == 3      # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
+    assert win_copy['runner_on_ok_total'] == 3  # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
     assert win_copy['runner_on_failed_total'] == 2  # Job1/H1 failed, Job4/H5 failed
     assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
     assert win_copy['events_processed_total'] == 5
@@ -293,7 +293,7 @@ def _validate_events_modules(result):
     assert yum['collection_source'] == 'community'
     assert yum['jobs_total'] == 3
     assert yum['jobs_never_started_total'] == 1
-    assert yum['runner_on_failed_total'] == 2        # Job1/H2, Job5/H9
+    assert yum['runner_on_failed_total'] == 2  # Job1/H2, Job5/H9
     assert yum['runner_on_async_failed_total'] == 1  # Job2/H2
     assert yum['events_processed_total'] == 3
 

@@ -486,7 +486,7 @@ def test_events_modules_aggregations_basic():
     # Events: Job1/H1 failed+ok (retry), Job2/H3 ok, Job4/H5 failed+ok (retry) → 5 events
     copy_stats = stats_by_module['ansible.windows.win_copy']
     assert copy_stats['collection_source'] == 'certified'
-    assert copy_stats['runner_on_ok_total'] == 3      # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
+    assert copy_stats['runner_on_ok_total'] == 3  # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
     assert copy_stats['runner_on_failed_total'] == 2  # Job1/H1 failed, Job4/H5 failed
     assert copy_stats['runner_on_failed_ignored_total'] == 0
     assert copy_stats['runner_on_unreachable_total'] == 0
@@ -534,7 +534,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['collection_source'] == 'community'
     assert ec2_stats['runner_on_ok_total'] == 2
     assert ec2_stats['runner_on_failed_total'] == 0
-    assert ec2_stats['runner_on_failed_ignored_total'] == 1   # Job4/H7 ignore_errors=True
+    assert ec2_stats['runner_on_failed_ignored_total'] == 1  # Job4/H7 ignore_errors=True
     assert ec2_stats['runner_on_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['jobs_never_started_total'] == 0
@@ -545,21 +545,21 @@ def test_events_modules_aggregations_basic():
     yum_stats = stats_by_module['community.general.yum']
     assert yum_stats['collection_source'] == 'community'
     assert yum_stats['runner_on_ok_total'] == 0
-    assert yum_stats['runner_on_failed_total'] == 2       # Job1/H2, Job5/H9
+    assert yum_stats['runner_on_failed_total'] == 2  # Job1/H2, Job5/H9
     assert yum_stats['runner_on_failed_ignored_total'] == 0
     assert yum_stats['runner_on_async_failed_total'] == 1  # Job2/H2
     assert yum_stats['jobs_total'] == 3
-    assert yum_stats['jobs_never_started_total'] == 1      # Job5 has job_started=None
+    assert yum_stats['jobs_never_started_total'] == 1  # Job5 has job_started=None
     assert yum_stats['events_processed_total'] == 3
 
     # community.mongodb.insert (community)
     # Events: Job1/H3 async_ok, Job2/H1 failed+ok (retry) → 3 events
     mongo_stats = stats_by_module['community.mongodb.insert']
     assert mongo_stats['collection_source'] == 'community'
-    assert mongo_stats['runner_on_ok_total'] == 1           # Job2/H1 ok
-    assert mongo_stats['runner_on_failed_total'] == 1       # Job2/H1 failed
+    assert mongo_stats['runner_on_ok_total'] == 1  # Job2/H1 ok
+    assert mongo_stats['runner_on_failed_total'] == 1  # Job2/H1 failed
     assert mongo_stats['runner_on_failed_ignored_total'] == 0
-    assert mongo_stats['runner_on_async_ok_total'] == 1     # Job1/H3 async_ok
+    assert mongo_stats['runner_on_async_ok_total'] == 1  # Job1/H3 async_ok
     assert mongo_stats['runner_on_async_failed_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['jobs_never_started_total'] == 0

@@ -30,16 +30,18 @@ _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?
 _COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
 
 # All runner event types tracked per module/collection/role
-_RUNNER_EVENTS = frozenset([
-    'runner_on_ok',
-    'runner_on_async_ok',
-    'runner_item_on_ok',
-    'runner_on_failed',
-    'runner_on_async_failed',
-    'runner_item_on_failed',
-    'runner_on_unreachable',
-    'runner_item_on_unreachable',
-])
+_RUNNER_EVENTS = frozenset(
+    [
+        'runner_on_ok',
+        'runner_on_async_ok',
+        'runner_item_on_ok',
+        'runner_on_failed',
+        'runner_on_async_failed',
+        'runner_item_on_failed',
+        'runner_on_unreachable',
+        'runner_item_on_unreachable',
+    ]
+)
 _ANNOTATION_EVENTS = frozenset(['warning', 'deprecated'])
 # Only runner events reach the per-module groupby.  Annotation events
 # (warning/deprecated) are counted separately in _count_initial_statistics
@@ -267,15 +269,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             return data_new
 
         module_stats = self._merge_stats_json(
-            data_all.get('module_stats', []), data_new.get('module_stats', []),
+            data_all.get('module_stats', []),
+            data_new.get('module_stats', []),
             ['module_name', 'collection_source', 'collection_name'],
         )
         collection_stats = self._merge_stats_json(
-            data_all.get('collection_stats', []), data_new.get('collection_stats', []),
+            data_all.get('collection_stats', []),
+            data_new.get('collection_stats', []),
             ['collection_name', 'collection_source'],
         )
         role_stats = self._merge_stats_json(
-            data_all.get('role_stats', []), data_new.get('role_stats', []),
+            data_all.get('role_stats', []),
+            data_new.get('role_stats', []),
             ['role', 'collection_name', 'collection_source'],
         )
 
@@ -473,23 +478,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Compute module_stats, collection_stats, and role_stats from the event dataframe."""
         common_aggregation = self._get_common_aggregation(dataframe)
 
-        module_stats = dataframe.groupby(
-            ['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True
-        ).agg(**common_aggregation)
-
-        collection_stats = dataframe.groupby(
-            ['collection_name', 'collection_source'], as_index=False, observed=True
-        ).agg(**common_aggregation)
-
-        dataframe['role_collection_name'] = (
-            dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
+        module_stats = dataframe.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
+            **common_aggregation
         )
+
+        collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+
+        dataframe['role_collection_name'] = dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         role_collection_source_str = dataframe['role_collection_name'].astype(str).map(self.collections)
         dataframe['role_collection_source'] = role_collection_source_str.fillna('Custom')
 
-        role_stats = dataframe.groupby(
-            ['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True
-        ).agg(**common_aggregation)
+        role_stats = dataframe.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
+            **common_aggregation
+        )
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
         return module_stats, collection_stats, role_stats
@@ -655,8 +656,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         modules_used_to_automate_total = len(unique_modules)
         modules_used_per_playbook_total = {
-            playbook: len(module_list) if isinstance(module_list, list) else module_list
-            for playbook, module_list in modules_per_playbook.items()
+            playbook: len(module_list) if isinstance(module_list, list) else module_list for playbook, module_list in modules_per_playbook.items()
         }
         hosts_automated_total = len(unique_hosts)
 
