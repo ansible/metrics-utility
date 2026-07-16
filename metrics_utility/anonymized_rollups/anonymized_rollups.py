@@ -538,6 +538,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         'feature_flags': _as_list(feature_flags_root),
         'observability_by_tasks': _as_list(task_executions_root),
         'indirect_nodes_by_collection': indirect_managed_nodes_root.get('by_collection', []),
+        'indirect_nodes_by_module': indirect_managed_nodes_root.get('by_module', []),
     }
 
     # Only include event-related arrays if there are events
