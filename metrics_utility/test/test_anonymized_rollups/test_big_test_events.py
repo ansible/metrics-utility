@@ -951,6 +951,48 @@ _EVENTS = [
         'deprecations': None,
         'ansible_version': '2.16.0',
     },
+    # ── ansible.builtin.debug via a role with no collection prefix ───────────
+    # local.cleanup_role has one dot so extract_role_name() keeps it, but only
+    # one dot so extract_collection_name() returns None.  These events verify
+    # that role_stats uses dropna=False and keeps null-collection-name roles.
+    {
+        'job_id': 3,
+        'playbook': 'cleanup.yml',
+        'host_id': 1,
+        'task_uuid': 't010',
+        'event': 'runner_on_ok',
+        'task_action': 'ansible.builtin.debug',
+        'resolved_action': None,
+        'resolved_role': None,
+        'role': 'local.cleanup_role',
+        'job_created': '2024-03-01 12:00:00+00',
+        'job_started': '2024-03-01 12:00:10+00',
+        'job_finished': '2024-03-01 12:05:00+00',
+        'job_failed': True,
+        'ignore_errors': False,
+        'warnings': None,
+        'deprecations': None,
+        'ansible_version': '2.16.0',
+    },
+    {
+        'job_id': 3,
+        'playbook': 'cleanup.yml',
+        'host_id': 6,
+        'task_uuid': 't010',
+        'event': 'runner_on_ok',
+        'task_action': 'ansible.builtin.debug',
+        'resolved_action': None,
+        'resolved_role': None,
+        'role': 'local.cleanup_role',
+        'job_created': '2024-03-01 12:00:00+00',
+        'job_started': '2024-03-01 12:00:10+00',
+        'job_finished': '2024-03-01 12:05:00+00',
+        'job_failed': True,
+        'ignore_errors': False,
+        'warnings': None,
+        'deprecations': None,
+        'ansible_version': '2.16.0',
+    },
     # ── top-level warning event ───────────────────────────────────────────────
     {
         'job_id': 3,
@@ -975,18 +1017,45 @@ _EVENTS = [
 
 
 # ---------------------------------------------------------------------------
-# Shared rollup result
+# Shared rollup result – parametrized to exercise both the single-batch path
+# and the split+merge path so that every assertion also validates merge().
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(scope='module')
-def result():
-    df = pd.DataFrame(_EVENTS)
+def _prepare_events(rollup, events):
+    """Convert a list of event dicts to a prepared rollup dict."""
+    df = pd.DataFrame(events)
     for col in ['host_id', 'job_id', 'playbook']:
         df[col] = df[col].astype(str).replace('None', None)
+    return rollup.prepare(df)
 
+
+@pytest.fixture(scope='module', params=['single_batch', 'two_batches_merged'])
+def result(request):
+    """Rollup result, parametrized over two strategies:
+
+    single_batch       – all 47 events in one prepare() call.
+    two_batches_merged – events split at the midpoint, each half prepared
+                         separately then merged with rollup.merge().  The
+                         final base() output must be identical, proving that
+                         unique_hosts_total (and every other counter) is
+                         correctly maintained across batch merges.
+    """
     rollup = EventModulesAnonymizedRollup()
-    prepared = rollup.prepare(df)
+
+    if request.param == 'single_batch':
+        prepared = _prepare_events(rollup, _EVENTS)
+    else:
+        # Split by job_id so each job's events stay in one batch.
+        # Per-job deduplication (jobs_total, durations …) requires that a
+        # job_id never straddles two batches (same assumption as hourly windows
+        # in production).  Splitting job 1 vs jobs 2+3 means ansible.builtin
+        # and community.general span both batches, genuinely exercising the
+        # host_ids set-union merge path.
+        first = _prepare_events(rollup, [e for e in _EVENTS if e['job_id'] == 1])
+        second = _prepare_events(rollup, [e for e in _EVENTS if e['job_id'] in (2, 3)])
+        prepared = rollup.merge(first, second)
+
     return rollup.base(prepared)['json']
 
 
@@ -996,7 +1065,7 @@ def result():
 
 
 def test_collected_events_total(result):
-    assert result['collected_events_total'] == 47  # all raw rows before any filtering
+    assert result['collected_events_total'] == 49  # all raw rows before any filtering
 
 
 def test_top_level_warnings_and_deprecations(result):
@@ -1010,14 +1079,14 @@ def test_no_hosts_automated_total_in_events_output(result):
 
 
 def test_modules_used_to_automate_total(result):
-    assert result['modules_used_to_automate_total'] == 9
+    assert result['modules_used_to_automate_total'] == 10
 
 
 def test_modules_used_per_playbook(result):
     assert result['modules_used_per_playbook_total'] == {
         'site.yml': 4,  # copy, package, firewalld, systemd
         'db.yml': 3,  # mongodb_replicaset, ini_file, template
-        'cleanup.yml': 2,  # file, yum
+        'cleanup.yml': 3,  # file, yum, debug
     }
 
 
@@ -1032,7 +1101,7 @@ def modules(result):
 
 
 def test_module_count(result):
-    assert len(result['module_stats']) == 9
+    assert len(result['module_stats']) == 10
 
 
 def test_ansible_builtin_copy(modules):
@@ -1208,6 +1277,23 @@ def test_ansible_builtin_file(modules):
     assert 'host_ids' not in m
 
 
+def test_ansible_builtin_debug(modules):
+    m = modules['ansible.builtin.debug']
+    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection_source'] == 'certified'
+    assert m['jobs_total'] == 1
+    assert m['jobs_failed_total'] == 1
+    assert m['jobs_successful_total'] == 0
+    assert m['runner_on_ok_total'] == 2  # h1, h6
+    assert m['runner_on_failed_total'] == 0
+    assert m['runner_item_on_ok_total'] == 0
+    assert m['warnings_total'] == 0
+    assert m['deprecations_total'] == 0
+    assert m['events_processed_total'] == 2
+    assert m['unique_hosts_total'] == 2  # h1, h6
+    assert 'host_ids' not in m
+
+
 def test_community_general_yum(modules):
     m = modules['community.general.yum']
     assert m['collection_name'] == 'community.general'
@@ -1251,8 +1337,8 @@ def test_ansible_builtin_collection(collections):
     assert c['jobs_successful_total'] == 1  # job 2
     assert c['jobs_duration_total_seconds'] == pytest.approx(2340.0)  # 870+1180+290
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)  # 30+20+10
-    # aggregated event counts (copy + package + systemd + template + file)
-    assert c['runner_on_ok_total'] == 9  # 4+1+0+2+2
+    # aggregated event counts (copy + package + systemd + template + file + debug)
+    assert c['runner_on_ok_total'] == 11  # 4+1+0+2+2+2
     assert c['runner_on_failed_total'] == 2  # 1+1+0+0+0
     assert c['runner_on_failed_ignored_total'] == 1  # 0+1+0+0+0
     assert c['runner_on_unreachable_total'] == 2  # 1+0+0+0+1
@@ -1264,7 +1350,7 @@ def test_ansible_builtin_collection(collections):
     assert c['runner_item_on_unreachable_total'] == 1  # 0+1+0+0+0
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
-    assert c['events_processed_total'] == 25  # 6+12+2+2+3
+    assert c['events_processed_total'] == 27  # 6+12+2+2+3+2(debug)
     assert c['unique_hosts_total'] == 6  # h1–h6 across all ansible.builtin modules
     assert 'host_ids' not in c
 
@@ -1341,8 +1427,10 @@ def roles(result):
 
 
 def test_role_count(result):
-    # Only events with an explicit role are grouped; None roles are dropped by groupby
-    assert len(result['role_stats']) == 2
+    # Only events with an explicit role are grouped (role=None is excluded).
+    # One-dot roles like local.cleanup_role have collection_name=None but are
+    # still included thanks to dropna=False on the role groupby.
+    assert len(result['role_stats']) == 3
 
 
 def test_role_web(roles):
@@ -1359,6 +1447,9 @@ def test_role_web(roles):
     assert r['warnings_total'] == 1
     assert r['deprecations_total'] == 0
     assert r['events_processed_total'] == 6
+    # copy task: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
+    assert r['unique_hosts_total'] == 5
+    assert 'host_ids' not in r
 
 
 def test_role_firewall(roles):
@@ -1375,3 +1466,22 @@ def test_role_firewall(roles):
     assert r['warnings_total'] == 0
     assert r['deprecations_total'] == 1
     assert r['events_processed_total'] == 3
+    # firewalld task: h1, h2, h3 → 3 distinct hosts
+    assert r['unique_hosts_total'] == 3
+    assert 'host_ids' not in r
+
+
+def test_role_local_cleanup(roles):
+    # local.cleanup_role has one dot so extract_role_name() keeps it, but
+    # extract_collection_name() returns None — this entry only exists because
+    # the role groupby uses dropna=False.
+    r = roles['local.cleanup_role']
+    assert r['collection_name'] is None
+    assert r['collection_source'] == 'Custom'
+    assert r['jobs_total'] == 1
+    assert r['jobs_failed_total'] == 1
+    assert r['runner_on_ok_total'] == 2  # h1, h6
+    assert r['runner_on_failed_total'] == 0
+    assert r['events_processed_total'] == 2
+    assert r['unique_hosts_total'] == 2  # h1, h6
+    assert 'host_ids' not in r

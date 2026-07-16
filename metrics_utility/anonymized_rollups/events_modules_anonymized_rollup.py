@@ -495,7 +495,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         role_collection_source_str = dataframe['role_collection_name'].astype(str).map(self.collections)
         dataframe['role_collection_source'] = role_collection_source_str.fillna('Custom')
 
-        role_stats = dataframe.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
+        # Only group events that have an explicit role.  dropna=False is needed
+        # so that one-dot roles (e.g. local.cleanup_role) whose collection_name
+        # is None are kept; without it the default dropna=True would silently
+        # discard them because role_collection_name is None.
+        role_df = dataframe[dataframe['role'].notna()]
+        role_stats = role_df.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True, dropna=False).agg(
             **common_aggregation
         )
         role_stats['unique_hosts_total'] = role_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
