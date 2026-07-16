@@ -728,14 +728,14 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # Drop host_ids from stats (we only need unique_hosts_total, not the raw host_ids list)
         # Rename module_name -> module and collection_name -> collection so Segment does not
         # filter the fields (Segment drops properties whose key contains "name").
-        _RENAMES = {'module_name': 'module', 'collection_name': 'collection'}
         for stats_list in [module_stats, collection_stats, role_stats]:
             for item in stats_list:
                 if 'host_ids' in item:
                     del item['host_ids']
-                for old, new in _RENAMES.items():
-                    if old in item:
-                        item[new] = item.pop(old)
+                if 'module_name' in item:
+                    item['module'] = item.pop('module_name')
+                if 'collection_name' in item:
+                    item['collection'] = item.pop('collection_name')
 
         # Compute modules_used_to_automate_total from unique_modules list
         modules_used_to_automate_total = len(unique_modules)
