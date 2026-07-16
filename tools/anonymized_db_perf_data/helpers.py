@@ -1305,6 +1305,20 @@ def create_instance(version='4.5.0', node_type='control'):
     return instance_id
 
 
+# Realistic module names from collections that have event_query.yml in ee-supported-rhel9.
+# These are the collections whose modules trigger indirect node counting in AWX.
+_INDIRECT_NODE_MODULES = [
+    ['cisco.intersight.server_profile'],
+    ['cisco.intersight.vnic_lan_connectivity_policy', 'cisco.intersight.vnic_eth_adapter_policy'],
+    ['cisco.intersight.fabric_eth_network_policy'],
+    ['cisco.intersight.ntp_policy', 'cisco.intersight.network_config_policy'],
+    ['microsoft.ad.computer'],
+    ['vmware.vmware.guest_info'],
+    ['vmware.vmware.vm_info', 'vmware.vmware.guest_info'],
+    ['vmware.vmware.cluster_info'],
+]
+
+
 def create_indirect_managed_node_audits(job_ids, host_ids, inventory_id, org_id, indirect_count=100, unique_suffix=None):
     """Create indirect managed node audit records spread across the given jobs.
 
@@ -1329,8 +1343,10 @@ def create_indirect_managed_node_audits(job_ids, host_ids, inventory_id, org_id,
         host_id_sql = str(host_ids[i % len(host_ids)]) if host_ids else 'NULL'
         host_name = f'indirect-host-{i}{suffix}.example.com'
         canonical_facts = json.dumps({'fqdn': host_name}).replace("'", "''")
+        events = json.dumps(_INDIRECT_NODE_MODULES[i % len(_INDIRECT_NODE_MODULES)]).replace("'", "''")
         values.append(
-            f"(NOW(), {job_id}, {org_id}, {inventory_id}, {host_id_sql}, '{host_name}', '{canonical_facts}'::jsonb, '{{}}'::jsonb, '[]'::jsonb, 1)"
+            f'(NOW(), {job_id}, {org_id}, {inventory_id}, {host_id_sql}, '
+            f"'{host_name}', '{canonical_facts}'::jsonb, '{{}}'::jsonb, '{events}'::jsonb, 1)"
         )
 
     _INSERT_BATCH_SIZE = 500

@@ -130,7 +130,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
                 if key not in groups:
                     groups[key] = {
                         'organization_name': org_name,
-                        'collection_name': collection_name,
+                        'collection': collection_name,
                         'host_names': set(),
                     }
                 groups[key]['host_names'].add(host_name)
@@ -144,7 +144,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
                 if key not in module_groups:
                     module_groups[key] = {
                         'organization_name': org_name,
-                        'module_name': module_name,
+                        'module': module_name,
                         'host_names': set(),
                     }
                 module_groups[key]['host_names'].add(host_name)
@@ -184,23 +184,23 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
 
         collection_hosts = {}
         for group in data.get('groups', {}).values():
-            cname = group['collection_name']
+            cname = group['collection']
             hosts = group.get('host_names', [])
             if cname not in collection_hosts:
                 collection_hosts[cname] = set()
             collection_hosts[cname].update(hosts)
 
-        by_collection = [{'collection_name': cname, 'host_count': len(hosts)} for cname, hosts in sorted(collection_hosts.items())]
+        by_collection = [{'collection': cname, 'host_count': len(hosts)} for cname, hosts in sorted(collection_hosts.items())]
 
         module_hosts = {}
         for group in data.get('module_groups', {}).values():
-            mname = group['module_name']
+            mname = group['module']
             hosts = group.get('host_names', [])
             if mname not in module_hosts:
                 module_hosts[mname] = set()
             module_hosts[mname].update(hosts)
 
-        by_module = [{'module_name': mname, 'host_count': len(hosts)} for mname, hosts in sorted(module_hosts.items())]
+        by_module = [{'module': mname, 'host_count': len(hosts)} for mname, hosts in sorted(module_hosts.items())]
 
         return {
             'json': {
@@ -230,7 +230,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         for key, group in data_all.get('groups', {}).items():
             merged_groups[key] = {
                 'organization_name': group['organization_name'],
-                'collection_name': group['collection_name'],
+                'collection': group['collection'],
                 'host_names': set(group.get('host_names', [])),
             }
 
@@ -240,7 +240,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             else:
                 merged_groups[key] = {
                     'organization_name': group['organization_name'],
-                    'collection_name': group['collection_name'],
+                    'collection': group['collection'],
                     'host_names': set(group.get('host_names', [])),
                 }
 
@@ -249,7 +249,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         for key, group in data_all.get('module_groups', {}).items():
             merged_module_groups[key] = {
                 'organization_name': group['organization_name'],
-                'module_name': group['module_name'],
+                'module': group['module'],
                 'host_names': set(group.get('host_names', [])),
             }
 
@@ -259,7 +259,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             else:
                 merged_module_groups[key] = {
                     'organization_name': group['organization_name'],
-                    'module_name': group['module_name'],
+                    'module': group['module'],
                     'host_names': set(group.get('host_names', [])),
                 }
 

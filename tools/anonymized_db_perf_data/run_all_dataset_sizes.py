@@ -41,6 +41,7 @@ DATASETS = [
         'job_count': 20,
         'host_count': 100,
         'task_count': 50,
+        'indirect_count': 1000,
         'target_events': '~100K',
         'test_since': '2024-01-01',
         'test_until': '2024-02-01',
@@ -50,6 +51,7 @@ DATASETS = [
         'job_count': 20,
         'host_count': 1000,
         'task_count': 50,
+        'indirect_count': 100000,
         'target_events': '~1M',
         'test_since': '2024-01-01',
         'test_until': '2024-02-01',
@@ -59,6 +61,7 @@ DATASETS = [
         'job_count': 6900,
         'host_count': 869,
         'task_count': 50,
+        'indirect_count': 1000000,
         'target_events': '~300M total (~10M/day)',
         'test_since': '2024-01-15',
         'test_until': '2024-01-16',
@@ -98,6 +101,7 @@ def run_dataset(config, index, total):
         f'--job-count={config["job_count"]} '
         f'--host-count={config["host_count"]} '
         f'--task-count={config["task_count"]} '
+        f'--indirect-count={config["indirect_count"]} '
         f'--since={config["test_since"]} --until={config["test_until"]}'
     )
     if not run_command(cmd, f'Generating {name} dataset'):
