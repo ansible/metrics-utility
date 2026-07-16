@@ -1004,9 +1004,9 @@ def test_top_level_warnings_and_deprecations(result):
     assert result['deprecations_total'] == 1  # job2 top-level deprecated event
 
 
-def test_hosts_automated_total(result):
-    # h1-h6 all appear in runner events; no host is exclusively in skipped events
-    assert result['hosts_automated_total'] == 6
+def test_no_hosts_automated_total_in_events_output(result):
+    # hosts_automated_total is sourced from job host summary, not events; must not appear here
+    assert 'hosts_automated_total' not in result
 
 
 def test_modules_used_to_automate_total(result):
@@ -1062,6 +1062,9 @@ def test_ansible_builtin_copy(modules):
     assert m['warnings_total'] == 1  # h3 module-level warning
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 6
+    # host coverage: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
+    assert m['unique_hosts_total'] == 5
+    assert 'host_ids' not in m
 
 
 def test_ansible_builtin_package(modules):
@@ -1085,6 +1088,8 @@ def test_ansible_builtin_package(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 12
+    assert m['unique_hosts_total'] == 3  # h1, h2, h3
+    assert 'host_ids' not in m
 
 
 def test_ansible_posix_firewalld(modules):
@@ -1103,6 +1108,8 @@ def test_ansible_posix_firewalld(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 1  # h3 module-level deprecation
     assert m['events_processed_total'] == 3  # h5 runner_on_skipped excluded
+    assert m['unique_hosts_total'] == 3  # h1, h2 (ignored), h3
+    assert 'host_ids' not in m
 
 
 def test_ansible_builtin_systemd(modules):
@@ -1118,6 +1125,8 @@ def test_ansible_builtin_systemd(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 2
+    assert m['unique_hosts_total'] == 2  # h1, h2
+    assert 'host_ids' not in m
 
 
 def test_community_mongodb_mongodb_replicaset(modules):
@@ -1137,6 +1146,8 @@ def test_community_mongodb_mongodb_replicaset(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 2
+    assert m['unique_hosts_total'] == 2  # h2, h3
+    assert 'host_ids' not in m
 
 
 def test_community_general_ini_file(modules):
@@ -1156,6 +1167,8 @@ def test_community_general_ini_file(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 6
+    assert m['unique_hosts_total'] == 2  # h2, h3
+    assert 'host_ids' not in m
 
 
 def test_ansible_builtin_template(modules):
@@ -1171,6 +1184,8 @@ def test_ansible_builtin_template(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 2
+    assert m['unique_hosts_total'] == 2  # h2, h3
+    assert 'host_ids' not in m
 
 
 def test_ansible_builtin_file(modules):
@@ -1189,6 +1204,8 @@ def test_ansible_builtin_file(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 3
+    assert m['unique_hosts_total'] == 3  # h1, h4, h6
+    assert 'host_ids' not in m
 
 
 def test_community_general_yum(modules):
@@ -1208,6 +1225,8 @@ def test_community_general_yum(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_processed_total'] == 6  # h4 runner_on_skipped excluded
+    assert m['unique_hosts_total'] == 2  # h1, h6
+    assert 'host_ids' not in m
 
 
 # ---------------------------------------------------------------------------
@@ -1246,6 +1265,8 @@ def test_ansible_builtin_collection(collections):
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
     assert c['events_processed_total'] == 25  # 6+12+2+2+3
+    assert c['unique_hosts_total'] == 6  # h1–h6 across all ansible.builtin modules
+    assert 'host_ids' not in c
 
 
 def test_ansible_posix_collection(collections):
@@ -1263,6 +1284,8 @@ def test_ansible_posix_collection(collections):
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 1
     assert c['events_processed_total'] == 3
+    assert c['unique_hosts_total'] == 3  # h1, h2, h3
+    assert 'host_ids' not in c
 
 
 def test_community_mongodb_collection(collections):
@@ -1279,6 +1302,8 @@ def test_community_mongodb_collection(collections):
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
     assert c['events_processed_total'] == 2
+    assert c['unique_hosts_total'] == 2  # h2, h3
+    assert 'host_ids' not in c
 
 
 def test_community_general_collection(collections):
@@ -1301,6 +1326,8 @@ def test_community_general_collection(collections):
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
     assert c['events_processed_total'] == 12  # 6+6
+    assert c['unique_hosts_total'] == 4  # h1, h2, h3, h6
+    assert 'host_ids' not in c
 
 
 # ---------------------------------------------------------------------------

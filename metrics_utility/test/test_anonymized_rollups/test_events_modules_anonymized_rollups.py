@@ -439,8 +439,8 @@ def test_events_modules_aggregations_basic():
         'maintenance.yml': 1,
     }
 
-    # host 8 only has a runner_on_skipped event which is excluded from analysis by design
-    assert result['hosts_automated_total'] == 8
+    # hosts_automated_total is sourced from job host summary, not events; absent from events output
+    assert 'hosts_automated_total' not in result
 
     # collection stats assertions (current aggregation schema)
     coll_by_name = {row['collection']: row for row in result['collection_stats']}

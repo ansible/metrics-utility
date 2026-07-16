@@ -251,7 +251,8 @@ def _validate_events_modules(result):
     """Validate events modules section."""
     assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
     # host 8 only has a runner_on_skipped event which is excluded from analysis by design
-    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 8, 'Should have 8 unique hosts from all tarballs'
+    # Sourced from job host summary (5 unique host_remote_ids: 1–5), not from events
+    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 5, 'Should have 5 unique hosts from job host summary'
     assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
     assert result['statistics']['rollup_period_warnings_total'] == 2, (
         f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'

@@ -161,7 +161,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'deprecations_total',
         'events_processed_total',
     ]
-    _LIST_COLS = ['ansible_versions']
+    # host_ids is a list of host IDs per stats entry; kept through batch merges (set-unioned)
+    # and used to recompute unique_hosts_total after each merge.  Stripped before shipping.
+    _LIST_COLS = ['ansible_versions', 'host_ids']
 
     def __init__(self):
         super().__init__('events_modules')
@@ -210,6 +212,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if item_all and item_new:
             self._merge_numeric_columns(item_all, item_new, merged_item)
             self._merge_list_columns(item_all, item_new, merged_item)
+            merged_item['unique_hosts_total'] = len(set(merged_item.get('host_ids', [])))
 
         return merged_item
 
@@ -255,12 +258,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             modules_per_playbook[playbook] = sorted(list(set_all.union(set_new)))
         return modules_per_playbook
 
-    def _merge_unique_hosts(self, data_all, data_new):
-        """Merge unique_hosts lists (union and sort)."""
-        unique_hosts_all = set(data_all.get('unique_hosts', []))
-        unique_hosts_new = set(data_new.get('unique_hosts', []))
-        return sorted(list(unique_hosts_all.union(unique_hosts_new)))
-
     def merge(self, data_all, data_new):
         """
         Override merge to aggregate module_stats, collection_stats, role_stats from batches.
@@ -294,7 +291,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'role_stats': role_stats,
             'unique_modules': self._merge_unique_modules(data_all, data_new),
             'modules_per_playbook': self._merge_modules_per_playbook(data_all, data_new),
-            'unique_hosts': self._merge_unique_hosts(data_all, data_new),
         }
 
     # ------------------------------------------------------------------
@@ -480,6 +476,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'deprecations_total': ('is_deprecation', 'sum'),
             'events_processed_total': ('event', 'size'),
             'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
+            'host_ids': ('host_id', lambda x: set(x.dropna())),
         }
 
     def _compute_all_stats(self, dataframe):
@@ -489,8 +486,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = dataframe.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             **common_aggregation
         )
+        module_stats['unique_hosts_total'] = module_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+        collection_stats['unique_hosts_total'] = collection_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         dataframe['role_collection_name'] = dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         role_collection_source_str = dataframe['role_collection_name'].astype(str).map(self.collections)
@@ -499,12 +498,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         role_stats = dataframe.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True).agg(
             **common_aggregation
         )
+        role_stats['unique_hosts_total'] = role_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
         return module_stats, collection_stats, role_stats
 
     def _compute_unique_metadata(self, dataframe):
-        """Compute unique_modules, modules_per_playbook, and unique_hosts."""
+        """Compute unique_modules and modules_per_playbook."""
         unique_modules = sorted(dataframe['module_name'].dropna().unique())
 
         modules_per_playbook = {}
@@ -512,9 +512,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             modules_in_playbook = sorted(dataframe[dataframe['playbook'] == playbook]['module_name'].dropna().unique())
             modules_per_playbook[playbook] = modules_in_playbook
 
-        unique_hosts = sorted(dataframe['host_id'].dropna().unique())
-
-        return unique_modules, modules_per_playbook, unique_hosts
+        return unique_modules, modules_per_playbook
 
     # ------------------------------------------------------------------
     # Serialisation helpers
@@ -553,6 +551,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
             self._convert_list_columns_to_json_format(df, 'ansible_versions')
+            self._convert_list_columns_to_json_format(df, 'host_ids')
             self._convert_categorical_columns_to_string(df)
 
         module_stats_json = self._convert_dataframe_to_json_records(module_stats)
@@ -589,7 +588,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     'role_stats': [],
                     'unique_modules': [],
                     'modules_per_playbook': {},
-                    'unique_hosts': [],
                 }
             )
 
@@ -600,7 +598,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         module_stats, collection_stats, role_stats = self._compute_all_stats(dataframe)
         module_stats_json, collection_stats_json, role_stats_json = self._convert_stats_to_json(module_stats, collection_stats, role_stats)
-        unique_modules, modules_per_playbook, unique_hosts = self._compute_unique_metadata(dataframe)
+        unique_modules, modules_per_playbook = self._compute_unique_metadata(dataframe)
 
         result = {
             'collected_events_total': collected_events_total,
@@ -611,7 +609,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'role_stats': role_stats_json,
             'unique_modules': unique_modules,
             'modules_per_playbook': modules_per_playbook,
-            'unique_hosts': unique_hosts,
         }
 
         return sanitize_json(result)
@@ -623,13 +620,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         Top-level output:
             modules_used_to_automate_total   - distinct module count
             modules_used_per_playbook_total  - distinct modules per playbook
-            module_stats                     - per-module stats (see _NUMERIC_COLS)
-            collection_stats                 - per-collection stats
-            role_stats                       - per-role stats
-            hosts_automated_total            - distinct hosts seen
+            module_stats                     - per-module stats (see _NUMERIC_COLS); each entry
+                                               includes unique_hosts_total (distinct hosts that
+                                               ran that module, computed via set-union across
+                                               hourly batches; host_ids is stripped before shipping)
+            collection_stats                 - per-collection stats (same unique_hosts_total)
+            role_stats                       - per-role stats (same unique_hosts_total)
             collected_events_total           - all raw events before filtering
             warnings_total                   - top-level warning events
             deprecations_total               - top-level deprecated events
+
+        hosts_automated_total (total hosts for the rollup period) is NOT included here;
+        it is sourced from job host summary data in flatten_json_report().
 
         data is a dict with already-aggregated JSON structures from prepare() and merge().
         """
@@ -646,7 +648,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         role_stats = data.get('role_stats', [])
         unique_modules = data.get('unique_modules', [])
         modules_per_playbook = data.get('modules_per_playbook', {})
-        unique_hosts = data.get('unique_hosts', [])
 
         if not module_stats and not collection_stats and not role_stats:
             return {
@@ -666,7 +667,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         modules_used_per_playbook_total = {
             playbook: len(module_list) if isinstance(module_list, list) else module_list for playbook, module_list in modules_per_playbook.items()
         }
-        hosts_automated_total = len(unique_hosts)
 
         json_data = {
             'modules_used_to_automate_total': modules_used_to_automate_total,
@@ -674,7 +674,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': module_stats,
             'collection_stats': collection_stats,
             'role_stats': role_stats,
-            'hosts_automated_total': hosts_automated_total,
             'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
             'deprecations_total': deprecations_total,

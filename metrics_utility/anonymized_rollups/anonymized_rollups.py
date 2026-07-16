@@ -333,7 +333,9 @@ def _build_statistics(
             {
                 # from events_modules
                 'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-                'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
+                # hosts_automated_total is sourced from job host summary (authoritative host count)
+                # rather than from event rows, which may miss hosts with no runner events.
+                'rollup_period_unique_hosts_automated_total': host_summary_totals['unique_hosts_total'],
                 'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
                 'rollup_period_warnings_total': events_modules.get('warnings_total'),
                 'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
