@@ -1079,7 +1079,6 @@ def test_top_level_warnings_and_deprecations(result):
 
 
 def test_no_hosts_automated_total_in_events_output(result):
-    # hosts_automated_total is sourced from job host summary, not events; must not appear here
     assert 'hosts_automated_total' not in result
 
 

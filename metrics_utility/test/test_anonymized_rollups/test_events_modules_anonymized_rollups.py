@@ -439,7 +439,6 @@ def test_events_modules_aggregations_basic():
         'maintenance.yml': 1,
     }
 
-    # hosts_automated_total is sourced from job host summary, not events; absent from events output
     assert 'hosts_automated_total' not in result
 
     # collection stats assertions (current aggregation schema)

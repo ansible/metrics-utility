@@ -32,7 +32,6 @@ def _create_statistics_dict(num_modules, num_jobs):
     """Create statistics dictionary for anonymized rollup."""
     return {
         'rollup_period_modules_total': num_modules,
-        'rollup_period_unique_hosts_automated_total': 1000,
         'rollup_period_collected_events_total': 5000,
         'rollup_period_warnings_total': 10,
         'rollup_period_deprecations_total': 5,

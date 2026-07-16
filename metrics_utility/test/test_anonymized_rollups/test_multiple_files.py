@@ -250,9 +250,6 @@ def _validate_job_host_summary(jobs_list, result):
 def _validate_events_modules(result):
     """Validate events modules section."""
     assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
-    # host 8 only has a runner_on_skipped event which is excluded from analysis by design
-    # Sourced from job host summary (5 unique host_remote_ids: 1–5), not from events
-    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 5, 'Should have 5 unique hosts from job host summary'
     assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
     assert result['statistics']['rollup_period_warnings_total'] == 2, (
         f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'
@@ -782,9 +779,6 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     # Event-related fields should be missing when there are no events
     assert 'rollup_period_modules_total' not in statistics, 'rollup_period_modules_total should be missing when there are no events'
-    assert 'rollup_period_unique_hosts_automated_total' not in statistics, (
-        'rollup_period_unique_hosts_automated_total should be missing when there are no events'
-    )
     assert 'rollup_period_warnings_total' not in statistics, 'rollup_period_warnings_total should be missing when there are no events'
     assert 'rollup_period_deprecations_total' not in statistics, 'rollup_period_deprecations_total should be missing when there are no events'
     assert 'rollup_period_execution_environments_total' in statistics

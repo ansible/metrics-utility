@@ -67,7 +67,6 @@ def _validate_statistics_structure(statistics):
     assert isinstance(statistics, dict), 'statistics should be a dictionary'
     required_fields = [
         'rollup_period_modules_total',
-        'rollup_period_unique_hosts_automated_total',
         'rollup_period_execution_environments_total',
         'rollup_period_EE_default_total',
         'rollup_period_EE_custom_total',
@@ -101,7 +100,6 @@ def _validate_statistics_structure(statistics):
 def _validate_statistics_data_types(statistics):
     """Validate statistics data types."""
     assert isinstance(statistics['rollup_period_modules_total'], int)
-    assert isinstance(statistics['rollup_period_unique_hosts_automated_total'], int)
     assert isinstance(statistics['rollup_period_execution_environments_total'], int)
     assert statistics['rollup_period_execution_environments_total'] == (
         statistics['rollup_period_EE_default_total'] + statistics['rollup_period_EE_custom_total']
@@ -915,7 +913,6 @@ def _validate_all_data(json_data, statistics):
     assert statistics['rollup_period_modules_total'] == 2, (
         'Should have 2 modules total (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
     )
-    assert statistics['rollup_period_unique_hosts_automated_total'] == 2, 'Should have 2 hosts automated'
     assert len(json_data['module_stats']) == 2, 'Should have 2 module stats (ansible.builtin.yum and a10.acos_axapi.a10_slb_virtual_server)'
     assert len(json_data['collection_stats']) == 2, 'Should have 2 collection stats (ansible.builtin and a10.acos_axapi)'
 

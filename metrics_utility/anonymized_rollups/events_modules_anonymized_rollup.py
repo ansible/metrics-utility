@@ -655,9 +655,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             warnings_total                   - top-level warning events
             deprecations_total               - top-level deprecated events
 
-        hosts_automated_total (total hosts for the rollup period) is NOT included here;
-        it is sourced from job host summary data in flatten_json_report().
-
         data is a dict with already-aggregated JSON structures from prepare() and merge().
         """
         if data is None:
