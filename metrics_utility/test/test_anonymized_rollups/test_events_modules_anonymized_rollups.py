@@ -460,7 +460,7 @@ def test_events_modules_aggregations_basic():
         win_copy_role_stats = stats_by_role['ansible.windows.win_copy_role']
         assert win_copy_role_stats['events_processed_total'] > 0
         assert 'jobs_total' in win_copy_role_stats
-        # Verify collection_name and collection_source are present
+        # Verify collection and collection_source are present
         assert 'collection' in win_copy_role_stats, 'role_stats should have collection field'
         assert 'collection_source' in win_copy_role_stats, 'role_stats should have collection_source field'
         # For collection-based roles, collection should be extracted (ansible.windows.win_copy_role -> ansible.windows)
@@ -474,7 +474,7 @@ def test_events_modules_aggregations_basic():
     # Verify standalone role (custom.standalone_role) has Custom collection_source
     if 'custom.standalone_role' in stats_by_role:
         standalone_role_stats = stats_by_role['custom.standalone_role']
-        # Standalone roles should have None collection_name and Custom collection_source
+        # Standalone roles should have None collection and Custom collection_source
         assert standalone_role_stats.get('collection') is None or standalone_role_stats.get('collection') == '', (
             f'Standalone role should have None collection, got {standalone_role_stats.get("collection")}'
         )

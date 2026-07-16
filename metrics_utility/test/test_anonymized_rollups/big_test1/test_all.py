@@ -425,7 +425,7 @@ def validate_ansible_versions_in_list(items, item_type):
             assert len(item['ansible_versions']) > 0
             for version in item['ansible_versions']:
                 assert version in expected_versions, (
-                    f'Unexpected ansible_versions {version} in {item_type} {item.get("module_name") or item.get("collection_name")}'
+                    f'Unexpected ansible_versions {version} in {item_type} {item.get("module") or item.get("collection")}'
                 )
 
 

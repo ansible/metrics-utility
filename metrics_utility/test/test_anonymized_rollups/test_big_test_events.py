@@ -1056,7 +1056,12 @@ def result(request):
         second = _prepare_events(rollup, [e for e in _EVENTS if e['job_id'] in (2, 3)])
         prepared = rollup.merge(first, second)
 
-    return rollup.base(prepared)['json']
+    result = rollup.base(prepared)['json']
+    import json
+
+    print(f'\n=== result [{request.param}] ===')
+    print(json.dumps(result, indent=2, default=str))
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -1097,7 +1102,7 @@ def test_modules_used_per_playbook(result):
 
 @pytest.fixture(scope='module')
 def modules(result):
-    return {m['module_name']: m for m in result['module_stats']}
+    return {m['module']: m for m in result['module_stats']}
 
 
 def test_module_count(result):
@@ -1106,7 +1111,7 @@ def test_module_count(result):
 
 def test_ansible_builtin_copy(modules):
     m = modules['ansible.builtin.copy']
-    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     # jobs
     assert m['jobs_total'] == 1
@@ -1138,7 +1143,7 @@ def test_ansible_builtin_copy(modules):
 
 def test_ansible_builtin_package(modules):
     m = modules['ansible.builtin.package']
-    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
@@ -1163,7 +1168,7 @@ def test_ansible_builtin_package(modules):
 
 def test_ansible_posix_firewalld(modules):
     m = modules['ansible.posix.firewalld']
-    assert m['collection_name'] == 'ansible.posix'
+    assert m['collection'] == 'ansible.posix'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
@@ -1183,7 +1188,7 @@ def test_ansible_posix_firewalld(modules):
 
 def test_ansible_builtin_systemd(modules):
     m = modules['ansible.builtin.systemd']
-    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['runner_on_ok_total'] == 0
@@ -1200,7 +1205,7 @@ def test_ansible_builtin_systemd(modules):
 
 def test_community_mongodb_mongodb_replicaset(modules):
     m = modules['community.mongodb.mongodb_replicaset']
-    assert m['collection_name'] == 'community.mongodb'
+    assert m['collection'] == 'community.mongodb'
     assert m['collection_source'] == 'community'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 0
@@ -1221,7 +1226,7 @@ def test_community_mongodb_mongodb_replicaset(modules):
 
 def test_community_general_ini_file(modules):
     m = modules['community.general.ini_file']
-    assert m['collection_name'] == 'community.general'
+    assert m['collection'] == 'community.general'
     assert m['collection_source'] == 'community'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 0
@@ -1242,7 +1247,7 @@ def test_community_general_ini_file(modules):
 
 def test_ansible_builtin_template(modules):
     m = modules['ansible.builtin.template']
-    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 0
@@ -1259,7 +1264,7 @@ def test_ansible_builtin_template(modules):
 
 def test_ansible_builtin_file(modules):
     m = modules['ansible.builtin.file']
-    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
@@ -1279,7 +1284,7 @@ def test_ansible_builtin_file(modules):
 
 def test_ansible_builtin_debug(modules):
     m = modules['ansible.builtin.debug']
-    assert m['collection_name'] == 'ansible.builtin'
+    assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
@@ -1296,7 +1301,7 @@ def test_ansible_builtin_debug(modules):
 
 def test_community_general_yum(modules):
     m = modules['community.general.yum']
-    assert m['collection_name'] == 'community.general'
+    assert m['collection'] == 'community.general'
     assert m['collection_source'] == 'community'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
@@ -1322,7 +1327,7 @@ def test_community_general_yum(modules):
 
 @pytest.fixture(scope='module')
 def collections(result):
-    return {c['collection_name']: c for c in result['collection_stats']}
+    return {c['collection']: c for c in result['collection_stats']}
 
 
 def test_collection_count(result):
@@ -1435,7 +1440,7 @@ def test_role_count(result):
 
 def test_role_web(roles):
     r = roles['acme.app.web_role']
-    assert r['collection_name'] == 'acme.app'
+    assert r['collection'] == 'acme.app'
     assert r['collection_source'] == 'Custom'
     assert r['jobs_total'] == 1
     assert r['jobs_failed_total'] == 1
@@ -1454,7 +1459,7 @@ def test_role_web(roles):
 
 def test_role_firewall(roles):
     r = roles['acme.app.firewall_role']
-    assert r['collection_name'] == 'acme.app'
+    assert r['collection'] == 'acme.app'
     assert r['collection_source'] == 'Custom'
     assert r['jobs_total'] == 1
     assert r['jobs_failed_total'] == 1
@@ -1476,7 +1481,7 @@ def test_role_local_cleanup(roles):
     # extract_collection_name() returns None — this entry only exists because
     # the role groupby uses dropna=False.
     r = roles['local.cleanup_role']
-    assert r['collection_name'] is None
+    assert r['collection'] is None
     assert r['collection_source'] == 'Custom'
     assert r['jobs_total'] == 1
     assert r['jobs_failed_total'] == 1

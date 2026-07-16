@@ -582,7 +582,7 @@ def _validate_cross_section_consistency(json_data, statistics):
     print('--- Validating cross-section data consistency ---')
     for module_stat in json_data['module_stats']:
         assert module_stat['jobs_total'] <= statistics['rollup_period_jobs_total'], (
-            f'Module {module_stat["module_name"][:50]} jobs_total should not exceed total jobs'
+            f'Module {module_stat["module"][:50]} jobs_total should not exceed total jobs'
         )
 
 
