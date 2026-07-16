@@ -146,7 +146,7 @@ def test_merge_unions_host_names():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1', 'host2'],
                 'host_count': 2,
             },
@@ -158,7 +158,7 @@ def test_merge_unions_host_names():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host2', 'host3'],
                 'host_count': 2,
             },
@@ -181,7 +181,7 @@ def test_merge_with_none_data_all():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1'],
                 'host_count': 1,
             },
@@ -202,7 +202,7 @@ def test_base_strips_pii():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1', 'host2'],
                 'host_count': 2,
             },
@@ -229,19 +229,19 @@ def test_base_collapses_orgs_into_collection_totals():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1'],
                 'host_count': 1,
             },
             'OrgB||cisco.ios': {
                 'organization_name': 'OrgB',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host2'],
                 'host_count': 1,
             },
             'OrgA||azure.azcollection': {
                 'organization_name': 'OrgA',
-                'collection_name': 'azure.azcollection',
+                'collection': 'azure.azcollection',
                 'host_names': ['host3'],
                 'host_count': 1,
             },
@@ -254,9 +254,9 @@ def test_base_collapses_orgs_into_collection_totals():
     assert result['json']['indirect_nodes_total'] == 3
     by_c = result['json']['by_collection']
     assert len(by_c) == 2
-    assert by_c[0]['collection_name'] == 'azure.azcollection'
+    assert by_c[0]['collection'] == 'azure.azcollection'
     assert by_c[0]['host_count'] == 1
-    assert by_c[1]['collection_name'] == 'cisco.ios'
+    assert by_c[1]['collection'] == 'cisco.ios'
     assert by_c[1]['host_count'] == 2
 
 
@@ -268,13 +268,13 @@ def test_base_deduplicates_hosts_across_orgs():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1', 'host2'],
                 'host_count': 2,
             },
             'OrgB||cisco.ios': {
                 'organization_name': 'OrgB',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host2', 'host3'],
                 'host_count': 2,
             },
@@ -285,7 +285,7 @@ def test_base_deduplicates_hosts_across_orgs():
     result = rollup.base(data)
 
     cisco_group = result['json']['by_collection'][0]
-    assert cisco_group['collection_name'] == 'cisco.ios'
+    assert cisco_group['collection'] == 'cisco.ios'
     assert cisco_group['host_count'] == 3
 
 
@@ -371,7 +371,7 @@ def test_merge_with_none_data_new():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1'],
                 'host_count': 1,
             },
@@ -523,7 +523,7 @@ def test_merge_unions_module_group_host_names():
         'module_groups': {
             'OrgA||cisco.ios.ios_command': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_command',
+                'module': 'cisco.ios.ios_command',
                 'host_names': ['host1', 'host2'],
                 'host_count': 2,
             },
@@ -536,7 +536,7 @@ def test_merge_unions_module_group_host_names():
         'module_groups': {
             'OrgA||cisco.ios.ios_command': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_command',
+                'module': 'cisco.ios.ios_command',
                 'host_names': ['host2', 'host3'],
                 'host_count': 2,
             },
@@ -560,13 +560,13 @@ def test_base_produces_by_module():
         'module_groups': {
             'OrgA||cisco.ios.ios_command': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_command',
+                'module': 'cisco.ios.ios_command',
                 'host_names': ['host1', 'host2'],
                 'host_count': 2,
             },
             'OrgA||cisco.ios.ios_config': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_config',
+                'module': 'cisco.ios.ios_config',
                 'host_names': ['host3'],
                 'host_count': 1,
             },
@@ -578,8 +578,8 @@ def test_base_produces_by_module():
 
     by_module = result['json']['by_module']
     assert len(by_module) == 2
-    assert by_module[0] == {'module_name': 'cisco.ios.ios_command', 'host_count': 2}
-    assert by_module[1] == {'module_name': 'cisco.ios.ios_config', 'host_count': 1}
+    assert by_module[0] == {'module': 'cisco.ios.ios_command', 'host_count': 2}
+    assert by_module[1] == {'module': 'cisco.ios.ios_config', 'host_count': 1}
     for entry in by_module:
         assert 'host_names' not in entry
         assert 'organization_name' not in entry
@@ -594,13 +594,13 @@ def test_base_deduplicates_module_hosts_across_orgs():
         'module_groups': {
             'OrgA||cisco.ios.ios_command': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_command',
+                'module': 'cisco.ios.ios_command',
                 'host_names': ['host1', 'host2'],
                 'host_count': 2,
             },
             'OrgB||cisco.ios.ios_command': {
                 'organization_name': 'OrgB',
-                'module_name': 'cisco.ios.ios_command',
+                'module': 'cisco.ios.ios_command',
                 'host_names': ['host2', 'host3'],
                 'host_count': 2,
             },
@@ -612,11 +612,11 @@ def test_base_deduplicates_module_hosts_across_orgs():
 
     by_module = result['json']['by_module']
     assert len(by_module) == 1
-    assert by_module[0]['module_name'] == 'cisco.ios.ios_command'
+    assert by_module[0]['module'] == 'cisco.ios.ios_command'
     assert by_module[0]['host_count'] == 3
 
 
-def test_base_by_module_sorted_by_module_name():
+def test_base_by_module_sorted_by_module():
     """base() sorts by_module entries by module name."""
     rollup = IndirectManagedNodesAnonymizedRollup()
 
@@ -625,13 +625,13 @@ def test_base_by_module_sorted_by_module_name():
         'module_groups': {
             'OrgA||cisco.ios.ios_config': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_config',
+                'module': 'cisco.ios.ios_config',
                 'host_names': ['host1'],
                 'host_count': 1,
             },
             'OrgA||azure.azcollection.azure_rm_vm': {
                 'organization_name': 'OrgA',
-                'module_name': 'azure.azcollection.azure_rm_vm',
+                'module': 'azure.azcollection.azure_rm_vm',
                 'host_names': ['host2'],
                 'host_count': 1,
             },
@@ -641,7 +641,7 @@ def test_base_by_module_sorted_by_module_name():
 
     result = rollup.base(data)
 
-    names = [e['module_name'] for e in result['json']['by_module']]
+    names = [e['module'] for e in result['json']['by_module']]
     assert names == sorted(names)
 
 
@@ -653,7 +653,7 @@ def test_base_by_collection_unchanged_with_module_data():
         'groups': {
             'OrgA||cisco.ios': {
                 'organization_name': 'OrgA',
-                'collection_name': 'cisco.ios',
+                'collection': 'cisco.ios',
                 'host_names': ['host1'],
                 'host_count': 1,
             },
@@ -661,7 +661,7 @@ def test_base_by_collection_unchanged_with_module_data():
         'module_groups': {
             'OrgA||cisco.ios.ios_command': {
                 'organization_name': 'OrgA',
-                'module_name': 'cisco.ios.ios_command',
+                'module': 'cisco.ios.ios_command',
                 'host_names': ['host1'],
                 'host_count': 1,
             },
@@ -671,5 +671,5 @@ def test_base_by_collection_unchanged_with_module_data():
 
     result = rollup.base(data)
 
-    assert result['json']['by_collection'] == [{'collection_name': 'cisco.ios', 'host_count': 1}]
-    assert result['json']['by_module'] == [{'module_name': 'cisco.ios.ios_command', 'host_count': 1}]
+    assert result['json']['by_collection'] == [{'collection': 'cisco.ios', 'host_count': 1}]
+    assert result['json']['by_module'] == [{'module': 'cisco.ios.ios_command', 'host_count': 1}]
