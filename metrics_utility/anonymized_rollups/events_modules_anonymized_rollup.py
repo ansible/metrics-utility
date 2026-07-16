@@ -192,13 +192,20 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             merged_item[col] = val_all + val_new
 
     def _merge_list_columns(self, item_all, item_new, merged_item):
-        """Union list columns from both items."""
+        """Union list columns from both items.
+
+        ansible_versions is sorted for deterministic JSON output.
+        host_ids is intentionally left unsorted: it can be very large (one entry per unique host
+        per module/collection/role), and we only ever call len() on it — sorting would be O(N log N)
+        wasted work per entry per merge for no benefit.
+        """
         for col in self._LIST_COLS:
             list_all = item_all.get(col) if item_all.get(col) is not None else []
             list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            merged_item[col] = sorted(list(set_all.union(set_new)))
+            union = set_all.union(set_new)
+            merged_item[col] = sorted(union) if col != 'host_ids' else list(union)
 
     def _merge_single_item(self, item_all, item_new):
         """Merge a single item from all and new data."""
@@ -532,11 +539,24 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             return value
         return []
 
+    @staticmethod
+    def _convert_set_or_list_to_list(value):
+        """Convert set or list to list (unsorted), return empty list for other types."""
+        if isinstance(value, (set, list)):
+            return list(value)
+        return []
+
     def _convert_list_columns_to_json_format(self, dataframe, column_name):
         """Convert a list/set column in dataframe to JSON-compatible sorted list format."""
         if dataframe.empty or column_name not in dataframe.columns:
             return
         dataframe[column_name] = dataframe[column_name].apply(self._convert_set_or_list_to_sorted_list)
+
+    def _convert_host_ids_to_json_format(self, dataframe):
+        """Convert host_ids column from set to list (unsorted — only len() is ever used)."""
+        if dataframe.empty or 'host_ids' not in dataframe.columns:
+            return
+        dataframe['host_ids'] = dataframe['host_ids'].apply(self._convert_set_or_list_to_list)
 
     def _convert_categorical_columns_to_string(self, dataframe):
         """Convert categorical columns to string type for JSON serialization."""
@@ -556,7 +576,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
             self._convert_list_columns_to_json_format(df, 'ansible_versions')
-            self._convert_list_columns_to_json_format(df, 'host_ids')
+            self._convert_host_ids_to_json_format(df)
             self._convert_categorical_columns_to_string(df)
 
         module_stats_json = self._convert_dataframe_to_json_records(module_stats)

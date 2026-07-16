@@ -425,6 +425,18 @@ main_jobevent_service_lines = [
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    # job 1, host 1, counter 3 (role: a10.acos_axapi.device_config)
+    '31,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
+    'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_1_2025-06-13_role_a10,f,f,f,'
+    'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,1,1,31,31,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    # job 1, host 1, counter 4 (role: redhat.rhel_system_roles.timesync)
+    '32,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_role_rhel,f,f,f,'
+    'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,1,1,31,31,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
     '3,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
@@ -434,6 +446,18 @@ main_jobevent_service_lines = [
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    # job 1, host 2, counter 3 (role: a10.acos_axapi.device_config)
+    '33,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
+    'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_2_2025-06-13_role_a10,f,f,f,'
+    'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,1,1,32,32,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    # job 1, host 2, counter 4 (role: redhat.rhel_system_roles.timesync)
+    '34,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_role_rhel,f,f,f,'
+    'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,1,1,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
     '5,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
@@ -445,6 +469,18 @@ main_jobevent_service_lines = [
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
     'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    # job 2, host 1, counter 3 (role: a10.acos_axapi.device_config)
+    '35,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
+    'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_1_2025-06-13_role_a10,f,f,f,'
+    'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,2,2,31,31,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    # job 2, host 1, counter 4 (role: redhat.rhel_system_roles.timesync)
+    '36,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_role_rhel,f,f,f,'
+    'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,2,2,31,31,'
+    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
     '7,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
@@ -454,6 +490,18 @@ main_jobevent_service_lines = [
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    # job 2, host 2, counter 3 (role: a10.acos_axapi.device_config)
+    '37,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
+    'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_2_2025-06-13_role_a10,f,f,f,'
+    'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,2,2,32,32,'
+    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    # job 2, host 2, counter 4 (role: redhat.rhel_system_roles.timesync)
+    '38,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_role_rhel,f,f,f,'
+    'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,2,2,32,32,'
     'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
     '9,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
@@ -465,6 +513,18 @@ main_jobevent_service_lines = [
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
     'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    # job 3, host 1, counter 3 (role: a10.acos_axapi.device_config)
+    '39,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
+    'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_role_a10,f,f,f,'
+    'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,3,3,31,31,'
+    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    # job 3, host 1, counter 4 (role: redhat.rhel_system_roles.timesync)
+    '40,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_role_rhel,f,f,f,'
+    'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,3,3,31,31,'
+    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
     '11,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
@@ -474,6 +534,18 @@ main_jobevent_service_lines = [
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
+    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    # job 3, host 2, counter 3 (role: a10.acos_axapi.device_config)
+    '41,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
+    'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_role_a10,f,f,f,'
+    'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,3,3,32,32,'
+    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    # job 3, host 2, counter 4 (role: redhat.rhel_system_roles.timesync)
+    '42,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
+    '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
+    'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_role_rhel,f,f,f,'
+    'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,3,3,32,32,'
     'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
     '13,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
@@ -595,7 +667,7 @@ def test_main_jobevent_service_row_limit(caplog):
     since = utcdt('2025-06-12')
     until = utcdt('2025-06-14')
 
-    # The fixture contains 30 events; a limit of 2 must cap the result.
+    # The fixture contains 42 events; a limit of 2 must cap the result.
     collector_instance = main_jobevent_service(db=connection, since=since, until=until, row_limit=2)
     with caplog.at_level(logging.INFO, logger='metrics_utility.logger'):
         df = collector_instance.gather()
