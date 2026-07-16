@@ -190,7 +190,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
                 collection_hosts[cname] = set()
             collection_hosts[cname].update(hosts)
 
-        by_collection = [{'collection': cname, 'host_count': len(hosts)} for cname, hosts in sorted(collection_hosts.items())]
+        by_collection = [{'collection_name': cname, 'host_count': len(hosts)} for cname, hosts in sorted(collection_hosts.items())]
 
         module_hosts = {}
         for group in data.get('module_groups', {}).values():
