@@ -97,7 +97,8 @@ def run_dataset(config, index, total):
         f'python tools/anonymized_db_perf_data/fill_perf_db_data.py '
         f'--job-count={config["job_count"]} '
         f'--host-count={config["host_count"]} '
-        f'--task-count={config["task_count"]}'
+        f'--task-count={config["task_count"]} '
+        f'--since={config["test_since"]} --until={config["test_until"]}'
     )
     if not run_command(cmd, f'Generating {name} dataset'):
         return {'success': False, 'elapsed': time.time() - start_time}
