@@ -30,7 +30,8 @@ def _parse_events(events_value):
         return []
     if isinstance(events_value, str):
         try:
-            return json.loads(events_value)
+            parsed = json.loads(events_value)
+            return parsed if isinstance(parsed, list) else []
         except ValueError:
             return []
     if isinstance(events_value, list):

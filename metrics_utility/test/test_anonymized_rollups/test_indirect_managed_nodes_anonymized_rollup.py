@@ -421,6 +421,20 @@ def test_extract_module_names_with_invalid_json():
     assert _extract_module_names('not valid json') == set()
 
 
+def test_extract_collection_names_with_non_list_json():
+    """_extract_collection_names returns empty set when JSON decodes to a non-list (null, number, object)."""
+    assert _extract_collection_names('null') == set()
+    assert _extract_collection_names('42') == set()
+    assert _extract_collection_names('{}') == set()
+
+
+def test_extract_module_names_with_non_list_json():
+    """_extract_module_names returns empty set when JSON decodes to a non-list (null, number, object)."""
+    assert _extract_module_names('null') == set()
+    assert _extract_module_names('42') == set()
+    assert _extract_module_names('{}') == set()
+
+
 def test_prepare_groups_by_module():
     """prepare() populates module_groups keyed by org and full FQCN."""
     rollup = IndirectManagedNodesAnonymizedRollup()
