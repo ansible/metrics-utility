@@ -56,6 +56,7 @@ def _validate_top_level_structure(json_data):
     assert 'feature_flags' in json_data, "Missing 'feature_flags' at top level"
     assert 'observability_by_tasks' in json_data, "Missing 'observability_by_tasks' at top level"
     assert 'indirect_nodes_by_collection' in json_data, "Missing 'indirect_nodes_by_collection' at top level"
+    assert 'indirect_nodes_by_module' in json_data, "Missing 'indirect_nodes_by_module' at top level"
     assert 'indirect_managed_nodes' not in json_data, 'indirect_managed_nodes raw data must not appear at the top level'
 
 
@@ -947,6 +948,15 @@ def _validate_indirect_managed_nodes(json_data, statistics):
         assert 'organization_name' not in group, 'organization_name must not appear in anonymized output (privacy)'
         assert 'collection_name' in group
         assert 'host_count' in group
+
+    by_m = json_data.get('indirect_nodes_by_module', [])
+    assert isinstance(by_m, list), 'indirect_nodes_by_module should be a list'
+
+    for entry in by_m:
+        assert 'host_names' not in entry, 'host_names must not appear in anonymized output (privacy)'
+        assert 'organization_name' not in entry, 'organization_name must not appear in anonymized output (privacy)'
+        assert 'module_name' in entry
+        assert 'host_count' in entry
 
 
 def _validate_all_data(json_data, statistics):

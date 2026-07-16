@@ -14,6 +14,31 @@ from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_co
 GROUP_KEY_SEPARATOR = '||'
 
 
+def _parse_events(events_value):
+    """Parse the events JSON column into a list of FQCNs.
+
+    Args:
+        events_value: Raw events column value - could be a JSON string,
+            a Python list, None, or NaN.
+
+    Returns:
+        List of FQCN strings, or empty list if unparseable.
+    """
+    if events_value is None:
+        return []
+    if isinstance(events_value, float):
+        return []
+    if isinstance(events_value, str):
+        try:
+            parsed = json.loads(events_value)
+            return parsed if isinstance(parsed, list) else []
+        except ValueError:
+            return []
+    if isinstance(events_value, list):
+        return events_value
+    return []
+
+
 def _extract_collection_names(events_value):
     """Parse the events JSON column and return a set of collection names.
 
@@ -24,28 +49,31 @@ def _extract_collection_names(events_value):
     Returns:
         Set of two-part collection name strings (e.g. ``{"azure.azcollection"}``).
     """
-    if events_value is None:
-        return set()
-
-    if isinstance(events_value, float):
-        return set()
-
-    if isinstance(events_value, str):
-        try:
-            events_list = json.loads(events_value)
-        except ValueError:
-            return set()
-    elif isinstance(events_value, list):
-        events_list = events_value
-    else:
-        return set()
-
     collections = set()
-    for fqcn in events_list:
+    for fqcn in _parse_events(events_value):
         name = DataframeContentUsage.extract_collection_name(fqcn)
         if name is not None:
             collections.add(name)
     return collections
+
+
+def _extract_module_names(events_value):
+    """Parse the events JSON column and return a set of full FQCNs (module names).
+
+    Only FQCNs with a valid namespace.collection prefix are included.
+
+    Args:
+        events_value: Raw events column value - could be a JSON string,
+            a Python list, None, or NaN.
+
+    Returns:
+        Set of full FQCN strings (e.g. ``{"azure.azcollection.azure_rm_vm"}``).
+    """
+    modules = set()
+    for fqcn in _parse_events(events_value):
+        if DataframeContentUsage.extract_collection_name(fqcn) is not None:
+            modules.add(fqcn)
+    return modules
 
 
 def _make_group_key(organization_name, collection_name):
@@ -76,9 +104,10 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe = self._convert_id_columns_to_strings(dataframe)
 
         if dataframe.empty:
-            return {'groups': {}, 'indirect_nodes_total': 0}
+            return {'groups': {}, 'module_groups': {}, 'indirect_nodes_total': 0}
 
         groups = {}
+        module_groups = {}
         all_host_names = set()
 
         for _, row in dataframe.iterrows():
@@ -90,8 +119,9 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             org_name = str(row.get('organization_name', ''))
             all_host_names.add(host_name)
 
-            collection_names = _extract_collection_names(row.get('events'))
+            events = row.get('events')
 
+            collection_names = _extract_collection_names(events)
             if not collection_names:
                 collection_names = {'_no_collection'}
 
@@ -105,13 +135,32 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
                     }
                 groups[key]['host_names'].add(host_name)
 
+            module_names = _extract_module_names(events)
+            if not module_names:
+                module_names = {'_no_module'}
+
+            for module_name in module_names:
+                key = _make_group_key(org_name, module_name)
+                if key not in module_groups:
+                    module_groups[key] = {
+                        'organization_name': org_name,
+                        'module_name': module_name,
+                        'host_names': set(),
+                    }
+                module_groups[key]['host_names'].add(host_name)
+
         for group in groups.values():
+            group['host_names'] = sorted(group['host_names'])
+            group['host_count'] = len(group['host_names'])
+
+        for group in module_groups.values():
             group['host_names'] = sorted(group['host_names'])
             group['host_count'] = len(group['host_names'])
 
         return sanitize_json(
             {
                 'groups': groups,
+                'module_groups': module_groups,
                 'indirect_nodes_total': len(all_host_names),
             }
         )
@@ -131,7 +180,7 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
             Dict with 'json' key containing the final rollup data.
         """
         if data is None:
-            return {'json': {'indirect_nodes_total': 0, 'by_collection': []}}
+            return {'json': {'indirect_nodes_total': 0, 'by_collection': [], 'by_module': []}}
 
         collection_hosts = {}
         for group in data.get('groups', {}).values():
@@ -143,10 +192,21 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
 
         by_collection = [{'collection_name': cname, 'host_count': len(hosts)} for cname, hosts in sorted(collection_hosts.items())]
 
+        module_hosts = {}
+        for group in data.get('module_groups', {}).values():
+            mname = group['module_name']
+            hosts = group.get('host_names', [])
+            if mname not in module_hosts:
+                module_hosts[mname] = set()
+            module_hosts[mname].update(hosts)
+
+        by_module = [{'module_name': mname, 'host_count': len(hosts)} for mname, hosts in sorted(module_hosts.items())]
+
         return {
             'json': {
                 'indirect_nodes_total': data.get('indirect_nodes_total', 0),
                 'by_collection': by_collection,
+                'by_module': by_module,
             }
         }
 
@@ -184,13 +244,37 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
                     'host_names': set(group.get('host_names', [])),
                 }
 
+        merged_module_groups = {}
+
+        for key, group in data_all.get('module_groups', {}).items():
+            merged_module_groups[key] = {
+                'organization_name': group['organization_name'],
+                'module_name': group['module_name'],
+                'host_names': set(group.get('host_names', [])),
+            }
+
+        for key, group in data_new.get('module_groups', {}).items():
+            if key in merged_module_groups:
+                merged_module_groups[key]['host_names'].update(group.get('host_names', []))
+            else:
+                merged_module_groups[key] = {
+                    'organization_name': group['organization_name'],
+                    'module_name': group['module_name'],
+                    'host_names': set(group.get('host_names', [])),
+                }
+
         all_host_names = set()
         for group in merged_groups.values():
             group['host_names'] = sorted(group['host_names'])
             group['host_count'] = len(group['host_names'])
             all_host_names.update(group['host_names'])
 
+        for group in merged_module_groups.values():
+            group['host_names'] = sorted(group['host_names'])
+            group['host_count'] = len(group['host_names'])
+
         return {
             'groups': merged_groups,
+            'module_groups': merged_module_groups,
             'indirect_nodes_total': len(all_host_names),
         }
