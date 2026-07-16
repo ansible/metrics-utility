@@ -5,6 +5,7 @@ import pandas as pd
 from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import (
     IndirectManagedNodesAnonymizedRollup,
     _extract_collection_names,
+    _extract_module_names,
 )
 
 
@@ -54,7 +55,7 @@ def test_prepare_handles_empty_dataframe():
 
     result = rollup.prepare(pd.DataFrame())
 
-    assert result == {'groups': {}, 'indirect_nodes_total': 0}
+    assert result == {'groups': {}, 'module_groups': {}, 'indirect_nodes_total': 0}
 
 
 def test_prepare_deduplicates_hosts_within_group():
@@ -294,7 +295,7 @@ def test_base_handles_none():
 
     result = rollup.base(None)
 
-    assert result == {'json': {'indirect_nodes_total': 0, 'by_collection': []}}
+    assert result == {'json': {'indirect_nodes_total': 0, 'by_collection': [], 'by_module': []}}
 
 
 def test_extract_collection_names_with_nan():
@@ -393,3 +394,282 @@ def test_collector_names():
     """collector_names is set correctly."""
     rollup = IndirectManagedNodesAnonymizedRollup()
     assert rollup.collector_names == ['main_indirectmanagednodeaudit']
+
+
+# --- module-level tests ---
+
+
+def test_extract_module_names_returns_full_fqcn():
+    """_extract_module_names returns the full FQCN, not just the collection prefix."""
+    result = _extract_module_names('["cisco.ios.ios_command", "azure.azcollection.azure_rm_vm"]')
+    assert result == {'cisco.ios.ios_command', 'azure.azcollection.azure_rm_vm'}
+
+
+def test_extract_module_names_skips_non_fqcn():
+    """_extract_module_names skips entries without a valid namespace.collection prefix."""
+    result = _extract_module_names('["cisco.ios.ios_command", "builtin_module"]')
+    assert result == {'cisco.ios.ios_command'}
+
+
+def test_extract_module_names_with_nan():
+    """_extract_module_names returns empty set for NaN input."""
+    assert _extract_module_names(float('nan')) == set()
+
+
+def test_extract_module_names_with_invalid_json():
+    """_extract_module_names returns empty set for malformed JSON."""
+    assert _extract_module_names('not valid json') == set()
+
+
+def test_extract_collection_names_with_non_list_json():
+    """_extract_collection_names returns empty set when JSON decodes to a non-list (null, number, object)."""
+    assert _extract_collection_names('null') == set()
+    assert _extract_collection_names('42') == set()
+    assert _extract_collection_names('{}') == set()
+
+
+def test_extract_module_names_with_non_list_json():
+    """_extract_module_names returns empty set when JSON decodes to a non-list (null, number, object)."""
+    assert _extract_module_names('null') == set()
+    assert _extract_module_names('42') == set()
+    assert _extract_module_names('{}') == set()
+
+
+def test_prepare_groups_by_module():
+    """prepare() populates module_groups keyed by org and full FQCN."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = _make_dataframe(
+        [
+            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'},
+            {'host_name': 'host2', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_config"]'},
+            {'host_name': 'host3', 'organization_name': 'OrgB', 'events': '["cisco.ios.ios_command"]'},
+        ]
+    )
+
+    result = rollup.prepare(data)
+
+    module_groups = result['module_groups']
+    assert 'OrgA||cisco.ios.ios_command' in module_groups
+    assert 'OrgA||cisco.ios.ios_config' in module_groups
+    assert 'OrgB||cisco.ios.ios_command' in module_groups
+    assert module_groups['OrgA||cisco.ios.ios_command']['host_count'] == 1
+    assert module_groups['OrgA||cisco.ios.ios_config']['host_count'] == 1
+    assert module_groups['OrgB||cisco.ios.ios_command']['host_count'] == 1
+
+
+def test_prepare_deduplicates_hosts_within_module_group():
+    """prepare() deduplicates hosts within the same module group."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = _make_dataframe(
+        [
+            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'},
+            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_command"]'},
+        ]
+    )
+
+    result = rollup.prepare(data)
+
+    assert result['module_groups']['OrgA||cisco.ios.ios_command']['host_count'] == 1
+    assert result['module_groups']['OrgA||cisco.ios.ios_command']['host_names'] == ['host1']
+
+
+def test_prepare_host_appears_in_multiple_module_groups():
+    """A host touched by multiple modules appears in each module group."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = _make_dataframe(
+        [
+            {
+                'host_name': 'host1',
+                'organization_name': 'OrgA',
+                'events': json.dumps(['azure.azcollection.azure_rm_vm', 'azure.azcollection.azure_rm_network_interface']),
+            },
+        ]
+    )
+
+    result = rollup.prepare(data)
+
+    assert result['indirect_nodes_total'] == 1
+    assert 'OrgA||azure.azcollection.azure_rm_vm' in result['module_groups']
+    assert 'OrgA||azure.azcollection.azure_rm_network_interface' in result['module_groups']
+    assert result['module_groups']['OrgA||azure.azcollection.azure_rm_vm']['host_count'] == 1
+    assert result['module_groups']['OrgA||azure.azcollection.azure_rm_network_interface']['host_count'] == 1
+
+
+def test_prepare_no_events_uses_no_module_fallback():
+    """prepare() buckets hosts with no events under _no_module in module_groups."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = _make_dataframe(
+        [
+            {'host_name': 'host1', 'organization_name': 'OrgA', 'events': '[]'},
+        ]
+    )
+
+    result = rollup.prepare(data)
+
+    assert 'OrgA||_no_module' in result['module_groups']
+    assert result['module_groups']['OrgA||_no_module']['host_count'] == 1
+
+
+def test_merge_unions_module_group_host_names():
+    """merge() unions host name sets in module_groups across two batches."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data_all = {
+        'groups': {},
+        'module_groups': {
+            'OrgA||cisco.ios.ios_command': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_command',
+                'host_names': ['host1', 'host2'],
+                'host_count': 2,
+            },
+        },
+        'indirect_nodes_total': 2,
+    }
+
+    data_new = {
+        'groups': {},
+        'module_groups': {
+            'OrgA||cisco.ios.ios_command': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_command',
+                'host_names': ['host2', 'host3'],
+                'host_count': 2,
+            },
+        },
+        'indirect_nodes_total': 2,
+    }
+
+    result = rollup.merge(data_all, data_new)
+
+    merged = result['module_groups']['OrgA||cisco.ios.ios_command']
+    assert merged['host_count'] == 3
+    assert sorted(merged['host_names']) == ['host1', 'host2', 'host3']
+
+
+def test_base_produces_by_module():
+    """base() outputs a by_module list stripped of PII."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = {
+        'groups': {},
+        'module_groups': {
+            'OrgA||cisco.ios.ios_command': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_command',
+                'host_names': ['host1', 'host2'],
+                'host_count': 2,
+            },
+            'OrgA||cisco.ios.ios_config': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_config',
+                'host_names': ['host3'],
+                'host_count': 1,
+            },
+        },
+        'indirect_nodes_total': 3,
+    }
+
+    result = rollup.base(data)
+
+    by_module = result['json']['by_module']
+    assert len(by_module) == 2
+    assert by_module[0] == {'module_name': 'cisco.ios.ios_command', 'host_count': 2}
+    assert by_module[1] == {'module_name': 'cisco.ios.ios_config', 'host_count': 1}
+    for entry in by_module:
+        assert 'host_names' not in entry
+        assert 'organization_name' not in entry
+
+
+def test_base_deduplicates_module_hosts_across_orgs():
+    """base() deduplicates hosts under the same module across different orgs."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = {
+        'groups': {},
+        'module_groups': {
+            'OrgA||cisco.ios.ios_command': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_command',
+                'host_names': ['host1', 'host2'],
+                'host_count': 2,
+            },
+            'OrgB||cisco.ios.ios_command': {
+                'organization_name': 'OrgB',
+                'module_name': 'cisco.ios.ios_command',
+                'host_names': ['host2', 'host3'],
+                'host_count': 2,
+            },
+        },
+        'indirect_nodes_total': 3,
+    }
+
+    result = rollup.base(data)
+
+    by_module = result['json']['by_module']
+    assert len(by_module) == 1
+    assert by_module[0]['module_name'] == 'cisco.ios.ios_command'
+    assert by_module[0]['host_count'] == 3
+
+
+def test_base_by_module_sorted_by_module_name():
+    """base() sorts by_module entries by module name."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = {
+        'groups': {},
+        'module_groups': {
+            'OrgA||cisco.ios.ios_config': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_config',
+                'host_names': ['host1'],
+                'host_count': 1,
+            },
+            'OrgA||azure.azcollection.azure_rm_vm': {
+                'organization_name': 'OrgA',
+                'module_name': 'azure.azcollection.azure_rm_vm',
+                'host_names': ['host2'],
+                'host_count': 1,
+            },
+        },
+        'indirect_nodes_total': 2,
+    }
+
+    result = rollup.base(data)
+
+    names = [e['module_name'] for e in result['json']['by_module']]
+    assert names == sorted(names)
+
+
+def test_base_by_collection_unchanged_with_module_data():
+    """Adding module_groups does not affect by_collection output."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+
+    data = {
+        'groups': {
+            'OrgA||cisco.ios': {
+                'organization_name': 'OrgA',
+                'collection_name': 'cisco.ios',
+                'host_names': ['host1'],
+                'host_count': 1,
+            },
+        },
+        'module_groups': {
+            'OrgA||cisco.ios.ios_command': {
+                'organization_name': 'OrgA',
+                'module_name': 'cisco.ios.ios_command',
+                'host_names': ['host1'],
+                'host_count': 1,
+            },
+        },
+        'indirect_nodes_total': 1,
+    }
+
+    result = rollup.base(data)
+
+    assert result['json']['by_collection'] == [{'collection_name': 'cisco.ios', 'host_count': 1}]
+    assert result['json']['by_module'] == [{'module_name': 'cisco.ios.ios_command', 'host_count': 1}]
