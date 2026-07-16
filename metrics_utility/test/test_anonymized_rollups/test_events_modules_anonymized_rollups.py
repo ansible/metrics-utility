@@ -748,3 +748,59 @@ def test_events_modules_aggregations_basic():
     )
     assert result['warnings_total'] == 2, f'Expected 2 warnings, got {result["warnings_total"]}'
     assert result['deprecations_total'] == 1, f'Expected 1 deprecated event, got {result["deprecations_total"]}'
+
+
+def test_base_renames_module_name_and_collection_name():
+    """base() renames module_name->module and collection_name->collection in all stats lists."""
+    rollup = EventModulesAnonymizedRollup()
+    data = {
+        'collected_events_total': 1,
+        'warnings_total': 0,
+        'deprecations_total': 0,
+        'module_stats': [
+            {'module_name': 'cisco.ios.ios_command', 'collection_name': 'cisco.ios', 'collection_source': 'certified', 'jobs_total': 1},
+        ],
+        'collection_stats': [
+            {'collection_name': 'cisco.ios', 'collection_source': 'certified', 'jobs_total': 1},
+        ],
+        'role_stats': [
+            {'role': 'my_role', 'collection_name': 'cisco.ios', 'collection_source': 'certified', 'jobs_total': 1},
+        ],
+        'unique_modules': ['cisco.ios.ios_command'],
+        'modules_per_playbook': {},
+        'unique_hosts': ['host1'],
+    }
+    result = rollup.base(data)['json']
+
+    assert 'module' in result['module_stats'][0]
+    assert 'module_name' not in result['module_stats'][0]
+    assert result['module_stats'][0]['module'] == 'cisco.ios.ios_command'
+
+    assert 'collection' in result['module_stats'][0]
+    assert 'collection_name' not in result['module_stats'][0]
+    assert result['module_stats'][0]['collection'] == 'cisco.ios'
+
+    assert 'collection' in result['collection_stats'][0]
+    assert 'collection_name' not in result['collection_stats'][0]
+
+    assert 'collection' in result['role_stats'][0]
+    assert 'collection_name' not in result['role_stats'][0]
+
+
+def test_base_handles_items_without_module_name():
+    """base() does not fail when module_name or collection_name are absent."""
+    rollup = EventModulesAnonymizedRollup()
+    data = {
+        'collected_events_total': 1,
+        'warnings_total': 0,
+        'deprecations_total': 0,
+        'module_stats': [{'collection_source': 'certified', 'jobs_total': 1}],
+        'collection_stats': [{'collection_source': 'certified', 'jobs_total': 1}],
+        'role_stats': [],
+        'unique_modules': [],
+        'modules_per_playbook': {},
+        'unique_hosts': [],
+    }
+    result = rollup.base(data)['json']
+    assert 'module_name' not in result['module_stats'][0]
+    assert 'collection_name' not in result['collection_stats'][0]
