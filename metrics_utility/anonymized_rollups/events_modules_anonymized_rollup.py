@@ -21,6 +21,19 @@ _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?
 _COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
 
 
+def _normalize_stats_item(item: dict) -> None:
+    """Remove host_ids and rename module_name/collection_name keys for Segment compatibility.
+
+    Segment drops properties whose key contains 'name', so module_name -> module
+    and collection_name -> collection before the payload is sent.
+    """
+    item.pop('host_ids', None)
+    if 'module_name' in item:
+        item['module'] = item.pop('module_name')
+    if 'collection_name' in item:
+        item['collection'] = item.pop('collection_name')
+
+
 def extract_collection_name(x: str | None) -> str | None:
     """Extract the ``namespace.collection`` prefix from a fully-qualified module name.
 
@@ -725,11 +738,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 },
             }
 
-        # Drop host_ids from stats (we only need unique_hosts_total, not the raw host_ids list)
+        # Drop host_ids and rename module_name/collection_name for Segment compatibility.
         for stats_list in [module_stats, collection_stats, role_stats]:
             for item in stats_list:
-                if 'host_ids' in item:
-                    del item['host_ids']
+                _normalize_stats_item(item)
 
         # Compute modules_used_to_automate_total from unique_modules list
         modules_used_to_automate_total = len(unique_modules)
