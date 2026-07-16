@@ -1330,14 +1330,13 @@ def create_indirect_managed_node_audits(job_ids, host_ids, inventory_id, org_id,
         host_name = f'indirect-host-{i}{suffix}.example.com'
         canonical_facts = json.dumps({'fqdn': host_name}).replace("'", "''")
         values.append(
-            f'(NOW(), NOW(), {job_id}, {org_id}, {inventory_id}, {host_id_sql}, '
-            f"'{host_name}', '{canonical_facts}'::jsonb, '{{}}'::jsonb, '[]'::jsonb, 1)"
+            f"(NOW(), {job_id}, {org_id}, {inventory_id}, {host_id_sql}, '{host_name}', '{canonical_facts}'::jsonb, '{{}}'::jsonb, '[]'::jsonb, 1)"
         )
 
     _INSERT_BATCH_SIZE = 500
     insert_sql = """
     INSERT INTO main_indirectmanagednodeaudit
-        (created, modified, job_id, organization_id, inventory_id, host_id,
+        (created, job_id, organization_id, inventory_id, host_id,
          name, canonical_facts, facts, events, count)
     VALUES {rows}
     RETURNING id;

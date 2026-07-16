@@ -224,8 +224,8 @@ if __name__ == '__main__':
     prepare()
 
     parser = argparse.ArgumentParser(description='Fill database with performance test data')
-    parser.add_argument('--host-count', type=int, default=30, help='Number of hosts to create (default: 10)')
-    parser.add_argument('--job-count', type=int, default=20, help='Number of jobs to create (default: 5)')
+    parser.add_argument('--host-count', type=int, default=30, help='Number of hosts to create (default: 30)')
+    parser.add_argument('--job-count', type=int, default=20, help='Number of jobs to create (default: 20)')
     parser.add_argument('--task-count', type=int, default=50, help='Number of tasks per job (default: 50)')
     parser.add_argument('--template-count', type=int, default=10, help='Number of job templates to create (default: 10)')
     parser.add_argument(
