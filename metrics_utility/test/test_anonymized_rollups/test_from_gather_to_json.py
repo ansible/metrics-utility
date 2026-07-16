@@ -297,18 +297,18 @@ def _validate_role_stats(json_data):
     assert a10_role is not None, 'Should have a10.acos_axapi.device_config role'
     assert a10_role['collection'] == 'a10.acos_axapi', f"Expected collection 'a10.acos_axapi', got {a10_role['collection']}"
     assert a10_role['collection_source'] == 'community', f"Expected collection_source 'community', got {a10_role['collection_source']}"
-    assert a10_role['jobs_total'] == 3, f"Expected 3 jobs for a10.acos_axapi.device_config, got {a10_role['jobs_total']}"
-    assert a10_role['runner_on_ok_total'] == 6, f"Expected 6 ok events (3 jobs × 2 hosts), got {a10_role['runner_on_ok_total']}"
-    assert a10_role['events_processed_total'] == 6, f"Expected 6 processed events, got {a10_role['events_processed_total']}"
+    assert a10_role['jobs_total'] == 3, f'Expected 3 jobs for a10.acos_axapi.device_config, got {a10_role["jobs_total"]}'
+    assert a10_role['runner_on_ok_total'] == 6, f'Expected 6 ok events (3 jobs × 2 hosts), got {a10_role["runner_on_ok_total"]}'
+    assert a10_role['events_processed_total'] == 6, f'Expected 6 processed events, got {a10_role["events_processed_total"]}'
 
     # redhat.rhel_system_roles.timesync (certified)
     rhel_role = roles_dict.get('redhat.rhel_system_roles.timesync')
     assert rhel_role is not None, 'Should have redhat.rhel_system_roles.timesync role'
     assert rhel_role['collection'] == 'redhat.rhel_system_roles', f"Expected collection 'redhat.rhel_system_roles', got {rhel_role['collection']}"
     assert rhel_role['collection_source'] == 'certified', f"Expected collection_source 'certified', got {rhel_role['collection_source']}"
-    assert rhel_role['jobs_total'] == 3, f"Expected 3 jobs for redhat.rhel_system_roles.timesync, got {rhel_role['jobs_total']}"
-    assert rhel_role['runner_on_ok_total'] == 6, f"Expected 6 ok events (3 jobs × 2 hosts), got {rhel_role['runner_on_ok_total']}"
-    assert rhel_role['events_processed_total'] == 6, f"Expected 6 processed events, got {rhel_role['events_processed_total']}"
+    assert rhel_role['jobs_total'] == 3, f'Expected 3 jobs for redhat.rhel_system_roles.timesync, got {rhel_role["jobs_total"]}'
+    assert rhel_role['runner_on_ok_total'] == 6, f'Expected 6 ok events (3 jobs × 2 hosts), got {rhel_role["runner_on_ok_total"]}'
+    assert rhel_role['events_processed_total'] == 6, f'Expected 6 processed events, got {rhel_role["events_processed_total"]}'
 
     # No Custom roles in final output (anonymize_data removes them entirely)
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
