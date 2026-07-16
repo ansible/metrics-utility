@@ -278,15 +278,43 @@ def _validate_collection_stats_values(json_data):
 
 
 def _validate_role_stats(json_data):
-    """Validate anonymized role_stats."""
-    if not ('role_stats' in json_data and json_data['role_stats']):
-        return
-    anonymized_roles = [r for r in json_data['role_stats'] if r.get('collection_source') == 'Custom']
-    for role_stat in anonymized_roles:
-        if role_stat.get('role'):
-            assert role_stat['role'] == 'Custom', f'Anonymized role name should be "Custom", got {role_stat.get("role")}'
-        if role_stat.get('collection'):
-            assert role_stat['collection'] == 'Custom', f'Anonymized collection in role_stat should be "Custom", got {role_stat.get("collection")}'
+    """Validate role_stats.
+
+    The SQL fixture inserts events in the 10:00h loop with two FQCN roles:
+      - a10.acos_axapi.device_config  (community)  — uses a10.acos_axapi.a10_slb_virtual_server
+      - redhat.rhel_system_roles.timesync (certified) — uses ansible.builtin.yum
+    Both appear for all 3 jobs × 2 hosts = 6 runner_on_ok events each.
+    All other events use role='default_role' (Custom, removed by anonymize_data).
+    """
+    print('--- Validating role_stats data values ---')
+    assert 'role_stats' in json_data, 'role_stats key must be present'
+    role_stats = json_data['role_stats']
+    assert isinstance(role_stats, list), 'role_stats should be a list'
+    assert len(role_stats) == 2, f'Should have 2 roles (Custom removed by anonymize), got {len(role_stats)}: {[r["role"] for r in role_stats]}'
+
+    roles_dict = {r['role']: r for r in role_stats}
+
+    # a10.acos_axapi.device_config (community)
+    a10_role = roles_dict.get('a10.acos_axapi.device_config')
+    assert a10_role is not None, 'Should have a10.acos_axapi.device_config role'
+    assert a10_role['collection'] == 'a10.acos_axapi', f"Expected collection 'a10.acos_axapi', got {a10_role['collection']}"
+    assert a10_role['collection_source'] == 'community', f"Expected collection_source 'community', got {a10_role['collection_source']}"
+    assert a10_role['jobs_total'] == 3, f"Expected 3 jobs for a10.acos_axapi.device_config, got {a10_role['jobs_total']}"
+    assert a10_role['runner_on_ok_total'] == 6, f"Expected 6 ok events (3 jobs × 2 hosts), got {a10_role['runner_on_ok_total']}"
+    assert a10_role['events_processed_total'] == 6, f"Expected 6 processed events, got {a10_role['events_processed_total']}"
+
+    # redhat.rhel_system_roles.timesync (certified)
+    rhel_role = roles_dict.get('redhat.rhel_system_roles.timesync')
+    assert rhel_role is not None, 'Should have redhat.rhel_system_roles.timesync role'
+    assert rhel_role['collection'] == 'redhat.rhel_system_roles', f"Expected collection 'redhat.rhel_system_roles', got {rhel_role['collection']}"
+    assert rhel_role['collection_source'] == 'certified', f"Expected collection_source 'certified', got {rhel_role['collection_source']}"
+    assert rhel_role['jobs_total'] == 3, f"Expected 3 jobs for redhat.rhel_system_roles.timesync, got {rhel_role['jobs_total']}"
+    assert rhel_role['runner_on_ok_total'] == 6, f"Expected 6 ok events (3 jobs × 2 hosts), got {rhel_role['runner_on_ok_total']}"
+    assert rhel_role['events_processed_total'] == 6, f"Expected 6 processed events, got {rhel_role['events_processed_total']}"
+
+    # No Custom roles in final output (anonymize_data removes them entirely)
+    custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
+    assert len(custom_roles) == 0, f'Should have 0 Custom roles after anonymization, got {len(custom_roles)}'
 
 
 def _validate_jobs_by_installed_collections_versions(json_data):
@@ -466,11 +494,10 @@ def _validate_module_stats_values_multi_hour(json_data):
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
     # 6 jobs total
     assert a10_module['jobs_total'] == 6, 'Should have 6 jobs using a10.acos_axapi.a10_slb_virtual_server'
-    # 6 jobs × 2 hosts = 12 ok events
-    assert a10_module['runner_on_ok_total'] == 12, 'Should have 12 ok events for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
+    # 6 jobs × 2 hosts (base) + 3 role events × 2 hosts (a10.acos_axapi.device_config role, 10:00h) = 18 ok events
+    assert a10_module['runner_on_ok_total'] == 18, 'Should have 18 ok events for a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
-    # 6 jobs × 2 hosts = 12 processed events
-    assert a10_module['events_processed_total'] == 12, 'Should have 12 processed events for a10.acos_axapi.a10_slb_virtual_server (6 jobs × 2 hosts)'
+    assert a10_module['events_processed_total'] == 18, 'Should have 18 processed events for a10.acos_axapi.a10_slb_virtual_server'
     assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
     assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
     assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
@@ -493,10 +520,9 @@ def _validate_collection_stats_values_multi_hour(json_data):
     assert len(a10_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
     for version in a10_collection['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    # 6 jobs × 2 hosts = 12 ok events
-    assert a10_collection['runner_on_ok_total'] == 12, 'a10.acos_axapi collection should have 12 ok events'
-    # 6 jobs × 2 hosts = 12 processed events
-    assert a10_collection['events_processed_total'] == 12, 'a10.acos_axapi collection should have 12 processed events (6 jobs × 2 hosts)'
+    # 6 jobs × 2 hosts (base) + 3 role events × 2 hosts (a10.acos_axapi.device_config role, 10:00h) = 18 ok events
+    assert a10_collection['runner_on_ok_total'] == 18, 'a10.acos_axapi collection should have 18 ok events'
+    assert a10_collection['events_processed_total'] == 18, 'a10.acos_axapi collection should have 18 processed events'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'

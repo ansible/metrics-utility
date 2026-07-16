@@ -746,6 +746,54 @@ $yaml$,
     END LOOP;
   END LOOP;
   --
+  -- Role events for 10:00 hour
+  -- These use FQCN roles so role_stats in the final output is non-empty after anonymization.
+  -- a10.acos_axapi.device_config (community) and redhat.rhel_system_roles.timesync (certified)
+  -- each appear in all 3 jobs × 2 hosts = 6 events per role.
+  FOR i IN array_lower(unified_jobs_10,1)..array_upper(unified_jobs_10,1) LOOP
+    unified_job_id := unified_jobs_10[i];
+    FOREACH host_id IN ARRAY host_ids LOOP
+      SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
+      i_text := i::text;
+
+      -- counter 3: a10.acos_axapi.device_config role, module a10.acos_axapi.a10_slb_virtual_server
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || i_text || '_' || host_name || '_role_a10"}')::text,
+        false, false,
+        host_name, 'default_play', 'a10.acos_axapi.device_config', 'configure device', 3,
+        host_id, unified_job_id, gen_random_uuid()::text, '', 3, 'default_playbook.yml',
+        3, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+
+      -- counter 4: redhat.rhel_system_roles.timesync role, module ansible.builtin.yum
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "ansible.builtin.yum", "task_uuid": "' || i_text || '_' || host_name || '_role_rhel"}')::text,
+        false, false,
+        host_name, 'default_play', 'redhat.rhel_system_roles.timesync', 'install packages', 4,
+        host_id, unified_job_id, gen_random_uuid()::text, '', 4, 'default_playbook.yml',
+        4, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+    END LOOP;
+  END LOOP;
+  --
   -- Add warning and deprecated events (job-level annotation events)
   -- These don't have task_uuid, host_id, etc. - they're job-level annotations
   -- Note: host_name, play, role, task, playbook are NOT NULL in schema, so we use empty strings
