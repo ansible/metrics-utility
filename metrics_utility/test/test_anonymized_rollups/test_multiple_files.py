@@ -260,7 +260,7 @@ def _validate_events_modules(result):
         f'Expected 1 deprecated event, got {result["statistics"]["rollup_period_deprecations_total"]}'
     )
 
-    module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
+    module_names = [m['module'] for m in result['module_stats'] if 'module' in m]
     for module_name in [
         'ansible.netcommon.cli_config',
         'ansible.posix.firewalld',
@@ -275,11 +275,11 @@ def _validate_events_modules(result):
     assert isinstance(module_stats, list), 'module_stats should be a list'
     assert len(module_stats) == 6, 'Should have stats for all 6 modules'
 
-    win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
+    win_copy_stats = [m for m in module_stats if m.get('module') == 'ansible.windows.win_copy']
     assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
     win_copy = win_copy_stats[0]
     assert win_copy['collection_source'] == 'certified'
-    assert win_copy['collection_name'] == 'ansible.windows'
+    assert win_copy['collection'] == 'ansible.windows'
     assert win_copy['jobs_total'] == 3
     assert win_copy['unique_hosts_total'] == 3
     assert win_copy['task_ok_total'] == 1
@@ -288,7 +288,7 @@ def _validate_events_modules(result):
     assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
     assert win_copy['processed_events_total'] == 5
 
-    yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
+    yum_stats = [m for m in module_stats if m.get('module') == 'community.general.yum']
     assert len(yum_stats) == 1, 'Should have exactly one entry for community.general.yum'
     yum = yum_stats[0]
     assert yum['collection_source'] == 'community'
@@ -302,7 +302,7 @@ def _validate_events_modules(result):
     assert isinstance(collection_stats, list), 'collection_stats should be a list'
     assert len(collection_stats) == 6, 'Should have stats for all 6 collections'
 
-    windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
+    windows_collection = [c for c in collection_stats if c.get('collection') == 'ansible.windows']
     assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
     windows_coll = windows_collection[0]
     assert windows_coll['collection_source'] == 'certified'

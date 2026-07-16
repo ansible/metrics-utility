@@ -151,9 +151,9 @@ def _validate_module_stats_structure(json_data):
     if not json_data['module_stats']:
         return
     for module_stat in json_data['module_stats']:
-        assert 'module_name' in module_stat
+        assert 'module' in module_stat
         assert 'collection_source' in module_stat
-        assert 'collection_name' in module_stat
+        assert 'collection' in module_stat
         assert 'jobs_total' in module_stat
         assert 'unique_hosts_total' in module_stat
         assert 'processed_events_total' in module_stat
@@ -166,7 +166,7 @@ def _validate_collection_stats_structure(json_data):
     if not json_data['collection_stats']:
         return
     for collection_stat in json_data['collection_stats']:
-        assert 'collection_name' in collection_stat
+        assert 'collection' in collection_stat
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
         assert 'processed_events_total' in collection_stat
@@ -239,7 +239,7 @@ def _validate_jobs_by_ansible_version_structure(json_data):
 def _validate_module_stats_values(json_data):
     """Validate module_stats actual values."""
     print('--- Validating module_stats data values ---')
-    module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
+    module_stats_dict = {m['module']: m for m in json_data['module_stats']}
 
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
     assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (Custom collections removed), got {len(anonymized_modules)}'
@@ -262,7 +262,7 @@ def _validate_module_stats_values(json_data):
 def _validate_collection_stats_values(json_data):
     """Validate collection_stats actual values."""
     print('--- Validating collection_stats data values ---')
-    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
+    collection_stats_dict = {c['collection']: c for c in json_data['collection_stats']}
 
     a10_collection = collection_stats_dict.get('a10.acos_axapi')
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'
@@ -289,10 +289,8 @@ def _validate_role_stats(json_data):
     for role_stat in anonymized_roles:
         if role_stat.get('role'):
             assert role_stat['role'] == 'Custom', f'Anonymized role name should be "Custom", got {role_stat.get("role")}'
-        if role_stat.get('collection_name'):
-            assert role_stat['collection_name'] == 'Custom', (
-                f'Anonymized collection_name in role_stat should be "Custom", got {role_stat.get("collection_name")}'
-            )
+        if role_stat.get('collection'):
+            assert role_stat['collection'] == 'Custom', f'Anonymized collection in role_stat should be "Custom", got {role_stat.get("collection")}'
 
 
 def _validate_jobs_by_installed_collections_versions(json_data):
@@ -463,7 +461,7 @@ def _validate_job_host_summary_values_multi_hour(json_data, statistics):
 def _validate_module_stats_values_multi_hour(json_data):
     """Validate module_stats actual values for multi-hour data (6 jobs total)."""
     print('--- Validating module_stats data values (multi-hour) ---')
-    module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
+    module_stats_dict = {m['module']: m for m in json_data['module_stats']}
 
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
     assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (Custom collections removed), got {len(anonymized_modules)}'
@@ -489,7 +487,7 @@ def _validate_module_stats_values_multi_hour(json_data):
 def _validate_collection_stats_values_multi_hour(json_data):
     """Validate collection_stats actual values for multi-hour data (6 jobs total)."""
     print('--- Validating collection_stats data values (multi-hour) ---')
-    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
+    collection_stats_dict = {c['collection']: c for c in json_data['collection_stats']}
 
     a10_collection = collection_stats_dict.get('a10.acos_axapi')
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'

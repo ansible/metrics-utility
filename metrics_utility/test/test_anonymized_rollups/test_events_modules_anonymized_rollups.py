@@ -442,10 +442,10 @@ def test_events_modules_aggregations_basic():
     assert result['hosts_automated_total'] == 9
 
     # collection stats assertions (current aggregation schema)
-    coll_by_name = {row['collection_name']: row for row in result['collection_stats']}
+    coll_by_name = {row['collection']: row for row in result['collection_stats']}
 
     # Verify per-module stats (aligned to current aggregation output)
-    stats_by_module = {row['module_name']: row for row in result['module_stats']}
+    stats_by_module = {row['module']: row for row in result['module_stats']}
 
     # Verify per-role stats (aligned to current aggregation output)
     stats_by_role = {row['role'] if row['role'] is not None else 'None': row for row in result['role_stats']}
@@ -460,11 +460,11 @@ def test_events_modules_aggregations_basic():
         assert win_copy_role_stats['tasks_total'] > 0
         assert 'jobs_total' in win_copy_role_stats
         # Verify collection_name and collection_source are present
-        assert 'collection_name' in win_copy_role_stats, 'role_stats should have collection_name field'
+        assert 'collection' in win_copy_role_stats, 'role_stats should have collection field'
         assert 'collection_source' in win_copy_role_stats, 'role_stats should have collection_source field'
-        # For collection-based roles, collection_name should be extracted (ansible.windows.win_copy_role -> ansible.windows)
-        assert win_copy_role_stats['collection_name'] == 'ansible.windows', (
-            f"Expected collection_name 'ansible.windows', got {win_copy_role_stats['collection_name']}"
+        # For collection-based roles, collection should be extracted (ansible.windows.win_copy_role -> ansible.windows)
+        assert win_copy_role_stats['collection'] == 'ansible.windows', (
+            f"Expected collection 'ansible.windows', got {win_copy_role_stats['collection']}"
         )
         assert win_copy_role_stats['collection_source'] == 'certified', (
             f"Expected collection_source 'certified', got {win_copy_role_stats['collection_source']}"
@@ -474,8 +474,8 @@ def test_events_modules_aggregations_basic():
     if 'custom.standalone_role' in stats_by_role:
         standalone_role_stats = stats_by_role['custom.standalone_role']
         # Standalone roles should have None collection_name and Custom collection_source
-        assert standalone_role_stats.get('collection_name') is None or standalone_role_stats.get('collection_name') == '', (
-            f'Standalone role should have None collection_name, got {standalone_role_stats.get("collection_name")}'
+        assert standalone_role_stats.get('collection') is None or standalone_role_stats.get('collection') == '', (
+            f'Standalone role should have None collection, got {standalone_role_stats.get("collection")}'
         )
         assert standalone_role_stats['collection_source'] == 'Custom', (
             f"Standalone role should have 'Custom' collection_source, got {standalone_role_stats['collection_source']}"
