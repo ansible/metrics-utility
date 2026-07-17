@@ -743,3 +743,46 @@ def test_base_handles_items_without_module_name():
     result = rollup.base(data)['json']
     assert 'module_name' not in result['module_stats'][0]
     assert 'collection_name' not in result['collection_stats'][0]
+
+
+@pytest.mark.parametrize(
+    'value,expected',
+    [
+        (None, False),
+        (float('nan'), False),
+        ([], False),
+        (['a warning'], True),
+        ({}, False),
+        ({'msg': 'deprecated'}, True),
+        ('[]', False),
+        ('["a"]', True),
+        ('null', False),
+        ('not-json', False),
+    ],
+)
+def test_parse_and_check_json_array(value, expected):
+    """List/dict annotations must not hit pd.isnull (empty list raises ValueError)."""
+    assert EventModulesAnonymizedRollup._parse_and_check_json_array(value) is expected
+
+
+@pytest.mark.parametrize(
+    'dataframe',
+    [
+        None,
+        pd.DataFrame(),
+        pd.DataFrame({'event': pd.Series(dtype=object)}),
+    ],
+)
+def test_prepare_empty_dataframe_returns_empty_stats(dataframe):
+    """No-event batches must not KeyError on missing columns during filtering."""
+    result = EventModulesAnonymizedRollup().prepare(dataframe)
+    assert result == {
+        'collected_events_total': 0,
+        'warnings_total': 0,
+        'deprecations_total': 0,
+        'module_stats': [],
+        'collection_stats': [],
+        'role_stats': [],
+        'unique_modules': [],
+        'modules_per_playbook': {},
+    }

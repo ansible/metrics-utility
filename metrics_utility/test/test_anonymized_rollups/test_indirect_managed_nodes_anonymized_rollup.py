@@ -671,5 +671,5 @@ def test_base_by_collection_unchanged_with_module_data():
 
     result = rollup.base(data)
 
-    assert result['json']['by_collection'] == [{'collection': 'cisco.ios', 'host_count': 1}]
+    assert result['json']['by_collection'] == [{'collection_name': 'cisco.ios', 'host_count': 1}]
     assert result['json']['by_module'] == [{'module': 'cisco.ios.ios_command', 'host_count': 1}]

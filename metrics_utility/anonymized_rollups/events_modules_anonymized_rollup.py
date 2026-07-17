@@ -362,19 +362,23 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     @staticmethod
     def _parse_and_check_json_array(x):
-        """Parse JSON array (string, list, or dict) and return True if it contains items."""
-        if pd.isnull(x):
+        """Parse JSON array (string, list, or dict) and return True if it contains items.
+
+        List/dict must be checked before ``pd.isnull``: ``pd.isnull([])`` returns an
+        ndarray and ``if pd.isnull(x)`` raises ValueError on empty lists.
+        """
+        if isinstance(x, (list, dict)):
+            parsed = x
+        elif x is None or (not isinstance(x, str) and pd.isnull(x)):
             return False
-        try:
-            if isinstance(x, (list, dict)):
-                parsed = x
-            else:
+        else:
+            try:
                 parsed = json.loads(x) if isinstance(x, str) else x
-            if isinstance(parsed, list):
-                return len(parsed) > 0
-            return bool(parsed)
-        except (json.JSONDecodeError, TypeError, ValueError):
-            return False
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return False
+        if isinstance(parsed, list):
+            return len(parsed) > 0
+        return bool(parsed)
 
     def _parse_warnings_deprecations(self, dataframe):
         """Parse warnings and deprecations from event_data.res (module-level annotations)."""
@@ -617,10 +621,29 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def prepare(self, dataframe):
         """Prepare dataframe for aggregation by filtering, transforming, and computing statistics."""
+        if dataframe is None:
+            dataframe = pd.DataFrame()
+
         dataframe = self._convert_id_columns_to_strings(dataframe)
         dataframe = self._ensure_event_data_length(dataframe)
 
         collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
+
+        # Empty / columnless frames must return before _filter_runner_events
+        # (accessing dataframe['event'] raises KeyError when the column is absent).
+        if dataframe.empty or 'event' not in dataframe.columns:
+            return sanitize_json(
+                {
+                    'collected_events_total': collected_events_total,
+                    'warnings_total': warnings_total,
+                    'deprecations_total': deprecations_total,
+                    'module_stats': [],
+                    'collection_stats': [],
+                    'role_stats': [],
+                    'unique_modules': [],
+                    'modules_per_playbook': {},
+                }
+            )
 
         # Module/collection/role path uses runner events only.
         dataframe = self._filter_runner_events(dataframe)
