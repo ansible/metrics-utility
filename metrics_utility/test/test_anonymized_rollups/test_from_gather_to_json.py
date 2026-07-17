@@ -56,10 +56,21 @@ def _validate_top_level_structure(json_data):
     assert 'event_data_size_total' in json_data['playbook_events']
     assert 'warning_total' in json_data['playbook_events']
     assert 'deprecated_total' in json_data['playbook_events']
-    assert 'playbook_on_start_total' in json_data['playbook_events']
-    assert 'playbook_on_play_start_total' in json_data['playbook_events']
-    assert 'playbook_on_task_start_total' in json_data['playbook_events']
-    assert 'playbook_on_stats_total' in json_data['playbook_events']
+    for key in (
+        'playbook_on_start_total',
+        'playbook_on_play_start_total',
+        'playbook_on_task_start_total',
+        'playbook_on_stats_total',
+        'playbook_on_notify_total',
+        'playbook_on_include_total',
+        'playbook_on_no_hosts_matched_total',
+        'playbook_on_no_hosts_remaining_total',
+        'playbook_on_vars_prompt_total',
+        'playbook_on_setup_total',
+        'playbook_on_import_for_host_total',
+        'playbook_on_not_import_for_host_total',
+    ):
+        assert key in json_data['playbook_events'], f'Missing {key} in playbook_events'
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"
@@ -291,13 +302,42 @@ def _validate_collection_stats_values(json_data):
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
 
 
+_RUNNER_EVENT_COUNTERS = (
+    'runner_on_ok_total',
+    'runner_on_failed_total',
+    'runner_on_failed_ignored_total',
+    'runner_on_unreachable_total',
+    'runner_on_async_ok_total',
+    'runner_on_async_failed_total',
+    'runner_item_on_ok_total',
+    'runner_item_on_failed_total',
+    'runner_item_on_failed_ignored_total',
+    'runner_item_on_unreachable_total',
+    'runner_retry_total',
+    'warnings_total',
+    'deprecations_total',
+    'events_collected_total',
+    'event_data_size_total',
+    'jobs_never_started_total',
+)
+
+
+def _assert_runner_event_counters_populated(stat, label):
+    """Fail if any tracked runner/module counter is still zero (fixture must exercise them)."""
+    for key in _RUNNER_EVENT_COUNTERS:
+        assert key in stat, f'{label} missing {key}'
+        assert stat[key] > 0, f'{label}.{key} should be > 0, got {stat[key]}'
+
+
+
 def _validate_role_stats(json_data):
     """Validate role_stats.
 
     The SQL fixture inserts events in the 10:00h loop with two FQCN roles:
       - a10.acos_axapi.device_config  (community)  — uses a10.acos_axapi.a10_slb_virtual_server
       - redhat.rhel_system_roles.timesync (certified) — uses ansible.builtin.yum
-    Both appear for all 3 jobs × 2 hosts = 6 runner_on_ok events each.
+    Base role events: 3 jobs × 2 hosts = 6 runner_on_ok, plus diversified events on job 1
+    (failed/async/item/warn variants) attributed to each FQCN role.
     All other events use role='default_role' (Custom, removed by anonymize_data).
     """
     print('--- Validating role_stats data values ---')
@@ -308,25 +348,19 @@ def _validate_role_stats(json_data):
 
     roles_dict = {r['role']: r for r in role_stats}
 
-    # a10.acos_axapi.device_config (community)
-    a10_role = roles_dict.get('a10.acos_axapi.device_config')
-    assert a10_role is not None, 'Should have a10.acos_axapi.device_config role'
-    assert a10_role['collection'] == 'a10.acos_axapi', f"Expected collection 'a10.acos_axapi', got {a10_role['collection']}"
-    assert a10_role['collection_source'] == 'community', f"Expected collection_source 'community', got {a10_role['collection_source']}"
-    assert a10_role['jobs_total'] == 3, f'Expected 3 jobs for a10.acos_axapi.device_config, got {a10_role["jobs_total"]}'
-    assert a10_role['runner_on_ok_total'] == 6, f'Expected 6 ok events (3 jobs × 2 hosts), got {a10_role["runner_on_ok_total"]}'
-    assert a10_role['events_collected_total'] == 6, f'Expected 6 collected events, got {a10_role["events_collected_total"]}'
+    for role_name, collection, source in (
+        ('a10.acos_axapi.device_config', 'a10.acos_axapi', 'community'),
+        ('redhat.rhel_system_roles.timesync', 'redhat.rhel_system_roles', 'certified'),
+    ):
+        role = roles_dict.get(role_name)
+        assert role is not None, f'Should have {role_name} role'
+        assert role['collection'] == collection
+        assert role['collection_source'] == source
+        assert role['jobs_total'] == 3
+        assert role['runner_on_ok_total'] == 7
+        assert role['events_collected_total'] == 17
+        _assert_runner_event_counters_populated(role, role_name)
 
-    # redhat.rhel_system_roles.timesync (certified)
-    rhel_role = roles_dict.get('redhat.rhel_system_roles.timesync')
-    assert rhel_role is not None, 'Should have redhat.rhel_system_roles.timesync role'
-    assert rhel_role['collection'] == 'redhat.rhel_system_roles', f"Expected collection 'redhat.rhel_system_roles', got {rhel_role['collection']}"
-    assert rhel_role['collection_source'] == 'certified', f"Expected collection_source 'certified', got {rhel_role['collection_source']}"
-    assert rhel_role['jobs_total'] == 3, f'Expected 3 jobs for redhat.rhel_system_roles.timesync, got {rhel_role["jobs_total"]}'
-    assert rhel_role['runner_on_ok_total'] == 6, f'Expected 6 ok events (3 jobs × 2 hosts), got {rhel_role["runner_on_ok_total"]}'
-    assert rhel_role['events_collected_total'] == 6, f'Expected 6 collected events, got {rhel_role["events_collected_total"]}'
-
-    # No Custom roles in final output (anonymize_data removes them entirely)
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
     assert len(custom_roles) == 0, f'Should have 0 Custom roles after anonymization, got {len(custom_roles)}'
 
@@ -434,12 +468,13 @@ def _validate_jobs_values_multi_hour(json_data, statistics):
     assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
     assert job['jobs_failed_total'] == 1, 'Should have 1 failed job (job 3 from 10:00h)'
     assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
-    # Job durations: 10:00 hour: 120s + 180s + 90s = 390s
-    #                11:00 hour: 100s + 150s + 80s = 330s
-    #                Total: 720s
-    assert job['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
-        f'Job duration total should be 720 seconds (390+330), got {job["jobs_duration_total_seconds"]}'
+    # Job 1 has started=NULL (never started) so its 120s duration is excluded:
+    # 10:00 hour: 180s + 90s = 270s; 11:00 hour: 100s + 150s + 80s = 330s; total 600s
+    assert job['jobs_duration_total_seconds'] == pytest.approx(600.0, rel=1e-6), (
+        f'Job duration total should be 600 seconds, got {job["jobs_duration_total_seconds"]}'
     )
+    assert job['jobs_never_started_total'] == 1, 'Job 1 is never-started (started IS NULL)'
+
     assert job['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6), (
         f'Job duration minimum should be 80 seconds, got {job["job_duration_minimum_seconds"]}'
     )
@@ -447,11 +482,9 @@ def _validate_jobs_values_multi_hour(json_data, statistics):
         f'Job duration maximum should be 180 seconds, got {job["job_duration_maximum_seconds"]}'
     )
     assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
-    # Waiting time: 10:00 hour: 10s + 20s + 30s = 60s
-    #              11:00 hour: 10s + 20s + 30s = 60s
-    #              Total: 120s
-    assert job['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6), (
-        f'Job waiting time total should be 120 seconds (60+60), got {job["job_waiting_time_total_seconds"]}'
+    # Waiting time excludes never-started job 1 (10s): 50s (10:00) + 60s (11:00) = 110s
+    assert job['job_waiting_time_total_seconds'] == pytest.approx(110.0, rel=1e-6), (
+        f'Job waiting time total should be 110 seconds, got {job["job_waiting_time_total_seconds"]}'
     )
 
 
@@ -504,19 +537,16 @@ def _validate_module_stats_values_multi_hour(json_data):
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
     assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (Custom collections removed), got {len(anonymized_modules)}'
 
-    a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
-    assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
-    # 6 jobs total
-    assert a10_module['jobs_total'] == 6, 'Should have 6 jobs using a10.acos_axapi.a10_slb_virtual_server'
-    # 6 jobs × 2 hosts (base) + 3 role events × 2 hosts (a10.acos_axapi.device_config role, 10:00h) = 18 ok events
-    assert a10_module['runner_on_ok_total'] == 18, 'Should have 18 ok events for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['events_collected_total'] == 18, 'Should have 18 collected events for a10.acos_axapi.a10_slb_virtual_server'
-    assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
-    assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
-    assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
-    for version in a10_module['ansible_versions']:
-        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
+    for module_name in ('a10.acos_axapi.a10_slb_virtual_server', 'ansible.builtin.yum'):
+        module = module_stats_dict.get(module_name)
+        assert module is not None, f'Should have {module_name} module'
+        assert module['jobs_total'] == 6, f'{module_name} should have 6 jobs'
+        # Base ok events (18) + 1 diversified ok-with-warnings on job 1
+        assert module['runner_on_ok_total'] == 19, f'{module_name} runner_on_ok_total'
+        assert module['events_collected_total'] == 29, f'{module_name} events_collected_total'
+        _assert_runner_event_counters_populated(module, module_name)
+        for version in module['ansible_versions']:
+            assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
 
 
 def _validate_collection_stats_values_multi_hour(json_data):
@@ -524,19 +554,16 @@ def _validate_collection_stats_values_multi_hour(json_data):
     print('--- Validating collection_stats data values (multi-hour) ---')
     collection_stats_dict = {c['collection']: c for c in json_data['collection_stats']}
 
-    a10_collection = collection_stats_dict.get('a10.acos_axapi')
-    assert a10_collection is not None, 'Should have a10.acos_axapi collection'
-    assert a10_collection['collection_source'] == 'community', 'a10.acos_axapi collection should be from community'
-    # 6 jobs total
-    assert a10_collection['jobs_total'] == 6, 'a10.acos_axapi collection should have 6 jobs'
-    assert 'ansible_versions' in a10_collection, 'Each collection_stat should have ansible_versions field'
-    assert isinstance(a10_collection['ansible_versions'], list), 'ansible_versions should be a list'
-    assert len(a10_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
-    for version in a10_collection['ansible_versions']:
-        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    # 6 jobs × 2 hosts (base) + 3 role events × 2 hosts (a10.acos_axapi.device_config role, 10:00h) = 18 ok events
-    assert a10_collection['runner_on_ok_total'] == 18, 'a10.acos_axapi collection should have 18 ok events'
-    assert a10_collection['events_collected_total'] == 18, 'a10.acos_axapi collection should have 18 collected events'
+    for collection_name, source in (('a10.acos_axapi', 'community'), ('ansible.builtin', 'certified')):
+        collection = collection_stats_dict.get(collection_name)
+        assert collection is not None, f'Should have {collection_name} collection'
+        assert collection['collection_source'] == source
+        assert collection['jobs_total'] == 6
+        assert collection['runner_on_ok_total'] == 19
+        assert collection['events_collected_total'] == 29
+        _assert_runner_event_counters_populated(collection, collection_name)
+        for version in collection['ansible_versions']:
+            assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
@@ -720,14 +747,16 @@ def _validate_jobs_by_controller_version(json_data, statistics):
     )
 
     # Duration and waiting totals must also match the known multi-hour values
-    assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
-        f'jobs_duration_total_seconds should be 720s (390+330), got {ctrl_summary["jobs_duration_total_seconds"]}'
+    assert ctrl_summary['jobs_duration_total_seconds'] == pytest.approx(600.0, rel=1e-6), (
+        f'jobs_duration_total_seconds should be 600s, got {ctrl_summary["jobs_duration_total_seconds"]}'
     )
     assert ctrl_summary['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6)
     assert ctrl_summary['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6)
-    assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6), (
-        f'job_waiting_time_total_seconds should be 120s (60+60), got {ctrl_summary["job_waiting_time_total_seconds"]}'
+    assert ctrl_summary['job_waiting_time_total_seconds'] == pytest.approx(110.0, rel=1e-6), (
+        f'job_waiting_time_total_seconds should be 110s, got {ctrl_summary["job_waiting_time_total_seconds"]}'
     )
+    assert ctrl_summary['jobs_never_started_total'] == 1
+
 
     # Required fields
     for field in [
@@ -915,20 +944,29 @@ def _validate_playbook_events_values_multi_hour(json_data, statistics):
     """Validate playbook_events for multi-hour data (6 jobs across 10:00 and 11:00)."""
     print('--- Validating playbook_events data values (multi-hour) ---')
     pe = json_data['playbook_events']
-    # 6 jobs × 4 playbook lifecycle events
-    assert pe['playbook_on_start_total'] == 6
-    assert pe['playbook_on_play_start_total'] == 6
-    assert pe['playbook_on_task_start_total'] == 6
-    assert pe['playbook_on_stats_total'] == 6
-    # SQL fixture: 2 warnings + 1 deprecated per hour × 2 hours
+    # 6 jobs × each playbook_on_* type
+    for key in (
+        'playbook_on_start_total',
+        'playbook_on_play_start_total',
+        'playbook_on_task_start_total',
+        'playbook_on_stats_total',
+        'playbook_on_notify_total',
+        'playbook_on_include_total',
+        'playbook_on_no_hosts_matched_total',
+        'playbook_on_no_hosts_remaining_total',
+        'playbook_on_vars_prompt_total',
+        'playbook_on_setup_total',
+        'playbook_on_import_for_host_total',
+        'playbook_on_not_import_for_host_total',
+    ):
+        assert pe[key] == 6, f'{key} should be 6, got {pe[key]}'
     assert pe['warning_total'] == 4
     assert pe['deprecated_total'] == 2
-    # 24 playbook_on_* + 4 warning + 2 deprecated
-    assert pe['events_collected_total'] == 30
-    assert pe['event_data_size_total'] > 0, 'event_data_size_total should be > 0 with live collector lengths'
+    # 72 playbook_on_* + 4 warning + 2 deprecated
+    assert pe['events_collected_total'] == 78
+    assert pe['event_data_size_total'] > 0
 
-    # 36 runner_on_ok + 30 playbook/annotation events
-    assert statistics['rollup_period_collected_events_total'] == 66
+    assert statistics['rollup_period_collected_events_total'] == 136
 
 
 def _validate_all_data(json_data, statistics):

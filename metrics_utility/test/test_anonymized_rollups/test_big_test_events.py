@@ -14,13 +14,16 @@ Event types exercised:
   runner_on_unreachable           runner_item_on_unreachable
   runner_on_async_ok              runner_on_skipped  (excluded by design)
   runner_on_async_failed
+  runner_retry
   playbook_on_start / play_start / task_start / stats
+  playbook_on_notify / include / no_hosts_matched / no_hosts_remaining
+  playbook_on_vars_prompt / setup / import_for_host / not_import_for_host
   warning  (top-level, no module)
   deprecated  (top-level, no module)
   warnings / deprecations fields from event_data.res (module-level annotations)
 
 Expected totals after processing:
-  collected_events_total : 58  (49 prior rows + 9 playbook_on_* events)
+  collected_events_total : 67  (prior rows + 17 playbook_on_* + 1 runner_retry)
   warnings_total         : 2   (top-level warning events)
   deprecations_total     : 1   (top-level deprecated event)
 """
@@ -95,6 +98,86 @@ _EVENTS = [
     _playbook_event(
         1,
         'playbook_on_stats',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_notify',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_include',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_no_hosts_matched',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_no_hosts_remaining',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_vars_prompt',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_setup',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_import_for_host',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_not_import_for_host',
         playbook='site.yml',
         job_created='2024-03-01 10:00:00+00',
         job_started='2024-03-01 10:00:10+00',
@@ -183,6 +266,25 @@ _EVENTS = [
         'host_id': 2,
         'task_uuid': 't001',
         'event': 'runner_on_failed',
+        'task_action': 'ansible.builtin.copy',
+        'resolved_action': None,
+        'resolved_role': None,
+        'role': 'acme.app.web_role',
+        'job_created': '2024-03-01 10:00:00+00',
+        'job_started': '2024-03-01 10:00:30+00',
+        'job_finished': '2024-03-01 10:15:00+00',
+        'job_failed': True,
+        'ignore_errors': False,
+        'warnings': None,
+        'deprecations': None,
+        'ansible_version': '2.16.0',
+    },
+    {
+        'job_id': 1,
+        'playbook': 'site.yml',
+        'host_id': 2,
+        'task_uuid': 't001',
+        'event': 'runner_retry',
         'task_action': 'ansible.builtin.copy',
         'resolved_action': None,
         'resolved_role': None,
@@ -1187,7 +1289,7 @@ def result(request):
 
 
 def test_collected_events_total(result):
-    assert result['collected_events_total'] == 58  # all raw rows before any filtering
+    assert result['collected_events_total'] == 67  # all raw rows before any filtering
 
 
 def test_top_level_warnings_and_deprecations(result):
@@ -1201,13 +1303,18 @@ def test_playbook_events(result):
     assert pe['playbook_on_play_start_total'] == 2
     assert pe['playbook_on_task_start_total'] == 1
     assert pe['playbook_on_stats_total'] == 3
+    assert pe['playbook_on_notify_total'] == 1
+    assert pe['playbook_on_include_total'] == 1
+    assert pe['playbook_on_no_hosts_matched_total'] == 1
+    assert pe['playbook_on_no_hosts_remaining_total'] == 1
+    assert pe['playbook_on_vars_prompt_total'] == 1
+    assert pe['playbook_on_setup_total'] == 1
+    assert pe['playbook_on_import_for_host_total'] == 1
+    assert pe['playbook_on_not_import_for_host_total'] == 1
     assert pe['warning_total'] == 2
     assert pe['deprecated_total'] == 1
-    assert pe['events_collected_total'] == 12  # 9 playbook_on_* + 2 warning + 1 deprecated
-    assert pe['event_data_size_total'] == 120  # 12 events × 10 bytes
-    # Unused playbook event types stay at zero
-    assert pe['playbook_on_notify_total'] == 0
-    assert pe['playbook_on_include_total'] == 0
+    assert pe['events_collected_total'] == 20  # 17 playbook_on_* + 2 warning + 1 deprecated
+    assert pe['event_data_size_total'] == 200  # 20 events × 10 bytes
 
 
 def test_no_hosts_automated_total_in_events_output(result):
@@ -1264,11 +1371,12 @@ def test_ansible_builtin_copy(modules):
     assert m['runner_item_on_failed_total'] == 0
     assert m['runner_item_on_failed_ignored_total'] == 0
     assert m['runner_item_on_unreachable_total'] == 0
+    assert m['runner_retry_total'] == 1  # h2 retry between failed and ok
     assert m['warnings_total'] == 1  # h3 module-level warning
     assert m['deprecations_total'] == 0
-    assert m['events_collected_total'] == 6
+    assert m['events_collected_total'] == 7
     assert m['event_data_size_total'] == 10 * m['events_collected_total']
-    # host coverage: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
+    # host coverage: h1, h2 (failed/retry/ok), h3, h4, h5 → 5 distinct hosts
 
 
 def test_ansible_builtin_package(modules):
@@ -1289,6 +1397,7 @@ def test_ansible_builtin_package(modules):
     assert m['runner_item_on_failed_total'] == 1  # h2 item failed (not ignored)
     assert m['runner_item_on_failed_ignored_total'] == 1  # h3 item failed (ignored)
     assert m['runner_item_on_unreachable_total'] == 1  # h2 item unreachable
+    assert m['runner_retry_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 12
@@ -1474,9 +1583,10 @@ def test_ansible_builtin_collection(collections):
     assert c['runner_item_on_failed_total'] == 1  # 0+1+0+0+0
     assert c['runner_item_on_failed_ignored_total'] == 1  # 0+1+0+0+0
     assert c['runner_item_on_unreachable_total'] == 1  # 0+1+0+0+0
+    assert c['runner_retry_total'] == 1  # copy h2
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
-    assert c['events_collected_total'] == 27  # 6+12+2+2+3+2(debug)
+    assert c['events_collected_total'] == 28  # 7+12+2+2+3+2(debug)
     assert c['event_data_size_total'] == 10 * c['events_collected_total']
 
 
@@ -1566,11 +1676,12 @@ def test_role_web(roles):
     assert r['runner_on_failed_ignored_total'] == 0
     assert r['runner_on_unreachable_total'] == 1
     assert r['runner_item_on_ok_total'] == 0
+    assert r['runner_retry_total'] == 1
     assert r['warnings_total'] == 1
     assert r['deprecations_total'] == 0
-    assert r['events_collected_total'] == 6
+    assert r['events_collected_total'] == 7
     assert r['event_data_size_total'] == 10 * r['events_collected_total']
-    # copy task: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
+    # copy task: h1, h2 (failed/retry/ok), h3, h4, h5 → 5 distinct hosts
 
 
 def test_role_firewall(roles):

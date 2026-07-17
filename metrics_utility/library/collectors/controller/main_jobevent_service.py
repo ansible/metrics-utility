@@ -18,6 +18,7 @@ _RUNNER_EVENTS = [
     'runner_item_on_failed',
     'runner_on_unreachable',
     'runner_item_on_unreachable',
+    'runner_retry',
 ]
 
 # Non-module Ansible/Controller events (playbook lifecycle + job annotations)

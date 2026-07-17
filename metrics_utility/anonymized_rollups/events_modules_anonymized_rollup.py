@@ -4,10 +4,8 @@ Aggregates module, collection, and role usage statistics from job event data,
 anonymising custom module/collection/role names before inclusion in reports.
 
 Event counts use a direct 1-to-1 mapping to Ansible event types — one counter
-per known event type — with no inferred classification (no "retry detection",
-no "task outcome" collapsing).  This avoids misclassification caused by loops,
-block/rescue, and retries all generating the same event types under the same
-task_uuid.
+per known event type — with no inferred classification (no "task outcome"
+collapsing).  Retries are counted explicitly via ``runner_retry`` events.
 
 For loops the task-level summary event (runner_on_failed/ok) and the
 item-level events (runner_item_on_*) are in separate counters so consumers
@@ -40,6 +38,7 @@ _RUNNER_EVENTS = frozenset(
         'runner_item_on_failed',
         'runner_on_unreachable',
         'runner_item_on_unreachable',
+        'runner_retry',
     ]
 )
 # Non-module events aggregated into a single playbook_events group.
@@ -149,6 +148,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         runner_item_on_ok_total, runner_item_on_failed_total,
         runner_item_on_failed_ignored_total, runner_item_on_unreachable_total
 
+    Retry events:
+        runner_retry_total
+
     For a loop with partial item failures the task-level runner_on_failed and
     the item-level runner_item_on_failed are in separate counters, so consumers
     can reason about them independently.
@@ -178,6 +180,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'runner_item_on_failed_total',
         'runner_item_on_failed_ignored_total',
         'runner_item_on_unreachable_total',
+        'runner_retry_total',
         'warnings_total',
         'deprecations_total',
         'events_collected_total',
@@ -535,6 +538,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                 lambda x: ((x == 'runner_item_on_failed') & ignore_errors.loc[x.index]).sum(),
             ),
             'runner_item_on_unreachable_total': ('event', lambda x: (x == 'runner_item_on_unreachable').sum()),
+            # Task retries (Ansible until/retries)
+            'runner_retry_total': ('event', lambda x: (x == 'runner_retry').sum()),
             # Module-level annotations (from event_data.res, distinct from top-level warning events)
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
