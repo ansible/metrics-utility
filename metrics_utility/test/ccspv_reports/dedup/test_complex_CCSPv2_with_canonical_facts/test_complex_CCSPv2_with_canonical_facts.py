@@ -2434,7 +2434,7 @@ def validate_input_csv_data_integrity():
         try:
             df = pandas.read_csv(file_path, encoding='utf-8')
             assert len(df) > 0, f'File {file_name} is empty'
-        except Exception as e:
+        except (IOError, UnicodeDecodeError, pandas.errors.ParserError) as e:
             pytest.fail(f'Failed to read {file_name}: {e}')
 
 
