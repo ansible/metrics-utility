@@ -161,9 +161,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'deprecations_total',
         'events_processed_total',
     ]
-    # host_ids is a list of host IDs per stats entry; kept through batch merges (set-unioned)
-    # and used to recompute unique_hosts_total after each merge.  Stripped before shipping.
-    _LIST_COLS = ['ansible_versions', 'host_ids']
+    _LIST_COLS = ['ansible_versions']
 
     def __init__(self):
         super().__init__('events_modules')
@@ -192,20 +190,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             merged_item[col] = val_all + val_new
 
     def _merge_list_columns(self, item_all, item_new, merged_item):
-        """Union list columns from both items.
-
-        ansible_versions is sorted for deterministic JSON output.
-        host_ids is intentionally left unsorted: it can be very large (one entry per unique host
-        per module/collection/role), and we only ever call len() on it — sorting would be O(N log N)
-        wasted work per entry per merge for no benefit.
-        """
+        """Union list columns from both items (sorted for deterministic JSON output)."""
         for col in self._LIST_COLS:
             list_all = item_all.get(col) if item_all.get(col) is not None else []
             list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            union = set_all.union(set_new)
-            merged_item[col] = sorted(union) if col != 'host_ids' else list(union)
+            merged_item[col] = sorted(set_all.union(set_new))
 
     def _merge_single_item(self, item_all, item_new):
         """Merge a single item from all and new data."""
@@ -219,7 +210,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if item_all and item_new:
             self._merge_numeric_columns(item_all, item_new, merged_item)
             self._merge_list_columns(item_all, item_new, merged_item)
-            merged_item['unique_hosts_total'] = len(set(merged_item.get('host_ids', [])))
 
         return merged_item
 
@@ -396,7 +386,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         columns_to_keep = [
             'job_id',
-            'host_id',
             'module_name',
             'playbook',
             'collection_name',
@@ -483,7 +472,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'deprecations_total': ('is_deprecation', 'sum'),
             'events_processed_total': ('event', 'size'),
             'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
-            'host_ids': ('host_id', lambda x: set(x.dropna())),
         }
 
     def _compute_all_stats(self, dataframe):
@@ -493,10 +481,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = dataframe.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
             **common_aggregation
         )
-        module_stats['unique_hosts_total'] = module_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
-        collection_stats['unique_hosts_total'] = collection_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
 
         dataframe['role_collection_name'] = dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         role_collection_source_str = dataframe['role_collection_name'].astype(str).map(self.collections)
@@ -510,7 +496,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         role_stats = role_df.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True, dropna=False).agg(
             **common_aggregation
         )
-        role_stats['unique_hosts_total'] = role_stats['host_ids'].apply(lambda x: len(x) if isinstance(x, set) else 0)
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
         return module_stats, collection_stats, role_stats
@@ -539,24 +524,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             return value
         return []
 
-    @staticmethod
-    def _convert_set_or_list_to_list(value):
-        """Convert set or list to list (unsorted), return empty list for other types."""
-        if isinstance(value, (set, list)):
-            return list(value)
-        return []
-
     def _convert_list_columns_to_json_format(self, dataframe, column_name):
         """Convert a list/set column in dataframe to JSON-compatible sorted list format."""
         if dataframe.empty or column_name not in dataframe.columns:
             return
         dataframe[column_name] = dataframe[column_name].apply(self._convert_set_or_list_to_sorted_list)
-
-    def _convert_host_ids_to_json_format(self, dataframe):
-        """Convert host_ids column from set to list (unsorted — only len() is ever used)."""
-        if dataframe.empty or 'host_ids' not in dataframe.columns:
-            return
-        dataframe['host_ids'] = dataframe['host_ids'].apply(self._convert_set_or_list_to_list)
 
     def _convert_categorical_columns_to_string(self, dataframe):
         """Convert categorical columns to string type for JSON serialization."""
@@ -576,7 +548,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Convert stats dataframes to JSON format."""
         for df in [module_stats, collection_stats, role_stats]:
             self._convert_list_columns_to_json_format(df, 'ansible_versions')
-            self._convert_host_ids_to_json_format(df)
             self._convert_categorical_columns_to_string(df)
 
         module_stats_json = self._convert_dataframe_to_json_records(module_stats)
@@ -645,12 +616,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         Top-level output:
             modules_used_to_automate_total   - distinct module count
             modules_used_per_playbook_total  - distinct modules per playbook
-            module_stats                     - per-module stats (see _NUMERIC_COLS); each entry
-                                               includes unique_hosts_total (distinct hosts that
-                                               ran that module, computed via set-union across
-                                               hourly batches; host_ids is stripped before shipping)
-            collection_stats                 - per-collection stats (same unique_hosts_total)
-            role_stats                       - per-role stats (same unique_hosts_total)
+            module_stats                     - per-module stats (see _NUMERIC_COLS)
+            collection_stats                 - per-collection stats
+            role_stats                       - per-role stats
             collected_events_total           - all raw events before filtering
             warnings_total                   - top-level warning events
             deprecations_total               - top-level deprecated events

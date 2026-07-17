@@ -79,7 +79,6 @@ def _create_module_stats(num_modules):
                 'collection_source': collection_source,
                 'collection_name': collection_name,
                 'jobs_total': 10 + (i % 20),
-                'unique_hosts_total': 5 + (i % 15),
                 'processed_events_total': 50 + (i % 100),
                 'ansible_versions': ansible_versions,
                 'tasks_ok_total': 100 + (i % 50),
@@ -102,7 +101,6 @@ def _create_collection_stats(num_collections):
                 'jobs_total': 20 + (i % 30),
                 'processed_events_total': 200 + (i % 200),
                 'ansible_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
-                'unique_hosts_total': 10 + (i % 20),
             }
         )
     return collection_stats
