@@ -548,6 +548,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['runner_on_failed_total'] == 2  # Job1/H2, Job5/H9
     assert yum_stats['runner_on_failed_ignored_total'] == 0
     assert yum_stats['runner_on_async_failed_total'] == 1  # Job2/H2
+    assert yum_stats['runner_on_async_failed_ignored_total'] == 0
     assert yum_stats['jobs_total'] == 3
     assert yum_stats['jobs_never_started_total'] == 1  # Job5 has job_started=None
     assert yum_stats['events_collected_total'] == 3

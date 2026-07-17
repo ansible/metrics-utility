@@ -123,7 +123,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         runner_on_unreachable_total
 
     Async task-level events (runner_on_async_*):
-        runner_on_async_ok_total, runner_on_async_failed_total
+        runner_on_async_ok_total, runner_on_async_failed_total,
+        runner_on_async_failed_ignored_total
 
     Loop item-level events (runner_item_on_*):
         runner_item_on_ok_total, runner_item_on_failed_total,
@@ -157,6 +158,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'runner_on_unreachable_total',
         'runner_on_async_ok_total',
         'runner_on_async_failed_total',
+        'runner_on_async_failed_ignored_total',
         'runner_item_on_ok_total',
         'runner_item_on_failed_total',
         'runner_item_on_failed_ignored_total',
@@ -425,15 +427,65 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # Aggregation
     # ------------------------------------------------------------------
 
+    # Runner event types counted via precomputed int8 flag columns (sum in groupby).
+    # Failed variants are split by ignore_errors into *_failed vs *_failed_ignored.
+    _RUNNER_EVENT_FLAG_COLS = (
+        'is_runner_on_ok',
+        'is_runner_on_failed',
+        'is_runner_on_failed_ignored',
+        'is_runner_on_unreachable',
+        'is_runner_on_async_ok',
+        'is_runner_on_async_failed',
+        'is_runner_on_async_failed_ignored',
+        'is_runner_item_on_ok',
+        'is_runner_item_on_failed',
+        'is_runner_item_on_failed_ignored',
+        'is_runner_item_on_unreachable',
+        'is_runner_retry',
+    )
+
+    @staticmethod
+    def _add_aggregation_columns(dataframe):
+        """Precompute columns so groupby can use vectorized sum/nunique instead of lambdas.
+
+        Runner event counters become int8 flags (0/1). Job success/failure counts use
+        masked job_id columns so ``nunique`` ignores NaN rows for the other outcome.
+        """
+        event = dataframe['event']
+        ignore_errors = dataframe['ignore_errors'].fillna(False).astype(bool)
+        job_failed = dataframe['job_failed'].fillna(False).astype(bool)
+
+        flags = {
+            'is_runner_on_ok': event == 'runner_on_ok',
+            'is_runner_on_failed': (event == 'runner_on_failed') & ~ignore_errors,
+            'is_runner_on_failed_ignored': (event == 'runner_on_failed') & ignore_errors,
+            'is_runner_on_unreachable': event == 'runner_on_unreachable',
+            'is_runner_on_async_ok': event == 'runner_on_async_ok',
+            'is_runner_on_async_failed': (event == 'runner_on_async_failed') & ~ignore_errors,
+            'is_runner_on_async_failed_ignored': (event == 'runner_on_async_failed') & ignore_errors,
+            'is_runner_item_on_ok': event == 'runner_item_on_ok',
+            'is_runner_item_on_failed': (event == 'runner_item_on_failed') & ~ignore_errors,
+            'is_runner_item_on_failed_ignored': (event == 'runner_item_on_failed') & ignore_errors,
+            'is_runner_item_on_unreachable': event == 'runner_item_on_unreachable',
+            'is_runner_retry': event == 'runner_retry',
+        }
+        # int8 sum is cheaper than bool sum across many groupby aggregations
+        flags = {name: series.astype('int8') for name, series in flags.items()}
+
+        job_id = dataframe['job_id']
+        return dataframe.assign(
+            **flags,
+            job_id_successful=job_id.where(~job_failed),
+            job_id_failed=job_id.where(job_failed),
+        )
+
     def _get_common_aggregation(self, dataframe):
         """Return aggregation spec for groupby calls over the event-level dataframe.
 
         Per-job metrics (counts, durations) are computed over unique job_ids within
         each group to avoid inflating counts when a job contributes many events.
-        Event-level metrics are plain counts — one increment per observed event.
+        Event-level metrics sum precomputed flag columns — one increment per event.
         """
-        job_failed = dataframe['job_failed']
-        ignore_errors = dataframe['ignore_errors']
 
         def _unique_job_sum(col_name):
             col = dataframe[col_name]
@@ -451,42 +503,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
             return agg
 
-        return {
+        aggregation = {
             'jobs_total': ('job_id', 'nunique'),
-            'jobs_successful_total': ('job_id', lambda x: x[~job_failed.loc[x.index]].nunique()),
-            'jobs_failed_total': ('job_id', lambda x: x[job_failed.loc[x.index]].nunique()),
+            # nunique skips NaN, so masked job_id columns replace per-group lambdas
+            'jobs_successful_total': ('job_id_successful', 'nunique'),
+            'jobs_failed_total': ('job_id_failed', 'nunique'),
             'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds')),
             'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds')),
             'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started')),
             'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds')),
             'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds')),
-            # Sync task-level event counts
-            'runner_on_ok_total': ('event', lambda x: (x == 'runner_on_ok').sum()),
-            'runner_on_failed_total': (
-                'event',
-                lambda x: ((x == 'runner_on_failed') & ~ignore_errors.loc[x.index]).sum(),
-            ),
-            'runner_on_failed_ignored_total': (
-                'event',
-                lambda x: ((x == 'runner_on_failed') & ignore_errors.loc[x.index]).sum(),
-            ),
-            'runner_on_unreachable_total': ('event', lambda x: (x == 'runner_on_unreachable').sum()),
-            # Async task-level event counts
-            'runner_on_async_ok_total': ('event', lambda x: (x == 'runner_on_async_ok').sum()),
-            'runner_on_async_failed_total': ('event', lambda x: (x == 'runner_on_async_failed').sum()),
-            # Loop item-level event counts
-            'runner_item_on_ok_total': ('event', lambda x: (x == 'runner_item_on_ok').sum()),
-            'runner_item_on_failed_total': (
-                'event',
-                lambda x: ((x == 'runner_item_on_failed') & ~ignore_errors.loc[x.index]).sum(),
-            ),
-            'runner_item_on_failed_ignored_total': (
-                'event',
-                lambda x: ((x == 'runner_item_on_failed') & ignore_errors.loc[x.index]).sum(),
-            ),
-            'runner_item_on_unreachable_total': ('event', lambda x: (x == 'runner_item_on_unreachable').sum()),
-            # Task retries (Ansible until/retries)
-            'runner_retry_total': ('event', lambda x: (x == 'runner_retry').sum()),
             # Module-level annotations (from event_data.res, distinct from top-level warning events)
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
@@ -495,8 +521,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
         }
 
+        # Map is_runner_on_ok -> runner_on_ok_total, etc.
+        for flag_col in self._RUNNER_EVENT_FLAG_COLS:
+            counter_name = flag_col[len('is_') :] + '_total'
+            aggregation[counter_name] = (flag_col, 'sum')
+
+        return aggregation
+
     def _compute_all_stats(self, dataframe):
         """Compute module_stats, collection_stats, and role_stats from the event dataframe."""
+        dataframe = self._add_aggregation_columns(dataframe)
         common_aggregation = self._get_common_aggregation(dataframe)
 
         module_stats = dataframe.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(

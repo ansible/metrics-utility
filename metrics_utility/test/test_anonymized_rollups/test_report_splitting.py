@@ -28,11 +28,44 @@ def cleanup_test_data():
     _cleanup_glob(file_glob)
 
 
+def _event_stat_counters(seed, *, jobs_total, events_collected_total, ansible_versions):
+    """Shared module/collection/role counters matching EventModulesAnonymizedRollup._NUMERIC_COLS."""
+    return {
+        'jobs_total': jobs_total,
+        'jobs_successful_total': max(0, jobs_total - (seed % 3)),
+        'jobs_failed_total': seed % 3,
+        'jobs_duration_total_seconds': 100 + (seed % 500),
+        'jobs_waiting_time_total_seconds': 10 + (seed % 60),
+        'jobs_never_started_total': seed % 2,
+        'jobs_successful_duration_total_seconds': 80 + (seed % 400),
+        'jobs_failed_duration_total_seconds': seed % 50,
+        'runner_on_ok_total': 100 + (seed % 50),
+        'runner_on_failed_total': seed % 10,
+        'runner_on_failed_ignored_total': seed % 5,
+        'runner_on_unreachable_total': seed % 4,
+        'runner_on_async_ok_total': seed % 8,
+        'runner_on_async_failed_total': seed % 3,
+        'runner_on_async_failed_ignored_total': seed % 2,
+        'runner_item_on_ok_total': seed % 20,
+        'runner_item_on_failed_total': seed % 6,
+        'runner_item_on_failed_ignored_total': seed % 2,
+        'runner_item_on_unreachable_total': seed % 2,
+        'runner_retry_total': seed % 7,
+        'warnings_total': seed % 5,
+        'deprecations_total': seed % 3,
+        'events_collected_total': events_collected_total,
+        'event_data_size_total': events_collected_total * (80 + (seed % 40)),
+        'ansible_versions': ansible_versions,
+    }
+
+
 def _create_statistics_dict(num_modules, num_jobs):
     """Create statistics dictionary for anonymized rollup."""
     return {
         'rollup_period_modules_total': num_modules,
         'rollup_period_collected_events_total': 5000,
+        'rollup_period_warnings_total': 12,
+        'rollup_period_deprecations_total': 4,
         'rollup_period_playbooks_total': 50,
         'rollup_period_execution_environments_total': 20,
         'rollup_period_EE_default_total': 10,
@@ -52,6 +85,8 @@ def _create_statistics_dict(num_modules, num_jobs):
         'rollup_period_successful_hosts_total': 1800,
         'rollup_period_failed_hosts_total': 150,
         'rollup_period_unreachable_hosts_total': 50,
+        'rollup_period_indirect_managed_nodes_all_total': 25,
+        # From job_host_summary host-task outcome totals (not events_modules runner counters)
         'rollup_period_tasks_total': 10000,
         'rollup_period_task_ok_total': 9000,
         'rollup_period_task_failed_total': 500,
@@ -62,64 +97,91 @@ def _create_statistics_dict(num_modules, num_jobs):
 
 
 def _create_module_stats(num_modules):
-    """Create module_stats array."""
+    """Create module_stats array matching production Segment field names."""
     module_stats = []
     for i in range(num_modules):
         is_even = i % 2 == 0
         is_divisible_by_3 = i % 3 == 0
         collection_source = 'certified' if is_even else 'community'
-        collection_name = 'ansible.builtin' if is_even else f'community.module_{i % 10}'
+        collection = 'ansible.builtin' if is_even else f'community.module_{i % 10}'
         ansible_versions = ['2.15.0', '2.16.0', '2.17.0'] if is_divisible_by_3 else ['2.18.0', '2.19.0']
+        jobs_total = 10 + (i % 20)
+        events_collected_total = 50 + (i % 100)
 
         module_stats.append(
             {
-                'module_name': f'ansible.builtin.module_{i:04d}',
+                'module': f'{collection}.module_{i:04d}',
                 'collection_source': collection_source,
-                'collection_name': collection_name,
-                'jobs_total': 10 + (i % 20),
-                'events_collected_total': 50 + (i % 100),
-                'ansible_versions': ansible_versions,
-                'tasks_ok_total': 100 + (i % 50),
-                'tasks_failed_total': i % 10,
-                'tasks_skipped_total': i % 5,
+                'collection': collection,
+                **_event_stat_counters(
+                    i,
+                    jobs_total=jobs_total,
+                    events_collected_total=events_collected_total,
+                    ansible_versions=ansible_versions,
+                ),
             }
         )
     return module_stats
 
 
 def _create_collection_stats(num_collections):
-    """Create collection_stats array."""
+    """Create collection_stats array matching production Segment field names."""
     collection_stats = []
     sources = ['certified', 'community', 'validated', 'partner']
     for i in range(num_collections):
+        jobs_total = 20 + (i % 30)
+        events_collected_total = 200 + (i % 200)
         collection_stats.append(
             {
-                'collection_name': f'ansible.collection_{i:03d}',
+                'collection': f'ansible.collection_{i:03d}',
                 'collection_source': sources[i % 4],
-                'jobs_total': 20 + (i % 30),
-                'events_collected_total': 200 + (i % 200),
-                'ansible_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+                **_event_stat_counters(
+                    i,
+                    jobs_total=jobs_total,
+                    events_collected_total=events_collected_total,
+                    ansible_versions=['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
+                ),
             }
         )
     return collection_stats
 
 
 def _create_role_stats():
-    """Create role_stats array."""
+    """Create role_stats array matching production Segment field names."""
     role_stats = []
     sources = ['certified', 'community']
     for i in range(30):
+        jobs_total = 5 + (i % 15)
+        events_collected_total = 100 + (i % 100)
         role_stats.append(
             {
                 'role': f'example_role_{i:03d}',
-                'collection_name': f'ansible.collection_{i % 10:03d}',
+                'collection': f'ansible.collection_{i % 10:03d}',
                 'collection_source': sources[i % 2],
-                'jobs_total': 5 + (i % 15),
-                'tasks_total': 20 + (i % 30),
-                'events_collected_total': 100 + (i % 100),
+                **_event_stat_counters(
+                    i,
+                    jobs_total=jobs_total,
+                    events_collected_total=events_collected_total,
+                    ansible_versions=['2.16.0', '2.17.0'],
+                ),
             }
         )
     return role_stats
+
+
+def _host_summary_fields(seed):
+    """Host-summary fields merged into jobs groupings (unique_hosts_total is top-level only)."""
+    return {
+        'unreachable_total': seed % 5,
+        'failed_total': seed % 3,
+        'ok_total': 10 + (seed % 20),
+        'skipped_total': seed % 4,
+        'ignored_total': seed % 2,
+        'rescued_total': 0,
+        'successful_hosts_total': 4 + (seed % 12),
+        'failed_hosts_total': seed % 3,
+        'unreachable_hosts_total': seed % 2,
+    }
 
 
 def _create_jobs_by_job_type(num_jobs):
@@ -138,6 +200,7 @@ def _create_jobs_by_job_type(num_jobs):
         jobs_by_job_type.append(
             {
                 'job_type': job_type,
+                'controller_version': '4.6.0',
                 'jobs_total': 1,
                 'jobs_successful_total': jobs_successful_total,
                 'jobs_failed_total': jobs_failed_total,
@@ -147,16 +210,7 @@ def _create_jobs_by_job_type(num_jobs):
                 'templates_total': 1,
                 'inventories_total': 1,
                 'ansible_versions': ansible_versions,
-                'unreachable_total': i % 5,
-                'failed_total': i % 3,
-                'ok_total': 10 + (i % 20),
-                'skipped_total': i % 4,
-                'ignored_total': i % 2,
-                'rescued_total': 0,
-                'unique_hosts_total': 5 + (i % 15),
-                'successful_hosts_total': 4 + (i % 12),
-                'failed_hosts_total': i % 3,
-                'unreachable_hosts_total': i % 2,
+                **_host_summary_fields(i),
             }
         )
     return jobs_by_job_type
@@ -170,19 +224,12 @@ def _create_jobs_by_launch_type():
         jobs_by_launch_type.append(
             {
                 'launch_type': launch_type,
+                'controller_version': '4.6.0',
                 'jobs_total': 25 + (i * 10),
                 'jobs_successful_total': 20 + (i * 8),
                 'jobs_failed_total': 5 + (i * 2),
-                'unreachable_total': i * 5,
-                'failed_total': i * 3,
-                'ok_total': 100 + (i * 20),
-                'skipped_total': i * 4,
-                'ignored_total': i * 2,
-                'rescued_total': 0,
-                'unique_hosts_total': 50 + (i * 10),
-                'successful_hosts_total': 45 + (i * 8),
-                'failed_hosts_total': 5 + (i * 2),
-                'unreachable_hosts_total': i * 2,
+                'templates_total': 5 + i,
+                **_host_summary_fields(i * 5),
             }
         )
     return jobs_by_launch_type
@@ -196,19 +243,12 @@ def _create_jobs_by_ansible_version():
         jobs_by_ansible_version.append(
             {
                 'ansible_version': version,
+                'controller_version': '4.6.0',
                 'jobs_total': 30 + (i * 5),
                 'jobs_successful_total': 25 + (i * 4),
                 'jobs_failed_total': 5 + i,
-                'unreachable_total': i * 3,
-                'failed_total': i * 2,
-                'ok_total': 120 + (i * 15),
-                'skipped_total': i * 3,
-                'ignored_total': i,
-                'rescued_total': 0,
-                'unique_hosts_total': 60 + (i * 8),
-                'successful_hosts_total': 55 + (i * 7),
-                'failed_hosts_total': 5 + i,
-                'unreachable_hosts_total': i * 2,
+                'templates_total': 8 + i,
+                **_host_summary_fields(i * 3),
             }
         )
     return jobs_by_ansible_version
@@ -218,15 +258,29 @@ def _create_jobs_by_installed_collections_versions():
     """Create jobs_by_installed_collections_versions array."""
     jobs_by_installed_collections_versions = []
     for i in range(20):
+        jobs_total = 10 + (i % 20)
         jobs_by_installed_collections_versions.append(
             {
-                'name': f'ansible.collection_{i:03d}',
+                'collection': f'ansible.collection_{i:03d}',
                 'version': f'1.{i}.0',
-                'jobs_total': 10 + (i % 20),
+                'jobs_total': jobs_total,
+                'jobs_failed_total': i % 3,
+                'jobs_successful_total': max(0, jobs_total - (i % 3)),
+                'jobs_never_started_total': 0,
+                'jobs_duration_total_seconds': 100 + (i % 200),
+                'jobs_successful_duration_total_seconds': 80 + (i % 150),
+                'jobs_failed_duration_total_seconds': i % 40,
+                'job_duration_maximum_seconds': 200 + i,
+                'job_duration_minimum_seconds': 10 + (i % 5),
+                'job_waiting_time_total_seconds': 5 + (i % 20),
+                'job_waiting_time_maximum_seconds': 30 + i,
+                'job_waiting_time_minimum_seconds': 1,
+                'templates_total': 1 + (i % 5),
+                'inventories_total': 1 + (i % 3),
+                'ansible_versions': ['2.16.0', '2.17.0'],
             }
         )
     return jobs_by_installed_collections_versions
-
 
 def _create_ansible_versions():
     """Create large ansible_versions array that will need to be split.
@@ -278,7 +332,21 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         'jobs_by_job_type': jobs_by_job_type,
         'jobs_by_launch_type': jobs_by_launch_type,
         'jobs_by_ansible_version': jobs_by_ansible_version,
+        'jobs_by_controller_version': [
+            {
+                'controller_version': '4.6.0',
+                'jobs_total': num_jobs,
+                'jobs_successful_total': num_jobs - 10,
+                'jobs_failed_total': 10,
+            }
+        ],
         'jobs_by_installed_collections_versions': jobs_by_installed_collections_versions,
+        'table_metadata': {'main_jobevent': {'row_count': 5000}, 'main_unifiedjob': {'row_count': num_jobs}},
+        'controller_versions': ['4.6.0'],
+        # Non-empty lists only — Segment skipping empty arrays means empty keys never get a chunk
+        'feature_flags': [{'name': 'example_flag', 'enabled': True}],
+        'observability_by_tasks': [{'task': 'example_task', 'count': 10}],
+        'indirect_nodes_by_collection': [{'collection': 'ansible.builtin', 'host_count': 5}],
     }
 
     return anonymized_rollup
@@ -379,12 +447,44 @@ def _print_chunk_statistics(chunk_sizes):
     print(f'{"=" * 80}')
 
 
+def _assert_fixture_matches_production_shape(anonymized_rollup):
+    """Guard against fixtures drifting from Segment/production JSON field names."""
+    module = anonymized_rollup['module_stats'][0]
+    assert 'module' in module and 'module_name' not in module
+    assert 'collection' in module and 'collection_name' not in module
+    assert 'runner_on_ok_total' in module
+    assert 'tasks_ok_total' not in module
+    assert 'tasks_failed_total' not in module
+    assert 'tasks_skipped_total' not in module
+
+    collection = anonymized_rollup['collection_stats'][0]
+    assert 'collection' in collection and 'collection_name' not in collection
+    assert 'runner_on_ok_total' in collection
+
+    role = anonymized_rollup['role_stats'][0]
+    assert 'collection' in role and 'collection_name' not in role
+    assert 'tasks_total' not in role
+    assert 'runner_on_ok_total' in role
+
+    installed = anonymized_rollup['jobs_by_installed_collections_versions'][0]
+    assert 'collection' in installed and 'name' not in installed
+
+    statistics = anonymized_rollup['statistics']
+    assert 'rollup_period_warnings_total' in statistics
+    assert 'rollup_period_deprecations_total' in statistics
+
+    job = anonymized_rollup['jobs_by_job_type'][0]
+    assert 'controller_version' in job
+    assert 'unique_hosts_total' not in job
+
+
 def test_anonymized_rollup_splitting(cleanup_test_data):
     """
     Test that anonymized rollup reports are correctly split into multiple chunks
     when arrays exceed the Segment message size limit.
     """
     anonymized_rollup = create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collections=50)
+    _assert_fixture_matches_production_shape(anonymized_rollup)
     storage_segment = StorageSegment()
     max_size = storage_segment.REGULAR_MESSAGE_LIMIT
 

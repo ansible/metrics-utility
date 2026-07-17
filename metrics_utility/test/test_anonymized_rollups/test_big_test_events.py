@@ -20,7 +20,7 @@ Event types exercised:
   warnings / deprecations fields from event_data.res (module-level annotations)
 
 Expected totals after processing:
-  collected_events_total : 50
+  collected_events_total : 51
   warnings_total         : 2   (top-level warning events)
   deprecations_total     : 1   (top-level deprecated event)
 """
@@ -528,6 +528,26 @@ _EVENTS = [
         'job_finished': '2024-03-01 10:15:00+00',
         'job_failed': True,
         'ignore_errors': False,
+        'warnings': None,
+        'deprecations': None,
+        'ansible_version': '2.16.0',
+    },
+    # h3 async failed ignored
+    {
+        'job_id': 1,
+        'playbook': 'site.yml',
+        'host_id': 3,
+        'task_uuid': 't004',
+        'event': 'runner_on_async_failed',
+        'task_action': 'ansible.builtin.systemd',
+        'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
+        'job_created': '2024-03-01 10:00:00+00',
+        'job_started': '2024-03-01 10:00:30+00',
+        'job_finished': '2024-03-01 10:15:00+00',
+        'job_failed': True,
+        'ignore_errors': True,
         'warnings': None,
         'deprecations': None,
         'ansible_version': '2.16.0',
@@ -1090,7 +1110,7 @@ def result(request):
 
 
 def test_collected_events_total(result):
-    assert result['collected_events_total'] == 50  # all raw rows before any filtering
+    assert result['collected_events_total'] == 51  # all raw rows before any filtering
 
 
 def test_top_level_warnings_and_deprecations(result):
@@ -1217,10 +1237,11 @@ def test_ansible_builtin_systemd(modules):
     assert m['runner_on_failed_total'] == 0
     assert m['runner_on_async_ok_total'] == 1  # h1
     assert m['runner_on_async_failed_total'] == 1  # h2
+    assert m['runner_on_async_failed_ignored_total'] == 1  # h3
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_collected_total'] == 2
+    assert m['events_collected_total'] == 3
     assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
@@ -1363,7 +1384,8 @@ def test_ansible_builtin_collection(collections):
     assert c['runner_on_failed_ignored_total'] == 1  # 0+1+0+0+0
     assert c['runner_on_unreachable_total'] == 2  # 1+0+0+0+1
     assert c['runner_on_async_ok_total'] == 1  # 0+0+1+0+0
-    assert c['runner_on_async_failed_total'] == 1  # 0+0+1+0+0
+    assert c['runner_on_async_failed_total'] == 1  # systemd h2
+    assert c['runner_on_async_failed_ignored_total'] == 1  # systemd h3
     assert c['runner_item_on_ok_total'] == 6  # 0+6+0+0+0
     assert c['runner_item_on_failed_total'] == 1  # 0+1+0+0+0
     assert c['runner_item_on_failed_ignored_total'] == 1  # 0+1+0+0+0
@@ -1371,7 +1393,7 @@ def test_ansible_builtin_collection(collections):
     assert c['runner_retry_total'] == 1  # copy h2
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
-    assert c['events_collected_total'] == 28  # 7+12+2+2+3+2(debug)
+    assert c['events_collected_total'] == 29  # 7+12+3+2+3+2(debug)
     assert c['event_data_size_total'] == 10 * c['events_collected_total']
 
 

@@ -900,7 +900,7 @@ $yaml$,
       );
       diversify_counter := diversify_counter + 1;
 
-      -- runner_on_async_failed
+      -- runner_on_async_failed (ignore_errors absent → false)
       INSERT INTO public.main_jobevent (
         created, modified, event, event_data, failed, changed,
         host_name, play, role, task, counter,
@@ -913,6 +913,25 @@ $yaml$,
         ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_async_failed"}')::text,
         true, false,
         host_name, 'default_play', diversify_role, 'diversify async failed', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_async_failed with ignore_errors true
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_async_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_async_failed_ignored", "ignore_errors": true}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify async failed ignored', diversify_counter,
         host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
         diversify_counter, '', 0,
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'

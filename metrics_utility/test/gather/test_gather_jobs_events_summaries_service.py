@@ -133,9 +133,14 @@ def _print_comparison(actual_text, expected_lines):
 
 
 def _get_sort_key(row, header_row):
-    """Create sort key from available columns: job_id, host_id, event, or first column."""
+    """Create a stable sort key for comparing gather output to the golden CSV.
+
+    Multiple events can share job_id/host_id/event (e.g. async_failed vs
+    async_failed_ignored for two modules on the same host), so include
+    task_action/task/role to break ties deterministically.
+    """
     key_parts = []
-    sort_columns = ['job_id', 'host_id', 'event']
+    sort_columns = ['job_id', 'host_id', 'event', 'task_action', 'task', 'role']
 
     for col_name in sort_columns:
         if col_name in header_row:
@@ -450,7 +455,7 @@ def test_main_jobevent_service_row_limit(caplog):
     since = utcdt('2025-06-12')
     until = utcdt('2025-06-14')
 
-    # The fixture contains 64 events; a limit of 2 must cap the result.
+    # The fixture contains 66 events; a limit of 2 must cap the result.
     collector_instance = main_jobevent_service(db=connection, since=since, until=until, row_limit=2)
     with caplog.at_level(logging.INFO, logger='metrics_utility.logger'):
         df = collector_instance.gather()
