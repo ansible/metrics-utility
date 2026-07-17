@@ -209,6 +209,9 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             ed.event_data->'res'->'warnings'     AS warnings,
             ed.event_data->'res'->'deprecations' AS deprecations,
 
+            -- Raw stored size of event_data (bytes) for performance modelling
+            octet_length(e.event_data) AS event_data_length,
+
             CASE
                 WHEN e.event = 'playbook_on_stats'
                 THEN ed.event_data - 'artifact_data'

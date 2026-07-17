@@ -120,6 +120,8 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     assert 'duration' in query
     assert 'warnings' in query
     assert 'deprecations' in query
+    assert 'octet_length(e.event_data)' in query
+    assert 'event_data_length' in query
 
     # Should have ansible_version from unified_job
     assert 'uj.ansible_version' in query or 'ansible_version' in query

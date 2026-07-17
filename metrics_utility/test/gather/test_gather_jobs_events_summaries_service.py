@@ -414,223 +414,223 @@ main_jobevent_service_lines = [
     'id,created,modified,job_created,job_finished,ansible_version,uuid,parent_uuid,event,'
     'task_action,resolved_action,resolved_role,duration,start,end,task_uuid,ignore_errors,failed,'
     'changed,playbook,play,task,role,job_remote_id,job_id,host_remote_id,host_id,'
-    'host_name,warnings,deprecations,playbook_on_stats,job_failed,job_started',
+    'host_name,warnings,deprecations,event_data_length,playbook_on_stats,job_failed,job_started',
     '1,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     '2,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     # job 1, host 1, counter 3 (role: a10.acos_axapi.device_config)
     '31,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_1_2025-06-13_role_a10,f,f,f,'
     'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     # job 1, host 1, counter 4 (role: redhat.rhel_system_roles.timesync)
     '32,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_1_2025-06-13_role_rhel,f,f,f,'
     'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,1,1,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     '3,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     '4,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,1,1,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     # job 1, host 2, counter 3 (role: a10.acos_axapi.device_config)
     '33,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,1_default_host_2_2025-06-13_role_a10,f,f,f,'
     'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,1,1,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     # job 1, host 2, counter 4 (role: redhat.rhel_system_roles.timesync)
     '34,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,1_default_host_2_2025-06-13_role_rhel,f,f,f,'
     'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,1,1,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:10+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:10+00:00',
     '5,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     '6,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     # job 2, host 1, counter 3 (role: a10.acos_axapi.device_config)
     '35,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_1_2025-06-13_role_a10,f,f,f,'
     'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,2,2,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     # job 2, host 1, counter 4 (role: redhat.rhel_system_roles.timesync)
     '36,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_1_2025-06-13_role_rhel,f,f,f,'
     'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,2,2,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     '7,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     '8,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,2,2,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     # job 2, host 2, counter 3 (role: a10.acos_axapi.device_config)
     '37,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,2_default_host_2_2025-06-13_role_a10,f,f,f,'
     'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,2,2,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     # job 2, host 2, counter 4 (role: redhat.rhel_system_roles.timesync)
     '38,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,2_default_host_2_2025-06-13_role_rhel,f,f,f,'
     'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,2,2,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 10:00:20+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 10:00:20+00:00',
     '9,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_1_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     '10,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_1_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     # job 3, host 1, counter 3 (role: a10.acos_axapi.device_config)
     '39,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_1_2025-06-13_role_a10,f,f,f,'
     'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_1_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     # job 3, host 1, counter 4 (role: redhat.rhel_system_roles.timesync)
     '40,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_1_2025-06-13_role_rhel,f,f,f,'
     'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,3,3,31,31,'
-    'default_host_1_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_1_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     '11,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_2_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     '12,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_2_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     # job 3, host 2, counter 3 (role: a10.acos_axapi.device_config)
     '41,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,3_default_host_2_2025-06-13_role_a10,f,f,f,'
     'default_playbook.yml,default_play,configure device,a10.acos_axapi.device_config,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_2_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     # job 3, host 2, counter 4 (role: redhat.rhel_system_roles.timesync)
     '42,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,3_default_host_2_2025-06-13_role_rhel,f,f,f,'
     'default_playbook.yml,default_play,install packages,redhat.rhel_system_roles.timesync,3,3,32,32,'
-    'default_host_2_2025-06-13,,,,t,2025-06-13 10:00:30+00:00',
+    'default_host_2_2025-06-13,,,,,t,2025-06-13 10:00:30+00:00',
     '13,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,2.9.10,'
     '13aac8b6-038d-4cbe-af99-67276d80d01b,,warning,,,,,,,,f,f,f,,,'
-    ',,1,1,,,,,,,f,2025-06-13 10:00:10+00:00',
+    ',,1,1,,,,,,,,f,2025-06-13 10:00:10+00:00',
     '14,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,2.9.10,'
     '8cdfc02a-8b52-4fe9-883a-1d6608f68c3f,,warning,,,,,,,,f,f,f,,,'
-    ',,2,2,,,,,,,f,2025-06-13 10:00:20+00:00',
+    ',,2,2,,,,,,,,f,2025-06-13 10:00:20+00:00',
     '15,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,'
     '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,2.9.10,'
     '150d1d0c-dccb-4940-83ee-4d75c2f22493,,deprecated,,,,,,,,f,f,f,,,'
-    ',,3,3,,,,,,,t,2025-06-13 10:00:30+00:00',
+    ',,3,3,,,,,,,,t,2025-06-13 10:00:30+00:00',
     '16,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,11_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,4,4,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 11:00:10+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 11:00:10+00:00',
     '17,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,11_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,4,4,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 11:00:10+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 11:00:10+00:00',
     '18,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,11_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,4,4,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 11:00:10+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 11:00:10+00:00',
     '19,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,11_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,4,4,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 11:00:10+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 11:00:10+00:00',
     '20,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:02:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,12_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,5,5,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 11:00:20+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 11:00:20+00:00',
     '21,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:02:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,12_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,5,5,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 11:00:20+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 11:00:20+00:00',
     '22,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:02:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,12_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,5,5,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 11:00:20+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 11:00:20+00:00',
     '23,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:02:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,12_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,5,5,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 11:00:20+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 11:00:20+00:00',
     '24,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,13_default_host_1_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,6,6,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 11:00:30+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 11:00:30+00:00',
     '25,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,13_default_host_1_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,6,6,31,31,'
-    'default_host_1_2025-06-13,,,,f,2025-06-13 11:00:30+00:00',
+    'default_host_1_2025-06-13,,,,,f,2025-06-13 11:00:30+00:00',
     '26,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,ansible.builtin.yum,,,,,,13_default_host_2_2025-06-13_1,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,6,6,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 11:00:30+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 11:00:30+00:00',
     '27,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     'UUID,,runner_on_ok,a10.acos_axapi.a10_slb_virtual_server,,,,,,13_default_host_2_2025-06-13_2,f,f,f,'
     'default_playbook.yml,default_play,default_task,default_role,6,6,32,32,'
-    'default_host_2_2025-06-13,,,,f,2025-06-13 11:00:30+00:00',
+    'default_host_2_2025-06-13,,,,,f,2025-06-13 11:00:30+00:00',
     '28,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     '13aac8b6-038d-4cbe-af99-67276d80d01b,,warning,,,,,,,,f,f,f,,,'
-    ',,4,4,,,,,,,f,2025-06-13 11:00:10+00:00',
+    ',,4,4,,,,,,,,f,2025-06-13 11:00:10+00:00',
     '29,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:02:50+00:00,2.9.10,'
     '8cdfc02a-8b52-4fe9-883a-1d6608f68c3f,,warning,,,,,,,,f,f,f,,,'
-    ',,5,5,,,,,,,f,2025-06-13 11:00:20+00:00',
+    ',,5,5,,,,,,,,f,2025-06-13 11:00:20+00:00',
     '30,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,'
     '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,2.9.10,'
     '150d1d0c-dccb-4940-83ee-4d75c2f22493,,deprecated,,,,,,,,f,f,f,,,'
-    ',,6,6,,,,,,,f,2025-06-13 11:00:30+00:00',
+    ',,6,6,,,,,,,,f,2025-06-13 11:00:30+00:00',
 ]
 
 
@@ -641,6 +641,7 @@ main_jobevent_service_skip_columns = [
     'uuid',
     'parent_uuid',
     'task_uuid',
+    'event_data_length',
 ]
 
 
@@ -707,6 +708,7 @@ def test_main_jobevent_service_row_limit(caplog):
         'host_name',
         'warnings',
         'deprecations',
+        'event_data_length',
         'playbook_on_stats',
         'job_failed',
         'job_started',
