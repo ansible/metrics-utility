@@ -21,25 +21,15 @@ _RUNNER_EVENTS = [
     'runner_retry',
 ]
 
-# Non-module Ansible/Controller events (playbook lifecycle + job annotations)
-_PLAYBOOK_EVENTS = [
-    'playbook_on_start',
-    'playbook_on_play_start',
-    'playbook_on_task_start',
-    'playbook_on_stats',
-    'playbook_on_notify',
-    'playbook_on_include',
-    'playbook_on_no_hosts_matched',
-    'playbook_on_no_hosts_remaining',
-    'playbook_on_vars_prompt',
-    'playbook_on_setup',
-    'playbook_on_import_for_host',
-    'playbook_on_not_import_for_host',
+# Job-level annotation events (high signal, low volume). Playbook lifecycle
+# events (playbook_on_*) are intentionally excluded — they dominate row volume
+# while the rollup only keeps counts that are redundant with jobs/runner data.
+_ANNOTATION_EVENTS = [
     'warning',
     'deprecated',
 ]
 
-_RELEVANT_EVENTS = _RUNNER_EVENTS + _PLAYBOOK_EVENTS
+_RELEVANT_EVENTS = _RUNNER_EVENTS + _ANNOTATION_EVENTS
 
 
 def _normalize_limit(value, default, name):
@@ -229,11 +219,6 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
 
             -- Raw stored size of event_data (bytes) for performance modelling
             octet_length(e.event_data) AS event_data_length,
-
-            CASE
-                WHEN e.event = 'playbook_on_stats'
-                THEN ed.event_data - 'artifact_data'
-            END AS playbook_on_stats,
 
             uj.failed as job_failed,
             uj.started as job_started

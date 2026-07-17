@@ -50,27 +50,7 @@ def _validate_top_level_structure(json_data):
     assert 'rollup_period_credential_types' in json_data, "Missing 'rollup_period_credential_types' at top level"
     assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
     assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
-    assert 'playbook_events' in json_data, "Missing 'playbook_events' in json_data"
-    assert isinstance(json_data['playbook_events'], dict), 'playbook_events should be a dict'
-    assert 'events_collected_total' in json_data['playbook_events']
-    assert 'event_data_size_total' in json_data['playbook_events']
-    assert 'warning_total' in json_data['playbook_events']
-    assert 'deprecated_total' in json_data['playbook_events']
-    for key in (
-        'playbook_on_start_total',
-        'playbook_on_play_start_total',
-        'playbook_on_task_start_total',
-        'playbook_on_stats_total',
-        'playbook_on_notify_total',
-        'playbook_on_include_total',
-        'playbook_on_no_hosts_matched_total',
-        'playbook_on_no_hosts_remaining_total',
-        'playbook_on_vars_prompt_total',
-        'playbook_on_setup_total',
-        'playbook_on_import_for_host_total',
-        'playbook_on_not_import_for_host_total',
-    ):
-        assert key in json_data['playbook_events'], f'Missing {key} in playbook_events'
+    assert 'playbook_events' not in json_data, 'playbook_events object was removed; warnings/deprecations live in statistics'
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"
@@ -105,6 +85,8 @@ def _validate_statistics_structure(statistics):
         'rollup_period_failed_hosts_total',
         'rollup_period_unreachable_hosts_total',
         'rollup_period_playbooks_total',
+        'rollup_period_warnings_total',
+        'rollup_period_deprecations_total',
         'rollup_period_templates_total',
         'rollup_period_tasks_total',
         'rollup_period_task_ok_total',
@@ -940,33 +922,14 @@ def _validate_indirect_managed_nodes(json_data, statistics):
         assert 'host_count' in entry
 
 
-def _validate_playbook_events_values_multi_hour(json_data, statistics):
-    """Validate playbook_events for multi-hour data (6 jobs across 10:00 and 11:00)."""
-    print('--- Validating playbook_events data values (multi-hour) ---')
-    pe = json_data['playbook_events']
-    # 6 jobs × each playbook_on_* type
-    for key in (
-        'playbook_on_start_total',
-        'playbook_on_play_start_total',
-        'playbook_on_task_start_total',
-        'playbook_on_stats_total',
-        'playbook_on_notify_total',
-        'playbook_on_include_total',
-        'playbook_on_no_hosts_matched_total',
-        'playbook_on_no_hosts_remaining_total',
-        'playbook_on_vars_prompt_total',
-        'playbook_on_setup_total',
-        'playbook_on_import_for_host_total',
-        'playbook_on_not_import_for_host_total',
-    ):
-        assert pe[key] == 6, f'{key} should be 6, got {pe[key]}'
-    assert pe['warning_total'] == 4
-    assert pe['deprecated_total'] == 2
-    # 72 playbook_on_* + 4 warning + 2 deprecated
-    assert pe['events_collected_total'] == 78
-    assert pe['event_data_size_total'] > 0
-
-    assert statistics['rollup_period_collected_events_total'] == 136
+def _validate_warnings_deprecations_values_multi_hour(json_data, statistics):
+    """Validate warning/deprecation statistics for multi-hour data (6 jobs across 10:00 and 11:00)."""
+    print('--- Validating warnings/deprecations statistics (multi-hour) ---')
+    assert 'playbook_events' not in json_data
+    assert statistics['rollup_period_warnings_total'] == 4
+    assert statistics['rollup_period_deprecations_total'] == 2
+    # 58 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
+    assert statistics['rollup_period_collected_events_total'] == 64
 
 
 def _validate_all_data(json_data, statistics):
@@ -995,7 +958,7 @@ def _validate_all_data(json_data, statistics):
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
     _validate_role_stats_and_jobs_by_installed_collections_versions(json_data)
-    _validate_playbook_events_values_multi_hour(json_data, statistics)
+    _validate_warnings_deprecations_values_multi_hour(json_data, statistics)
 
     print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'

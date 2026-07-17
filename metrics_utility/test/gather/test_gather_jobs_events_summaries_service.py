@@ -450,7 +450,7 @@ def test_main_jobevent_service_row_limit(caplog):
     since = utcdt('2025-06-12')
     until = utcdt('2025-06-14')
 
-    # The fixture contains 136 events; a limit of 2 must cap the result.
+    # The fixture contains 64 events; a limit of 2 must cap the result.
     collector_instance = main_jobevent_service(db=connection, since=since, until=until, row_limit=2)
     with caplog.at_level(logging.INFO, logger='metrics_utility.logger'):
         df = collector_instance.gather()
@@ -491,7 +491,6 @@ def test_main_jobevent_service_row_limit(caplog):
         'warnings',
         'deprecations',
         'event_data_length',
-        'playbook_on_stats',
         'job_failed',
         'job_started',
     ]

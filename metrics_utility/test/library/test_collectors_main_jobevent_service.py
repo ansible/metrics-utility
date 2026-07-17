@@ -200,8 +200,8 @@ def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
-    """Test that query handles playbook_on_stats event specially."""
+def test_main_jobevent_service_annotation_events_only(mock_copy_pandas):
+    """Test that query collects warning/deprecated and excludes playbook_on_* lifecycle events."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -220,10 +220,11 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Should have CASE statement for playbook_on_stats
-    assert 'playbook_on_stats' in query
-    assert 'CASE' in query
-    assert 'artifact_data' in query
+    assert "'warning'" in query
+    assert "'deprecated'" in query
+    assert 'playbook_on_task_start' not in query
+    assert 'playbook_on_stats' not in query
+    assert 'artifact_data' not in query
 
 
 # ---------------------------------------------------------------------------

@@ -117,51 +117,10 @@ def create_csv_files_from_parts(data_parts, data_dir, filename_template):
     return csv_files
 
 
-_PLAYBOOK_LIFECYCLE_EVENTS = (
-    'playbook_on_start',
-    'playbook_on_play_start',
-    'playbook_on_task_start',
-    'playbook_on_stats',
-)
-
-
-def _playbook_lifecycle_events_for_job_events(job_events):
-    """Synthesize playbook lifecycle events from a job's existing event rows."""
-    if not job_events:
-        return []
-
-    sample = next((e for e in job_events if e.get('playbook')), job_events[0])
-    playbook = sample.get('playbook') or 'unknown.yml'
-    return [
-        {
-            'job_id': sample['job_id'],
-            'playbook': playbook,
-            'host_id': None,
-            'task_uuid': None,
-            'event': event_name,
-            'task_action': None,
-            'job_created': sample.get('job_created'),
-            'job_started': sample.get('job_started'),
-            'job_finished': sample.get('job_finished'),
-            'job_failed': sample.get('job_failed', False),
-            'resolved_action': None,
-            'resolved_role': None,
-            'role': None,
-            'ignore_errors': False,
-            'ansible_version': sample.get('ansible_version'),
-        }
-        for event_name in _PLAYBOOK_LIFECYCLE_EVENTS
-    ]
-
-
 def combine_all_job_data():
     """Combine all job data from job1 through job8."""
     all_jobs = jobs1 + jobs2 + jobs3 + jobs4 + jobs5 + jobs6 + jobs7 + jobs8
-    per_job_events = [events1, events2, events3, events4, events5, events6, events7, events8]
-    all_events = []
-    for job_events in per_job_events:
-        all_events.extend(job_events)
-        all_events.extend(_playbook_lifecycle_events_for_job_events(job_events))
+    all_events = events1 + events2 + events3 + events4 + events5 + events6 + events7 + events8
     all_jobhostsummary = jhs1 + jhs2 + jhs3 + jhs4 + jhs5 + jhs6 + jhs7 + jhs8
     return all_jobs, all_events, all_jobhostsummary
 
@@ -288,7 +247,6 @@ def test_all_jobs_combined(cleanup_test_data):
     validate_collection_stats(result)
     validate_role_stats(result)
     validate_playbooks(result)
-    validate_playbook_events(result)
     validate_execution_environments(result)
     validate_credentials(result)
     validate_job_totals_match(result, jobs_by_launch_type_list, jobs_by_ansible_version_list)
@@ -343,10 +301,9 @@ def validate_task_statistics(statistics):
 
 def validate_events_statistics(statistics):
     """Validate events statistics."""
-    # 142 original events + 8 jobs × 4 playbook lifecycle events
-    assert statistics['rollup_period_collected_events_total'] == 174
-    assert 'rollup_period_warnings_total' not in statistics
-    assert 'rollup_period_deprecations_total' not in statistics
+    assert statistics['rollup_period_collected_events_total'] == 142
+    assert statistics['rollup_period_warnings_total'] == 3
+    assert statistics['rollup_period_deprecations_total'] == 2
 
 
 def validate_jobs(result):
@@ -563,22 +520,6 @@ def validate_playbooks(result):
     """Validate playbook statistics."""
     assert 'rollup_period_playbooks_total' in result['statistics']
     assert result['statistics']['rollup_period_playbooks_total'] >= 2
-
-
-def validate_playbook_events(result):
-    """Validate top-level playbook_events rollup (lifecycle + warning/deprecated)."""
-    assert 'playbook_events' in result
-    pe = result['playbook_events']
-    # 8 jobs × each lifecycle event
-    assert pe['playbook_on_start_total'] == 8
-    assert pe['playbook_on_play_start_total'] == 8
-    assert pe['playbook_on_task_start_total'] == 8
-    assert pe['playbook_on_stats_total'] == 8
-    # Existing job-level annotation events in fixtures
-    assert pe['warning_total'] == 3
-    assert pe['deprecated_total'] == 2
-    # 32 playbook_on_* + 3 warning + 2 deprecated
-    assert pe['events_collected_total'] == 37
 
 
 def validate_execution_environments(result):

@@ -250,16 +250,9 @@ def _validate_job_host_summary(jobs_list, result):
 def _validate_events_modules(result):
     """Validate events modules section."""
     assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
-    assert 'rollup_period_warnings_total' not in result['statistics']
-    assert 'rollup_period_deprecations_total' not in result['statistics']
-
-    assert 'playbook_events' in result, 'Should have playbook_events when events are present'
-    pe = result['playbook_events']
-    assert pe['warning_total'] == 2
-    assert pe['deprecated_total'] == 1
-    assert pe['events_collected_total'] >= 3
-    assert 'event_data_size_total' in pe
-    assert pe['event_data_size_total'] >= 0
+    assert result['statistics']['rollup_period_warnings_total'] == 2
+    assert result['statistics']['rollup_period_deprecations_total'] == 1
+    assert 'playbook_events' not in result
 
     module_names = [m['module'] for m in result['module_stats'] if 'module' in m]
     for module_name in [

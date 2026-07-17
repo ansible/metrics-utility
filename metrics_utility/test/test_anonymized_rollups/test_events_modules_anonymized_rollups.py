@@ -677,12 +677,7 @@ def test_events_modules_aggregations_basic():
     assert result['warnings_total'] == 2, f'Expected 2 warnings, got {result["warnings_total"]}'
     assert result['deprecations_total'] == 1, f'Expected 1 deprecated event, got {result["deprecations_total"]}'
 
-    pe = result['playbook_events']
-    assert pe['warning_total'] == 2
-    assert pe['deprecated_total'] == 1
-    assert pe['events_collected_total'] == 3
-    assert pe['event_data_size_total'] == 30
-    assert pe['playbook_on_start_total'] == 0
+    assert 'playbook_events' not in result
 
     # event_data_size_total is sum of event_data_length for events in each group
     for module in result['module_stats']:
