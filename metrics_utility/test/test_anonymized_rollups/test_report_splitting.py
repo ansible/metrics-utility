@@ -282,6 +282,7 @@ def _create_jobs_by_installed_collections_versions():
         )
     return jobs_by_installed_collections_versions
 
+
 def _create_ansible_versions():
     """Create large ansible_versions array that will need to be split.
 

@@ -312,7 +312,6 @@ def _assert_runner_event_counters_populated(stat, label):
         assert stat[key] > 0, f'{label}.{key} should be > 0, got {stat[key]}'
 
 
-
 def _validate_role_stats(json_data):
     """Validate role_stats.
 
@@ -739,7 +738,6 @@ def _validate_jobs_by_controller_version(json_data, statistics):
         f'job_waiting_time_total_seconds should be 110s, got {ctrl_summary["job_waiting_time_total_seconds"]}'
     )
     assert ctrl_summary['jobs_never_started_total'] == 1
-
 
     # Required fields
     for field in [

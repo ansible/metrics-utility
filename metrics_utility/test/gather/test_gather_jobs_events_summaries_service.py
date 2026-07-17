@@ -1,6 +1,7 @@
 import csv
-from pathlib import Path
 import glob
+
+from pathlib import Path
 
 import pytest
 
@@ -416,9 +417,7 @@ def test_job_host_summary_service_command(cleanup_glob):
     validate_dataframe(df, jobs_host_summary_service_lines, jobs_host_summary_service_skip_columns)
 
 
-main_jobevent_service_lines = (
-    Path(__file__).resolve().parent.joinpath('fixtures', 'main_jobevent_service_expected.csv').read_text().splitlines()
-)
+main_jobevent_service_lines = Path(__file__).resolve().parent.joinpath('fixtures', 'main_jobevent_service_expected.csv').read_text().splitlines()
 
 
 main_jobevent_service_skip_columns = [
