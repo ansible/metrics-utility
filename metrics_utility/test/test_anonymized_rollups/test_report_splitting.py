@@ -33,8 +33,6 @@ def _create_statistics_dict(num_modules, num_jobs):
     return {
         'rollup_period_modules_total': num_modules,
         'rollup_period_collected_events_total': 5000,
-        'rollup_period_warnings_total': 10,
-        'rollup_period_deprecations_total': 5,
         'rollup_period_playbooks_total': 50,
         'rollup_period_execution_environments_total': 20,
         'rollup_period_EE_default_total': 10,

@@ -676,6 +676,12 @@ def test_events_modules_aggregations_basic():
     assert result['warnings_total'] == 2, f'Expected 2 warnings, got {result["warnings_total"]}'
     assert result['deprecations_total'] == 1, f'Expected 1 deprecated event, got {result["deprecations_total"]}'
 
+    pe = result['playbook_events']
+    assert pe['warning_total'] == 2
+    assert pe['deprecated_total'] == 1
+    assert pe['events_collected_total'] == 3
+    assert pe['playbook_on_start_total'] == 0
+
 
 def test_base_renames_module_name_and_collection_name():
     """base() renames module_name->module and collection_name->collection in all stats lists."""

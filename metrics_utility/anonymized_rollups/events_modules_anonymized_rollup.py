@@ -42,11 +42,28 @@ _RUNNER_EVENTS = frozenset(
         'runner_item_on_unreachable',
     ]
 )
-_ANNOTATION_EVENTS = frozenset(['warning', 'deprecated'])
-# Only runner events reach the per-module groupby.  Annotation events
-# (warning/deprecated) are counted separately in _count_initial_statistics
-# BEFORE filtering, so they never need to pass through the pipeline.
-_RELEVANT_EVENTS = _RUNNER_EVENTS
+# Non-module events aggregated into a single playbook_events group.
+# Order is stable for deterministic JSON key ordering in empty/zero templates.
+_PLAYBOOK_EVENT_TYPES = (
+    'playbook_on_start',
+    'playbook_on_play_start',
+    'playbook_on_task_start',
+    'playbook_on_stats',
+    'playbook_on_notify',
+    'playbook_on_include',
+    'playbook_on_no_hosts_matched',
+    'playbook_on_no_hosts_remaining',
+    'playbook_on_vars_prompt',
+    'playbook_on_setup',
+    'playbook_on_import_for_host',
+    'playbook_on_not_import_for_host',
+    'warning',
+    'deprecated',
+)
+_PLAYBOOK_EVENTS = frozenset(_PLAYBOOK_EVENT_TYPES)
+# Runner events reach the per-module groupby.  Playbook/annotation events are
+# counted separately into the single playbook_events object.
+_RELEVANT_EVENTS = _RUNNER_EVENTS | _PLAYBOOK_EVENTS
 
 
 def _normalize_stats_item(item: dict) -> None:
@@ -135,6 +152,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     For a loop with partial item failures the task-level runner_on_failed and
     the item-level runner_item_on_failed are in separate counters, so consumers
     can reason about them independently.
+
+    Non-module events (playbook_on_* / warning / deprecated) are counted once
+    into the single playbook_events object — one ``<event>_total`` counter per
+    event type, plus events_collected_total.
     """
 
     # Numeric columns summed when merging batches
@@ -286,6 +307,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': module_stats,
             'collection_stats': collection_stats,
             'role_stats': role_stats,
+            'playbook_events': self._merge_playbook_events(data_all.get('playbook_events'), data_new.get('playbook_events')),
             'unique_modules': self._merge_unique_modules(data_all, data_new),
             'modules_per_playbook': self._merge_modules_per_playbook(data_all, data_new),
         }
@@ -293,6 +315,37 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # ------------------------------------------------------------------
     # Preparation helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _empty_playbook_events():
+        """Return a zeroed playbook_events counter dict."""
+        result = {f'{event}_total': 0 for event in _PLAYBOOK_EVENT_TYPES}
+        result['events_collected_total'] = 0
+        return result
+
+    def _merge_playbook_events(self, data_all, data_new):
+        """Sum playbook_events counters from two batches."""
+        merged = self._empty_playbook_events()
+        for source in (data_all or {}, data_new or {}):
+            for key in merged:
+                merged[key] += source.get(key, 0) or 0
+        return merged
+
+    def _compute_playbook_events(self, dataframe):
+        """Count non-module event types into a single playbook_events object."""
+        result = self._empty_playbook_events()
+        if dataframe is None or dataframe.empty or 'event' not in dataframe.columns:
+            return result
+
+        playbook_df = dataframe[dataframe['event'].isin(_PLAYBOOK_EVENTS)]
+        if playbook_df.empty:
+            return result
+
+        counts = playbook_df['event'].value_counts()
+        for event in _PLAYBOOK_EVENT_TYPES:
+            result[f'{event}_total'] = int(counts.get(event, 0))
+        result['events_collected_total'] = int(counts.sum())
+        return result
 
     def _count_initial_statistics(self, dataframe):
         """Count all events, warnings, and deprecations before filtering."""
@@ -307,9 +360,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         return collected_events_total, warnings_total, deprecations_total
 
-    def _filter_relevant_events(self, dataframe):
-        """Filter dataframe to only the event types tracked by this rollup."""
-        return dataframe[dataframe['event'].isin(_RELEVANT_EVENTS)]
+    def _filter_runner_events(self, dataframe):
+        """Filter dataframe to runner event types used for module/collection/role stats."""
+        return dataframe[dataframe['event'].isin(_RUNNER_EVENTS)]
 
     def _prepare_basic_columns(self, dataframe):
         """Prepare basic columns: ignore_errors, datetime, module_name, role, job_failed."""
@@ -565,8 +618,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe = self._convert_id_columns_to_strings(dataframe)
 
         collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
+        playbook_events = self._compute_playbook_events(dataframe)
 
-        dataframe = self._filter_relevant_events(dataframe)
+        # Module/collection/role path uses runner events only.
+        dataframe = self._filter_runner_events(dataframe)
         dataframe = self._prepare_basic_columns(dataframe)
         dataframe = self._extract_collection_info(dataframe)
         dataframe = self._compute_job_metrics(dataframe)
@@ -582,6 +637,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     'module_stats': [],
                     'collection_stats': [],
                     'role_stats': [],
+                    'playbook_events': playbook_events,
                     'unique_modules': [],
                     'modules_per_playbook': {},
                 }
@@ -603,6 +659,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': module_stats_json,
             'collection_stats': collection_stats_json,
             'role_stats': role_stats_json,
+            'playbook_events': playbook_events,
             'unique_modules': unique_modules,
             'modules_per_playbook': modules_per_playbook,
         }
@@ -619,6 +676,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             module_stats                     - per-module stats (see _NUMERIC_COLS)
             collection_stats                 - per-collection stats
             role_stats                       - per-role stats
+            playbook_events                  - single object of non-module event-type counts
             collected_events_total           - all raw events before filtering
             warnings_total                   - top-level warning events
             deprecations_total               - top-level deprecated events
@@ -627,7 +685,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """
         if data is None:
             return {
-                'json': {'collected_events_total': 0, 'warnings_total': 0, 'deprecations_total': 0},
+                'json': {
+                    'collected_events_total': 0,
+                    'warnings_total': 0,
+                    'deprecations_total': 0,
+                    'playbook_events': self._empty_playbook_events(),
+                },
             }
 
         collected_events_total = data.get('collected_events_total', 0)
@@ -636,6 +699,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = data.get('module_stats', [])
         collection_stats = data.get('collection_stats', [])
         role_stats = data.get('role_stats', [])
+        playbook_events = data.get('playbook_events') or self._empty_playbook_events()
         unique_modules = data.get('unique_modules', [])
         modules_per_playbook = data.get('modules_per_playbook', {})
 
@@ -645,6 +709,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     'collected_events_total': collected_events_total,
                     'warnings_total': warnings_total,
                     'deprecations_total': deprecations_total,
+                    'playbook_events': playbook_events,
                 },
             }
 
@@ -664,6 +729,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'module_stats': module_stats,
             'collection_stats': collection_stats,
             'role_stats': role_stats,
+            'playbook_events': playbook_events,
             'collected_events_total': collected_events_total,
             'warnings_total': warnings_total,
             'deprecations_total': deprecations_total,

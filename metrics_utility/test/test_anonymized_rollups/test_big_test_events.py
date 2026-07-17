@@ -14,12 +14,13 @@ Event types exercised:
   runner_on_unreachable           runner_item_on_unreachable
   runner_on_async_ok              runner_on_skipped  (excluded by design)
   runner_on_async_failed
+  playbook_on_start / play_start / task_start / stats
   warning  (top-level, no module)
   deprecated  (top-level, no module)
   warnings / deprecations fields from event_data.res (module-level annotations)
 
 Expected totals after processing:
-  collected_events_total : 47
+  collected_events_total : 58  (49 prior rows + 9 playbook_on_* events)
   warnings_total         : 2   (top-level warning events)
   deprecations_total     : 1   (top-level deprecated event)
 """
@@ -30,11 +31,127 @@ import pytest
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 
 
+def _playbook_event(job_id, event, *, playbook, job_created, job_started, job_finished, job_failed, ansible_version):
+    """Build a non-module playbook/lifecycle event row."""
+    return {
+        'job_id': job_id,
+        'playbook': playbook,
+        'host_id': None,
+        'task_uuid': None,
+        'event': event,
+        'task_action': None,
+        'resolved_action': None,
+        'resolved_role': None,
+        'role': None,
+        'job_created': job_created,
+        'job_started': job_started,
+        'job_finished': job_finished,
+        'job_failed': job_failed,
+        'ignore_errors': False,
+        'warnings': None,
+        'deprecations': None,
+        'ansible_version': ansible_version,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Fixture data – flat list of DB rows as returned by main_jobevent_service
 # ---------------------------------------------------------------------------
 
 _EVENTS = [
+    # =========================================================================
+    # Playbook lifecycle events (non-module) – counted in playbook_events
+    # =========================================================================
+    _playbook_event(
+        1,
+        'playbook_on_start',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_play_start',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_task_start',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        1,
+        'playbook_on_stats',
+        playbook='site.yml',
+        job_created='2024-03-01 10:00:00+00',
+        job_started='2024-03-01 10:00:10+00',
+        job_finished='2024-03-01 10:15:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        2,
+        'playbook_on_start',
+        playbook='db.yml',
+        job_created='2024-03-01 11:00:00+00',
+        job_started='2024-03-01 11:00:10+00',
+        job_finished='2024-03-01 11:20:00+00',
+        job_failed=False,
+        ansible_version='2.17.0',
+    ),
+    _playbook_event(
+        2,
+        'playbook_on_play_start',
+        playbook='db.yml',
+        job_created='2024-03-01 11:00:00+00',
+        job_started='2024-03-01 11:00:10+00',
+        job_finished='2024-03-01 11:20:00+00',
+        job_failed=False,
+        ansible_version='2.17.0',
+    ),
+    _playbook_event(
+        2,
+        'playbook_on_stats',
+        playbook='db.yml',
+        job_created='2024-03-01 11:00:00+00',
+        job_started='2024-03-01 11:00:10+00',
+        job_finished='2024-03-01 11:20:00+00',
+        job_failed=False,
+        ansible_version='2.17.0',
+    ),
+    _playbook_event(
+        3,
+        'playbook_on_start',
+        playbook='cleanup.yml',
+        job_created='2024-03-01 12:00:00+00',
+        job_started='2024-03-01 12:00:10+00',
+        job_finished='2024-03-01 12:05:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
+    _playbook_event(
+        3,
+        'playbook_on_stats',
+        playbook='cleanup.yml',
+        job_created='2024-03-01 12:00:00+00',
+        job_started='2024-03-01 12:00:10+00',
+        job_finished='2024-03-01 12:05:00+00',
+        job_failed=True,
+        ansible_version='2.16.0',
+    ),
     # =========================================================================
     # Job 1 – site.yml (failed)
     # =========================================================================
@@ -1068,12 +1185,26 @@ def result(request):
 
 
 def test_collected_events_total(result):
-    assert result['collected_events_total'] == 49  # all raw rows before any filtering
+    assert result['collected_events_total'] == 58  # all raw rows before any filtering
 
 
 def test_top_level_warnings_and_deprecations(result):
     assert result['warnings_total'] == 2  # job1 + job3 top-level warning events
     assert result['deprecations_total'] == 1  # job2 top-level deprecated event
+
+
+def test_playbook_events(result):
+    pe = result['playbook_events']
+    assert pe['playbook_on_start_total'] == 3
+    assert pe['playbook_on_play_start_total'] == 2
+    assert pe['playbook_on_task_start_total'] == 1
+    assert pe['playbook_on_stats_total'] == 3
+    assert pe['warning_total'] == 2
+    assert pe['deprecated_total'] == 1
+    assert pe['events_collected_total'] == 12  # 9 playbook_on_* + 2 warning + 1 deprecated
+    # Unused playbook event types stay at zero
+    assert pe['playbook_on_notify_total'] == 0
+    assert pe['playbook_on_include_total'] == 0
 
 
 def test_no_hosts_automated_total_in_events_output(result):

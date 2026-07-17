@@ -334,8 +334,6 @@ def _build_statistics(
                 # from events_modules
                 'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
                 'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
-                'rollup_period_warnings_total': events_modules.get('warnings_total'),
-                'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
                 'rollup_period_playbooks_total': playbooks_total,
             }
         )
@@ -554,6 +552,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
         flattened['module_stats'] = module_stats
         flattened['collection_stats'] = collection_stats
         flattened['role_stats'] = role_stats
+        flattened['playbook_events'] = events_modules.get('playbook_events') or {}
 
     return flattened
 

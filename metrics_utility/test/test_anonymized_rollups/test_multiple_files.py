@@ -250,14 +250,14 @@ def _validate_job_host_summary(jobs_list, result):
 def _validate_events_modules(result):
     """Validate events modules section."""
     assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
-    assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
-    assert result['statistics']['rollup_period_warnings_total'] == 2, (
-        f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'
-    )
-    assert 'rollup_period_deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
-    assert result['statistics']['rollup_period_deprecations_total'] == 1, (
-        f'Expected 1 deprecated event, got {result["statistics"]["rollup_period_deprecations_total"]}'
-    )
+    assert 'rollup_period_warnings_total' not in result['statistics']
+    assert 'rollup_period_deprecations_total' not in result['statistics']
+
+    assert 'playbook_events' in result, 'Should have playbook_events when events are present'
+    pe = result['playbook_events']
+    assert pe['warning_total'] == 2
+    assert pe['deprecated_total'] == 1
+    assert pe['events_collected_total'] >= 3
 
     module_names = [m['module'] for m in result['module_stats'] if 'module' in m]
     for module_name in [
@@ -772,6 +772,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Event-related fields should be missing when there are no events
     assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
     assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
+    assert 'playbook_events' not in result, 'playbook_events should be missing when there are no events'
     assert 'jobs_by_installed_collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
@@ -875,6 +876,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Event-related arrays should be missing when there are no events
     assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
     assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
+    assert 'playbook_events' not in result, 'playbook_events should be missing when there are no events'
 
     # modules_used_per_playbook is computed but not included in final output
 

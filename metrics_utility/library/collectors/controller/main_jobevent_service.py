@@ -9,7 +9,7 @@ from ..util import DataframeOutput, collector
 _DEFAULT_JOB_LIMIT = 1_000
 _DEFAULT_ROW_LIMIT = 200_000
 
-_RELEVANT_EVENTS = [
+_RUNNER_EVENTS = [
     'runner_on_ok',
     'runner_on_async_ok',
     'runner_item_on_ok',
@@ -18,10 +18,27 @@ _RELEVANT_EVENTS = [
     'runner_item_on_failed',
     'runner_on_unreachable',
     'runner_item_on_unreachable',
-    # job annotations
+]
+
+# Non-module Ansible/Controller events (playbook lifecycle + job annotations)
+_PLAYBOOK_EVENTS = [
+    'playbook_on_start',
+    'playbook_on_play_start',
+    'playbook_on_task_start',
+    'playbook_on_stats',
+    'playbook_on_notify',
+    'playbook_on_include',
+    'playbook_on_no_hosts_matched',
+    'playbook_on_no_hosts_remaining',
+    'playbook_on_vars_prompt',
+    'playbook_on_setup',
+    'playbook_on_import_for_host',
+    'playbook_on_not_import_for_host',
     'warning',
     'deprecated',
 ]
+
+_RELEVANT_EVENTS = _RUNNER_EVENTS + _PLAYBOOK_EVENTS
 
 
 def _normalize_limit(value, default, name):

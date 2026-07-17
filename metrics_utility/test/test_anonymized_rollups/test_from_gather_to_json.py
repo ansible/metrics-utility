@@ -50,6 +50,11 @@ def _validate_top_level_structure(json_data):
     assert 'rollup_period_credential_types' in json_data, "Missing 'rollup_period_credential_types' at top level"
     assert 'module_stats' in json_data, "Missing 'module_stats' in json_data"
     assert 'collection_stats' in json_data, "Missing 'collection_stats' in json_data"
+    assert 'playbook_events' in json_data, "Missing 'playbook_events' in json_data"
+    assert isinstance(json_data['playbook_events'], dict), 'playbook_events should be a dict'
+    assert 'events_collected_total' in json_data['playbook_events']
+    assert 'warning_total' in json_data['playbook_events']
+    assert 'deprecated_total' in json_data['playbook_events']
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"

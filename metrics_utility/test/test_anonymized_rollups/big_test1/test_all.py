@@ -302,8 +302,8 @@ def validate_task_statistics(statistics):
 def validate_events_statistics(statistics):
     """Validate events statistics."""
     assert statistics['rollup_period_collected_events_total'] == 142
-    assert statistics['rollup_period_warnings_total'] == 3
-    assert statistics['rollup_period_deprecations_total'] == 2
+    assert 'rollup_period_warnings_total' not in statistics
+    assert 'rollup_period_deprecations_total' not in statistics
 
 
 def validate_jobs(result):

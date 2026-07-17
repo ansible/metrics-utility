@@ -307,7 +307,7 @@ def cli_job_host_summary_service(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_jobevent_service', '1.5', format='csv', fnc_slicing=daily_slicing)
+@register('main_jobevent_service', '1.6', format='csv', fnc_slicing=daily_slicing)
 def cli_main_jobevent_service(since, until, output):
     if 'main_jobevent_service' not in get_optional_collectors():
         return None
