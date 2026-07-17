@@ -1132,7 +1132,7 @@ def test_ansible_builtin_copy(modules):
     assert m['runner_item_on_unreachable_total'] == 0
     assert m['warnings_total'] == 1  # h3 module-level warning
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 6
+    assert m['events_collected_total'] == 6
     # host coverage: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
 
 
@@ -1156,7 +1156,7 @@ def test_ansible_builtin_package(modules):
     assert m['runner_item_on_unreachable_total'] == 1  # h2 item unreachable
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 12
+    assert m['events_collected_total'] == 12
 
 
 def test_ansible_posix_firewalld(modules):
@@ -1174,7 +1174,7 @@ def test_ansible_posix_firewalld(modules):
     assert m['runner_item_on_failed_ignored_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 1  # h3 module-level deprecation
-    assert m['events_processed_total'] == 3  # h5 runner_on_skipped excluded
+    assert m['events_collected_total'] == 3  # h5 runner_on_skipped excluded
 
 
 def test_ansible_builtin_systemd(modules):
@@ -1189,7 +1189,7 @@ def test_ansible_builtin_systemd(modules):
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 2
+    assert m['events_collected_total'] == 2
 
 
 def test_community_mongodb_mongodb_replicaset(modules):
@@ -1208,7 +1208,7 @@ def test_community_mongodb_mongodb_replicaset(modules):
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 2
+    assert m['events_collected_total'] == 2
 
 
 def test_community_general_ini_file(modules):
@@ -1227,7 +1227,7 @@ def test_community_general_ini_file(modules):
     assert m['runner_item_on_unreachable_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 6
+    assert m['events_collected_total'] == 6
 
 
 def test_ansible_builtin_template(modules):
@@ -1242,7 +1242,7 @@ def test_ansible_builtin_template(modules):
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 2
+    assert m['events_collected_total'] == 2
 
 
 def test_ansible_builtin_file(modules):
@@ -1260,7 +1260,7 @@ def test_ansible_builtin_file(modules):
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 3
+    assert m['events_collected_total'] == 3
 
 
 def test_ansible_builtin_debug(modules):
@@ -1275,7 +1275,7 @@ def test_ansible_builtin_debug(modules):
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 2
+    assert m['events_collected_total'] == 2
 
 
 def test_community_general_yum(modules):
@@ -1294,7 +1294,7 @@ def test_community_general_yum(modules):
     assert m['runner_item_on_unreachable_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['events_processed_total'] == 6  # h4 runner_on_skipped excluded
+    assert m['events_collected_total'] == 6  # h4 runner_on_skipped excluded
 
 
 # ---------------------------------------------------------------------------
@@ -1332,7 +1332,7 @@ def test_ansible_builtin_collection(collections):
     assert c['runner_item_on_unreachable_total'] == 1  # 0+1+0+0+0
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
-    assert c['events_processed_total'] == 27  # 6+12+2+2+3+2(debug)
+    assert c['events_collected_total'] == 27  # 6+12+2+2+3+2(debug)
 
 
 def test_ansible_posix_collection(collections):
@@ -1349,7 +1349,7 @@ def test_ansible_posix_collection(collections):
     assert c['runner_item_on_ok_total'] == 0
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 1
-    assert c['events_processed_total'] == 3
+    assert c['events_collected_total'] == 3
 
 
 def test_community_mongodb_collection(collections):
@@ -1365,7 +1365,7 @@ def test_community_mongodb_collection(collections):
     assert c['runner_item_on_ok_total'] == 0
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
-    assert c['events_processed_total'] == 2
+    assert c['events_collected_total'] == 2
 
 
 def test_community_general_collection(collections):
@@ -1387,7 +1387,7 @@ def test_community_general_collection(collections):
     assert c['runner_item_on_unreachable_total'] == 0
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
-    assert c['events_processed_total'] == 12  # 6+6
+    assert c['events_collected_total'] == 12  # 6+6
 
 
 # ---------------------------------------------------------------------------
@@ -1420,7 +1420,7 @@ def test_role_web(roles):
     assert r['runner_item_on_ok_total'] == 0
     assert r['warnings_total'] == 1
     assert r['deprecations_total'] == 0
-    assert r['events_processed_total'] == 6
+    assert r['events_collected_total'] == 6
     # copy task: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
 
 
@@ -1437,7 +1437,7 @@ def test_role_firewall(roles):
     assert r['runner_item_on_ok_total'] == 0
     assert r['warnings_total'] == 0
     assert r['deprecations_total'] == 1
-    assert r['events_processed_total'] == 3
+    assert r['events_collected_total'] == 3
     # firewalld task: h1, h2, h3 → 3 distinct hosts
 
 
@@ -1452,4 +1452,4 @@ def test_role_local_cleanup(roles):
     assert r['jobs_failed_total'] == 1
     assert r['runner_on_ok_total'] == 2  # h1, h6
     assert r['runner_on_failed_total'] == 0
-    assert r['events_processed_total'] == 2
+    assert r['events_collected_total'] == 2

@@ -283,7 +283,7 @@ def _validate_events_modules(result):
     assert win_copy['runner_on_ok_total'] == 3  # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
     assert win_copy['runner_on_failed_total'] == 2  # Job1/H1 failed, Job4/H5 failed
     assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
-    assert win_copy['events_processed_total'] == 5
+    assert win_copy['events_collected_total'] == 5
 
     yum_stats = [m for m in module_stats if m.get('module') == 'community.general.yum']
     assert len(yum_stats) == 1, 'Should have exactly one entry for community.general.yum'
@@ -293,7 +293,7 @@ def _validate_events_modules(result):
     assert yum['jobs_never_started_total'] == 1
     assert yum['runner_on_failed_total'] == 2  # Job1/H2, Job5/H9
     assert yum['runner_on_async_failed_total'] == 1  # Job2/H2
-    assert yum['events_processed_total'] == 3
+    assert yum['events_collected_total'] == 3
 
     collection_stats = result['collection_stats']
     assert isinstance(collection_stats, list), 'collection_stats should be a list'
@@ -306,7 +306,7 @@ def _validate_events_modules(result):
     assert windows_coll['jobs_total'] == 3
     assert windows_coll['runner_on_ok_total'] == 3
     assert windows_coll['runner_on_failed_total'] == 2
-    assert windows_coll['events_processed_total'] == 5
+    assert windows_coll['events_collected_total'] == 5
 
     assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
 

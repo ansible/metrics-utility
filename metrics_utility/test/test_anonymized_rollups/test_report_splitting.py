@@ -79,7 +79,7 @@ def _create_module_stats(num_modules):
                 'collection_source': collection_source,
                 'collection_name': collection_name,
                 'jobs_total': 10 + (i % 20),
-                'processed_events_total': 50 + (i % 100),
+                'events_collected_total': 50 + (i % 100),
                 'ansible_versions': ansible_versions,
                 'tasks_ok_total': 100 + (i % 50),
                 'tasks_failed_total': i % 10,
@@ -99,7 +99,7 @@ def _create_collection_stats(num_collections):
                 'collection_name': f'ansible.collection_{i:03d}',
                 'collection_source': sources[i % 4],
                 'jobs_total': 20 + (i % 30),
-                'processed_events_total': 200 + (i % 200),
+                'events_collected_total': 200 + (i % 200),
                 'ansible_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
             }
         )
@@ -118,7 +118,7 @@ def _create_role_stats():
                 'collection_source': sources[i % 2],
                 'jobs_total': 5 + (i % 15),
                 'tasks_total': 20 + (i % 30),
-                'processed_events_total': 100 + (i % 100),
+                'events_collected_total': 100 + (i % 100),
             }
         )
     return role_stats

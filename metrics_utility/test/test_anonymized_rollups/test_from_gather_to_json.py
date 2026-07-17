@@ -153,7 +153,7 @@ def _validate_module_stats_structure(json_data):
         assert 'collection_source' in module_stat
         assert 'collection' in module_stat
         assert 'jobs_total' in module_stat
-        assert 'events_processed_total' in module_stat
+        assert 'events_collected_total' in module_stat
         assert 'ansible_versions' in module_stat, 'Each module_stat should have ansible_versions field'
         assert isinstance(module_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -166,7 +166,7 @@ def _validate_collection_stats_structure(json_data):
         assert 'collection' in collection_stat
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
-        assert 'events_processed_total' in collection_stat
+        assert 'events_collected_total' in collection_stat
         assert 'ansible_versions' in collection_stat, 'Each collection_stat should have ansible_versions field'
         assert isinstance(collection_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -246,7 +246,7 @@ def _validate_module_stats_values(json_data):
     assert a10_module['jobs_total'] == 3, 'Should have 3 jobs using a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['runner_on_ok_total'] == 6, 'Should have 6 ok events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
     assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['events_processed_total'] == 6, 'Should have 6 processed events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['events_collected_total'] == 6, 'Should have 6 collected events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
     assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
     assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
     assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
@@ -269,7 +269,7 @@ def _validate_collection_stats_values(json_data):
     for version in a10_collection['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
     assert a10_collection['runner_on_ok_total'] == 6, 'a10.acos_axapi collection should have 6 ok events'
-    assert a10_collection['events_processed_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
+    assert a10_collection['events_collected_total'] == 6, 'a10.acos_axapi collection should have 6 collected events (3 jobs × 2 hosts)'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
@@ -299,7 +299,7 @@ def _validate_role_stats(json_data):
     assert a10_role['collection_source'] == 'community', f"Expected collection_source 'community', got {a10_role['collection_source']}"
     assert a10_role['jobs_total'] == 3, f'Expected 3 jobs for a10.acos_axapi.device_config, got {a10_role["jobs_total"]}'
     assert a10_role['runner_on_ok_total'] == 6, f'Expected 6 ok events (3 jobs × 2 hosts), got {a10_role["runner_on_ok_total"]}'
-    assert a10_role['events_processed_total'] == 6, f'Expected 6 processed events, got {a10_role["events_processed_total"]}'
+    assert a10_role['events_collected_total'] == 6, f'Expected 6 collected events, got {a10_role["events_collected_total"]}'
 
     # redhat.rhel_system_roles.timesync (certified)
     rhel_role = roles_dict.get('redhat.rhel_system_roles.timesync')
@@ -308,7 +308,7 @@ def _validate_role_stats(json_data):
     assert rhel_role['collection_source'] == 'certified', f"Expected collection_source 'certified', got {rhel_role['collection_source']}"
     assert rhel_role['jobs_total'] == 3, f'Expected 3 jobs for redhat.rhel_system_roles.timesync, got {rhel_role["jobs_total"]}'
     assert rhel_role['runner_on_ok_total'] == 6, f'Expected 6 ok events (3 jobs × 2 hosts), got {rhel_role["runner_on_ok_total"]}'
-    assert rhel_role['events_processed_total'] == 6, f'Expected 6 processed events, got {rhel_role["events_processed_total"]}'
+    assert rhel_role['events_collected_total'] == 6, f'Expected 6 collected events, got {rhel_role["events_collected_total"]}'
 
     # No Custom roles in final output (anonymize_data removes them entirely)
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
@@ -495,7 +495,7 @@ def _validate_module_stats_values_multi_hour(json_data):
     # 6 jobs × 2 hosts (base) + 3 role events × 2 hosts (a10.acos_axapi.device_config role, 10:00h) = 18 ok events
     assert a10_module['runner_on_ok_total'] == 18, 'Should have 18 ok events for a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['events_processed_total'] == 18, 'Should have 18 processed events for a10.acos_axapi.a10_slb_virtual_server'
+    assert a10_module['events_collected_total'] == 18, 'Should have 18 collected events for a10.acos_axapi.a10_slb_virtual_server'
     assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
     assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
     assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
@@ -520,7 +520,7 @@ def _validate_collection_stats_values_multi_hour(json_data):
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
     # 6 jobs × 2 hosts (base) + 3 role events × 2 hosts (a10.acos_axapi.device_config role, 10:00h) = 18 ok events
     assert a10_collection['runner_on_ok_total'] == 18, 'a10.acos_axapi collection should have 18 ok events'
-    assert a10_collection['events_processed_total'] == 18, 'a10.acos_axapi collection should have 18 processed events'
+    assert a10_collection['events_collected_total'] == 18, 'a10.acos_axapi collection should have 18 collected events'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
