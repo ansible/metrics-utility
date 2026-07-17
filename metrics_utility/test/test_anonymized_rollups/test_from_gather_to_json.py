@@ -53,6 +53,7 @@ def _validate_top_level_structure(json_data):
     assert 'playbook_events' in json_data, "Missing 'playbook_events' in json_data"
     assert isinstance(json_data['playbook_events'], dict), 'playbook_events should be a dict'
     assert 'events_collected_total' in json_data['playbook_events']
+    assert 'event_data_size_total' in json_data['playbook_events']
     assert 'warning_total' in json_data['playbook_events']
     assert 'deprecated_total' in json_data['playbook_events']
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
@@ -159,6 +160,9 @@ def _validate_module_stats_structure(json_data):
         assert 'collection' in module_stat
         assert 'jobs_total' in module_stat
         assert 'events_collected_total' in module_stat
+        assert 'event_data_size_total' in module_stat
+        assert isinstance(module_stat['event_data_size_total'], (int, float))
+        assert module_stat['event_data_size_total'] > 0
         assert 'ansible_versions' in module_stat, 'Each module_stat should have ansible_versions field'
         assert isinstance(module_stat['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -172,6 +176,9 @@ def _validate_collection_stats_structure(json_data):
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
         assert 'events_collected_total' in collection_stat
+        assert 'event_data_size_total' in collection_stat
+        assert isinstance(collection_stat['event_data_size_total'], (int, float))
+        assert collection_stat['event_data_size_total'] > 0
         assert 'ansible_versions' in collection_stat, 'Each collection_stat should have ansible_versions field'
         assert isinstance(collection_stat['ansible_versions'], list), 'ansible_versions should be a list'
 

@@ -258,6 +258,8 @@ def _validate_events_modules(result):
     assert pe['warning_total'] == 2
     assert pe['deprecated_total'] == 1
     assert pe['events_collected_total'] >= 3
+    assert 'event_data_size_total' in pe
+    assert pe['event_data_size_total'] >= 0
 
     module_names = [m['module'] for m in result['module_stats'] if 'module' in m]
     for module_name in [

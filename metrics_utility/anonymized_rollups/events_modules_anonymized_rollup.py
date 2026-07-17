@@ -155,7 +155,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     Non-module events (playbook_on_* / warning / deprecated) are counted once
     into the single playbook_events object — one ``<event>_total`` counter per
-    event type, plus events_collected_total.
+    event type, plus events_collected_total and event_data_size_total.
     """
 
     # Numeric columns summed when merging batches
@@ -181,6 +181,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'warnings_total',
         'deprecations_total',
         'events_collected_total',
+        'event_data_size_total',
     ]
     _LIST_COLS = ['ansible_versions']
 
@@ -321,6 +322,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Return a zeroed playbook_events counter dict."""
         result = {f'{event}_total': 0 for event in _PLAYBOOK_EVENT_TYPES}
         result['events_collected_total'] = 0
+        result['event_data_size_total'] = 0
         return result
 
     def _merge_playbook_events(self, data_all, data_new):
@@ -330,6 +332,15 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             for key in merged:
                 merged[key] += source.get(key, 0) or 0
         return merged
+
+    @staticmethod
+    def _ensure_event_data_length(dataframe):
+        """Ensure event_data_length is a numeric column (bytes); missing values become 0."""
+        if dataframe is None or dataframe.empty:
+            return dataframe
+        if 'event_data_length' not in dataframe.columns:
+            return dataframe.assign(event_data_length=0)
+        return dataframe.assign(event_data_length=pd.to_numeric(dataframe['event_data_length'], errors='coerce').fillna(0))
 
     def _compute_playbook_events(self, dataframe):
         """Count non-module event types into a single playbook_events object."""
@@ -345,6 +356,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         for event in _PLAYBOOK_EVENT_TYPES:
             result[f'{event}_total'] = int(counts.get(event, 0))
         result['events_collected_total'] = int(counts.sum())
+        result['event_data_size_total'] = int(playbook_df['event_data_length'].sum())
         return result
 
     def _count_initial_statistics(self, dataframe):
@@ -436,6 +448,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         if 'ansible_version' not in dataframe.columns:
             dataframe['ansible_version'] = None
+        if 'event_data_length' not in dataframe.columns:
+            dataframe['event_data_length'] = 0
 
         columns_to_keep = [
             'job_id',
@@ -453,6 +467,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'is_warning',
             'is_deprecation',
             'ansible_version',
+            'event_data_length',
         ]
         return dataframe[columns_to_keep]
 
@@ -524,6 +539,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
             'events_collected_total': ('event', 'size'),
+            'event_data_size_total': ('event_data_length', 'sum'),
             'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
         }
 
@@ -616,6 +632,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def prepare(self, dataframe):
         """Prepare dataframe for aggregation by filtering, transforming, and computing statistics."""
         dataframe = self._convert_id_columns_to_strings(dataframe)
+        dataframe = self._ensure_event_data_length(dataframe)
 
         collected_events_total, warnings_total, deprecations_total = self._count_initial_statistics(dataframe)
         playbook_events = self._compute_playbook_events(dataframe)

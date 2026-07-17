@@ -1144,6 +1144,8 @@ def _prepare_events(rollup, events):
     df = pd.DataFrame(events)
     for col in ['host_id', 'job_id', 'playbook']:
         df[col] = df[col].astype(str).replace('None', None)
+    # Fixed byte size per event so event_data_size_total == 10 * events_collected_total
+    df['event_data_length'] = 10
     return rollup.prepare(df)
 
 
@@ -1202,6 +1204,7 @@ def test_playbook_events(result):
     assert pe['warning_total'] == 2
     assert pe['deprecated_total'] == 1
     assert pe['events_collected_total'] == 12  # 9 playbook_on_* + 2 warning + 1 deprecated
+    assert pe['event_data_size_total'] == 120  # 12 events × 10 bytes
     # Unused playbook event types stay at zero
     assert pe['playbook_on_notify_total'] == 0
     assert pe['playbook_on_include_total'] == 0
@@ -1264,6 +1267,7 @@ def test_ansible_builtin_copy(modules):
     assert m['warnings_total'] == 1  # h3 module-level warning
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 6
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
     # host coverage: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
 
 
@@ -1288,6 +1292,7 @@ def test_ansible_builtin_package(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 12
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_ansible_posix_firewalld(modules):
@@ -1306,6 +1311,7 @@ def test_ansible_posix_firewalld(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 1  # h3 module-level deprecation
     assert m['events_collected_total'] == 3  # h5 runner_on_skipped excluded
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_ansible_builtin_systemd(modules):
@@ -1321,6 +1327,7 @@ def test_ansible_builtin_systemd(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 2
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_community_mongodb_mongodb_replicaset(modules):
@@ -1340,6 +1347,7 @@ def test_community_mongodb_mongodb_replicaset(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 2
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_community_general_ini_file(modules):
@@ -1359,6 +1367,7 @@ def test_community_general_ini_file(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 6
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_ansible_builtin_template(modules):
@@ -1374,6 +1383,7 @@ def test_ansible_builtin_template(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 2
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_ansible_builtin_file(modules):
@@ -1392,6 +1402,7 @@ def test_ansible_builtin_file(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 3
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_ansible_builtin_debug(modules):
@@ -1407,6 +1418,7 @@ def test_ansible_builtin_debug(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 2
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 def test_community_general_yum(modules):
@@ -1426,6 +1438,7 @@ def test_community_general_yum(modules):
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['events_collected_total'] == 6  # h4 runner_on_skipped excluded
+    assert m['event_data_size_total'] == 10 * m['events_collected_total']
 
 
 # ---------------------------------------------------------------------------
@@ -1464,6 +1477,7 @@ def test_ansible_builtin_collection(collections):
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
     assert c['events_collected_total'] == 27  # 6+12+2+2+3+2(debug)
+    assert c['event_data_size_total'] == 10 * c['events_collected_total']
 
 
 def test_ansible_posix_collection(collections):
@@ -1481,6 +1495,7 @@ def test_ansible_posix_collection(collections):
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 1
     assert c['events_collected_total'] == 3
+    assert c['event_data_size_total'] == 10 * c['events_collected_total']
 
 
 def test_community_mongodb_collection(collections):
@@ -1497,6 +1512,7 @@ def test_community_mongodb_collection(collections):
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
     assert c['events_collected_total'] == 2
+    assert c['event_data_size_total'] == 10 * c['events_collected_total']
 
 
 def test_community_general_collection(collections):
@@ -1519,6 +1535,7 @@ def test_community_general_collection(collections):
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
     assert c['events_collected_total'] == 12  # 6+6
+    assert c['event_data_size_total'] == 10 * c['events_collected_total']
 
 
 # ---------------------------------------------------------------------------
@@ -1552,6 +1569,7 @@ def test_role_web(roles):
     assert r['warnings_total'] == 1
     assert r['deprecations_total'] == 0
     assert r['events_collected_total'] == 6
+    assert r['event_data_size_total'] == 10 * r['events_collected_total']
     # copy task: h1, h2 (two events), h3, h4, h5 → 5 distinct hosts
 
 
@@ -1569,6 +1587,7 @@ def test_role_firewall(roles):
     assert r['warnings_total'] == 0
     assert r['deprecations_total'] == 1
     assert r['events_collected_total'] == 3
+    assert r['event_data_size_total'] == 10 * r['events_collected_total']
     # firewalld task: h1, h2, h3 → 3 distinct hosts
 
 
@@ -1584,3 +1603,4 @@ def test_role_local_cleanup(roles):
     assert r['runner_on_ok_total'] == 2  # h1, h6
     assert r['runner_on_failed_total'] == 0
     assert r['events_collected_total'] == 2
+    assert r['event_data_size_total'] == 10 * r['events_collected_total']

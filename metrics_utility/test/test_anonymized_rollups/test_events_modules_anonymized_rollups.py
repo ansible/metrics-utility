@@ -418,6 +418,7 @@ def test_events_modules_aggregations_basic():
         df[col] = df[col].astype(str).replace('None', None)
     # provide default event_data for ignore_errors lookup in prepare_data
     df['event_data'] = [{}] * len(df)
+    df['event_data_length'] = 10
     events_modules_anonymized_rollup = EventModulesAnonymizedRollup()
     prepared = events_modules_anonymized_rollup.prepare(df)
     result = events_modules_anonymized_rollup.base(prepared)
@@ -680,7 +681,16 @@ def test_events_modules_aggregations_basic():
     assert pe['warning_total'] == 2
     assert pe['deprecated_total'] == 1
     assert pe['events_collected_total'] == 3
+    assert pe['event_data_size_total'] == 30
     assert pe['playbook_on_start_total'] == 0
+
+    # event_data_size_total is sum of event_data_length for events in each group
+    for module in result['module_stats']:
+        assert module['event_data_size_total'] == 10 * module['events_collected_total']
+    for collection in result['collection_stats']:
+        assert collection['event_data_size_total'] == 10 * collection['events_collected_total']
+    for role_stat in result['role_stats']:
+        assert role_stat['event_data_size_total'] == 10 * role_stat['events_collected_total']
 
 
 def test_base_renames_module_name_and_collection_name():
