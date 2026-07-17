@@ -8,6 +8,14 @@ DECLARE
   task_uuid_2 text;
   event_data_1 text;
   event_data_2 text;
+  playbook_event text;
+  playbook_events text[] := ARRAY[
+    'playbook_on_start',
+    'playbook_on_play_start',
+    'playbook_on_task_start',
+    'playbook_on_stats'
+  ];
+  playbook_event_idx INTEGER;
   --
   default_organization_id                           INTEGER;
   default_inventory_id                              INTEGER;
@@ -789,6 +797,41 @@ $yaml$,
         host_name, 'default_play', 'redhat.rhel_system_roles.timesync', 'install packages', 4,
         host_id, unified_job_id, gen_random_uuid()::text, '', 4, 'default_playbook.yml',
         4, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+    END LOOP;
+  END LOOP;
+  --
+  -- Playbook lifecycle events (non-module) for each job in the 10:00 hour.
+  -- Counted into playbook_events in the anonymized events rollup.
+  --
+  FOR i IN array_lower(unified_jobs_10,1)..array_upper(unified_jobs_10,1) LOOP
+    unified_job_id := unified_jobs_10[i];
+    playbook_event_idx := 0;
+    FOREACH playbook_event IN ARRAY playbook_events LOOP
+      playbook_event_idx := playbook_event_idx + 1;
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        playbook_event,
+        ('{"playbook": "default_playbook.yml", "event": "' || playbook_event || '"}')::text,
+        false, false,
+        '', '', '', '',
+        200 + playbook_event_idx,
+        NULL,
+        unified_job_id,
+        gen_random_uuid()::text,
+        '',
+        0,
+        'default_playbook.yml',
+        0,
+        playbook_event,
+        0,
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
       );
     END LOOP;
@@ -1599,6 +1642,40 @@ $yaml$,
         'default_playbook.yml',
         2,
         'ok: ' || host_name,
+        0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
+      );
+    END LOOP;
+  END LOOP;
+  --
+  -- Playbook lifecycle events (non-module) for each job in the 11:00 hour.
+  --
+  FOR i IN array_lower(unified_jobs_11,1)..array_upper(unified_jobs_11,1) LOOP
+    unified_job_id := unified_jobs_11[i];
+    playbook_event_idx := 0;
+    FOREACH playbook_event IN ARRAY playbook_events LOOP
+      playbook_event_idx := playbook_event_idx + 1;
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00',
+        playbook_event,
+        ('{"playbook": "default_playbook.yml", "event": "' || playbook_event || '"}')::text,
+        false, false,
+        '', '', '', '',
+        200 + playbook_event_idx,
+        NULL,
+        unified_job_id,
+        gen_random_uuid()::text,
+        '',
+        0,
+        'default_playbook.yml',
+        0,
+        playbook_event,
         0,
         TIMESTAMP WITH TIME ZONE '2025-06-13 11:00:00+00'
       );

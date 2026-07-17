@@ -56,6 +56,10 @@ def _validate_top_level_structure(json_data):
     assert 'event_data_size_total' in json_data['playbook_events']
     assert 'warning_total' in json_data['playbook_events']
     assert 'deprecated_total' in json_data['playbook_events']
+    assert 'playbook_on_start_total' in json_data['playbook_events']
+    assert 'playbook_on_play_start_total' in json_data['playbook_events']
+    assert 'playbook_on_task_start_total' in json_data['playbook_events']
+    assert 'playbook_on_stats_total' in json_data['playbook_events']
     assert 'jobs_by_job_type' in json_data, "Missing 'jobs_by_job_type' in json_data"
     assert 'jobs_by_launch_type' in json_data, "Missing 'jobs_by_launch_type' in json_data"
     assert 'jobs_by_controller_version' in json_data, "Missing 'jobs_by_controller_version' in json_data"
@@ -907,6 +911,26 @@ def _validate_indirect_managed_nodes(json_data, statistics):
         assert 'host_count' in entry
 
 
+def _validate_playbook_events_values_multi_hour(json_data, statistics):
+    """Validate playbook_events for multi-hour data (6 jobs across 10:00 and 11:00)."""
+    print('--- Validating playbook_events data values (multi-hour) ---')
+    pe = json_data['playbook_events']
+    # 6 jobs × 4 playbook lifecycle events
+    assert pe['playbook_on_start_total'] == 6
+    assert pe['playbook_on_play_start_total'] == 6
+    assert pe['playbook_on_task_start_total'] == 6
+    assert pe['playbook_on_stats_total'] == 6
+    # SQL fixture: 2 warnings + 1 deprecated per hour × 2 hours
+    assert pe['warning_total'] == 4
+    assert pe['deprecated_total'] == 2
+    # 24 playbook_on_* + 4 warning + 2 deprecated
+    assert pe['events_collected_total'] == 30
+    assert pe['event_data_size_total'] > 0, 'event_data_size_total should be > 0 with live collector lengths'
+
+    # 36 runner_on_ok + 30 playbook/annotation events
+    assert statistics['rollup_period_collected_events_total'] == 66
+
+
 def _validate_all_data(json_data, statistics):
     """Run all validation checks on the json_data."""
     # Validate structure
@@ -933,6 +957,7 @@ def _validate_all_data(json_data, statistics):
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
     _validate_role_stats_and_jobs_by_installed_collections_versions(json_data)
+    _validate_playbook_events_values_multi_hour(json_data, statistics)
 
     print('--- Validating playbooks_total ---')
     assert statistics['rollup_period_playbooks_total'] == 1, 'Should have 1 total playbook'
