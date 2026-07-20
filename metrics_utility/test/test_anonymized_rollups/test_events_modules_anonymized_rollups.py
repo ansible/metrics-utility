@@ -697,13 +697,25 @@ def test_base_renames_module_name_and_collection_name():
         'warnings_total': 0,
         'deprecations_total': 0,
         'module_stats': [
-            {'module_name': 'cisco.ios.ios_command', 'collection_name': 'cisco.ios', 'collection_source': 'certified', 'jobs_total': 1},
+            {
+                'module_name': 'cisco.ios.ios_command',
+                'collection_source': 'certified',
+                'collection_name': 'cisco.ios',
+                'jobs_total': 1,
+                'collected_events_total': 1,
+            },
         ],
         'collection_stats': [
-            {'collection_name': 'cisco.ios', 'collection_source': 'certified', 'jobs_total': 1},
+            {'collection_name': 'cisco.ios', 'jobs_total': 1, 'collection_source': 'certified', 'collected_events_total': 1},
         ],
         'role_stats': [
-            {'role': 'my_role', 'collection_name': 'cisco.ios', 'collection_source': 'certified', 'jobs_total': 1},
+            {
+                'role': 'my_role',
+                'jobs_total': 1,
+                'collection_name': 'cisco.ios',
+                'collection_source': 'certified',
+                'collected_events_total': 1,
+            },
         ],
         'unique_modules': ['cisco.ios.ios_command'],
         'modules_per_playbook': {},
@@ -724,6 +736,11 @@ def test_base_renames_module_name_and_collection_name():
 
     assert 'collection' in result['role_stats'][0]
     assert 'collection_name' not in result['role_stats'][0]
+
+    # Identity keys stay at the front after rename.
+    assert list(result['module_stats'][0].keys())[:3] == ['module', 'collection', 'collection_source']
+    assert list(result['collection_stats'][0].keys())[:2] == ['collection', 'collection_source']
+    assert list(result['role_stats'][0].keys())[:3] == ['role', 'collection', 'collection_source']
 
 
 def test_base_handles_items_without_module_name():

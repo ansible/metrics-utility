@@ -51,12 +51,24 @@ def _normalize_stats_item(item: dict) -> None:
 
     Segment drops properties whose key contains 'name', so module_name -> module
     and collection_name -> collection before the payload is sent.
+
+    Identity keys are placed first so the report reads as:
+    module/role, collection, collection_source, then metrics.
     """
     item.pop('host_ids', None)
     if 'module_name' in item:
         item['module'] = item.pop('module_name')
     if 'collection_name' in item:
         item['collection'] = item.pop('collection_name')
+
+    leading = [key for key in ('module', 'role', 'collection', 'collection_source') if key in item]
+    if not leading:
+        return
+
+    reordered = {key: item.pop(key) for key in leading}
+    reordered.update(item)
+    item.clear()
+    item.update(reordered)
 
 
 def extract_collection_name(x: str | None) -> str | None:
@@ -274,7 +286,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         module_stats = self._merge_stats_json(
             data_all.get('module_stats', []),
             data_new.get('module_stats', []),
-            ['module_name', 'collection_source', 'collection_name'],
+            ['module_name', 'collection_name', 'collection_source'],
         )
         collection_stats = self._merge_stats_json(
             data_all.get('collection_stats', []),
@@ -537,7 +549,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         dataframe = self._add_aggregation_columns(dataframe)
         common_aggregation = self._get_common_aggregation(dataframe)
 
-        module_stats = dataframe.groupby(['module_name', 'collection_source', 'collection_name'], as_index=False, observed=True).agg(
+        module_stats = dataframe.groupby(['module_name', 'collection_name', 'collection_source'], as_index=False, observed=True).agg(
             **common_aggregation
         )
 
