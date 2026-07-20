@@ -156,7 +156,7 @@ def _validate_module_stats_structure(json_data):
         assert 'collection_source' in module_stat
         assert 'collection' in module_stat
         assert 'jobs_total' in module_stat
-        assert 'events_collected_total' in module_stat
+        assert 'collected_events_total' in module_stat
         assert 'event_data_size_total' in module_stat
         assert isinstance(module_stat['event_data_size_total'], (int, float))
         assert module_stat['event_data_size_total'] > 0
@@ -172,7 +172,7 @@ def _validate_collection_stats_structure(json_data):
         assert 'collection' in collection_stat
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
-        assert 'events_collected_total' in collection_stat
+        assert 'collected_events_total' in collection_stat
         assert 'event_data_size_total' in collection_stat
         assert isinstance(collection_stat['event_data_size_total'], (int, float))
         assert collection_stat['event_data_size_total'] > 0
@@ -255,7 +255,7 @@ def _validate_module_stats_values(json_data):
     assert a10_module['jobs_total'] == 3, 'Should have 3 jobs using a10.acos_axapi.a10_slb_virtual_server'
     assert a10_module['runner_on_ok_total'] == 6, 'Should have 6 ok events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
     assert a10_module['runner_on_failed_total'] == 0, 'Should have 0 failed events for a10.acos_axapi.a10_slb_virtual_server'
-    assert a10_module['events_collected_total'] == 6, 'Should have 6 collected events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
+    assert a10_module['collected_events_total'] == 6, 'Should have 6 collected events for a10.acos_axapi.a10_slb_virtual_server (3 jobs × 2 hosts)'
     assert 'ansible_versions' in a10_module, 'a10_module should have ansible_versions field'
     assert isinstance(a10_module['ansible_versions'], list), 'ansible_versions should be a list'
     assert len(a10_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
@@ -278,7 +278,7 @@ def _validate_collection_stats_values(json_data):
     for version in a10_collection['ansible_versions']:
         assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
     assert a10_collection['runner_on_ok_total'] == 6, 'a10.acos_axapi collection should have 6 ok events'
-    assert a10_collection['events_collected_total'] == 6, 'a10.acos_axapi collection should have 6 collected events (3 jobs × 2 hosts)'
+    assert a10_collection['collected_events_total'] == 6, 'a10.acos_axapi collection should have 6 collected events (3 jobs × 2 hosts)'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
     assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (Custom collections removed), got {len(anonymized_collections)}'
@@ -299,7 +299,7 @@ _RUNNER_EVENT_COUNTERS = (
     'runner_retry_total',
     'warnings_total',
     'deprecations_total',
-    'events_collected_total',
+    'collected_events_total',
     'event_data_size_total',
     'jobs_never_started_total',
 )
@@ -340,7 +340,7 @@ def _validate_role_stats(json_data):
         assert role['collection_source'] == source
         assert role['jobs_total'] == 3
         assert role['runner_on_ok_total'] == 7
-        assert role['events_collected_total'] == 18
+        assert role['collected_events_total'] == 18
         _assert_runner_event_counters_populated(role, role_name)
 
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
@@ -525,7 +525,7 @@ def _validate_module_stats_values_multi_hour(json_data):
         assert module['jobs_total'] == 6, f'{module_name} should have 6 jobs'
         # Base ok events (18) + 1 diversified ok-with-warnings on job 1
         assert module['runner_on_ok_total'] == 19, f'{module_name} runner_on_ok_total'
-        assert module['events_collected_total'] == 30, f'{module_name} events_collected_total'
+        assert module['collected_events_total'] == 30, f'{module_name} collected_events_total'
         _assert_runner_event_counters_populated(module, module_name)
         for version in module['ansible_versions']:
             assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
@@ -542,7 +542,7 @@ def _validate_collection_stats_values_multi_hour(json_data):
         assert collection['collection_source'] == source
         assert collection['jobs_total'] == 6
         assert collection['runner_on_ok_total'] == 19
-        assert collection['events_collected_total'] == 30
+        assert collection['collected_events_total'] == 30
         _assert_runner_event_counters_populated(collection, collection_name)
         for version in collection['ansible_versions']:
             assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'

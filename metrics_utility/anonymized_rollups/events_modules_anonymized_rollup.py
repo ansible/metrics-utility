@@ -166,7 +166,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'runner_retry_total',
         'warnings_total',
         'deprecations_total',
-        'events_collected_total',
+        'collected_events_total',
         'event_data_size_total',
     ]
     _LIST_COLS = ['ansible_versions']
@@ -520,7 +520,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             # Module-level annotations (from event_data.res, distinct from top-level warning events)
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
-            'events_collected_total': ('event', 'size'),
+            'collected_events_total': ('event', 'size'),
             'event_data_size_total': ('event_data_length', 'sum'),
             'ansible_versions': ('ansible_version', lambda x: set(x.dropna())),
         }

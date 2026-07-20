@@ -440,7 +440,7 @@ def validate_module_stats(result):
         'module',
         'collection',
         'jobs_total',
-        'events_collected_total',
+        'collected_events_total',
         'event_data_size_total',
         'ansible_versions',
     ]
@@ -448,8 +448,8 @@ def validate_module_stats(result):
     for module in module_stats:
         for field in required_fields:
             assert field in module
-        assert isinstance(module['events_collected_total'], (int, float))
-        assert module['events_collected_total'] > 0
+        assert isinstance(module['collected_events_total'], (int, float))
+        assert module['collected_events_total'] > 0
         assert isinstance(module['event_data_size_total'], (int, float))
         assert module['event_data_size_total'] >= 0
 
@@ -466,7 +466,7 @@ def validate_collection_stats(result):
         'collection',
         'collection_source',
         'jobs_total',
-        'events_collected_total',
+        'collected_events_total',
         'event_data_size_total',
         'ansible_versions',
     ]
@@ -474,8 +474,8 @@ def validate_collection_stats(result):
     for collection in collection_stats:
         for field in required_fields:
             assert field in collection
-        assert isinstance(collection['events_collected_total'], (int, float))
-        assert collection['events_collected_total'] > 0
+        assert isinstance(collection['collected_events_total'], (int, float))
+        assert collection['collected_events_total'] > 0
         assert isinstance(collection['event_data_size_total'], (int, float))
         assert collection['event_data_size_total'] >= 0
 
@@ -494,15 +494,15 @@ def validate_role_stats(result):
         'collection',
         'collection_source',
         'jobs_total',
-        'events_collected_total',
+        'collected_events_total',
         'event_data_size_total',
     ]
 
     for role_stat in role_stats:
         for field in required_fields:
             assert field in role_stat
-        assert isinstance(role_stat['events_collected_total'], (int, float))
-        assert role_stat['events_collected_total'] > 0
+        assert isinstance(role_stat['collected_events_total'], (int, float))
+        assert role_stat['collected_events_total'] > 0
         assert isinstance(role_stat['event_data_size_total'], (int, float))
         assert role_stat['event_data_size_total'] >= 0
 

@@ -28,7 +28,7 @@ def cleanup_test_data():
     _cleanup_glob(file_glob)
 
 
-def _event_stat_counters(seed, *, jobs_total, events_collected_total, ansible_versions):
+def _event_stat_counters(seed, *, jobs_total, collected_events_total, ansible_versions):
     """Shared module/collection/role counters matching EventModulesAnonymizedRollup._NUMERIC_COLS."""
     return {
         'jobs_total': jobs_total,
@@ -53,8 +53,8 @@ def _event_stat_counters(seed, *, jobs_total, events_collected_total, ansible_ve
         'runner_retry_total': seed % 7,
         'warnings_total': seed % 5,
         'deprecations_total': seed % 3,
-        'events_collected_total': events_collected_total,
-        'event_data_size_total': events_collected_total * (80 + (seed % 40)),
+        'collected_events_total': collected_events_total,
+        'event_data_size_total': collected_events_total * (80 + (seed % 40)),
         'ansible_versions': ansible_versions,
     }
 
@@ -106,7 +106,7 @@ def _create_module_stats(num_modules):
         collection = 'ansible.builtin' if is_even else f'community.module_{i % 10}'
         ansible_versions = ['2.15.0', '2.16.0', '2.17.0'] if is_divisible_by_3 else ['2.18.0', '2.19.0']
         jobs_total = 10 + (i % 20)
-        events_collected_total = 50 + (i % 100)
+        collected_events_total = 50 + (i % 100)
 
         module_stats.append(
             {
@@ -116,7 +116,7 @@ def _create_module_stats(num_modules):
                 **_event_stat_counters(
                     i,
                     jobs_total=jobs_total,
-                    events_collected_total=events_collected_total,
+                    collected_events_total=collected_events_total,
                     ansible_versions=ansible_versions,
                 ),
             }
@@ -130,7 +130,7 @@ def _create_collection_stats(num_collections):
     sources = ['certified', 'community', 'validated', 'partner']
     for i in range(num_collections):
         jobs_total = 20 + (i % 30)
-        events_collected_total = 200 + (i % 200)
+        collected_events_total = 200 + (i % 200)
         collection_stats.append(
             {
                 'collection': f'ansible.collection_{i:03d}',
@@ -138,7 +138,7 @@ def _create_collection_stats(num_collections):
                 **_event_stat_counters(
                     i,
                     jobs_total=jobs_total,
-                    events_collected_total=events_collected_total,
+                    collected_events_total=collected_events_total,
                     ansible_versions=['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
                 ),
             }
@@ -152,7 +152,7 @@ def _create_role_stats():
     sources = ['certified', 'community']
     for i in range(30):
         jobs_total = 5 + (i % 15)
-        events_collected_total = 100 + (i % 100)
+        collected_events_total = 100 + (i % 100)
         role_stats.append(
             {
                 'role': f'example_role_{i:03d}',
@@ -161,7 +161,7 @@ def _create_role_stats():
                 **_event_stat_counters(
                     i,
                     jobs_total=jobs_total,
-                    events_collected_total=events_collected_total,
+                    collected_events_total=collected_events_total,
                     ansible_versions=['2.16.0', '2.17.0'],
                 ),
             }

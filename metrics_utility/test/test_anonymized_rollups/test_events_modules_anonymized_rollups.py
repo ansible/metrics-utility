@@ -458,7 +458,7 @@ def test_events_modules_aggregations_basic():
     # Verify a specific role has stats (ansible.windows.win_copy_role)
     if 'ansible.windows.win_copy_role' in stats_by_role:
         win_copy_role_stats = stats_by_role['ansible.windows.win_copy_role']
-        assert win_copy_role_stats['events_collected_total'] > 0
+        assert win_copy_role_stats['collected_events_total'] > 0
         assert 'jobs_total' in win_copy_role_stats
         # Verify collection and collection_source are present
         assert 'collection' in win_copy_role_stats, 'role_stats should have collection field'
@@ -497,7 +497,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['runner_item_on_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['jobs_never_started_total'] == 0
-    assert copy_stats['events_collected_total'] == 5
+    assert copy_stats['collected_events_total'] == 5
     assert 'ansible_versions' in copy_stats, 'Should have ansible_versions field'
     assert isinstance(copy_stats['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -511,7 +511,7 @@ def test_events_modules_aggregations_basic():
     assert template_stats['runner_item_on_ok_total'] == 1
     assert template_stats['jobs_total'] == 2
     assert template_stats['jobs_never_started_total'] == 0
-    assert template_stats['events_collected_total'] == 2
+    assert template_stats['collected_events_total'] == 2
     assert 'ansible_versions' in template_stats, 'Should have ansible_versions field'
     assert isinstance(template_stats['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -525,7 +525,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['runner_on_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['jobs_never_started_total'] == 0
-    assert firewalld_stats['events_collected_total'] == 2
+    assert firewalld_stats['collected_events_total'] == 2
 
     # community.aws.ec2 (community)
     # Events: Job3/H2 ok, Job4/H6 ok, Job4/H7 failed(ignored) → 3 events
@@ -538,7 +538,7 @@ def test_events_modules_aggregations_basic():
     assert ec2_stats['runner_on_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['jobs_never_started_total'] == 0
-    assert ec2_stats['events_collected_total'] == 3  # skipped event is excluded
+    assert ec2_stats['collected_events_total'] == 3  # skipped event is excluded
 
     # community.general.yum (community)
     # Events: Job1/H2 failed, Job2/H2 async_failed, Job5/H9 failed → 3 events
@@ -551,7 +551,7 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['runner_on_async_failed_ignored_total'] == 0
     assert yum_stats['jobs_total'] == 3
     assert yum_stats['jobs_never_started_total'] == 1  # Job5 has job_started=None
-    assert yum_stats['events_collected_total'] == 3
+    assert yum_stats['collected_events_total'] == 3
 
     # community.mongodb.insert (community)
     # Events: Job1/H3 async_ok, Job2/H1 failed+ok (retry) → 3 events
@@ -564,7 +564,7 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['runner_on_async_failed_total'] == 0
     assert mongo_stats['jobs_total'] == 2
     assert mongo_stats['jobs_never_started_total'] == 0
-    assert mongo_stats['events_collected_total'] == 3
+    assert mongo_stats['collected_events_total'] == 3
 
     # custom.user.collection (Custom)
     # Events: Job1/H1 ok → 1 event
@@ -574,7 +574,7 @@ def test_events_modules_aggregations_basic():
     assert custom_stats['runner_on_failed_total'] == 0
     assert custom_stats['jobs_total'] == 1
     assert custom_stats['jobs_never_started_total'] == 0
-    assert custom_stats['events_collected_total'] == 1
+    assert custom_stats['collected_events_total'] == 1
 
     # collection_stats assertions
 
@@ -589,7 +589,7 @@ def test_events_modules_aggregations_basic():
     assert netcommon_coll['runner_on_ok_total'] == 0
     assert netcommon_coll['runner_on_unreachable_total'] == 1
     assert netcommon_coll['runner_item_on_ok_total'] == 1
-    assert netcommon_coll['events_collected_total'] == 2
+    assert netcommon_coll['collected_events_total'] == 2
     assert 'ansible_versions' in netcommon_coll, 'Should have ansible_versions field'
     assert isinstance(netcommon_coll['ansible_versions'], list), 'ansible_versions should be a list'
 
@@ -603,7 +603,7 @@ def test_events_modules_aggregations_basic():
     assert posix_coll['jobs_failed_total'] == 1
     assert posix_coll['runner_on_ok_total'] == 1
     assert posix_coll['runner_on_failed_total'] == 1
-    assert posix_coll['events_collected_total'] == 2
+    assert posix_coll['collected_events_total'] == 2
 
     # ansible.windows
     windows_coll = coll_by_name['ansible.windows']
@@ -616,7 +616,7 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['runner_on_ok_total'] == 3
     assert windows_coll['runner_on_failed_total'] == 2
     assert windows_coll['runner_on_failed_ignored_total'] == 0
-    assert windows_coll['events_collected_total'] == 5
+    assert windows_coll['collected_events_total'] == 5
 
     # community.aws
     aws_coll = coll_by_name['community.aws']
@@ -629,7 +629,7 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['runner_on_ok_total'] == 2
     assert aws_coll['runner_on_failed_total'] == 0
     assert aws_coll['runner_on_failed_ignored_total'] == 1
-    assert aws_coll['events_collected_total'] == 3  # skipped event excluded
+    assert aws_coll['collected_events_total'] == 3  # skipped event excluded
 
     # community.general
     general_coll = coll_by_name['community.general']
@@ -642,7 +642,7 @@ def test_events_modules_aggregations_basic():
     assert general_coll['runner_on_ok_total'] == 0
     assert general_coll['runner_on_failed_total'] == 2
     assert general_coll['runner_on_async_failed_total'] == 1
-    assert general_coll['events_collected_total'] == 3
+    assert general_coll['collected_events_total'] == 3
 
     # community.mongodb
     mongodb_coll = coll_by_name['community.mongodb']
@@ -655,7 +655,7 @@ def test_events_modules_aggregations_basic():
     assert mongodb_coll['runner_on_ok_total'] == 1
     assert mongodb_coll['runner_on_failed_total'] == 1
     assert mongodb_coll['runner_on_async_ok_total'] == 1
-    assert mongodb_coll['events_collected_total'] == 3
+    assert mongodb_coll['collected_events_total'] == 3
 
     # custom.user
     custom_coll = coll_by_name['custom.user']
@@ -667,7 +667,7 @@ def test_events_modules_aggregations_basic():
     assert custom_coll['jobs_failed_total'] == 1
     assert custom_coll['runner_on_ok_total'] == 1
     assert custom_coll['runner_on_failed_total'] == 0
-    assert custom_coll['events_collected_total'] == 1
+    assert custom_coll['collected_events_total'] == 1
 
     # Verify warnings_total and deprecations_total
     # We added 2 warning events (job 1 and job 2) and 1 deprecated event (job 3)
@@ -682,11 +682,11 @@ def test_events_modules_aggregations_basic():
 
     # event_data_size_total is sum of event_data_length for events in each group
     for module in result['module_stats']:
-        assert module['event_data_size_total'] == 10 * module['events_collected_total']
+        assert module['event_data_size_total'] == 10 * module['collected_events_total']
     for collection in result['collection_stats']:
-        assert collection['event_data_size_total'] == 10 * collection['events_collected_total']
+        assert collection['event_data_size_total'] == 10 * collection['collected_events_total']
     for role_stat in result['role_stats']:
-        assert role_stat['event_data_size_total'] == 10 * role_stat['events_collected_total']
+        assert role_stat['event_data_size_total'] == 10 * role_stat['collected_events_total']
 
 
 def test_base_renames_module_name_and_collection_name():
