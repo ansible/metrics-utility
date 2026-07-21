@@ -55,8 +55,8 @@ jobs:
 
       - name: "Start RustFS"
         env:
-          RUSTFS_ACCESS_KEY: rustfsaccess
-          RUSTFS_SECRET_KEY: rustfssecret
+          RUSTFS_ACCESS_KEY: rustfsadmin
+          RUSTFS_SECRET_KEY: rustfsadmin
         run: |
           mkdir rustfs-data
           rustfs server ./rustfs-data --console-address ":9001" &
@@ -64,8 +64,8 @@ jobs:
       - name: "Wait for RustFS and create bucket"
         timeout-minutes: 1
         env:
-          AWS_ACCESS_KEY_ID: rustfsaccess
-          AWS_SECRET_ACCESS_KEY: rustfssecret
+          AWS_ACCESS_KEY_ID: rustfsadmin
+          AWS_SECRET_ACCESS_KEY: rustfsadmin
           AWS_DEFAULT_REGION: us-east-1
         run: |
           until aws --endpoint-url http://localhost:9000 s3 ls 2>/dev/null; do
@@ -90,11 +90,11 @@ jobs:
 
       - name: "Run pytest"
         env:
-          METRICS_UTILITY_BUCKET_ACCESS_KEY: "rustfsaccess"
+          METRICS_UTILITY_BUCKET_ACCESS_KEY: "rustfsadmin"
           METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
           METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-          METRICS_UTILITY_BUCKET_SECRET_KEY: "rustfssecret"
+          METRICS_UTILITY_BUCKET_SECRET_KEY: "rustfsadmin"
           METRICS_UTILITY_DB_HOST: "localhost"
           METRICS_UTILITY_DB_NAME: "postgres"
           METRICS_UTILITY_DB_USER: "awx"

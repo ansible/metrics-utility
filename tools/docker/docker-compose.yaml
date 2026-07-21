@@ -23,8 +23,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      RUSTFS_ACCESS_KEY: "rustfsaccess"
-      RUSTFS_SECRET_KEY: "rustfssecret"
+      RUSTFS_ACCESS_KEY: "rustfsadmin"
+      RUSTFS_SECRET_KEY: "rustfsadmin"
     tmpfs:
       - /data:mode=1777
     command: server /data --console-address ":9001"
@@ -43,8 +43,8 @@ import time, boto3, botocore
 
 s3 = boto3.client(\"s3\",
     endpoint_url=\"http://rustfs:9000\",
-    aws_access_key_id=\"rustfsaccess\",
-    aws_secret_access_key=\"rustfssecret\",
+    aws_access_key_id=\"rustfsadmin\",
+    aws_secret_access_key=\"rustfsadmin\",
 )
 
 print(\"Waiting for RustFS to be ready...\")
@@ -114,11 +114,11 @@ print(\"Bucket metricsutilitys3 ready\")
     working_dir: /app
     profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
-      METRICS_UTILITY_BUCKET_ACCESS_KEY: "rustfsaccess"
+      METRICS_UTILITY_BUCKET_ACCESS_KEY: "rustfsadmin"
       METRICS_UTILITY_BUCKET_ENDPOINT: "http://rustfs:9000"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-      METRICS_UTILITY_BUCKET_SECRET_KEY: "rustfssecret"
+      METRICS_UTILITY_BUCKET_SECRET_KEY: "rustfsadmin"
       METRICS_UTILITY_DB_HOST: "postgres"
       MOCK_SEGMENT_URL: "http://mock-segment:8765"
       MOCK_PROMETHEUS_URL: "http://mock-prometheus:9090"
@@ -172,11 +172,11 @@ print(\"Bucket metricsutilitys3 ready\")
     working_dir: /app
     profiles: ["env"] # makes this service non-default, except when --profile=env
     environment:
-      METRICS_UTILITY_BUCKET_ACCESS_KEY: "rustfsaccess"
+      METRICS_UTILITY_BUCKET_ACCESS_KEY: "rustfsadmin"
       METRICS_UTILITY_BUCKET_ENDPOINT: "http://rustfs:9000"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-      METRICS_UTILITY_BUCKET_SECRET_KEY: "rustfssecret"
+      METRICS_UTILITY_BUCKET_SECRET_KEY: "rustfsadmin"
       METRICS_UTILITY_DB_HOST: "postgres"
     entrypoint: |
       sh -c '

@@ -6,11 +6,11 @@ export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
 export METRICS_UTILITY_SHIP_PATH="$$"
 export METRICS_UTILITY_SHIP_TARGET="s3"
 
-export METRICS_UTILITY_BUCKET_ACCESS_KEY="rustfsaccess"
+export METRICS_UTILITY_BUCKET_ACCESS_KEY="rustfsadmin"
 export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:9000"
 export METRICS_UTILITY_BUCKET_NAME="metricsutilitys3"
 export METRICS_UTILITY_BUCKET_REGION="us-east-1"
-export METRICS_UTILITY_BUCKET_SECRET_KEY="rustfssecret"
+export METRICS_UTILITY_BUCKET_SECRET_KEY="rustfsadmin"
 
 if ! pg_isready -h localhost; then
   echo "run-s3-gather-build: DB not ready, run make compose first"
