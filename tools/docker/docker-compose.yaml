@@ -17,7 +17,7 @@ x-metrics-service: &metrics-service
 
 services:
   garage:
-    image: "mirror.gcr.io/dxflrs/garage:latest"
+    image: "docker.io/dxflrs/garage:latest"  # not available on mirror.gcr.io or ghcr.io
     container_name: garage
     ports:
       - "3900:3900"
