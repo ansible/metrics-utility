@@ -21,7 +21,7 @@ env_vars = {
 def test_command():
     """Build xlsx report using build command and test its contents."""
     run_gather_ext(env_vars, ['--ship', '--until=10m'])
-    # mc ls -r local/metricsutilitys3/metrics-utility/shipped_data_*/data/
+    # aws --endpoint-url http://localhost:3900 s3 ls --recursive s3://metricsutilitys3/metrics-utility/shipped_data_*/data/
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
