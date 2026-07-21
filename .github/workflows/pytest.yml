@@ -41,10 +41,12 @@ jobs:
       - name: "Pull SeaweedFS"
         run: |
           mkdir -p ~/.local/bin
-          curl -fL https://github.com/seaweedfs/seaweedfs/releases/download/4.40/linux_amd64.tar.gz -o /tmp/seaweedfs.tar.gz
+          curl -fL https://github.com/seaweedfs/seaweedfs/releases/latest/download/linux_amd64.tar.gz -o /tmp/seaweedfs.tar.gz
+          curl -fL https://github.com/seaweedfs/seaweedfs/releases/latest/download/linux_amd64.tar.gz.md5 -o /tmp/seaweedfs.md5
 
-          CHECKSUM=$(md5sum /tmp/seaweedfs.tar.gz | awk '{ print $1 }')
-          [ "$CHECKSUM" = "c8582376cdd480fb5d56bd94c95e359a" ]
+          EXPECTED=$(awk '{print $1}' /tmp/seaweedfs.md5)
+          ACTUAL=$(md5sum /tmp/seaweedfs.tar.gz | awk '{print $1}')
+          [ "$EXPECTED" = "$ACTUAL" ]
 
           tar -xzf /tmp/seaweedfs.tar.gz -C ~/.local/bin
           chmod +x ~/.local/bin/weed
