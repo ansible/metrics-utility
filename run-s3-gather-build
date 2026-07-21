@@ -23,7 +23,7 @@ fi
 
 echo
 echo "$S3 ls --recursive s3://$METRICS_UTILITY_BUCKET_NAME/$METRICS_UTILITY_SHIP_PATH"
-$S3 ls --recursive s3://"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"
+$S3 ls --recursive s3://"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH" || true
 echo
 uv run ./manage.py gather_automation_controller_billing_data --ship --since=2025-06-01 --until=2025-07-01 --force
 echo
