@@ -17,7 +17,7 @@ x-metrics-service: &metrics-service
 
 services:
   rustfs:
-    image: "rustfs/rustfs:latest"
+    image: "mirror.gcr.io/rustfs/rustfs:latest"
     container_name: rustfs
     ports:
       - "9000:9000"
