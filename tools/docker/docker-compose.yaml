@@ -33,34 +33,21 @@ services:
     image: "mirror.gcr.io/python"
     depends_on:
       - rustfs
+    environment:
+      AWS_ACCESS_KEY_ID: "rustfsadmin"
+      AWS_SECRET_ACCESS_KEY: "rustfsadmin"
+      AWS_DEFAULT_REGION: "us-east-1"
     entrypoint: |
       sh -c '
         set -e
-        pip install -q boto3
-
-        python3 -c "
-import time, boto3, botocore
-
-s3 = boto3.client(\"s3\",
-    endpoint_url=\"http://rustfs:9000\",
-    aws_access_key_id=\"rustfsadmin\",
-    aws_secret_access_key=\"rustfsadmin\",
-)
-
-print(\"Waiting for RustFS to be ready...\")
-for i in range(30):
-    try:
-        s3.list_buckets()
-        break
-    except Exception:
-        time.sleep(2)
-
-try:
-    s3.create_bucket(Bucket=\"metricsutilitys3\")
-except s3.exceptions.BucketAlreadyOwnedByYou:
-    pass
-print(\"Bucket metricsutilitys3 ready\")
-"
+        pip install -q awscli
+        echo "Waiting for RustFS to be ready..."
+        for i in $$(seq 30); do
+          aws --endpoint-url http://rustfs:9000 s3 ls 2>/dev/null && break
+          sleep 2
+        done
+        aws --endpoint-url http://rustfs:9000 s3 mb s3://metricsutilitys3 || true
+        echo "Bucket metricsutilitys3 ready"
       '
 
   postgres:
