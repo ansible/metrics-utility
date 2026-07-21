@@ -60,6 +60,7 @@ jobs:
           root_domain = ".s3.garage.localhost"
           [s3_web]
           bind_addr = "127.0.0.1:3902"
+          root_domain = ".web.garage.localhost"
           [admin]
           api_bind_addr = "127.0.0.1:3903"
           TOML

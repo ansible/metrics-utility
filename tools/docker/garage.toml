@@ -15,6 +15,7 @@ root_domain = ".s3.garage.localhost"
 
 [s3_web]
 bind_addr = "0.0.0.0:3902"
+root_domain = ".web.garage.localhost"
 
 [admin]
 api_bind_addr = "0.0.0.0:3903"
