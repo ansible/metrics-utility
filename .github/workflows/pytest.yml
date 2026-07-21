@@ -55,8 +55,8 @@ jobs:
 
       - name: "Start RustFS"
         env:
-          RUSTFS_ROOT_USER: rustfsaccess
-          RUSTFS_ROOT_PASSWORD: rustfssecret
+          RUSTFS_ACCESS_KEY: rustfsaccess
+          RUSTFS_SECRET_KEY: rustfssecret
         run: |
           mkdir rustfs-data
           rustfs server ./rustfs-data --console-address ":9001" &

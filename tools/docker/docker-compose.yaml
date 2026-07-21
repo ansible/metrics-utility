@@ -23,8 +23,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      RUSTFS_ROOT_USER: "rustfsaccess"
-      RUSTFS_ROOT_PASSWORD: "rustfssecret"
+      RUSTFS_ACCESS_KEY: "rustfsaccess"
+      RUSTFS_SECRET_KEY: "rustfssecret"
     tmpfs:
       - /data:mode=1777
     command: server /data --console-address ":9001"
