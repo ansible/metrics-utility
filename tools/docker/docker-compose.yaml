@@ -17,7 +17,7 @@ x-metrics-service: &metrics-service
 
 services:
   seaweedfs:
-    image: "chrislusf/seaweedfs:latest"
+    image: "mirror.gcr.io/chrislusf/seaweedfs:latest"
     container_name: seaweedfs
     ports:
       - "8333:8333"
