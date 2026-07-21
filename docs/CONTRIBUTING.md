@@ -71,7 +71,7 @@ We use a **forking workflow** to ensure stability in the main repository. Follow
    ```bash
    make test
    ```
-   The compose environment is providing a postgres database for testing, and a minio for S3 target tests. If existing tests fail, fix the code. If new tests fail, fix the tests.
+   The compose environment is providing a postgres database for testing, and a RustFS instance for S3 target tests. If existing tests fail, fix the code. If new tests fail, fix the tests.
 
 9. **Push** your branch to your fork:
    ```bash
