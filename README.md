@@ -168,7 +168,7 @@ Both require a `../metrics-service` checkout.
 
 ### Tests
 
-Some tests depend on a running postgres & Garage (S3) instance - run `make compose` to get one.
+Some tests depend on a running postgres & Garage instance - run `make compose` to get one.
 
 `make test` runs the full test suite,
 `make coverage` produces a coverage report.
