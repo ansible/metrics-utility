@@ -69,7 +69,7 @@ jobs:
       - name: "Wait for Garage"
         timeout-minutes: 1
         run: |
-          until curl -sf http://localhost:3900 > /dev/null 2>&1; do
+          until curl -s -o /dev/null http://localhost:3900; do
             sleep 2
           done
 
