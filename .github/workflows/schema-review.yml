@@ -18,7 +18,7 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'AparnaKarve', 'dmzoneill'];
+            const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie'];
             const author = context.payload.pull_request.user.login;
             const filtered_reviewers = allReviewers.filter(reviewer => reviewer !== author);
             await github.rest.pulls.requestReviewers({
