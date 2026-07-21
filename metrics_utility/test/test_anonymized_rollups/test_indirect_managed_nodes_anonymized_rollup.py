@@ -254,9 +254,9 @@ def test_base_collapses_orgs_into_collection_totals():
     assert result['json']['indirect_nodes_total'] == 3
     by_c = result['json']['by_collection']
     assert len(by_c) == 2
-    assert by_c[0]['collection_name'] == 'azure.azcollection'
+    assert by_c[0]['collection'] == 'azure.azcollection'
     assert by_c[0]['host_count'] == 1
-    assert by_c[1]['collection_name'] == 'cisco.ios'
+    assert by_c[1]['collection'] == 'cisco.ios'
     assert by_c[1]['host_count'] == 2
 
 
@@ -285,7 +285,7 @@ def test_base_deduplicates_hosts_across_orgs():
     result = rollup.base(data)
 
     cisco_group = result['json']['by_collection'][0]
-    assert cisco_group['collection_name'] == 'cisco.ios'
+    assert cisco_group['collection'] == 'cisco.ios'
     assert cisco_group['host_count'] == 3
 
 
@@ -671,5 +671,5 @@ def test_base_by_collection_unchanged_with_module_data():
 
     result = rollup.base(data)
 
-    assert result['json']['by_collection'] == [{'collection_name': 'cisco.ios', 'host_count': 1}]
+    assert result['json']['by_collection'] == [{'collection': 'cisco.ios', 'host_count': 1}]
     assert result['json']['by_module'] == [{'module': 'cisco.ios.ios_command', 'host_count': 1}]

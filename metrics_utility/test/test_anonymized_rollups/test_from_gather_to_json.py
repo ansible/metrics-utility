@@ -908,7 +908,7 @@ def _validate_indirect_managed_nodes(json_data, statistics):
     for group in by_c:
         assert 'host_names' not in group, 'host_names must not appear in anonymized output (privacy)'
         assert 'organization_name' not in group, 'organization_name must not appear in anonymized output (privacy)'
-        assert 'collection_name' in group
+        assert 'collection' in group
         assert 'host_count' in group
 
     by_m = json_data.get('indirect_nodes_by_module', [])

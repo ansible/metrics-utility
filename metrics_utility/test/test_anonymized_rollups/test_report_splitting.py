@@ -347,7 +347,7 @@ def create_mock_anonymized_rollup_data(num_modules=200, num_jobs=150, num_collec
         # Non-empty lists only — Segment skipping empty arrays means empty keys never get a chunk
         'feature_flags': [{'name': 'example_flag', 'enabled': True}],
         'observability_by_tasks': [{'task': 'example_task', 'count': 10}],
-        'indirect_nodes_by_collection': [{'collection_name': 'ansible.builtin', 'host_count': 5}],
+        'indirect_nodes_by_collection': [{'collection': 'ansible.builtin', 'host_count': 5}],
     }
 
     return anonymized_rollup
