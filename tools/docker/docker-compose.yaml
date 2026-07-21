@@ -28,7 +28,7 @@ services:
     tmpfs:
       - /data:mode=1777
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8333"]
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://localhost:8333"]
       interval: 5s
       timeout: 3s
       retries: 10

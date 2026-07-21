@@ -61,7 +61,7 @@ jobs:
       - name: "Wait for SeaweedFS"
         timeout-minutes: 1
         run: |
-          until curl -sf http://localhost:8333 > /dev/null; do
+          until curl -s -o /dev/null http://localhost:8333; do
             sleep 2
           done
 
