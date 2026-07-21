@@ -44,9 +44,12 @@ jobs:
         run: |
           mkdir -p ~/.local/bin
           RUSTFS_TAG=$(gh api repos/rustfs/rustfs/releases --jq '.[0].tag_name')
-          curl -fL "https://github.com/rustfs/rustfs/releases/download/${RUSTFS_TAG}/rustfs-linux-x86_64-gnu-latest.zip" -o /tmp/rustfs.zip
+          RUSTFS_ASSET="rustfs-linux-x86_64-gnu-v${RUSTFS_TAG}.zip"
+          curl -fL "https://github.com/rustfs/rustfs/releases/download/${RUSTFS_TAG}/${RUSTFS_ASSET}" -o /tmp/rustfs.zip
           curl -fL "https://github.com/rustfs/rustfs/releases/download/${RUSTFS_TAG}/SHA256SUMS" -o /tmp/SHA256SUMS
-          cd /tmp && grep "rustfs-linux-x86_64-gnu-latest.zip" SHA256SUMS | sha256sum -c
+          EXPECTED=$(grep "$RUSTFS_ASSET" /tmp/SHA256SUMS | awk '{print $1}')
+          ACTUAL=$(sha256sum /tmp/rustfs.zip | awk '{print $1}')
+          [ "$EXPECTED" = "$ACTUAL" ]
           unzip -o /tmp/rustfs.zip -d ~/.local/bin
           chmod +x ~/.local/bin/rustfs
 
