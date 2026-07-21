@@ -6,11 +6,11 @@ from metrics_utility.test.util import run_build_ext, run_gather_ext, run_gather_
 
 
 env_vars = {
-    'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'myuseraccesskey',
-    'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000'),  # or http://minio:9000
+    'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'rustfsadmin',
+    'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000'),  # or http://rustfs:9000
     'METRICS_UTILITY_BUCKET_NAME': 'metricsutilitys3',
     'METRICS_UTILITY_BUCKET_REGION': 'us-east-1',
-    'METRICS_UTILITY_BUCKET_SECRET_KEY': 'myusersecretkey',
+    'METRICS_UTILITY_BUCKET_SECRET_KEY': 'rustfsadmin',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_SHIP_PATH': f'metrics-utility/shipped_data_{os.getpid()}',
     'METRICS_UTILITY_SHIP_TARGET': 's3',

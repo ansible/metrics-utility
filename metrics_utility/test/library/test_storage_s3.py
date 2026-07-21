@@ -7,14 +7,14 @@ import pytest
 from metrics_utility.library.storage import StorageS3
 
 
-# "localhost" (github actions, pytest WITH compose) or "minio" (pytest IN compose)
+# "localhost" (github actions, pytest WITH compose) or "rustfs" (pytest IN compose)
 endpoint = os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000')
 s3_settings = {
-    'access_key': 'myuseraccesskey',
+    'access_key': 'rustfsadmin',
     'bucket': 'metricsutilitys3',
     'endpoint': endpoint,
     'region': 'us-east-1',
-    'secret_key': 'myusersecretkey',
+    'secret_key': 'rustfsadmin',
 }
 s3_object_name = f'temporary object x{os.getpid()}y'
 
