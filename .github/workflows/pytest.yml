@@ -39,10 +39,14 @@ jobs:
           cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
 
       - name: "Download RustFS"
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p ~/.local/bin
-          curl -fL https://github.com/rustfs/rustfs/releases/download/1.0.0-beta.10/rustfs-linux-x86_64-gnu-v1.0.0-beta.10.zip -o /tmp/rustfs.zip
-          echo "2bea1080165ada57984c4fc4a80b149e4a6f096c57e3fd56ef89c30c703e743e  /tmp/rustfs.zip" | sha256sum -c
+          RUSTFS_TAG=$(gh api repos/rustfs/rustfs/releases --jq '.[0].tag_name')
+          curl -fL "https://github.com/rustfs/rustfs/releases/download/${RUSTFS_TAG}/rustfs-linux-x86_64-gnu-latest.zip" -o /tmp/rustfs.zip
+          curl -fL "https://github.com/rustfs/rustfs/releases/download/${RUSTFS_TAG}/SHA256SUMS" -o /tmp/SHA256SUMS
+          cd /tmp && grep "rustfs-linux-x86_64-gnu-latest.zip" SHA256SUMS | sha256sum -c
           unzip -o /tmp/rustfs.zip -d ~/.local/bin
           chmod +x ~/.local/bin/rustfs
 
