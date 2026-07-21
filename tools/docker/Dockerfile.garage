@@ -1,0 +1,8 @@
+FROM alpine:3
+RUN apk add --no-cache curl && \
+    curl -fL https://garagehq.deuxfleurs.fr/_releases/v2.3.0/x86_64-unknown-linux-musl/garage -o /usr/local/bin/garage && \
+    chmod +x /usr/local/bin/garage && \
+    apk del curl
+RUN addgroup -S app && adduser -S -G app app
+EXPOSE 3900 3901
+ENTRYPOINT ["garage"]
