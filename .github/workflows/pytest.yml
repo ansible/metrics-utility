@@ -38,47 +38,46 @@ jobs:
         run: |
           cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
 
-      - name: "Pull minio"
+      - name: "Set up Garage"
         run: |
           mkdir -p ~/.local/bin
-          curl -fL https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z -o ~/.local/bin/mc
-          curl -fL https://dl.min.io/server/minio/release/linux-amd64/minio -o ~/.local/bin/minio
-          chmod +x ~/.local/bin/{mc,minio}
+          curl -fL https://garagehq.deuxfleurs.fr/_releases/v2.3.0/x86_64-unknown-linux-musl/garage -o ~/.local/bin/garage
+          chmod +x ~/.local/bin/garage
 
-          MC_CHECKSUM=`md5sum ~/.local/bin/mc | awk '{ print $1 }'`
-          MINIO_CHECKSUM=`md5sum ~/.local/bin/minio | awk '{ print $1 }'`
+          mkdir -p /tmp/garage-meta /tmp/garage-data
 
-          [ "$MC_CHECKSUM" = "4e57e038d26428190dd757cb47aae202" ]
-          [ "$MINIO_CHECKSUM" = "88a11227cd67611d1a64f0c6d2bc13d8" ]
+          cat > /tmp/garage.toml <<'TOML'
+          metadata_dir = "/tmp/garage-meta"
+          data_dir = "/tmp/garage-data"
+          db_engine = "sqlite"
+          replication_factor = 1
+          [rpc]
+          bind_addr = "127.0.0.1:3901"
+          rpc_secret = "4a6b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a"
+          [s3_api]
+          api_bind_addr = "127.0.0.1:3900"
+          s3_region = "us-east-1"
+          root_domain = ".s3.garage.localhost"
+          [s3_web]
+          bind_addr = "127.0.0.1:3902"
+          [admin]
+          api_bind_addr = "127.0.0.1:3903"
+          TOML
 
-      - name: "Set up minio"
+      - name: "Start Garage"
         env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
+          GARAGE_DEFAULT_ACCESS_KEY: myuseraccesskey
+          GARAGE_DEFAULT_SECRET_KEY: myusersecretkey
+          GARAGE_DEFAULT_BUCKET: metricsutilitys3
         run: |
-          mkdir minio-data
-          minio server ./minio-data --console-address ":9001" &
+          garage -c /tmp/garage.toml server --single-node --default-bucket &
 
-      - name: "Wait for minio"
+      - name: "Wait for Garage"
         timeout-minutes: 1
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
         run: |
-          until mc alias set local http://localhost:9000 minioaccess miniosecret; do
-            sleep 4
+          until curl -sf http://localhost:3900 > /dev/null 2>&1; do
+            sleep 2
           done
-
-      - name: "Create minio user"
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
-        run: |
-          mc alias set local http://localhost:9000 minioaccess miniosecret
-          mc mb --ignore-existing local/metricsutilitys3
-          mc admin user add local mynewuser mysecretpassword
-          mc admin policy attach local readwrite --user=mynewuser
-          mc admin accesskey create local mynewuser --access-key myuseraccesskey --secret-key myusersecretkey
 
       - name: "Set up Go"
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
@@ -98,7 +97,7 @@ jobs:
       - name: "Run pytest"
         env:
           METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
+          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:3900"
           METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"

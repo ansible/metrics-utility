@@ -7,7 +7,7 @@ export METRICS_UTILITY_SHIP_PATH="$$"
 export METRICS_UTILITY_SHIP_TARGET="s3"
 
 export METRICS_UTILITY_BUCKET_ACCESS_KEY="myuseraccesskey"
-export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:9000"
+export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:3900"
 export METRICS_UTILITY_BUCKET_NAME="metricsutilitys3"
 export METRICS_UTILITY_BUCKET_REGION="us-east-1"
 export METRICS_UTILITY_BUCKET_SECRET_KEY="myusersecretkey"
@@ -17,15 +17,29 @@ if ! pg_isready -h localhost; then
   exit 1
 fi
 
-minio-mc alias set local "$METRICS_UTILITY_BUCKET_ENDPOINT" "$METRICS_UTILITY_BUCKET_ACCESS_KEY" "$METRICS_UTILITY_BUCKET_SECRET_KEY"
+# List S3 objects using boto3 (works with any S3-compatible store, including Garage)
+s3_ls() {
+  uv run python -c "
+import boto3
+s3 = boto3.client('s3',
+    endpoint_url='$METRICS_UTILITY_BUCKET_ENDPOINT',
+    aws_access_key_id='$METRICS_UTILITY_BUCKET_ACCESS_KEY',
+    aws_secret_access_key='$METRICS_UTILITY_BUCKET_SECRET_KEY',
+    region_name='$METRICS_UTILITY_BUCKET_REGION')
+resp = s3.list_objects_v2(Bucket='$METRICS_UTILITY_BUCKET_NAME', Prefix='$1')
+for obj in resp.get('Contents', []):
+    print(f'{obj[\"LastModified\"]}  {obj[\"Size\"]:>10}  {obj[\"Key\"]}')
+"
+}
+
 echo
-echo minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"
-minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"
+echo "s3 ls $METRICS_UTILITY_BUCKET_NAME/$METRICS_UTILITY_SHIP_PATH"
+s3_ls "$METRICS_UTILITY_SHIP_PATH"
 echo
 uv run ./manage.py gather_automation_controller_billing_data --ship --since=2025-06-01 --until=2025-07-01 --force
 echo
-minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"/data
+s3_ls "$METRICS_UTILITY_SHIP_PATH/data"
 echo
 uv run ./manage.py build_report --month=2025-06 --force
 echo
-minio-mc ls -r local/"$METRICS_UTILITY_BUCKET_NAME"/"$METRICS_UTILITY_SHIP_PATH"/reports
+s3_ls "$METRICS_UTILITY_SHIP_PATH/reports"
