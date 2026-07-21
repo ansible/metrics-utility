@@ -91,20 +91,71 @@ jobs:
             exit 0
           fi
 
+          NEW_PARAGRAPH=$(jq -n --arg url "$PR_URL" '{
+            type: "paragraph",
+            content: [{
+              type: "text",
+              text: $url,
+              marks: [{ type: "link", attrs: { href: $url } }]
+            }]
+          }')
+
+          CURRENT=$(curl -s -f \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+            "${JIRA_BASE_URL}/rest/api/3/issue/${TICKET}?fields=${JIRA_PR_FIELD_ID}" \
+            | jq ".fields.${JIRA_PR_FIELD_ID}") || { echo "::warning::Failed to fetch Jira ticket ${TICKET}"; exit 0; }
+
+          if echo "$CURRENT" | jq -re '.. | (.href? // .url? // empty), (strings | select(startswith("http")))' 2>/dev/null | grep -qFx "$PR_URL"; then
+            echo "PR URL already linked in ${TICKET}"
+            echo "linked=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$CURRENT" | jq -e '.content' &>/dev/null; then
+            UPDATED=$(echo "$CURRENT" | jq --argjson p "$NEW_PARAGRAPH" '.content += [$p]')
+          elif echo "$CURRENT" | jq -e 'type == "string" and length > 0' &>/dev/null; then
+            OLD_PARAGRAPH=$(echo "$CURRENT" | jq '{
+              type: "paragraph",
+              content: [{
+                type: "text",
+                text: .,
+                marks: [{ type: "link", attrs: { href: . } }]
+              }]
+            }')
+            UPDATED=$(jq -n --argjson old "$OLD_PARAGRAPH" --argjson new "$NEW_PARAGRAPH" '{
+              type: "doc",
+              version: 1,
+              content: [$old, $new]
+            }')
+          else
+            UPDATED=$(jq -n --argjson p "$NEW_PARAGRAPH" '{
+              type: "doc",
+              version: 1,
+              content: [$p]
+            }')
+          fi
+
+          PAYLOAD=$(jq -n --argjson val "$UPDATED" \
+            --arg field "$JIRA_PR_FIELD_ID" \
+            '{ fields: { ($field): $val } }')
+
           HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
             --connect-timeout 10 \
             --max-time 30 \
             -X PUT \
             -H "Content-Type: application/json" \
             -u "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
-            "${JIRA_BASE_URL}/rest/api/2/issue/${TICKET}" \
-            -d "{\"fields\": {\"${JIRA_PR_FIELD_ID}\": \"${PR_URL}\"}}") || true
+            "${JIRA_BASE_URL}/rest/api/3/issue/${TICKET}" \
+            -d "$PAYLOAD") || true
 
           if [[ "$HTTP_CODE" -ge 200 && "$HTTP_CODE" -lt 300 ]]; then
             echo "Updated ${TICKET} Git Pull Request field with ${PR_URL}"
             echo "linked=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::Failed to update Jira ticket ${TICKET} (HTTP ${HTTP_CODE})"
+            cat response.json
           fi
 
       - name: "Comment on PR with linked ticket"
