@@ -10,7 +10,7 @@ env_vars = {
     'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:3900'),  # or http://garage:3900
     'METRICS_UTILITY_BUCKET_NAME': 'metricsutilitys3',
     'METRICS_UTILITY_BUCKET_REGION': 'us-east-1',
-    'METRICS_UTILITY_BUCKET_SECRET_KEY': 'myusersecretkey',
+    'METRICS_UTILITY_BUCKET_SECRET_KEY': 'myusersecretkeyXX',
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_SHIP_PATH': f'metrics-utility/shipped_data_{os.getpid()}',
     'METRICS_UTILITY_SHIP_TARGET': 's3',

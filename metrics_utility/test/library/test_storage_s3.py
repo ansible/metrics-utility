@@ -14,7 +14,7 @@ s3_settings = {
     'bucket': 'metricsutilitys3',
     'endpoint': endpoint,
     'region': 'us-east-1',
-    'secret_key': 'myusersecretkey',
+    'secret_key': 'myusersecretkeyXX',
 }
 s3_object_name = f'temporary object x{os.getpid()}y'
 

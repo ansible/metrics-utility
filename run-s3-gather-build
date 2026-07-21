@@ -10,7 +10,7 @@ export METRICS_UTILITY_BUCKET_ACCESS_KEY="myuseraccesskey"
 export METRICS_UTILITY_BUCKET_ENDPOINT="http://localhost:3900"
 export METRICS_UTILITY_BUCKET_NAME="metricsutilitys3"
 export METRICS_UTILITY_BUCKET_REGION="us-east-1"
-export METRICS_UTILITY_BUCKET_SECRET_KEY="myusersecretkey"
+export METRICS_UTILITY_BUCKET_SECRET_KEY="myusersecretkeyXX"
 
 if ! pg_isready -h localhost; then
   echo "run-s3-gather-build: DB not ready, run make compose first"

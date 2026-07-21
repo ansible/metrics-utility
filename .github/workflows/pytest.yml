@@ -61,7 +61,7 @@ jobs:
       - name: "Start Garage"
         env:
           GARAGE_DEFAULT_ACCESS_KEY: myuseraccesskey
-          GARAGE_DEFAULT_SECRET_KEY: myusersecretkey
+          GARAGE_DEFAULT_SECRET_KEY: myusersecretkeyXX
           GARAGE_DEFAULT_BUCKET: metricsutilitys3
         run: |
           garage -c /tmp/garage.toml server --single-node --default-bucket &
@@ -94,7 +94,7 @@ jobs:
           METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:3900"
           METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
-          METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
+          METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkeyXX"
           METRICS_UTILITY_DB_HOST: "localhost"
           METRICS_UTILITY_DB_NAME: "postgres"
           METRICS_UTILITY_DB_USER: "awx"
