@@ -26,7 +26,7 @@ S3_ENDPOINT="--endpoint-url $METRICS_UTILITY_BUCKET_ENDPOINT"
 
 echo
 echo aws $S3_ENDPOINT s3 ls "s3://$METRICS_UTILITY_BUCKET_NAME/$METRICS_UTILITY_SHIP_PATH" --recursive
-aws $S3_ENDPOINT s3 ls "s3://$METRICS_UTILITY_BUCKET_NAME/$METRICS_UTILITY_SHIP_PATH" --recursive
+aws $S3_ENDPOINT s3 ls "s3://$METRICS_UTILITY_BUCKET_NAME/$METRICS_UTILITY_SHIP_PATH" --recursive || true
 echo
 uv run ./manage.py gather_automation_controller_billing_data --ship --since=2025-06-01 --until=2025-07-01 --force
 echo
