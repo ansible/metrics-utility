@@ -1144,13 +1144,12 @@ def test_ansible_builtin_copy(modules):
     # event counts
     assert m['runner_on_ok_total'] == 4  # h1, h2-retry, h3, h5
     assert m['runner_on_failed_total'] == 1  # h2 first attempt
-    assert m['runner_on_failed_ignored_total'] == 0
+    assert m['ignore_errors_total'] == 0
     assert m['runner_on_unreachable_total'] == 1  # h4
     assert m['runner_on_async_ok_total'] == 0
     assert m['runner_on_async_failed_total'] == 0
     assert m['runner_item_on_ok_total'] == 0
     assert m['runner_item_on_failed_total'] == 0
-    assert m['runner_item_on_failed_ignored_total'] == 0
     assert m['runner_retry_total'] == 1  # h2 retry between failed and ok
     assert m['warnings_total'] == 1  # h3 module-level warning
     assert m['deprecations_total'] == 0
@@ -1167,15 +1166,14 @@ def test_ansible_builtin_package(modules):
     assert m['jobs_failed_total'] == 1
     # task-level event counts
     assert m['runner_on_ok_total'] == 1  # h1 task summary ok
-    assert m['runner_on_failed_total'] == 1  # h2 task summary failed (not ignored)
-    assert m['runner_on_failed_ignored_total'] == 1  # h3 task summary failed (ignored)
+    assert m['runner_on_failed_total'] == 2  # h2 (not ignored) + h3 (ignored)
     assert m['runner_on_unreachable_total'] == 0
     assert m['runner_on_async_ok_total'] == 0
     assert m['runner_on_async_failed_total'] == 0
     # item-level event counts
     assert m['runner_item_on_ok_total'] == 6  # h1×3, h2×1, h3×2
-    assert m['runner_item_on_failed_total'] == 1  # h2 item failed (not ignored)
-    assert m['runner_item_on_failed_ignored_total'] == 1  # h3 item failed (ignored)
+    assert m['runner_item_on_failed_total'] == 2  # h2 item failed (not ignored) + h3 item failed (ignored)
+    assert m['ignore_errors_total'] == 2  # h3 task-level failed + h3 item-level failed, both ignored
     assert m['runner_retry_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
@@ -1190,12 +1188,11 @@ def test_ansible_posix_firewalld(modules):
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
     assert m['runner_on_ok_total'] == 2  # h1, h3
-    assert m['runner_on_failed_total'] == 0
-    assert m['runner_on_failed_ignored_total'] == 1  # h2 (ignore_errors=True)
+    assert m['runner_on_failed_total'] == 1  # h2 (ignore_errors=True, still counted unconditionally)
+    assert m['ignore_errors_total'] == 1  # h2 (ignore_errors=True)
     assert m['runner_on_unreachable_total'] == 0
     assert m['runner_item_on_ok_total'] == 0
     assert m['runner_item_on_failed_total'] == 0
-    assert m['runner_item_on_failed_ignored_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 1  # h3 module-level deprecation
     assert m['collected_events_total'] == 3  # h5 runner_on_skipped excluded
@@ -1210,8 +1207,8 @@ def test_ansible_builtin_systemd(modules):
     assert m['runner_on_ok_total'] == 0
     assert m['runner_on_failed_total'] == 0
     assert m['runner_on_async_ok_total'] == 1  # h1
-    assert m['runner_on_async_failed_total'] == 1  # h2
-    assert m['runner_on_async_failed_ignored_total'] == 1  # h3
+    assert m['runner_on_async_failed_total'] == 2  # h2 (not ignored) + h3 (ignored)
+    assert m['ignore_errors_total'] == 1  # h3
     assert m['runner_item_on_ok_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
@@ -1247,11 +1244,10 @@ def test_community_general_ini_file(modules):
     assert m['jobs_failed_total'] == 0
     assert m['jobs_successful_total'] == 1
     assert m['runner_on_ok_total'] == 1  # h2 task summary ok
-    assert m['runner_on_failed_total'] == 0
-    assert m['runner_on_failed_ignored_total'] == 1  # h3 task summary failed (ignored)
+    assert m['runner_on_failed_total'] == 1  # h3 task summary failed (ignore_errors=True, still counted unconditionally)
     assert m['runner_item_on_ok_total'] == 3  # h2×2, h3×1
-    assert m['runner_item_on_failed_total'] == 0
-    assert m['runner_item_on_failed_ignored_total'] == 1  # h3 item failed (ignored)
+    assert m['runner_item_on_failed_total'] == 1  # h3 item failed (ignore_errors=True, still counted unconditionally)
+    assert m['ignore_errors_total'] == 2  # h3 task-level failed + h3 item-level failed, both ignored
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 6
@@ -1318,10 +1314,9 @@ def test_community_general_yum(modules):
     assert m['jobs_successful_total'] == 0
     assert m['runner_on_ok_total'] == 1  # h1 task summary ok
     assert m['runner_on_failed_total'] == 1  # h6 task summary failed
-    assert m['runner_on_failed_ignored_total'] == 0
     assert m['runner_item_on_ok_total'] == 3  # h1×2, h6×1
     assert m['runner_item_on_failed_total'] == 1  # h6 item failed
-    assert m['runner_item_on_failed_ignored_total'] == 0
+    assert m['ignore_errors_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 6  # h4 runner_on_skipped excluded
@@ -1352,15 +1347,13 @@ def test_ansible_builtin_collection(collections):
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)  # 30+20+10
     # aggregated event counts (copy + package + systemd + template + file + debug)
     assert c['runner_on_ok_total'] == 11  # 4+1+0+2+2+2
-    assert c['runner_on_failed_total'] == 2  # 1+1+0+0+0
-    assert c['runner_on_failed_ignored_total'] == 1  # 0+1+0+0+0
+    assert c['runner_on_failed_total'] == 3  # 1+2+0+0+0 (package now includes h3 ignored)
     assert c['runner_on_unreachable_total'] == 2  # 1+0+0+0+1
     assert c['runner_on_async_ok_total'] == 1  # 0+0+1+0+0
-    assert c['runner_on_async_failed_total'] == 1  # systemd h2
-    assert c['runner_on_async_failed_ignored_total'] == 1  # systemd h3
+    assert c['runner_on_async_failed_total'] == 2  # systemd h2 (not ignored) + h3 (ignored)
     assert c['runner_item_on_ok_total'] == 6  # 0+6+0+0+0
-    assert c['runner_item_on_failed_total'] == 1  # 0+1+0+0+0
-    assert c['runner_item_on_failed_ignored_total'] == 1  # 0+1+0+0+0
+    assert c['runner_item_on_failed_total'] == 2  # package h2 (not ignored) + h3 (ignored)
+    assert c['ignore_errors_total'] == 3  # package h3 (task+item) + systemd h3
     assert c['runner_retry_total'] == 1  # copy h2
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
@@ -1376,8 +1369,8 @@ def test_ansible_posix_collection(collections):
     assert c['jobs_duration_total_seconds'] == pytest.approx(870.0)
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(30.0)
     assert c['runner_on_ok_total'] == 2
-    assert c['runner_on_failed_total'] == 0
-    assert c['runner_on_failed_ignored_total'] == 1
+    assert c['runner_on_failed_total'] == 1  # h2 (ignore_errors=True, still counted unconditionally)
+    assert c['ignore_errors_total'] == 1
     assert c['runner_on_unreachable_total'] == 0
     assert c['runner_item_on_ok_total'] == 0
     assert c['warnings_total'] == 0
@@ -1413,12 +1406,11 @@ def test_community_general_collection(collections):
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(30.0)  # 20+10
     # ini_file + yum
     assert c['runner_on_ok_total'] == 2  # 1+1
-    assert c['runner_on_failed_total'] == 1  # 0+1
-    assert c['runner_on_failed_ignored_total'] == 1  # 1+0
+    assert c['runner_on_failed_total'] == 2  # 1+1 (ini_file's is ignored, yum's is not)
     assert c['runner_on_unreachable_total'] == 0
     assert c['runner_item_on_ok_total'] == 6  # 3+3
-    assert c['runner_item_on_failed_total'] == 1  # 0+1
-    assert c['runner_item_on_failed_ignored_total'] == 1  # 1+0
+    assert c['runner_item_on_failed_total'] == 2  # 1+1 (ini_file's is ignored, yum's is not)
+    assert c['ignore_errors_total'] == 2  # ini_file task-level + item-level, both ignored
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
     assert c['collected_events_total'] == 12  # 6+6
@@ -1450,7 +1442,7 @@ def test_role_web(roles):
     assert r['jobs_failed_total'] == 1
     assert r['runner_on_ok_total'] == 4
     assert r['runner_on_failed_total'] == 1
-    assert r['runner_on_failed_ignored_total'] == 0
+    assert r['ignore_errors_total'] == 0
     assert r['runner_on_unreachable_total'] == 1
     assert r['runner_item_on_ok_total'] == 0
     assert r['runner_retry_total'] == 1
@@ -1468,8 +1460,8 @@ def test_role_firewall(roles):
     assert r['jobs_total'] == 1
     assert r['jobs_failed_total'] == 1
     assert r['runner_on_ok_total'] == 2
-    assert r['runner_on_failed_total'] == 0
-    assert r['runner_on_failed_ignored_total'] == 1
+    assert r['runner_on_failed_total'] == 1  # h2 (ignore_errors=True, still counted unconditionally)
+    assert r['ignore_errors_total'] == 1
     assert r['runner_on_unreachable_total'] == 0
     assert r['runner_item_on_ok_total'] == 0
     assert r['warnings_total'] == 0

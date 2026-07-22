@@ -130,16 +130,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     block/rescue, and retries.
 
     Sync task-level events (runner_on_*):
-        runner_on_ok_total, runner_on_failed_total, runner_on_failed_ignored_total,
-        runner_on_unreachable_total
+        runner_on_ok_total, runner_on_failed_total, runner_on_unreachable_total
 
     Async task-level events (runner_on_async_*):
-        runner_on_async_ok_total, runner_on_async_failed_total,
-        runner_on_async_failed_ignored_total
+        runner_on_async_ok_total, runner_on_async_failed_total
 
     Loop item-level events (runner_item_on_*):
-        runner_item_on_ok_total, runner_item_on_failed_total,
-        runner_item_on_failed_ignored_total
+        runner_item_on_ok_total, runner_item_on_failed_total
 
     Retry events:
         runner_retry_total
@@ -147,6 +144,20 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     For a loop with partial item failures the task-level runner_on_failed and
     the item-level runner_item_on_failed are in separate counters, so consumers
     can reason about them independently.
+
+    ignore_errors is tracked as a single combined ``ignore_errors_total``
+    counter across all failed-variant events (runner_on_failed,
+    runner_on_async_failed, runner_item_on_failed), rather than as a per-event
+    ``*_ignored`` split. This is a deliberate simplification: ansible-core does
+    not expose an ignore_errors signal anywhere on runner_on_async_failed
+    events (see main_jobevent_service.py for details), so a per-event split
+    would silently under-count ignored async failures as non-ignored. The
+    *_total counters above are therefore unconditional (count every event of
+    that type regardless of ignore_errors), and ignore_errors_total is a
+    best-effort, currently-incomplete signal that undercounts ignored async
+    failures. Revisit if/when async ignore_errors can be recovered (e.g. via
+    the companion runner_on_failed event ansible-core also emits for a failed
+    async task).
 
     Annotation events (warning / deprecated) are counted into top-level
     ``warnings_total`` / ``deprecations_total`` (promoted to statistics in the
@@ -165,15 +176,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'jobs_failed_duration_total_seconds',
         'runner_on_ok_total',
         'runner_on_failed_total',
-        'runner_on_failed_ignored_total',
         'runner_on_unreachable_total',
         'runner_on_async_ok_total',
         'runner_on_async_failed_total',
-        'runner_on_async_failed_ignored_total',
         'runner_item_on_ok_total',
         'runner_item_on_failed_total',
-        'runner_item_on_failed_ignored_total',
         'runner_retry_total',
+        'ignore_errors_total',
         'warnings_total',
         'deprecations_total',
         'collected_events_total',
@@ -454,20 +463,22 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # ------------------------------------------------------------------
 
     # Runner event types counted via precomputed int8 flag columns (sum in groupby).
-    # Failed variants are split by ignore_errors into *_failed vs *_failed_ignored.
+    # is_ignore_errors is a combined counter across all failed-variant events;
+    # see class docstring for why it isn't split per event type.
     _RUNNER_EVENT_FLAG_COLS = (
         'is_runner_on_ok',
         'is_runner_on_failed',
-        'is_runner_on_failed_ignored',
         'is_runner_on_unreachable',
         'is_runner_on_async_ok',
         'is_runner_on_async_failed',
-        'is_runner_on_async_failed_ignored',
         'is_runner_item_on_ok',
         'is_runner_item_on_failed',
-        'is_runner_item_on_failed_ignored',
         'is_runner_retry',
+        'is_ignore_errors',
     )
+
+    # Event types for which ignore_errors is meaningful (task-failure variants).
+    _FAILED_EVENTS = frozenset(['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed'])
 
     @staticmethod
     def _add_aggregation_columns(dataframe):
@@ -482,16 +493,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         flags = {
             'is_runner_on_ok': event == 'runner_on_ok',
-            'is_runner_on_failed': (event == 'runner_on_failed') & ~ignore_errors,
-            'is_runner_on_failed_ignored': (event == 'runner_on_failed') & ignore_errors,
+            'is_runner_on_failed': event == 'runner_on_failed',
             'is_runner_on_unreachable': event == 'runner_on_unreachable',
             'is_runner_on_async_ok': event == 'runner_on_async_ok',
-            'is_runner_on_async_failed': (event == 'runner_on_async_failed') & ~ignore_errors,
-            'is_runner_on_async_failed_ignored': (event == 'runner_on_async_failed') & ignore_errors,
+            'is_runner_on_async_failed': event == 'runner_on_async_failed',
             'is_runner_item_on_ok': event == 'runner_item_on_ok',
-            'is_runner_item_on_failed': (event == 'runner_item_on_failed') & ~ignore_errors,
-            'is_runner_item_on_failed_ignored': (event == 'runner_item_on_failed') & ignore_errors,
+            'is_runner_item_on_failed': event == 'runner_item_on_failed',
             'is_runner_retry': event == 'runner_retry',
+            # Best-effort: undercounts ignored runner_on_async_failed events,
+            # since ansible-core exposes no ignore_errors signal for them (see docstring).
+            'is_ignore_errors': event.isin(EventModulesAnonymizedRollup._FAILED_EVENTS) & ignore_errors,
         }
         # int8 sum is cheaper than bool sum across many groupby aggregations
         flags = {name: series.astype('int8') for name, series in flags.items()}

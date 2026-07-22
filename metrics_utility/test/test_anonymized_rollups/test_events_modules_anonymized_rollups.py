@@ -488,7 +488,7 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['collection_source'] == 'certified'
     assert copy_stats['runner_on_ok_total'] == 3  # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
     assert copy_stats['runner_on_failed_total'] == 2  # Job1/H1 failed, Job4/H5 failed
-    assert copy_stats['runner_on_failed_ignored_total'] == 0
+    assert copy_stats['ignore_errors_total'] == 0
     assert copy_stats['runner_on_unreachable_total'] == 0
     assert copy_stats['runner_on_async_ok_total'] == 0
     assert copy_stats['runner_on_async_failed_total'] == 0
@@ -520,7 +520,7 @@ def test_events_modules_aggregations_basic():
     assert firewalld_stats['collection_source'] == 'certified'
     assert firewalld_stats['runner_on_ok_total'] == 1
     assert firewalld_stats['runner_on_failed_total'] == 1
-    assert firewalld_stats['runner_on_failed_ignored_total'] == 0
+    assert firewalld_stats['ignore_errors_total'] == 0
     assert firewalld_stats['runner_on_unreachable_total'] == 0
     assert firewalld_stats['jobs_total'] == 2
     assert firewalld_stats['jobs_never_started_total'] == 0
@@ -532,8 +532,8 @@ def test_events_modules_aggregations_basic():
     ec2_stats = stats_by_module['community.aws.ec2']
     assert ec2_stats['collection_source'] == 'community'
     assert ec2_stats['runner_on_ok_total'] == 2
-    assert ec2_stats['runner_on_failed_total'] == 0
-    assert ec2_stats['runner_on_failed_ignored_total'] == 1  # Job4/H7 ignore_errors=True
+    assert ec2_stats['runner_on_failed_total'] == 1  # Job4/H7 (ignore_errors=True, still counted unconditionally)
+    assert ec2_stats['ignore_errors_total'] == 1  # Job4/H7 ignore_errors=True
     assert ec2_stats['runner_on_unreachable_total'] == 0
     assert ec2_stats['jobs_total'] == 2
     assert ec2_stats['jobs_never_started_total'] == 0
@@ -545,9 +545,8 @@ def test_events_modules_aggregations_basic():
     assert yum_stats['collection_source'] == 'community'
     assert yum_stats['runner_on_ok_total'] == 0
     assert yum_stats['runner_on_failed_total'] == 2  # Job1/H2, Job5/H9
-    assert yum_stats['runner_on_failed_ignored_total'] == 0
     assert yum_stats['runner_on_async_failed_total'] == 1  # Job2/H2
-    assert yum_stats['runner_on_async_failed_ignored_total'] == 0
+    assert yum_stats['ignore_errors_total'] == 0
     assert yum_stats['jobs_total'] == 3
     assert yum_stats['jobs_never_started_total'] == 1  # Job5 has job_started=None
     assert yum_stats['collected_events_total'] == 3
@@ -558,7 +557,7 @@ def test_events_modules_aggregations_basic():
     assert mongo_stats['collection_source'] == 'community'
     assert mongo_stats['runner_on_ok_total'] == 1  # Job2/H1 ok
     assert mongo_stats['runner_on_failed_total'] == 1  # Job2/H1 failed
-    assert mongo_stats['runner_on_failed_ignored_total'] == 0
+    assert mongo_stats['ignore_errors_total'] == 0
     assert mongo_stats['runner_on_async_ok_total'] == 1  # Job1/H3 async_ok
     assert mongo_stats['runner_on_async_failed_total'] == 0
     assert mongo_stats['jobs_total'] == 2
@@ -614,7 +613,7 @@ def test_events_modules_aggregations_basic():
     assert windows_coll['jobs_failed_total'] == 3
     assert windows_coll['runner_on_ok_total'] == 3
     assert windows_coll['runner_on_failed_total'] == 2
-    assert windows_coll['runner_on_failed_ignored_total'] == 0
+    assert windows_coll['ignore_errors_total'] == 0
     assert windows_coll['collected_events_total'] == 5
 
     # community.aws
@@ -626,8 +625,8 @@ def test_events_modules_aggregations_basic():
     assert aws_coll['jobs_waiting_time_total_seconds'] == pytest.approx(900.0)
     assert aws_coll['jobs_failed_total'] == 1
     assert aws_coll['runner_on_ok_total'] == 2
-    assert aws_coll['runner_on_failed_total'] == 0
-    assert aws_coll['runner_on_failed_ignored_total'] == 1
+    assert aws_coll['runner_on_failed_total'] == 1  # Job4/H7 (ignore_errors=True, still counted unconditionally)
+    assert aws_coll['ignore_errors_total'] == 1
     assert aws_coll['collected_events_total'] == 3  # skipped event excluded
 
     # community.general
