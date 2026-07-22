@@ -1141,6 +1141,8 @@ def test_ansible_builtin_copy(modules):
     assert m['jobs_waiting_time_total_seconds'] == pytest.approx(30.0)
     assert m['jobs_successful_duration_total_seconds'] == pytest.approx(0.0)
     assert m['jobs_failed_duration_total_seconds'] == pytest.approx(870.0)
+    # tasks
+    assert m['tasks_total'] == 1  # t001
     # event counts
     assert m['runner_on_ok_total'] == 4  # h1, h2-retry, h3, h5
     assert m['runner_on_failed_total'] == 1  # h2 first attempt
@@ -1155,7 +1157,6 @@ def test_ansible_builtin_copy(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 7
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
-    # host coverage: h1, h2 (failed/retry/ok), h3, h4, h5 → 5 distinct hosts
 
 
 def test_ansible_builtin_package(modules):
@@ -1164,6 +1165,7 @@ def test_ansible_builtin_package(modules):
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
+    assert m['tasks_total'] == 1  # t002
     # task-level event counts
     assert m['runner_on_ok_total'] == 1  # h1 task summary ok
     assert m['runner_on_failed_total'] == 2  # h2 (not ignored) + h3 (ignored)
@@ -1187,6 +1189,7 @@ def test_ansible_posix_firewalld(modules):
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
+    assert m['tasks_total'] == 1  # t003 (h5 runner_on_skipped excluded but task still counted from h1/h2/h3)
     assert m['runner_on_ok_total'] == 2  # h1, h3
     assert m['runner_on_failed_total'] == 1  # h2 (ignore_errors=True, still counted unconditionally)
     assert m['ignore_errors_total'] == 1  # h2 (ignore_errors=True)
@@ -1204,6 +1207,7 @@ def test_ansible_builtin_systemd(modules):
     assert m['collection'] == 'ansible.builtin'
     assert m['collection_source'] == 'certified'
     assert m['jobs_total'] == 1
+    assert m['tasks_total'] == 1  # t004
     assert m['runner_on_ok_total'] == 0
     assert m['runner_on_failed_total'] == 0
     assert m['runner_on_async_ok_total'] == 1  # h1
@@ -1223,6 +1227,7 @@ def test_community_mongodb_mongodb_replicaset(modules):
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 0
     assert m['jobs_successful_total'] == 1
+    assert m['tasks_total'] == 1  # t005
     assert m['jobs_duration_total_seconds'] == pytest.approx(1180.0)
     assert m['jobs_successful_duration_total_seconds'] == pytest.approx(1180.0)
     assert m['jobs_failed_duration_total_seconds'] == pytest.approx(0.0)
@@ -1243,6 +1248,7 @@ def test_community_general_ini_file(modules):
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 0
     assert m['jobs_successful_total'] == 1
+    assert m['tasks_total'] == 1  # t006
     assert m['runner_on_ok_total'] == 1  # h2 task summary ok
     assert m['runner_on_failed_total'] == 1  # h3 task summary failed (ignore_errors=True, still counted unconditionally)
     assert m['runner_item_on_ok_total'] == 3  # h2×2, h3×1
@@ -1261,6 +1267,7 @@ def test_ansible_builtin_template(modules):
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 0
     assert m['jobs_successful_total'] == 1
+    assert m['tasks_total'] == 1  # t007
     assert m['runner_on_ok_total'] == 2  # h2, h3
     assert m['runner_on_failed_total'] == 0
     assert m['runner_item_on_ok_total'] == 0
@@ -1279,6 +1286,7 @@ def test_ansible_builtin_file(modules):
     assert m['jobs_successful_total'] == 0
     assert m['jobs_duration_total_seconds'] == pytest.approx(290.0)
     assert m['jobs_failed_duration_total_seconds'] == pytest.approx(290.0)
+    assert m['tasks_total'] == 1  # t008
     assert m['runner_on_ok_total'] == 2  # h1, h6
     assert m['runner_on_failed_total'] == 0
     assert m['runner_on_unreachable_total'] == 1  # h4
@@ -1296,6 +1304,7 @@ def test_ansible_builtin_debug(modules):
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
     assert m['jobs_successful_total'] == 0
+    assert m['tasks_total'] == 1  # t010
     assert m['runner_on_ok_total'] == 2  # h1, h6
     assert m['runner_on_failed_total'] == 0
     assert m['runner_item_on_ok_total'] == 0
@@ -1312,6 +1321,7 @@ def test_community_general_yum(modules):
     assert m['jobs_total'] == 1
     assert m['jobs_failed_total'] == 1
     assert m['jobs_successful_total'] == 0
+    assert m['tasks_total'] == 1  # t009 (h4 runner_on_skipped excluded but task counted from h1/h6)
     assert m['runner_on_ok_total'] == 1  # h1 task summary ok
     assert m['runner_on_failed_total'] == 1  # h6 task summary failed
     assert m['runner_item_on_ok_total'] == 3  # h1×2, h6×1
@@ -1345,6 +1355,8 @@ def test_ansible_builtin_collection(collections):
     assert c['jobs_successful_total'] == 1  # job 2
     assert c['jobs_duration_total_seconds'] == pytest.approx(2340.0)  # 870+1180+290
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(60.0)  # 30+20+10
+    assert c['tasks_total'] == 6  # t001(copy) + t002(package) + t004(systemd) + t007(template) + t008(file) + t010(debug)
+    assert c['unique_hosts_total'] == 6  # h1, h2, h3, h4, h5, h6
     # aggregated event counts (copy + package + systemd + template + file + debug)
     assert c['runner_on_ok_total'] == 11  # 4+1+0+2+2+2
     assert c['runner_on_failed_total'] == 3  # 1+2+0+0+0 (package now includes h3 ignored)
@@ -1368,6 +1380,8 @@ def test_ansible_posix_collection(collections):
     assert c['jobs_failed_total'] == 1
     assert c['jobs_duration_total_seconds'] == pytest.approx(870.0)
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(30.0)
+    assert c['tasks_total'] == 1  # t003(firewalld)
+    assert c['unique_hosts_total'] == 3  # h1, h2, h3 (h5 skipped event excluded)
     assert c['runner_on_ok_total'] == 2
     assert c['runner_on_failed_total'] == 1  # h2 (ignore_errors=True, still counted unconditionally)
     assert c['ignore_errors_total'] == 1
@@ -1387,6 +1401,8 @@ def test_community_mongodb_collection(collections):
     assert c['jobs_successful_total'] == 1
     assert c['jobs_duration_total_seconds'] == pytest.approx(1180.0)
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(20.0)
+    assert c['tasks_total'] == 1  # t005(mongodb_replicaset)
+    assert c['unique_hosts_total'] == 2  # h2, h3
     assert c['runner_on_async_ok_total'] == 2
     assert c['runner_on_ok_total'] == 0
     assert c['runner_item_on_ok_total'] == 0
@@ -1404,6 +1420,8 @@ def test_community_general_collection(collections):
     assert c['jobs_successful_total'] == 1  # job 2
     assert c['jobs_duration_total_seconds'] == pytest.approx(1470.0)  # 1180+290
     assert c['jobs_waiting_time_total_seconds'] == pytest.approx(30.0)  # 20+10
+    assert c['tasks_total'] == 2  # t006(ini_file) + t009(yum)
+    assert c['unique_hosts_total'] == 4  # h1, h2, h3, h6 (h4 skipped event excluded)
     # ini_file + yum
     assert c['runner_on_ok_total'] == 2  # 1+1
     assert c['runner_on_failed_total'] == 2  # 1+1 (ini_file's is ignored, yum's is not)
