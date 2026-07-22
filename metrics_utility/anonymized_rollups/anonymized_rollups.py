@@ -1,7 +1,3 @@
-import hashlib
-import json
-import os
-
 from typing import Any, Callable, Dict, List
 
 import pandas as pd
@@ -11,17 +7,12 @@ from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import Cre
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import load_known_collections
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
-
-
-def hash(value, salt):
-    # has the value and salt, hash should be string
-    combined = (salt + ':' + value).encode('utf-8')
-    hashed = hashlib.sha256(combined).hexdigest()
-    return hashed
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
 def _installed_collection_name_is_unknown(collection_name: Any, known: Dict[str, Any]) -> bool:
@@ -70,7 +61,17 @@ def create_anonymized_object(rollup_name: str):
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
-def anonymize_data(data, salt):
+def _remove_custom_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return a new list with all items whose collection_source is 'Custom' removed."""
+    return [item for item in items if item and item.get('collection_source') != 'Custom']
+
+
+def _remove_unknown_installed_collections(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return a new list with installed-collection entries not in the known whitelist removed."""
+    return [item for item in items if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)]
+
+
+def anonymize_data(data):
     """
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
@@ -88,74 +89,37 @@ def anonymize_data(data, salt):
             - role_stats: array of role statistics
             - jobs_by_installed_collections_versions: array of {collection, version, jobs_total, jobs_failed_total,
               jobs_successful_total} from installed collections
-        salt: Salt string for hashing (used for job_template_name hashing)
     """
     if not data or not isinstance(data, dict):
         return
 
-    # anonymize jobs_by_job_type job template name (if present)
-    # Note: jobs_by_job_type is now grouped by job_type, but may still have job_template_name for templates_total
-    if 'jobs_by_job_type' in data and data['jobs_by_job_type']:
-        for job in data['jobs_by_job_type']:
-            if job and 'job_template_name' in job and job['job_template_name']:
-                job['job_template_name'] = hash(job['job_template_name'], salt)
+    for key in ('module_stats', 'collection_stats', 'role_stats'):
+        if key in data:
+            data[key] = _remove_custom_items(data[key] or [])
 
-    # anonymize jobs_by_launch_type job template name (if present)
-    if 'jobs_by_launch_type' in data and data['jobs_by_launch_type']:
-        for job in data['jobs_by_launch_type']:
-            if job and 'job_template_name' in job and job['job_template_name']:
-                job['job_template_name'] = hash(job['job_template_name'], salt)
+    known_collections = load_known_collections()
 
-    # anonymize jobs_by_ansible_version job template name (if present)
-    if 'jobs_by_ansible_version' in data and data['jobs_by_ansible_version']:
-        for job in data['jobs_by_ansible_version']:
-            if job and 'job_template_name' in job and job['job_template_name']:
-                job['job_template_name'] = hash(job['job_template_name'], salt)
-
-    # anonymize module_stats - replace module name and collection name with 'Custom' for 'Custom' sources
-    if 'module_stats' in data and data['module_stats']:
-        for module in data['module_stats']:
-            if module and module.get('collection_source') == 'Custom':
-                if 'module_name' in module and module['module_name']:
-                    module['module_name'] = 'Custom'
-                if 'collection_name' in module and module['collection_name']:
-                    module['collection_name'] = 'Custom'
-
-    # anonymize collection_stats - replace collection name with 'Custom' for 'Custom' sources
-    if 'collection_stats' in data and data['collection_stats']:
-        for collection in data['collection_stats']:
-            if collection and collection.get('collection_source') == 'Custom':
-                if 'collection_name' in collection and collection['collection_name']:
-                    collection['collection_name'] = 'Custom'
-
-    # anonymize role_stats - replace role name and collection name with 'Custom' for 'Custom' sources
-    if 'role_stats' in data and data['role_stats']:
-        for role in data['role_stats']:
-            if role and role.get('collection_source') == 'Custom':
-                if 'role' in role and role['role']:
-                    role['role'] = 'Custom'
-                if 'collection_name' in role and role['collection_name']:
-                    role['collection_name'] = 'Custom'
-
-    # anonymize jobs_by_installed_collections_versions - replace collection and version with "Custom" for unknown collections
-    # Load collections.json to check if collection is known
-    collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
-    try:
-        with open(collections_path, 'r') as f:
-            collections = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        collections = {}
-
-    if 'jobs_by_installed_collections_versions' in data and data['jobs_by_installed_collections_versions']:
-        for collection_version in data['jobs_by_installed_collections_versions']:
-            if collection_version and 'collection' in collection_version:
-                collection_name = collection_version.get('collection', '')
-                if _installed_collection_name_is_unknown(collection_name, collections):
-                    collection_version['collection'] = 'Custom'
-                    collection_version['version'] = 'Custom'
-
-    # Note: modules_used_per_playbook anonymization removed since it's not in final output
-    # If needed in future, can be re-enabled when modules_used_per_playbook is added back to output
+    if 'jobs_by_installed_collections_versions' in data:
+        data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(
+            data['jobs_by_installed_collections_versions'] or [],
+            known_collections,
+        )
+    if 'indirect_nodes_by_collection' in data:
+        data['indirect_nodes_by_collection'] = [
+            item
+            for item in (data['indirect_nodes_by_collection'] or [])
+            if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)
+        ]
+    if 'indirect_nodes_by_module' in data:
+        data['indirect_nodes_by_module'] = [
+            item
+            for item in (data['indirect_nodes_by_module'] or [])
+            if item
+            and not _installed_collection_name_is_unknown(
+                DataframeContentUsage.extract_collection_name(item.get('module', '')),
+                known_collections,
+            )
+        ]
 
 
 def _normalize_ansible_version_key(ansible_version: Any) -> str:
@@ -589,7 +553,6 @@ def anonymize_rollups(
     credentials_rollup,
     table_metadata_rollup,
     controller_version_rollup,
-    salt,
     *,
     feature_flags_rollup=None,
     task_executions_rollup=None,
@@ -606,7 +569,6 @@ def anonymize_rollups(
         credentials_rollup: Credentials statistics
         table_metadata_rollup: Table metadata statistics
         controller_version_rollup: Controller version statistics
-        salt: Salt string for hashing sensitive data
         feature_flags_rollup: Enabled feature flags list (optional, keyword-only)
         task_executions_rollup: Task execution observability statistics (optional, keyword-only)
         indirect_managed_nodes_rollup: Indirect managed nodes statistics (optional, keyword-only)
@@ -631,6 +593,6 @@ def anonymize_rollups(
     data = flatten_json_report(data)
 
     # Then anonymize the flattened structure
-    anonymize_data(data, salt)
+    anonymize_data(data)
 
     return data
