@@ -55,12 +55,19 @@ jobs:
         working-directory: awx
         run: |
           uv venv /tmp/awx-venv
+
           # Filter out uwsgi (needs crypt.h) — not needed for migrations
           sed '/^uwsgi==/d' requirements/requirements.txt > /tmp/awx-requirements-filtered.txt
+
+          # Filter out backports-zstd on Python 3.14+ (stdlib compression.zstd replaces it)
+          python -c 'import sys; sys.exit(0 if sys.version_info >= (3,14) else 1)' \
+            && sed -i '/^backports-zstd/d' /tmp/awx-requirements-filtered.txt
+
           uv pip install --python /tmp/awx-venv/bin/python \
             -r /tmp/awx-requirements-filtered.txt \
             -r requirements/requirements_git.txt \
             -r requirements/requirements_dev.txt
+
           uv pip install --python /tmp/awx-venv/bin/python -e .
 
       - name: "Run AWX migrations"
