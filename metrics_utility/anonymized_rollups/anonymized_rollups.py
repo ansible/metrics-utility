@@ -14,6 +14,7 @@ from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import 
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
 def _installed_collection_name_is_unknown(collection_name: Any, known: Dict[str, Any]) -> bool:
@@ -120,11 +121,30 @@ def anonymize_data(data):
     for key in ('module_stats', 'collection_stats', 'role_stats'):
         if key in data:
             data[key] = _remove_custom_items(data[key] or [])
+
+    known_collections = _load_known_collections()
+
     if 'jobs_by_installed_collections_versions' in data:
         data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(
             data['jobs_by_installed_collections_versions'] or [],
-            _load_known_collections(),
+            known_collections,
         )
+    if 'indirect_nodes_by_collection' in data:
+        data['indirect_nodes_by_collection'] = [
+            item
+            for item in (data['indirect_nodes_by_collection'] or [])
+            if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)
+        ]
+    if 'indirect_nodes_by_module' in data:
+        data['indirect_nodes_by_module'] = [
+            item
+            for item in (data['indirect_nodes_by_module'] or [])
+            if item
+            and not _installed_collection_name_is_unknown(
+                DataframeContentUsage.extract_collection_name(item.get('module', '')),
+                known_collections,
+            )
+        ]
 
 
 def _normalize_ansible_version_key(ansible_version: Any) -> str:

@@ -1,7 +1,6 @@
 """Anonymized rollup for indirect managed node audit collector data."""
 
 import json
-import os
 
 import pandas as pd
 
@@ -91,9 +90,6 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
     def __init__(self):
         super().__init__('indirect_managed_nodes')
         self.collector_names = ['main_indirectmanagednodeaudit']
-        collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
-        with open(collections_path, 'r') as f:
-            self.known_collections = json.load(f)
 
     def prepare(self, dataframe):
         """Transform raw indirect node audit data into org/collection groups.
@@ -189,8 +185,6 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         collection_hosts = {}
         for group in data.get('groups', {}).values():
             cname = group['collection']
-            if cname not in self.known_collections:
-                continue
             hosts = group.get('host_names', [])
             if cname not in collection_hosts:
                 collection_hosts[cname] = set()
@@ -201,8 +195,6 @@ class IndirectManagedNodesAnonymizedRollup(BaseAnonymizedRollup):
         module_hosts = {}
         for group in data.get('module_groups', {}).values():
             mname = group['module']
-            if DataframeContentUsage.extract_collection_name(mname) not in self.known_collections:
-                continue
             hosts = group.get('host_names', [])
             if mname not in module_hosts:
                 module_hosts[mname] = set()
