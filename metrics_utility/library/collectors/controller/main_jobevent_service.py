@@ -17,7 +17,6 @@ _RUNNER_EVENTS = [
     'runner_on_async_failed',
     'runner_item_on_failed',
     'runner_on_unreachable',
-    'runner_item_on_unreachable',
     'runner_retry',
 ]
 

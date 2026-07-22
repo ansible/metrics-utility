@@ -295,7 +295,6 @@ _RUNNER_EVENT_COUNTERS = (
     'runner_item_on_ok_total',
     'runner_item_on_failed_total',
     'runner_item_on_failed_ignored_total',
-    'runner_item_on_unreachable_total',
     'runner_retry_total',
     'warnings_total',
     'deprecations_total',
@@ -340,7 +339,7 @@ def _validate_role_stats(json_data):
         assert role['collection_source'] == source
         assert role['jobs_total'] == 3
         assert role['runner_on_ok_total'] == 7
-        assert role['collected_events_total'] == 18
+        assert role['collected_events_total'] == 17
         _assert_runner_event_counters_populated(role, role_name)
 
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
@@ -525,7 +524,7 @@ def _validate_module_stats_values_multi_hour(json_data):
         assert module['jobs_total'] == 6, f'{module_name} should have 6 jobs'
         # Base ok events (18) + 1 diversified ok-with-warnings on job 1
         assert module['runner_on_ok_total'] == 19, f'{module_name} runner_on_ok_total'
-        assert module['collected_events_total'] == 30, f'{module_name} collected_events_total'
+        assert module['collected_events_total'] == 29, f'{module_name} collected_events_total'
         _assert_runner_event_counters_populated(module, module_name)
         for version in module['ansible_versions']:
             assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
@@ -542,7 +541,7 @@ def _validate_collection_stats_values_multi_hour(json_data):
         assert collection['collection_source'] == source
         assert collection['jobs_total'] == 6
         assert collection['runner_on_ok_total'] == 19
-        assert collection['collected_events_total'] == 30
+        assert collection['collected_events_total'] == 29
         _assert_runner_event_counters_populated(collection, collection_name)
         for version in collection['ansible_versions']:
             assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
@@ -927,8 +926,8 @@ def _validate_warnings_deprecations_values_multi_hour(json_data, statistics):
     assert 'playbook_events' not in json_data
     assert statistics['rollup_period_warnings_total'] == 4
     assert statistics['rollup_period_deprecations_total'] == 2
-    # 60 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
-    assert statistics['rollup_period_collected_events_total'] == 66
+    # 58 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
+    assert statistics['rollup_period_collected_events_total'] == 64
 
 
 def _validate_all_data(json_data, statistics):

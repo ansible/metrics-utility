@@ -49,7 +49,6 @@ def _event_stat_counters(seed, *, jobs_total, collected_events_total, ansible_ve
         'runner_item_on_ok_total': seed % 20,
         'runner_item_on_failed_total': seed % 6,
         'runner_item_on_failed_ignored_total': seed % 2,
-        'runner_item_on_unreachable_total': seed % 2,
         'runner_retry_total': seed % 7,
         'warnings_total': seed % 5,
         'deprecations_total': seed % 3,

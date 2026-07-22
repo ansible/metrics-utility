@@ -995,25 +995,6 @@ $yaml$,
       );
       diversify_counter := diversify_counter + 1;
 
-      -- runner_item_on_unreachable
-      INSERT INTO public.main_jobevent (
-        created, modified, event, event_data, failed, changed,
-        host_name, play, role, task, counter,
-        host_id, job_id, uuid, parent_uuid, end_line, playbook,
-        start_line, stdout, verbosity, job_created
-      ) VALUES (
-        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
-        'runner_item_on_unreachable',
-        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_item_unreachable"}')::text,
-        true, false,
-        host_name, 'default_play', diversify_role, 'diversify item unreachable', diversify_counter,
-        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
-        diversify_counter, '', 0,
-        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
-      );
-      diversify_counter := diversify_counter + 1;
-
       -- runner_retry (Ansible until/retries)
       INSERT INTO public.main_jobevent (
         created, modified, event, event_data, failed, changed,

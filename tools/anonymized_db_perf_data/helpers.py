@@ -402,7 +402,7 @@ def _patch_res_for_outcome(res, event_type, failed, changed):
         res['changed'] = False
         res.pop('skipped', None)
         res.pop('unreachable', None)
-    elif event_type in ('runner_on_unreachable', 'runner_item_on_unreachable'):
+    elif event_type == 'runner_on_unreachable':
         res['rc'] = 1
         res['unreachable'] = True
         res['changed'] = False

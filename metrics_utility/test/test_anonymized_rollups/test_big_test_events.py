@@ -11,8 +11,8 @@ Event types exercised:
   runner_on_ok                    runner_item_on_ok
   runner_on_failed                runner_item_on_failed
   runner_on_failed   (ignored)    runner_item_on_failed  (ignored)
-  runner_on_unreachable           runner_item_on_unreachable
-  runner_on_async_ok              runner_on_skipped  (excluded by design)
+  runner_on_unreachable           runner_on_skipped  (excluded by design)
+  runner_on_async_ok
   runner_on_async_failed
   runner_retry
   warning  (top-level, no module)
@@ -20,7 +20,7 @@ Event types exercised:
   warnings / deprecations fields from event_data.res (module-level annotations)
 
 Expected totals after processing:
-  collected_events_total : 51
+  collected_events_total : 50
   warnings_total         : 2   (top-level warning events)
   deprecations_total     : 1   (top-level deprecated event)
 """
@@ -256,32 +256,13 @@ _EVENTS = [
         'deprecations': None,
         'ansible_version': '2.16.0',
     },
-    # h2: nginx ok, httpd item unreachable, python3 item failed → task failed
+    # h2: nginx ok, python3 item failed → task failed
     {
         'job_id': 1,
         'playbook': 'site.yml',
         'host_id': 2,
         'task_uuid': 't002',
         'event': 'runner_item_on_ok',
-        'task_action': 'ansible.builtin.package',
-        'resolved_action': None,
-        'resolved_role': None,
-        'role': None,
-        'job_created': '2024-03-01 10:00:00+00',
-        'job_started': '2024-03-01 10:00:30+00',
-        'job_finished': '2024-03-01 10:15:00+00',
-        'job_failed': True,
-        'ignore_errors': False,
-        'warnings': None,
-        'deprecations': None,
-        'ansible_version': '2.16.0',
-    },
-    {
-        'job_id': 1,
-        'playbook': 'site.yml',
-        'host_id': 2,
-        'task_uuid': 't002',
-        'event': 'runner_item_on_unreachable',
         'task_action': 'ansible.builtin.package',
         'resolved_action': None,
         'resolved_role': None,
@@ -1096,12 +1077,7 @@ def result(request):
         second = _prepare_events(rollup, [e for e in _EVENTS if e['job_id'] in (2, 3)])
         prepared = rollup.merge(first, second)
 
-    result = rollup.base(prepared)['json']
-    import json
-
-    print(f'\n=== result [{request.param}] ===')
-    print(json.dumps(result, indent=2, default=str))
-    return result
+    return rollup.base(prepared)['json']
 
 
 # ---------------------------------------------------------------------------
@@ -1110,7 +1086,7 @@ def result(request):
 
 
 def test_collected_events_total(result):
-    assert result['collected_events_total'] == 51  # all raw rows before any filtering
+    assert result['collected_events_total'] == 50  # all raw rows before any filtering
 
 
 def test_top_level_warnings_and_deprecations(result):
@@ -1175,7 +1151,6 @@ def test_ansible_builtin_copy(modules):
     assert m['runner_item_on_ok_total'] == 0
     assert m['runner_item_on_failed_total'] == 0
     assert m['runner_item_on_failed_ignored_total'] == 0
-    assert m['runner_item_on_unreachable_total'] == 0
     assert m['runner_retry_total'] == 1  # h2 retry between failed and ok
     assert m['warnings_total'] == 1  # h3 module-level warning
     assert m['deprecations_total'] == 0
@@ -1201,11 +1176,10 @@ def test_ansible_builtin_package(modules):
     assert m['runner_item_on_ok_total'] == 6  # h1×3, h2×1, h3×2
     assert m['runner_item_on_failed_total'] == 1  # h2 item failed (not ignored)
     assert m['runner_item_on_failed_ignored_total'] == 1  # h3 item failed (ignored)
-    assert m['runner_item_on_unreachable_total'] == 1  # h2 item unreachable
     assert m['runner_retry_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
-    assert m['collected_events_total'] == 12
+    assert m['collected_events_total'] == 11
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
 
 
@@ -1278,7 +1252,6 @@ def test_community_general_ini_file(modules):
     assert m['runner_item_on_ok_total'] == 3  # h2×2, h3×1
     assert m['runner_item_on_failed_total'] == 0
     assert m['runner_item_on_failed_ignored_total'] == 1  # h3 item failed (ignored)
-    assert m['runner_item_on_unreachable_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 6
@@ -1349,7 +1322,6 @@ def test_community_general_yum(modules):
     assert m['runner_item_on_ok_total'] == 3  # h1×2, h6×1
     assert m['runner_item_on_failed_total'] == 1  # h6 item failed
     assert m['runner_item_on_failed_ignored_total'] == 0
-    assert m['runner_item_on_unreachable_total'] == 0
     assert m['warnings_total'] == 0
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 6  # h4 runner_on_skipped excluded
@@ -1389,11 +1361,10 @@ def test_ansible_builtin_collection(collections):
     assert c['runner_item_on_ok_total'] == 6  # 0+6+0+0+0
     assert c['runner_item_on_failed_total'] == 1  # 0+1+0+0+0
     assert c['runner_item_on_failed_ignored_total'] == 1  # 0+1+0+0+0
-    assert c['runner_item_on_unreachable_total'] == 1  # 0+1+0+0+0
     assert c['runner_retry_total'] == 1  # copy h2
     assert c['warnings_total'] == 1  # copy h3
     assert c['deprecations_total'] == 0
-    assert c['collected_events_total'] == 29  # 7+12+3+2+3+2(debug)
+    assert c['collected_events_total'] == 28  # 7+11+3+2+3+2(debug)
     assert c['event_data_size_total'] == 10 * c['collected_events_total']
 
 
@@ -1448,7 +1419,6 @@ def test_community_general_collection(collections):
     assert c['runner_item_on_ok_total'] == 6  # 3+3
     assert c['runner_item_on_failed_total'] == 1  # 0+1
     assert c['runner_item_on_failed_ignored_total'] == 1  # 1+0
-    assert c['runner_item_on_unreachable_total'] == 0
     assert c['warnings_total'] == 0
     assert c['deprecations_total'] == 0
     assert c['collected_events_total'] == 12  # 6+6

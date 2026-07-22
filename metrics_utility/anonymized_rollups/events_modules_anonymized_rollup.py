@@ -37,7 +37,6 @@ _RUNNER_EVENTS = frozenset(
         'runner_on_async_failed',
         'runner_item_on_failed',
         'runner_on_unreachable',
-        'runner_item_on_unreachable',
         'runner_retry',
     ]
 )
@@ -140,7 +139,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     Loop item-level events (runner_item_on_*):
         runner_item_on_ok_total, runner_item_on_failed_total,
-        runner_item_on_failed_ignored_total, runner_item_on_unreachable_total
+        runner_item_on_failed_ignored_total
 
     Retry events:
         runner_retry_total
@@ -174,7 +173,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'runner_item_on_ok_total',
         'runner_item_on_failed_total',
         'runner_item_on_failed_ignored_total',
-        'runner_item_on_unreachable_total',
         'runner_retry_total',
         'warnings_total',
         'deprecations_total',
@@ -456,7 +454,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'is_runner_item_on_ok',
         'is_runner_item_on_failed',
         'is_runner_item_on_failed_ignored',
-        'is_runner_item_on_unreachable',
         'is_runner_retry',
     )
 
@@ -482,7 +479,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'is_runner_item_on_ok': event == 'runner_item_on_ok',
             'is_runner_item_on_failed': (event == 'runner_item_on_failed') & ~ignore_errors,
             'is_runner_item_on_failed_ignored': (event == 'runner_item_on_failed') & ignore_errors,
-            'is_runner_item_on_unreachable': event == 'runner_item_on_unreachable',
             'is_runner_retry': event == 'runner_retry',
         }
         # int8 sum is cheaper than bool sum across many groupby aggregations

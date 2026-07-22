@@ -494,7 +494,6 @@ def test_events_modules_aggregations_basic():
     assert copy_stats['runner_on_async_failed_total'] == 0
     assert copy_stats['runner_item_on_ok_total'] == 0
     assert copy_stats['runner_item_on_failed_total'] == 0
-    assert copy_stats['runner_item_on_unreachable_total'] == 0
     assert copy_stats['jobs_total'] == 3
     assert copy_stats['jobs_never_started_total'] == 0
     assert copy_stats['collected_events_total'] == 5
