@@ -126,6 +126,12 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     # Should have ansible_version from unified_job
     assert 'uj.ansible_version' in query or 'ansible_version' in query
 
+    # ignore_errors must fall back to res._ansible_ignore_errors, since the
+    # awx_display callback only sets the top-level key for runner_on_failed
+    # and leaves runner_item_on_failed/runner_on_async_failed without it.
+    assert "event_data->>'ignore_errors'" in query
+    assert "event_data->'res'->>'_ansible_ignore_errors'" in query
+
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pandas):

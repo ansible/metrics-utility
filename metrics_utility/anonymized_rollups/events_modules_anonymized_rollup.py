@@ -353,7 +353,19 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         dataframe['role'] = dataframe['resolved_role'].fillna(dataframe['role']).astype(str)
-        dataframe['role'] = dataframe['role'].apply(lambda x: DataframeContentUsage.extract_role_name(x))
+        raw_role = dataframe['role']
+        dataframe['role'] = raw_role.apply(lambda x: DataframeContentUsage.extract_role_name(x))
+
+        # extract_role_name only recognises Galaxy-style dotted names
+        # (namespace.role or namespace.collection.role). Most locally-authored
+        # roles Ansible reports (task._role._role_name) are a single bare word
+        # (e.g. "webserver") with no dot at all, so extract_role_name returns
+        # None for them. Keep the raw name instead of silently dropping the
+        # role from role_stats; it will correctly fall through to a "Custom"
+        # collection_source below since it has no extractable collection.
+        bare_role = raw_role.str.strip()
+        bare_role_mask = dataframe['role'].isna() & (bare_role != '') & (bare_role.str.lower() != 'nan')
+        dataframe.loc[bare_role_mask, 'role'] = bare_role[bare_role_mask]
 
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
         return dataframe

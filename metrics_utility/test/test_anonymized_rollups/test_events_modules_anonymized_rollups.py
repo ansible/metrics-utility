@@ -761,6 +761,54 @@ def test_base_handles_items_without_module_name():
     assert 'collection_name' not in result['collection_stats'][0]
 
 
+def test_bare_role_name_kept_in_role_stats():
+    """A plain, non-namespaced role name (e.g. "webserver") must not be dropped from role_stats.
+
+    Ansible reports task._role._role_name verbatim, and most locally-authored
+    roles are a single bare word with no dot -- unlike Galaxy-style
+    "namespace.role" / "namespace.collection.role" names. extract_role_name()
+    only recognises the dotted forms, so the rollup must keep the raw name
+    instead of silently discarding the role.
+    """
+    bare_role_events = [
+        {
+            'job_id': 100,
+            'playbook': 'webserver.yml',
+            'host_id': 1,
+            'task_uuid': 't100',
+            'event': 'runner_on_ok',
+            'task_action': 'ansible.builtin.service',
+            'job_created': '2024-02-01 00:00:00+00',
+            'job_started': '2024-02-01 00:01:00+00',
+            'job_finished': '2024-02-01 00:05:00+00',
+            'job_failed': False,
+            'resolved_action': None,
+            'resolved_role': None,
+            'role': 'webserver',
+            'ignore_errors': False,
+        },
+    ]
+
+    df = pd.DataFrame(bare_role_events)
+    for col in ['host_id', 'job_id', 'playbook']:
+        df[col] = df[col].astype(str)
+    df['event_data'] = [{}] * len(df)
+    df['event_data_length'] = 10
+
+    rollup = EventModulesAnonymizedRollup()
+    prepared = rollup.prepare(df)
+    result = rollup.base(prepared)['json']
+
+    stats_by_role = {row['role']: row for row in result['role_stats']}
+    assert 'webserver' in stats_by_role, f'Expected bare role "webserver" in role_stats, got {list(stats_by_role)}'
+
+    webserver_stats = stats_by_role['webserver']
+    assert webserver_stats['collection'] is None
+    assert webserver_stats['collection_source'] == 'Custom'
+    assert webserver_stats['runner_on_ok_total'] == 1
+    assert webserver_stats['jobs_total'] == 1
+
+
 @pytest.mark.parametrize(
     'value,expected',
     [

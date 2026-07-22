@@ -199,7 +199,20 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             (ed.event_data->>'start')::timestamptz AS start,
             (ed.event_data->>'end')::timestamptz   AS end,
             (ed.event_data->>'task_uuid')        AS task_uuid,
-            COALESCE( (ed.event_data->>'ignore_errors')::boolean, false ) AS ignore_errors,
+
+            -- ignore_errors: the awx_display callback only ever writes the
+            -- top-level event_data.ignore_errors key for runner_on_failed.
+            -- For runner_item_on_failed, ansible-core stashes the per-item
+            -- flag at res._ansible_ignore_errors instead (set in
+            -- TaskExecutor._run_loop / _execute for each loop item), so we
+            -- fall back to that. runner_on_async_failed carries neither --
+            -- ansible-core does not expose ignore_errors anywhere in the
+            -- async result -- so it will still resolve to false there.
+            COALESCE(
+                (ed.event_data->>'ignore_errors')::boolean,
+                (ed.event_data->'res'->>'_ansible_ignore_errors')::boolean,
+                false
+            ) AS ignore_errors,
             e.failed,
             e.changed,
             e.playbook,
