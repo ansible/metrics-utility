@@ -654,11 +654,10 @@ $yaml$,
       -- get host name
       SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
 
-      -- task_uuid should be i + host_name + 1, second task should be i + host_name + 2
-      -- convert i to text
+      -- task_uuid is per-task within a job (same across all hosts)
       i_text := i::text;
-      task_uuid_1 := i_text || '_' || host_name || '_1';
-      task_uuid_2 := i_text || '_' || host_name || '_2';
+      task_uuid_1 := i_text || '_1';
+      task_uuid_2 := i_text || '_2';
 
       event_data_1 := '{"task_action": "ansible.builtin.yum", "task_uuid": "' || task_uuid_1 || '"}';
       event_data_2 := '{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || task_uuid_2 || '"}';
@@ -779,7 +778,7 @@ $yaml$,
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         'runner_on_ok',
-        ('{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || i_text || '_' || host_name || '_role_a10"}')::text,
+        ('{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || i_text || '_role_a10"}')::text,
         false, false,
         host_name, 'default_play', 'a10.acos_axapi.device_config', 'configure device', 3,
         host_id, unified_job_id, gen_random_uuid()::text, '', 3, 'default_playbook.yml',
@@ -797,7 +796,7 @@ $yaml$,
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
         'runner_on_ok',
-        ('{"task_action": "ansible.builtin.yum", "task_uuid": "' || i_text || '_' || host_name || '_role_rhel"}')::text,
+        ('{"task_action": "ansible.builtin.yum", "task_uuid": "' || i_text || '_role_rhel"}')::text,
         false, false,
         host_name, 'default_play', 'redhat.rhel_system_roles.timesync', 'install packages', 4,
         host_id, unified_job_id, gen_random_uuid()::text, '', 4, 'default_playbook.yml',
@@ -1747,11 +1746,11 @@ $yaml$,
       -- get host name
       SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
 
-      -- task_uuid should be i + host_name + 1, second task should be i + host_name + 2
-      -- convert i to text, add 10 to distinguish from 10:00 hour jobs
+      -- task_uuid is per-task within a job (same across all hosts)
+      -- add 10 to distinguish from 10:00 hour jobs
       i_text := (i + 10)::text;
-      task_uuid_1 := i_text || '_' || host_name || '_1';
-      task_uuid_2 := i_text || '_' || host_name || '_2';
+      task_uuid_1 := i_text || '_1';
+      task_uuid_2 := i_text || '_2';
 
       event_data_1 := '{"task_action": "ansible.builtin.yum", "task_uuid": "' || task_uuid_1 || '"}';
       event_data_2 := '{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || task_uuid_2 || '"}';

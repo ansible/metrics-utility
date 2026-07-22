@@ -34,6 +34,7 @@ def _event_stat_counters(seed, *, jobs_total, collected_events_total, ansible_ve
         'jobs_total': jobs_total,
         'jobs_successful_total': max(0, jobs_total - (seed % 3)),
         'jobs_failed_total': seed % 3,
+        'tasks_total': 5 + (seed % 30),
         'jobs_duration_total_seconds': 100 + (seed % 500),
         'jobs_waiting_time_total_seconds': 10 + (seed % 60),
         'jobs_never_started_total': seed % 2,
@@ -138,6 +139,7 @@ def _create_collection_stats(num_collections):
                     collected_events_total=collected_events_total,
                     ansible_versions=['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
                 ),
+                'unique_hosts_total': 10 + (i % 50),
             }
         )
     return collection_stats
@@ -451,6 +453,7 @@ def _assert_fixture_matches_production_shape(anonymized_rollup):
     assert 'module' in module and 'module_name' not in module
     assert 'collection' in module and 'collection_name' not in module
     assert 'runner_on_ok_total' in module
+    assert 'tasks_total' in module
     assert 'tasks_ok_total' not in module
     assert 'tasks_failed_total' not in module
     assert 'tasks_skipped_total' not in module
@@ -458,10 +461,11 @@ def _assert_fixture_matches_production_shape(anonymized_rollup):
     collection = anonymized_rollup['collection_stats'][0]
     assert 'collection' in collection and 'collection_name' not in collection
     assert 'runner_on_ok_total' in collection
+    assert 'unique_hosts_total' in collection
 
     role = anonymized_rollup['role_stats'][0]
     assert 'collection' in role and 'collection_name' not in role
-    assert 'tasks_total' not in role
+    assert 'tasks_total' in role
     assert 'runner_on_ok_total' in role
 
     installed = anonymized_rollup['jobs_by_installed_collections_versions'][0]
