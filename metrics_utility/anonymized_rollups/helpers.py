@@ -2,7 +2,9 @@
 Helper utilities for anonymized rollups.
 """
 
+import json
 import math
+import os
 
 
 try:
@@ -11,6 +13,21 @@ try:
     HAS_NUMPY = True
 except ImportError:
     HAS_NUMPY = False
+
+
+def load_known_collections():
+    """Load the public collections whitelist from collections.json.
+
+    Returns:
+        Dict mapping collection name to source category, or empty dict if the
+        file is missing or malformed.
+    """
+    collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
+    try:
+        with open(collections_path, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
 
 def sanitize_json(obj):
