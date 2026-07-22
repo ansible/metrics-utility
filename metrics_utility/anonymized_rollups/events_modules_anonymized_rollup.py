@@ -20,26 +20,13 @@ import pandas as pd
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import load_known_collections, sanitize_json
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
+from metrics_utility.event_types import RUNNER_EVENTS
 
 
 # Regex pattern to match collection names (e.g., namespace.collection.role or namespace.collection.role.task)
 # Pattern is safe from reDOS: uses non-capturing groups and non-nested quantifiers
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
 _COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
-
-# All runner event types tracked per module/collection/role
-_RUNNER_EVENTS = frozenset(
-    [
-        'runner_on_ok',
-        'runner_on_async_ok',
-        'runner_item_on_ok',
-        'runner_on_failed',
-        'runner_on_async_failed',
-        'runner_item_on_failed',
-        'runner_on_unreachable',
-        'runner_retry',
-    ]
-)
 # Job-level annotation events counted into top-level warnings_total /
 # deprecations_total.  Playbook lifecycle events (playbook_on_*) are not
 # collected — high volume, low unique information vs jobs/runner counters.
@@ -345,7 +332,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _filter_runner_events(self, dataframe):
         """Filter dataframe to runner event types used for module/collection/role stats."""
-        return dataframe[dataframe['event'].isin(_RUNNER_EVENTS)]
+        return dataframe[dataframe['event'].isin(RUNNER_EVENTS)]
 
     def _prepare_basic_columns(self, dataframe):
         """Prepare basic columns: ignore_errors, datetime, module_name, role, job_failed."""
@@ -435,8 +422,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         if 'ansible_version' not in dataframe.columns:
             dataframe['ansible_version'] = None
-        if 'event_data_length' not in dataframe.columns:
-            dataframe['event_data_length'] = 0
 
         columns_to_keep = [
             'job_id',
@@ -514,24 +499,27 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             job_id_failed=job_id.where(job_failed),
         )
 
-    def _get_common_aggregation(self, dataframe):
+    def _get_common_aggregation(self, frame):
         """Return aggregation spec for groupby calls over the event-level dataframe.
 
         Per-job metrics (counts, durations) are computed over unique job_ids within
         each group to avoid inflating counts when a job contributes many events.
         Event-level metrics sum precomputed flag columns — one increment per event.
+
+        *frame* must be the same DataFrame the groupby will run on, so that
+        column lookups inside the closures always use matching indices.
         """
 
-        def _unique_job_sum(col_name):
-            col = dataframe[col_name]
+        def _unique_job_sum(col_name, fr):
+            col = fr[col_name]
 
             def agg(x):
                 return col.loc[x[~x.duplicated()].index].sum()
 
             return agg
 
-        def _unique_job_na_count(col_name):
-            col = dataframe[col_name]
+        def _unique_job_na_count(col_name, fr):
+            col = fr[col_name]
 
             def agg(x):
                 return col.loc[x[~x.duplicated()].index].isna().sum()
@@ -543,11 +531,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             # nunique skips NaN, so masked job_id columns replace per-group lambdas
             'jobs_successful_total': ('job_id_successful', 'nunique'),
             'jobs_failed_total': ('job_id_failed', 'nunique'),
-            'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds')),
-            'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds')),
-            'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started')),
-            'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds')),
-            'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds')),
+            'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds', frame)),
+            'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds', frame)),
+            'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started', frame)),
+            'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds', frame)),
+            'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds', frame)),
             # Module-level annotations (from event_data.res, distinct from top-level warning events)
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
@@ -583,8 +571,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # is None are kept; without it the default dropna=True would silently
         # discard them because role_collection_name is None.
         role_df = dataframe[dataframe['role'].notna()]
+        role_aggregation = self._get_common_aggregation(role_df)
         role_stats = role_df.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True, dropna=False).agg(
-            **common_aggregation
+            **role_aggregation
         )
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
@@ -594,10 +583,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Compute unique_modules and modules_per_playbook."""
         unique_modules = sorted(dataframe['module_name'].dropna().unique())
 
-        modules_per_playbook = {}
-        for playbook in dataframe['playbook'].dropna().unique():
-            modules_in_playbook = sorted(dataframe[dataframe['playbook'] == playbook]['module_name'].dropna().unique())
-            modules_per_playbook[playbook] = modules_in_playbook
+        modules_per_playbook = (
+            dataframe.dropna(subset=['playbook', 'module_name']).groupby('playbook')['module_name'].apply(lambda x: sorted(x.unique())).to_dict()
+        )
 
         return unique_modules, modules_per_playbook
 

@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 
+from metrics_utility.event_types import RUNNER_EVENTS
 from metrics_utility.logger import logger
 
 from ..util import DataframeOutput, collector
@@ -8,17 +9,6 @@ from ..util import DataframeOutput, collector
 
 _DEFAULT_JOB_LIMIT = 1_000
 _DEFAULT_ROW_LIMIT = 200_000
-
-_RUNNER_EVENTS = [
-    'runner_on_ok',
-    'runner_on_async_ok',
-    'runner_item_on_ok',
-    'runner_on_failed',
-    'runner_on_async_failed',
-    'runner_item_on_failed',
-    'runner_on_unreachable',
-    'runner_retry',
-]
 
 # Job-level annotation events (high signal, low volume). Playbook lifecycle
 # events (playbook_on_*) are intentionally excluded — they dominate row volume
@@ -28,7 +18,7 @@ _ANNOTATION_EVENTS = [
     'deprecated',
 ]
 
-_RELEVANT_EVENTS = _RUNNER_EVENTS + _ANNOTATION_EVENTS
+_RELEVANT_EVENTS = sorted(RUNNER_EVENTS) + _ANNOTATION_EVENTS
 
 
 def _normalize_limit(value, default, name):
