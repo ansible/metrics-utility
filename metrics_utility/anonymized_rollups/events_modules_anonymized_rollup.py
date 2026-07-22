@@ -170,12 +170,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'runner_item_on_failed_total',
         'runner_retry_total',
         'ignore_errors_total',
+        'tasks_total',
         'warnings_total',
         'deprecations_total',
         'collected_events_total',
         'event_data_size_total',
     ]
-    _LIST_COLS = ['ansible_versions']
+    _LIST_COLS = ['host_ids', 'ansible_versions']
 
     def __init__(self):
         super().__init__('events_modules')
@@ -206,8 +207,12 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _merge_list_columns(self, item_all, item_new, merged_item):
         """Union list columns from both items (sorted for deterministic JSON output)."""
         for col in self._LIST_COLS:
-            list_all = item_all.get(col) if item_all.get(col) is not None else []
-            list_new = item_new.get(col) if item_new.get(col) is not None else []
+            val_all = item_all.get(col)
+            val_new = item_new.get(col)
+            if val_all is None and val_new is None:
+                continue
+            list_all = val_all if val_all is not None else []
+            list_new = val_new if val_new is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
             merged_item[col] = sorted(set_all.union(set_new))
@@ -425,6 +430,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         columns_to_keep = [
             'job_id',
+            'task_uuid',
+            'host_id',
             'module_name',
             'playbook',
             'collection_name',
@@ -493,8 +500,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         flags = {name: series.astype('int8') for name, series in flags.items()}
 
         job_id = dataframe['job_id']
+        task_key = job_id.astype(str) + '||' + dataframe['task_uuid'].astype(str)
         return dataframe.assign(
             **flags,
+            task_key=task_key,
             job_id_successful=job_id.where(~job_failed),
             job_id_failed=job_id.where(job_failed),
         )
@@ -531,6 +540,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             # nunique skips NaN, so masked job_id columns replace per-group lambdas
             'jobs_successful_total': ('job_id_successful', 'nunique'),
             'jobs_failed_total': ('job_id_failed', 'nunique'),
+            'tasks_total': ('task_key', 'nunique'),
             'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds', frame)),
             'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds', frame)),
             'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started', frame)),
@@ -560,7 +570,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             **common_aggregation
         )
 
-        collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
+        collection_aggregation = {**common_aggregation, 'host_ids': ('host_id', lambda x: sorted(x.dropna().unique().tolist()))}
+        collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**collection_aggregation)
 
         dataframe['role_collection_name'] = dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         role_collection_source_str = dataframe['role_collection_name'].astype(str).map(self.collections)
@@ -750,6 +761,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     'deprecations_total': deprecations_total,
                 },
             }
+
+        for item in collection_stats:
+            item['unique_hosts_total'] = len(item.get('host_ids', []))
 
         # Drop host_ids and rename module_name/collection_name for Segment compatibility.
         for stats_list in [module_stats, collection_stats, role_stats]:
