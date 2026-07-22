@@ -1,6 +1,3 @@
-import json
-import os
-
 from typing import Any, Callable, Dict, List
 
 import pandas as pd
@@ -10,6 +7,7 @@ from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import Cre
 from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
+from metrics_utility.anonymized_rollups.helpers import load_known_collections
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
@@ -81,15 +79,6 @@ def _remove_custom_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [item for item in items if item and item.get('collection_source') != 'Custom']
 
 
-def _load_known_collections() -> Dict[str, Any]:
-    collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
-    try:
-        with open(collections_path, 'r') as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
 def _remove_unknown_installed_collections(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Return a new list with installed-collection entries not in the known whitelist removed."""
     return [item for item in items if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)]
@@ -122,7 +111,7 @@ def anonymize_data(data):
         if key in data:
             data[key] = _remove_custom_items(data[key] or [])
 
-    known_collections = _load_known_collections()
+    known_collections = load_known_collections()
 
     if 'jobs_by_installed_collections_versions' in data:
         data['jobs_by_installed_collections_versions'] = _remove_unknown_installed_collections(

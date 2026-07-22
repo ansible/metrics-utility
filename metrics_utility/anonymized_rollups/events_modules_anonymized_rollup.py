@@ -5,13 +5,12 @@ anonymising custom module/collection/role names before inclusion in reports.
 """
 
 import json
-import os
 import re
 
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
-from metrics_utility.anonymized_rollups.helpers import sanitize_json
+from metrics_utility.anonymized_rollups.helpers import load_known_collections, sanitize_json
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
@@ -149,10 +148,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         self.collector_names = ['main_jobevent_service']
 
-        # Open the JSON file using path relative to this module
-        collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
-        with open(collections_path, 'r') as f:
-            self.collections = json.load(f)
+        self.collections = load_known_collections()
 
     def _create_lookup_dict(self, stats_list, groupby_cols):
         """Create a lookup dictionary keyed by grouping columns."""
