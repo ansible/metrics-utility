@@ -421,6 +421,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             & dataframe['host_id'].notna()
             & dataframe['playbook'].notna()
             & dataframe['job_id'].notna()
+            & dataframe['task_uuid'].notna()
             & (dataframe['module_name'].str.strip() != '')
             & (dataframe['playbook'].str.strip() != '')
         ]
