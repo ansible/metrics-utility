@@ -151,13 +151,12 @@ jobs:
           name: awx-schema
           path: tools/docker/latest.sql
 
-  create-pr:
+  push-branch:
     needs: extract-schema
     if: needs.extract-schema.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - name: "Checkout metrics-utility"
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -168,58 +167,23 @@ jobs:
           name: awx-schema
           path: tools/docker
 
-      - name: "Create pull request"
-        id: cpr
-        continue-on-error: true
-        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: awx-schema-update
-          commit-message: "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
-          title: "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
-          body: |
-            Automated AWX schema update from `ansible/awx@devel` at commit `${{ needs.extract-schema.outputs.awx_sha }}`.
-
-            Please review the schema diff for any changes relevant to metrics-utility.
-
-      - name: "Create pull request (fallback)"
-        id: fallback
-        if: steps.cpr.outcome == 'failure'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "Commit and push"
         run: |
-          EXISTING=$(gh pr list --head awx-schema-update --json number,url --jq '.[0]')
-          if [ -n "$EXISTING" ]; then
-            echo "pr_url=$(echo "$EXISTING" | jq -r .url)" >> "$GITHUB_OUTPUT"
-          else
-            PR_URL=$(gh pr create \
-              --base devel \
-              --head awx-schema-update \
-              --title "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})" \
-              --body "Automated AWX schema update from ansible/awx@devel at commit ${{ needs.extract-schema.outputs.awx_sha }}.")
-            echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B awx-schema-update
+          git add tools/docker/latest.sql
+          git commit -m "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
+          git push -f origin awx-schema-update
 
       - name: "Notify Slack"
-        if: always()
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_ESBN_WEBHOOK_URL }}
-          CPR_OUTCOME: ${{ steps.cpr.outcome }}
-          CPR_URL: ${{ steps.cpr.outputs.pull-request-url }}
-          FALLBACK_OUTCOME: ${{ steps.fallback.outcome }}
-          FALLBACK_URL: ${{ steps.fallback.outputs.pr_url }}
           REPO: ${{ github.repository }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ "$CPR_OUTCOME" = "success" ]; then
-            MSG="AWX schema PR created: <$CPR_URL|PR> _(peter-evans)_"
-          elif [ "$FALLBACK_OUTCOME" = "success" ] && [ -n "$FALLBACK_URL" ]; then
-            MSG="AWX schema PR created: <$FALLBACK_URL|PR> _(gh cli fallback)_"
-          else
-            COMPARE="https://github.com/$REPO/compare/devel...awx-schema-update"
-            MSG="AWX schema changes pushed to \`awx-schema-update\` but could not create PR — <$COMPARE|compare>"
-          fi
+          COMPARE="https://github.com/$REPO/compare/devel...awx-schema-update"
+          MSG="AWX schema changes pushed to \`awx-schema-update\` — <$COMPARE|compare & create PR>"
 
           jq -n \
             --arg msg "$MSG" \
