@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import timedelta
 
+from metrics_utility.event_types import RUNNER_EVENTS
 from metrics_utility.logger import logger
 
 from ..util import DataframeOutput, collector
@@ -9,19 +10,15 @@ from ..util import DataframeOutput, collector
 _DEFAULT_JOB_LIMIT = 1_000
 _DEFAULT_ROW_LIMIT = 200_000
 
-_RELEVANT_EVENTS = [
-    'runner_on_ok',
-    'runner_on_async_ok',
-    'runner_item_on_ok',
-    'runner_on_failed',
-    'runner_on_async_failed',
-    'runner_item_on_failed',
-    'runner_on_unreachable',
-    'runner_item_on_unreachable',
-    # job annotations
+# Job-level annotation events (high signal, low volume). Playbook lifecycle
+# events (playbook_on_*) are intentionally excluded — they dominate row volume
+# while the rollup only keeps counts that are redundant with jobs/runner data.
+_ANNOTATION_EVENTS = [
     'warning',
     'deprecated',
 ]
+
+_RELEVANT_EVENTS = sorted(RUNNER_EVENTS) + _ANNOTATION_EVENTS
 
 
 def _normalize_limit(value, default, name):
@@ -192,7 +189,20 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             (ed.event_data->>'start')::timestamptz AS start,
             (ed.event_data->>'end')::timestamptz   AS end,
             (ed.event_data->>'task_uuid')        AS task_uuid,
-            COALESCE( (ed.event_data->>'ignore_errors')::boolean, false ) AS ignore_errors,
+
+            -- ignore_errors: the awx_display callback only ever writes the
+            -- top-level event_data.ignore_errors key for runner_on_failed.
+            -- For runner_item_on_failed, ansible-core stashes the per-item
+            -- flag at res._ansible_ignore_errors instead (set in
+            -- TaskExecutor._run_loop / _execute for each loop item), so we
+            -- fall back to that. runner_on_async_failed carries neither --
+            -- ansible-core does not expose ignore_errors anywhere in the
+            -- async result -- so it will still resolve to false there.
+            COALESCE(
+                (ed.event_data->>'ignore_errors')::boolean,
+                (ed.event_data->'res'->>'_ansible_ignore_errors')::boolean,
+                false
+            ) AS ignore_errors,
             e.failed,
             e.changed,
             e.playbook,
@@ -209,10 +219,8 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             ed.event_data->'res'->'warnings'     AS warnings,
             ed.event_data->'res'->'deprecations' AS deprecations,
 
-            CASE
-                WHEN e.event = 'playbook_on_stats'
-                THEN ed.event_data - 'artifact_data'
-            END AS playbook_on_stats,
+            -- Raw stored size of event_data (bytes) for performance modelling
+            octet_length(e.event_data) AS event_data_length,
 
             uj.failed as job_failed,
             uj.started as job_started

@@ -333,10 +333,9 @@ def _build_statistics(
             {
                 # from events_modules
                 'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-                'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
                 'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
-                'rollup_period_warnings_total': events_modules.get('warnings_total'),
-                'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
+                'rollup_period_warnings_total': events_modules.get('warnings_total') or 0,
+                'rollup_period_deprecations_total': events_modules.get('deprecations_total') or 0,
                 'rollup_period_playbooks_total': playbooks_total,
             }
         )
