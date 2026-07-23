@@ -133,7 +133,7 @@ jobs:
       - name: "Notify Slack (no changes)"
         if: steps.diff.outputs.changed == 'false'
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_ESBN_WEBHOOK_URL }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           jq -n \
@@ -204,7 +204,7 @@ jobs:
       - name: "Notify Slack"
         if: always()
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_ESBN_WEBHOOK_URL }}
           CPR_OUTCOME: ${{ steps.cpr.outcome }}
           CPR_URL: ${{ steps.cpr.outputs.pull-request-url }}
           FALLBACK_OUTCOME: ${{ steps.fallback.outcome }}
