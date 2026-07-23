@@ -38,47 +38,32 @@ jobs:
         run: |
           cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
 
-      - name: "Pull minio"
+      - name: "Pull SeaweedFS"
         run: |
           mkdir -p ~/.local/bin
-          curl -fL https://github.com/minio/mc/releases/download/RELEASE.2025-08-13T08-35-41Z/mc.linux-amd64.RELEASE.2025-08-13T08-35-41Z -o ~/.local/bin/mc
-          curl -fL https://dl.min.io/server/minio/release/linux-amd64/minio -o ~/.local/bin/minio
-          chmod +x ~/.local/bin/{mc,minio}
+          curl -fL https://github.com/seaweedfs/seaweedfs/releases/latest/download/linux_amd64.tar.gz -o /tmp/seaweedfs.tar.gz
+          curl -fL https://github.com/seaweedfs/seaweedfs/releases/latest/download/linux_amd64.tar.gz.md5 -o /tmp/seaweedfs.md5
 
-          MC_CHECKSUM=`md5sum ~/.local/bin/mc | awk '{ print $1 }'`
-          MINIO_CHECKSUM=`md5sum ~/.local/bin/minio | awk '{ print $1 }'`
+          EXPECTED=$(awk '{print $1}' /tmp/seaweedfs.md5)
+          ACTUAL=$(md5sum /tmp/seaweedfs.tar.gz | awk '{print $1}')
+          [ "$EXPECTED" = "$ACTUAL" ]
 
-          [ "$MC_CHECKSUM" = "4e57e038d26428190dd757cb47aae202" ]
-          [ "$MINIO_CHECKSUM" = "88a11227cd67611d1a64f0c6d2bc13d8" ]
+          tar -xzf /tmp/seaweedfs.tar.gz -C ~/.local/bin
+          chmod +x ~/.local/bin/weed
 
-      - name: "Set up minio"
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
+      - name: "Start SeaweedFS"
         run: |
-          mkdir minio-data
-          minio server ./minio-data --console-address ":9001" &
+          AWS_ACCESS_KEY_ID=myuseraccesskey \
+          AWS_SECRET_ACCESS_KEY=myusersecretkey \
+          S3_BUCKET=metricsutilitys3 \
+          weed mini -dir=/tmp/seaweedfs-data &
 
-      - name: "Wait for minio"
+      - name: "Wait for SeaweedFS"
         timeout-minutes: 1
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
         run: |
-          until mc alias set local http://localhost:9000 minioaccess miniosecret; do
-            sleep 4
+          until curl -s -o /dev/null http://localhost:8333; do
+            sleep 2
           done
-
-      - name: "Create minio user"
-        env:
-          MINIO_ROOT_USER: minioaccess
-          MINIO_ROOT_PASSWORD: miniosecret
-        run: |
-          mc alias set local http://localhost:9000 minioaccess miniosecret
-          mc mb --ignore-existing local/metricsutilitys3
-          mc admin user add local mynewuser mysecretpassword
-          mc admin policy attach local readwrite --user=mynewuser
-          mc admin accesskey create local mynewuser --access-key myuseraccesskey --secret-key myusersecretkey
 
       - name: "Set up Go"
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
@@ -98,7 +83,7 @@ jobs:
       - name: "Run pytest"
         env:
           METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:9000"
+          METRICS_UTILITY_BUCKET_ENDPOINT: "http://localhost:8333"
           METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
           METRICS_UTILITY_BUCKET_REGION: "us-east-1"
           METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"

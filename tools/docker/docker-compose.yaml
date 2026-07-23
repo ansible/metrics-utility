@@ -16,38 +16,22 @@ x-metrics-service: &metrics-service
     METRICS_SERVICE_DATABASES__awx__PASSWORD: awx
 
 services:
-  minio:
-    image: "mirror.gcr.io/minio/minio"
-    container_name: minio
+  seaweedfs:
+    image: "mirror.gcr.io/chrislusf/seaweedfs:latest"
+    container_name: seaweedfs
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "8333:8333"
     environment:
-      MINIO_ROOT_USER: "minioaccess"
-      MINIO_ROOT_PASSWORD: "miniosecret"
+      AWS_ACCESS_KEY_ID: "myuseraccesskey"
+      AWS_SECRET_ACCESS_KEY: "myusersecretkey"
+      S3_BUCKET: "metricsutilitys3"
     tmpfs:
-      - /minio-data:mode=1777
-    command: server /minio-data --console-address ":9001"
-
-  minio-setup:
-    image: "mirror.gcr.io/minio/mc"
-    depends_on:
-      - minio
-    entrypoint: |
-      sh -c '
-        set -e
-
-        echo "Waiting for MinIO to be ready..."
-        until mc alias set local http://minio:9000 "minioaccess" "miniosecret"; do
-          sleep 2
-        done
-
-        echo "MinIO is ready! Creating bucket and user..."
-        mc mb --ignore-existing local/metricsutilitys3
-        mc admin user add local "mynewuser" "mysecretpassword"
-        mc admin policy attach local readwrite --user="mynewuser"
-        mc admin accesskey create local "mynewuser" --access-key "myuseraccesskey" --secret-key "myusersecretkey"
-      '
+      - /data:mode=1777
+    healthcheck:
+      test: ["CMD", "curl", "-s", "-o", "/dev/null", "http://localhost:8333"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   postgres:
     image: "mirror.gcr.io/postgres"
@@ -85,8 +69,8 @@ services:
     image: "mirror.gcr.io/python"
     container_name: metrics-utility
     depends_on:
-      minio-setup:
-        condition: service_completed_successfully
+      seaweedfs:
+        condition: service_healthy
       postgres-wait:
         condition: service_completed_successfully
       mock-segment:
@@ -101,7 +85,7 @@ services:
     profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
       METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-      METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
+      METRICS_UTILITY_BUCKET_ENDPOINT: "http://seaweedfs:8333"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
@@ -149,8 +133,8 @@ services:
     image: "mirror.gcr.io/python"
     container_name: metrics-utility-env
     depends_on:
-      minio-setup:
-        condition: service_completed_successfully
+      seaweedfs:
+        condition: service_healthy
       postgres-wait:
         condition: service_completed_successfully
     volumes:
@@ -159,7 +143,7 @@ services:
     profiles: ["env"] # makes this service non-default, except when --profile=env
     environment:
       METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
-      METRICS_UTILITY_BUCKET_ENDPOINT: "http://minio:9000"
+      METRICS_UTILITY_BUCKET_ENDPOINT: "http://seaweedfs:8333"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
       METRICS_UTILITY_BUCKET_REGION: "us-east-1"
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"

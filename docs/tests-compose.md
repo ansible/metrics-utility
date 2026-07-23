@@ -11,7 +11,7 @@ make compose-pytest
 ```bash
 make compose-env  # starts a metrics-utility-env container with python & uv set up
 
-# wait for postgres & minio containers to start, then:
+# wait for postgres & seaweedfs containers to start, then:
 docker exec -it metrics-utility-env /bin/sh
 # or: podman exec -it metrics-utility-env /bin/sh
 

@@ -7,7 +7,7 @@ from metrics_utility.test.util import run_build_ext, run_gather_ext, run_gather_
 
 env_vars = {
     'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'myuseraccesskey',
-    'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:9000'),  # or http://minio:9000
+    'METRICS_UTILITY_BUCKET_ENDPOINT': os.getenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'http://localhost:8333'),  # or http://seaweedfs:8333
     'METRICS_UTILITY_BUCKET_NAME': 'metricsutilitys3',
     'METRICS_UTILITY_BUCKET_REGION': 'us-east-1',
     'METRICS_UTILITY_BUCKET_SECRET_KEY': 'myusersecretkey',
@@ -21,7 +21,7 @@ env_vars = {
 def test_command():
     """Build xlsx report using build command and test its contents."""
     run_gather_ext(env_vars, ['--ship', '--until=10m'])
-    # mc ls -r local/metricsutilitys3/metrics-utility/shipped_data_*/data/
+    # aws --endpoint-url http://localhost:8333 s3 ls --recursive s3://metricsutilitys3/metrics-utility/shipped_data_*/data/
 
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')

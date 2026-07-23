@@ -98,7 +98,7 @@ StorageDirectory(
 ```
 
 ```
-# StorageS3 - S3 or minio
+# StorageS3 - S3 or S3-compatible (e.g. SeaweedFS)
 #
 # bucket = METRICS_UTILITY_BUCKET_NAME
 # endpoint = METRICS_UTILITY_BUCKET_ENDPOINT
@@ -108,7 +108,7 @@ StorageDirectory(
 
 StorageS3(
     bucket='name',
-    endpoint='http://localhost:9000', # or 'https://s3.us-east.example.com'
+    endpoint='http://localhost:8333', # or 'https://s3.us-east.example.com'
     region='us-east-1', # optional
     access_key='...',
     secret_key='...',
