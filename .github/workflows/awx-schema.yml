@@ -97,7 +97,7 @@ jobs:
         id: extract
         run: |
           AWX_SHA="$(git -C awx rev-parse --short HEAD)"
-          pg_dump -s -U awx -h localhost awx \
+          sudo -u postgres pg_dump -s awx \
             `# strip pg_dump version comments — they change with postgres upgrades` \
             | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d' \
             `# strip pg18+ security directives and settings not present in older versions` \
@@ -111,6 +111,13 @@ jobs:
             > tools/docker/latest.sql
           echo "awx_sha=$AWX_SHA" >> "$GITHUB_OUTPUT"
 
+      - name: "Validate schema"
+        run: |
+          if ! grep -q 'CREATE TABLE' tools/docker/latest.sql; then
+            echo "::error::Schema dump is empty or invalid — expected CREATE TABLE statements"
+            exit 1
+          fi
+
       - name: "Check for changes"
         id: diff
         run: |
@@ -122,6 +129,20 @@ jobs:
             echo "Schema changes detected:"
             git diff --stat tools/docker/latest.sql
           fi
+
+      - name: "Notify Slack (no changes)"
+        if: steps.diff.outputs.changed == 'false'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          jq -n \
+            --arg ctx "AWX schema update · <$RUN_URL|GitHub Actions>" \
+            '{blocks: [
+              {type: "section", text: {type: "mrkdwn", text: "No AWX schema changes detected."}},
+              {type: "context", elements: [{type: "mrkdwn", text: $ctx}]}
+            ]}' \
+          | curl -sS -X POST "$SLACK_WEBHOOK" -H 'Content-Type: application/json' -d @-
 
       - name: "Upload schema"
         if: steps.diff.outputs.changed == 'true'
@@ -148,6 +169,8 @@ jobs:
           path: tools/docker
 
       - name: "Create pull request"
+        id: cpr
+        continue-on-error: true
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -158,3 +181,51 @@ jobs:
             Automated AWX schema update from `ansible/awx@devel` at commit `${{ needs.extract-schema.outputs.awx_sha }}`.
 
             Please review the schema diff for any changes relevant to metrics-utility.
+
+      - name: "Create pull request (fallback)"
+        id: fallback
+        if: steps.cpr.outcome == 'failure'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh pr list --head awx-schema-update --json number,url --jq '.[0]')
+          if [ -n "$EXISTING" ]; then
+            echo "pr_url=$(echo "$EXISTING" | jq -r .url)" >> "$GITHUB_OUTPUT"
+          else
+            PR_URL=$(gh pr create \
+              --base devel \
+              --head awx-schema-update \
+              --title "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})" \
+              --body "Automated AWX schema update from ansible/awx@devel at commit ${{ needs.extract-schema.outputs.awx_sha }}.")
+            echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Notify Slack"
+        if: always()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}
+          CPR_OUTCOME: ${{ steps.cpr.outcome }}
+          CPR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+          FALLBACK_OUTCOME: ${{ steps.fallback.outcome }}
+          FALLBACK_URL: ${{ steps.fallback.outputs.pr_url }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$CPR_OUTCOME" = "success" ]; then
+            MSG="AWX schema PR created: <$CPR_URL|PR> _(peter-evans)_"
+          elif [ "$FALLBACK_OUTCOME" = "success" ] && [ -n "$FALLBACK_URL" ]; then
+            MSG="AWX schema PR created: <$FALLBACK_URL|PR> _(gh cli fallback)_"
+          else
+            COMPARE="https://github.com/$REPO/compare/devel...awx-schema-update"
+            MSG="AWX schema changes pushed to \`awx-schema-update\` but could not create PR — <$COMPARE|compare>"
+          fi
+
+          jq -n \
+            --arg msg "$MSG" \
+            --arg ctx "AWX schema update · <$RUN_URL|GitHub Actions>" \
+            '{blocks: [
+              {type: "section", text: {type: "mrkdwn", text: $msg}},
+              {type: "context", elements: [{type: "mrkdwn", text: $ctx}]}
+            ]}' \
+          | curl -sS -X POST "$SLACK_WEBHOOK" -H 'Content-Type: application/json' -d @-
