@@ -170,6 +170,18 @@ jobs:
         run: |
           cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
 
+      - name: "Set up Go"
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: tools/mock-segment-server/go.mod
+
+      - name: "Start mock segment server"
+        timeout-minutes: 1
+        run: |
+          go build -C tools/mock-segment-server -o /tmp/mock-segment-server .
+          /tmp/mock-segment-server &
+          until curl -sf http://localhost:8765/requests > /dev/null; do sleep 1; done
+
       - name: "Clone metrics-service"
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -208,5 +220,6 @@ jobs:
           METRICS_SERVICE_DATABASES__awx__PASSWORD: awx
           DJANGO_SETTINGS_MODULE: metrics_service.settings
           METRICS_SERVICE_MODE: test
+          MOCK_SEGMENT_URL: "http://localhost:8765"
         run: |
           uv run pytest -s -v
