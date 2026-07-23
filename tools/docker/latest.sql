@@ -2629,7 +2629,7 @@ CREATE TABLE public.main_job (
     extra_vars text NOT NULL,
     job_tags text NOT NULL,
     force_handlers boolean NOT NULL,
-    skip_tags character varying(1024) NOT NULL,
+    skip_tags text NOT NULL,
     start_at_task character varying(1024) NOT NULL,
     become_enabled boolean NOT NULL,
     inventory_id integer,
@@ -2890,7 +2890,7 @@ CREATE TABLE public.main_jobtemplate (
     extra_vars text NOT NULL,
     job_tags text NOT NULL,
     force_handlers boolean NOT NULL,
-    skip_tags character varying(1024) NOT NULL,
+    skip_tags text NOT NULL,
     start_at_task character varying(1024) NOT NULL,
     become_enabled boolean NOT NULL,
     host_config_key character varying(1024) NOT NULL,
@@ -4884,13 +4884,6 @@ ALTER TABLE ONLY public.dab_rbac_roleuserassignment
 
 ALTER TABLE ONLY public.dab_rbac_roleuserassignment
     ADD CONSTRAINT dab_rbac_roleuserassignment_pkey PRIMARY KEY (id);
-
---
--- Name: dab_resource_registry_resource dab_resource_registry_re_content_type_id_object_i_c41ad5bd_uniq; Type: CONSTRAINT; Schema: public; Owner: awx
---
-
-ALTER TABLE ONLY public.dab_resource_registry_resource
-    ADD CONSTRAINT dab_resource_registry_re_content_type_id_object_i_c41ad5bd_uniq UNIQUE (content_type_id, object_id);
 
 --
 -- Name: dab_resource_registry_resource dab_resource_registry_resource_pkey; Type: CONSTRAINT; Schema: public; Owner: awx
@@ -6888,12 +6881,6 @@ CREATE INDEX dab_rbac_roleuserassignment_role_definition_id_4b3cfad9 ON public.d
 CREATE INDEX dab_rbac_roleuserassignment_user_id_585ff6b3 ON public.dab_rbac_roleuserassignment USING btree (user_id);
 
 --
--- Name: dab_resourc_content_6d9d9c_idx; Type: INDEX; Schema: public; Owner: awx
---
-
-CREATE INDEX dab_resourc_content_6d9d9c_idx ON public.dab_resource_registry_resource USING btree (content_type_id, object_id);
-
---
 -- Name: dab_resource_registry_resource_content_type_id_aaf2e6b9; Type: INDEX; Schema: public; Owner: awx
 --
 
@@ -8026,6 +8013,12 @@ CREATE INDEX main_jobevent_job_id_uuid_3df694c5_idx ON public._unpartitioned_mai
 --
 
 CREATE INDEX main_jobevent_modified_52b12bb7 ON ONLY public.main_jobevent USING btree (modified);
+
+--
+-- Name: main_jobhostsumm_host_id_desc; Type: INDEX; Schema: public; Owner: awx
+--
+
+CREATE INDEX main_jobhostsumm_host_id_desc ON public.main_jobhostsummary USING btree (host_id, id DESC);
 
 --
 -- Name: main_jobhostsummary_constructed_host_id_8ec8dc05; Type: INDEX; Schema: public; Owner: awx
@@ -9340,6 +9333,12 @@ CREATE UNIQUE INDEX ujt_hard_name_constraint ON public.main_unifiedjobtemplate U
 --
 
 CREATE UNIQUE INDEX unique_ip_address_not_empty ON public.main_instance USING btree (ip_address) WHERE (NOT ((ip_address)::text = ''::text));
+
+--
+-- Name: unique_resource_content_type_object_id; Type: INDEX; Schema: public; Owner: awx
+--
+
+CREATE UNIQUE INDEX unique_resource_content_type_object_id ON public.dab_resource_registry_resource USING btree (content_type_id, object_id) INCLUDE (ansible_id);
 
 --
 -- Name: auth_group_permissions auth_group_permissio_permission_id_84c5c92e_fk_auth_perm; Type: FK CONSTRAINT; Schema: public; Owner: awx
