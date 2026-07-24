@@ -2,6 +2,7 @@ DO $$
 DECLARE
   --
   job_content_type_id INTEGER;
+  project_content_type_id INTEGER;
   --
   i_text text;
   task_uuid_1 text;
@@ -83,6 +84,16 @@ BEGIN
   END IF;
   
   RAISE NOTICE 'Inserted django_content_type for job model with id = %', job_content_type_id;
+
+  INSERT INTO public.django_content_type (app_label, model)
+  VALUES ('main', 'project')
+  ON CONFLICT (app_label, model) DO NOTHING
+  RETURNING id INTO project_content_type_id;
+
+  IF project_content_type_id IS NULL THEN
+    SELECT id INTO project_content_type_id FROM public.django_content_type
+    WHERE app_label = 'main' AND model = 'project';
+  END IF;
   --
   --
   -- ORGANIZATION
@@ -222,7 +233,8 @@ $yaml$,
     last_job_failed,
     status,
     organization_id,
-    org_unique
+    org_unique,
+    polymorphic_ctype_id
     )
   VALUES (
     TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00', -- created
@@ -233,7 +245,8 @@ $yaml$,
     false,                                             -- last_job_failed
     'never updated',                                   -- status (adjust as needed)
     default_organization_id,                           -- organization_id
-    false                                              -- org_unique
+    false,                                             -- org_unique
+    project_content_type_id                            -- polymorphic_ctype_id
   )
   RETURNING id
   INTO default_unified_job_template_id;
