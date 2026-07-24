@@ -14,6 +14,7 @@ x-metrics-service: &metrics-service
     METRICS_SERVICE_DATABASES__awx__HOST: postgres
     METRICS_SERVICE_DATABASES__awx__USER: awx
     METRICS_SERVICE_DATABASES__awx__PASSWORD: awx
+    MOCK_SEGMENT_URL: "http://mock-segment:8765"
 
 services:
   seaweedfs:
