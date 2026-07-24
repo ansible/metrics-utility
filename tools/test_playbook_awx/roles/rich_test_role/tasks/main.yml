@@ -5,3 +5,7 @@
 
 - name: "Role task — command from role"
   ansible.builtin.command: echo "role task done"
+
+- name: "Role task — failure in role (ignored)"
+  ansible.builtin.command: /bin/false
+  ignore_errors: true
