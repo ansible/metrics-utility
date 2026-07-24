@@ -19,6 +19,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+
 # Bootstrap metrics-utility
 current_dir = Path(__file__).resolve().parent
 metrics_utility_path = current_dir.parent.parent
@@ -75,9 +76,11 @@ def main() -> int:
             os.environ[env_var] = default
 
     from metrics_utility import prepare  # noqa: E402
+
     prepare()
 
     from django.db import connection  # noqa: E402
+
     from metrics_utility.library.collectors.controller import main_jobevent_service  # noqa: E402
 
     now = datetime.now(tz=timezone.utc)

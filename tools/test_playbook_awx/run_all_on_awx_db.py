@@ -29,6 +29,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 
@@ -85,13 +86,21 @@ def main() -> int:
 
     if not args.skip_playbook:
         banner(2, 'Run rich playbook')
-        rc = run_script('run_rich_playbook.py', [
-            '--url', args.url,
-            '--user', args.user,
-            '--password', args.password,
-            '--container', args.container,
-            '--hosts', str(args.hosts),
-        ])
+        rc = run_script(
+            'run_rich_playbook.py',
+            [
+                '--url',
+                args.url,
+                '--user',
+                args.user,
+                '--password',
+                args.password,
+                '--container',
+                args.container,
+                '--hosts',
+                str(args.hosts),
+            ],
+        )
         if rc != 0:
             print(f'run_rich_playbook.py failed (rc={rc})', file=sys.stderr)
             return rc
@@ -110,9 +119,16 @@ def main() -> int:
     #         collect_events which saves into out/.
     # ------------------------------------------------------------------
     banner(3, 'Run metrics-service pipeline (anonymized report)')
-    rc = run_script('run_on_awx_db.py', [
-        '--', '--since', since_str, '--until', until_str,
-    ])
+    rc = run_script(
+        'run_on_awx_db.py',
+        [
+            '--',
+            '--since',
+            since_str,
+            '--until',
+            until_str,
+        ],
+    )
     if rc != 0:
         print(f'run_on_awx_db.py failed (rc={rc})', file=sys.stderr)
         return rc
@@ -121,10 +137,15 @@ def main() -> int:
     # Step 4: Collect events (raw CSV into out/)
     # ------------------------------------------------------------------
     banner(4, 'Collect events')
-    rc = run_script('collect_events.py', [
-        '--since', since_str,
-        '--until', until_str,
-    ])
+    rc = run_script(
+        'collect_events.py',
+        [
+            '--since',
+            since_str,
+            '--until',
+            until_str,
+        ],
+    )
     if rc != 0:
         print(f'collect_events.py failed (rc={rc})', file=sys.stderr)
         return rc

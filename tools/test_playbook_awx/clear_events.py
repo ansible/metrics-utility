@@ -24,6 +24,7 @@ import argparse
 import subprocess
 import sys
 
+
 DEFAULT_CONTAINER = 'tools_awx_1'
 
 
@@ -39,19 +40,24 @@ def run_sql(container: str, sql: str) -> str:
 
 
 def get_counts(container: str) -> None:
-    out = run_sql(container, """
+    out = run_sql(
+        container,
+        """
         SELECT 'main_jobevent' AS tbl, count(*) FROM main_jobevent
         UNION ALL
         SELECT 'main_jobhostsummary', count(*) FROM main_jobhostsummary
         UNION ALL
         SELECT 'main_unifiedjob', count(*) FROM main_unifiedjob
         ORDER BY tbl;
-    """)
+    """,
+    )
     print(out)
 
 
 def get_partitions(container: str) -> str:
-    return run_sql(container, """
+    return run_sql(
+        container,
+        """
         SELECT child.relname AS partition,
                pg_size_pretty(pg_relation_size(child.oid)) AS size
         FROM pg_inherits
@@ -59,7 +65,8 @@ def get_partitions(container: str) -> str:
         JOIN pg_class child ON pg_inherits.inhrelid = child.oid
         WHERE parent.relname = 'main_jobevent'
         ORDER BY child.relname;
-    """)
+    """,
+    )
 
 
 def main() -> int:
@@ -83,7 +90,7 @@ def main() -> int:
     if args.job_ids:
         ids_str = ','.join(str(j) for j in args.job_ids)
         print(f'Deleting events for job_id IN ({ids_str})...')
-        out = run_sql(args.container, f"DELETE FROM main_jobevent WHERE job_id IN ({ids_str});")
+        out = run_sql(args.container, f'DELETE FROM main_jobevent WHERE job_id IN ({ids_str});')
         print(out if out else 'Done')
 
     elif args.before:
@@ -93,7 +100,7 @@ def main() -> int:
 
     else:
         print('Deleting ALL events...')
-        out = run_sql(args.container, "DELETE FROM main_jobevent;")
+        out = run_sql(args.container, 'DELETE FROM main_jobevent;')
         print(out if out else 'Done')
 
     print()

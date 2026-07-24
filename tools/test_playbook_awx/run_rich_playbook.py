@@ -27,6 +27,7 @@ import time
 
 import requests
 
+
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 DEFAULT_URL = 'https://localhost:8043'
@@ -144,20 +145,28 @@ def setup_resources(client: AWXClient, num_hosts: int) -> int:
     """Create project, inventory, hosts, and job template. Returns template id."""
 
     # Project (manual, scm_type="")
-    project, created = client.find_or_create('projects/', PROJECT_NAME, {
-        'name': PROJECT_NAME,
-        'organization': 1,
-        'scm_type': '',
-        'local_path': PROJECT_DIR,
-    })
+    project, created = client.find_or_create(
+        'projects/',
+        PROJECT_NAME,
+        {
+            'name': PROJECT_NAME,
+            'organization': 1,
+            'scm_type': '',
+            'local_path': PROJECT_DIR,
+        },
+    )
     project_id = project['id']
     print(f'Project: {PROJECT_NAME} (id={project_id}) {"[created]" if created else "[exists]"}')
 
     # Inventory
-    inventory, created = client.find_or_create('inventories/', INVENTORY_NAME, {
-        'name': INVENTORY_NAME,
-        'organization': 1,
-    })
+    inventory, created = client.find_or_create(
+        'inventories/',
+        INVENTORY_NAME,
+        {
+            'name': INVENTORY_NAME,
+            'organization': 1,
+        },
+    )
     inventory_id = inventory['id']
     print(f'Inventory: {INVENTORY_NAME} (id={inventory_id}) {"[created]" if created else "[exists]"}')
 
@@ -168,21 +177,28 @@ def setup_resources(client: AWXClient, num_hosts: int) -> int:
     if existing_count < num_hosts:
         for i in range(existing_count + 1, num_hosts + 1):
             host_name = f'{PREFIX}_host_{i}'
-            client.post(f'inventories/{inventory_id}/hosts/', {
-                'name': host_name,
-                'variables': 'ansible_connection: local',
-            })
+            client.post(
+                f'inventories/{inventory_id}/hosts/',
+                {
+                    'name': host_name,
+                    'variables': 'ansible_connection: local',
+                },
+            )
         print(f'Hosts: created {num_hosts - existing_count} new (total {num_hosts})')
     else:
         print(f'Hosts: {existing_count} already exist (requested {num_hosts})')
 
     # Job template
-    template, created = client.find_or_create('job_templates/', TEMPLATE_NAME, {
-        'name': TEMPLATE_NAME,
-        'project': project_id,
-        'inventory': inventory_id,
-        'playbook': PLAYBOOK_FILE,
-    })
+    template, created = client.find_or_create(
+        'job_templates/',
+        TEMPLATE_NAME,
+        {
+            'name': TEMPLATE_NAME,
+            'project': project_id,
+            'inventory': inventory_id,
+            'playbook': PLAYBOOK_FILE,
+        },
+    )
     template_id = template['id']
     print(f'Template: {TEMPLATE_NAME} (id={template_id}) {"[created]" if created else "[exists]"}')
 
