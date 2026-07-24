@@ -465,7 +465,7 @@ def handle_crc_ship_target():
     # only used for the other modes
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     if ship_path:
-        allowed = 'controller_db", "directory", "s3'
+        allowed = '", "'.join(['controller_db', 'directory', 's3'])
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
     # Master flag to disable all Candlepin functionality (cert loading, registration, lifecycle).

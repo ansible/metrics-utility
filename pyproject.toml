@@ -144,6 +144,8 @@ ignore = [
     "PLR2004",  # magic value comparison — common in tests and data processing
     # perflint
     "PERF401",  # list.extend/comprehension — readability over micro-optimization in data processing
+    # flynt
+    "FLY002",   # str.join() is more readable than f-string for list-of-strings patterns
 ]
 
 [tool.ruff.lint.per-file-ignores]
