@@ -187,11 +187,12 @@
     # ------------------------------------------------------------------
     - name: "Retry — command that fails then succeeds"
       ansible.builtin.shell: |
-        if [ ! -f /tmp/rich_playbook_retry_flag ]; then
-          touch /tmp/rich_playbook_retry_flag
+        FLAG="/tmp/rich_retry_{{ inventory_hostname }}"
+        if [ ! -f "$FLAG" ]; then
+          touch "$FLAG"
           exit 1
         fi
-        rm -f /tmp/rich_playbook_retry_flag
+        rm -f "$FLAG"
       retries: 3
       delay: 1
       register: retry_result
@@ -257,12 +258,18 @@
 
     # ------------------------------------------------------------------
     # 11. Role usage (role_stats coverage)
-    #     Uses include_role with a proper roles/ directory so AWX
-    #     populates resolved_role in event data.
+    #     Uses FQCN roles from local collections/ so the role names
+    #     match the collections.json whitelist and survive anonymization.
+    #     (bare role names like "my_role" get collection_source=Custom
+    #      and are stripped by anonymize_data.)
     # ------------------------------------------------------------------
-    - name: "Role — include rich_test_role"
+    - name: "Role — include redhat.rhel_system_roles role"
       ansible.builtin.include_role:
-        name: rich_test_role
+        name: redhat.rhel_system_roles.rich_test_role
+
+    - name: "Role — include ansible.network role"
+      ansible.builtin.include_role:
+        name: ansible.network.rich_test_role
 
     # ------------------------------------------------------------------
     # 12. Final summary
@@ -276,3 +283,5 @@
           multiple modules (debug, command, shell, raw, ping, tempfile,
           file, set_fact, copy, stat, lineinfile, uri, assert, fail,
           async_status, include_role).
+          Roles: redhat.rhel_system_roles.rich_test_role,
+          ansible.network.rich_test_role.
