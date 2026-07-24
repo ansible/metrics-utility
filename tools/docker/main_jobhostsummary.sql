@@ -3,6 +3,7 @@ DECLARE
   --
   job_content_type_id INTEGER;
   project_content_type_id INTEGER;
+  jobtemplate_content_type_id INTEGER;
   --
   i_text text;
   task_uuid_1 text;
@@ -26,7 +27,11 @@ DECLARE
   default_organization_id                           INTEGER;
   default_inventory_id                              INTEGER;
   default_instance_uuid UUID;
-  default_unified_job_template_id                   INTEGER;
+  default_project_ujt_id                             INTEGER;
+  default_jobtemplate_ujt_id                          INTEGER;
+  jt_admin_role_id                                   INTEGER;
+  jt_execute_role_id                                 INTEGER;
+  jt_read_role_id                                    INTEGER;
   -- enable for testing purposes for being able to repeatedly insert data
   --random_suffix    TEXT := substring(md5(random()::text), 1, 5);
   random_suffix                   TEXT := '2025-06-13';
@@ -93,6 +98,16 @@ BEGIN
   IF project_content_type_id IS NULL THEN
     SELECT id INTO project_content_type_id FROM public.django_content_type
     WHERE app_label = 'main' AND model = 'project';
+  END IF;
+
+  INSERT INTO public.django_content_type (app_label, model)
+  VALUES ('main', 'jobtemplate')
+  ON CONFLICT (app_label, model) DO NOTHING
+  RETURNING id INTO jobtemplate_content_type_id;
+
+  IF jobtemplate_content_type_id IS NULL THEN
+    SELECT id INTO jobtemplate_content_type_id FROM public.django_content_type
+    WHERE app_label = 'main' AND model = 'jobtemplate';
   END IF;
   --
   --
@@ -225,35 +240,31 @@ $yaml$,
   -- UNIFIED JOB TEMPLATE
   --
   INSERT INTO public.main_unifiedjobtemplate (
-    created,
-    modified,
-    description,
-    name,
-    old_pk,
-    last_job_failed,
-    status,
-    organization_id,
-    org_unique,
-    polymorphic_ctype_id
+    created, modified, description, name, old_pk,
+    last_job_failed, status, organization_id, org_unique, polymorphic_ctype_id
     )
   VALUES (
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00', -- created
-    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00', -- modified
-    '',                                                -- description
-    'default_unified_job_template_' || random_suffix,  -- name (w/ random suffix)
-    0,                                                 -- old_pk (must be >= 0)
-    false,                                             -- last_job_failed
-    'never updated',                                   -- status (adjust as needed)
-    default_organization_id,                           -- organization_id
-    false,                                             -- org_unique
-    project_content_type_id                            -- polymorphic_ctype_id
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    '', 'default_project_' || random_suffix, 0,
+    false, 'never updated', default_organization_id, false, project_content_type_id
   )
-  RETURNING id
-  INTO default_unified_job_template_id;
+  RETURNING id INTO default_project_ujt_id;
+
+  INSERT INTO public.main_unifiedjobtemplate (
+    created, modified, description, name, old_pk,
+    last_job_failed, status, organization_id, org_unique, polymorphic_ctype_id
+    )
+  VALUES (
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+    '', 'default_job_template_' || random_suffix, 0,
+    false, 'never updated', default_organization_id, false, jobtemplate_content_type_id
+  )
+  RETURNING id INTO default_jobtemplate_ujt_id;
   --
-  RAISE NOTICE 'Inserted UnifiedJobTemplate % with id = %',
-               'default_job_template_' || random_suffix,
-               default_unified_job_template_id;
+  RAISE NOTICE 'Inserted project UJT=%, job template UJT=%',
+               default_project_ujt_id, default_jobtemplate_ujt_id;
   --
   -- Project
   --
@@ -275,7 +286,7 @@ $yaml$,
       allow_override,
       scm_track_submodules
   ) VALUES (
-      default_unified_job_template_id,
+      default_project_ujt_id,
       'LOCAL_PATH',                    
       'git',                      -- scm_type: git for testing
       'SCM_URL',                       
@@ -339,7 +350,7 @@ $yaml$,
     prevent_instance_group_fallback
   )
   VALUES (
-    default_unified_job_template_id,  -- the FK you just created
+    default_jobtemplate_ujt_id,       -- the FK you just created
     'manual',                         -- job_type
     '',                               -- playbook
     0,                                -- forks
@@ -383,7 +394,25 @@ $yaml$,
   );
   --
   RAISE NOTICE 'Inserted Main JobTemplate ptr_id = %',
-               default_unified_job_template_id;
+               default_jobtemplate_ujt_id;
+
+  INSERT INTO public.main_rbac_roles (role_field, implicit_parents, content_type_id, object_id)
+  VALUES ('admin_role', '[]', jobtemplate_content_type_id, default_jobtemplate_ujt_id)
+  RETURNING id INTO jt_admin_role_id;
+
+  INSERT INTO public.main_rbac_roles (role_field, implicit_parents, content_type_id, object_id)
+  VALUES ('execute_role', '[]', jobtemplate_content_type_id, default_jobtemplate_ujt_id)
+  RETURNING id INTO jt_execute_role_id;
+
+  INSERT INTO public.main_rbac_roles (role_field, implicit_parents, content_type_id, object_id)
+  VALUES ('read_role', '[]', jobtemplate_content_type_id, default_jobtemplate_ujt_id)
+  RETURNING id INTO jt_read_role_id;
+
+  UPDATE public.main_jobtemplate SET
+    admin_role_id = jt_admin_role_id,
+    execute_role_id = jt_execute_role_id,
+    read_role_id = jt_read_role_id
+  WHERE unifiedjobtemplate_ptr_id = default_jobtemplate_ujt_id;
   --
   -- Execution Environments
   --
@@ -507,7 +536,7 @@ $yaml$,
       '{}'::text,                             -- start_args
       ''::text,                               -- result_traceback
       gen_random_uuid()::text,                -- celery_task_id
-      default_unified_job_template_id,        -- FK to your template
+      default_jobtemplate_ujt_id,              -- FK to your template
       default_organization_id,
       'auto',                                 -- execution_node
       0,                                      -- emitted_events
@@ -582,8 +611,8 @@ $yaml$,
       '',                              -- start_at_task
       false,                           -- become_enabled
       default_inventory_id,            -- inventory_id
-      default_unified_job_template_id, -- job_template_id
-      default_unified_job_template_id, -- project_id
+      default_jobtemplate_ujt_id, -- job_template_id
+      default_project_ujt_id,    -- project_id
       false,                           -- allow_simultaneous
       '{}'::text,                      -- artifacts
       0,                               -- timeout
@@ -1622,7 +1651,7 @@ $yaml$,
       '{}'::text,                             -- start_args
       ''::text,                               -- result_traceback
       gen_random_uuid()::text,                -- celery_task_id
-      default_unified_job_template_id,        -- FK to your template
+      default_jobtemplate_ujt_id,              -- FK to your template
       default_organization_id,
       'auto',                                 -- execution_node
       0,                                      -- emitted_events
@@ -1698,8 +1727,8 @@ $yaml$,
       '',                              -- start_at_task
       false,                           -- become_enabled
       default_inventory_id,            -- inventory_id
-      default_unified_job_template_id, -- job_template_id
-      default_unified_job_template_id, -- project_id
+      default_jobtemplate_ujt_id, -- job_template_id
+      default_project_ujt_id,    -- project_id
       false,                           -- allow_simultaneous
       '{}'::text,                      -- artifacts
       0,                               -- timeout
