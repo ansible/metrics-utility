@@ -74,7 +74,13 @@ BEGIN
   --
   INSERT INTO public.django_content_type (app_label, model)
   VALUES ('main', 'job')
+  ON CONFLICT (app_label, model) DO NOTHING
   RETURNING id INTO job_content_type_id;
+
+  IF job_content_type_id IS NULL THEN
+    SELECT id INTO job_content_type_id FROM public.django_content_type
+    WHERE app_label = 'main' AND model = 'job';
+  END IF;
   
   RAISE NOTICE 'Inserted django_content_type for job model with id = %', job_content_type_id;
   --
@@ -1214,7 +1220,13 @@ $yaml$,
       '{}'::jsonb,
       'credential_type'
     )
+    ON CONFLICT (name, kind) DO NOTHING
     RETURNING id INTO machine_credential_type_id;
+
+  IF machine_credential_type_id IS NULL THEN
+    SELECT id INTO machine_credential_type_id FROM public.main_credentialtype
+    WHERE name = 'Machine' AND kind = 'ssh';
+  END IF;
   
   -- Insert Cloud credential type
   INSERT INTO public.main_credentialtype (
@@ -1238,7 +1250,13 @@ $yaml$,
       '{}'::jsonb,
       'aws'
     )
+    ON CONFLICT (name, kind) DO NOTHING
     RETURNING id INTO cloud_credential_type_id;
+
+  IF cloud_credential_type_id IS NULL THEN
+    SELECT id INTO cloud_credential_type_id FROM public.main_credentialtype
+    WHERE name = 'Amazon Web Services' AND kind = 'cloud';
+  END IF;
   
   -- Insert Vault credential type
   INSERT INTO public.main_credentialtype (
@@ -1262,7 +1280,13 @@ $yaml$,
       '{}'::jsonb,
       'credential_type'
     )
+    ON CONFLICT (name, kind) DO NOTHING
     RETURNING id INTO vault_credential_type_id;
+
+  IF vault_credential_type_id IS NULL THEN
+    SELECT id INTO vault_credential_type_id FROM public.main_credentialtype
+    WHERE name = 'Vault' AND kind = 'vault';
+  END IF;
   
   -- Insert Network credential type
   INSERT INTO public.main_credentialtype (
@@ -1286,7 +1310,13 @@ $yaml$,
       '{}'::jsonb,
       'credential_type'
     )
+    ON CONFLICT (name, kind) DO NOTHING
     RETURNING id INTO network_credential_type_id;
+
+  IF network_credential_type_id IS NULL THEN
+    SELECT id INTO network_credential_type_id FROM public.main_credentialtype
+    WHERE name = 'Network' AND kind = 'net';
+  END IF;
   
   -- Insert Custom credential type (managed=false to test filtering)
   INSERT INTO public.main_credentialtype (
