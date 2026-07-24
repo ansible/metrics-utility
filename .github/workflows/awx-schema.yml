@@ -107,7 +107,7 @@ jobs:
           }
 
           sudo -u postgres pg_dump -s awx | pgdump_filter > tools/docker/latest.sql
-          sudo -u postgres pg_dump --data-only awx | pgdump_filter > tools/docker/initial.sql
+          sudo -u postgres pg_dump --data-only --disable-triggers awx | pgdump_filter > tools/docker/initial.sql
 
           echo "awx_sha=$AWX_SHA" >> "$GITHUB_OUTPUT"
 
@@ -117,8 +117,8 @@ jobs:
             echo "::error::Schema dump is empty or invalid — expected CREATE TABLE statements"
             exit 1
           fi
-          if ! grep -q 'INSERT INTO' tools/docker/initial.sql; then
-            echo "::error::Initial data dump is empty or invalid — expected INSERT INTO statements"
+          if ! grep -q '^COPY ' tools/docker/initial.sql; then
+            echo "::error::Initial data dump is empty or invalid — expected COPY statements"
             exit 1
           fi
 
