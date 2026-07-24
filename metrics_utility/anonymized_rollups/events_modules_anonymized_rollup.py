@@ -13,20 +13,34 @@ can use each group independently without double-counting.
 """
 
 import json
+import os
 import re
 
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
-from metrics_utility.anonymized_rollups.helpers import load_known_collections, sanitize_json
+from metrics_utility.anonymized_rollups.helpers import sanitize_json
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
-from metrics_utility.event_types import RUNNER_EVENTS
 
 
 # Regex pattern to match collection names (e.g., namespace.collection.role or namespace.collection.role.task)
 # Pattern is safe from reDOS: uses non-capturing groups and non-nested quantifiers
 _COLLECTION_RE = re.compile(r'^([A-Za-z0-9_]+)\.([A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$')
 _COLLECTION_PATTERN = r'^([A-Za-z0-9_]+\.[A-Za-z0-9_]+)\.[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*$'
+
+# All runner event types tracked per module/collection/role
+_RUNNER_EVENTS = frozenset(
+    [
+        'runner_on_ok',
+        'runner_on_async_ok',
+        'runner_item_on_ok',
+        'runner_on_failed',
+        'runner_on_async_failed',
+        'runner_item_on_failed',
+        'runner_on_unreachable',
+        'runner_retry',
+    ]
+)
 # Job-level annotation events counted into top-level warnings_total /
 # deprecations_total.  Playbook lifecycle events (playbook_on_*) are not
 # collected — high volume, low unique information vs jobs/runner counters.
@@ -117,13 +131,16 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     block/rescue, and retries.
 
     Sync task-level events (runner_on_*):
-        runner_on_ok_total, runner_on_failed_total, runner_on_unreachable_total
+        runner_on_ok_total, runner_on_failed_total, runner_on_failed_ignored_total,
+        runner_on_unreachable_total
 
     Async task-level events (runner_on_async_*):
-        runner_on_async_ok_total, runner_on_async_failed_total
+        runner_on_async_ok_total, runner_on_async_failed_total,
+        runner_on_async_failed_ignored_total
 
     Loop item-level events (runner_item_on_*):
-        runner_item_on_ok_total, runner_item_on_failed_total
+        runner_item_on_ok_total, runner_item_on_failed_total,
+        runner_item_on_failed_ignored_total
 
     Retry events:
         runner_retry_total
@@ -131,20 +148,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     For a loop with partial item failures the task-level runner_on_failed and
     the item-level runner_item_on_failed are in separate counters, so consumers
     can reason about them independently.
-
-    ignore_errors is tracked as a single combined ``ignore_errors_total``
-    counter across all failed-variant events (runner_on_failed,
-    runner_on_async_failed, runner_item_on_failed), rather than as a per-event
-    ``*_ignored`` split. This is a deliberate simplification: ansible-core does
-    not expose an ignore_errors signal anywhere on runner_on_async_failed
-    events (see main_jobevent_service.py for details), so a per-event split
-    would silently under-count ignored async failures as non-ignored. The
-    *_total counters above are therefore unconditional (count every event of
-    that type regardless of ignore_errors), and ignore_errors_total is a
-    best-effort, currently-incomplete signal that undercounts ignored async
-    failures. Revisit if/when async ignore_errors can be recovered (e.g. via
-    the companion runner_on_failed event ansible-core also emits for a failed
-    async task).
 
     Annotation events (warning / deprecated) are counted into top-level
     ``warnings_total`` / ``deprecations_total`` (promoted to statistics in the
@@ -163,27 +166,30 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'jobs_failed_duration_total_seconds',
         'runner_on_ok_total',
         'runner_on_failed_total',
+        'runner_on_failed_ignored_total',
         'runner_on_unreachable_total',
         'runner_on_async_ok_total',
         'runner_on_async_failed_total',
+        'runner_on_async_failed_ignored_total',
         'runner_item_on_ok_total',
         'runner_item_on_failed_total',
+        'runner_item_on_failed_ignored_total',
         'runner_retry_total',
-        'ignore_errors_total',
-        'tasks_total',
         'warnings_total',
         'deprecations_total',
         'collected_events_total',
         'event_data_size_total',
     ]
-    _LIST_COLS = ['host_ids', 'ansible_versions']
+    _LIST_COLS = ['ansible_versions']
 
     def __init__(self):
         super().__init__('events_modules')
 
         self.collector_names = ['main_jobevent_service']
 
-        self.collections = load_known_collections()
+        collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
+        with open(collections_path, 'r') as f:
+            self.collections = json.load(f)
 
     # ------------------------------------------------------------------
     # Merge helpers
@@ -207,12 +213,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _merge_list_columns(self, item_all, item_new, merged_item):
         """Union list columns from both items (sorted for deterministic JSON output)."""
         for col in self._LIST_COLS:
-            val_all = item_all.get(col)
-            val_new = item_new.get(col)
-            if val_all is None and val_new is None:
-                continue
-            list_all = val_all if val_all is not None else []
-            list_new = val_new if val_new is not None else []
+            list_all = item_all.get(col) if item_all.get(col) is not None else []
+            list_new = item_new.get(col) if item_new.get(col) is not None else []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
             merged_item[col] = sorted(set_all.union(set_new))
@@ -337,7 +339,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _filter_runner_events(self, dataframe):
         """Filter dataframe to runner event types used for module/collection/role stats."""
-        return dataframe[dataframe['event'].isin(RUNNER_EVENTS)]
+        return dataframe[dataframe['event'].isin(_RUNNER_EVENTS)]
 
     def _prepare_basic_columns(self, dataframe):
         """Prepare basic columns: ignore_errors, datetime, module_name, role, job_failed."""
@@ -354,19 +356,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
 
         dataframe['role'] = dataframe['resolved_role'].fillna(dataframe['role']).astype(str)
-        raw_role = dataframe['role']
-        dataframe['role'] = raw_role.apply(lambda x: DataframeContentUsage.extract_role_name(x))
-
-        # extract_role_name only recognises Galaxy-style dotted names
-        # (namespace.role or namespace.collection.role). Most locally-authored
-        # roles Ansible reports (task._role._role_name) are a single bare word
-        # (e.g. "webserver") with no dot at all, so extract_role_name returns
-        # None for them. Keep the raw name instead of silently dropping the
-        # role from role_stats; it will correctly fall through to a "Custom"
-        # collection_source below since it has no extractable collection.
-        bare_role = raw_role.str.strip()
-        bare_role_mask = dataframe['role'].isna() & (bare_role != '') & (bare_role.str.lower() != 'nan')
-        dataframe.loc[bare_role_mask, 'role'] = bare_role[bare_role_mask]
+        dataframe['role'] = dataframe['role'].apply(lambda x: DataframeContentUsage.extract_role_name(x))
 
         dataframe = dataframe.assign(job_failed=dataframe['job_failed'].fillna(False).astype(bool))
         return dataframe
@@ -421,18 +411,17 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             & dataframe['host_id'].notna()
             & dataframe['playbook'].notna()
             & dataframe['job_id'].notna()
-            & dataframe['task_uuid'].notna()
             & (dataframe['module_name'].str.strip() != '')
             & (dataframe['playbook'].str.strip() != '')
         ]
 
         if 'ansible_version' not in dataframe.columns:
             dataframe['ansible_version'] = None
+        if 'event_data_length' not in dataframe.columns:
+            dataframe['event_data_length'] = 0
 
         columns_to_keep = [
             'job_id',
-            'task_uuid',
-            'host_id',
             'module_name',
             'playbook',
             'collection_name',
@@ -456,22 +445,20 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     # ------------------------------------------------------------------
 
     # Runner event types counted via precomputed int8 flag columns (sum in groupby).
-    # is_ignore_errors is a combined counter across all failed-variant events;
-    # see class docstring for why it isn't split per event type.
+    # Failed variants are split by ignore_errors into *_failed vs *_failed_ignored.
     _RUNNER_EVENT_FLAG_COLS = (
         'is_runner_on_ok',
         'is_runner_on_failed',
+        'is_runner_on_failed_ignored',
         'is_runner_on_unreachable',
         'is_runner_on_async_ok',
         'is_runner_on_async_failed',
+        'is_runner_on_async_failed_ignored',
         'is_runner_item_on_ok',
         'is_runner_item_on_failed',
+        'is_runner_item_on_failed_ignored',
         'is_runner_retry',
-        'is_ignore_errors',
     )
-
-    # Event types for which ignore_errors is meaningful (task-failure variants).
-    _FAILED_EVENTS = frozenset(['runner_on_failed', 'runner_on_async_failed', 'runner_item_on_failed'])
 
     @staticmethod
     def _add_aggregation_columns(dataframe):
@@ -486,50 +473,45 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
         flags = {
             'is_runner_on_ok': event == 'runner_on_ok',
-            'is_runner_on_failed': event == 'runner_on_failed',
+            'is_runner_on_failed': (event == 'runner_on_failed') & ~ignore_errors,
+            'is_runner_on_failed_ignored': (event == 'runner_on_failed') & ignore_errors,
             'is_runner_on_unreachable': event == 'runner_on_unreachable',
             'is_runner_on_async_ok': event == 'runner_on_async_ok',
-            'is_runner_on_async_failed': event == 'runner_on_async_failed',
+            'is_runner_on_async_failed': (event == 'runner_on_async_failed') & ~ignore_errors,
+            'is_runner_on_async_failed_ignored': (event == 'runner_on_async_failed') & ignore_errors,
             'is_runner_item_on_ok': event == 'runner_item_on_ok',
-            'is_runner_item_on_failed': event == 'runner_item_on_failed',
+            'is_runner_item_on_failed': (event == 'runner_item_on_failed') & ~ignore_errors,
+            'is_runner_item_on_failed_ignored': (event == 'runner_item_on_failed') & ignore_errors,
             'is_runner_retry': event == 'runner_retry',
-            # Best-effort: undercounts ignored runner_on_async_failed events,
-            # since ansible-core exposes no ignore_errors signal for them (see docstring).
-            'is_ignore_errors': event.isin(EventModulesAnonymizedRollup._FAILED_EVENTS) & ignore_errors,
         }
         # int8 sum is cheaper than bool sum across many groupby aggregations
         flags = {name: series.astype('int8') for name, series in flags.items()}
 
         job_id = dataframe['job_id']
-        task_key = job_id.astype(str) + '||' + dataframe['task_uuid'].astype(str)
         return dataframe.assign(
             **flags,
-            task_key=task_key,
             job_id_successful=job_id.where(~job_failed),
             job_id_failed=job_id.where(job_failed),
         )
 
-    def _get_common_aggregation(self, frame):
+    def _get_common_aggregation(self, dataframe):
         """Return aggregation spec for groupby calls over the event-level dataframe.
 
         Per-job metrics (counts, durations) are computed over unique job_ids within
         each group to avoid inflating counts when a job contributes many events.
         Event-level metrics sum precomputed flag columns — one increment per event.
-
-        *frame* must be the same DataFrame the groupby will run on, so that
-        column lookups inside the closures always use matching indices.
         """
 
-        def _unique_job_sum(col_name, fr):
-            col = fr[col_name]
+        def _unique_job_sum(col_name):
+            col = dataframe[col_name]
 
             def agg(x):
                 return col.loc[x[~x.duplicated()].index].sum()
 
             return agg
 
-        def _unique_job_na_count(col_name, fr):
-            col = fr[col_name]
+        def _unique_job_na_count(col_name):
+            col = dataframe[col_name]
 
             def agg(x):
                 return col.loc[x[~x.duplicated()].index].isna().sum()
@@ -541,12 +523,11 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             # nunique skips NaN, so masked job_id columns replace per-group lambdas
             'jobs_successful_total': ('job_id_successful', 'nunique'),
             'jobs_failed_total': ('job_id_failed', 'nunique'),
-            'tasks_total': ('task_key', 'nunique'),
-            'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds', frame)),
-            'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds', frame)),
-            'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started', frame)),
-            'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds', frame)),
-            'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds', frame)),
+            'jobs_duration_total_seconds': ('job_id', _unique_job_sum('job_duration_seconds')),
+            'jobs_waiting_time_total_seconds': ('job_id', _unique_job_sum('job_waiting_time_seconds')),
+            'jobs_never_started_total': ('job_id', _unique_job_na_count('job_started')),
+            'jobs_successful_duration_total_seconds': ('job_id', _unique_job_sum('jobs_successful_duration_total_seconds')),
+            'jobs_failed_duration_total_seconds': ('job_id', _unique_job_sum('jobs_failed_duration_total_seconds')),
             # Module-level annotations (from event_data.res, distinct from top-level warning events)
             'warnings_total': ('is_warning', 'sum'),
             'deprecations_total': ('is_deprecation', 'sum'),
@@ -571,8 +552,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             **common_aggregation
         )
 
-        collection_aggregation = {**common_aggregation, 'host_ids': ('host_id', lambda x: sorted(x.dropna().unique().tolist()))}
-        collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**collection_aggregation)
+        collection_stats = dataframe.groupby(['collection_name', 'collection_source'], as_index=False, observed=True).agg(**common_aggregation)
 
         dataframe['role_collection_name'] = dataframe['role'].astype(str).apply(lambda x: extract_collection_name(x) if x and x != 'nan' else None)
         role_collection_source_str = dataframe['role_collection_name'].astype(str).map(self.collections)
@@ -583,9 +563,8 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         # is None are kept; without it the default dropna=True would silently
         # discard them because role_collection_name is None.
         role_df = dataframe[dataframe['role'].notna()]
-        role_aggregation = self._get_common_aggregation(role_df)
         role_stats = role_df.groupby(['role', 'role_collection_name', 'role_collection_source'], as_index=False, observed=True, dropna=False).agg(
-            **role_aggregation
+            **common_aggregation
         )
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
@@ -595,9 +574,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Compute unique_modules and modules_per_playbook."""
         unique_modules = sorted(dataframe['module_name'].dropna().unique())
 
-        modules_per_playbook = (
-            dataframe.dropna(subset=['playbook', 'module_name']).groupby('playbook')['module_name'].apply(lambda x: sorted(x.unique())).to_dict()
-        )
+        modules_per_playbook = {}
+        for playbook in dataframe['playbook'].dropna().unique():
+            modules_in_playbook = sorted(dataframe[dataframe['playbook'] == playbook]['module_name'].dropna().unique())
+            modules_per_playbook[playbook] = modules_in_playbook
 
         return unique_modules, modules_per_playbook
 
@@ -762,9 +742,6 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
                     'deprecations_total': deprecations_total,
                 },
             }
-
-        for item in collection_stats:
-            item['unique_hosts_total'] = len(item.get('host_ids', []))
 
         # Drop host_ids and rename module_name/collection_name for Segment compatibility.
         for stats_list in [module_stats, collection_stats, role_stats]:
