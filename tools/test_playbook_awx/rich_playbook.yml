@@ -198,14 +198,8 @@
       until: retry_result.rc == 0
 
     # ------------------------------------------------------------------
-    # 9. Warnings via module output
-    #    → warnings_total (module-level res.warnings)
+    # 9. Assertions
     # ------------------------------------------------------------------
-    - name: "Warning — shell with deprecation-prone syntax"
-      ansible.builtin.shell:
-        cmd: "echo 'this is fine'"
-        warn: false
-
     - name: "Assert — passing assertion"
       ansible.builtin.assert:
         that:

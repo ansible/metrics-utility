@@ -104,7 +104,9 @@ def main() -> int:
     print(f'args  : {" ".join(run_py_args)}')
     print()
 
-    return subprocess.call([sys.executable, str(run_py)] + run_py_args, env=env)
+    # Run in this script's directory so run.py's ./out/ lands in test_playbook_awx/out/
+    script_dir = str(Path(__file__).resolve().parent)
+    return subprocess.call([sys.executable, str(run_py)] + run_py_args, env=env, cwd=script_dir)
 
 
 if __name__ == '__main__':
