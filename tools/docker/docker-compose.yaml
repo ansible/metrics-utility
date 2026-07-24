@@ -46,13 +46,14 @@ services:
     volumes:
       - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql
       - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql
-      - ./functions.sql:/docker-entrypoint-initdb.d/init-2-functions.sql
-      - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-3-conf_setting.sql
-      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-4-main_hostmetric.sql
-      - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql
-      - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-6-main_jobhostsummary.sql
-      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-7-dab_feature_flags.sql
-      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-8-main_indirectmanagednodeaudit.sql
+      - ./initial.sql:/docker-entrypoint-initdb.d/init-2-initial.sql
+      - ./functions.sql:/docker-entrypoint-initdb.d/init-3-functions.sql
+      - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-4-conf_setting.sql
+      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-5-main_hostmetric.sql
+      - ./main_instance.sql:/docker-entrypoint-initdb.d/init-6-main_instance.sql
+      - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-7-main_jobhostsummary.sql
+      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-8-dab_feature_flags.sql
+      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-9-main_indirectmanagednodeaudit.sql
 
   postgres-wait:
     image: "mirror.gcr.io/postgres"
@@ -231,3 +232,80 @@ services:
     environment:
       <<: *metrics-service-env
       METRICS_SERVICE_MODE: test
+
+  redis:
+    image: "mirror.gcr.io/library/redis:7.4.8"
+    container_name: redis
+    profiles: ["awx"]
+    volumes:
+      - ./awx/redis.conf:/usr/local/etc/redis/redis.conf:z
+      - redis_socket:/var/run/redis/:rw
+    entrypoint: ["redis-server"]
+    command: ["/usr/local/etc/redis/redis.conf"]
+
+  awx:
+    image: "ghcr.io/ansible/awx_devel:devel"
+    container_name: awx
+    hostname: awx-1
+    profiles: ["awx"]
+    command: launch_awx.sh supervisord --pidfile=/tmp/supervisor_pid -n
+    environment:
+      AWX_GROUP_QUEUES: tower
+      MAIN_NODE_TYPE: hybrid
+      RECEPTORCTL_SOCKET: /var/run/awx-receptor/receptor.sock
+      CONTROL_PLANE_NODE_COUNT: 1
+      EXECUTION_NODE_COUNT: 0
+      AWX_LOGGING_MODE: stdout
+      DJANGO_SUPERUSER_PASSWORD: admin
+      RUN_MIGRATIONS: 1
+    working_dir: /awx_devel
+    volumes:
+      - ../../../awx:/awx_devel:z
+      - ./awx/database.py:/etc/tower/conf.d/database.py:z
+      - ./awx/websocket_secret.py:/etc/tower/conf.d/websocket_secret.py:z
+      - ./awx/local_settings.py:/etc/tower/conf.d/local_settings.py:z
+      - ./awx/nginx.conf:/etc/nginx/nginx.conf:z
+      - ./awx/nginx.locations.conf:/etc/nginx/conf.d/nginx.locations.conf:z
+      - ./awx/SECRET_KEY:/etc/tower/SECRET_KEY:z
+      - ./awx/receptor.conf:/etc/receptor/receptor.conf:z
+      - ../../../awx/tools/docker-compose/supervisor.conf:/etc/supervisord.conf:z
+      - redis_socket:/var/run/redis/:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    privileged: true
+    depends_on:
+      postgres-wait:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    ports:
+      - "8013:8013"
+      - "8043:8043"
+    tty: true
+
+  ansible-ui:
+    image: "mirror.gcr.io/node:20"
+    container_name: ansible-ui
+    profiles: ["ansible-ui"]
+    working_dir: /app/frontend/awx
+    volumes:
+      - ../../../ansible-ui:/app:z
+      - ansible_ui_node_modules:/app/node_modules
+    environment:
+      AWX_SERVER: "https://awx:8043"
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    depends_on:
+      awx:
+        condition: service_started
+    ports:
+      - "4101:4101"
+    entrypoint: |
+      sh -c '
+        cd /app
+        npm ci
+        cd frontend/awx
+        npm run start -- --host 0.0.0.0
+      '
+
+volumes:
+  redis_socket:
+  ansible_ui_node_modules:
