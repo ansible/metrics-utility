@@ -18,13 +18,17 @@ def pgdump_filter(lines):
     result = []
     prev_blank = False
     for line in lines:
+        # strip pg_dump version comments — they change with postgres upgrades
         if line.startswith('-- Dumped from database version') or line.startswith('-- Dumped by pg_dump version'):
             continue
+        # strip pg18+ security directives and settings not present in older versions
         if line.startswith('\\restrict ') or line.startswith('\\unrestrict'):
             continue
         if line.startswith('SET transaction_timeout'):
             continue
+        # strip pg18+ named NOT NULL constraints back to plain NOT NULL
         line = re.sub(r' CONSTRAINT [a-z_]*_not_null\d* NOT NULL', ' NOT NULL', line)
+        # collapse consecutive blank lines left by the above removals
         if line == '\n':
             if prev_blank:
                 continue
@@ -32,6 +36,7 @@ def pgdump_filter(lines):
         else:
             prev_blank = False
         result.append(line)
+    # strip trailing blank lines
     while result and result[-1] == '\n':
         result.pop()
     if result and not result[-1].endswith('\n'):
