@@ -1,4 +1,5 @@
-from typing import Any, Callable, Dict, List
+from collections.abc import Callable
+from typing import Any
 
 import pandas as pd
 
@@ -15,7 +16,7 @@ from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
-def _installed_collection_name_is_unknown(collection_name: Any, known: Dict[str, Any]) -> bool:
+def _installed_collection_name_is_unknown(collection_name: Any, known: dict[str, Any]) -> bool:
     """
     Return True if the name should be anonymized to 'Custom': missing, blank, NA,
     or not present in the known collections map.
@@ -61,12 +62,12 @@ def create_anonymized_object(rollup_name: str):
         raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
-def _remove_custom_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _remove_custom_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return a new list with all items whose collection_source is 'Custom' removed."""
     return [item for item in items if item and item.get('collection_source') != 'Custom']
 
 
-def _remove_unknown_installed_collections(items: List[Dict[str, Any]], known_collections: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _remove_unknown_installed_collections(items: list[dict[str, Any]], known_collections: dict[str, Any]) -> list[dict[str, Any]]:
     """Return a new list with installed-collection entries not in the known whitelist removed."""
     return [item for item in items if item and not _installed_collection_name_is_unknown(item.get('collection', ''), known_collections)]
 
@@ -129,7 +130,7 @@ def _normalize_ansible_version_key(ansible_version: Any) -> str:
     return str(ansible_version)
 
 
-def _get_default_host_summary_fields() -> Dict[str, int]:
+def _get_default_host_summary_fields() -> dict[str, int]:
     """Get default values for host summary fields when no match is found."""
     return {
         'unreachable_total': 0,
@@ -144,7 +145,7 @@ def _get_default_host_summary_fields() -> Dict[str, int]:
     }
 
 
-def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_host_summary_fields(jhs_data: dict[str, Any]) -> dict[str, Any]:
     """Extract host summary fields from job_host_summary data.
 
     Note: unique_hosts_total is not included here as it's only computed at the top level,
@@ -164,11 +165,11 @@ def _extract_host_summary_fields(jhs_data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _merge_jobs_with_host_summary(
-    jobs_list: List[Dict[str, Any]],
-    jhs_lookup: Dict[str, Dict[str, Any]],
-    key_extractor: Callable[[Dict[str, Any]], Any],
-    normalize_key: Callable[[Any], str] = None,
-) -> List[Dict[str, Any]]:
+    jobs_list: list[dict[str, Any]],
+    jhs_lookup: dict[str, dict[str, Any]],
+    key_extractor: Callable[[dict[str, Any]], Any],
+    normalize_key: Callable[[Any], str] | None = None,
+) -> list[dict[str, Any]]:
     """Merge job_host_summary data into jobs list using a lookup dictionary."""
     default_fields = _get_default_host_summary_fields()
     merged_jobs = []
@@ -190,14 +191,14 @@ def _merge_jobs_with_host_summary(
     return merged_jobs
 
 
-def _calculate_sum_from_list(items: List[Dict[str, Any]], field: str) -> Any:
+def _calculate_sum_from_list(items: list[dict[str, Any]], field: str) -> Any:
     """Calculate sum of a field from a list of dictionaries, returning 0 if list is empty."""
     if not items:
         return 0
     return sum(item.get(field, 0) for item in items)
 
 
-def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, Any]], host_ids: List[Any] = None) -> Dict[str, Any]:
+def _calculate_host_summary_totals(job_host_summary_by_job_type: list[dict[str, Any]], host_ids: list[Any] | None = None) -> dict[str, Any]:
     """Calculate host summary totals from job_type groups.
 
     Args:
@@ -218,7 +219,7 @@ def _calculate_host_summary_totals(job_host_summary_by_job_type: List[Dict[str, 
     }
 
 
-def _calculate_job_statistics(jobs_by_job_type: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_job_statistics(jobs_by_job_type: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculate job statistics by summing from all job_type groups."""
     return {
         'rollup_period_jobs_total': _calculate_sum_from_list(jobs_by_job_type, 'jobs_total'),
@@ -232,17 +233,17 @@ def _calculate_job_statistics(jobs_by_job_type: List[Dict[str, Any]]) -> Dict[st
     }
 
 
-def _merge_ansible_versions(jobs_by_job_type: List[Dict[str, Any]]) -> List[str]:
+def _merge_ansible_versions(jobs_by_job_type: list[dict[str, Any]]) -> list[str]:
     """Merge ansible_versions from all job_type groups (unique values, sorted)."""
     ansible_versions_set = set()
     for job in jobs_by_job_type:
         ansible_versions = job.get('ansible_versions', [])
         if isinstance(ansible_versions, list):
             ansible_versions_set.update(ansible_versions)
-    return sorted(list(ansible_versions_set)) if ansible_versions_set else []
+    return sorted(ansible_versions_set) if ansible_versions_set else []
 
 
-def _calculate_execution_environments_total(execution_environments: Dict[str, Any]) -> Any:
+def _calculate_execution_environments_total(execution_environments: dict[str, Any]) -> Any:
     """Calculate execution_environments_total as sum of default and custom."""
     default_total = execution_environments.get('execution_environments_default_total')
     custom_total = execution_environments.get('execution_environments_custom_total')
@@ -251,7 +252,7 @@ def _calculate_execution_environments_total(execution_environments: Dict[str, An
     return (default_total or 0) + (custom_total or 0)
 
 
-def _calculate_task_statistics(jobs_by_job_type_merged: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _calculate_task_statistics(jobs_by_job_type_merged: list[dict[str, Any]]) -> dict[str, Any]:
     """Calculate task statistics from merged jobs_by_job_type."""
     task_ok = sum(job.get('ok_total', 0) for job in jobs_by_job_type_merged)
     task_failed = sum(job.get('failed_total', 0) for job in jobs_by_job_type_merged)
@@ -270,17 +271,17 @@ def _calculate_task_statistics(jobs_by_job_type_merged: List[Dict[str, Any]]) ->
 
 
 def _build_statistics(
-    events_modules: Dict[str, Any],
-    execution_environments: Dict[str, Any],
-    jobs: Dict[str, Any],
-    job_statistics: Dict[str, Any],
-    host_summary_totals: Dict[str, Any],
+    events_modules: dict[str, Any],
+    execution_environments: dict[str, Any],
+    jobs: dict[str, Any],
+    job_statistics: dict[str, Any],
+    host_summary_totals: dict[str, Any],
     job_host_pairs_total: Any,
     playbooks_total: int,
     execution_environments_total: Any,
     has_events: bool = True,
-    indirect_managed_nodes: Dict[str, Any] = None,
-) -> Dict[str, Any]:
+    indirect_managed_nodes: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Build statistics dictionary with rollup_period_ prefix for all fields."""
     # Calculate indirect node count
     indirect_nodes_total = 0
@@ -330,7 +331,7 @@ def _build_statistics(
     return statistics
 
 
-def _inject_controller_version(jobs_by_controller_version: List[Dict[str, Any]], controller_versions: List[str]) -> List[Dict[str, Any]]:
+def _inject_controller_version(jobs_by_controller_version: list[dict[str, Any]], controller_versions: list[str]) -> list[dict[str, Any]]:
     """Inject the first controller_version from the controller_versions list into the
     single-item jobs_by_controller_version summary."""
     if not jobs_by_controller_version:
@@ -341,7 +342,7 @@ def _inject_controller_version(jobs_by_controller_version: List[Dict[str, Any]],
     return jobs_by_controller_version
 
 
-def _inject_controller_version_to_all_items(jobs_list: List[Dict[str, Any]], controller_versions: List[str]) -> List[Dict[str, Any]]:
+def _inject_controller_version_to_all_items(jobs_list: list[dict[str, Any]], controller_versions: list[str]) -> list[dict[str, Any]]:
     """Inject the first controller_version from the controller_versions list into every
     item of the given jobs grouping list."""
     first_version = controller_versions[0] if controller_versions else None
@@ -350,9 +351,9 @@ def _inject_controller_version_to_all_items(jobs_list: List[Dict[str, Any]], con
     return jobs_list
 
 
-def _extract_jobs_by_installed_collections_versions(jobs: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _extract_jobs_by_installed_collections_versions(jobs: dict[str, Any]) -> list[dict[str, Any]]:
     """Extract and transform installed collections from jobs data."""
-    installed_collections: List[Dict[str, Any]] = jobs.get('installed_collections', []) or []
+    installed_collections: list[dict[str, Any]] = jobs.get('installed_collections', []) or []
     return [
         {
             'collection': item.get('collection_name', ''),
@@ -379,15 +380,15 @@ def _extract_jobs_by_installed_collections_versions(jobs: Dict[str, Any]) -> Lis
 
 
 def _merge_all_jobs_groupings(
-    jobs: Dict[str, Any],
-    job_host_summary_by_job_type: List[Dict[str, Any]],
-    job_host_summary_by_launch_type: List[Dict[str, Any]],
-    job_host_summary_by_ansible_version: List[Dict[str, Any]],
-) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    jobs: dict[str, Any],
+    job_host_summary_by_job_type: list[dict[str, Any]],
+    job_host_summary_by_launch_type: list[dict[str, Any]],
+    job_host_summary_by_ansible_version: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     """Merge job_host_summary data into all jobs groupings."""
     # Merge by job_type
-    jhs_lookup_by_job_type: Dict[str, Dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
-    jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
+    jhs_lookup_by_job_type: dict[str, dict[str, Any]] = {jhs.get('job_type'): jhs for jhs in job_host_summary_by_job_type}
+    jobs_by_job_type: list[dict[str, Any]] = jobs.get('by_job_type', []) or []
     jobs_by_job_type_merged = _merge_jobs_with_host_summary(
         jobs_by_job_type,
         jhs_lookup_by_job_type,
@@ -395,8 +396,8 @@ def _merge_all_jobs_groupings(
     )
 
     # Merge by launch_type
-    jhs_lookup_by_launch_type: Dict[str, Dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
-    jobs_by_launch_type: List[Dict[str, Any]] = jobs.get('by_launch_type', []) or []
+    jhs_lookup_by_launch_type: dict[str, dict[str, Any]] = {jhs.get('launch_type'): jhs for jhs in job_host_summary_by_launch_type}
+    jobs_by_launch_type: list[dict[str, Any]] = jobs.get('by_launch_type', []) or []
     jobs_by_launch_type_merged = _merge_jobs_with_host_summary(
         jobs_by_launch_type,
         jhs_lookup_by_launch_type,
@@ -404,12 +405,12 @@ def _merge_all_jobs_groupings(
     )
 
     # Merge by ansible_version
-    jhs_lookup_by_ansible_version: Dict[str, Dict[str, Any]] = {}
+    jhs_lookup_by_ansible_version: dict[str, dict[str, Any]] = {}
     for jhs in job_host_summary_by_ansible_version:
         key = _normalize_ansible_version_key(jhs.get('ansible_version'))
         jhs_lookup_by_ansible_version[key] = jhs
 
-    jobs_by_ansible_version: List[Dict[str, Any]] = jobs.get('by_ansible_version', []) or []
+    jobs_by_ansible_version: list[dict[str, Any]] = jobs.get('by_ansible_version', []) or []
     jobs_by_ansible_version_merged = _merge_jobs_with_host_summary(
         jobs_by_ansible_version,
         jhs_lookup_by_ansible_version,
@@ -420,12 +421,12 @@ def _merge_all_jobs_groupings(
     return jobs_by_job_type_merged, jobs_by_launch_type_merged, jobs_by_ansible_version_merged
 
 
-def _as_list(value: Any) -> List[Any]:
+def _as_list(value: Any) -> list[Any]:
     """Return *value* unchanged when it is already a list; otherwise return an empty list."""
     return value if isinstance(value, list) else []
 
 
-def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
+def flatten_json_report(data: dict[str, Any]) -> dict[str, Any]:
     """
     Manually flattens the given nested report into:
       - statistics: object of primitive totals (includes credentials)
@@ -454,14 +455,14 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     indirect_managed_nodes_root = data.get('indirect_managed_nodes', {})
 
     # Extract data structures
-    credentials_list: List[str] = _as_list(credentials_root)
-    jobs_by_job_type: List[Dict[str, Any]] = jobs.get('by_job_type', []) or []
-    job_host_summary_by_job_type: List[Dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
-    job_host_summary_by_launch_type: List[Dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
-    job_host_summary_by_ansible_version: List[Dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
+    credentials_list: list[str] = _as_list(credentials_root)
+    jobs_by_job_type: list[dict[str, Any]] = jobs.get('by_job_type', []) or []
+    job_host_summary_by_job_type: list[dict[str, Any]] = job_host_summary_root.get('by_job_type', []) or []
+    job_host_summary_by_launch_type: list[dict[str, Any]] = job_host_summary_root.get('by_launch_type', []) or []
+    job_host_summary_by_ansible_version: list[dict[str, Any]] = job_host_summary_root.get('by_ansible_version', []) or []
 
     # Extract top-level host_ids list to compute unique_hosts_total
-    host_ids: List[Any] = job_host_summary_root.get('host_ids', []) or []
+    host_ids: list[Any] = job_host_summary_root.get('host_ids', []) or []
 
     # Calculate statistics using helper functions
     host_summary_totals = _calculate_host_summary_totals(job_host_summary_by_job_type, host_ids)
@@ -490,9 +491,9 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Extract arrays and collections
     # Only include event-related arrays if there are events
-    module_stats: List[Dict[str, Any]] = events_modules.get('module_stats', []) or []
-    collection_stats: List[Dict[str, Any]] = events_modules.get('collection_stats', []) or []
-    role_stats: List[Dict[str, Any]] = events_modules.get('role_stats', []) or []
+    module_stats: list[dict[str, Any]] = events_modules.get('module_stats', []) or []
+    collection_stats: list[dict[str, Any]] = events_modules.get('collection_stats', []) or []
+    role_stats: list[dict[str, Any]] = events_modules.get('role_stats', []) or []
     jobs_by_installed_collections_versions = _extract_jobs_by_installed_collections_versions(jobs)
 
     # Merge job_host_summary into jobs groupings
@@ -504,8 +505,8 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
     # Build jobs_by_controller_version: inject first controller_version from the controller_version collector
-    jobs_by_controller_version: List[Dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
-    controller_versions: List[str] = _as_list(controller_version_root)
+    jobs_by_controller_version: list[dict[str, Any]] = jobs.get('jobs_by_controller_version', []) or []
+    controller_versions: list[str] = _as_list(controller_version_root)
     jobs_by_controller_version = _inject_controller_version(jobs_by_controller_version, controller_versions)
 
     # Inject controller_version into every item of the three job groupings
@@ -518,7 +519,7 @@ def flatten_json_report(data: Dict[str, Any]) -> Dict[str, Any]:
     statistics.update(task_statistics)
 
     # Assemble the flattened object
-    flattened: Dict[str, Any] = {
+    flattened: dict[str, Any] = {
         'statistics': statistics,
         'rollup_period_ansible_versions': ansible_versions_merged,
         'rollup_period_scm_types': _as_list(jobs.get('scm_types')),

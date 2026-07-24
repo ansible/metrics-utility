@@ -281,7 +281,7 @@ def _validate_events_modules(result):
 
     module_stats = result['module_stats']
     assert isinstance(module_stats, list), 'module_stats should be a list'
-    assert len(module_stats) == 7, 'Should have stats for all 7 modules'
+    assert len(module_stats) == 6, 'Should have stats for all 6 non-Custom modules'
 
     win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
     assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
@@ -308,7 +308,7 @@ def _validate_events_modules(result):
 
     collection_stats = result['collection_stats']
     assert isinstance(collection_stats, list), 'collection_stats should be a list'
-    assert len(collection_stats) == 7, 'Should have stats for all 7 collections'
+    assert len(collection_stats) == 6, 'Should have stats for all 6 non-Custom collections'
 
     windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
     assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
@@ -326,16 +326,19 @@ def _validate_events_modules(result):
 def _validate_jobs_by_installed_collections_versions(result):
     """Validate collections versions section.
 
-    Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is unknown →
-    anonymised to Custom/Custom.  All timing/template/inventory/ansible_version stats should match
-    the per-collection rollup values calculated from jobs 1-4 and 6 (job 5 filtered – no finished).
+    Uses same job fixture data as test_jobs_anonymized_rollups.py.  ansible.builtin is a known
+    certified collection kept as-is.  All timing/template/inventory/ansible_version stats should
+    match the per-collection rollup values calculated from jobs 1-4 and 6 (job 5 filtered – no
+    finished).
     """
     jobs_by_installed_collections_versions = result['jobs_by_installed_collections_versions']
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
     cv = {(c['collection'], c['version']): c for c in jobs_by_installed_collections_versions}
 
     # --- jobs_total counts (unchanged from before) ---
-    assert cv.get(('Custom', 'Custom'))['jobs_total'] == 5, f'Expected Custom Custom (ansible.builtin) in 5 jobs, got {cv.get(("Custom", "Custom"))}'
+    assert cv.get(('ansible.builtin', '2.9.10'))['jobs_total'] == 5, (
+        f'Expected ansible.builtin 2.9.10 in 5 jobs, got {cv.get(("ansible.builtin", "2.9.10"))}'
+    )
     assert cv.get(('community.general', '1.0.0'))['jobs_total'] == 2
     assert cv.get(('community.general', '2.0.0'))['jobs_total'] == 2
     assert cv.get(('community.general', '3.0.0'))['jobs_total'] == 1
@@ -343,12 +346,12 @@ def _validate_jobs_by_installed_collections_versions(result):
     assert cv.get(('community.aws', '1.5.0'))['jobs_total'] == 1
 
     assert len(jobs_by_installed_collections_versions) == 6, (
-        f'Expected 6 unique collection-version pairs, got {len(jobs_by_installed_collections_versions)}'
+        f'Expected 6 unique collection-version pairs (ansible.builtin now kept), got {len(jobs_by_installed_collections_versions)}'
     )
 
-    # --- Custom/Custom (ansible.builtin 2.9.10, 5 jobs) ---
+    # --- ansible.builtin 2.9.10 (5 jobs) ---
     # jobs 1(s,3s,0s) 2(f,5s,2s) 3(s,7s,4s) 4(s,2s,1s) 6(f,NaN,NaN,never-started)
-    custom = cv[('Custom', 'Custom')]
+    custom = cv[('ansible.builtin', '2.9.10')]
     assert custom['jobs_failed_total'] == 2
     assert custom['jobs_successful_total'] == 3
     assert custom['jobs_never_started_total'] == 1
@@ -679,7 +682,7 @@ def test_multiple_csv_files_concatenation(cleanup_test_data):
     # ========== Split and create CSV files for each collector ==========
     input_data = _create_csv_files_from_split_data(data_dir, jobs, events, execution_environments, jobhostsummary, credentials)
 
-    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data)
 
     # print the result with pretty json
     import json
@@ -784,7 +787,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     }
 
     # Should not crash, but return empty/default results
-    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data)
 
     # Print the result for debugging
     import json
