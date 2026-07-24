@@ -7,8 +7,8 @@ import subprocess
 import sys
 import uuid
 
-from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from contextlib import contextmanager, suppress
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 import pytest
@@ -18,7 +18,7 @@ def utcdt(s):
     """Parse an ISO date/datetime string as UTC. Assumes UTC if no timezone given."""
     dt = datetime.fromisoformat(s)
     if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
+        return dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -29,10 +29,8 @@ def cleanup_glob(file_glob):
         os.remove(file)
         dirs.add(os.path.dirname(file))
     for d in dirs:
-        try:
+        with suppress(OSError):
             os.removedirs(d)
-        except OSError:
-            pass
 
 
 @contextmanager
@@ -192,7 +190,7 @@ def generate_renewal_guidance_dataframe(is_empty=False, current_datetime=None):
 
     # --- Helper to generate common datetime objects for consistency ---
     if current_datetime is None:
-        now_utc = datetime.now(timezone.utc).replace(microsecond=0)
+        now_utc = datetime.now(UTC).replace(microsecond=0)
     else:
         now_utc = current_datetime.replace(microsecond=0)  # Use provided fixed datetime
 
@@ -201,8 +199,8 @@ def generate_renewal_guidance_dataframe(is_empty=False, current_datetime=None):
     rows = []
 
     # Row 1: localhost (Non-deleted, Non-ephemeral)
-    first_auto_dt_1 = datetime(2025, 5, 7, 14, 45, 32, tzinfo=timezone.utc)
-    last_auto_dt_1 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=timezone.utc)
+    first_auto_dt_1 = datetime(2025, 5, 7, 14, 45, 32, tzinfo=UTC)
+    last_auto_dt_1 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=UTC)
     hostname_1 = 'localhost'
     rows.append(
         {
@@ -223,8 +221,8 @@ def generate_renewal_guidance_dataframe(is_empty=False, current_datetime=None):
     )
 
     # Row 2: localhost2 (Non-deleted, Non-ephemeral)
-    first_auto_dt_2 = datetime(2025, 5, 7, 15, 40, 6, tzinfo=timezone.utc)
-    last_auto_dt_2 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=timezone.utc)
+    first_auto_dt_2 = datetime(2025, 5, 7, 15, 40, 6, tzinfo=UTC)
+    last_auto_dt_2 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=UTC)
     hostname_2 = 'localhost2'
     rows.append(
         {
@@ -245,8 +243,8 @@ def generate_renewal_guidance_dataframe(is_empty=False, current_datetime=None):
     )
 
     # Row 3: localhost3 (Non-deleted, Non-ephemeral)
-    first_auto_dt_3 = datetime(2025, 5, 7, 15, 40, 6, tzinfo=timezone.utc)
-    last_auto_dt_3 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=timezone.utc)
+    first_auto_dt_3 = datetime(2025, 5, 7, 15, 40, 6, tzinfo=UTC)
+    last_auto_dt_3 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=UTC)
     hostname_3 = 'localhost3'
     rows.append(
         {
@@ -267,8 +265,8 @@ def generate_renewal_guidance_dataframe(is_empty=False, current_datetime=None):
     )
 
     # Row 4: localhost-duplicate (Deleted, Non-ephemeral)
-    first_auto_dt_4 = datetime(2025, 5, 7, 15, 40, 6, tzinfo=timezone.utc)
-    last_auto_dt_4 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=timezone.utc)
+    first_auto_dt_4 = datetime(2025, 5, 7, 15, 40, 6, tzinfo=UTC)
+    last_auto_dt_4 = datetime(2025, 5, 22, 19, 45, 11, tzinfo=UTC)
     hostname_4 = 'localhost-duplicate'
     rows.append(
         {

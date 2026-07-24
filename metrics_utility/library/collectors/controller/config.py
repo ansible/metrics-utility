@@ -28,7 +28,7 @@ SETTINGS = [
 
 
 @collector
-def config(*, db=None, billing_provider_params={}, output=DictOutput()):
+def config(*, db=None, billing_provider_params=None, output=DictOutput()):
     """Collect Controller configuration, license, and version information.
 
     Args:
@@ -40,6 +40,8 @@ def config(*, db=None, billing_provider_params={}, output=DictOutput()):
     Returns:
         Dict containing settings, license info, version, and platform details.
     """
+    if billing_provider_params is None:
+        billing_provider_params = {}
     settings = _get_controller_settings(db, keys=SETTINGS)
     license_info = settings.get('LICENSE', {})
 

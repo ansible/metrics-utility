@@ -507,14 +507,18 @@ def test_main_jobevent_service_row_limit(caplog):
 
 execution_environments_lines = [
     'id,created,modified,description,image,managed,created_by_id,credential_id,modified_by_id,organization_id,name,pull',
-    '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'Python 3.11 environment with common ML libraries,'
-    'registry.example.com/envs/python-ml:3.11,t,,,,,'
-    'Python ML Environment,always',
-    '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
-    'Node.js 20 environment for backend services,'
-    'registry.example.com/envs/node-backend:20,f,,,,,'
-    'Node Backend Environment,missing',
+    (
+        '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+        'Python 3.11 environment with common ML libraries,'
+        'registry.example.com/envs/python-ml:3.11,t,,,,,'
+        'Python ML Environment,always'
+    ),
+    (
+        '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,'
+        'Node.js 20 environment for backend services,'
+        'registry.example.com/envs/node-backend:20,f,,,,,'
+        'Node Backend Environment,missing'
+    ),
 ]
 
 execution_environments_skip_columns = [

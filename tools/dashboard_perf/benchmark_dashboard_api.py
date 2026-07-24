@@ -39,7 +39,7 @@ Usage:
         metrics_service/tools/dashboard_collection_performance_tests/benchmark_dashboard_api.py
 """
 
-# ruff: noqa: T201, E402
+# ruff: noqa: E402
 import os
 import sys
 import time
@@ -128,8 +128,8 @@ def wait_for_task(task_id: str) -> float:
         data = resp.json()
         status = data.get('status')
         if status == 'completed':
-            started_at = datetime.fromisoformat(data['started_at'].replace('Z', '+00:00'))
-            completed_at = datetime.fromisoformat(data['completed_at'].replace('Z', '+00:00'))
+            started_at = datetime.fromisoformat(data['started_at'])
+            completed_at = datetime.fromisoformat(data['completed_at'])
             return (completed_at - started_at).total_seconds()
         if status in ('failed', 'cancelled'):
             raise RuntimeError(f'Task {task_id} {status}: {data.get("error", "")}')

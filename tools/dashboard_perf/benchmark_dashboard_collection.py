@@ -27,7 +27,7 @@ TEST_SINCE=2024-01-01 TEST_UNTIL=2024-04-01 INCREMENT_HOURS=6 INCREMENT_COUNT=8 
     python metrics_service/tools/dashboard_collection_performance_tests/benchmark_dashboard_collection.py
 """
 
-# ruff: noqa: T201, E402
+# ruff: noqa: E402
 import contextlib
 import os
 import sys
@@ -55,6 +55,8 @@ django.setup()
 # ---------------------------------------------------------------------------
 # Application imports (after Django setup)
 # ---------------------------------------------------------------------------
+from typing import Self
+
 from apps.dashboard_reports.models import JobData, TemplateMetadata
 from apps.dashboard_reports.tasks import _collect_data
 
@@ -78,7 +80,7 @@ class PeakMemoryMonitor:
         self._peak = 0.0
         self._stop = threading.Event()
 
-    def __enter__(self) -> 'PeakMemoryMonitor':
+    def __enter__(self) -> Self:
         self._peak = get_memory_mb(self._process)
         self._stop.clear()
         self._thread = threading.Thread(target=self._poll, daemon=True)
@@ -191,14 +193,14 @@ def run_incremental_phase(
                 failed_runs.append(i)
                 print(
                     f'  {i:>4}   {run_since.isoformat():>28} {run_until.isoformat():>28}'
-                    f' {str(job_count):>8} {run_duration:>10.2f}s {get_memory_mb(process):>10.1f}{err_flag}'
+                    f' {job_count!s:>8} {run_duration:>10.2f}s {get_memory_mb(process):>10.1f}{err_flag}'
                 )
                 print(f'  Error: {result.get("message", "unknown error")}')
                 sys.exit(1)
 
             print(
                 f'  {i:>4}   {run_since.isoformat():>28} {run_until.isoformat():>28}'
-                f' {str(job_count):>8} {run_duration:>10.2f}s {current_memory:>10.1f}{err_flag}'
+                f' {job_count!s:>8} {run_duration:>10.2f}s {current_memory:>10.1f}{err_flag}'
             )
         except Exception as exc:
             run_duration = time.time() - run_start
@@ -296,7 +298,7 @@ def print_output_table_sizes() -> None:
     with connection.cursor() as cursor:
         for label, table in output_tables:
             try:
-                cursor.execute(f'SELECT COUNT(*) FROM {table}')  # noqa: S608
+                cursor.execute(f'SELECT COUNT(*) FROM {table}')
                 rows = cursor.fetchone()[0]
                 cursor.execute(
                     'SELECT pg_size_pretty(pg_total_relation_size(%s))',

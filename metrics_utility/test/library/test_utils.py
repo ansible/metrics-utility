@@ -122,6 +122,6 @@ def test_tempdir_nested_file_creation():
         assert os.path.exists(nested_file)
 
         # Read it back
-        with open(nested_file, 'r') as f:
+        with open(nested_file) as f:
             content = f.read()
             assert content == 'col1,col2\nval1,val2\n'

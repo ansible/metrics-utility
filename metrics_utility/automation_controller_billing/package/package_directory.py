@@ -5,8 +5,7 @@ import shutil
 
 from django.conf import settings
 
-import metrics_utility.base as base
-
+from metrics_utility import base
 from metrics_utility.logger import logger
 
 
@@ -35,10 +34,7 @@ class PackageDirectory(base.Package):
             logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
-        if 'Error:' in str(self.tar_path):
-            return False
-
-        return True
+        return 'Error:' not in str(self.tar_path)
 
     def _destination_path(self, base_path, timestamp, filename):
         year = timestamp.strftime('%Y')

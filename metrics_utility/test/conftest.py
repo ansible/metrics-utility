@@ -22,7 +22,7 @@ def fixed_now():
     """
     Provides a fixed, timezone-aware datetime for deterministic tests.
     """
-    return dt_actual.datetime(2025, 6, 3, 10, 0, 0, tzinfo=dt_actual.timezone.utc)
+    return dt_actual.datetime(2025, 6, 3, 10, 0, 0, tzinfo=dt_actual.UTC)
 
 
 @pytest.fixture
@@ -65,7 +65,7 @@ def setup_processed_dataframe(fixed_now):
     yield processed_df
 
 
-def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=[]):
+def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=None):
     """Assert that an Excel workbook contains exactly the expected sheet tabs.
 
     Args:
@@ -74,6 +74,8 @@ def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=[]):
         excluded_sheets: Sheet names to ignore when comparing.
     """
 
+    if excluded_sheets is None:
+        excluded_sheets = []
     wb = openpyxl.load_workbook(file_path)
     try:
         actual_tab_names = wb.sheetnames
@@ -115,7 +117,7 @@ def validate_sheet_columns(file_path, expected_sheets, usage_reporting_min_row):
     def get_column_headers(expected_column_data):
         expected_column_headers = []
         for column_group in expected_column_data:
-            expected_column_headers.extend(normalize_column(col) for col in column_group.keys())
+            expected_column_headers.extend(normalize_column(col) for col in column_group)
         return expected_column_headers
 
     wb = openpyxl.load_workbook(file_path)

@@ -465,7 +465,7 @@ def handle_crc_ship_target():
     # only used for the other modes
     ship_path = os.getenv('METRICS_UTILITY_SHIP_PATH')
     if ship_path:
-        allowed = '", "'.join(['controller_db', 'directory', 's3'])
+        allowed = 'controller_db", "directory", "s3'
         logger.warning(f'Ignoring METRICS_UTILITY_SHIP_PATH used without METRICS_UTILITY_SHIP_TARGET="{allowed}"')
 
     # Master flag to disable all Candlepin functionality (cert loading, registration, lifecycle).
@@ -747,7 +747,7 @@ def now():
     Returns:
         :class:`datetime.datetime` representing the current moment.
     """
-    return datetime.datetime.now()
+    return datetime.datetime.now(tz=datetime.UTC)
 
 
 def startofday(dt):
@@ -762,7 +762,7 @@ def startofday(dt):
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def parse_date_param(value, help_texts={None: ''}, name=None):
+def parse_date_param(value, help_texts=None, name=None):
     """Parse a human-friendly date string into a timezone-aware datetime.
 
     Supported formats: ISO date (``2023-12-20``), ``Nd``/``Ndays`` (N days ago,
@@ -781,6 +781,8 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
         :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the string
             cannot be parsed.
     """
+    if help_texts is None:
+        help_texts = {None: ''}
     if not value:
         return None
 
@@ -811,13 +813,13 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
 
         # actual date
         if not parsed:
-            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.timezone.utc)
+            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.UTC)
     except Exception as e:
-        raise UnparsableParameter(f'{str(e)}: {help_text}')
+        raise UnparsableParameter(f'{e!s}: {help_text}')
 
     # Set timezone to UTC when missing
     if parsed and parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+        parsed = parsed.replace(tzinfo=datetime.UTC)
 
     return parsed
 
@@ -925,7 +927,7 @@ def validate_build_params(options, help_texts):
     if report_type in {'CCSP', 'CCSPv2'}:
         validate_ccsp_params(options)
 
-    if report_type in {'RENEWAL_GUIDANCE'}:
+    if report_type == 'RENEWAL_GUIDANCE':
         validate_renewal_params(options, help_texts)
 
     return parse_since_until(options, help_texts)
@@ -947,7 +949,7 @@ def parse_number_of_days(date_option):
     if not date_option:
         return None
 
-    if date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days'):
+    if date_option.endswith(('d', 'day', 'days')):
         if date_option.endswith('d'):
             suffix_length = len('d')
         elif date_option.endswith('day'):
@@ -956,7 +958,7 @@ def parse_number_of_days(date_option):
             suffix_length = len('days')
 
         days = int(date_option[0:-suffix_length])
-    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
+    elif date_option.endswith(('mo', 'month', 'months')):
         if date_option.endswith('mo'):
             suffix_length = len('mo')
         elif date_option.endswith('month'):
@@ -975,12 +977,12 @@ def handle_month(month):
     """Process month argument"""
     if month is not None:
         try:
-            date = datetime.datetime.strptime(month, '%Y-%m')
+            date = datetime.datetime.strptime(month, '%Y-%m').replace(tzinfo=datetime.UTC)
         except ValueError:
             raise DateFormatError('Invalid --month format. Supported date format: YYYY-MM')
     else:
         """Return last month if no month was passed"""
-        beginning_of_the_month = datetime.datetime.today().replace(day=1)
+        beginning_of_the_month = datetime.datetime.now(tz=datetime.UTC).replace(day=1)
         beginning_of_the_previous_month = beginning_of_the_month - relativedelta(months=1)
         date = beginning_of_the_previous_month
         y = date.strftime('%Y')

@@ -13,7 +13,7 @@ Usage:
 import sys
 import time
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -101,8 +101,8 @@ def main():
     args = parser.parse_args()
 
     # Configuration
-    since = datetime.strptime(args.since, '%Y-%m-%d').replace(tzinfo=timezone.utc)
-    until = datetime.strptime(args.until, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+    since = datetime.strptime(args.since, '%Y-%m-%d').replace(tzinfo=UTC)
+    until = datetime.strptime(args.until, '%Y-%m-%d').replace(tzinfo=UTC)
     output_dir = Path(__file__).parent / 'out'
     output_dir.mkdir(exist_ok=True)
 

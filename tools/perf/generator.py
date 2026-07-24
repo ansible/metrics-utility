@@ -27,18 +27,18 @@ logger = logging.getLogger(__name__)
 
 
 def now():
-    return datetime.datetime.now(tz=datetime.timezone.utc)
+    return datetime.datetime.now(tz=datetime.UTC)
 
 
 def parse_date(str):
-    return datetime.datetime.fromisoformat(str).astimezone(datetime.timezone.utc)
+    return datetime.datetime.fromisoformat(str).astimezone(datetime.UTC)
 
 
 def random_date(earliest, latest):
     tsmin = earliest.timestamp()
     tsmax = latest.timestamp()
     rand = tsmin + (random.random() * (tsmax - tsmin))
-    return datetime.datetime.fromtimestamp(rand, tz=datetime.timezone.utc)
+    return datetime.datetime.fromtimestamp(rand, tz=datetime.UTC)
 
 
 def random_adjective():
@@ -181,19 +181,17 @@ def main_jobevent_data(df, config, output_from, output_to):
 
 def data_collection_status_data(selected, output_from, output_to):
     return pd.DataFrame(
-        list(
-            map(
-                lambda file: {
-                    'collection_start_timestamp': now().isoformat(),
-                    'since': output_from.isoformat(),
-                    'until': output_to.isoformat(),
-                    'file_name': f'{file}.csv',
-                    'status': 'ok',
-                    'elapsed': str(int((output_to - output_from).total_seconds())),
-                },
-                selected,
-            )
-        )
+        [
+            {
+                'collection_start_timestamp': now().isoformat(),
+                'since': output_from.isoformat(),
+                'until': output_to.isoformat(),
+                'file_name': f'{file}.csv',
+                'status': 'ok',
+                'elapsed': str(int((output_to - output_from).total_seconds())),
+            }
+            for file in selected
+        ]
     )
 
 
@@ -207,12 +205,12 @@ def process_tarballs(path, temp_dir, enabled_set):
                 return json.loads(f.read())
 
     # extract csv based on generator SELECTED_DATA
-    return ProcessTarballs(extra_params=dict()).process_tarballs(path, temp_dir, enabled_set)
+    return ProcessTarballs(extra_params={}).process_tarballs(path, temp_dir, enabled_set)
 
 
 # metrics_utility.automation_controller_billing.collectors daily_slicing, but without the awx imports
 def daily_slicing(**kwargs):
-    since, until = kwargs.get('since', None), kwargs.get('until', now())
+    since, until = kwargs.get('since'), kwargs.get('until', now())
     if since is None:
         return
 
@@ -319,7 +317,7 @@ Environment vars:
         self.loaded[name] = pd.concat([self.loaded[name], data], ignore_index=True)
 
     def load(self):
-        self.loaded = dict((s, None) for s in self.selected)
+        self.loaded = dict.fromkeys(self.selected)
         logger.debug(f'loaded {self.loaded}')
 
         if os.path.isdir(self.source_tarballs):
@@ -350,7 +348,7 @@ Environment vars:
         logger.info(f'{table} - duplicated')
 
     def process(self):
-        self.generated = dict((s, None) for s in self.selected)
+        self.generated = dict.fromkeys(self.selected)
 
         self.gen_df('job_host_summary', job_host_summary_data, self.job_host_summary)
         self.gen_df('main_host', main_host_data, self.main_host)

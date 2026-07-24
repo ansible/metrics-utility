@@ -42,43 +42,7 @@ class Command(BaseCommand):
             subcommand,
             # ensure newlines are preserved in descriptions and epilog
             formatter_class=RawDescriptionHelpFormatter,
-            epilog='\n'.join(
-                [
-                    'ENVIRONMENT',
-                    '',
-                    '  Core Configuration:',
-                    "    METRICS_UTILITY_SHIP_TARGET (required): one of 'crc', 'directory', 's3' - input/output mechanism",
-                    '    METRICS_UTILITY_SHIP_PATH (required): directory path for data collection and storage',
-                    '',
-                    '  Collection Configuration:',
-                    '    METRICS_UTILITY_CLUSTER_NAME (optional): cluster name for total_workers_vcpu collector (required when enabled)',  # noqa: E501
-                    '    METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX (optional): custom lock name for total_workers_vcpu collector',
-                    '    METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR (optional): disable job_host_summary collector',  # noqa: E501
-                    '    METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES (optional): skip updating last gather info from controller settings',  # noqa: E501
-                    '    METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS (optional): maximum length of collection interval in days (default: 28)',  # noqa: E501
-                    '    METRICS_UTILITY_OPTIONAL_COLLECTORS (optional): optional collectors, comma-separated list',
-                    '    METRICS_UTILITY_USAGE_BASED_METERING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)',  # noqa: E501
-                    '',
-                    '  Billing Provider Configuration:',
-                    '    METRICS_UTILITY_BILLING_ACCOUNT_ID (optional): AWS account ID for billing',
-                    '    METRICS_UTILITY_BILLING_PROVIDER (optional): billing provider type',
-                    '    METRICS_UTILITY_RED_HAT_ORG_ID (optional): Red Hat organization ID',
-                    '',
-                    '  S3 Configuration:',
-                    '    METRICS_UTILITY_BUCKET_NAME (optional): S3 bucket name',
-                    '    METRICS_UTILITY_BUCKET_ENDPOINT (optional): S3 endpoint URL',
-                    '    METRICS_UTILITY_BUCKET_ACCESS_KEY (optional): S3 access key',
-                    '    METRICS_UTILITY_BUCKET_SECRET_KEY (optional): S3 secret key',
-                    '    METRICS_UTILITY_BUCKET_REGION (optional): S3 region',
-                    '',
-                    '  CRC Configuration:',
-                    '    METRICS_UTILITY_CRC_INGRESS_URL (optional): CRC upload URL',
-                    '    METRICS_UTILITY_CRC_SSO_URL (optional): CRC login URL',
-                    '    METRICS_UTILITY_PROXY_URL (optional): upload proxy URL',
-                    '    METRICS_UTILITY_SERVICE_ACCOUNT_ID (optional): service account ID',
-                    '    METRICS_UTILITY_SERVICE_ACCOUNT_SECRET (optional): service account secret',
-                ]
-            ),
+            epilog="ENVIRONMENT\n\n  Core Configuration:\n    METRICS_UTILITY_SHIP_TARGET (required): one of 'crc', 'directory', 's3' - input/output mechanism\n    METRICS_UTILITY_SHIP_PATH (required): directory path for data collection and storage\n\n  Collection Configuration:\n    METRICS_UTILITY_CLUSTER_NAME (optional): cluster name for total_workers_vcpu collector (required when enabled)\n    METRICS_UTILITY_COLLECTOR_LOCK_SUFFIX (optional): custom lock name for total_workers_vcpu collector\n    METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR (optional): disable job_host_summary collector\n    METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES (optional): skip updating last gather info from controller settings\n    METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS (optional): maximum length of collection interval in days (default: 28)\n    METRICS_UTILITY_OPTIONAL_COLLECTORS (optional): optional collectors, comma-separated list\n    METRICS_UTILITY_USAGE_BASED_METERING_ENABLED (optional): total_workers_vcpu collector toggle (default: false)\n\n  Billing Provider Configuration:\n    METRICS_UTILITY_BILLING_ACCOUNT_ID (optional): AWS account ID for billing\n    METRICS_UTILITY_BILLING_PROVIDER (optional): billing provider type\n    METRICS_UTILITY_RED_HAT_ORG_ID (optional): Red Hat organization ID\n\n  S3 Configuration:\n    METRICS_UTILITY_BUCKET_NAME (optional): S3 bucket name\n    METRICS_UTILITY_BUCKET_ENDPOINT (optional): S3 endpoint URL\n    METRICS_UTILITY_BUCKET_ACCESS_KEY (optional): S3 access key\n    METRICS_UTILITY_BUCKET_SECRET_KEY (optional): S3 secret key\n    METRICS_UTILITY_BUCKET_REGION (optional): S3 region\n\n  CRC Configuration:\n    METRICS_UTILITY_CRC_INGRESS_URL (optional): CRC upload URL\n    METRICS_UTILITY_CRC_SSO_URL (optional): CRC login URL\n    METRICS_UTILITY_PROXY_URL (optional): upload proxy URL\n    METRICS_UTILITY_SERVICE_ACCOUNT_ID (optional): service account ID\n    METRICS_UTILITY_SERVICE_ACCOUNT_SECRET (optional): service account secret",
             **kwargs,
         )
 
@@ -150,5 +114,5 @@ class Command(BaseCommand):
             handle_not_crc()
             return handle_s3_ship_target()
         else:
-            allowed = ', '.join(['crc', 'directory', 's3'])
+            allowed = 'crc, directory, s3'
             raise BadShipTarget(f'Unexpected value for METRICS_UTILITY_SHIP_TARGET env var ({ship_target}), allowed values: {allowed}')

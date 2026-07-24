@@ -55,7 +55,7 @@ dev = [
     "pytest-cov>=6.0.0",
     "pytest-mock>=3.14.0",
     "pytest>=8.3.4",
-    "ruff>=0.9.2",
+    "ruff>=0.16.0",
     "jsonschema>=4.26.0",
 ]
 
@@ -84,18 +84,98 @@ quote-style = "single"
 indent-style = "space"
 
 [tool.ruff.lint]
-extend-select = [
-# Essential PEP 8 errors (indentation, syntax)
-    "E",
-# PEP 8 warnings (whitespace, line breaks)
-    "W",
-# PEP 8 naming conventions
-#   "N",
-# Python syntax upgrades
-#   "UP",
-# Sort imports
-    "I",
+# Explicit rule selection (aligned with metrics-service where applicable)
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "C90",  # mccabe complexity
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit (security)
+    "SIM",  # flake8-simplify
+    "DTZ",  # flake8-datetimez
+    "PIE",  # flake8-pie
+    "PLR",  # pylint refactoring
+    "RUF",  # ruff-specific
+    "PERF", # perflint
+    "FLY",  # flynt
+    "FURB", # refurb
+    "ISC",  # implicit string concatenation
+    "EXE",  # flake8-executable
+    "T10",  # flake8-debugger
 ]
+ignore = [
+    # bugbear
+    "B008",     # function call in default arg — DataframeOutput()/DictOutput() defaults are intentional
+    "B011",     # assert False — used in unreachable-code guards
+    "B017",     # assert blind exception — testing that any Exception is raised is valid
+    "B904",     # raise from — TODO: add exception chaining
+    "B905",     # zip() without strict= — behavior change, needs careful review
+    # bandit
+    "S101",     # use of assert — common in tests and validation
+    "S105",     # hardcoded password — false positives on setting key names
+    "S108",     # /tmp paths — test doubles use /tmp/fake-*
+    "S110",     # try-except-pass — sometimes intentional (fallback logic)
+    "S113",     # request timeout — TODO: add timeouts to requests calls
+    "S306",     # mktemp — used safely in controlled context
+    "S608",     # SQL injection — using psycopg.sql safely, revisit
+    # simplify
+    "SIM102",   # nested if — complex conditions, more readable nested
+    "SIM105",   # contextlib.suppress — try/except/pass reads clearer in some spots
+    "SIM108",   # ternary operator — many would create very long lines
+    "SIM112",   # capitalized env var — `container` env var is genuinely lowercase (systemd/podman)
+    "SIM115",   # context manager for files — some handles span multiple methods
+    "SIM117",   # nested with — long mock chains, more readable nested
+    # ruff
+    "RUF001",   # ambiguous unicode — intentional special characters
+    "RUF002",   # ambiguous unicode in docstring
+    "RUF003",   # ambiguous unicode in comment
+    "RUF012",   # ClassVar for mutable class attrs — Django models don't use this
+    # pylint
+    "PLR0911",  # too many return statements
+    "PLR0913",  # too many arguments — complex functions
+    "PLR0915",  # too many statements — report builders are inherently large
+    "PLR0917",  # too many positional arguments
+    "PLR1704",  # redefining argument — intentional shadowing in storage put() methods
+    "PLR0912",  # too many branches — report builders and test helpers are inherently branchy
+    "PLR2004",  # magic value comparison — common in tests and data processing
+    # perflint
+    "PERF401",  # list.extend/comprehension — readability over micro-optimization in data processing
+]
+
+[tool.ruff.lint.per-file-ignores]
+"metrics_utility/test/**" = [
+    "DTZ",      # timezone-naive datetimes are fine in tests
+    "PERF",     # performance micro-optimizations don't matter in tests
+    "S106",     # hardcoded passwords in test fixtures
+    "S310",     # URL scheme auditing is noise in tests
+    "S311",     # random is fine for test data, not crypto
+    "S603",     # subprocess call in tests
+]
+"metrics_utility/management/commands/*" = [
+    "E501",     # help text epilogs are inherently long single-line strings
+]
+"tools/**" = [
+    "C901",     # complexity limits don't matter in dev tools
+    "DTZ",      # timezone-naive datetimes are fine in dev tools
+    "EXE001",   # scripts have shebangs but don't need +x in repo
+    "PERF",     # performance micro-optimizations don't matter in dev tools
+    "S104",     # binding to all interfaces in dev tools
+    "S311",     # random is fine for test data generation
+    "S602",     # subprocess with shell=True in dev tools
+    "S603",     # subprocess call in dev tools
+    "S607",     # partial executable path in dev tools
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 20
+
+[tool.ruff.lint.pylint]
+max-statements = 50
+max-args = 8
 
 [tool.ruff.lint.isort]
 # Separate direct imports from 'from' imports

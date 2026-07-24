@@ -34,7 +34,7 @@ END_DATE = date.today() + timedelta(days=10)  # just for sure we are collecting 
 
 path_to_shipped_data = '/var/tmp/shipped_data'
 
-if ENVIRONMENT == 'local' or ENVIRONMENT == 'containerized':
+if ENVIRONMENT in {'local', 'containerized'}:
     path_to_shipped_data = './shipped_data'
 
 
@@ -43,8 +43,7 @@ def enumerate_ranges(start_date, end_date):
 
     while current <= end_date:
         end = current + timedelta(days=28)
-        if end > end_date + timedelta(days=1):
-            end = end_date + timedelta(days=1)
+        end = min(end, end_date + timedelta(days=1))
 
         yield (current, end)
 
@@ -116,7 +115,7 @@ def run_command(args, config):
         POD_NAME = os.getenv('POD_NAME')
 
         # Use oc exec to run the command
-        oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{container_cmd}"'  # noqa: E501
+        oc_cmd = f'oc exec -n {NAMESPACE} {POD_NAME} -- /bin/bash -c "{container_cmd}"'
         print('Running OpenShift:', oc_cmd)
         return subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
 

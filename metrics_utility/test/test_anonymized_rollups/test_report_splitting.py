@@ -292,8 +292,8 @@ def _create_ansible_versions():
     """
     ansible_versions = []
     for major in range(2, 5):  # Major versions 2, 3, 4
-        for minor in range(0, 100):  # Minor versions 0-99
-            for patch in range(0, 10):  # Patch versions 0-9
+        for minor in range(100):  # Minor versions 0-99
+            for patch in range(10):  # Patch versions 0-9
                 version = f'{major}.{minor}.{patch}'
                 ansible_versions.append(version)
     return ansible_versions
@@ -376,7 +376,7 @@ def _save_and_validate_chunks(chunks, storage_segment, max_size, output_dir, ano
         chunk_sizes.append(chunk_size)
         assert chunk_size <= max_size, f'Chunk {i} size ({chunk_size} bytes) exceeds the limit ({max_size} bytes)'
 
-        chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
+        chunk_key = next(iter(chunk.keys())) if chunk else 'unknown'
         chunk_keys.append(chunk_key)
 
         chunk_path = os.path.join(output_dir, f'chunk_{i:03d}_of_{len(chunks):03d}_{chunk_key}.json')
@@ -543,7 +543,7 @@ def test_anonymized_rollup_splitting_with_small_data(cleanup_test_data):
     )
 
     # Validate no array was unnecessarily split
-    chunk_keys = [list(chunk.keys())[0] for chunk in chunks]
+    chunk_keys = [next(iter(chunk.keys())) for chunk in chunks]
 
     # Count how many times each key appears
     key_counts = {}

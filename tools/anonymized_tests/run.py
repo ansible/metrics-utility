@@ -39,9 +39,9 @@ import shutil
 import sys
 import time
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -96,12 +96,12 @@ from metrics_utility.library.storage.segment import StorageSegment  # noqa: E402
 DEFAULT_JOBEVENT_ROW_LIMIT = 200_000
 DEFAULT_JOBEVENT_JOB_LIMIT = 1_000
 
-DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
-DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
+DEFAULT_SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=UTC)
+DEFAULT_UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=UTC)
 
 # Hourly collector registry – mirrors collect_hourly_metrics.py
 # Order matches production schedule (:05, :10, :15, :20).
-HOURLY_COLLECTORS: Dict[str, Dict[str, Any]] = {
+HOURLY_COLLECTORS: dict[str, dict[str, Any]] = {
     'job_host_summary_service': {
         'collector': job_host_summary_service,
         'rollup': JobHostSummaryAnonymizedRollup,
@@ -121,7 +121,7 @@ HOURLY_COLLECTORS: Dict[str, Dict[str, Any]] = {
 }
 
 # Snapshot/daily collector registry – mirrors collect_snapshot_metrics.py
-SNAPSHOT_COLLECTORS: Dict[str, Dict[str, Any]] = {
+SNAPSHOT_COLLECTORS: dict[str, dict[str, Any]] = {
     'execution_environments': {
         'collector': execution_environments,
         'rollup': ExecutionEnvironmentsAnonymizedRollup,
@@ -153,13 +153,13 @@ SNAPSHOT_COLLECTORS: Dict[str, Dict[str, Any]] = {
 def parse_datetime(dt_str: str) -> datetime:
     for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
         try:
-            return datetime.strptime(dt_str, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(dt_str, fmt).replace(tzinfo=UTC)
         except ValueError:
             pass
     raise ValueError(f'Cannot parse datetime: {dt_str!r}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS')
 
 
-def hourly_intervals(since: datetime, until: datetime) -> List[Tuple[datetime, datetime]]:
+def hourly_intervals(since: datetime, until: datetime) -> list[tuple[datetime, datetime]]:
     """Split [since, until) into 1-hour windows."""
     intervals = []
     current = since
@@ -183,7 +183,7 @@ def fmt_time(seconds: float) -> str:
     return f'{seconds:.2f}s'
 
 
-def df_rows(df: Optional[pd.DataFrame]) -> int:
+def df_rows(df: pd.DataFrame | None) -> int:
     if df is None or (isinstance(df, pd.DataFrame) and df.empty):
         return 0
     return len(df)
@@ -207,12 +207,12 @@ def _section(title: str) -> None:
 
 
 def phase1_hourly(
-    intervals: List[Tuple[datetime, datetime]],
+    intervals: list[tuple[datetime, datetime]],
     db,
     collect_events: bool,
     row_limit: int = DEFAULT_JOBEVENT_ROW_LIMIT,
     job_limit: int = DEFAULT_JOBEVENT_JOB_LIMIT,
-) -> Tuple[Dict[str, List[Any]], Dict[str, Dict[str, float]]]:
+) -> tuple[dict[str, list[Any]], dict[str, dict[str, float]]]:
     """
     For each hour: collect → prepare → store hourly rollup JSON.
 
@@ -221,8 +221,8 @@ def phase1_hourly(
         timing          – {collector_name: {'collect': float, 'prepare': float}}
                           (summed across all hours)
     """
-    hourly_rollups: Dict[str, List[Any]] = {name: [] for name in HOURLY_COLLECTORS}
-    timing: Dict[str, Dict[str, float]] = {name: {'collect': 0.0, 'prepare': 0.0} for name in HOURLY_COLLECTORS}
+    hourly_rollups: dict[str, list[Any]] = {name: [] for name in HOURLY_COLLECTORS}
+    timing: dict[str, dict[str, float]] = {name: {'collect': 0.0, 'prepare': 0.0} for name in HOURLY_COLLECTORS}
 
     COL_NAME = 35
     COL_ROWS = 14
@@ -290,7 +290,7 @@ def phase2_snapshots(
     service_db,
     since: datetime,
     until: datetime,
-) -> Tuple[Dict[str, Any], Dict[str, Dict[str, float]]]:
+) -> tuple[dict[str, Any], dict[str, dict[str, float]]]:
     """
     Run snapshot + daily collectors once.
 
@@ -298,8 +298,8 @@ def phase2_snapshots(
         snapshot_rollups – {collector_name: prepared_json}
         timing           – {collector_name: {'collect': float, 'prepare': float}}
     """
-    snapshot_rollups: Dict[str, Any] = {}
-    timing: Dict[str, Dict[str, float]] = {}
+    snapshot_rollups: dict[str, Any] = {}
+    timing: dict[str, dict[str, float]] = {}
 
     _section('Phase 2 – Snapshot / Daily Collectors')
 
@@ -365,9 +365,9 @@ def phase2_snapshots(
 
 
 def phase3_merge(
-    hourly_rollups: Dict[str, List[Any]],
-    snapshot_rollups: Dict[str, Any],
-) -> Tuple[Dict[str, Any], Dict[str, float]]:
+    hourly_rollups: dict[str, list[Any]],
+    snapshot_rollups: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, float]]:
     """
     Merge all hourly rollups per collector, then call base().
     Mirrors daily_metrics_rollup task.
@@ -379,13 +379,13 @@ def phase3_merge(
     _section('Phase 3 – Merge Rollups (daily_metrics_rollup)')
 
     # Map collector registry name → rollup class
-    all_rollup_classes: Dict[str, Any] = {name: cfg['rollup'] for name, cfg in HOURLY_COLLECTORS.items()}
+    all_rollup_classes: dict[str, Any] = {name: cfg['rollup'] for name, cfg in HOURLY_COLLECTORS.items()}
     for name, cfg in SNAPSHOT_COLLECTORS.items():
         all_rollup_classes[name] = cfg['rollup']
     all_rollup_classes['task_executions_service'] = TaskExecutionsAnonymizedRollup
 
-    daily_json: Dict[str, Any] = {}
-    timing: Dict[str, float] = {}
+    daily_json: dict[str, Any] = {}
+    timing: dict[str, float] = {}
 
     # Hourly collectors: merge list of hourly prepared JSONs
     for collector_name, rollup_cls in {n: c for n, c in all_rollup_classes.items() if n in HOURLY_COLLECTORS}.items():
@@ -436,7 +436,7 @@ def phase3_merge(
     return daily_json, timing
 
 
-def phase4_anonymize(daily_json: Dict[str, Any]) -> Tuple[Any, float]:
+def phase4_anonymize(daily_json: dict[str, Any]) -> tuple[Any, float]:
     """
     Call anonymize_rollups() with merged daily data.
     Mirrors daily_anonymize_and_prepare task.
@@ -510,10 +510,10 @@ def phase5_output(json_data: Any) -> None:
 
 
 def print_time_summary(
-    intervals: List[Tuple[datetime, datetime]],
-    hourly_timing: Dict[str, Dict[str, float]],
-    snapshot_timing: Dict[str, Dict[str, float]],
-    merge_timing: Dict[str, float],
+    intervals: list[tuple[datetime, datetime]],
+    hourly_timing: dict[str, dict[str, float]],
+    snapshot_timing: dict[str, dict[str, float]],
+    merge_timing: dict[str, float],
     anon_elapsed: float,
     total_elapsed: float,
 ) -> None:

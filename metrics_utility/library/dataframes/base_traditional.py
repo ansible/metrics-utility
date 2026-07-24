@@ -76,7 +76,7 @@ class BaseTraditional(BaseDataframe):
         df_grouped = self.cast_dataframe(df_grouped)
         return df_grouped.reset_index()
 
-    def summarize_merged_dataframes(self, df, columns, operations={}):
+    def summarize_merged_dataframes(self, df, columns, operations=None):
         """Reduce ``_x``/``_y`` suffix columns produced by an outer merge.
 
         Args:
@@ -89,17 +89,19 @@ class BaseTraditional(BaseDataframe):
         Returns:
             The DataFrame with reconciled columns (in-place modifications).
         """
+        if operations is None:
+            operations = {}
         for col in columns:
             if operations.get(col) == 'min':
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json':
-                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
             del df[f'{col}_x']
@@ -281,7 +283,7 @@ def merge_json_sets(json_values):
             for key, value in d.items():
                 # Ignore null (None) or empty string values.
                 # We also want to ignore NA value used when facts are not available
-                if value is not None and value != '' and value != 'NA':
+                if value is not None and value not in {'', 'NA'}:
                     if isinstance(value, set):
                         merged.setdefault(key, set()).update(value)
                     else:

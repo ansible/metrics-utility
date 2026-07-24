@@ -12,7 +12,7 @@ Each collector:
 import decimal
 
 from datetime import datetime
-from typing import List, TypedDict
+from typing import TypedDict
 
 from ..util import collector
 from .queries import (
@@ -53,7 +53,7 @@ class AWXJobType(TypedDict):
 
 class DashboardJobsResultType(TypedDict):
     count: int
-    results: List[AWXJobType]
+    results: list[AWXJobType]
 
 
 def _dashboard_job_labels(since: datetime, until: datetime, db, date_field: str = 'modified', **kwargs) -> dict[int, list[int]]:
@@ -150,10 +150,10 @@ def _dashboard_job_host_summaries(
 def dashboard_jobs(
     *,
     db=None,
-    since: datetime = None,
-    until: datetime = None,
-    after_id: int = None,
-    batch_size: int = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    after_id: int | None = None,
+    batch_size: int | None = None,
     date_field: str = 'modified',
 ) -> DashboardJobsResultType:
     """

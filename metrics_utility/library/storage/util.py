@@ -57,7 +57,4 @@ def date_filter(filename, since=None, until=None):
     dt = datetime.datetime.strptime(m[0], '%Y-%m-%d-%H%M%S%z')
     if since and dt < since:
         return False
-    if until and dt >= until:
-        return False
-
-    return True
+    return not (until and dt >= until)

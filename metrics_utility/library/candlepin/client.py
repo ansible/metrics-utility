@@ -1,8 +1,9 @@
+import contextlib
 import os
 import tempfile
 import uuid as _uuid_mod
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -164,7 +165,7 @@ class CandlepinClient:
                 resp = requests.put(
                     url,
                     cert=(cert_path, key_path),
-                    json={'facts': {'aap.last_checkin': datetime.now(timezone.utc).isoformat()}},
+                    json={'facts': {'aap.last_checkin': datetime.now(UTC).isoformat()}},
                     headers={'Content-Type': 'application/json'},
                     verify=self.verify,
                     proxies=self.proxies,
@@ -231,10 +232,8 @@ class CandlepinClient:
             fd = None
         except Exception:
             if fd is not None:
-                try:
+                with contextlib.suppress(OSError):
                     os.close(fd)
-                except OSError:
-                    pass
             if os.path.exists(path):
                 os.unlink(path)
             raise

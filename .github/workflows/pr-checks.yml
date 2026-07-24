@@ -43,11 +43,11 @@ jobs:
 
       - name: "Run ruff check"
         run: |
-          uvx ruff check --output-format=github .
+          uv run ruff check --output-format=github .
 
       - name: "Check ruff format"
         run: |
-          uvx ruff format --check
+          uv run ruff format --check
 
       - name: "One logger to rule them all"
         run: |

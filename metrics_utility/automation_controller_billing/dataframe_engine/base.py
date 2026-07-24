@@ -176,7 +176,6 @@ class Base:
 
         Must be implemented by subclasses.
         """
-        pass
 
     def dates(self):
         """Return the list of daily dates to iterate over for the reporting window.
@@ -223,7 +222,7 @@ class Base:
 
         return df.astype(types)
 
-    def summarize_merged_dataframes(self, df, columns, operations={}):
+    def summarize_merged_dataframes(self, df, columns, operations=None):
         """Reduce paired ``_x``/``_y`` suffix columns produced by an outer merge.
 
         For each column in *columns*, the ``_x`` and ``_y`` variants are combined
@@ -240,17 +239,19 @@ class Base:
         Returns:
             The DataFrame with reconciled columns (in-place).
         """
+        if operations is None:
+            operations = {}
         for col in columns:
             if operations.get(col) == 'min':
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row: combine_set(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json':
-                df[col] = df.apply(lambda row: combine_json(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json_values':
-                df[col] = df.apply(lambda row: combine_json_values(row.get(f'{col}_x'), row.get(f'{col}_y')), axis=1)
+                df[col] = df.apply(lambda row, c=col: combine_json_values(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             else:
                 df[col] = df[[f'{col}_x', f'{col}_y']].sum(axis=1)
             del df[f'{col}_x']

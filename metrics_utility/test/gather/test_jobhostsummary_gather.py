@@ -26,9 +26,7 @@ def safe_tarfile_member_check(member):
     if member.isdev() or member.isfifo():
         return False
     # Reject paths with directory traversal patterns
-    if '..' in member.name or member.name.startswith('/'):
-        return False
-    return True
+    return not ('..' in member.name or member.name.startswith('/'))
 
 
 class SafeTarFile:
@@ -80,71 +78,97 @@ file_paths = f'./metrics_utility/test/test_data/data/2025/06/13/{uuid}-*.tar.gz'
 
 # expected CSV content (header + rows)
 test_lines = [
-    'id,created,modified,host_name,host_remote_id,ansible_host_variable,'
-    'ansible_connection_variable,changed,dark,failures,ok,processed,skipped,'
-    'failed,ignored,rescued,job_created,job_remote_id,job_template_remote_id,'
-    'job_template_name,inventory_remote_id,inventory_name,organization_remote_id,'
-    'organization_name,project_remote_id,project_name',
-    '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
-    '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
-    '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '7,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 11:00:00+00,4,1,default_unified_job_11_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '8,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 11:00:00+00,4,1,default_unified_job_11_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '9,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 11:00:00+00,5,1,default_unified_job_11_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '10,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 11:00:00+00,5,1,default_unified_job_11_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '11,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 11:00:00+00,6,1,default_unified_job_11_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
-    '12,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
-    'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
-    '2025-06-13 11:00:00+00,6,1,default_unified_job_11_2025-06-13,1,'
-    'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
-    'default_unified_job_template_2025-06-13',
+    (
+        'id,created,modified,host_name,host_remote_id,ansible_host_variable,'
+        'ansible_connection_variable,changed,dark,failures,ok,processed,skipped,'
+        'failed,ignored,rescued,job_created,job_remote_id,job_template_remote_id,'
+        'job_template_name,inventory_remote_id,inventory_name,organization_remote_id,'
+        'organization_name,project_remote_id,project_name'
+    ),
+    (
+        '1,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '2,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,1,1,default_unified_job_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '3,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '4,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 10:00:00+00,2,1,default_unified_job_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '5,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_1_2025-06-13,1,'
+        'default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
+        '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '6,2025-06-13 10:00:00+00,2025-06-13 10:00:00+00,default_host_2_2025-06-13,2,'
+        'default_ansible_host,default_ansible_connection,0,0,1,0,0,0,t,0,0,'
+        '2025-06-13 10:00:00+00,3,1,default_unified_job_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '7,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 11:00:00+00,4,1,default_unified_job_11_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '8,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 11:00:00+00,4,1,default_unified_job_11_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '9,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 11:00:00+00,5,1,default_unified_job_11_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '10,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 11:00:00+00,5,1,default_unified_job_11_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '11,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_1_2025-06-13,1,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 11:00:00+00,6,1,default_unified_job_11_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
+    (
+        '12,2025-06-13 11:00:00+00,2025-06-13 11:00:00+00,default_host_2_2025-06-13,2,'
+        'default_ansible_host,default_ansible_connection,0,0,0,1,0,0,f,0,0,'
+        '2025-06-13 11:00:00+00,6,1,default_unified_job_11_2025-06-13,1,'
+        'default_inventory_2025-06-13,1,default_org_2025-06-13,1,'
+        'default_unified_job_template_2025-06-13'
+    ),
 ]
 
 # derive expected header and rows

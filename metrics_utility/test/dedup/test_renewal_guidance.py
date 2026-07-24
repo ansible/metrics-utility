@@ -479,7 +479,7 @@ class TestDedupRenewal:
 
         dedup = DedupRenewal(mock_dataframes, base_extra_params)
 
-        test_set = {None, 'value1', 'value2', None}
+        test_set = {None, 'value1', 'value2'}
         result = ', '.join(sorted(filter(None, dedup.stringify(test_set).split(', '))))
 
         assert result == 'value1, value2'
