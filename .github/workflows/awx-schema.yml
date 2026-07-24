@@ -98,16 +98,13 @@ jobs:
         run: |
           AWX_SHA="$(git -C awx rev-parse --short HEAD)"
 
-          pgdump_filter() {
-            sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d' \
-            | sed '/^\\restrict /d; /^\\unrestrict/d; /^SET transaction_timeout/d' \
-            | sed 's/ CONSTRAINT [a-z_]*_not_null[0-9]* NOT NULL/ NOT NULL/g' \
-            | cat -s \
-            | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
-          }
+          sudo -u postgres pg_dump -s awx \
+            | python3 tools/docker/filter_pgdump.py \
+            > tools/docker/latest.sql
 
-          sudo -u postgres pg_dump -s awx | pgdump_filter > tools/docker/latest.sql
-          sudo -u postgres pg_dump --data-only --disable-triggers awx | pgdump_filter > tools/docker/initial.sql
+          sudo -u postgres pg_dump --data-only --disable-triggers awx \
+            | python3 tools/docker/filter_pgdump.py --normalize \
+            > tools/docker/initial.sql
 
           echo "awx_sha=$AWX_SHA" >> "$GITHUB_OUTPUT"
 

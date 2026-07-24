@@ -103,23 +103,15 @@ AWX_SETTINGS_DIR="$TMPDIR" \
 AWX_LOGGING_MODE=stdout \
 .venv/bin/awx-manage migrate --noinput
 
-pgdump_filter() {
-  sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d' \
-  | sed '/^\\restrict /d; /^\\unrestrict/d; /^SET transaction_timeout/d' \
-  | sed 's/ CONSTRAINT [a-z_]*_not_null[0-9]* NOT NULL/ NOT NULL/g' \
-  | cat -s \
-  | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'
-}
-
 echo "Extracting schema..."
 cd "$SCRIPT_DIR"
 $COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump -s -U awx awx \
-  | pgdump_filter \
+  | python3 "$SCRIPT_DIR/filter_pgdump.py" \
   > latest.sql
 
 echo "Extracting initial data..."
 $COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump --data-only --disable-triggers -U awx awx \
-  | pgdump_filter \
+  | python3 "$SCRIPT_DIR/filter_pgdump.py" --normalize \
   > initial.sql
 
 echo "Done. Schema written to $SCRIPT_DIR/latest.sql"
