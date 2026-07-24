@@ -99,10 +99,13 @@ class AWXClient:
 
 
 def copy_playbook_to_container(container: str, project_dir: str) -> None:
-    """Copy rich_playbook.yml into the AWX container's project directory."""
+    """Copy rich_playbook.yml and roles/ into the AWX container's project directory."""
     from pathlib import Path
 
-    playbook_src = Path(__file__).resolve().parent / PLAYBOOK_FILE
+    script_dir = Path(__file__).resolve().parent
+    playbook_src = script_dir / PLAYBOOK_FILE
+    roles_src = script_dir / 'roles'
+
     if not playbook_src.exists():
         print(f'Error: {playbook_src} not found', file=sys.stderr)
         sys.exit(1)
@@ -117,11 +120,19 @@ def copy_playbook_to_container(container: str, project_dir: str) -> None:
         ['docker', 'cp', str(playbook_src), f'{container}:{remote_dir}/{PLAYBOOK_FILE}'],
         check=True,
     )
+    print(f'Copied {PLAYBOOK_FILE} → {container}:{remote_dir}/{PLAYBOOK_FILE}')
+
+    if roles_src.is_dir():
+        subprocess.run(
+            ['docker', 'cp', str(roles_src), f'{container}:{remote_dir}/roles'],
+            check=True,
+        )
+        print(f'Copied roles/ → {container}:{remote_dir}/roles/')
+
     subprocess.run(
         ['docker', 'exec', container, 'chown', '-R', '1000:0', remote_dir],
         check=True,
     )
-    print(f'Copied {PLAYBOOK_FILE} → {container}:{remote_dir}/{PLAYBOOK_FILE}')
 
 
 def setup_resources(client: AWXClient, num_hosts: int) -> int:

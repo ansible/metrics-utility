@@ -56,7 +56,7 @@ def main() -> int:
     parser.add_argument('--db-name', default=None)
     parser.add_argument('--db-user', default=None)
     parser.add_argument('--db-password', default=None)
-    default_output = str(current_dir / 'collected_events.csv')
+    default_output = str(current_dir / 'out' / 'collected_events.csv')
     parser.add_argument('-o', '--output', default=default_output, help=f'Output CSV path (default: {default_output})')
     args = parser.parse_args()
 

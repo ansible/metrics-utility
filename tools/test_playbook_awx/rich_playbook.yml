@@ -257,27 +257,12 @@
 
     # ------------------------------------------------------------------
     # 11. Role usage (role_stats coverage)
-    #     Uses include_role with tasks_from to run an inline role-like
-    #     task list without needing a roles/ directory.
+    #     Uses include_role with a proper roles/ directory so AWX
+    #     populates resolved_role in event data.
     # ------------------------------------------------------------------
-    - name: "Role — create temp role tasks file"
-      ansible.builtin.copy:
-        content: |
-          - name: "Role task — debug from role"
-            ansible.builtin.debug:
-              msg: "Running inside an included role"
-          - name: "Role task — command from role"
-            ansible.builtin.command: echo "role task done"
-        dest: "/tmp/rich_role_tasks.yml"
-
-    - name: "Role — include tasks as role substitute"
-      ansible.builtin.include_tasks:
-        file: "/tmp/rich_role_tasks.yml"
-
-    - name: "Cleanup — remove role tasks file"
-      ansible.builtin.file:
-        path: "/tmp/rich_role_tasks.yml"
-        state: absent
+    - name: "Role — include rich_test_role"
+      ansible.builtin.include_role:
+        name: rich_test_role
 
     # ------------------------------------------------------------------
     # 12. Final summary
@@ -290,4 +275,4 @@
           block/rescue/always, retries, assertions, roles,
           multiple modules (debug, command, shell, raw, ping, tempfile,
           file, set_fact, copy, stat, lineinfile, uri, assert, fail,
-          async_status, include_tasks).
+          async_status, include_role).

@@ -1,0 +1,7 @@
+---
+- name: "Role task — debug from role"
+  ansible.builtin.debug:
+    msg: "Running inside an included role"
+
+- name: "Role task — command from role"
+  ansible.builtin.command: echo "role task done"

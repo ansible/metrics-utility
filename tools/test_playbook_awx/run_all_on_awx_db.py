@@ -5,9 +5,9 @@ End-to-end pipeline: clean slate → run playbook → collect → anonymize.
 Steps:
   1. clear_events.py     — wipe all events from the AWX DB
   2. run_rich_playbook.py — deploy + run rich_playbook.yml on AWX
-  3. collect_events.py    — dump raw events to collected_events.csv
-  4. run_on_awx_db.py     — run the full metrics-service pipeline
-                            (produces out/anonymized_rollup.json + out/segment/)
+  3. run_on_awx_db.py     — run the full metrics-service pipeline
+                            (wipes + recreates out/, produces out/anonymized_rollup.json + out/segment/)
+  4. collect_events.py    — dump raw events to out/collected_events.csv
 
 Timestamps are captured around step 2 so that steps 3–4 scope to exactly
 the window in which the playbook ran.
@@ -105,26 +105,28 @@ def main() -> int:
     print(f'\nTime window for collection: {since_str} → {until_str}')
 
     # ------------------------------------------------------------------
-    # Step 3: Collect events
+    # Step 3: Run metrics-service pipeline (run_on_awx_db.py)
+    #         This wipes and recreates out/, so it must run before
+    #         collect_events which saves into out/.
     # ------------------------------------------------------------------
-    banner(3, 'Collect events')
+    banner(3, 'Run metrics-service pipeline (anonymized report)')
+    rc = run_script('run_on_awx_db.py', [
+        '--', '--since', since_str, '--until', until_str,
+    ])
+    if rc != 0:
+        print(f'run_on_awx_db.py failed (rc={rc})', file=sys.stderr)
+        return rc
+
+    # ------------------------------------------------------------------
+    # Step 4: Collect events (raw CSV into out/)
+    # ------------------------------------------------------------------
+    banner(4, 'Collect events')
     rc = run_script('collect_events.py', [
         '--since', since_str,
         '--until', until_str,
     ])
     if rc != 0:
         print(f'collect_events.py failed (rc={rc})', file=sys.stderr)
-        return rc
-
-    # ------------------------------------------------------------------
-    # Step 4: Run metrics-service pipeline (run_on_awx_db.py)
-    # ------------------------------------------------------------------
-    banner(4, 'Run metrics-service pipeline (anonymized report)')
-    rc = run_script('run_on_awx_db.py', [
-        '--', '--since', since_str, '--until', until_str,
-    ])
-    if rc != 0:
-        print(f'run_on_awx_db.py failed (rc={rc})', file=sys.stderr)
         return rc
 
     # ------------------------------------------------------------------
@@ -140,7 +142,7 @@ def main() -> int:
     print(f'  Total time  : {total_elapsed:.1f}s')
     print()
     print('  Outputs:')
-    print(f'    Raw events   : {SCRIPT_DIR / "collected_events.csv"}')
+    print(f'    Raw events   : {SCRIPT_DIR / "out" / "collected_events.csv"}')
     print(f'    Anonymized   : {SCRIPT_DIR / "out" / "anonymized_rollup.json"}')
     print(f'    Segment      : {SCRIPT_DIR / "out" / "segment" / ""}')
 
