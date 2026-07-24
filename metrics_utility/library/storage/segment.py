@@ -168,18 +168,29 @@ class StorageSegment:
             segment_meta = {}
         message_id = segment_meta.get('message_id', None)
 
+        # Base timestamp for spacing chunk timestamps apart. Segment deduplicates
+        # events that share anonymousId + timestamp when no messageId differs.
+        base_ts = datetime.datetime.now(tz=datetime.timezone.utc)
+
         # Send each chunk
         for i, chunk in enumerate(chunks, 1):
             chunk_size = self._calculate_size(chunk)
 
-            # chunk hash = sha256(message hash + chunk index)
+            # Unique timestamp per chunk (100 ms apart) prevents Segment-side
+            # deduplication when all chunks share the same anonymousId.
+            chunk_ts = (base_ts + datetime.timedelta(milliseconds=i * 100)).isoformat()
+
+            # Unique messageId per chunk: derive from caller-supplied base via
+            # sha256, or generate a fresh UUID when no base is provided.
             if message_id:
-                segment_meta['message_id'] = hashlib.sha256(f'{message_id}_{i}'.encode('utf-8', errors='replace')).hexdigest()
+                chunk_message_id = hashlib.sha256(f'{message_id}_{i}'.encode('utf-8', errors='replace')).hexdigest()
+            else:
+                chunk_message_id = str(uuid.uuid4())
+
+            chunk_meta = {**segment_meta, 'message_id': chunk_message_id}
 
             if self.debug:
-                msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes)'
-                if message_id:
-                    msg += f'; message_id={segment_meta["message_id"]}'
+                msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes); message_id={chunk_message_id}'
                 print(msg, file=sys.stderr)
 
             analytics.track(
@@ -188,14 +199,14 @@ class StorageSegment:
                 properties={
                     'artifact_name': artifact_name,
                     'data': chunk,
-                    'upload_timestamp': (datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
+                    'upload_timestamp': chunk_ts,
                     'chunk_info': {
                         'chunk_number': i,
                         'total_chunks': total_chunks,
                         'chunk_size': chunk_size,
                     },
                 },
-                **segment_meta,
+                **chunk_meta,
             )
 
         # Flush to ensure all events are sent
