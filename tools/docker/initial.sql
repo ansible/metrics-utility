@@ -22,7 +22,6 @@ SET SESSION AUTHORIZATION DEFAULT;
 ALTER TABLE public.auth_user DISABLE TRIGGER ALL;
 
 COPY public.auth_user (id, password, last_login, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined) FROM stdin;
-1	pbkdf2_sha256$1000000$jGFgUcijpfNfWQBqo6A42j$eQLEuWYF0sovXUtiwaJ5tucZWF4HN4wm4b9wmgLIONs=	\N	t	admin			admin@localhost	t	t	2000-01-01 00:00:00.000000+00
 \.
 
 ALTER TABLE public.auth_user ENABLE TRIGGER ALL;
@@ -157,43 +156,6 @@ ALTER TABLE public.main_rbac_roles DISABLE TRIGGER ALL;
 
 COPY public.main_rbac_roles (id, role_field, singleton_name, implicit_parents, content_type_id, object_id) FROM stdin;
 1	system_administrator	system_administrator	[]	\N	\N
-2	admin_role	\N	[]	22	1
-3	execute_role	\N	[]	22	1
-4	project_admin_role	\N	[]	22	1
-5	inventory_admin_role	\N	[]	22	1
-6	credential_admin_role	\N	[]	22	1
-7	workflow_admin_role	\N	[]	22	1
-8	notification_admin_role	\N	[]	22	1
-9	job_template_admin_role	\N	[]	22	1
-10	execution_environment_admin_role	\N	[]	22	1
-11	auditor_role	\N	[]	22	1
-12	member_role	\N	[]	22	1
-13	read_role	\N	[]	22	1
-14	approval_role	\N	[]	22	1
-15	admin_role	\N	[]	5	5
-16	use_role	\N	[]	5	5
-17	update_role	\N	[]	5	5
-18	read_role	\N	[]	5	5
-19	admin_role	\N	[]	14	1
-20	use_role	\N	[]	14	1
-21	read_role	\N	[]	14	1
-22	admin_role	\N	[]	14	2
-23	use_role	\N	[]	14	2
-24	read_role	\N	[]	14	2
-25	admin_role	\N	[]	19	1
-26	update_role	\N	[]	19	1
-27	adhoc_role	\N	[]	19	1
-28	use_role	\N	[]	19	1
-29	read_role	\N	[]	19	1
-30	admin_role	\N	[]	4	6
-31	execute_role	\N	[]	4	6
-32	read_role	\N	[]	4	6
-33	admin_role	\N	[]	39	1
-34	use_role	\N	[]	39	1
-35	read_role	\N	[]	39	1
-36	admin_role	\N	[]	39	2
-37	use_role	\N	[]	39	2
-38	read_role	\N	[]	39	2
 \.
 
 ALTER TABLE public.main_rbac_roles ENABLE TRIGGER ALL;
@@ -205,8 +167,6 @@ ALTER TABLE public.main_rbac_roles ENABLE TRIGGER ALL;
 ALTER TABLE public.main_credential DISABLE TRIGGER ALL;
 
 COPY public.main_credential (id, created, modified, description, name, created_by_id, modified_by_id, organization_id, admin_role_id, use_role_id, read_role_id, inputs, credential_type_id, managed) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		Demo Credential	1	1	1	19	20	21	{"username": "admin"}	7	f
-2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		Ansible Galaxy	1	1	\N	22	23	24	{"url": "https://galaxy.ansible.com/"}	2	t
 \.
 
 ALTER TABLE public.main_credential ENABLE TRIGGER ALL;
@@ -218,7 +178,6 @@ ALTER TABLE public.main_credential ENABLE TRIGGER ALL;
 ALTER TABLE public.main_organization DISABLE TRIGGER ALL;
 
 COPY public.main_organization (id, created, modified, description, name, created_by_id, modified_by_id, admin_role_id, auditor_role_id, member_role_id, read_role_id, custom_virtualenv, execute_role_id, job_template_admin_role_id, credential_admin_role_id, inventory_admin_role_id, project_admin_role_id, workflow_admin_role_id, notification_admin_role_id, max_hosts, approval_role_id, default_environment_id, execution_environment_admin_role_id, opa_query_path) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		Default	1	1	2	11	12	13	\N	3	9	6	5	4	7	8	0	14	\N	10	\N
 \.
 
 ALTER TABLE public.main_organization ENABLE TRIGGER ALL;
@@ -230,8 +189,6 @@ ALTER TABLE public.main_organization ENABLE TRIGGER ALL;
 ALTER TABLE public.main_executionenvironment DISABLE TRIGGER ALL;
 
 COPY public.main_executionenvironment (id, created, modified, description, image, managed, created_by_id, credential_id, modified_by_id, organization_id, name, pull) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		quay.io/ansible/awx-ee:latest	f	\N	\N	\N	\N	AWX EE (latest)	
-2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		quay.io/ansible/awx-ee:latest	t	\N	\N	\N	\N	Control Plane Execution Environment	
 \.
 
 ALTER TABLE public.main_executionenvironment ENABLE TRIGGER ALL;
@@ -243,8 +200,6 @@ ALTER TABLE public.main_executionenvironment ENABLE TRIGGER ALL;
 ALTER TABLE public.main_instancegroup DISABLE TRIGGER ALL;
 
 COPY public.main_instancegroup (id, name, created, modified, policy_instance_list, policy_instance_minimum, policy_instance_percentage, credential_id, pod_spec_override, is_container_group, max_concurrent_jobs, max_forks, admin_role_id, read_role_id, use_role_id) FROM stdin;
-1	controlplane	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	[]	0	100	\N		f	0	0	33	35	34
-2	default	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	[]	0	100	\N		f	0	0	36	38	37
 \.
 
 ALTER TABLE public.main_instancegroup ENABLE TRIGGER ALL;
@@ -256,7 +211,6 @@ ALTER TABLE public.main_instancegroup ENABLE TRIGGER ALL;
 ALTER TABLE public.main_inventory DISABLE TRIGGER ALL;
 
 COPY public.main_inventory (id, created, modified, description, name, variables, has_active_failures, total_hosts, hosts_with_active_failures, total_groups, has_inventory_sources, total_inventory_sources, inventory_sources_with_failures, created_by_id, modified_by_id, organization_id, admin_role_id, adhoc_role_id, update_role_id, use_role_id, read_role_id, host_filter, kind, pending_deletion, prevent_instance_group_fallback, opa_query_path) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		Demo Inventory		f	0	0	0	f	0	0	1	1	1	25	27	26	28	29	\N		f	f	\N
 \.
 
 ALTER TABLE public.main_inventory ENABLE TRIGGER ALL;
@@ -268,9 +222,9 @@ ALTER TABLE public.main_inventory ENABLE TRIGGER ALL;
 ALTER TABLE public.main_schedule DISABLE TRIGGER ALL;
 
 COPY public.main_schedule (id, created, modified, description, name, enabled, dtstart, dtend, rrule, next_run, extra_data, created_by_id, modified_by_id, unified_job_template_id, char_prompts, inventory_id, survey_passwords, execution_environment_id) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Automatically Generated Schedule	Cleanup Job Schedule	t	2000-01-01 00:00:00.000000+00	\N	DTSTART:20000101T000000Z RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=SU	2000-01-01 00:00:00.000000+00	{"days": "120"}	\N	\N	1	{}	\N	{}	\N
-2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Automatically Generated Schedule	Cleanup Activity Schedule	t	2000-01-01 00:00:00.000000+00	\N	DTSTART:20000101T000000Z RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=TU	2000-01-01 00:00:00.000000+00	{"days": "355"}	\N	\N	2	{}	\N	{}	\N
-4	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Cleans out expired browser sessions	Cleanup Expired Sessions	t	2000-01-01 00:00:00.000000+00	\N	DTSTART:20000101T000000Z RRULE:FREQ=WEEKLY;INTERVAL=1	2000-01-01 00:00:00.000000+00	{}	\N	\N	4	{}	\N	{}	\N
+1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Automatically Generated Schedule	Cleanup Job Schedule	t	\N	\N	DTSTART:20000101T000000Z RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=SU	\N	{"days": "120"}	\N	\N	1	{}	\N	{}	\N
+2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Automatically Generated Schedule	Cleanup Activity Schedule	t	\N	\N	DTSTART:20000101T000000Z RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=TU	\N	{"days": "355"}	\N	\N	2	{}	\N	{}	\N
+4	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Cleans out expired browser sessions	Cleanup Expired Sessions	t	\N	\N	DTSTART:20000101T000000Z RRULE:FREQ=WEEKLY;INTERVAL=1	\N	{}	\N	\N	4	{}	\N	{}	\N
 \.
 
 ALTER TABLE public.main_schedule ENABLE TRIGGER ALL;
@@ -281,7 +235,7 @@ ALTER TABLE public.main_schedule ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_unifiedjob DISABLE TRIGGER ALL;
 
-COPY public.main_unifiedjob (id, created, modified, description, name, old_pk, launch_type, cancel_flag, status, failed, started, finished, elapsed, job_args, job_cwd, job_explanation, start_args, result_stdout_text, result_traceback, celery_task_id, created_by_id, modified_by_id, polymorphic_ctype_id, schedule_id, unified_job_template_id, execution_node, instance_group_id, emitted_events, controller_node, canceled_on, dependencies_processed, organization_id, execution_environment_id, installed_collections, ansible_version, work_unit_id, host_status_counts, preferred_instance_groups_cache, task_impact, job_env) FROM stdin;
+COPY public.main_unifiedjob (id, created, modified, description, name, old_pk, launch_type, cancel_flag, status, failed, started, finished, elapsed, job_args, job_cwd, job_env_old, job_explanation, start_args, result_stdout_text, result_traceback, celery_task_id, created_by_id, modified_by_id, polymorphic_ctype_id, schedule_id, unified_job_template_id, execution_node, instance_group_id, emitted_events, controller_node, canceled_on, dependencies_processed, organization_id, execution_environment_id, installed_collections, ansible_version, work_unit_id, host_status_counts, preferred_instance_groups_cache, task_impact, job_env) FROM stdin;
 \.
 
 ALTER TABLE public.main_unifiedjob ENABLE TRIGGER ALL;
@@ -304,11 +258,9 @@ ALTER TABLE public.main_adhoccommand ENABLE TRIGGER ALL;
 ALTER TABLE public.main_unifiedjobtemplate DISABLE TRIGGER ALL;
 
 COPY public.main_unifiedjobtemplate (id, created, modified, description, name, old_pk, last_job_failed, last_job_run, next_job_run, status, created_by_id, current_job_id, last_job_id, modified_by_id, next_schedule_id, polymorphic_ctype_id, organization_id, execution_environment_id, org_unique) FROM stdin;
-5	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		Demo Project	\N	f	\N	\N	successful	1	\N	\N	1	\N	5	1	\N	t
-6	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		Demo Job Template	\N	f	\N	\N	never updated	1	\N	\N	1	\N	4	1	\N	t
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Remove job history	Cleanup Job Details	\N	f	\N	2000-01-01 00:00:00.000000+00	ok	\N	\N	\N	\N	1	1	\N	\N	t
-2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Remove activity stream history	Cleanup Activity Stream	\N	f	\N	2000-01-01 00:00:00.000000+00	ok	\N	\N	\N	\N	2	1	\N	\N	t
-4	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Cleans out expired browser sessions	Cleanup Expired Sessions	\N	f	\N	2000-01-01 00:00:00.000000+00	ok	\N	\N	\N	\N	4	1	\N	\N	t
+1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Remove job history	Cleanup Job Details	\N	f	\N	\N	ok	\N	\N	\N	\N	\N	1	\N	\N	t
+2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Remove activity stream history	Cleanup Activity Stream	\N	f	\N	\N	ok	\N	\N	\N	\N	\N	1	\N	\N	t
+4	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	Cleans out expired browser sessions	Cleanup Expired Sessions	\N	f	\N	\N	ok	\N	\N	\N	\N	\N	1	\N	\N	t
 \.
 
 ALTER TABLE public.main_unifiedjobtemplate ENABLE TRIGGER ALL;
@@ -320,7 +272,6 @@ ALTER TABLE public.main_unifiedjobtemplate ENABLE TRIGGER ALL;
 ALTER TABLE public.main_project DISABLE TRIGGER ALL;
 
 COPY public.main_project (unifiedjobtemplate_ptr_id, local_path, scm_type, scm_url, scm_branch, scm_clean, scm_delete_on_update, scm_update_on_launch, scm_update_cache_timeout, credential_id, admin_role_id, use_role_id, update_role_id, read_role_id, timeout, scm_revision, playbook_files, inventory_files, custom_virtualenv, scm_refspec, allow_override, default_environment_id, scm_track_submodules, signature_validation_credential_id) FROM stdin;
-5	_5__demo_project	git	https://github.com/ansible/ansible-tower-samples		f	f	f	0	\N	15	16	17	18	0	347e44fea036c94d5f60e544de006453ee5c71ad	["hello_world.yml"]	[]	\N		f	\N	f	\N
 \.
 
 ALTER TABLE public.main_project ENABLE TRIGGER ALL;
@@ -332,7 +283,6 @@ ALTER TABLE public.main_project ENABLE TRIGGER ALL;
 ALTER TABLE public.main_jobtemplate DISABLE TRIGGER ALL;
 
 COPY public.main_jobtemplate (unifiedjobtemplate_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, host_config_key, ask_variables_on_launch, survey_enabled, survey_spec, inventory_id, project_id, admin_role_id, execute_role_id, read_role_id, ask_limit_on_launch, ask_inventory_on_launch, ask_credential_on_launch, ask_job_type_on_launch, ask_tags_on_launch, allow_simultaneous, ask_skip_tags_on_launch, timeout, use_fact_cache, ask_verbosity_on_launch, ask_diff_mode_on_launch, diff_mode, custom_virtualenv, job_slice_count, ask_scm_branch_on_launch, scm_branch, webhook_credential_id, webhook_key, webhook_service, ask_execution_environment_on_launch, ask_forks_on_launch, ask_instance_groups_on_launch, ask_job_slice_count_on_launch, ask_labels_on_launch, ask_timeout_on_launch, prevent_instance_group_fallback, opa_query_path) FROM stdin;
-6	run	hello_world.yml	0		0			f			f		f	f	{}	1	5	30	31	32	f	f	f	f	f	f	f	0	f	f	f	f	\N	1	f		\N			f	f	f	f	f	f	f	\N
 \.
 
 ALTER TABLE public.main_jobtemplate ENABLE TRIGGER ALL;
@@ -354,7 +304,7 @@ ALTER TABLE public.main_projectupdate ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_job DISABLE TRIGGER ALL;
 
-COPY public.main_job (unifiedjob_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, inventory_id, job_template_id, project_id, allow_simultaneous, artifacts, timeout, scm_revision, project_update_id, use_fact_cache, diff_mode, job_slice_count, job_slice_number, custom_virtualenv, scm_branch, webhook_credential_id, webhook_guid, webhook_service, survey_passwords, event_queries_processed) FROM stdin;
+COPY public.main_job (unifiedjob_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, inventory_id, job_template_id, project_id, survey_passwords_old, allow_simultaneous, artifacts, timeout, scm_revision, project_update_id, use_fact_cache, diff_mode, job_slice_count, job_slice_number, custom_virtualenv, scm_branch, webhook_credential_id, webhook_guid, webhook_service, survey_passwords, event_queries_processed) FROM stdin;
 \.
 
 ALTER TABLE public.main_job ENABLE TRIGGER ALL;
@@ -366,7 +316,6 @@ ALTER TABLE public.main_job ENABLE TRIGGER ALL;
 ALTER TABLE public.main_host DISABLE TRIGGER ALL;
 
 COPY public.main_host (id, created, modified, description, name, enabled, instance_id, variables, created_by_id, inventory_id, last_job_host_summary_id, modified_by_id, last_job_id, ansible_facts, ansible_facts_modified) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00		localhost	t		ansible_connection: local\nansible_python_interpreter: '{{ ansible_playbook_python }}'	1	1	\N	1	\N	{}	\N
 \.
 
 ALTER TABLE public.main_host ENABLE TRIGGER ALL;
@@ -928,14 +877,14 @@ ALTER TABLE public.dab_rbac_dabcontenttype DISABLE TRIGGER ALL;
 COPY public.dab_rbac_dabcontenttype (id, service, app_label, model, parent_content_type_id, api_slug, pk_field_type) FROM stdin;
 39	awx	main	instancegroup	\N	awx.instancegroup	integer
 22	shared	main	organization	\N	shared.organization	integer
-25	shared	main	team	22	shared.team	integer
-6	awx	main	workflowjobtemplate	22	awx.workflowjobtemplate	integer
-4	awx	main	jobtemplate	22	awx.jobtemplate	integer
-14	awx	main	credential	22	awx.credential	integer
 19	awx	main	inventory	22	awx.inventory	integer
-30	awx	main	notificationtemplate	22	awx.notificationtemplate	integer
+6	awx	main	workflowjobtemplate	22	awx.workflowjobtemplate	integer
 55	awx	main	executionenvironment	22	awx.executionenvironment	integer
 5	awx	main	project	22	awx.project	integer
+25	shared	main	team	22	shared.team	integer
+14	awx	main	credential	22	awx.credential	integer
+30	awx	main	notificationtemplate	22	awx.notificationtemplate	integer
+4	awx	main	jobtemplate	22	awx.jobtemplate	integer
 \.
 
 ALTER TABLE public.dab_rbac_dabcontenttype ENABLE TRIGGER ALL;
@@ -1007,34 +956,34 @@ ALTER TABLE public.dab_rbac_dabpermission ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_roledefinition DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_roledefinition (id, name, description, managed, created_by_id, created, modified_by_id, modified, content_type_id) FROM stdin;
-1	Team Admin	Has all permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
-2	Team Member	Has member permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
-3	WorkflowJobTemplate Admin	Has all permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
-4	Organization WorkflowJobTemplate Admin	Has all permissions to workflow job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-5	WorkflowJobTemplate Execute	Has execute permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
-6	WorkflowJobTemplate Approve	Has approve permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
-7	JobTemplate Admin	Has all permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
-8	Organization JobTemplate Admin	Has all permissions to job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-9	JobTemplate Execute	Has execute permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
-10	Credential Admin	Has all permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
-11	Organization Credential Admin	Has all permissions to credentials within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-12	Credential Use	Has use permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
-13	InstanceGroup Admin	Has all permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
-14	InstanceGroup Use	Has use permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
-15	Inventory Admin	Has all permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-16	Organization Inventory Admin	Has all permissions to inventories within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-17	Inventory Use	Has use permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-18	Inventory Adhoc	Has adhoc permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-19	Inventory Update	Has update permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-20	NotificationTemplate Admin	Has all permissions to a single notification template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	30
-21	Organization NotificationTemplate Admin	Has all permissions to notification templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-22	Organization Member	Has member permissions to a single organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-23	ExecutionEnvironment Admin	Has all permissions to a single execution environment	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	55
-24	Organization ExecutionEnvironment Admin	Has all permissions to execution environments within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-25	Project Admin	Has all permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
-26	Organization Project Admin	Has all permissions to projects within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-27	Project Use	Has use permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
-28	Project Update	Has update permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
+1	Inventory Admin	Has all permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+2	Organization Inventory Admin	Has all permissions to inventories within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+3	Inventory Use	Has use permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+4	Inventory Adhoc	Has adhoc permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+5	Inventory Update	Has update permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+6	InstanceGroup Admin	Has all permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
+7	InstanceGroup Use	Has use permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
+8	Organization Member	Has member permissions to a single organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+9	WorkflowJobTemplate Admin	Has all permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
+10	Organization WorkflowJobTemplate Admin	Has all permissions to workflow job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+11	WorkflowJobTemplate Execute	Has execute permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
+12	WorkflowJobTemplate Approve	Has approve permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
+13	ExecutionEnvironment Admin	Has all permissions to a single execution environment	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	55
+14	Organization ExecutionEnvironment Admin	Has all permissions to execution environments within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+15	Project Admin	Has all permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
+16	Organization Project Admin	Has all permissions to projects within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+17	Project Use	Has use permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
+18	Project Update	Has update permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
+19	Team Admin	Has all permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
+20	Team Member	Has member permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
+21	Credential Admin	Has all permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
+22	Organization Credential Admin	Has all permissions to credentials within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+23	Credential Use	Has use permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
+24	NotificationTemplate Admin	Has all permissions to a single notification template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	30
+25	Organization NotificationTemplate Admin	Has all permissions to notification templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+26	JobTemplate Admin	Has all permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
+27	Organization JobTemplate Admin	Has all permissions to job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+28	JobTemplate Execute	Has execute permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
 29	Organization Admin	Has all permissions to a single organization and all objects inside of it	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
 30	Organization Audit	Has permission to view all objects inside of a single organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
 31	Organization Execute	Has permission to execute all runnable objects in the organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
@@ -1050,7 +999,6 @@ ALTER TABLE public.dab_rbac_roledefinition ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_objectrole DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_objectrole (id, object_id, role_definition_id, parent_reference, content_type_id) FROM stdin;
-1	1	10		14
 \.
 
 ALTER TABLE public.dab_rbac_objectrole ENABLE TRIGGER ALL;
@@ -1084,117 +1032,117 @@ ALTER TABLE public.dab_rbac_objectrole_provides_teams ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_roledefinition_permissions DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_roledefinition_permissions (id, roledefinition_id, dabpermission_id) FROM stdin;
-1	1	19
-2	1	20
-3	1	21
-4	1	22
-5	2	21
-6	2	22
-7	3	38
-8	3	39
-9	3	40
-10	3	41
-11	3	42
-12	4	37
-13	4	38
-14	4	39
-15	4	40
-16	4	41
-17	4	42
-18	4	15
-19	4	16
-20	5	40
-21	5	41
-22	6	40
-23	6	42
-24	7	24
-25	7	25
-26	7	26
-27	7	23
-28	8	15
+1	1	7
+2	1	8
+3	1	9
+4	1	10
+5	1	11
+6	1	12
+7	2	6
+8	2	7
+9	2	8
+10	2	9
+11	2	10
+12	2	11
+13	2	12
+14	2	15
+15	2	16
+16	3	9
+17	3	10
+18	4	9
+19	4	10
+20	4	11
+21	5	9
+22	5	12
+23	6	43
+24	6	44
+25	6	45
+26	6	46
+27	7	45
+28	7	46
 29	8	16
-30	8	23
-31	8	24
-32	8	25
-33	8	26
-34	9	25
-35	9	26
-36	10	2
-37	10	3
-38	10	4
-39	10	5
-40	11	1
-41	11	2
-42	11	3
-43	11	4
-44	11	5
-45	11	15
-46	11	16
-47	12	4
-48	12	5
-49	13	43
-50	13	44
-51	13	45
-52	13	46
-53	14	45
-54	14	46
-55	15	7
-56	15	8
-57	15	9
-58	15	10
-59	15	11
-60	15	12
-61	16	6
-62	16	7
-63	16	8
-64	16	9
-65	16	10
-66	16	11
-67	16	12
-68	16	15
-69	16	16
-70	17	9
-71	17	10
-72	18	9
-73	18	10
-74	18	11
-75	19	9
-76	19	12
-77	20	34
-78	20	35
-79	20	36
-80	21	33
-81	21	34
-82	21	35
-83	21	36
-84	21	15
-85	21	16
-86	22	16
-87	22	15
-88	23	48
-89	23	49
-91	24	47
-92	24	48
-93	24	49
-95	24	15
-96	24	16
-97	25	32
-98	25	28
-99	25	29
-100	25	30
-101	25	31
-102	26	32
-103	26	15
-104	26	16
-105	26	27
-106	26	28
-107	26	29
-108	26	30
-109	26	31
-110	27	32
-111	27	30
-112	28	30
-113	28	31
+30	8	15
+31	9	38
+32	9	39
+33	9	40
+34	9	41
+35	9	42
+36	10	37
+37	10	38
+38	10	39
+39	10	40
+40	10	41
+41	10	42
+42	10	15
+43	10	16
+44	11	40
+45	11	41
+46	12	40
+47	12	42
+48	13	48
+49	13	49
+51	14	47
+52	14	48
+53	14	49
+55	14	15
+56	14	16
+57	15	32
+58	15	28
+59	15	29
+60	15	30
+61	15	31
+62	16	32
+63	16	15
+64	16	16
+65	16	27
+66	16	28
+67	16	29
+68	16	30
+69	16	31
+70	17	32
+71	17	30
+72	18	30
+73	18	31
+74	19	19
+75	19	20
+76	19	21
+77	19	22
+78	20	21
+79	20	22
+80	21	2
+81	21	3
+82	21	4
+83	21	5
+84	22	1
+85	22	2
+86	22	3
+87	22	4
+88	22	5
+89	22	15
+90	22	16
+91	23	4
+92	23	5
+93	24	34
+94	24	35
+95	24	36
+96	25	33
+97	25	34
+98	25	35
+99	25	36
+100	25	15
+101	25	16
+102	26	24
+103	26	25
+104	26	26
+105	26	23
+106	27	15
+107	27	16
+108	27	23
+109	27	24
+110	27	25
+111	27	26
+112	28	25
+113	28	26
 114	29	1
 115	29	2
 116	29	3
@@ -1268,10 +1216,6 @@ ALTER TABLE public.dab_rbac_roledefinition_permissions ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_roleevaluation DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_roleevaluation (id, codename, object_id, role_id, content_type_id) FROM stdin;
-1	use_credential	1	1	14
-2	delete_credential	1	1	14
-3	view_credential	1	1	14
-4	change_credential	1	1	14
 \.
 
 ALTER TABLE public.dab_rbac_roleevaluation ENABLE TRIGGER ALL;
@@ -1305,7 +1249,6 @@ ALTER TABLE public.dab_rbac_roleteamassignment ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_roleuserassignment DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_roleuserassignment (id, created, object_id, role_definition_id, created_by_id, user_id, object_role_id, content_type_id) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	1	10	1	1	1	14
 \.
 
 ALTER TABLE public.dab_rbac_roleuserassignment ENABLE TRIGGER ALL;
@@ -1317,34 +1260,34 @@ ALTER TABLE public.dab_rbac_roleuserassignment ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_resource_registry_resource DISABLE TRIGGER ALL;
 
 COPY public.dab_resource_registry_resource (id, object_id, service_id, ansible_id, name, content_type_id, is_partially_migrated) FROM stdin;
-1	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	82ef7ac4-af48-5c94-a2ff-aac8c11082f5	Team Admin	83	f
-2	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	a6cab448-b776-55b8-80a5-7513da538556	Team Member	83	f
-3	3	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	01aa8550-f0e9-597f-95ba-d3d03f766f95	WorkflowJobTemplate Admin	83	f
-4	4	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	701682d0-76c0-5d85-ba88-116c8ab038d7	Organization WorkflowJobTemplate Admin	83	f
-5	5	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3eed92e2-01f3-5181-bc3a-fee151827c4a	WorkflowJobTemplate Execute	83	f
-6	6	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3268c0fc-b4a4-5dc3-9222-3eccbee62e41	WorkflowJobTemplate Approve	83	f
-7	7	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	71db26f5-8365-5508-8d21-4a81c1882782	JobTemplate Admin	83	f
-8	8	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	47aaa577-6df7-57b1-be2f-8d9d56206bff	Organization JobTemplate Admin	83	f
-9	9	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	083a6c13-2dc9-5189-ae36-d6fed4a6aa5f	JobTemplate Execute	83	f
-10	10	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7caf39df-9f4d-58d9-b44e-a2bb656f2393	Credential Admin	83	f
-11	11	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	4e7a0674-84fc-53f4-810b-3796b8be0872	Organization Credential Admin	83	f
-12	12	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	e9cfeea5-e188-5064-a825-0bf091cad9eb	Credential Use	83	f
-13	13	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2436cd1d-1a77-5a1b-b66b-e22f9f805b31	InstanceGroup Admin	83	f
-14	14	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5ebef0ee-7ebb-521e-8437-bf8bfcf24a31	InstanceGroup Use	83	f
-15	15	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	c59c3209-a66f-5bcb-b1e5-ba17ad126b5e	Inventory Admin	83	f
-16	16	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d493a1db-0da7-5107-b7c6-e4090a16922c	Organization Inventory Admin	83	f
-17	17	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5247c30f-b815-51f1-8922-1be14753362b	Inventory Use	83	f
-18	18	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	b26b9e1f-08fe-593e-8f8b-d158ec2e7050	Inventory Adhoc	83	f
-19	19	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d9a2706d-eac2-5f98-b3a3-6a740dcd32a6	Inventory Update	83	f
-20	20	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2cc291e5-1270-5165-a937-8c78ef4abe00	NotificationTemplate Admin	83	f
-21	21	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	28a7058e-f439-5e34-8125-466280cfe101	Organization NotificationTemplate Admin	83	f
-22	22	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	79ab51a3-7d2f-5ec8-861e-9c178fe547b7	Organization Member	83	f
-23	23	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5324169e-9731-553a-9169-c0f7d0a6131c	ExecutionEnvironment Admin	83	f
-24	24	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3e659418-5a14-5f4c-879e-cd0078a23b95	Organization ExecutionEnvironment Admin	83	f
-25	25	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7ab6bc08-0f3a-5cd2-bf05-e781a412350c	Project Admin	83	f
-26	26	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	043cd189-aae6-5698-af58-f2253c8e090d	Organization Project Admin	83	f
-27	27	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	88b4e1cd-928e-51ba-8080-24703641df1a	Project Use	83	f
-28	28	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	61e3a26e-1798-569b-8dcd-79754b904201	Project Update	83	f
+1	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	82ef7ac4-af48-5c94-a2ff-aac8c11082f5	Inventory Admin	83	f
+2	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	a6cab448-b776-55b8-80a5-7513da538556	Organization Inventory Admin	83	f
+3	3	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	01aa8550-f0e9-597f-95ba-d3d03f766f95	Inventory Use	83	f
+4	4	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	701682d0-76c0-5d85-ba88-116c8ab038d7	Inventory Adhoc	83	f
+5	5	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3eed92e2-01f3-5181-bc3a-fee151827c4a	Inventory Update	83	f
+6	6	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3268c0fc-b4a4-5dc3-9222-3eccbee62e41	InstanceGroup Admin	83	f
+7	7	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	71db26f5-8365-5508-8d21-4a81c1882782	InstanceGroup Use	83	f
+8	8	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	47aaa577-6df7-57b1-be2f-8d9d56206bff	Organization Member	83	f
+9	9	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	083a6c13-2dc9-5189-ae36-d6fed4a6aa5f	WorkflowJobTemplate Admin	83	f
+10	10	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7caf39df-9f4d-58d9-b44e-a2bb656f2393	Organization WorkflowJobTemplate Admin	83	f
+11	11	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	4e7a0674-84fc-53f4-810b-3796b8be0872	WorkflowJobTemplate Execute	83	f
+12	12	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	e9cfeea5-e188-5064-a825-0bf091cad9eb	WorkflowJobTemplate Approve	83	f
+13	13	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2436cd1d-1a77-5a1b-b66b-e22f9f805b31	ExecutionEnvironment Admin	83	f
+14	14	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5ebef0ee-7ebb-521e-8437-bf8bfcf24a31	Organization ExecutionEnvironment Admin	83	f
+15	15	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	c59c3209-a66f-5bcb-b1e5-ba17ad126b5e	Project Admin	83	f
+16	16	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d493a1db-0da7-5107-b7c6-e4090a16922c	Organization Project Admin	83	f
+17	17	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5247c30f-b815-51f1-8922-1be14753362b	Project Use	83	f
+18	18	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	b26b9e1f-08fe-593e-8f8b-d158ec2e7050	Project Update	83	f
+19	19	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d9a2706d-eac2-5f98-b3a3-6a740dcd32a6	Team Admin	83	f
+20	20	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2cc291e5-1270-5165-a937-8c78ef4abe00	Team Member	83	f
+21	21	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	28a7058e-f439-5e34-8125-466280cfe101	Credential Admin	83	f
+22	22	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	79ab51a3-7d2f-5ec8-861e-9c178fe547b7	Organization Credential Admin	83	f
+23	23	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5324169e-9731-553a-9169-c0f7d0a6131c	Credential Use	83	f
+24	24	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3e659418-5a14-5f4c-879e-cd0078a23b95	NotificationTemplate Admin	83	f
+25	25	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7ab6bc08-0f3a-5cd2-bf05-e781a412350c	Organization NotificationTemplate Admin	83	f
+26	26	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	043cd189-aae6-5698-af58-f2253c8e090d	JobTemplate Admin	83	f
+27	27	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	88b4e1cd-928e-51ba-8080-24703641df1a	Organization JobTemplate Admin	83	f
+28	28	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	61e3a26e-1798-569b-8dcd-79754b904201	JobTemplate Execute	83	f
 29	29	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	47f057a2-d722-561a-b7da-d88e5974d14e	Organization Admin	83	f
 30	30	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	173d348b-e1dc-57da-b2c4-23d108ad35ec	Organization Audit	83	f
 31	31	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	721b42e2-a169-503d-81e0-2fcece93c2c8	Organization Execute	83	f
@@ -1352,8 +1295,6 @@ COPY public.dab_resource_registry_resource (id, object_id, service_id, ansible_i
 34	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	164679b9-04ed-5b35-b438-9677104067fc	FEATURE_INDIRECT_NODE_COUNTING_ENABLED	84	f
 35	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	9c472490-7391-5cd7-aeac-4f2173a0bb5f	FEATURE_EDA_ANALYTICS_ENABLED	84	f
 36	3	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	1245eca9-4d48-51b6-8901-b663da504cf4	FEATURE_OIDC_WORKLOAD_IDENTITY_ENABLED	84	f
-37	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d7d77ff8-4189-502c-a3d7-e8193b79fa9f	admin	2	f
-38	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3117b872-07cc-5f96-99df-78e27606080f	Default	22	f
 \.
 
 ALTER TABLE public.dab_resource_registry_resource ENABLE TRIGGER ALL;
@@ -1681,30 +1622,29 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 286	dab_resource_registry	0005_resource_is_partially_migrated_and_more	2000-01-01 00:00:00.000000+00
 287	dab_resource_registry	0006_alter_resource_service_id	2000-01-01 00:00:00.000000+00
 288	dab_resource_registry	0007_alter_resource_ansible_id_and_more	2000-01-01 00:00:00.000000+00
-289	dab_resource_registry	0008_resource_covering_index_ansible_id	2000-01-01 00:00:00.000000+00
-290	flags	0001_initial	2000-01-01 00:00:00.000000+00
-291	flags	0002_auto_20151030_1401	2000-01-01 00:00:00.000000+00
-292	flags	0003_flag_hidden	2000-01-01 00:00:00.000000+00
-293	flags	0004_remove_flag_hidden	2000-01-01 00:00:00.000000+00
-294	flags	0005_flag_enabled_by_default	2000-01-01 00:00:00.000000+00
-295	flags	0006_auto_20151217_2003	2000-01-01 00:00:00.000000+00
-296	flags	0007_unique_flag_site	2000-01-01 00:00:00.000000+00
-297	flags	0008_add_state_conditions	2000-01-01 00:00:00.000000+00
-298	flags	0009_migrate_to_conditional_state	2000-01-01 00:00:00.000000+00
-299	flags	0010_delete_flag_site_fk	2000-01-01 00:00:00.000000+00
-300	flags	0011_migrate_path_data_startswith_to_matches	2000-01-01 00:00:00.000000+00
-301	flags	0013_add_required_field	2000-01-01 00:00:00.000000+00
-302	main	0204_squashed_deletions	2000-01-01 00:00:00.000000+00
-303	main	0205_add_ordering_to_instancegroup_and_workflow_nodes	2000-01-01 00:00:00.000000+00
-304	main	0206_jobhostsummary_host_id_idx	2000-01-01 00:00:00.000000+00
-305	main	0207_alter_skip_tags_to_textfield	2000-01-01 00:00:00.000000+00
-306	sites	0001_initial	2000-01-01 00:00:00.000000+00
-307	sites	0002_alter_domain_unique	2000-01-01 00:00:00.000000+00
-308	main	0002_squashed_v300_release	2000-01-01 00:00:00.000000+00
-309	main	0003_squashed_v300_v303_updates	2000-01-01 00:00:00.000000+00
-310	main	0004_squashed_v310_release	2000-01-01 00:00:00.000000+00
-311	main	0005_squashed_v310_v313_updates	2000-01-01 00:00:00.000000+00
-312	flags	0012_replace_migrations_for_wagtail_independence	2000-01-01 00:00:00.000000+00
+289	flags	0001_initial	2000-01-01 00:00:00.000000+00
+290	flags	0002_auto_20151030_1401	2000-01-01 00:00:00.000000+00
+291	flags	0003_flag_hidden	2000-01-01 00:00:00.000000+00
+292	flags	0004_remove_flag_hidden	2000-01-01 00:00:00.000000+00
+293	flags	0005_flag_enabled_by_default	2000-01-01 00:00:00.000000+00
+294	flags	0006_auto_20151217_2003	2000-01-01 00:00:00.000000+00
+295	flags	0007_unique_flag_site	2000-01-01 00:00:00.000000+00
+296	flags	0008_add_state_conditions	2000-01-01 00:00:00.000000+00
+297	flags	0009_migrate_to_conditional_state	2000-01-01 00:00:00.000000+00
+298	flags	0010_delete_flag_site_fk	2000-01-01 00:00:00.000000+00
+299	flags	0011_migrate_path_data_startswith_to_matches	2000-01-01 00:00:00.000000+00
+300	flags	0013_add_required_field	2000-01-01 00:00:00.000000+00
+301	main	0204_squashed_deletions	2000-01-01 00:00:00.000000+00
+302	main	0205_add_ordering_to_instancegroup_and_workflow_nodes	2000-01-01 00:00:00.000000+00
+303	main	0206_jobhostsummary_host_id_idx	2000-01-01 00:00:00.000000+00
+304	main	0207_alter_skip_tags_to_textfield	2000-01-01 00:00:00.000000+00
+305	sites	0001_initial	2000-01-01 00:00:00.000000+00
+306	sites	0002_alter_domain_unique	2000-01-01 00:00:00.000000+00
+307	main	0002_squashed_v300_release	2000-01-01 00:00:00.000000+00
+308	main	0003_squashed_v300_v303_updates	2000-01-01 00:00:00.000000+00
+309	main	0004_squashed_v310_release	2000-01-01 00:00:00.000000+00
+310	main	0005_squashed_v310_v313_updates	2000-01-01 00:00:00.000000+00
+311	flags	0012_replace_migrations_for_wagtail_independence	2000-01-01 00:00:00.000000+00
 \.
 
 ALTER TABLE public.django_migrations ENABLE TRIGGER ALL;
@@ -1749,25 +1689,7 @@ ALTER TABLE public.flags_flagstate ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_activitystream DISABLE TRIGGER ALL;
 
-COPY public.main_activitystream (id, operation, "timestamp", changes, object_relationship_type, object1, object2, actor_id, action_node, deleted_actor, setting) FROM stdin;
-1	create	2000-01-01 00:00:00.000000+00	{"username": "admin", "first_name": "", "last_name": "", "email": "admin@localhost", "is_superuser": true, "password": "hidden", "id": 1}		user		\N	awx-1	\N	{}
-2	create	2000-01-01 00:00:00.000000+00	{"name": "Default", "description": "", "max_hosts": 0, "default_environment": null, "opa_query_path": null, "id": 1}		organization		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-3	create	2000-01-01 00:00:00.000000+00	{"name": "Demo Project", "description": "", "local_path": "", "scm_type": "git", "scm_url": "https://github.com/ansible/ansible-tower-samples", "scm_branch": "", "scm_refspec": "", "scm_clean": false, "scm_track_submodules": false, "scm_delete_on_update": false, "credential": null, "timeout": 0, "organization": "Default-1", "scm_update_on_launch": false, "scm_update_cache_timeout": 0, "allow_override": false, "default_environment": null, "signature_validation_credential": null, "id": 5}		project		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-4	create	2000-01-01 00:00:00.000000+00	{"name": "Demo Credential", "description": "", "organization": "Default-1", "credential_type": "Machine-7", "inputs": "hidden", "id": 1}		credential		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-5	associate	2000-01-01 00:00:00.000000+00	{"object1": "credential", "object1_pk": 1, "object2": "user", "object2_pk": 1, "action": "associate", "relationship": "awx.main.models.rbac.Role_members"}	awx.main.models.credential.Credential.admin_role	credential	user	1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-6	create	2000-01-01 00:00:00.000000+00	{"name": "Ansible Galaxy", "description": "", "organization": null, "credential_type": "Ansible Galaxy/Automation Hub API Token-2", "inputs": "hidden", "id": 2}		credential		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-7	associate	2000-01-01 00:00:00.000000+00	{"object1": "organization", "object1_pk": 1, "object2": "credential", "object2_pk": 2, "action": "associate", "relationship": "awx.main.models.organization.OrganizationGalaxyCredentialMembership"}	awx.main.models.organization.OrganizationGalaxyCredentialMembership	organization	credential	1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-8	create	2000-01-01 00:00:00.000000+00	{"name": "Demo Inventory", "description": "", "organization": "Default-1", "kind": "", "host_filter": null, "variables": "", "prevent_instance_group_fallback": false, "opa_query_path": null, "id": 1}		inventory		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-9	create	2000-01-01 00:00:00.000000+00	{"name": "localhost", "description": "", "inventory": "Demo Inventory-1", "enabled": true, "instance_id": "", "variables": "ansible_connection: local\\nansible_python_interpreter: '{{ ansible_playbook_python }}'", "id": 1}		host		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-10	create	2000-01-01 00:00:00.000000+00	{"name": "Demo Job Template", "description": "", "job_type": "run", "inventory": "Demo Inventory-1", "project": "Demo Project-5", "playbook": "hello_world.yml", "scm_branch": "", "forks": 0, "limit": "", "verbosity": 0, "extra_vars": "", "job_tags": "", "force_handlers": false, "skip_tags": "", "start_at_task": "", "timeout": 0, "use_fact_cache": false, "execution_environment": null, "host_config_key": "", "ask_scm_branch_on_launch": false, "ask_diff_mode_on_launch": false, "ask_variables_on_launch": false, "ask_limit_on_launch": false, "ask_tags_on_launch": false, "ask_skip_tags_on_launch": false, "ask_job_type_on_launch": false, "ask_verbosity_on_launch": false, "ask_inventory_on_launch": false, "ask_credential_on_launch": false, "ask_execution_environment_on_launch": false, "ask_labels_on_launch": false, "ask_forks_on_launch": false, "ask_job_slice_count_on_launch": false, "ask_timeout_on_launch": false, "ask_instance_groups_on_launch": false, "survey_enabled": false, "become_enabled": false, "diff_mode": false, "allow_simultaneous": false, "job_slice_count": 1, "webhook_service": "", "webhook_credential": null, "prevent_instance_group_fallback": false, "opa_query_path": null, "survey_spec": "{}", "id": 6}		job_template		1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-11	associate	2000-01-01 00:00:00.000000+00	{"object1": "job_template", "object1_pk": 6, "object2": "credential", "object2_pk": 1, "action": "associate", "relationship": "awx.main.models.unified_jobs.UnifiedJobTemplate_credentials"}	awx.main.models.unified_jobs.UnifiedJobTemplate_credentials	job_template	credential	1	awx-1	{"id": 1, "username": "admin", "last_name": "", "first_name": ""}	{}
-12	create	2000-01-01 00:00:00.000000+00	{"name": "AWX EE (latest)", "description": "", "organization": null, "image": "quay.io/ansible/awx-ee:latest", "credential": null, "pull": "", "id": 1}		execution_environment		\N	awx-1	\N	{}
-13	create	2000-01-01 00:00:00.000000+00	{"name": "Control Plane Execution Environment", "description": "", "organization": null, "image": "quay.io/ansible/awx-ee:latest", "credential": null, "pull": "", "id": 2}		execution_environment		\N	awx-1	\N	{}
-14	create	2000-01-01 00:00:00.000000+00	{"hostname": "awx-1", "capacity_adjustment": "1", "enabled": true, "managed_by_policy": true, "node_type": "hybrid", "node_state": "installed", "peers": "main.ReceptorAddress.None", "listener_port": null, "peers_from_control_nodes": null, "id": 1}		instance		\N	awx-1	\N	{}
-15	create	2000-01-01 00:00:00.000000+00	{"name": "controlplane", "max_concurrent_jobs": 0, "max_forks": 0, "is_container_group": false, "credential": null, "policy_instance_percentage": 0, "policy_instance_minimum": 0, "policy_instance_list": "[]", "pod_spec_override": "", "id": 1}		instance_group		\N	awx-1	\N	{}
-16	update	2000-01-01 00:00:00.000000+00	{"policy_instance_percentage": [0, 100]}		instance_group		\N	awx-1	\N	{}
-17	create	2000-01-01 00:00:00.000000+00	{"name": "default", "max_concurrent_jobs": 0, "max_forks": 0, "is_container_group": false, "credential": null, "policy_instance_percentage": 0, "policy_instance_minimum": 0, "policy_instance_list": "[]", "pod_spec_override": "", "id": 2}		instance_group		\N	awx-1	\N	{}
-18	update	2000-01-01 00:00:00.000000+00	{"policy_instance_percentage": [0, 100]}		instance_group		\N	awx-1	\N	{}
+COPY public.main_activitystream (id, operation, "timestamp", changes, object_relationship_type, object1, object2, actor_id, setting_old, deleted_actor_old, action_node, deleted_actor, setting) FROM stdin;
 \.
 
 ALTER TABLE public.main_activitystream ENABLE TRIGGER ALL;
@@ -1790,11 +1712,6 @@ ALTER TABLE public.main_activitystream_ad_hoc_command ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_credential DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_credential (id, activitystream_id, credential_id) FROM stdin;
-1	4	1
-2	5	1
-3	6	2
-4	7	2
-5	11	1
 \.
 
 ALTER TABLE public.main_activitystream_credential ENABLE TRIGGER ALL;
@@ -1817,8 +1734,6 @@ ALTER TABLE public.main_activitystream_credential_type ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_execution_environment DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_execution_environment (id, activitystream_id, executionenvironment_id) FROM stdin;
-1	12	1
-2	13	2
 \.
 
 ALTER TABLE public.main_activitystream_execution_environment ENABLE TRIGGER ALL;
@@ -1852,7 +1767,6 @@ ALTER TABLE public.main_activitystream_group ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_host DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_host (id, activitystream_id, host_id) FROM stdin;
-1	9	1
 \.
 
 ALTER TABLE public.main_activitystream_host ENABLE TRIGGER ALL;
@@ -1864,7 +1778,6 @@ ALTER TABLE public.main_activitystream_host ENABLE TRIGGER ALL;
 ALTER TABLE public.main_instance DISABLE TRIGGER ALL;
 
 COPY public.main_instance (id, uuid, hostname, created, modified, capacity, version, capacity_adjustment, cpu, memory, cpu_capacity, mem_capacity, enabled, managed_by_policy, ip_address, node_type, last_seen, errors, last_health_check, node_state, health_check_started, managed) FROM stdin;
-1	f3debee2-d44b-5198-b6ab-e745b5a795fd	awx-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	619	24.6.2.dev872+gea14ee156	1.00	16.0	67118624768	64	619	t	t		hybrid	2000-01-01 00:00:00.000000+00		2000-01-01 00:00:00.000000+00	ready	\N	t
 \.
 
 ALTER TABLE public.main_instance ENABLE TRIGGER ALL;
@@ -1876,7 +1789,6 @@ ALTER TABLE public.main_instance ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_instance DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_instance (id, activitystream_id, instance_id) FROM stdin;
-1	14	1
 \.
 
 ALTER TABLE public.main_activitystream_instance ENABLE TRIGGER ALL;
@@ -1888,10 +1800,6 @@ ALTER TABLE public.main_activitystream_instance ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_instance_group DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_instance_group (id, activitystream_id, instancegroup_id) FROM stdin;
-1	15	1
-2	16	1
-3	17	2
-4	18	2
 \.
 
 ALTER TABLE public.main_activitystream_instance_group ENABLE TRIGGER ALL;
@@ -1903,7 +1811,6 @@ ALTER TABLE public.main_activitystream_instance_group ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_inventory DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_inventory (id, activitystream_id, inventory_id) FROM stdin;
-1	8	1
 \.
 
 ALTER TABLE public.main_activitystream_inventory ENABLE TRIGGER ALL;
@@ -1948,8 +1855,6 @@ ALTER TABLE public.main_activitystream_job ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_job_template DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_job_template (id, activitystream_id, jobtemplate_id) FROM stdin;
-1	10	6
-2	11	6
 \.
 
 ALTER TABLE public.main_activitystream_job_template ENABLE TRIGGER ALL;
@@ -1993,7 +1898,7 @@ ALTER TABLE public.main_notificationtemplate ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_notification DISABLE TRIGGER ALL;
 
-COPY public.main_notification (id, created, modified, status, error, notifications_sent, notification_type, recipients, subject, notification_template_id, body) FROM stdin;
+COPY public.main_notification (id, created, modified, status, error, notifications_sent, notification_type, recipients, subject, body_old, notification_template_id, body) FROM stdin;
 \.
 
 ALTER TABLE public.main_notification ENABLE TRIGGER ALL;
@@ -2027,8 +1932,6 @@ ALTER TABLE public.main_activitystream_notification_template ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_organization DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_organization (id, activitystream_id, organization_id) FROM stdin;
-1	2	1
-2	7	1
 \.
 
 ALTER TABLE public.main_activitystream_organization ENABLE TRIGGER ALL;
@@ -2040,7 +1943,6 @@ ALTER TABLE public.main_activitystream_organization ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_project DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_project (id, activitystream_id, project_id) FROM stdin;
-1	3	5
 \.
 
 ALTER TABLE public.main_activitystream_project ENABLE TRIGGER ALL;
@@ -2063,7 +1965,6 @@ ALTER TABLE public.main_activitystream_project_update ENABLE TRIGGER ALL;
 ALTER TABLE public.main_receptoraddress DISABLE TRIGGER ALL;
 
 COPY public.main_receptoraddress (id, address, port, websocket_path, protocol, is_internal, canonical, peers_from_control_nodes, instance_id) FROM stdin;
-1	awx-1	2222		tcp	f	t	f	1
 \.
 
 ALTER TABLE public.main_receptoraddress ENABLE TRIGGER ALL;
@@ -2086,7 +1987,6 @@ ALTER TABLE public.main_activitystream_receptor_address ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_role DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_role (id, activitystream_id, role_id) FROM stdin;
-1	5	19
 \.
 
 ALTER TABLE public.main_activitystream_role ENABLE TRIGGER ALL;
@@ -2142,8 +2042,6 @@ ALTER TABLE public.main_activitystream_unified_job_template ENABLE TRIGGER ALL;
 ALTER TABLE public.main_activitystream_user DISABLE TRIGGER ALL;
 
 COPY public.main_activitystream_user (id, activitystream_id, user_id) FROM stdin;
-1	1	1
-2	5	1
 \.
 
 ALTER TABLE public.main_activitystream_user ENABLE TRIGGER ALL;
@@ -2209,7 +2107,7 @@ ALTER TABLE public.main_workflowjobtemplate ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_workflowjob DISABLE TRIGGER ALL;
 
-COPY public.main_workflowjob (unifiedjob_ptr_id, extra_vars, workflow_job_template_id, allow_simultaneous, is_sliced_job, job_template_id, inventory_id, webhook_credential_id, webhook_guid, webhook_service, is_bulk_job, char_prompts, survey_passwords) FROM stdin;
+COPY public.main_workflowjob (unifiedjob_ptr_id, extra_vars, workflow_job_template_id, survey_passwords_old, allow_simultaneous, is_sliced_job, job_template_id, char_prompts_old, inventory_id, webhook_credential_id, webhook_guid, webhook_service, is_bulk_job, char_prompts, survey_passwords) FROM stdin;
 \.
 
 ALTER TABLE public.main_workflowjob ENABLE TRIGGER ALL;
@@ -2231,7 +2129,7 @@ ALTER TABLE public.main_activitystream_workflow_job ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_workflowjobnode DISABLE TRIGGER ALL;
 
-COPY public.main_workflowjobnode (id, created, modified, job_id, unified_job_template_id, workflow_job_id, inventory_id, ancestor_artifacts, extra_data, do_not_run, all_parents_must_converge, identifier, execution_environment_id, char_prompts, survey_passwords) FROM stdin;
+COPY public.main_workflowjobnode (id, created, modified, job_id, unified_job_template_id, workflow_job_id, char_prompts_old, inventory_id, ancestor_artifacts, extra_data, survey_passwords_old, do_not_run, all_parents_must_converge, identifier, execution_environment_id, char_prompts, survey_passwords) FROM stdin;
 \.
 
 ALTER TABLE public.main_workflowjobnode ENABLE TRIGGER ALL;
@@ -2397,8 +2295,6 @@ ALTER TABLE public.main_indirectmanagednodeaudit ENABLE TRIGGER ALL;
 ALTER TABLE public.main_instancegroup_instances DISABLE TRIGGER ALL;
 
 COPY public.main_instancegroup_instances (id, instancegroup_id, instance_id) FROM stdin;
-1	1	1
-2	2	1
 \.
 
 ALTER TABLE public.main_instancegroup_instances ENABLE TRIGGER ALL;
@@ -2475,7 +2371,7 @@ ALTER TABLE public.main_jobhostsummary ENABLE TRIGGER ALL;
 
 ALTER TABLE public.main_joblaunchconfig DISABLE TRIGGER ALL;
 
-COPY public.main_joblaunchconfig (id, extra_data, inventory_id, job_id, execution_environment_id, char_prompts, survey_passwords) FROM stdin;
+COPY public.main_joblaunchconfig (id, extra_data, survey_passwords_old, char_prompts_old, inventory_id, job_id, execution_environment_id, char_prompts, survey_passwords) FROM stdin;
 \.
 
 ALTER TABLE public.main_joblaunchconfig ENABLE TRIGGER ALL;
@@ -2564,7 +2460,6 @@ ALTER TABLE public.main_organization_notification_templates_success ENABLE TRIGG
 ALTER TABLE public.main_organizationgalaxycredentialmembership DISABLE TRIGGER ALL;
 
 COPY public.main_organizationgalaxycredentialmembership (id, "position", credential_id, organization_id) FROM stdin;
-1	0	2	1
 \.
 
 ALTER TABLE public.main_organizationgalaxycredentialmembership ENABLE TRIGGER ALL;
@@ -2598,7 +2493,6 @@ ALTER TABLE public.main_rbac_role_ancestors ENABLE TRIGGER ALL;
 ALTER TABLE public.main_rbac_roles_members DISABLE TRIGGER ALL;
 
 COPY public.main_rbac_roles_members (id, role_id, user_id) FROM stdin;
-1	19	1
 \.
 
 ALTER TABLE public.main_rbac_roles_members ENABLE TRIGGER ALL;
@@ -2665,7 +2559,6 @@ ALTER TABLE public.main_smartinventorymembership ENABLE TRIGGER ALL;
 ALTER TABLE public.main_towerschedulestate DISABLE TRIGGER ALL;
 
 COPY public.main_towerschedulestate (id, schedule_last_run) FROM stdin;
-1	2000-01-01 00:00:00.000000+00
 \.
 
 ALTER TABLE public.main_towerschedulestate ENABLE TRIGGER ALL;
@@ -2721,7 +2614,6 @@ ALTER TABLE public.main_unifiedjob_notifications ENABLE TRIGGER ALL;
 ALTER TABLE public.main_unifiedjobtemplate_credentials DISABLE TRIGGER ALL;
 
 COPY public.main_unifiedjobtemplate_credentials (id, unifiedjobtemplate_id, credential_id) FROM stdin;
-1	6	1
 \.
 
 ALTER TABLE public.main_unifiedjobtemplate_credentials ENABLE TRIGGER ALL;
@@ -2974,7 +2866,7 @@ SELECT pg_catalog.setval('public.auth_user_groups_id_seq', 1, false);
 -- Name: auth_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.auth_user_id_seq', 1, true);
+SELECT pg_catalog.setval('public.auth_user_id_seq', 1, false);
 
 --
 -- Name: auth_user_user_permissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3010,7 +2902,7 @@ SELECT pg_catalog.setval('public.dab_rbac_dabpermission_id_seq', 50, true);
 -- Name: dab_rbac_objectrole_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_rbac_objectrole_id_seq', 1, true);
+SELECT pg_catalog.setval('public.dab_rbac_objectrole_id_seq', 1, false);
 
 --
 -- Name: dab_rbac_objectrole_provides_teams_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3034,7 +2926,7 @@ SELECT pg_catalog.setval('public.dab_rbac_roledefinition_permissions_id_seq', 18
 -- Name: dab_rbac_roleevaluation_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_rbac_roleevaluation_id_seq', 4, true);
+SELECT pg_catalog.setval('public.dab_rbac_roleevaluation_id_seq', 1, false);
 
 --
 -- Name: dab_rbac_roleevaluationuuid_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3052,13 +2944,13 @@ SELECT pg_catalog.setval('public.dab_rbac_roleteamassignment_id_seq', 1, false);
 -- Name: dab_rbac_roleuserassignment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_rbac_roleuserassignment_id_seq', 1, true);
+SELECT pg_catalog.setval('public.dab_rbac_roleuserassignment_id_seq', 1, false);
 
 --
 -- Name: dab_resource_registry_resource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_resource_registry_resource_id_seq', 38, true);
+SELECT pg_catalog.setval('public.dab_resource_registry_resource_id_seq', 36, true);
 
 --
 -- Name: dab_resource_registry_resourcetype_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3076,7 +2968,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 92, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 312, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 311, true);
 
 --
 -- Name: django_site_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3100,7 +2992,7 @@ SELECT pg_catalog.setval('public.main_activitystream_ad_hoc_command_id_seq', 1, 
 -- Name: main_activitystream_credential_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_credential_id_seq', 5, true);
+SELECT pg_catalog.setval('public.main_activitystream_credential_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_credential_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3112,7 +3004,7 @@ SELECT pg_catalog.setval('public.main_activitystream_credential_type_id_seq', 1,
 -- Name: main_activitystream_execution_environment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_execution_environment_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_activitystream_execution_environment_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3124,31 +3016,31 @@ SELECT pg_catalog.setval('public.main_activitystream_group_id_seq', 1, false);
 -- Name: main_activitystream_host_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_host_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_activitystream_host_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_id_seq', 18, true);
+SELECT pg_catalog.setval('public.main_activitystream_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_instance_group_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_instance_group_id_seq', 4, true);
+SELECT pg_catalog.setval('public.main_activitystream_instance_group_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_instance_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_instance_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_activitystream_instance_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_inventory_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_activitystream_inventory_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_inventory_source_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3172,7 +3064,7 @@ SELECT pg_catalog.setval('public.main_activitystream_job_id_seq', 1, false);
 -- Name: main_activitystream_job_template_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_job_template_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_activitystream_job_template_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_label_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3196,13 +3088,13 @@ SELECT pg_catalog.setval('public.main_activitystream_notification_template_id_se
 -- Name: main_activitystream_organization_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_organization_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_activitystream_organization_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_project_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_project_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_activitystream_project_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_project_update_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3220,7 +3112,7 @@ SELECT pg_catalog.setval('public.main_activitystream_receptor_address_id_seq', 1
 -- Name: main_activitystream_role_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_role_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_activitystream_role_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_schedule_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3250,7 +3142,7 @@ SELECT pg_catalog.setval('public.main_activitystream_unified_job_template_id_seq
 -- Name: main_activitystream_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_activitystream_user_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_activitystream_user_id_seq', 1, false);
 
 --
 -- Name: main_activitystream_workflow_approval_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3304,7 +3196,7 @@ SELECT pg_catalog.setval('public.main_adhoccommandevent_id_seq1', 1, false);
 -- Name: main_credential_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_credential_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_credential_id_seq', 1, false);
 
 --
 -- Name: main_credentialinputsource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3334,7 +3226,7 @@ SELECT pg_catalog.setval('public.main_eventquery_id_seq', 1, false);
 -- Name: main_executionenvironment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_executionenvironment_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_executionenvironment_id_seq', 1, false);
 
 --
 -- Name: main_group_hosts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3364,7 +3256,7 @@ SELECT pg_catalog.setval('public.main_group_parents_id_seq', 1, false);
 -- Name: main_host_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_host_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_host_id_seq', 1, false);
 
 --
 -- Name: main_host_inventory_sources_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3394,19 +3286,19 @@ SELECT pg_catalog.setval('public.main_indirectmanagednodeaudit_id_seq', 1, false
 -- Name: main_instance_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_instance_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_instance_id_seq', 1, false);
 
 --
 -- Name: main_instancegroup_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_instancegroup_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_instancegroup_id_seq', 1, false);
 
 --
 -- Name: main_instancegroup_instances_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_instancegroup_instances_id_seq', 2, true);
+SELECT pg_catalog.setval('public.main_instancegroup_instances_id_seq', 1, false);
 
 --
 -- Name: main_instancelink_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3418,7 +3310,7 @@ SELECT pg_catalog.setval('public.main_instancelink_id_seq', 1, false);
 -- Name: main_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_inventory_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_inventory_id_seq', 1, false);
 
 --
 -- Name: main_inventory_labels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3520,7 +3412,7 @@ SELECT pg_catalog.setval('public.main_notificationtemplate_id_seq', 1, false);
 -- Name: main_organization_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_organization_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_organization_id_seq', 1, false);
 
 --
 -- Name: main_organization_notification_templates_approvals_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3550,7 +3442,7 @@ SELECT pg_catalog.setval('public.main_organization_notification_templates_succes
 -- Name: main_organizationgalaxycredentialmembership_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_organizationgalaxycredentialmembership_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_organizationgalaxycredentialmembership_id_seq', 1, false);
 
 --
 -- Name: main_organizationinstancegroupmembership_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3580,13 +3472,13 @@ SELECT pg_catalog.setval('public.main_rbac_role_ancestors_id_seq', 1, false);
 -- Name: main_rbac_roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_rbac_roles_id_seq', 38, true);
+SELECT pg_catalog.setval('public.main_rbac_roles_id_seq', 1, true);
 
 --
 -- Name: main_rbac_roles_members_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_rbac_roles_members_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_rbac_roles_members_id_seq', 1, false);
 
 --
 -- Name: main_rbac_roles_parents_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3598,7 +3490,7 @@ SELECT pg_catalog.setval('public.main_rbac_roles_parents_id_seq', 1, false);
 -- Name: main_receptoraddress_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_receptoraddress_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_receptoraddress_id_seq', 1, false);
 
 --
 -- Name: main_schedule_credentials_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -3688,13 +3580,13 @@ SELECT pg_catalog.setval('public.main_unifiedjob_notifications_id_seq', 1, false
 -- Name: main_unifiedjobtemplate_credentials_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_unifiedjobtemplate_credentials_id_seq', 1, true);
+SELECT pg_catalog.setval('public.main_unifiedjobtemplate_credentials_id_seq', 1, false);
 
 --
 -- Name: main_unifiedjobtemplate_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.main_unifiedjobtemplate_id_seq', 6, true);
+SELECT pg_catalog.setval('public.main_unifiedjobtemplate_id_seq', 4, true);
 
 --
 -- Name: main_unifiedjobtemplate_labels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
