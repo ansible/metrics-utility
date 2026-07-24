@@ -7,7 +7,7 @@ import subprocess
 import sys
 import uuid
 
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 
 import pandas as pd
@@ -29,8 +29,10 @@ def cleanup_glob(file_glob):
         os.remove(file)
         dirs.add(os.path.dirname(file))
     for d in dirs:
-        with suppress(OSError):
+        try:
             os.removedirs(d)
+        except OSError:
+            pass
 
 
 @contextmanager

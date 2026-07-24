@@ -1,4 +1,3 @@
-import contextlib
 import os
 import tempfile
 import uuid as _uuid_mod
@@ -232,8 +231,10 @@ class CandlepinClient:
             fd = None
         except Exception:
             if fd is not None:
-                with contextlib.suppress(OSError):
+                try:
                     os.close(fd)
+                except OSError:
+                    pass
             if os.path.exists(path):
                 os.unlink(path)
             raise

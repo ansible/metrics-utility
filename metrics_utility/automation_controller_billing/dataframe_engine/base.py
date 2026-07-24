@@ -222,7 +222,7 @@ class Base:
 
         return df.astype(types)
 
-    def summarize_merged_dataframes(self, df, columns, operations=None):
+    def summarize_merged_dataframes(self, df, columns, operations={}):
         """Reduce paired ``_x``/``_y`` suffix columns produced by an outer merge.
 
         For each column in *columns*, the ``_x`` and ``_y`` variants are combined
@@ -239,8 +239,6 @@ class Base:
         Returns:
             The DataFrame with reconciled columns (in-place).
         """
-        if operations is None:
-            operations = {}
         for col in columns:
             if operations.get(col) == 'min':
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)

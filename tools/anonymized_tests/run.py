@@ -496,7 +496,7 @@ def phase5_output(json_data: Any) -> None:
 
     for i, chunk in enumerate(chunks, 1):
         chunk_size = storage_segment._calculate_size(chunk)
-        chunk_key = next(iter(chunk), 'unknown')
+        chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
         chunk_path = f'{segment_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
         with open(chunk_path, 'w') as f:
             json.dump(chunk, f, indent=4)

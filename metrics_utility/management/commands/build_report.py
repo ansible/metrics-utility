@@ -166,7 +166,7 @@ class Command(BaseCommand):
         ship_path = extra_params['ship_path']
         if opt_since is not None:
             since_date = opt_since.date()
-            until_date = opt_until.date() if opt_until else datetime.datetime.now(tz=datetime.UTC).date()
+            until_date = opt_until.date() if opt_until else datetime.date.today()
 
             extra_params['since_date'] = since_date
             extra_params['until_date'] = until_date

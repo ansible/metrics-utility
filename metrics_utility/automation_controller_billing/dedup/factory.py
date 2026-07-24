@@ -54,7 +54,7 @@ class Factory:  # DedupFactory
     def _get_default_deduplicator(self, report_type, kwargs):
         if report_type in {'CCSP', 'CCSPv2'}:
             return DedupCCSP(**kwargs)
-        if report_type == 'RENEWAL_GUIDANCE':
+        if report_type in {'RENEWAL_GUIDANCE'}:
             return DedupRenewal(**kwargs)
         raise NotSupportedFactory(f'Unknown report type: {report_type}')
 

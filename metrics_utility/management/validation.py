@@ -747,7 +747,7 @@ def now():
     Returns:
         :class:`datetime.datetime` representing the current moment.
     """
-    return datetime.datetime.now(tz=datetime.UTC)
+    return datetime.datetime.now()
 
 
 def startofday(dt):
@@ -762,7 +762,7 @@ def startofday(dt):
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-def parse_date_param(value, help_texts=None, name=None):
+def parse_date_param(value, help_texts={None: ''}, name=None):
     """Parse a human-friendly date string into a timezone-aware datetime.
 
     Supported formats: ISO date (``2023-12-20``), ``Nd``/``Ndays`` (N days ago,
@@ -781,8 +781,6 @@ def parse_date_param(value, help_texts=None, name=None):
         :exc:`~metrics_utility.exceptions.UnparsableParameter`: If the string
             cannot be parsed.
     """
-    if help_texts is None:
-        help_texts = {None: ''}
     if not value:
         return None
 
@@ -815,7 +813,7 @@ def parse_date_param(value, help_texts=None, name=None):
         if not parsed:
             parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.UTC)
     except Exception as e:
-        raise UnparsableParameter(f'{e!s}: {help_text}')
+        raise UnparsableParameter(f'{str(e)}: {help_text}')
 
     # Set timezone to UTC when missing
     if parsed and parsed.tzinfo is None:
@@ -927,7 +925,7 @@ def validate_build_params(options, help_texts):
     if report_type in {'CCSP', 'CCSPv2'}:
         validate_ccsp_params(options)
 
-    if report_type == 'RENEWAL_GUIDANCE':
+    if report_type in {'RENEWAL_GUIDANCE'}:
         validate_renewal_params(options, help_texts)
 
     return parse_since_until(options, help_texts)
@@ -977,12 +975,12 @@ def handle_month(month):
     """Process month argument"""
     if month is not None:
         try:
-            date = datetime.datetime.strptime(month, '%Y-%m').replace(tzinfo=datetime.UTC)
+            date = datetime.datetime.strptime(month, '%Y-%m')
         except ValueError:
             raise DateFormatError('Invalid --month format. Supported date format: YYYY-MM')
     else:
         """Return last month if no month was passed"""
-        beginning_of_the_month = datetime.datetime.now(tz=datetime.UTC).replace(day=1)
+        beginning_of_the_month = datetime.datetime.today().replace(day=1)
         beginning_of_the_previous_month = beginning_of_the_month - relativedelta(months=1)
         date = beginning_of_the_previous_month
         y = date.strftime('%Y')

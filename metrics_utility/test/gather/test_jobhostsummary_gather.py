@@ -26,7 +26,9 @@ def safe_tarfile_member_check(member):
     if member.isdev() or member.isfifo():
         return False
     # Reject paths with directory traversal patterns
-    return not ('..' in member.name or member.name.startswith('/'))
+    if '..' in member.name or member.name.startswith('/'):
+        return False
+    return True
 
 
 class SafeTarFile:

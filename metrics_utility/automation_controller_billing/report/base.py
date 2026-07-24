@@ -152,10 +152,10 @@ class Base:
             return None
 
         def concatenate_columns_mapping(row):
-            return f'{row["original_host_name"]}__{row["install_uuid"]!s}__{row["job_remote_id"]!s}'
+            return f'{row["original_host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
 
         def concatenate_columns_destination(row):
-            return f'{row["host_name"]}__{row["install_uuid"]!s}__{row["job_remote_id"]!s}'
+            return f'{row["host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
 
         # Apply the function to each row of the DataFrame
         mapping_dataframe['host_composite_id'] = mapping_dataframe.apply(concatenate_columns_mapping, axis=1)
@@ -163,7 +163,7 @@ class Base:
         mapping_dataframe = mapping_dataframe['host_name'].astype(str).to_dict()
 
         def apply_mapping(row):
-            return mapping_dataframe.get(f'{row["host_name"]}__{row["install_uuid"]!s}__{row["job_remote_id"]}', row['host_name'])
+            return mapping_dataframe.get(f'{row["host_name"]}__{str(row["install_uuid"])}__{row["job_remote_id"]}', row['host_name'])
 
         destination_dataframe['host_name'] = destination_dataframe.apply(apply_mapping, axis=1)
         destination_dataframe['host_composite_id'] = destination_dataframe.apply(concatenate_columns_destination, axis=1)
@@ -255,7 +255,7 @@ class Base:
         def extract_infra_info(facts):
             def extract_value(value):
                 if isinstance(value, set):
-                    return next(iter(value)) if value else 'Unknown'
+                    return list(value)[0] if value else 'Unknown'
                 elif isinstance(value, list):
                     return value[0] if value else 'Unknown'
                 elif isinstance(value, str):

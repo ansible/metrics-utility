@@ -376,7 +376,7 @@ def _save_and_validate_chunks(chunks, storage_segment, max_size, output_dir, ano
         chunk_sizes.append(chunk_size)
         assert chunk_size <= max_size, f'Chunk {i} size ({chunk_size} bytes) exceeds the limit ({max_size} bytes)'
 
-        chunk_key = next(iter(chunk.keys())) if chunk else 'unknown'
+        chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
         chunk_keys.append(chunk_key)
 
         chunk_path = os.path.join(output_dir, f'chunk_{i:03d}_of_{len(chunks):03d}_{chunk_key}.json')
@@ -543,7 +543,7 @@ def test_anonymized_rollup_splitting_with_small_data(cleanup_test_data):
     )
 
     # Validate no array was unnecessarily split
-    chunk_keys = [next(iter(chunk.keys())) for chunk in chunks]
+    chunk_keys = [list(chunk.keys())[0] for chunk in chunks]
 
     # Count how many times each key appears
     key_counts = {}

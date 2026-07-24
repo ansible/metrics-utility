@@ -9,7 +9,7 @@ from .config import _get_install_type, _version
 
 
 @collector
-def config_django(*, billing_provider_params=None, output=DictOutput()):
+def config_django(*, billing_provider_params={}, output=DictOutput()):
     """Collect Controller configuration using AWX Django APIs (in-process variant).
 
     Equivalent to :func:`config` but reads settings and license info directly
@@ -26,8 +26,6 @@ def config_django(*, billing_provider_params=None, output=DictOutput()):
     from awx.main.utils import get_awx_version
     from django.conf import settings
 
-    if billing_provider_params is None:
-        billing_provider_params = {}
     license_info = get_license()
 
     return output.dict(

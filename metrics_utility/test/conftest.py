@@ -65,7 +65,7 @@ def setup_processed_dataframe(fixed_now):
     yield processed_df
 
 
-def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=None):
+def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=[]):
     """Assert that an Excel workbook contains exactly the expected sheet tabs.
 
     Args:
@@ -74,8 +74,6 @@ def validate_sheet_tab_names(file_path, expected_sheets, excluded_sheets=None):
         excluded_sheets: Sheet names to ignore when comparing.
     """
 
-    if excluded_sheets is None:
-        excluded_sheets = []
     wb = openpyxl.load_workbook(file_path)
     try:
         actual_tab_names = wb.sheetnames

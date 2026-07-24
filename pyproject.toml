@@ -86,35 +86,53 @@ indent-style = "space"
 [tool.ruff.lint]
 # Explicit rule selection (aligned with metrics-service where applicable)
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
     "B",    # flake8-bugbear
     "C4",   # flake8-comprehensions
     "C90",  # mccabe complexity
-    "UP",   # pyupgrade
-    "S",    # flake8-bandit (security)
-    "SIM",  # flake8-simplify
-    "DTZ",  # flake8-datetimez
+    "E",    # pycodestyle errors
+    "EXE",  # flake8-executable
+    "F",    # pyflakes
+    "FLY",  # flynt
+    "FURB", # refurb
+    "I",    # isort
+    "ISC",  # implicit string concatenation
+    "PERF", # perflint
     "PIE",  # flake8-pie
     "PLR",  # pylint refactoring
     "RUF",  # ruff-specific
-    "PERF", # perflint
-    "FLY",  # flynt
-    "FURB", # refurb
-    "ISC",  # implicit string concatenation
-    "EXE",  # flake8-executable
+    "S",    # flake8-bandit (security)
+    "SIM",  # flake8-simplify
     "T10",  # flake8-debugger
+    "UP",   # pyupgrade
+    "W",    # pycodestyle warnings
 ]
 ignore = [
-    # bugbear
+    "B006",     # mutable default arg — billing_provider_params={} is intentional, never mutated
     "B008",     # function call in default arg — DataframeOutput()/DictOutput() defaults are intentional
     "B011",     # assert False — used in unreachable-code guards
     "B017",     # assert blind exception — testing that any Exception is raised is valid
     "B904",     # raise from — TODO: add exception chaining
     "B905",     # zip() without strict= — behavior change, needs careful review
-    # bandit
+    "C402",     # unnecessary generator — dict() with generator is fine
+    "C417",     # dict.fromkeys() — dict comprehension is more readable
+    "C420",     # dict.fromkeys() — dict comprehension is more readable
+    "FLY002",   # str.join() is more readable than f-string for list-of-strings patterns
+    "FURB171",  # single-item membership test — intentional for future extension
+    "PERF401",  # list.extend/comprehension — readability over micro-optimization in data processing
+    "PLR0911",  # too many return statements
+    "PLR0912",  # too many branches — report builders and test helpers are inherently branchy
+    "PLR0913",  # too many arguments — complex functions
+    "PLR0915",  # too many statements — report builders are inherently large
+    "PLR0917",  # too many positional arguments
+    "PLR1704",  # redefining argument — intentional shadowing in storage put() methods
+    "PLR1714",  # repeated equality — single-element `in {..}` is intentional for future extension
+    "PLR2004",  # magic value comparison — common in tests and data processing
+    "RUF001",   # ambiguous unicode — intentional special characters
+    "RUF002",   # ambiguous unicode in docstring
+    "RUF003",   # ambiguous unicode in comment
+    "RUF010",   # f-string !s conversion — str() is more readable
+    "RUF012",   # ClassVar for mutable class attrs — Django models don't use this
+    "RUF015",   # next(iter()) — list()[0] is more readable
     "S101",     # use of assert — common in tests and validation
     "S105",     # hardcoded password — false positives on setting key names
     "S108",     # /tmp paths — test doubles use /tmp/fake-*
@@ -122,35 +140,17 @@ ignore = [
     "S113",     # request timeout — TODO: add timeouts to requests calls
     "S306",     # mktemp — used safely in controlled context
     "S608",     # SQL injection — using psycopg.sql safely, revisit
-    # simplify
     "SIM102",   # nested if — complex conditions, more readable nested
+    "SIM103",   # return not — if/return False/return True reads clearer
     "SIM105",   # contextlib.suppress — try/except/pass reads clearer in some spots
     "SIM108",   # ternary operator — many would create very long lines
     "SIM112",   # capitalized env var — `container` env var is genuinely lowercase (systemd/podman)
     "SIM115",   # context manager for files — some handles span multiple methods
     "SIM117",   # nested with — long mock chains, more readable nested
-    # ruff
-    "RUF001",   # ambiguous unicode — intentional special characters
-    "RUF002",   # ambiguous unicode in docstring
-    "RUF003",   # ambiguous unicode in comment
-    "RUF012",   # ClassVar for mutable class attrs — Django models don't use this
-    # pylint
-    "PLR0911",  # too many return statements
-    "PLR0913",  # too many arguments — complex functions
-    "PLR0915",  # too many statements — report builders are inherently large
-    "PLR0917",  # too many positional arguments
-    "PLR1704",  # redefining argument — intentional shadowing in storage put() methods
-    "PLR0912",  # too many branches — report builders and test helpers are inherently branchy
-    "PLR2004",  # magic value comparison — common in tests and data processing
-    # perflint
-    "PERF401",  # list.extend/comprehension — readability over micro-optimization in data processing
-    # flynt
-    "FLY002",   # str.join() is more readable than f-string for list-of-strings patterns
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "metrics_utility/test/**" = [
-    "DTZ",      # timezone-naive datetimes are fine in tests
     "PERF",     # performance micro-optimizations don't matter in tests
     "S106",     # hardcoded passwords in test fixtures
     "S310",     # URL scheme auditing is noise in tests
@@ -162,7 +162,6 @@ ignore = [
 ]
 "tools/**" = [
     "C901",     # complexity limits don't matter in dev tools
-    "DTZ",      # timezone-naive datetimes are fine in dev tools
     "EXE001",   # scripts have shebangs but don't need +x in repo
     "PERF",     # performance micro-optimizations don't matter in dev tools
     "S104",     # binding to all interfaces in dev tools

@@ -208,7 +208,7 @@ print('=' * 70)
 print(f'  {"Hour":<6} {"Collector":<35} {"Duration":>10} {"Peak MB":>10}')
 print(f'  {"----":<6} {"---------":<35} {"--------":>10} {"-------":>10}')
 
-collector_durations = dict.fromkeys(HOURLY_COLLECTORS, 0.0)
+collector_durations = {c: 0.0 for c in HOURLY_COLLECTORS}
 
 hourly_start = time.perf_counter()
 for hour in range(24):

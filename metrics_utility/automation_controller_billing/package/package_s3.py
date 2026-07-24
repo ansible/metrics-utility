@@ -34,7 +34,10 @@ class PackageS3(base.Package):
             logger.error(f'Insights for Ansible Automation Platform TAR {self.tar_path} not found')
             return False
 
-        return 'Error:' not in str(self.tar_path)
+        if 'Error:' in str(self.tar_path):
+            return False
+
+        return True
 
     def _destination_path(self, base_path, timestamp, filename):
         year = timestamp.strftime('%Y')

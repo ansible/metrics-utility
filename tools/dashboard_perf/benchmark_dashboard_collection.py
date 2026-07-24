@@ -193,14 +193,14 @@ def run_incremental_phase(
                 failed_runs.append(i)
                 print(
                     f'  {i:>4}   {run_since.isoformat():>28} {run_until.isoformat():>28}'
-                    f' {job_count!s:>8} {run_duration:>10.2f}s {get_memory_mb(process):>10.1f}{err_flag}'
+                    f' {str(job_count):>8} {run_duration:>10.2f}s {get_memory_mb(process):>10.1f}{err_flag}'
                 )
                 print(f'  Error: {result.get("message", "unknown error")}')
                 sys.exit(1)
 
             print(
                 f'  {i:>4}   {run_since.isoformat():>28} {run_until.isoformat():>28}'
-                f' {job_count!s:>8} {run_duration:>10.2f}s {current_memory:>10.1f}{err_flag}'
+                f' {str(job_count):>8} {run_duration:>10.2f}s {current_memory:>10.1f}{err_flag}'
             )
         except Exception as exc:
             run_duration = time.time() - run_start

@@ -191,7 +191,7 @@ def save_result_and_chunks(result, since, until, year, month, day):
         chunk_size = storage_segment._calculate_size(chunk)
         chunk_json = json.dumps(chunk, indent=4)
         chunk_path = f'{segment_chunks_dir}/chunk_{i:03d}_of_{len(chunks):03d}.json'
-        chunk_key = next(iter(chunk.keys())) if chunk else 'unknown'
+        chunk_key = list(chunk.keys())[0] if chunk else 'unknown'
 
         with open(chunk_path, 'w') as f:
             f.write(chunk_json)

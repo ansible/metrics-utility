@@ -118,7 +118,7 @@ class ReportRenewalGuidance(Base):
         # Ephemeral threshold, host's first automation must be older than ephemeral threshold
         # to be considered as ephemeral
         ephemeral_threshold = (
-            pd.to_datetime(datetime.datetime.now(tz=datetime.UTC) - datetime.timedelta(days=self.ephemeral_days - 1), format='ISO8601')
+            pd.to_datetime(datetime.datetime.now() - datetime.timedelta(days=self.ephemeral_days - 1), format='ISO8601')
             .replace(hour=0, minute=0, second=0, microsecond=0)
             .tz_localize(None)
         )

@@ -76,7 +76,7 @@ class BaseTraditional(BaseDataframe):
         df_grouped = self.cast_dataframe(df_grouped)
         return df_grouped.reset_index()
 
-    def summarize_merged_dataframes(self, df, columns, operations=None):
+    def summarize_merged_dataframes(self, df, columns, operations={}):
         """Reduce ``_x``/``_y`` suffix columns produced by an outer merge.
 
         Args:
@@ -89,8 +89,6 @@ class BaseTraditional(BaseDataframe):
         Returns:
             The DataFrame with reconciled columns (in-place modifications).
         """
-        if operations is None:
-            operations = {}
         for col in columns:
             if operations.get(col) == 'min':
                 df[col] = df[[f'{col}_x', f'{col}_y']].min(axis=1)

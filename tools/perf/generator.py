@@ -317,7 +317,7 @@ Environment vars:
         self.loaded[name] = pd.concat([self.loaded[name], data], ignore_index=True)
 
     def load(self):
-        self.loaded = dict.fromkeys(self.selected)
+        self.loaded = dict((s, None) for s in self.selected)
         logger.debug(f'loaded {self.loaded}')
 
         if os.path.isdir(self.source_tarballs):
@@ -348,7 +348,7 @@ Environment vars:
         logger.info(f'{table} - duplicated')
 
     def process(self):
-        self.generated = dict.fromkeys(self.selected)
+        self.generated = dict((s, None) for s in self.selected)
 
         self.gen_df('job_host_summary', job_host_summary_data, self.job_host_summary)
         self.gen_df('main_host', main_host_data, self.main_host)
