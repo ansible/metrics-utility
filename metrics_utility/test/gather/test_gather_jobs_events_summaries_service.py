@@ -220,7 +220,7 @@ jobs_lines = [
         'controller1,f,pending,f,,2025-06-13 10:02:10+00:00,120.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
-        'default_unified_job_template_2025-06-13,git'
+        'default_job_template_2025-06-13,git'
     ),
     (
         '2,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
@@ -228,7 +228,7 @@ jobs_lines = [
         'controller1,f,pending,f,2025-06-13 10:00:20+00:00,2025-06-13 10:03:20+00:00,180.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
-        'default_unified_job_template_2025-06-13,git'
+        'default_job_template_2025-06-13,git'
     ),
     (
         '3,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
@@ -237,7 +237,7 @@ jobs_lines = [
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}, '
         '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,20,'
-        'default_unified_job_template_2025-06-13,git'
+        'default_job_template_2025-06-13,git'
     ),
     (
         '4,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
@@ -246,7 +246,7 @@ jobs_lines = [
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}, '
         '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,8,'
-        'default_unified_job_template_2025-06-13,git'
+        'default_job_template_2025-06-13,git'
     ),
     (
         '5,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
@@ -255,7 +255,7 @@ jobs_lines = [
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}, '
         '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,15,'
-        'default_unified_job_template_2025-06-13,git'
+        'default_job_template_2025-06-13,git'
     ),
     (
         '6,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
@@ -263,7 +263,7 @@ jobs_lines = [
         'controller1,f,pending,f,2025-06-13 11:00:30+00:00,2025-06-13 11:01:50+00:00,80.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,25,'
-        'default_unified_job_template_2025-06-13,git'
+        'default_job_template_2025-06-13,git'
     ),
 ]
 
@@ -306,86 +306,86 @@ jobs_host_summary_service_lines = [
     (
         '1,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
         '31,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00:00,1,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
+        '2025-06-13 10:00:00+00:00,1,1,default_job_template_2025-06-13,2.9.10,manual,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '2,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
         '32,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00:00,1,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
+        '2025-06-13 10:00:00+00:00,1,1,default_job_template_2025-06-13,2.9.10,manual,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '3,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
         '31,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00:00,2,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
+        '2025-06-13 10:00:00+00:00,2,1,default_job_template_2025-06-13,2.9.10,scheduled,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '4,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
         '32,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 10:00:00+00:00,2,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
+        '2025-06-13 10:00:00+00:00,2,1,default_job_template_2025-06-13,2.9.10,scheduled,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '5,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_1_2025-06-13,'
         '31,0,0,1,0,0,0,t,0,0,'
-        '2025-06-13 10:00:00+00:00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
+        '2025-06-13 10:00:00+00:00,3,1,default_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '6,2025-06-13 10:00:00+00:00,2025-06-13 10:00:00+00:00,default_host_2_2025-06-13,'
         '32,0,0,1,0,0,0,t,0,0,'
-        '2025-06-13 10:00:00+00:00,3,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
+        '2025-06-13 10:00:00+00:00,3,1,default_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '7,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,default_host_1_2025-06-13,'
         '31,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 11:00:00+00:00,4,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
+        '2025-06-13 11:00:00+00:00,4,1,default_job_template_2025-06-13,2.9.10,manual,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '8,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,default_host_2_2025-06-13,'
         '32,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 11:00:00+00:00,4,1,default_unified_job_template_2025-06-13,2.9.10,manual,4,'
+        '2025-06-13 11:00:00+00:00,4,1,default_job_template_2025-06-13,2.9.10,manual,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '9,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,default_host_1_2025-06-13,'
         '31,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 11:00:00+00:00,5,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
+        '2025-06-13 11:00:00+00:00,5,1,default_job_template_2025-06-13,2.9.10,scheduled,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '10,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,default_host_2_2025-06-13,'
         '32,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 11:00:00+00:00,5,1,default_unified_job_template_2025-06-13,2.9.10,scheduled,4,'
+        '2025-06-13 11:00:00+00:00,5,1,default_job_template_2025-06-13,2.9.10,scheduled,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '11,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,default_host_1_2025-06-13,'
         '31,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 11:00:00+00:00,6,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
+        '2025-06-13 11:00:00+00:00,6,1,default_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
     (
         '12,2025-06-13 11:00:00+00:00,2025-06-13 11:00:00+00:00,default_host_2_2025-06-13,'
         '32,0,0,0,1,0,0,f,0,0,'
-        '2025-06-13 11:00:00+00:00,6,1,default_unified_job_template_2025-06-13,2.9.10,workflow,4,'
+        '2025-06-13 11:00:00+00:00,6,1,default_job_template_2025-06-13,2.9.10,workflow,4,'
         'default_inventory_2025-06-13,2,default_org_2025-06-13,1,'
-        'default_unified_job_template_2025-06-13,job'
+        'default_project_2025-06-13,job'
     ),
 ]
 
