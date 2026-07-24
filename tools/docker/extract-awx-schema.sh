@@ -118,7 +118,7 @@ $COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump -s -U
   > latest.sql
 
 echo "Extracting initial data..."
-$COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump --data-only -U awx awx \
+$COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump --data-only --disable-triggers -U awx awx \
   | pgdump_filter \
   > initial.sql
 
