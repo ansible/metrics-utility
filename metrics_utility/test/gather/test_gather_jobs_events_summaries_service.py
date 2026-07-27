@@ -492,6 +492,7 @@ def test_main_jobevent_service_row_limit(caplog):
         'host_remote_id',
         'host_id',
         'host_name',
+        'async_job_id',
         'warnings',
         'deprecations',
         'event_data_length',
