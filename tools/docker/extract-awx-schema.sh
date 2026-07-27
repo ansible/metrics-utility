@@ -106,18 +106,15 @@ AWX_LOGGING_MODE=stdout \
 echo "Extracting schema..."
 cd "$SCRIPT_DIR"
 $COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump -s -U awx awx \
-  `# strip pg_dump version comments — they change with postgres upgrades` \
-  | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d' \
-  `# strip pg18+ security directives and settings not present in older versions` \
-  | sed '/^\\restrict /d; /^\\unrestrict/d; /^SET transaction_timeout/d' \
-  `# strip pg18+ named NOT NULL constraints back to plain NOT NULL` \
-  | sed 's/ CONSTRAINT [a-z_]*_not_null[0-9]* NOT NULL/ NOT NULL/g' \
-  `# collapse consecutive blank lines left by the above removals` \
-  | cat -s \
-  `# strip trailing blank lines` \
-  | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' \
+  | python3 "$SCRIPT_DIR/filter_pgdump.py" \
   > latest.sql
 
+echo "Extracting initial data..."
+$COMPOSE_CMD -f "$SCRIPT_DIR/docker-compose.yaml" exec -T postgres pg_dump --data-only --disable-triggers -U awx awx \
+  | python3 "$SCRIPT_DIR/filter_pgdump.py" --normalize \
+  > initial.sql
+
 echo "Done. Schema written to $SCRIPT_DIR/latest.sql"
+echo "       Data written to $SCRIPT_DIR/initial.sql"
 echo "AWX commit: $(git -C "$AWX_DIR" rev-parse --short HEAD)"
-echo "Lines: $(wc -l < latest.sql)"
+echo "Lines: $(wc -l < latest.sql) (schema), $(wc -l < initial.sql) (data)"

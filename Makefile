@@ -2,7 +2,7 @@ COMPOSE_CMD ?= $(shell command -v podman-compose 2>/dev/null || echo "docker com
 COMPOSE_FILE = tools/docker/docker-compose.yaml
 
 help:
-	@echo help sync test coverage lint fix compose compose-pytest compose-env compose-service compose-pytest-svc clean psql
+	@echo help sync test coverage lint fix compose compose-pytest compose-env compose-service compose-pytest-svc compose-awx compose-awx-service compose-ui compose-ui-service clean psql
 
 sync:
 	uv run sync
@@ -37,6 +37,18 @@ compose-service:
 compose-pytest-svc:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile pytest-svc up
 
+compose-awx:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile awx up
+
+compose-awx-service:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile awx --profile service up
+
+compose-ui:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile awx --profile ansible-ui up
+
+compose-ui-service:
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile awx --profile service --profile ansible-ui up
+
 clean:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) down -v --rmi local
 
@@ -44,4 +56,4 @@ psql:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) exec postgres psql -U awx
 
 
-.PHONY: help sync test coverage lint fix compose compose-pytest compose-env compose-service compose-pytest-svc clean psql
+.PHONY: help sync test coverage lint fix compose compose-pytest compose-env compose-service compose-pytest-svc compose-awx compose-awx-service compose-ui compose-ui-service clean psql
