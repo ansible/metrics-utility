@@ -77,8 +77,9 @@ def anonymize_data(data):
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
 
-    For items with collection_source == 'Custom', replaces module names, collection names,
-    and role names with the string "Custom" instead of hashing them.
+    For items with collection_source == 'Custom', removes their entries from
+    module_stats, collection_stats, and role_stats entirely so private names
+    never appear in the outbound payload.
 
     Args:
         data: Flattened data structure with keys:

@@ -257,7 +257,7 @@ def _validate_job_host_summary(jobs_list, result):
 
 def _validate_events_modules(result):
     """Validate events modules section."""
-    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
+    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
     assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
     assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
     assert result['statistics']['rollup_period_warnings_total'] == 2, (
