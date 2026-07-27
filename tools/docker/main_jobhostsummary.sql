@@ -8,6 +8,19 @@ DECLARE
   task_uuid_2 text;
   event_data_1 text;
   event_data_2 text;
+  -- Diversified runner events (non-zero counters for anonymized events rollup)
+  diversify_modules text[] := ARRAY[
+    'ansible.builtin.yum',
+    'a10.acos_axapi.a10_slb_virtual_server'
+  ];
+  diversify_roles text[] := ARRAY[
+    'redhat.rhel_system_roles.timesync',
+    'a10.acos_axapi.device_config'
+  ];
+  diversify_mod text;
+  diversify_role text;
+  diversify_idx INTEGER;
+  diversify_counter INTEGER;
   --
   default_organization_id                           INTEGER;
   default_inventory_id                              INTEGER;
@@ -641,11 +654,10 @@ $yaml$,
       -- get host name
       SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
 
-      -- task_uuid should be i + host_name + 1, second task should be i + host_name + 2
-      -- convert i to text
+      -- task_uuid is per-task within a job (same across all hosts)
       i_text := i::text;
-      task_uuid_1 := i_text || '_' || host_name || '_1';
-      task_uuid_2 := i_text || '_' || host_name || '_2';
+      task_uuid_1 := i_text || '_1';
+      task_uuid_2 := i_text || '_2';
 
       event_data_1 := '{"task_action": "ansible.builtin.yum", "task_uuid": "' || task_uuid_1 || '"}';
       event_data_2 := '{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || task_uuid_2 || '"}';
@@ -745,6 +757,288 @@ $yaml$,
       );
     END LOOP;
   END LOOP;
+  --
+  -- Role events for 10:00 hour
+  -- These use FQCN roles so role_stats in the final output is non-empty after anonymization.
+  -- a10.acos_axapi.device_config (community) and redhat.rhel_system_roles.timesync (certified)
+  -- each appear in all 3 jobs × 2 hosts = 6 events per role.
+  FOR i IN array_lower(unified_jobs_10,1)..array_upper(unified_jobs_10,1) LOOP
+    unified_job_id := unified_jobs_10[i];
+    FOREACH host_id IN ARRAY host_ids LOOP
+      SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
+      i_text := i::text;
+
+      -- counter 3: a10.acos_axapi.device_config role, module a10.acos_axapi.a10_slb_virtual_server
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || i_text || '_role_a10"}')::text,
+        false, false,
+        host_name, 'default_play', 'a10.acos_axapi.device_config', 'configure device', 3,
+        host_id, unified_job_id, gen_random_uuid()::text, '', 3, 'default_playbook.yml',
+        3, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+
+      -- counter 4: redhat.rhel_system_roles.timesync role, module ansible.builtin.yum
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "ansible.builtin.yum", "task_uuid": "' || i_text || '_role_rhel"}')::text,
+        false, false,
+        host_name, 'default_play', 'redhat.rhel_system_roles.timesync', 'install packages', 4,
+        host_id, unified_job_id, gen_random_uuid()::text, '', 4, 'default_playbook.yml',
+        4, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+    END LOOP;
+  END LOOP;
+  --
+  -- Diversified runner events for 10:00 hour (job 1 / host 1).
+  -- Ensures anonymized events rollup has non-zero counters for every tracked
+  -- runner event type, ignore_errors variants, and module warnings/deprecations.
+  -- yum events → redhat.rhel_system_roles.timesync; a10 → a10.acos_axapi.device_config
+  -- so role_stats also get non-zero non-ok counters.
+  -- never_started: jobs keep started set (NULL would break job-duration fixtures).
+  --
+  IF array_length(unified_jobs_10, 1) >= 1 AND array_length(host_ids, 1) >= 1 THEN
+    unified_job_id := unified_jobs_10[1];
+    host_id := host_ids[1];
+    SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
+    diversify_counter := 300;
+
+    FOR diversify_idx IN 1..array_length(diversify_modules, 1) LOOP
+      diversify_mod := diversify_modules[diversify_idx];
+      diversify_role := diversify_roles[diversify_idx];
+
+      -- runner_on_failed (ignore_errors absent → false)
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_failed"}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify failed', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_failed with ignore_errors true
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_failed_ignored", "ignore_errors": true}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify failed ignored', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_unreachable
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_unreachable',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_unreachable"}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify unreachable', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_async_ok
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_async_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_async_ok"}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify async ok', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_async_failed (ignore_errors absent → false)
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_async_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_async_failed"}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify async failed', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_async_failed with ignore_errors true
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_async_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_async_failed_ignored", "ignore_errors": true}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify async failed ignored', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_item_on_ok
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_item_on_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_item_ok"}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify item ok', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_item_on_failed (ignore_errors absent → false)
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_item_on_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_item_failed"}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify item failed', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_item_on_failed with ignore_errors true
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_item_on_failed',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_item_failed_ignored", "ignore_errors": true}')::text,
+        true, false,
+        host_name, 'default_play', diversify_role, 'diversify item failed ignored', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_retry (Ansible until/retries)
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_retry',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_retry"}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify retry', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- runner_on_ok with module-level warnings + deprecations in event_data.res
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_ok_warn", "res": {"warnings": ["fixture warning"], "deprecations": [{"msg": "fixture deprecation"}]}}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify ok with warnings', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+    END LOOP;
+
+    -- Clear started on job 1 so jobs_never_started_total is non-zero in rollups.
+    -- finished stays set so the job remains in the gather window.
+    UPDATE public.main_unifiedjob
+    SET started = NULL
+    WHERE id = unified_job_id;
+  END IF;
   --
   -- Add warning and deprecated events (job-level annotation events)
   -- These don't have task_uuid, host_id, etc. - they're job-level annotations
@@ -1452,11 +1746,11 @@ $yaml$,
       -- get host name
       SELECT name INTO host_name FROM public.main_host WHERE id = host_id;
 
-      -- task_uuid should be i + host_name + 1, second task should be i + host_name + 2
-      -- convert i to text, add 10 to distinguish from 10:00 hour jobs
+      -- task_uuid is per-task within a job (same across all hosts)
+      -- add 10 to distinguish from 10:00 hour jobs
       i_text := (i + 10)::text;
-      task_uuid_1 := i_text || '_' || host_name || '_1';
-      task_uuid_2 := i_text || '_' || host_name || '_2';
+      task_uuid_1 := i_text || '_1';
+      task_uuid_2 := i_text || '_2';
 
       event_data_1 := '{"task_action": "ansible.builtin.yum", "task_uuid": "' || task_uuid_1 || '"}';
       event_data_2 := '{"task_action": "a10.acos_axapi.a10_slb_virtual_server", "task_uuid": "' || task_uuid_2 || '"}';

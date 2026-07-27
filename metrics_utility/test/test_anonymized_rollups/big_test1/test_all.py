@@ -433,7 +433,7 @@ def validate_ansible_versions_in_list(items, item_type):
             assert len(item['ansible_versions']) > 0
             for version in item['ansible_versions']:
                 assert version in expected_versions, (
-                    f'Unexpected ansible_versions {version} in {item_type} {item.get("module_name") or item.get("collection_name")}'
+                    f'Unexpected ansible_versions {version} in {item_type} {item.get("module") or item.get("collection")}'
                 )
 
 
@@ -448,16 +448,18 @@ def validate_module_stats(result):
         'module',
         'collection',
         'jobs_total',
-        'unique_hosts_total',
-        'processed_events_total',
+        'collected_events_total',
+        'event_data_size_total',
         'ansible_versions',
     ]
 
     for module in module_stats:
         for field in required_fields:
             assert field in module
-        assert isinstance(module['processed_events_total'], (int, float))
-        assert module['processed_events_total'] > 0
+        assert isinstance(module['collected_events_total'], (int, float))
+        assert module['collected_events_total'] > 0
+        assert isinstance(module['event_data_size_total'], (int, float))
+        assert module['event_data_size_total'] >= 0
 
     validate_ansible_versions_in_list(module_stats, 'module')
 
@@ -472,15 +474,18 @@ def validate_collection_stats(result):
         'collection',
         'collection_source',
         'jobs_total',
-        'processed_events_total',
+        'collected_events_total',
+        'event_data_size_total',
         'ansible_versions',
     ]
 
     for collection in collection_stats:
         for field in required_fields:
             assert field in collection
-        assert isinstance(collection['processed_events_total'], (int, float))
-        assert collection['processed_events_total'] > 0
+        assert isinstance(collection['collected_events_total'], (int, float))
+        assert collection['collected_events_total'] > 0
+        assert isinstance(collection['event_data_size_total'], (int, float))
+        assert collection['event_data_size_total'] >= 0
 
     validate_ansible_versions_in_list(collection_stats, 'collection')
 
@@ -497,15 +502,17 @@ def validate_role_stats(result):
         'collection',
         'collection_source',
         'jobs_total',
-        'tasks_total',
-        'processed_events_total',
+        'collected_events_total',
+        'event_data_size_total',
     ]
 
     for role_stat in role_stats:
         for field in required_fields:
             assert field in role_stat
-        assert isinstance(role_stat['processed_events_total'], (int, float))
-        assert role_stat['processed_events_total'] > 0
+        assert isinstance(role_stat['collected_events_total'], (int, float))
+        assert role_stat['collected_events_total'] > 0
+        assert isinstance(role_stat['event_data_size_total'], (int, float))
+        assert role_stat['event_data_size_total'] >= 0
 
     # Verify that at least one role has a known collection_source
     known_collection_roles = [r for r in role_stats if r.get('collection_source') != 'Custom']

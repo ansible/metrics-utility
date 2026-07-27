@@ -120,9 +120,17 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     assert 'duration' in query
     assert 'warnings' in query
     assert 'deprecations' in query
+    assert 'octet_length(e.event_data)' in query
+    assert 'event_data_length' in query
 
     # Should have ansible_version from unified_job
     assert 'uj.ansible_version' in query or 'ansible_version' in query
+
+    # ignore_errors must fall back to res._ansible_ignore_errors, since the
+    # awx_display callback only sets the top-level key for runner_on_failed
+    # and leaves runner_item_on_failed/runner_on_async_failed without it.
+    assert "event_data->>'ignore_errors'" in query
+    assert "event_data->'res'->>'_ansible_ignore_errors'" in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
@@ -198,8 +206,8 @@ def test_main_jobevent_service_initial_query_parameters(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
-    """Test that query handles playbook_on_stats event specially."""
+def test_main_jobevent_service_annotation_events_only(mock_copy_pandas):
+    """Test that query collects warning/deprecated and excludes playbook_on_* lifecycle events."""
     mock_db = MagicMock()
     mock_cursor = MagicMock()
     mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
@@ -218,10 +226,11 @@ def test_main_jobevent_service_playbook_stats_handling(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Should have CASE statement for playbook_on_stats
-    assert 'playbook_on_stats' in query
-    assert 'CASE' in query
-    assert 'artifact_data' in query
+    assert "'warning'" in query
+    assert "'deprecated'" in query
+    assert 'playbook_on_task_start' not in query
+    assert 'playbook_on_stats' not in query
+    assert 'artifact_data' not in query
 
 
 # ---------------------------------------------------------------------------
