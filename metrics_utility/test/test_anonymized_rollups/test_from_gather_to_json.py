@@ -144,9 +144,9 @@ def _validate_module_stats_structure(json_data):
     if not json_data['module_stats']:
         return
     for module_stat in json_data['module_stats']:
-        assert 'module_name' in module_stat
+        assert 'module' in module_stat
         assert 'collection_source' in module_stat
-        assert 'collection_name' in module_stat
+        assert 'collection' in module_stat
         assert 'jobs_total' in module_stat
         assert 'unique_hosts_total' in module_stat
         assert 'processed_events_total' in module_stat
@@ -159,7 +159,7 @@ def _validate_collection_stats_structure(json_data):
     if not json_data['collection_stats']:
         return
     for collection_stat in json_data['collection_stats']:
-        assert 'collection_name' in collection_stat
+        assert 'collection' in collection_stat
         assert 'collection_source' in collection_stat
         assert 'jobs_total' in collection_stat
         assert 'processed_events_total' in collection_stat
@@ -232,7 +232,7 @@ def _validate_jobs_by_ansible_version_structure(json_data):
 def _validate_module_stats_values(json_data):
     """Validate module_stats actual values."""
     print('--- Validating module_stats data values ---')
-    module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
+    module_stats_dict = {m['module']: m for m in json_data['module_stats']}
 
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
     assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (unknown collections removed by filter), got {len(anonymized_modules)}'
@@ -255,7 +255,7 @@ def _validate_module_stats_values(json_data):
 def _validate_collection_stats_values(json_data):
     """Validate collection_stats actual values."""
     print('--- Validating collection_stats data values ---')
-    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
+    collection_stats_dict = {c['collection']: c for c in json_data['collection_stats']}
 
     a10_collection = collection_stats_dict.get('a10.acos_axapi')
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'
@@ -282,10 +282,8 @@ def _validate_role_stats(json_data):
     for role_stat in anonymized_roles:
         if role_stat.get('role'):
             assert role_stat['role'] == 'Custom', f'Anonymized role name should be "Custom", got {role_stat.get("role")}'
-        if role_stat.get('collection_name'):
-            assert role_stat['collection_name'] == 'Custom', (
-                f'Anonymized collection_name in role_stat should be "Custom", got {role_stat.get("collection_name")}'
-            )
+        if role_stat.get('collection'):
+            assert role_stat['collection'] == 'Custom', f'Anonymized collection in role_stat should be "Custom", got {role_stat.get("collection")}'
 
 
 def _validate_jobs_by_installed_collections_versions(json_data):
@@ -295,9 +293,171 @@ def _validate_jobs_by_installed_collections_versions(json_data):
     print('--- Validating jobs_by_installed_collections_versions data values ---')
     jobs_by_installed_collections_versions = json_data['jobs_by_installed_collections_versions']
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
-    unknown_collections = [c for c in jobs_by_installed_collections_versions if c.get('collection') == 'Custom']
-    known_collections = [c for c in jobs_by_installed_collections_versions if c.get('collection') != 'Custom']
-    assert len(unknown_collections) == 0, f'Should have 0 Custom collections (removed by filter), got {len(unknown_collections)}'
+    new_fields = [
+        'jobs_never_started_total',
+        'jobs_duration_total_seconds',
+        'jobs_successful_duration_total_seconds',
+        'jobs_failed_duration_total_seconds',
+        'job_duration_maximum_seconds',
+        'job_duration_minimum_seconds',
+        'job_waiting_time_total_seconds',
+        'job_waiting_time_maximum_seconds',
+        'job_waiting_time_minimum_seconds',
+        'templates_total',
+        'inventories_total',
+        'ansible_versions',
+    ]
+    for collection in jobs_by_installed_collections_versions:
+        assert collection['collection'] != 'Custom', f'Custom collections are removed, got {collection.get("collection")}'
+        assert collection['version'] != 'Custom', f'Custom collection versions are removed, got {collection.get("version")}'
+        assert 'version' in collection, 'Each collection should have version field'
+        assert 'jobs_total' in collection, 'Each collection should have jobs_total field'
+        assert 'jobs_failed_total' in collection, 'Each collection should have jobs_failed_total field'
+        assert 'jobs_successful_total' in collection, 'Each collection should have jobs_successful_total field'
+        assert isinstance(collection.get('jobs_total'), int), 'jobs_total should be an integer'
+        assert isinstance(collection.get('jobs_failed_total'), int), 'jobs_failed_total should be an integer'
+        assert isinstance(collection.get('jobs_successful_total'), int), 'jobs_successful_total should be an integer'
+        assert collection['jobs_failed_total'] + collection['jobs_successful_total'] == collection['jobs_total'], (
+            f'jobs_failed_total + jobs_successful_total should equal jobs_total for {collection}'
+        )
+        for field in new_fields:
+            assert field in collection, (
+                f'Missing new field {field!r} in jobs_by_installed_collections_versions entry {collection["collection"]} {collection["version"]}'
+            )
+        assert isinstance(collection['jobs_never_started_total'], int), 'jobs_never_started_total should be an int'
+        assert isinstance(collection['templates_total'], int), 'templates_total should be an int'
+        assert isinstance(collection['inventories_total'], int), 'inventories_total should be an int'
+        assert isinstance(collection['ansible_versions'], list), 'ansible_versions should be a list'
+        assert collection['jobs_duration_total_seconds'] >= 0, 'jobs_duration_total_seconds should be non-negative'
+        assert collection['job_waiting_time_total_seconds'] >= 0, 'job_waiting_time_total_seconds should be non-negative'
+        # max >= min when both are set
+        if collection['job_duration_maximum_seconds'] is not None and collection['job_duration_minimum_seconds'] is not None:
+            assert collection['job_duration_maximum_seconds'] >= collection['job_duration_minimum_seconds'], (
+                'job_duration_maximum_seconds should be >= job_duration_minimum_seconds'
+            )
+        if collection['job_waiting_time_maximum_seconds'] is not None and collection['job_waiting_time_minimum_seconds'] is not None:
+            assert collection['job_waiting_time_maximum_seconds'] >= collection['job_waiting_time_minimum_seconds'], (
+                'job_waiting_time_maximum_seconds should be >= job_waiting_time_minimum_seconds'
+            )
+
+
+def _validate_role_stats_and_jobs_by_installed_collections_versions(json_data):
+    """Validate anonymized role_stats and jobs_by_installed_collections_versions."""
+    _validate_role_stats(json_data)
+    _validate_jobs_by_installed_collections_versions(json_data)
+
+
+def _validate_jobs_values(json_data, statistics):
+    """Validate jobs actual values."""
+    print('--- Validating jobs data values ---')
+    assert statistics['rollup_period_jobs_total'] == 3, 'Should have 3 total jobs'
+    assert statistics['rollup_period_forks_total'] == 35, 'Should have 35 total forks (5 + 10 + 20)'
+    assert len(json_data['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
+    job = json_data['jobs_by_job_type'][0]
+    assert job['jobs_total'] == 3, 'Job type should have 3 jobs'
+    assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
+    assert job['jobs_failed_total'] == 0, 'Should have 0 failed jobs'
+    assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
+    # Job durations: 120s + 180s + 90s = 390s total
+    assert job['jobs_duration_total_seconds'] == pytest.approx(390.0, rel=1e-6), (
+        f'Job duration total should be 390 seconds (120+180+90), got {job["jobs_duration_total_seconds"]}'
+    )
+    assert job['job_duration_minimum_seconds'] == pytest.approx(90.0, rel=1e-6), (
+        f'Job duration minimum should be 90 seconds, got {job["job_duration_minimum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6), (
+        f'Job duration maximum should be 180 seconds, got {job["job_duration_maximum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
+    # Waiting time: all jobs created at 10:00:00, started at 10:00:10, 10:00:20, 10:00:30
+    # Job 1: 10s wait, Job 2: 20s wait, Job 3: 30s wait = 60s total
+    assert job['job_waiting_time_total_seconds'] == pytest.approx(60.0, rel=1e-6), (
+        f'Job waiting time total should be 60 seconds (10+20+30), got {job["job_waiting_time_total_seconds"]}'
+    )
+
+
+def _validate_jobs_values_multi_hour(json_data, statistics):
+    """Validate jobs actual values for multi-hour data (10:00-12:00)."""
+    print('--- Validating jobs data values (multi-hour) ---')
+    # 3 jobs from 10:00 hour + 3 jobs from 11:00 hour = 6 total
+    assert statistics['rollup_period_jobs_total'] == 6, 'Should have 6 total jobs (3 from 10:00 + 3 from 11:00)'
+    # Forks: (5 + 10 + 20) from 10:00 + (8 + 15 + 25) from 11:00 = 35 + 48 = 83
+    assert statistics['rollup_period_forks_total'] == 83, 'Should have 83 total forks (35 + 48)'
+    assert len(json_data['jobs_by_job_type']) == 1, 'Should have 1 job_type group'
+    job = json_data['jobs_by_job_type'][0]
+    assert job['jobs_total'] == 6, 'Job type should have 6 jobs'
+    assert statistics['rollup_period_templates_total'] == 1, 'Should have 1 total job template (sum from all job_type groups)'
+    assert job['jobs_failed_total'] == 1, 'Should have 1 failed job (job 3 from 10:00h)'
+    assert job['job_type'] == 'job', f"Expected job_type to be 'job', but got {job['job_type']}"
+    # Job durations: 10:00 hour: 120s + 180s + 90s = 390s
+    #                11:00 hour: 100s + 150s + 80s = 330s
+    #                Total: 720s
+    assert job['jobs_duration_total_seconds'] == pytest.approx(720.0, rel=1e-6), (
+        f'Job duration total should be 720 seconds (390+330), got {job["jobs_duration_total_seconds"]}'
+    )
+    assert job['job_duration_minimum_seconds'] == pytest.approx(80.0, rel=1e-6), (
+        f'Job duration minimum should be 80 seconds, got {job["job_duration_minimum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] == pytest.approx(180.0, rel=1e-6), (
+        f'Job duration maximum should be 180 seconds, got {job["job_duration_maximum_seconds"]}'
+    )
+    assert job['job_duration_maximum_seconds'] >= job['job_duration_minimum_seconds'], 'Max duration should be >= min duration'
+    # Waiting time: 10:00 hour: 10s + 20s + 30s = 60s
+    #              11:00 hour: 10s + 20s + 30s = 60s
+    #              Total: 120s
+    assert job['job_waiting_time_total_seconds'] == pytest.approx(120.0, rel=1e-6), (
+        f'Job waiting time total should be 120 seconds (60+60), got {job["job_waiting_time_total_seconds"]}'
+    )
+
+
+def _validate_job_host_summary_values(json_data, statistics):
+    """Validate job_host_summary data merged into jobs_by_job_type."""
+    print('--- Validating job_host_summary data values (merged into jobs_by_job_type) ---')
+    assert statistics['rollup_period_unique_hosts_total'] == 2, 'Should have 2 unique hosts'
+    assert statistics['rollup_period_job_host_pairs_total'] == 6, (
+        f'Should have 6 total job host summary records (3 jobs × 2 hosts), got {statistics["rollup_period_job_host_pairs_total"]}'
+    )
+
+    job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
+    assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
+    assert job_entry['ok_total'] == 6, 'Should have 6 ok tasks'
+    assert job_entry['failed_total'] == 0, 'Should have 0 failures'
+    assert job_entry['unreachable_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
+    # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
+    # not per job_type group, as host_ids are not tracked in groupings
+
+
+def _validate_job_host_summary_values_multi_hour(json_data, statistics):
+    """Validate job_host_summary data merged into jobs_by_job_type for multi-hour data."""
+    print('--- Validating job_host_summary data values (merged into jobs_by_job_type, multi-hour) ---')
+    assert statistics['rollup_period_unique_hosts_total'] == 2, 'Should have 2 unique hosts'
+    # 6 jobs from 10:00 + 6 jobs from 11:00 = 12 total job-host pairs (6 jobs × 2 hosts)
+    assert statistics['rollup_period_job_host_pairs_total'] == 12, (
+        f'Should have 12 total job host summary records (6 jobs × 2 hosts), got {statistics["rollup_period_job_host_pairs_total"]}'
+    )
+
+    job_entry = next((j for j in json_data['jobs_by_job_type'] if j.get('job_type') == 'job'), None)
+    assert job_entry is not None, 'Should have job_type job in jobs_by_job_type'
+    # 10:00h: jobs 1 and 2 have ok=1 per host (2×2=4), job 3 (failed) has ok=0 per host (1×2=0)
+    # 11:00h: all 3 jobs have ok=1 per host (3×2=6)
+    # Total: 4 + 0 + 6 = 10
+    assert job_entry['ok_total'] == 10, 'Should have 10 ok tasks (job 3 from 10:00h is failed with ok=0)'
+    # job 3 (10:00h, failed) has failures=1 per host, 2 hosts → 2 total failures
+    assert job_entry['failed_total'] == 2, 'Should have 2 failures (job 3 from 10:00h: 2 hosts × failures=1)'
+    assert job_entry['unreachable_total'] == 0, 'Should have 0 dark (unreachable) hosts'
+    assert job_entry['skipped_total'] == 0, 'Should have 0 skipped tasks'
+    # Note: unique_hosts_total is only computed at the top level (rollup_period_unique_hosts_total),
+    # not per job_type group, as host_ids are not tracked in groupings
+
+
+def _validate_module_stats_values_multi_hour(json_data):
+    """Validate module_stats actual values for multi-hour data (6 jobs total)."""
+    print('--- Validating module_stats data values (multi-hour) ---')
+    module_stats_dict = {m['module']: m for m in json_data['module_stats']}
+
+    anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
+    assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (Custom collections removed), got {len(anonymized_modules)}'
 
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
@@ -320,7 +480,7 @@ def _validate_jobs_by_installed_collections_versions(json_data):
 def _validate_collection_stats_values_multi_hour(json_data):
     """Validate collection_stats actual values for multi-hour data (6 jobs total)."""
     print('--- Validating collection_stats data values (multi-hour) ---')
-    collection_stats_dict = {c['collection_name']: c for c in json_data['collection_stats']}
+    collection_stats_dict = {c['collection']: c for c in json_data['collection_stats']}
 
     a10_collection = collection_stats_dict.get('a10.acos_axapi')
     assert a10_collection is not None, 'Should have a10.acos_axapi collection'

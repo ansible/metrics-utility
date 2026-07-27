@@ -445,8 +445,8 @@ def validate_module_stats(result):
     assert result['statistics']['rollup_period_modules_total'] == 6
 
     required_fields = [
-        'module_name',
-        'collection_name',
+        'module',
+        'collection',
         'jobs_total',
         'unique_hosts_total',
         'processed_events_total',
@@ -469,7 +469,7 @@ def validate_collection_stats(result):
     assert len(collection_stats) == 2
 
     required_fields = [
-        'collection_name',
+        'collection',
         'collection_source',
         'jobs_total',
         'processed_events_total',
@@ -494,7 +494,7 @@ def validate_role_stats(result):
 
     required_fields = [
         'role',
-        'collection_name',
+        'collection',
         'collection_source',
         'jobs_total',
         'tasks_total',
@@ -514,7 +514,7 @@ def validate_role_stats(result):
     valid_sources = {'certified', 'community', 'validated', 'partner'}
     for role_stat in known_collection_roles:
         assert role_stat['collection_source'] in valid_sources
-        assert role_stat['collection_name'] is not None and role_stat['collection_name'] != ''
+        assert role_stat['collection'] is not None and role_stat['collection'] != ''
 
 
 def validate_playbooks(result):
