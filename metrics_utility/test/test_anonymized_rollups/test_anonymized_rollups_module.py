@@ -63,20 +63,20 @@ def test_create_anonymized_object_unknown_name_raises():
 
 def test_anonymize_data_none_returns_none():
     """anonymize_data should return immediately (no error) when data is None."""
-    result = anonymize_data(None, 'salt')
+    result = anonymize_data(None)
     assert result is None
 
 
 def test_anonymize_data_non_dict_returns_none():
     """anonymize_data should return immediately when data is not a dict."""
-    result = anonymize_data(['not', 'a', 'dict'], 'salt')
+    result = anonymize_data(['not', 'a', 'dict'])
     assert result is None
 
 
 def test_anonymize_data_empty_dict_does_not_raise():
     """anonymize_data with an empty dict should be a no-op."""
     data = {}
-    anonymize_data(data, 'salt')
+    anonymize_data(data)
     assert data == {}
 
 
@@ -107,12 +107,12 @@ def test_anonymize_data_known_collection_unchanged():
             }
         ],
     }
-    anonymize_data(data, 'salt')
+    anonymize_data(data)
     assert data['jobs_by_installed_collections_versions'][0]['collection'] == 'ansible.posix'
     assert data['jobs_by_installed_collections_versions'][0]['version'] == '1.5.0'
 
 
-def test_anonymize_data_empty_collection_name_becomes_custom():
+def test_anonymize_data_unknown_installed_collection_removed():
     data = {
         'jobs_by_installed_collections_versions': [
             {
@@ -122,13 +122,11 @@ def test_anonymize_data_empty_collection_name_becomes_custom():
             }
         ],
     }
-    anonymize_data(data, 'salt')
-    row = data['jobs_by_installed_collections_versions'][0]
-    assert row['collection'] == 'Custom'
-    assert row['version'] == 'Custom'
+    anonymize_data(data)
+    assert data['jobs_by_installed_collections_versions'] == []
 
 
-def test_anonymize_data_pd_na_collection_does_not_raise():
+def test_anonymize_data_pd_na_collection_removed():
     data = {
         'jobs_by_installed_collections_versions': [
             {
@@ -138,10 +136,8 @@ def test_anonymize_data_pd_na_collection_does_not_raise():
             }
         ],
     }
-    anonymize_data(data, 'salt')
-    row = data['jobs_by_installed_collections_versions'][0]
-    assert row['collection'] == 'Custom'
-    assert row['version'] == 'Custom'
+    anonymize_data(data)
+    assert data['jobs_by_installed_collections_versions'] == []
 
 
 # ---------------------------------------------------------------------------
@@ -185,3 +181,58 @@ def test_inject_controller_version_no_versions_injects_none():
     jobs = [{'job_type': 'run'}]
     result = _inject_controller_version(jobs, [])
     assert result[0]['controller_version'] is None
+
+
+# ---------------------------------------------------------------------------
+# anonymize_data – indirect_nodes_by_collection / indirect_nodes_by_module
+# ---------------------------------------------------------------------------
+
+
+def test_anonymize_data_indirect_nodes_by_collection_removes_private():
+    """anonymize_data strips private collection names from indirect_nodes_by_collection."""
+    data = {
+        'indirect_nodes_by_collection': [
+            {'collection': 'cisco.ios', 'host_count': 5},
+            {'collection': 'acme.private_collection', 'host_count': 3},
+        ],
+    }
+    anonymize_data(data)
+    names = [e['collection'] for e in data['indirect_nodes_by_collection']]
+    assert 'cisco.ios' in names
+    assert 'acme.private_collection' not in names
+
+
+def test_anonymize_data_indirect_nodes_by_collection_removes_no_collection_sentinel():
+    """anonymize_data strips the _no_collection sentinel from indirect_nodes_by_collection."""
+    data = {
+        'indirect_nodes_by_collection': [
+            {'collection': '_no_collection', 'host_count': 2},
+        ],
+    }
+    anonymize_data(data)
+    assert data['indirect_nodes_by_collection'] == []
+
+
+def test_anonymize_data_indirect_nodes_by_module_removes_private():
+    """anonymize_data strips modules whose collection prefix is private from indirect_nodes_by_module."""
+    data = {
+        'indirect_nodes_by_module': [
+            {'module': 'cisco.ios.ios_command', 'host_count': 5},
+            {'module': 'acme.private_collection.some_module', 'host_count': 3},
+        ],
+    }
+    anonymize_data(data)
+    names = [e['module'] for e in data['indirect_nodes_by_module']]
+    assert 'cisco.ios.ios_command' in names
+    assert 'acme.private_collection.some_module' not in names
+
+
+def test_anonymize_data_indirect_nodes_by_module_removes_no_module_sentinel():
+    """anonymize_data strips the _no_module sentinel from indirect_nodes_by_module."""
+    data = {
+        'indirect_nodes_by_module': [
+            {'module': '_no_module', 'host_count': 2},
+        ],
+    }
+    anonymize_data(data)
+    assert data['indirect_nodes_by_module'] == []

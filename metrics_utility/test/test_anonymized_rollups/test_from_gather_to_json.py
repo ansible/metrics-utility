@@ -235,21 +235,7 @@ def _validate_module_stats_values(json_data):
     module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
 
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
-    assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
-    yum_module = anonymized_modules[0]
-    assert yum_module['jobs_total'] == 3, 'Should have 3 jobs using ansible.builtin.yum (anonymized)'
-    assert yum_module['unique_hosts_total'] == 2, 'Should have 2 hosts for ansible.builtin.yum (anonymized)'
-    assert yum_module['task_ok_total'] == 6, 'Should have 6 successful tasks for ansible.builtin.yum (3 jobs × 2 hosts)'
-    assert yum_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
-    assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
-    assert yum_module['processed_events_total'] == 6, 'Should have 6 processed events for ansible.builtin.yum (3 jobs × 2 hosts)'
-    assert 'ansible_versions' in yum_module, 'yum_module should have ansible_versions field'
-    assert isinstance(yum_module['ansible_versions'], list), 'ansible_versions should be a list'
-    assert len(yum_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
-    for version in yum_module['ansible_versions']:
-        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert yum_module['module_name'] == 'Custom', f'Anonymized module name should be "Custom", got {yum_module["module_name"]}'
-    assert yum_module['collection_name'] == 'Custom', f'Anonymized collection name should be "Custom", got {yum_module.get("collection_name")}'
+    assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (unknown collections removed by filter), got {len(anonymized_modules)}'
 
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
@@ -285,21 +271,7 @@ def _validate_collection_stats_values(json_data):
     assert a10_collection['processed_events_total'] == 6, 'a10.acos_axapi collection should have 6 processed events (3 jobs × 2 hosts)'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
-    assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
-    builtin_collection = anonymized_collections[0]
-    assert builtin_collection['collection_source'] == 'Custom', 'ansible.builtin collection should be Custom (not in collections.json)'
-    assert builtin_collection['jobs_total'] == 3, 'ansible.builtin collection should have 3 jobs'
-    assert 'ansible_versions' in builtin_collection, 'Each collection_stat should have ansible_versions field'
-    assert isinstance(builtin_collection['ansible_versions'], list), 'ansible_versions should be a list'
-    assert len(builtin_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
-    for version in builtin_collection['ansible_versions']:
-        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
-    assert builtin_collection['task_ok_total'] == 6, 'ansible.builtin collection should have 6 successful tasks'
-    assert builtin_collection['processed_events_total'] == 6, 'ansible.builtin collection should have 6 processed events (3 jobs × 2 hosts)'
-    assert builtin_collection['collection_name'] == 'Custom', (
-        f'Anonymized collection name should be "Custom", got {builtin_collection["collection_name"]}'
-    )
+    assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (removed by filter), got {len(anonymized_collections)}'
 
 
 def _validate_role_stats(json_data):
@@ -325,10 +297,7 @@ def _validate_jobs_by_installed_collections_versions(json_data):
     assert isinstance(jobs_by_installed_collections_versions, list), 'jobs_by_installed_collections_versions should be a list'
     unknown_collections = [c for c in jobs_by_installed_collections_versions if c.get('collection') == 'Custom']
     known_collections = [c for c in jobs_by_installed_collections_versions if c.get('collection') != 'Custom']
-    assert len(unknown_collections) > 0, 'Should have at least one collection with "Custom" collection (ansible.builtin)'
-    for collection in unknown_collections:
-        assert collection['collection'] == 'Custom', f'Custom collection should have collection "Custom", got {collection.get("collection")}'
-        assert collection['version'] == 'Custom', f'Custom collection should have version "Custom", got {collection.get("version")}'
+    assert len(unknown_collections) == 0, f'Should have 0 Custom collections (removed by filter), got {len(unknown_collections)}'
     new_fields = [
         'jobs_never_started_total',
         'jobs_duration_total_seconds',
@@ -501,24 +470,7 @@ def _validate_module_stats_values_multi_hour(json_data):
     module_stats_dict = {m['module_name']: m for m in json_data['module_stats']}
 
     anonymized_modules = [m for m in json_data['module_stats'] if m.get('collection_source') == 'Custom']
-    assert len(anonymized_modules) == 1, f'Should have 1 anonymized module (ansible.builtin.yum), got {len(anonymized_modules)}'
-    yum_module = anonymized_modules[0]
-    # 6 jobs total (3 from 10:00 + 3 from 11:00)
-    assert yum_module['jobs_total'] == 6, 'Should have 6 jobs using ansible.builtin.yum (anonymized)'
-    assert yum_module['unique_hosts_total'] == 2, 'Should have 2 hosts for ansible.builtin.yum (anonymized)'
-    # 6 jobs × 2 hosts = 12 successful tasks
-    assert yum_module['task_ok_total'] == 12, 'Should have 12 successful tasks for ansible.builtin.yum (6 jobs × 2 hosts)'
-    assert yum_module['task_ok_with_retries_total'] == 0, 'Should have 0 reruns for ansible.builtin.yum'
-    assert yum_module['task_failed_total'] == 0, 'Should have 0 failures for ansible.builtin.yum'
-    # 6 jobs × 2 hosts = 12 processed events
-    assert yum_module['processed_events_total'] == 12, 'Should have 12 processed events for ansible.builtin.yum (6 jobs × 2 hosts)'
-    assert 'ansible_versions' in yum_module, 'yum_module should have ansible_versions field'
-    assert isinstance(yum_module['ansible_versions'], list), 'ansible_versions should be a list'
-    assert len(yum_module['ansible_versions']) > 0, 'ansible_versions should not be empty'
-    for version in yum_module['ansible_versions']:
-        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert yum_module['module_name'] == 'Custom', f'Anonymized module name should be "Custom", got {yum_module["module_name"]}'
-    assert yum_module['collection_name'] == 'Custom', f'Anonymized collection name should be "Custom", got {yum_module.get("collection_name")}'
+    assert len(anonymized_modules) == 0, f'Should have 0 Custom modules (unknown collections removed by filter), got {len(anonymized_modules)}'
 
     a10_module = module_stats_dict.get('a10.acos_axapi.a10_slb_virtual_server')
     assert a10_module is not None, 'Should have a10.acos_axapi.a10_slb_virtual_server module'
@@ -560,24 +512,7 @@ def _validate_collection_stats_values_multi_hour(json_data):
     assert a10_collection['processed_events_total'] == 12, 'a10.acos_axapi collection should have 12 processed events (6 jobs × 2 hosts)'
 
     anonymized_collections = [c for c in json_data['collection_stats'] if c.get('collection_source') == 'Custom']
-    assert len(anonymized_collections) == 1, f'Should have 1 anonymized collection (ansible.builtin), got {len(anonymized_collections)}'
-    builtin_collection = anonymized_collections[0]
-    assert builtin_collection['collection_source'] == 'Custom', 'ansible.builtin collection should be Custom (not in collections.json)'
-    # 6 jobs total
-    assert builtin_collection['jobs_total'] == 6, 'ansible.builtin collection should have 6 jobs'
-    assert 'ansible_versions' in builtin_collection, 'Each collection_stat should have ansible_versions field'
-    assert isinstance(builtin_collection['ansible_versions'], list), 'ansible_versions should be a list'
-    assert len(builtin_collection['ansible_versions']) > 0, 'ansible_versions should not be empty'
-    for version in builtin_collection['ansible_versions']:
-        assert _is_valid_version(version), f'Version should contain numbers and dots, got {version}'
-    assert builtin_collection['unique_hosts_total'] == 2, 'ansible.builtin collection should have 2 hosts'
-    # 6 jobs × 2 hosts = 12 successful tasks
-    assert builtin_collection['task_ok_total'] == 12, 'ansible.builtin collection should have 12 successful tasks'
-    # 6 jobs × 2 hosts = 12 processed events
-    assert builtin_collection['processed_events_total'] == 12, 'ansible.builtin collection should have 12 processed events (6 jobs × 2 hosts)'
-    assert builtin_collection['collection_name'] == 'Custom', (
-        f'Anonymized collection name should be "Custom", got {builtin_collection["collection_name"]}'
-    )
+    assert len(anonymized_collections) == 0, f'Should have 0 Custom collections (removed by filter), got {len(anonymized_collections)}'
 
 
 def _validate_jobs_by_launch_type_values(json_data):
@@ -1041,9 +976,8 @@ def test_from_gather_to_json(cleanup_glob):
     input_data = _prepare_input_data(results, collector_to_input_key)
 
     # Compute anonymized rollup from raw data
-    salt = 'salt'
     print('Computing anonymized rollup from collected data...')
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data)
     print('✓ Anonymized rollup computed successfully')
 
     # Save JSON output

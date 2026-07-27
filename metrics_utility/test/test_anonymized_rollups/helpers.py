@@ -21,6 +21,7 @@ from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import 
 from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
 from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import sanitize_json
+from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import IndirectManagedNodesAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
@@ -31,6 +32,7 @@ from metrics_utility.library.collectors.controller import (
     execution_environments,
     feature_flags_service,
     job_host_summary_service,
+    main_indirectmanagednodeaudit,
     main_jobevent_service,
     table_metadata,
     unified_jobs,
@@ -87,7 +89,7 @@ def load_anonymized_rollup_data(rollup_object: BaseAnonymizedRollup, dataframe_l
     return concat_data
 
 
-def compute_anonymized_rollup_from_raw_data(input_data, salt):
+def compute_anonymized_rollup_from_raw_data(input_data):
 
     # delete everything in the directory ./out/batches (including subdirectories)
     if os.path.exists(OUT_BATCHES_DIR):
@@ -120,6 +122,9 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     task_executions = load_anonymized_rollup_data(TaskExecutionsAnonymizedRollup(), input_data.get('task_executions', []))
     task_executions_result = TaskExecutionsAnonymizedRollup().base(task_executions)
 
+    indirect_managed_nodes = load_anonymized_rollup_data(IndirectManagedNodesAnonymizedRollup(), input_data.get('indirect_managed_nodes', []))
+    indirect_managed_nodes_result = IndirectManagedNodesAnonymizedRollup().base(indirect_managed_nodes)
+
     anonymized_rollup = anonymize_rollups(
         events_modules_rollup=events_modules_result['json'],
         execution_environments_rollup=execution_environments_result['json'],
@@ -129,8 +134,8 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
         table_metadata_rollup=table_metadata_result['json'],
         controller_version_rollup=controller_version_result['json'],
         feature_flags_rollup=feature_flags_result['json'],
-        salt=salt,
         task_executions_rollup=task_executions_result['json'],
+        indirect_managed_nodes_rollup=indirect_managed_nodes_result['json'],
     )
     # Sanitize the result to replace NaN and infinity values with None (valid JSON)
     anonymized_rollup = sanitize_json(anonymized_rollup)
@@ -143,7 +148,7 @@ def compute_anonymized_rollup_from_raw_data(input_data, salt):
     return anonymized_rollup
 
 
-def compute_anonymized_rollup(db, salt, since, until, service_db=None):
+def compute_anonymized_rollup(db, since, until, service_db=None):
     # This will contain list of files that belongs to particular collector
     execution_environments_data = []
     try:
@@ -200,6 +205,12 @@ def compute_anonymized_rollup(db, salt, since, until, service_db=None):
         except Exception as e:
             logger.error(f'Failed to gather task_executions data: {e}')
 
+    indirect_managed_nodes_data = []
+    try:
+        indirect_managed_nodes_data = main_indirectmanagednodeaudit(db=db, since=since, until=until).gather()
+    except Exception as e:
+        logger.error(f'Failed to gather indirect_managed_nodes data: {e}')
+
     input_data = {
         'execution_environments': execution_environments_data,
         'unified_jobs': unified_jobs_data,
@@ -210,9 +221,10 @@ def compute_anonymized_rollup(db, salt, since, until, service_db=None):
         'controller_version': controller_version_data,
         'feature_flags': feature_flags_data,
         'task_executions': task_executions_data,
+        'indirect_managed_nodes': indirect_managed_nodes_data,
     }
 
     # load data for each collector
-    json_data = compute_anonymized_rollup_from_raw_data(input_data, salt)
+    json_data = compute_anonymized_rollup_from_raw_data(input_data)
 
     return json_data

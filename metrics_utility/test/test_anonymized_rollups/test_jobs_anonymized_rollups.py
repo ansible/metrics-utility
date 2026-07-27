@@ -1461,7 +1461,7 @@ def test_jobs_anonymized_rollups_statistics_ansible_versions():
         'credentials': [cred_csv] if cred_csv else [],
     }
 
-    result = compute_anonymized_rollup_from_raw_data(input_data=input_data, salt='test_salt')
+    result = compute_anonymized_rollup_from_raw_data(input_data=input_data)
 
     # Validate result has ansible_versions at top level
     assert 'statistics' in result, 'Should have statistics in result'

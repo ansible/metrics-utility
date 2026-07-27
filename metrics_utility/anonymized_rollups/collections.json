@@ -3750,5 +3750,6 @@
     "zxbot.carbonio_ssinstall": "community",
     "zxbot.carbonio_upgrade": "community",
     "zzbytes.redteam": "community",
-    "zzpio.test": "community"
+    "zzpio.test": "community",
+    "ansible.builtin": "certified"
 }
