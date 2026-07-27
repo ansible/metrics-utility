@@ -4,8 +4,7 @@ import os
 
 from django.conf import settings
 
-import metrics_utility.base as base
-
+from metrics_utility import base
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 from metrics_utility.logger import logger
 

@@ -92,9 +92,8 @@ class TestGetMaxGatherPeriodDays:
             assert get_max_gather_period_days() == 1
 
     def test_raises_on_non_integer_value(self):
-        with patch.dict('os.environ', {'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': 'not_a_number'}):
-            with pytest.raises(ValueError):
-                get_max_gather_period_days()
+        with patch.dict('os.environ', {'METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS': 'not_a_number'}), pytest.raises(ValueError):
+            get_max_gather_period_days()
 
 
 class TestGetOptionalCollectors:

@@ -190,11 +190,13 @@ class TestRegisterSubcommand:
         monkeypatch.delenv('METRICS_UTILITY_RH_USERNAME', raising=False)
         mock_store = _make_mock_store()
 
-        with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
+        with (
+            patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store),
+            patch(
                 'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(None, SAMPLE_PASSWORD, None)
-            ):
-                _, stderr, exit_code = _run('register')
+            ),
+        ):
+            _, stderr, exit_code = _run('register')
 
         assert exit_code != 0
         assert 'username' in stderr
@@ -202,11 +204,13 @@ class TestRegisterSubcommand:
     def test_exits_nonzero_when_password_missing(self, monkeypatch):
         mock_store = _make_mock_store()
 
-        with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
+        with (
+            patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store),
+            patch(
                 'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials', return_value=(SAMPLE_USERNAME, None, None)
-            ):
-                _, stderr, exit_code = _run('register')
+            ),
+        ):
+            _, stderr, exit_code = _run('register')
 
         assert exit_code != 0
         assert 'password' in stderr
@@ -216,14 +220,16 @@ class TestRegisterSubcommand:
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
 
-        with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
+        with (
+            patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store),
+            patch(
                 'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials',
                 return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None),
-            ):
-                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
-                    MockClient.return_value.discover_org.return_value = None
-                    _, stderr, exit_code = _run('register')
+            ),
+            patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient,
+        ):
+            MockClient.return_value.discover_org.return_value = None
+            _, stderr, exit_code = _run('register')
 
         assert exit_code != 0
         assert 'org' in stderr.lower()
@@ -233,14 +239,16 @@ class TestRegisterSubcommand:
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', SAMPLE_ORG)
         mock_store = _make_mock_store()
 
-        with patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store):
-            with patch(
+        with (
+            patch('metrics_utility.management.commands.candlepin_manage.get_candlepin_store', return_value=mock_store),
+            patch(
                 'metrics_utility.management.commands.candlepin_manage._resolve_registration_credentials',
                 return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, None),
-            ):
-                with patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient:
-                    MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
-                    _, stderr, exit_code = _run('register')
+            ),
+            patch('metrics_utility.management.commands.candlepin_manage.CandlepinClient') as MockClient,
+        ):
+            MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
+            _, stderr, exit_code = _run('register')
 
         assert exit_code != 0
         assert 'failed' in stderr.lower()

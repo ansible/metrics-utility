@@ -3,7 +3,6 @@
 import json
 
 from itertools import chain
-from typing import Dict
 
 import pandas as pd
 
@@ -13,7 +12,7 @@ from metrics_utility.library.collectors.controller.config import _datetime_hook
 from metrics_utility.logger import logger
 
 
-def get_last_entries_from_db() -> Dict:
+def get_last_entries_from_db() -> dict:
     """
     Get AUTOMATION_ANALYTICS_LAST_ENTRIES directly from database.
 
@@ -100,7 +99,7 @@ def merge_json_sets(json_values):
             for key, value in d.items():
                 # Ignore null (None) or empty string values.
                 # We also want to ignore NA value used when facts are not available
-                if value is not None and value != '' and value != 'NA':
+                if value is not None and value not in {'', 'NA'}:
                     if isinstance(value, set):
                         merged.setdefault(key, set()).update(value)
                     else:

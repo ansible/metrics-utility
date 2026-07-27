@@ -20,12 +20,11 @@ def test_put_get_filename():
         file.close()
         storage.put(target_filename, filename=file.name)
 
-    with open(joined, mode='r', encoding='utf-8') as file:
+    with open(joined, encoding='utf-8') as file:
         assert file.read() == f'Hello {target_filename}!'
 
-    with storage.get(target_filename) as filename:
-        with open(filename, mode='r', encoding='utf-8') as file:
-            assert file.read() == f'Hello {target_filename}!'
+    with storage.get(target_filename) as filename, open(filename, encoding='utf-8') as file:
+        assert file.read() == f'Hello {target_filename}!'
 
 
 def test_put_get_dict():
@@ -34,12 +33,11 @@ def test_put_get_dict():
     obj = {'foo': 5, 'bar': 'baz'}
     storage.put(target_filename, dict=obj)
 
-    with open(joined, mode='r', encoding='utf-8') as file:
+    with open(joined, encoding='utf-8') as file:
         assert file.read() == '{"foo": 5, "bar": "baz"}'
 
-    with storage.get(target_filename) as filename:
-        with open(filename, mode='r', encoding='utf-8') as file:
-            assert file.read() == '{"foo": 5, "bar": "baz"}'
+    with storage.get(target_filename) as filename, open(filename, encoding='utf-8') as file:
+        assert file.read() == '{"foo": 5, "bar": "baz"}'
 
 
 def test_base_path_slash():
@@ -58,12 +56,10 @@ def test_base_path_slash():
     storage_without.put(filename1, dict={'foo': 123})
     storage_with.put(filename2, dict={'foo': 456})
 
-    with storage_with.get(filename1) as fn1:
-        with open(fn1, mode='r', encoding='utf-8') as file:
-            assert file.read() == '{"foo": 123}'
-    with storage_without.get(filename2) as fn2:
-        with open(fn2, mode='r', encoding='utf-8') as file:
-            assert file.read() == '{"foo": 456}'
+    with storage_with.get(filename1) as fn1, open(fn1, encoding='utf-8') as file:
+        assert file.read() == '{"foo": 123}'
+    with storage_without.get(filename2) as fn2, open(fn2, encoding='utf-8') as file:
+        assert file.read() == '{"foo": 456}'
 
     storage_with.remove(filename1)
     storage_with.remove(filename2)
@@ -72,9 +68,8 @@ def test_base_path_slash():
 def test_get_error():
     storage = StorageDirectory(base_path=base_path)
 
-    with pytest.raises(Exception) as exc:
-        with storage.get('not ' + target_filename) as _filename:
-            assert False
+    with pytest.raises(Exception) as exc, storage.get('not ' + target_filename) as _filename:
+        assert False
     assert exc is not None
 
 
@@ -87,7 +82,7 @@ def test_exists():
 def test_glob():
     storage = StorageDirectory(base_path=base_path)
     pid = os.getpid()
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     assert storage.glob(target_filename) == [target_filename]
     assert storage.glob('not ' + target_filename) == []

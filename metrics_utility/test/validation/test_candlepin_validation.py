@@ -105,7 +105,7 @@ class TestFetchRegistrationCredentialsFromDb:
 
     def test_falls_back_to_subscriptions_when_redhat_absent(self):
         with patch.dict(sys.modules, _awx_cred_modules(settings=self._settings())):
-            username, password, _ = _fetch_registration_credentials_from_db()
+            username, _password, _ = _fetch_registration_credentials_from_db()
         assert username == SAMPLE_USERNAME
 
     def test_decrypts_encrypted_password(self):
@@ -153,9 +153,8 @@ class TestFetchRegistrationCredentialsFromDb:
             'awx.main.utils': MagicMock(),
             'awx.main.utils.encryption': MagicMock(),
         }
-        with patch.dict(sys.modules, modules):
-            with patch('metrics_utility.management.validation.logger') as mock_log:
-                _fetch_registration_credentials_from_db()
+        with patch.dict(sys.modules, modules), patch('metrics_utility.management.validation.logger') as mock_log:
+            _fetch_registration_credentials_from_db()
         mock_log.warning.assert_called_once()
 
 
@@ -195,7 +194,7 @@ class TestResolveRegistrationCredentials:
             'metrics_utility.management.validation._fetch_registration_credentials_from_db',
             return_value=(SAMPLE_USERNAME, SAMPLE_PASSWORD, SAMPLE_INSTALL_UUID),
         ) as mock_db:
-            username, password, install_uuid = _resolve_registration_credentials()
+            username, _password, install_uuid = _resolve_registration_credentials()
 
         mock_db.assert_called_once()
         assert username == SAMPLE_USERNAME
@@ -228,11 +227,10 @@ class TestRegisterCandlepinConsumer:
     def test_returns_cert_key_uuid_on_success(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
-                MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
-                cert, key, uuid_ = _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.discover_org.return_value = SAMPLE_ORG
+            MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
+            cert, key, uuid_ = _register_candlepin_consumer(mock_store)
         assert cert == SAMPLE_NEW_CERT
         assert key == SAMPLE_NEW_KEY
         assert uuid_ == CONSUMER_UUID
@@ -240,20 +238,18 @@ class TestRegisterCandlepinConsumer:
     def test_calls_store_save_registration_on_success(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
-                MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
-                _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.discover_org.return_value = SAMPLE_ORG
+            MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
+            _register_candlepin_consumer(mock_store)
         mock_store.save_registration.assert_called_once_with(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
 
     def test_uses_env_var_org_without_discovery(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_ORG', 'override-org')
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
-                _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.register_consumer.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
+            _register_candlepin_consumer(mock_store)
         MockClient.return_value.discover_org.assert_not_called()
 
     def test_returns_none_tuple_when_username_missing(self):
@@ -271,41 +267,37 @@ class TestRegisterCandlepinConsumer:
     def test_returns_none_tuple_when_org_discovery_fails(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.discover_org.return_value = None
-                result = _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.discover_org.return_value = None
+            result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)
 
     def test_returns_none_tuple_when_api_fails(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
-                MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
-                result = _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.discover_org.return_value = SAMPLE_ORG
+            MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
+            result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)
 
     def test_logs_error_when_api_fails(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
-                MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
-                with patch('metrics_utility.management.validation.logger') as mock_log:
-                    _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.discover_org.return_value = SAMPLE_ORG
+            MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
+            with patch('metrics_utility.management.validation.logger') as mock_log:
+                _register_candlepin_consumer(mock_store)
         mock_log.error.assert_called_once()
 
     def test_never_raises(self, monkeypatch):
         monkeypatch.delenv('METRICS_UTILITY_CANDLEPIN_ORG', raising=False)
         mock_store = _make_mock_store()
-        with self._patch_creds():
-            with patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
-                MockClient.return_value.discover_org.return_value = SAMPLE_ORG
-                MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
-                result = _register_candlepin_consumer(mock_store)
+        with self._patch_creds(), patch('metrics_utility.management.validation.CandlepinClient') as MockClient:
+            MockClient.return_value.discover_org.return_value = SAMPLE_ORG
+            MockClient.return_value.register_consumer.side_effect = RuntimeError('Candlepin down')
+            result = _register_candlepin_consumer(mock_store)
         assert result == (None, None, None)
 
 
@@ -586,12 +578,14 @@ class TestHandleCrcShipTargetCandlepin:
     def test_registered_cert_injected_into_billing_params(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED', 'true')
         mock_store = _make_mock_store()
-        with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
-            with patch(
+        with (
+            patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store),
+            patch(
                 'metrics_utility.management.validation._register_candlepin_consumer', return_value=(SAMPLE_NEW_CERT, SAMPLE_NEW_KEY, CONSUMER_UUID)
-            ):
-                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                    params = handle_crc_ship_target()
+            ),
+            patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}),
+        ):
+            params = handle_crc_ship_target()
         assert params['candlepin_cert_pem'] == SAMPLE_NEW_CERT
         assert params['candlepin_key_pem'] == SAMPLE_NEW_KEY
 
@@ -643,7 +637,7 @@ class TestLoadCertFromControllerDb:
         with patch('metrics_utility.management.validation.DBCandlepinStore') as MockDB:
             MockDB.return_value.load.return_value = (SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
             with patch('metrics_utility.management.validation.is_cert_valid', return_value=False):
-                cert, key, uuid = _load_cert_from_controller_db()
+                cert, _key, _uuid = _load_cert_from_controller_db()
         assert cert is None
 
     def test_logs_warning_when_cert_invalid(self):
@@ -683,40 +677,48 @@ class TestHandleCrcShipTargetDbFirst:
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'local')
 
     def test_uses_db_cert_when_controller_has_valid_cert(self):
-        with patch(
-            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        with (
+            patch(
+                'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            ),
+            patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}),
         ):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                params = handle_crc_ship_target()
+            params = handle_crc_ship_target()
         assert params['candlepin_cert_pem'] == SAMPLE_CERT_PEM
         assert params['candlepin_key_pem'] == SAMPLE_KEY_PEM
 
     def test_skips_lifecycle_when_db_cert_present(self):
-        with patch(
-            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        with (
+            patch(
+                'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            ),
+            patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}),
         ):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
-                    handle_crc_ship_target()
+            with patch('metrics_utility.management.validation._run_candlepin_lifecycle') as mock_lc:
+                handle_crc_ship_target()
         mock_lc.assert_not_called()
 
     def test_skips_local_store_when_db_cert_present(self):
         mock_store = _make_mock_store()
-        with patch(
-            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        with (
+            patch(
+                'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            ),
+            patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store),
         ):
-            with patch('metrics_utility.management.validation.get_candlepin_store', return_value=mock_store):
-                with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                    handle_crc_ship_target()
+            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
+                handle_crc_ship_target()
         mock_store.load.assert_not_called()
 
     def test_logs_controller_db_source_when_db_cert_used(self):
-        with patch(
-            'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+        with (
+            patch(
+                'metrics_utility.management.validation._load_cert_from_controller_db', return_value=(SAMPLE_CERT_PEM, SAMPLE_KEY_PEM, CONSUMER_UUID)
+            ),
+            patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}),
         ):
-            with patch('metrics_utility.management.validation.parse_cert', return_value={'days_remaining': 90}):
-                with patch('metrics_utility.management.validation.logger') as mock_log:
-                    handle_crc_ship_target()
+            with patch('metrics_utility.management.validation.logger') as mock_log:
+                handle_crc_ship_target()
         info_msgs = [str(c) for c in mock_log.info.call_args_list]
         assert any('controller DB' in m for m in info_msgs)
 

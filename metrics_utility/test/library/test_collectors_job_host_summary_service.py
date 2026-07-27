@@ -10,8 +10,8 @@ from metrics_utility.library.collectors.controller.job_host_summary_service impo
 def test_job_host_summary_service_basic():
     """Test job_host_summary_service collector basic functionality."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.UTC)
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
 
@@ -26,8 +26,8 @@ def test_job_host_summary_service_basic():
 def test_job_host_summary_service_calls_copy_table(mock_copy_pandas):
     """Test that job_host_summary_service calls copy_table with correct parameters."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 1, 1, 0, 0, 0, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 1, 31, 23, 59, 59, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2], 'host_id': [10, 20], 'job_id': [100, 101]})
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
@@ -45,8 +45,8 @@ def test_job_host_summary_service_calls_copy_table(mock_copy_pandas):
 def test_job_host_summary_service_query_contains_time_range(mock_copy_pandas):
     """Test that the query includes the time range."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 3, 1, 10, 0, 0, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 3, 15, 18, 30, 0, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 3, 1, 10, 0, 0, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 3, 15, 18, 30, 0, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
@@ -66,8 +66,8 @@ def test_job_host_summary_service_query_contains_time_range(mock_copy_pandas):
 def test_job_host_summary_service_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
@@ -92,8 +92,8 @@ def test_job_host_summary_service_query_structure(mock_copy_pandas):
 def test_job_host_summary_service_filters_by_finished_jobs(mock_copy_pandas):
     """Test that query filters jobs by finished timestamp."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
@@ -110,8 +110,8 @@ def test_job_host_summary_service_filters_by_finished_jobs(mock_copy_pandas):
 def test_job_host_summary_service_doesnt_yaml_json_functions(mock_copy_pandas):
     """Test that query doesn't use metrics_utility SQL helper functions."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
@@ -129,8 +129,8 @@ def test_job_host_summary_service_doesnt_yaml_json_functions(mock_copy_pandas):
 def test_job_host_summary_service_orders_by_finished(mock_copy_pandas):
     """Test that query orders results by job finished time."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)
@@ -148,8 +148,8 @@ def test_job_host_summary_service_orders_by_finished(mock_copy_pandas):
 def test_job_host_summary_service_isoformat(mock_copy_pandas):
     """Test that datetime objects are converted to isoformat in query."""
     mock_db = MagicMock()
-    since = datetime.datetime(2024, 7, 20, 8, 15, 30, tzinfo=datetime.timezone.utc)
-    until = datetime.datetime(2024, 7, 21, 16, 45, 0, tzinfo=datetime.timezone.utc)
+    since = datetime.datetime(2024, 7, 20, 8, 15, 30, tzinfo=datetime.UTC)
+    until = datetime.datetime(2024, 7, 21, 16, 45, 0, tzinfo=datetime.UTC)
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = job_host_summary_service(db=mock_db, since=since, until=until)

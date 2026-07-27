@@ -27,7 +27,7 @@ class TestQueriesDashboard:
         assert params == expected_params
 
     def test_where_clause_finished(self):
-        result, params = get_where_clause(self.since, self.until, date_field='finished')
+        result, _params = get_where_clause(self.since, self.until, date_field='finished')
         assert 'AND uj.finished >= %s' in result
         assert 'AND uj.finished < %s' in result
         assert 'modified' not in result

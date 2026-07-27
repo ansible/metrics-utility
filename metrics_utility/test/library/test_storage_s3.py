@@ -27,9 +27,8 @@ def test_put_get_filename():
         file.close()
         storage.put(s3_object_name, filename=file.name)
 
-    with storage.get(s3_object_name) as filename:
-        with open(filename, mode='r', encoding='utf-8') as file:
-            assert file.read() == f'Hello {s3_object_name}!'
+    with storage.get(s3_object_name) as filename, open(filename, encoding='utf-8') as file:
+        assert file.read() == f'Hello {s3_object_name}!'
 
 
 def test_put_get_dict():
@@ -38,17 +37,15 @@ def test_put_get_dict():
     obj = {'foo': 5, 'bar': 'baz'}
     storage.put(s3_object_name, dict=obj)
 
-    with storage.get(s3_object_name) as filename:
-        with open(filename, mode='r', encoding='utf-8') as file:
-            assert file.read() == '{"foo": 5, "bar": "baz"}'
+    with storage.get(s3_object_name) as filename, open(filename, encoding='utf-8') as file:
+        assert file.read() == '{"foo": 5, "bar": "baz"}'
 
 
 def test_get_error():
     storage = StorageS3(**s3_settings)
 
-    with pytest.raises(Exception) as exc:
-        with storage.get('not ' + s3_object_name) as _filename:
-            assert False
+    with pytest.raises(Exception) as exc, storage.get('not ' + s3_object_name) as _filename:
+        assert False
     assert exc is not None
 
 
@@ -61,7 +58,7 @@ def test_exists():
 def test_glob():
     storage = StorageS3(**s3_settings)
     pid = f'x{os.getpid()}y'
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
 
     assert storage.glob(s3_object_name) == [s3_object_name]
     assert storage.glob('not ' + s3_object_name) == []

@@ -78,13 +78,13 @@ from metrics_utility.library.collectors.controller import config, main_jobevent
 from metrics_utility.library.instants import last_day, this_day
 from metrics_utility.library import lock, storage
 
-db = ... # django.db.connection / psycopg 3
+db = ...  # django.db.connection / psycopg 3
 
 dir_storage = storage.StorageDirectory(base_path='./out')
 
 with lock('my-unique-key', wait=False, db=db) as acquired:
     if not acquired:
-        raise "too bad" # or use wait=True instead
+        raise 'too bad'  # or use wait=True instead
 
     # dict, will be converted to json
     config_dict = config(db=db).gather()
