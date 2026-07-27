@@ -42,7 +42,6 @@ class Collection:
 
     def cleanup(self):
         """There is an action only for CollectionCSV"""
-        pass
 
     @abstractmethod
     def data_size(self):
@@ -98,7 +97,6 @@ class Collection:
     @abstractmethod
     def target(self):
         """Data attribute specific for collection"""
-        pass
 
     def update_last_gathered_entries(self, updates_dict):
         if self.key in updates_dict['locked']:

@@ -44,7 +44,6 @@ Environment variables:
     TEST_DATE      Date to collect for, YYYY-MM-DD (default: 2024-01-25)
 """
 
-# ruff: noqa: T201
 import os
 import time
 
@@ -116,8 +115,8 @@ def wait_for_task(task_id):
         data = resp.json()
         status = data.get('status')
         if status == 'completed':
-            started_at = datetime.fromisoformat(data['started_at'].replace('Z', '+00:00'))
-            completed_at = datetime.fromisoformat(data['completed_at'].replace('Z', '+00:00'))
+            started_at = datetime.fromisoformat(data['started_at'])
+            completed_at = datetime.fromisoformat(data['completed_at'])
             return (completed_at - started_at).total_seconds()
         if status in ('failed', 'cancelled'):
             raise RuntimeError(f'Task {task_id} {status}')
@@ -159,7 +158,7 @@ def prometheus_delta(before, after, key):
 # ---------------------------------------------------------------------------
 
 
-def main():  # noqa: PLR0915
+def main():
     print('=' * 70)
     print('Metrics Service API Pipeline Benchmark')
     print('=' * 70)

@@ -41,7 +41,7 @@ def count_csv_rows(file_paths):
     total_rows = 0
     for file_path in file_paths:
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 rows = sum(1 for line in f) - 1  # Subtract header
                 total_rows += rows
         except Exception:
@@ -130,9 +130,9 @@ def explain_main_jobevent_service(db, since, until):
         }
 
     # Extract job_ids and hour boundaries (same logic as collector)
-    job_ids_set = set(job_id for job_id, _ in jobs)
+    job_ids_set = {job_id for job_id, _ in jobs}
     hour_boundaries = set()
-    for job_id, job_created in jobs:
+    for _job_id, job_created in jobs:
         if job_created:
             hour_start = job_created.replace(minute=0, second=0, microsecond=0)
             hour_boundaries.add(hour_start)
@@ -332,7 +332,7 @@ def run_collector_test(collector_func, collector_name, since, until, explain_ana
             print('\n  Generated files:')
             for i, file_path in enumerate(result):
                 try:
-                    with open(file_path, 'r') as f:
+                    with open(file_path) as f:
                         file_rows = sum(1 for line in f) - 1
                     print(f'    {i + 1}. {Path(file_path).name} ({file_rows:,} rows)')
                 except Exception as e:

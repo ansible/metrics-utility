@@ -19,7 +19,7 @@ def replace_date(script, date):
 
 
 def generate_ccsp():
-    with open('tools/docker/main_jobhostsummary.sql', 'r') as file:
+    with open('tools/docker/main_jobhostsummary.sql') as file:
         original_script = file.read()
 
     def replace_host_count(script, host_count):
@@ -53,7 +53,7 @@ generate_ccsp()
 
 
 def generate_renewal_guidance():
-    with open('tools/docker/main_hostmetric.sql', 'r') as file:
+    with open('tools/docker/main_hostmetric.sql') as file:
         original_script = file.read()
 
     sql_script = replace_date(original_script, '2025-07-09')

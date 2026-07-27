@@ -15,13 +15,13 @@ from metrics_utility.library.collectors.others.total_workers_vcpu import (
 def test_get_hour_boundaries():
     """Test get_hour_boundaries calculates correct hour boundaries."""
     # Test with a specific timestamp: 2024-01-15 14:30:45
-    current_ts = datetime.datetime(2024, 1, 15, 14, 30, 45, tzinfo=datetime.timezone.utc).timestamp()
+    current_ts = datetime.datetime(2024, 1, 15, 14, 30, 45, tzinfo=datetime.UTC).timestamp()
 
     prev_start, prev_end = get_hour_boundaries(current_ts)
 
     # Previous hour should be 13:00:00 to 13:59:59.999
-    expected_start = datetime.datetime(2024, 1, 15, 13, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
-    expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, 999000, tzinfo=datetime.timezone.utc).timestamp()
+    expected_start = datetime.datetime(2024, 1, 15, 13, 0, 0, tzinfo=datetime.UTC).timestamp()
+    expected_end = datetime.datetime(2024, 1, 15, 13, 59, 59, 999000, tzinfo=datetime.UTC).timestamp()
 
     assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
     assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
@@ -30,13 +30,13 @@ def test_get_hour_boundaries():
 def test_get_hour_boundaries_on_hour():
     """Test get_hour_boundaries when current time is exactly on the hour."""
     # Test at exactly 10:00:00
-    current_ts = datetime.datetime(2024, 6, 20, 10, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
+    current_ts = datetime.datetime(2024, 6, 20, 10, 0, 0, tzinfo=datetime.UTC).timestamp()
 
     prev_start, prev_end = get_hour_boundaries(current_ts)
 
     # Previous hour should be 09:00:00 to 09:59:59.999
-    expected_start = datetime.datetime(2024, 6, 20, 9, 0, 0, tzinfo=datetime.timezone.utc).timestamp()
-    expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, 999000, tzinfo=datetime.timezone.utc).timestamp()
+    expected_start = datetime.datetime(2024, 6, 20, 9, 0, 0, tzinfo=datetime.UTC).timestamp()
+    expected_end = datetime.datetime(2024, 6, 20, 9, 59, 59, 999000, tzinfo=datetime.UTC).timestamp()
 
     assert prev_start == pytest.approx(expected_start, rel=0, abs=1e-6)
     assert prev_end == pytest.approx(expected_end, rel=0, abs=1e-6)
@@ -143,7 +143,7 @@ def test_get_cpu_timeline_sorting():
 def test_total_workers_vcpu_metering_disabled(mock_datetime, mock_prom_class):
     """Test total_workers_vcpu when metering is disabled."""
     # Mock current time
-    mock_now = datetime.datetime(2024, 1, 15, 14, 30, 0, tzinfo=datetime.timezone.utc)
+    mock_now = datetime.datetime(2024, 1, 15, 14, 30, 0, tzinfo=datetime.UTC)
     mock_datetime.now.return_value = mock_now
     mock_datetime.fromtimestamp = datetime.datetime.fromtimestamp
     mock_datetime.timezone = datetime.timezone
@@ -168,7 +168,7 @@ def test_total_workers_vcpu_metering_disabled(mock_datetime, mock_prom_class):
 def test_total_workers_vcpu_metering_enabled(mock_datetime, mock_prom_class, mock_timeline, mock_total_cpu):
     """Test total_workers_vcpu when metering is enabled."""
     # Mock current time
-    mock_now = datetime.datetime(2024, 1, 15, 14, 30, 0, tzinfo=datetime.timezone.utc)
+    mock_now = datetime.datetime(2024, 1, 15, 14, 30, 0, tzinfo=datetime.UTC)
     mock_datetime.now.return_value = mock_now
     mock_datetime.fromtimestamp = datetime.datetime.fromtimestamp
     mock_datetime.timezone = datetime.timezone
@@ -211,7 +211,7 @@ def test_total_workers_vcpu_metering_enabled(mock_datetime, mock_prom_class, moc
 def test_total_workers_vcpu_no_data_available(mock_datetime, mock_prom_class, mock_timeline, mock_total_cpu):
     """Test total_workers_vcpu when Prometheus returns no data."""
     # Mock current time
-    mock_now = datetime.datetime(2024, 1, 15, 14, 30, 0, tzinfo=datetime.timezone.utc)
+    mock_now = datetime.datetime(2024, 1, 15, 14, 30, 0, tzinfo=datetime.UTC)
     mock_datetime.now.return_value = mock_now
     mock_datetime.fromtimestamp = datetime.datetime.fromtimestamp
     mock_datetime.timezone = datetime.timezone

@@ -43,8 +43,8 @@ def test_json_collections(collector):
             files[member.name] = archive.extractfile(member)
 
         assert_common_files(files)
-        assert './json_collection_1.json' in files.keys()
-        assert './json_collection_2.json' in files.keys()
+        assert './json_collection_1.json' in files
+        assert './json_collection_2.json' in files
 
         assert json.loads(files['./config.json'].read()) == {'version': '1.0'}
         assert json.loads(files['./json_collection_1.json'].read()) == {'json1': 'True'}
@@ -64,9 +64,9 @@ def test_small_csvs(collector):
             files[member.name] = archive.extractfile(member)
 
         assert_common_files(files)
-        assert './csv_collection_1.csv' in files.keys()
-        assert './csv_collection_2.csv' in files.keys()
-        assert './csv_collection_3.csv' in files.keys()
+        assert './csv_collection_1.csv' in files
+        assert './csv_collection_2.csv' in files
+        assert './csv_collection_3.csv' in files
 
         # length defined by @registered function
         assert len(files['./csv_collection_1.csv'].read()) == 100
@@ -97,13 +97,13 @@ def test_jsons_with_csvs_with_slicing(collector):
 
             assert_common_files(files)
             if i == 0:
-                assert './json_collection_1.json' in files.keys()
-                assert './json_collection_2.json' in files.keys()
-                assert './csv_slicing_1.csv' in files.keys()
+                assert './json_collection_1.json' in files
+                assert './json_collection_2.json' in files
+                assert './csv_slicing_1.csv' in files
             if i == 1:
-                assert './csv_slicing_2.csv' in files.keys()
+                assert './csv_slicing_2.csv' in files
             if i == 2:
-                assert './csv_slicing_2.csv' in files.keys()
+                assert './csv_slicing_2.csv' in files
 
 
 def test_one_csv_collection_splitted_by_size(collector):
@@ -119,7 +119,7 @@ def test_one_csv_collection_splitted_by_size(collector):
 
             assert_common_files(files)
             assert len(files.keys()) == 1 + _common_files_count()
-            assert './big_table.csv' in files.keys()
+            assert './big_table.csv' in files
             assert len(files['./big_table.csv'].read()) == 1000
 
     collector._gather_cleanup()
@@ -141,15 +141,15 @@ def test_multiple_collections_multiple_tarballs(mocker, collector):
             assert_common_files(files)
             if i == 0:
                 assert len(files.keys()) == 2 + _common_files_count()
-                assert './big_table_2.csv' in files.keys()
-                assert './csv_collection_1.csv' in files.keys()
+                assert './big_table_2.csv' in files
+                assert './csv_collection_1.csv' in files
             elif i == 1:
                 assert len(files.keys()) == 2 + _common_files_count()
-                assert './big_table_2.csv' in files.keys()
-                assert './csv_collection_2.csv' in files.keys()
+                assert './big_table_2.csv' in files
+                assert './csv_collection_2.csv' in files
             elif i == 2:
                 assert len(files.keys()) == 1 + _common_files_count()
-                assert './big_table_2.csv' in files.keys()
+                assert './big_table_2.csv' in files
 
     collector._gather_cleanup()
 
@@ -173,51 +173,51 @@ def test_multiple_collections_and_distributions(collector):
 
             assert_common_files(files)
             if i == 0:
-                assert './simple_json1.json' in files.keys()
+                assert './simple_json1.json' in files
             else:
-                assert './simple_json1.json' not in files.keys()
+                assert './simple_json1.json' not in files
 
             # CSVs with no slicing start at index 0
             if 0 <= i <= 1:
-                assert './csv_no_slicing_1-2x.csv' in files.keys()
+                assert './csv_no_slicing_1-2x.csv' in files
             else:
-                assert './csv_no_slicing_1-2x.csv' not in files.keys()
+                assert './csv_no_slicing_1-2x.csv' not in files
 
             if i == 0:
-                assert './csv_no_slicing_2-1x.csv' in files.keys()
+                assert './csv_no_slicing_2-1x.csv' in files
             else:
-                assert './csv_no_slicing_2-1x.csv' not in files.keys()
+                assert './csv_no_slicing_2-1x.csv' not in files
 
             if 0 <= i <= 9:
-                assert './csv_no_slicing_3-10x.csv' in files.keys()
+                assert './csv_no_slicing_3-10x.csv' in files
             else:
-                assert './csv_no_slicing_3-10x.csv' not in files.keys()
+                assert './csv_no_slicing_3-10x.csv' not in files
 
             if 0 <= i <= 11:
-                assert './csv_no_slicing_4-12x.csv' in files.keys()
+                assert './csv_no_slicing_4-12x.csv' in files
             else:
-                assert './csv_no_slicing_4-12x.csv' not in files.keys()
+                assert './csv_no_slicing_4-12x.csv' not in files
 
             # CSVs with slicing start after index next to previous slice
             if 0 <= i <= 4:
-                assert './csv_with_slicing_1-5x.csv' in files.keys()
+                assert './csv_with_slicing_1-5x.csv' in files
             else:
-                assert './csv_with_slicing_1-5x.csv' not in files.keys()
+                assert './csv_with_slicing_1-5x.csv' not in files
 
             if 5 <= i <= 7:
-                assert './csv_with_slicing_2-3x.csv' in files.keys()
+                assert './csv_with_slicing_2-3x.csv' in files
             else:
-                assert './csv_with_slicing_2-3x.csv' not in files.keys()
+                assert './csv_with_slicing_2-3x.csv' not in files
 
             if 8 <= i <= 9:
-                assert './csv_with_slicing_3-2x.csv' in files.keys()
+                assert './csv_with_slicing_3-2x.csv' in files
             else:
-                assert './csv_with_slicing_3-2x.csv' not in files.keys()
+                assert './csv_with_slicing_3-2x.csv' not in files
 
             if 10 <= i <= 12:
-                assert './csv_with_slicing_4-3x.csv' in files.keys()
+                assert './csv_with_slicing_4-3x.csv' in files
             else:
-                assert './csv_with_slicing_4-3x.csv' not in files.keys()
+                assert './csv_with_slicing_4-3x.csv' not in files
 
 
 def test_manifest_and_status(collector):

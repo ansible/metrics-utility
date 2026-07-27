@@ -13,7 +13,7 @@ Hourly collectors (run 24x):
 
 """
 
-# ruff: noqa: T201, E402
+# ruff: noqa: E402
 import contextlib
 import os
 import sys

@@ -44,10 +44,7 @@ def find_schema(stem, version):
 
 
 def has_any_schema(stem):
-    for p in SCHEMAS_DIR.glob(f'{stem}*.jsonschema'):
-        if p.stem == stem or p.stem.startswith(f'{stem}-'):
-            return True
-    return False
+    return any(p.stem == stem or p.stem.startswith(f'{stem}-') for p in SCHEMAS_DIR.glob(f'{stem}*.jsonschema'))
 
 
 def load_schema(path):
@@ -203,10 +200,9 @@ def validate_tarball(tarball_path, verbose, skip_dcs, aliases, strict_billing):
             if filename == 'manifest.json':
                 continue
 
-            if strict_billing and (filename.endswith('.csv') or filename.endswith('.json')):
-                if filename not in BILLING_FILES:
-                    fail(f'{filename}: not accepted by the billing controller pipeline')
-                    continue
+            if strict_billing and (filename.endswith(('.csv', '.json'))) and filename not in BILLING_FILES:
+                fail(f'{filename}: not accepted by the billing controller pipeline')
+                continue
 
             old_name = reverse_aliases.get(filename)
             version = manifest.get(filename) or (manifest.get(old_name) if old_name else None)

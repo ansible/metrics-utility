@@ -10,7 +10,7 @@ from metrics_utility.logger import logger
 
 
 try:
-    import segment.analytics as analytics
+    from segment import analytics
 
     SEGMENT_AVAILABLE = True
 except ImportError:
@@ -101,7 +101,7 @@ class StorageSegment:
                 if len(active_chunk[key]) > 0:
                     chunks.append(active_chunk)
 
-        return chunks if chunks else [data]
+        return chunks or [data]
 
     def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None, segment_meta=None):
         """
@@ -166,7 +166,7 @@ class StorageSegment:
 
         if not segment_meta:
             segment_meta = {}
-        message_id = segment_meta.get('message_id', None)
+        message_id = segment_meta.get('message_id')
 
         # Send each chunk
         for i, chunk in enumerate(chunks, 1):
@@ -188,7 +188,7 @@ class StorageSegment:
                 properties={
                     'artifact_name': artifact_name,
                     'data': chunk,
-                    'upload_timestamp': (datetime.datetime.now(tz=datetime.timezone.utc).isoformat()),
+                    'upload_timestamp': (datetime.datetime.now(tz=datetime.UTC).isoformat()),
                     'chunk_info': {
                         'chunk_number': i,
                         'total_chunks': total_chunks,

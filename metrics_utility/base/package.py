@@ -75,12 +75,10 @@ class Package:
     @abstractmethod
     def get_ingress_url(self):
         """URL of cloud's upload URL"""
-        pass
 
     @abstractmethod
     def get_s3_configured(self):
         """URL of cloud's upload URL"""
-        pass
 
     def has_free_space(self, requested_size):
         return self.total_data_size + requested_size <= self.max_data_size()
@@ -220,7 +218,7 @@ class Package:
                 self.manifest.add_collection(collection)
         except Exception as e:
             logger.exception(f'Could not generate metric {collection.filename}: {e}')
-            return None
+            return
 
     def _send_data(self, url, files, session):
         if self.shipping_auth_mode() == self.SHIPPING_AUTH_USERPASS:
@@ -237,7 +235,7 @@ class Package:
 
         # Accept 2XX status_codes
         if response.status_code >= 300:
-            logger.error('Upload failed with status {}, {}'.format(response.status_code, response.text))
+            logger.error(f'Upload failed with status {response.status_code}, {response.text}')
             return False
 
         return True
@@ -256,31 +254,26 @@ class Package:
         """Optional HTTP headers for POST request to get_ingress_url() URL
         :return: dict()
         """
-        pass
 
     @abstractmethod
     def _get_rh_user(self):
         """Auth: username for HTTP POST request to cloud.
         shipping_auth_mode() must return SHIPPING_AUTH_USERPASS (default)
         """
-        pass
 
     @abstractmethod
     def _get_rh_password(self):
         """Auth: password for HTTP POST request to cloud.
         shipping_auth_mode() must return SHIPPING_AUTH_USERPASS (default)
         """
-        pass
 
     @abstractmethod
     def _get_rh_region(self):
         """s3: The region that boto3 will connect to"""
-        pass
 
     @abstractmethod
     def _get_rh_bucket(self):
         """s3: The bucket that boto3 will use"""
-        pass
 
     def _get_client_certificates(self):
         """Auth: get client certificate and key, by default we use the RHSM certs

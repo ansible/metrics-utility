@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
@@ -158,13 +158,13 @@ class TestGetHourBoundaries:
         ]
 
         for current_hour, expected_prev_hour in test_cases:
-            test_datetime = datetime(2023, 12, 25, current_hour, 30, 0, tzinfo=timezone.utc)
+            test_datetime = datetime(2023, 12, 25, current_hour, 30, 0, tzinfo=UTC)
             current_ts = test_datetime.timestamp()
 
             prev_hour_start, prev_hour_end = get_hour_boundaries(current_ts)
 
-            expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=timezone.utc).timestamp()
-            expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, 999000, tzinfo=timezone.utc).timestamp()
+            expected_prev_hour_start = datetime(2023, 12, 25, expected_prev_hour, 0, 0, tzinfo=UTC).timestamp()
+            expected_prev_hour_end = datetime(2023, 12, 25, expected_prev_hour, 59, 59, 999000, tzinfo=UTC).timestamp()
 
             assert prev_hour_start == pytest.approx(expected_prev_hour_start, rel=0, abs=1e-6)
             assert prev_hour_end == pytest.approx(expected_prev_hour_end, rel=0, abs=1e-6)

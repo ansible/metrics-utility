@@ -8,7 +8,6 @@ import warnings
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
 
 import openpyxl
 import openpyxl.utils
@@ -35,9 +34,9 @@ class DataShape:
                                         "generated": date when it was generated
     """
 
-    env_vars: Dict[str, str]
-    params: List[str]
-    custom_params: Dict[str, str]
+    env_vars: dict[str, str]
+    params: list[str]
+    custom_params: dict[str, str]
 
 
 def create_directory_if_not_exists(directory_path: str) -> None:
@@ -67,7 +66,7 @@ def parse_json_file(file_path: str) -> dict | None:
         dict: The parsed JSON data, or None if an error occurred.
     """
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path) as file:
             data = json.load(file)
             return data
     except json.JSONDecodeError as e:
@@ -102,7 +101,7 @@ def save_snapshot_definition(data: DataShape, path: str) -> None:
         logger.error(f'An error occurred while saving the data: {e} into {path}')
 
 
-def find_json_files(directory: str) -> List[Path]:
+def find_json_files(directory: str) -> list[Path]:
     """
     Finds all JSON files recursively in the given directory.
 
@@ -281,7 +280,7 @@ def compare_ccsp_reports(original_report_path: str, generated_report_path: str) 
         o_wb.close()
 
 
-def compare_worksheets(workbook_generated: openpyxl.Workbook, workbook_original: openpyxl.Workbook, sheet_number: int, exceptions: List[str]) -> None:
+def compare_worksheets(workbook_generated: openpyxl.Workbook, workbook_original: openpyxl.Workbook, sheet_number: int, exceptions: list[str]) -> None:
     """
     Compares worksheets in two workbooks cell by cell, optionally ignoring cells in the `exceptions` list.
 
@@ -330,7 +329,7 @@ def compare_worksheets(workbook_generated: openpyxl.Workbook, workbook_original:
                 )
 
 
-def get_file_name(params: List[str], env_vars: Dict[str, str]) -> str | None:
+def get_file_name(params: list[str], env_vars: dict[str, str]) -> str | None:
     """
     Attempts to deduce the filename for the generated report based on report type and parameters.
 
@@ -351,7 +350,7 @@ def get_file_name(params: List[str], env_vars: Dict[str, str]) -> str | None:
     return None
 
 
-def get_param_value(params: List[str], name: str) -> str | None:
+def get_param_value(params: list[str], name: str) -> str | None:
     """
     Extracts the value from a command-line parameter of the form "name=value".
 

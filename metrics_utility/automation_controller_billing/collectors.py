@@ -69,7 +69,7 @@ def daily_slicing(key, last_gather, **kwargs):
     Yields:
         Tuple of ``(since, until)`` timezone-aware datetimes.
     """
-    since, until = kwargs.get('since', None), kwargs.get('until', now())
+    since, until = kwargs.get('since'), kwargs.get('until', now())
     if since is not None:
         last_entry = since
     else:
@@ -236,7 +236,7 @@ def cli_total_workers_vcpu(since, until, output):
         if not os.path.exists(ca_cert_path):
             raise MetricsException(f'CA_CERT not found at {ca_cert_path}')
 
-        with open(token_path, 'r') as f:
+        with open(token_path) as f:
             token = f.read().strip()
         if not token:
             raise MetricsException(f'Unable to retrieve the token for the current service account from {token_path}')

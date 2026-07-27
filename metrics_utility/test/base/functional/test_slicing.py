@@ -47,7 +47,7 @@ def test_slices_by_date(collector):
                 files[member.name] = archive.extractfile(member)
 
             assert_common_files(files)
-            assert './csv_one_day_slicing_1.csv' in files.keys()
+            assert './csv_one_day_slicing_1.csv' in files
 
             lines = files['./csv_one_day_slicing_1.csv'].readlines()
             _header = lines.pop(0)
@@ -60,7 +60,7 @@ def test_slices_by_date(collector):
                 int(row[3]),
                 int(row[4]),
                 int(row[5]),
-                tzinfo=datetime.timezone.utc,
+                tzinfo=datetime.UTC,
             )
             csv_until = datetime.datetime(
                 int(row[6]),
@@ -69,7 +69,7 @@ def test_slices_by_date(collector):
                 int(row[9]),
                 int(row[10]),
                 int(row[11]),
-                tzinfo=datetime.timezone.utc,
+                tzinfo=datetime.UTC,
             )
 
             assert csv_since == since

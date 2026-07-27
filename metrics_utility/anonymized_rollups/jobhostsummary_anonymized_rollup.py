@@ -31,9 +31,9 @@ class JobHostSummaryAnonymizedRollup(BaseAnonymizedRollup):
     def _merge_stats_json(self, stats_all, stats_new, groupby_col):
         """Merge two stats JSON lists by summing numeric columns and unioning lists."""
         if not stats_all:
-            return stats_new if stats_new else []
+            return stats_new or []
         if not stats_new:
-            return stats_all if stats_all else []
+            return stats_all or []
 
         # Create lookup dictionaries keyed by grouping column
         all_dict = {item.get(groupby_col): item.copy() for item in stats_all}

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -6,8 +6,8 @@ import pandas as pd
 from metrics_utility.library.collectors.controller.main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
 
 
-SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=timezone.utc)
-UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=timezone.utc)
+SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=UTC)
+UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=UTC)
 
 
 def test_main_indirectmanagednodeaudit_basic():

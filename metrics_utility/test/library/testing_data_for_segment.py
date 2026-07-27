@@ -383,5 +383,5 @@ segment_data_large = json.dumps(segment_data)
 segment_data_large = json.loads(segment_data_large)
 
 # repeat module names X times
-for i in range(15):
+for _i in range(15):
     segment_data_large['module_stats'].extend(segment_data['module_stats'])

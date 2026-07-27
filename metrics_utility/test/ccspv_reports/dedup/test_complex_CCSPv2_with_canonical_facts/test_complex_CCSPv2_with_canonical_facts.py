@@ -1,4 +1,3 @@
-# ruff: noqa: E501
 import datetime
 import json
 import math
@@ -1623,9 +1622,9 @@ def validate_ccsp_summary(file_path):
         actual['structure']['report_period_contains'] = ['2025-07-08', '2025-07-11']
 
     # Check for SKU data - look for quantity 20, 21 or 22 anywhere in the sheet (may vary based on deduplication)
-    for col_name, col_data in raw_data.items():
+    for col_data in raw_data.values():
         if isinstance(col_data, dict):
-            for row_idx, value in col_data.items():
+            for value in col_data.values():
                 if value in [20, 21, 22, 23]:
                     actual['structure']['has_sku_data'] = True
                     actual['structure']['total_unique_nodes'] = value  # Use the actual value found
@@ -2046,9 +2045,7 @@ def validate_data_collection_status(file_path):
         for k, v in d.items():
             if isinstance(v, dict):
                 result[k] = normalize_for_comparison(v)
-            elif isinstance(v, float) and math.isnan(v):
-                result[k] = 'NAN_VALUE'
-            elif v is pandas.NaT:
+            elif (isinstance(v, float) and math.isnan(v)) or v is pandas.NaT:
                 result[k] = 'NAN_VALUE'
             else:
                 result[k] = v
@@ -2434,7 +2431,7 @@ def validate_input_csv_data_integrity():
         try:
             df = pandas.read_csv(file_path, encoding='utf-8')
             assert len(df) > 0, f'File {file_name} is empty'
-        except (IOError, UnicodeDecodeError, pandas.errors.ParserError) as e:
+        except (OSError, UnicodeDecodeError, pandas.errors.ParserError) as e:
             pytest.fail(f'Failed to read {file_name}: {e}')
 
 
