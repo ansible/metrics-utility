@@ -28,7 +28,7 @@ class StorageSegment:
 
     # Max JSON size of each `data` chunk. Segment enforces ~32KB per `track` message
     # including `properties` wrapper, event name, and segment_meta; keep this conservative.
-    REGULAR_MESSAGE_LIMIT = 24 * 1024
+    REGULAR_MESSAGE_LIMIT = 32 * 1024
 
     def __init__(self, **settings):
         """Initialise the Segment storage backend.
@@ -155,7 +155,14 @@ class StorageSegment:
         # Setting to None restores the SDK default (https://api.segment.io).
         analytics.host = self.host or None
 
-        max_size = self.REGULAR_MESSAGE_LIMIT
+        header = {
+            'artifact_name': artifact_name,
+            'data': {},
+            'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'chunk_info': {'chunk_number': 0, 'total_chunks': 0, 'chunk_size': 0},
+        }
+        overhead = self._calculate_size({**header, **(segment_meta or {})})
+        max_size = self.REGULAR_MESSAGE_LIMIT - overhead
         chunks = self._split_into_chunks(dict, max_size)
 
         total_chunks = len(chunks)
