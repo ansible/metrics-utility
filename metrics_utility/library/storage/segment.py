@@ -26,8 +26,9 @@ class StorageSegment:
     per-message size limit.
     """
 
-    # Max JSON size of each `data` chunk. Segment enforces ~32KB per `track` message
-    # including `properties` wrapper, event name, and segment_meta; keep this conservative.
+    # Total budget for each Segment track message (JSON bytes). The SDK enforces a
+    # hard 32KB limit; in the `put` in this file, we subtract the header (and all
+    # other properties in the packet) from this number, and chunk accordingly
     REGULAR_MESSAGE_LIMIT = 32 * 1024
 
     def __init__(self, **settings):
@@ -156,12 +157,21 @@ class StorageSegment:
         analytics.host = self.host or None
 
         header = {
-            'artifact_name': artifact_name,
-            'data': {},
-            'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
-            'chunk_info': {'chunk_number': 0, 'total_chunks': 0, 'chunk_size': 0},
+            'anonymousId': anonymous_id,
+            'type': 'track',
+            'event': event_name,
+            'messageId': str(uuid.uuid4()),
+            'timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'integrations': {},
+            'context': {},
+            'properties': {
+                'artifact_name': artifact_name,
+                'data': {},
+                'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+                'chunk_info': {'chunk_number': 0, 'total_chunks': 0, 'chunk_size': 0},
+            },
         }
-        overhead = self._calculate_size({**header, **(segment_meta or {})})
+        overhead = self._calculate_size(header)
         max_size = self.REGULAR_MESSAGE_LIMIT - overhead
         chunks = self._split_into_chunks(dict, max_size)
 
