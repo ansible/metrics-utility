@@ -36,9 +36,9 @@ class TestStorageSegmentAvailable:
         assert 'jobs_by_job_type' in chunks[5]
         assert 'job_host_summary' in chunks[6]
 
-        assert len(chunks[1]['module_stats']) == 38
-        assert len(chunks[2]['module_stats']) == 38
-        assert len(chunks[3]['module_stats']) == 36
+        assert len(chunks[1]['module_stats']) == 50
+        assert len(chunks[2]['module_stats']) == 50
+        assert len(chunks[3]['module_stats']) == 12
 
     def test_simple_list_data(self):
         data = {'test_list': ['item1', 'item2']}
@@ -58,8 +58,8 @@ class TestStorageSegmentAvailable:
         assert len(chunks) == 2
         assert 'test_list' in chunks[0]
         assert 'test_list' in chunks[1]
-        assert len(chunks[0]['test_list']) == 2139
-        assert len(chunks[1]['test_list']) == 861
+        assert len(chunks[0]['test_list']) == 2821
+        assert len(chunks[1]['test_list']) == 179
 
     def test_rollup_period_string_arrays(self):
         """Test that arrays of strings (like rollup_period_controller_versions) are split correctly."""

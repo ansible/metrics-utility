@@ -61,7 +61,7 @@ class StorageSegment:
         If a top-level key's value is a list, it is split in order: the next item is
         considered appended to the current chunk; if ``json.dumps`` of that chunk
         would exceed max_size, the current chunk is finalized and a new one is started
-        (or a single oversize item is emitted alone).
+        (or a single oversize item is emitted alone with a warning).
 
         Args:
             data: Dictionary to split, dictionary contains key : value pairs
@@ -72,7 +72,14 @@ class StorageSegment:
 
         Returns:
             List of data chunks
+
+        Raises:
+            ValueError: If max_size is not positive.
         """
+        if max_size <= 0:
+            msg = f'max_size must be positive, got {max_size}'
+            raise ValueError(msg)
+
         chunks = []
 
         if data is not None and not isinstance(data, dict):
@@ -81,8 +88,11 @@ class StorageSegment:
 
         for key, value in data.items():
             if isinstance(value, dict):
-                # always add to chunks, each key in main dict is a separate chunk
-                chunks.append({key: value})
+                chunk = {key: value}
+                chunk_size = self._calculate_size(chunk)
+                if chunk_size > max_size:
+                    logger.warning('Oversized dict chunk for key %r: %d bytes exceeds %d limit', key, chunk_size, max_size)
+                chunks.append(chunk)
 
             elif isinstance(value, list):
                 active_chunk = {key: []}
@@ -94,7 +104,7 @@ class StorageSegment:
                             chunks.append(active_chunk)
                             active_chunk = {key: [item]}
                         else:
-                            # single item does not fit max_size; emit it alone
+                            logger.warning('Single list item in key %r exceeds %d byte limit', key, max_size)
                             chunks.append({key: [item]})
                     else:
                         active_chunk[key].append(item)
@@ -156,14 +166,18 @@ class StorageSegment:
         # Setting to None restores the SDK default (https://api.segment.io).
         analytics.host = self.host or None
 
+        if not segment_meta:
+            segment_meta = {}
+        message_id = segment_meta.get('message_id')
+
         header = {
             'anonymousId': anonymous_id,
             'type': 'track',
             'event': event_name,
-            'messageId': str(uuid.uuid4()),
+            'messageId': 'a' * 64 if message_id else str(uuid.uuid4()),
             'timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
-            'integrations': {},
-            'context': {},
+            'integrations': segment_meta.get('integrations', {}),
+            'context': segment_meta.get('context', {}),
             'properties': {
                 'artifact_name': artifact_name,
                 'data': {},
@@ -180,10 +194,6 @@ class StorageSegment:
         if self.debug:
             msg = f'Split data into {total_chunks} chunks'
             print(msg, file=sys.stderr)
-
-        if not segment_meta:
-            segment_meta = {}
-        message_id = segment_meta.get('message_id')
 
         # Send each chunk
         for i, chunk in enumerate(chunks, 1):
