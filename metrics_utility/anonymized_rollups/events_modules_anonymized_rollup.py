@@ -15,6 +15,7 @@ can use each group independently without double-counting.
 import json
 import re
 
+import numpy as np
 import pandas as pd
 
 from metrics_utility.anonymized_rollups.base_anonymized_rollup import BaseAnonymizedRollup
@@ -229,8 +230,22 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if item_all and item_new:
             self._merge_numeric_columns(item_all, item_new, merged_item)
             self._merge_list_columns(item_all, item_new, merged_item)
+            self._merge_task_type_columns(item_all, item_new, merged_item)
 
         return merged_item
+
+    def _merge_task_type_columns(self, item_all, item_new, merged_item):
+        """Sum task_type sub-dict numeric fields from both items."""
+        for tt in self._TASK_TYPE_NAMES:
+            dict_all = item_all.get(tt)
+            dict_new = item_new.get(tt)
+            if dict_all is None and dict_new is None:
+                merged_item.pop(tt, None)
+                continue
+            d_all = dict_all if isinstance(dict_all, dict) else {}
+            d_new = dict_new if isinstance(dict_new, dict) else {}
+            all_keys = set(d_all.keys()) | set(d_new.keys())
+            merged_item[tt] = {k: d_all.get(k, 0) + d_new.get(k, 0) for k in all_keys}
 
     def _merge_stats_json(self, stats_all, stats_new, groupby_cols):
         """Merge two stats JSON lists by summing numeric columns and unioning lists."""
@@ -429,6 +444,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         if 'ansible_version' not in dataframe.columns:
             dataframe['ansible_version'] = None
 
+        if 'async_job_id' not in dataframe.columns:
+            dataframe['async_job_id'] = None
+
         columns_to_keep = [
             'job_id',
             'task_uuid',
@@ -448,8 +466,88 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'is_deprecation',
             'ansible_version',
             'event_data_length',
+            'async_job_id',
         ]
         return dataframe[columns_to_keep]
+
+    # ------------------------------------------------------------------
+    # Task type classification
+    # ------------------------------------------------------------------
+
+    _TASK_TYPE_NAMES = (
+        'sync_task',
+        'sync_loop',
+        'async_poll_task',
+        'async_poll_loop',
+        'async_fire_forget_task',
+        'async_fire_forget_loop',
+    )
+
+    _ITEM_EVENTS = frozenset([
+        'runner_item_on_ok',
+        'runner_item_on_failed',
+        'runner_item_on_skipped',
+        'runner_item_on_unreachable',
+    ])
+
+    _ASYNC_POLL_EVENTS = frozenset([
+        'runner_on_async_ok',
+        'runner_on_async_failed',
+        'runner_on_async_poll',
+    ])
+
+    @classmethod
+    def _classify_task_types(cls, dataframe):
+        """Assign a task_type column to each event based on (job_id, task_uuid) grouping.
+
+        Classification per (job_id, task_uuid):
+        - Loop dimension: any runner_item_on_* event present
+        - Execution mode:
+          - async_poll: any runner_on_async_* event present
+          - async_fire_forget: any non-async_status event with async_job_id present
+          - sync: everything else
+        """
+        group_keys = ['job_id', 'task_uuid']
+
+        is_loop = dataframe['event'].isin(cls._ITEM_EVENTS).groupby(
+            [dataframe['job_id'], dataframe['task_uuid']]
+        ).transform('any')
+
+        is_async_poll = dataframe['event'].isin(cls._ASYNC_POLL_EVENTS).groupby(
+            [dataframe['job_id'], dataframe['task_uuid']]
+        ).transform('any')
+
+        if 'async_job_id' in dataframe.columns:
+            is_ff_event = (
+                dataframe['async_job_id'].notna()
+                & (dataframe['module_name'] != 'ansible.builtin.async_status')
+            )
+            is_fire_forget = is_ff_event.groupby(
+                [dataframe['job_id'], dataframe['task_uuid']]
+            ).transform('any')
+        else:
+            is_fire_forget = pd.Series(False, index=dataframe.index, dtype=bool)
+
+        # Build task_type from the two dimensions
+        conditions = [
+            is_async_poll & is_loop,
+            is_async_poll & ~is_loop,
+            is_fire_forget & is_loop,
+            is_fire_forget & ~is_loop,
+            ~is_async_poll & ~is_fire_forget & is_loop,
+            ~is_async_poll & ~is_fire_forget & ~is_loop,
+        ]
+        choices = [
+            'async_poll_loop',
+            'async_poll_task',
+            'async_fire_forget_loop',
+            'async_fire_forget_task',
+            'sync_loop',
+            'sync_task',
+        ]
+        task_type = np.select(conditions, choices, default='sync_task')
+
+        return dataframe.assign(task_type=task_type)
 
     # ------------------------------------------------------------------
     # Aggregation
@@ -564,6 +662,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
 
     def _compute_all_stats(self, dataframe):
         """Compute module_stats, collection_stats, and role_stats from the event dataframe."""
+        dataframe = self._classify_task_types(dataframe)
         dataframe = self._add_aggregation_columns(dataframe)
         common_aggregation = self._get_common_aggregation(dataframe)
 
@@ -589,7 +688,77 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         )
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
+        # Per-task_type breakdown
+        module_task_type_stats = self._compute_task_type_breakdown(
+            dataframe, ['module_name', 'collection_name', 'collection_source']
+        )
+        collection_task_type_stats = self._compute_task_type_breakdown(
+            dataframe, ['collection_name', 'collection_source']
+        )
+        role_task_type_stats = self._compute_task_type_breakdown(
+            role_df, ['role', 'role_collection_name', 'role_collection_source']
+        )
+
+        self._attach_task_type_stats(module_stats, module_task_type_stats, ['module_name', 'collection_name', 'collection_source'])
+        self._attach_task_type_stats(collection_stats, collection_task_type_stats, ['collection_name', 'collection_source'])
+        role_key_cols = ['role', 'collection_name', 'collection_source']
+        # role_task_type_stats uses role_collection_name/source before rename
+        self._attach_task_type_stats(
+            role_stats, role_task_type_stats, role_key_cols,
+            stats_key_map={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'},
+        )
+
         return module_stats, collection_stats, role_stats
+
+    def _compute_task_type_breakdown(self, dataframe, groupby_cols):
+        """Compute per-task_type event counts for each grouping.
+
+        Returns a dict keyed by tuple of groupby values, with each value being
+        a dict of task_type -> {tasks_total, collected_events_total, runner counters, ignore_errors_total}.
+        """
+        if dataframe.empty or 'task_type' not in dataframe.columns:
+            return {}
+
+        agg_spec = {
+            'tasks_total': ('task_key', 'nunique'),
+            'collected_events_total': ('event', 'size'),
+        }
+        for flag_col in self._RUNNER_EVENT_FLAG_COLS:
+            counter_name = flag_col[len('is_'):] + '_total'
+            agg_spec[counter_name] = (flag_col, 'sum')
+
+        agg_result = dataframe.groupby(groupby_cols + ['task_type'], as_index=False, observed=True).agg(**agg_spec)
+
+        result = {}
+        stat_cols = [c for c in agg_result.columns if c not in groupby_cols and c != 'task_type']
+        for _, row in agg_result.iterrows():
+            key = tuple(row[col] for col in groupby_cols)
+            task_type = row['task_type']
+            if key not in result:
+                result[key] = {}
+            result[key][task_type] = {col: int(row[col]) for col in stat_cols}
+
+        return result
+
+    def _attach_task_type_stats(self, stats_df, task_type_dict, key_cols, stats_key_map=None):
+        """Attach per-task_type breakdown dicts to each row in the stats DataFrame."""
+        if stats_df.empty or not task_type_dict:
+            for tt in self._TASK_TYPE_NAMES:
+                stats_df[tt] = None
+            return
+
+        def _build_type_dict(row):
+            if stats_key_map:
+                key = tuple(row[stats_key_map.get(col, col)] for col in key_cols)
+            else:
+                key = tuple(row[col] for col in key_cols)
+            return task_type_dict.get(key, {})
+
+        type_dicts = stats_df.apply(_build_type_dict, axis=1)
+
+        for tt in self._TASK_TYPE_NAMES:
+            stats_df[tt] = type_dicts.apply(lambda d: d.get(tt))
+
 
     def _compute_unique_metadata(self, dataframe):
         """Compute unique_modules and modules_per_playbook."""
@@ -770,6 +939,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         for stats_list in [module_stats, collection_stats, role_stats]:
             for item in stats_list:
                 _normalize_stats_item(item)
+                # Remove task_type keys that are None (no events in that group)
+                for tt in self._TASK_TYPE_NAMES:
+                    if item.get(tt) is None:
+                        item.pop(tt, None)
 
         modules_used_to_automate_total = len(unique_modules)
         modules_used_per_playbook_total = {
