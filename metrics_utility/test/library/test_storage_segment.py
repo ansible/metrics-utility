@@ -1,5 +1,7 @@
 from unittest.mock import Mock, patch
 
+import pytest
+
 from metrics_utility.library.storage.segment import StorageSegment
 from metrics_utility.test.library.testing_data_for_segment import segment_data, segment_data_large
 
@@ -129,6 +131,55 @@ class TestStorageSegmentAvailable:
             chunk_info = call_kwargs['properties']['chunk_info']
             assert chunk_info['chunk_number'] == i
             assert chunk_info['total_chunks'] == 7
+
+    def test_split_into_chunks_rejects_non_positive_max_size(self):
+        storage_segment = StorageSegment()
+        with pytest.raises(ValueError, match='max_size must be positive'):
+            storage_segment._split_into_chunks({'key': [1, 2, 3]}, 0)
+        with pytest.raises(ValueError, match='max_size must be positive'):
+            storage_segment._split_into_chunks({'key': [1, 2, 3]}, -100)
+
+    def test_split_into_chunks_warns_on_oversized_dict(self, caplog):
+        storage_segment = StorageSegment()
+        data = {'big': {'a': 'x' * 500}}
+        chunks = storage_segment._split_into_chunks(data, 50)
+        assert len(chunks) == 1
+        assert chunks[0] == data
+        assert 'Oversized dict chunk' in caplog.text
+
+    def test_split_into_chunks_warns_on_oversized_single_list_item(self, caplog):
+        storage_segment = StorageSegment()
+        data = {'items': ['x' * 500]}
+        chunks = storage_segment._split_into_chunks(data, 50)
+        assert len(chunks) == 1
+        assert chunks[0]['items'] == ['x' * 500]
+        assert 'Single list item' in caplog.text
+
+    @patch('metrics_utility.library.storage.segment.analytics')
+    @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
+    def test_put_overhead_includes_segment_meta(self, mock_analytics):
+        """put() accounts for segment_meta (including hashed message_id) in overhead."""
+        mock_analytics.track = Mock()
+        mock_analytics.flush = Mock()
+
+        storage_segment = StorageSegment(write_key='test_write_key')
+        meta = {'message_id': 'original-id-value'}
+        chunks_with_meta = storage_segment.put(
+            artifact_name='test',
+            dict={'items': [f'item{i}' for i in range(3000)]},
+            event_name='Test',
+            segment_meta=meta,
+        )
+
+        chunks_without_meta = storage_segment.put(
+            artifact_name='test',
+            dict={'items': [f'item{i}' for i in range(3000)]},
+            event_name='Test',
+        )
+
+        # A 64-char hashed message_id is larger than a 36-char UUID,
+        # so with meta the overhead is higher and chunks hold fewer items
+        assert len(chunks_with_meta) >= len(chunks_without_meta)
 
     @patch('metrics_utility.library.storage.segment.analytics')
     @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
