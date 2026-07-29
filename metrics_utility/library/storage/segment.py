@@ -190,9 +190,10 @@ class StorageSegment:
             'context': {},
         }
         properties = self._build_properties(artifact_name, {}, 0, 0, 0)
+        serializable_meta = {k: v.isoformat() if isinstance(v, datetime.datetime) else v for k, v in segment_meta.items()}
         header = {
             **segment_envelope,
-            **segment_meta,
+            **serializable_meta,
             'properties': properties,
             'anonymousId': anonymous_id,
             'event': event_name,
