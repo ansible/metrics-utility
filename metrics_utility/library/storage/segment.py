@@ -49,6 +49,18 @@ class StorageSegment:
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
+    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size):
+        return {
+            'artifact_name': artifact_name,
+            'data': data,
+            'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'chunk_info': {
+                'chunk_number': chunk_number,
+                'total_chunks': total_chunks,
+                'chunk_size': chunk_size,
+            },
+        }
+
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
         return len(json.dumps(data).encode('utf-8'))
@@ -170,21 +182,17 @@ class StorageSegment:
             segment_meta = {}
         message_id = segment_meta.get('message_id')
 
-        header = {
+        segment_envelope = {
             'anonymousId': anonymous_id,
             'type': 'track',
             'event': event_name,
             'messageId': 'a' * 64 if message_id else str(uuid.uuid4()),
             'timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
-            'integrations': segment_meta.get('integrations', {}),
-            'context': segment_meta.get('context', {}),
-            'properties': {
-                'artifact_name': artifact_name,
-                'data': {},
-                'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
-                'chunk_info': {'chunk_number': 0, 'total_chunks': 0, 'chunk_size': 0},
-            },
+            'integrations': {},
+            'context': {},
         }
+        properties = self._build_properties(artifact_name, {}, 0, 0, 0)
+        header = {**segment_envelope, 'properties': properties, **segment_meta}
         overhead = self._calculate_size(header)
         max_size = self.REGULAR_MESSAGE_LIMIT - overhead
         chunks = self._split_into_chunks(dict, max_size)
@@ -212,16 +220,9 @@ class StorageSegment:
             analytics.track(
                 anonymous_id=anonymous_id,
                 event=event_name,
-                properties={
-                    'artifact_name': artifact_name,
-                    'data': chunk,
-                    'upload_timestamp': (datetime.datetime.now(tz=datetime.UTC).isoformat()),
-                    'chunk_info': {
-                        'chunk_number': i,
-                        'total_chunks': total_chunks,
-                        'chunk_size': chunk_size,
-                    },
-                },
+                properties=self._build_properties(
+                    artifact_name, chunk, i, total_chunks, chunk_size,
+                ),
                 **segment_meta,
             )
 
