@@ -183,16 +183,20 @@ class StorageSegment:
         message_id = segment_meta.get('message_id')
 
         segment_envelope = {
-            'anonymousId': anonymous_id,
             'type': 'track',
-            'event': event_name,
             'messageId': 'a' * 64 if message_id else str(uuid.uuid4()),
             'timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
             'integrations': {},
             'context': {},
         }
         properties = self._build_properties(artifact_name, {}, 0, 0, 0)
-        header = {**segment_envelope, 'properties': properties}
+        header = {
+            **segment_envelope,
+            **segment_meta,
+            'properties': properties,
+            'anonymousId': anonymous_id,
+            'event': event_name,
+        }
         overhead = self._calculate_size(header)
         max_size = self.REGULAR_MESSAGE_LIMIT - overhead
         chunks = self._split_into_chunks(dict, max_size)
