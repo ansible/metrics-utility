@@ -22,9 +22,11 @@ from .jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
 from .jobs_anonymized_rollup import JobsAnonymizedRollup
 from .table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 from .task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
+from .types import AnonymizedPayload
 
 
 __all__ = [
+    'AnonymizedPayload',
     'BaseAnonymizedRollup',
     'ControllerVersionAnonymizedRollup',
     'CredentialsAnonymizedRollup',
