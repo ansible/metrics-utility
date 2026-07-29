@@ -483,18 +483,22 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         'async_fire_forget_loop',
     )
 
-    _ITEM_EVENTS = frozenset([
-        'runner_item_on_ok',
-        'runner_item_on_failed',
-        'runner_item_on_skipped',
-        'runner_item_on_unreachable',
-    ])
+    _ITEM_EVENTS = frozenset(
+        [
+            'runner_item_on_ok',
+            'runner_item_on_failed',
+            'runner_item_on_skipped',
+            'runner_item_on_unreachable',
+        ]
+    )
 
-    _ASYNC_POLL_EVENTS = frozenset([
-        'runner_on_async_ok',
-        'runner_on_async_failed',
-        'runner_on_async_poll',
-    ])
+    _ASYNC_POLL_EVENTS = frozenset(
+        [
+            'runner_on_async_ok',
+            'runner_on_async_failed',
+            'runner_on_async_poll',
+        ]
+    )
 
     @classmethod
     def _classify_task_types(cls, dataframe):
@@ -507,24 +511,13 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
           - async_fire_forget: any non-async_status event with async_job_id present
           - sync: everything else
         """
-        group_keys = ['job_id', 'task_uuid']
+        is_loop = dataframe['event'].isin(cls._ITEM_EVENTS).groupby([dataframe['job_id'], dataframe['task_uuid']]).transform('any')
 
-        is_loop = dataframe['event'].isin(cls._ITEM_EVENTS).groupby(
-            [dataframe['job_id'], dataframe['task_uuid']]
-        ).transform('any')
-
-        is_async_poll = dataframe['event'].isin(cls._ASYNC_POLL_EVENTS).groupby(
-            [dataframe['job_id'], dataframe['task_uuid']]
-        ).transform('any')
+        is_async_poll = dataframe['event'].isin(cls._ASYNC_POLL_EVENTS).groupby([dataframe['job_id'], dataframe['task_uuid']]).transform('any')
 
         if 'async_job_id' in dataframe.columns:
-            is_ff_event = (
-                dataframe['async_job_id'].notna()
-                & (dataframe['module_name'] != 'ansible.builtin.async_status')
-            )
-            is_fire_forget = is_ff_event.groupby(
-                [dataframe['job_id'], dataframe['task_uuid']]
-            ).transform('any')
+            is_ff_event = dataframe['async_job_id'].notna() & (dataframe['module_name'] != 'ansible.builtin.async_status')
+            is_fire_forget = is_ff_event.groupby([dataframe['job_id'], dataframe['task_uuid']]).transform('any')
         else:
             is_fire_forget = pd.Series(False, index=dataframe.index, dtype=bool)
 
@@ -689,22 +682,18 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         role_stats = role_stats.rename(columns={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'})
 
         # Per-task_type breakdown
-        module_task_type_stats = self._compute_task_type_breakdown(
-            dataframe, ['module_name', 'collection_name', 'collection_source']
-        )
-        collection_task_type_stats = self._compute_task_type_breakdown(
-            dataframe, ['collection_name', 'collection_source']
-        )
-        role_task_type_stats = self._compute_task_type_breakdown(
-            role_df, ['role', 'role_collection_name', 'role_collection_source']
-        )
+        module_task_type_stats = self._compute_task_type_breakdown(dataframe, ['module_name', 'collection_name', 'collection_source'])
+        collection_task_type_stats = self._compute_task_type_breakdown(dataframe, ['collection_name', 'collection_source'])
+        role_task_type_stats = self._compute_task_type_breakdown(role_df, ['role', 'role_collection_name', 'role_collection_source'])
 
         self._attach_task_type_stats(module_stats, module_task_type_stats, ['module_name', 'collection_name', 'collection_source'])
         self._attach_task_type_stats(collection_stats, collection_task_type_stats, ['collection_name', 'collection_source'])
         role_key_cols = ['role', 'collection_name', 'collection_source']
         # role_task_type_stats uses role_collection_name/source before rename
         self._attach_task_type_stats(
-            role_stats, role_task_type_stats, role_key_cols,
+            role_stats,
+            role_task_type_stats,
+            role_key_cols,
             stats_key_map={'role_collection_name': 'collection_name', 'role_collection_source': 'collection_source'},
         )
 
@@ -724,10 +713,10 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             'collected_events_total': ('event', 'size'),
         }
         for flag_col in self._RUNNER_EVENT_FLAG_COLS:
-            counter_name = flag_col[len('is_'):] + '_total'
+            counter_name = flag_col[len('is_') :] + '_total'
             agg_spec[counter_name] = (flag_col, 'sum')
 
-        agg_result = dataframe.groupby(groupby_cols + ['task_type'], as_index=False, observed=True).agg(**agg_spec)
+        agg_result = dataframe.groupby([*groupby_cols, 'task_type'], as_index=False, observed=True).agg(**agg_spec)
 
         result = {}
         stat_cols = [c for c in agg_result.columns if c not in groupby_cols and c != 'task_type']
@@ -757,8 +746,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         type_dicts = stats_df.apply(_build_type_dict, axis=1)
 
         for tt in self._TASK_TYPE_NAMES:
-            stats_df[tt] = type_dicts.apply(lambda d: d.get(tt))
-
+            stats_df[tt] = type_dicts.apply(lambda d, _tt=tt: d.get(_tt))
 
     def _compute_unique_metadata(self, dataframe):
         """Compute unique_modules and modules_per_playbook."""

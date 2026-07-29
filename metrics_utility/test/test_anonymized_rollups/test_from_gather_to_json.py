@@ -316,6 +316,31 @@ _RUNNER_EVENT_COUNTERS = (
     'jobs_never_started_total',
 )
 
+_TASK_TYPE_NAMES = (
+    'sync_task',
+    'sync_loop',
+    'async_poll_task',
+    'async_poll_loop',
+    'async_fire_forget_task',
+    'async_fire_forget_loop',
+)
+
+_TASK_TYPE_BREAKDOWN_KEYS = frozenset(
+    {
+        'tasks_total',
+        'collected_events_total',
+        'runner_on_ok_total',
+        'runner_on_failed_total',
+        'runner_on_unreachable_total',
+        'runner_on_async_ok_total',
+        'runner_on_async_failed_total',
+        'runner_item_on_ok_total',
+        'runner_item_on_failed_total',
+        'runner_retry_total',
+        'ignore_errors_total',
+    }
+)
+
 
 def _assert_runner_event_counters_populated(stat, label):
     """Fail if any tracked runner/module counter is still zero (fixture must exercise them)."""
@@ -363,6 +388,58 @@ def _validate_role_stats(json_data):
 
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
     assert len(custom_roles) == 0, f'Should have 0 Custom roles after anonymization, got {len(custom_roles)}'
+
+
+def _validate_task_type_breakdowns(json_data):
+    """Validate task type breakdown dicts in module_stats, collection_stats, and role_stats.
+
+    Each stat entry may have one or more task_type keys (sync_task, sync_loop, etc.)
+    containing sub-breakdowns of event counters. Validates:
+      - Structure: each breakdown dict has the expected keys with integer values
+      - Consistency: sum of collected_events_total across task types == total collected_events_total
+      - Coverage: at least some entries have task type breakdowns
+    """
+    print('--- Validating task type breakdowns ---')
+
+    for stats_key in ('module_stats', 'collection_stats', 'role_stats'):
+        stats_list = json_data.get(stats_key, [])
+        if not stats_list:
+            continue
+
+        entries_with_breakdowns = 0
+        for stat in stats_list:
+            present_types = [tt for tt in _TASK_TYPE_NAMES if tt in stat]
+            if not present_types:
+                continue
+            entries_with_breakdowns += 1
+
+            breakdown_events_sum = 0
+            for tt in present_types:
+                breakdown = stat[tt]
+                assert isinstance(breakdown, dict), f'{stats_key}: task_type {tt!r} should be a dict, got {type(breakdown)}'
+                missing_keys = _TASK_TYPE_BREAKDOWN_KEYS - set(breakdown)
+                assert not missing_keys, f'{stats_key}: task_type {tt!r} missing keys {sorted(missing_keys)}'
+                for key in _TASK_TYPE_BREAKDOWN_KEYS:
+                    assert isinstance(breakdown[key], int), f'{stats_key}: {tt}.{key} should be int, got {type(breakdown[key])}'
+                    assert breakdown[key] >= 0, f'{stats_key}: {tt}.{key} should be >= 0, got {breakdown[key]}'
+                assert breakdown['tasks_total'] > 0, f'{stats_key}: {tt}.tasks_total should be > 0'
+                assert breakdown['collected_events_total'] > 0, f'{stats_key}: {tt}.collected_events_total should be > 0'
+                breakdown_events_sum += breakdown['collected_events_total']
+
+            total_events = stat.get('collected_events_total', 0)
+            assert breakdown_events_sum == total_events, (
+                f'{stats_key}: sum of task_type collected_events_total ({breakdown_events_sum}) != total collected_events_total ({total_events})'
+            )
+
+        assert entries_with_breakdowns > 0, f'{stats_key}: expected at least one entry with task type breakdowns'
+
+    # The fixture exercises sync_task, sync_loop, and async events so at least
+    # sync_task and sync_loop should appear in module_stats.
+    module_stats = json_data.get('module_stats', [])
+    has_sync_task = any('sync_task' in m for m in module_stats)
+    has_sync_loop = any('sync_loop' in m for m in module_stats)
+    assert has_sync_task, 'module_stats should have at least one entry with sync_task breakdown'
+    assert has_sync_loop, 'module_stats should have at least one entry with sync_loop breakdown'
 
 
 def _validate_jobs_by_installed_collections_versions(json_data):
@@ -980,6 +1057,7 @@ def _validate_all_data(json_data, statistics):
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
     _validate_role_stats_and_jobs_by_installed_collections_versions(json_data)
+    _validate_task_type_breakdowns(json_data)
     _validate_warnings_deprecations_values_multi_hour(json_data, statistics)
 
     print('--- Validating playbooks_total ---')

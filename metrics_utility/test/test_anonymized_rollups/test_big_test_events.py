@@ -1157,6 +1157,27 @@ def test_ansible_builtin_copy(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 7
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t001 is a sync task (no item events, no async events)
+    assert m['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 7,
+        'runner_on_ok_total': 4,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 1,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 1,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_loop' not in m
+    assert 'async_poll_task' not in m
+    assert 'async_poll_loop' not in m
+    assert 'async_fire_forget_task' not in m
+    assert 'async_fire_forget_loop' not in m
 
 
 def test_ansible_builtin_package(modules):
@@ -1181,6 +1202,24 @@ def test_ansible_builtin_package(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 11
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t002 is a sync loop (has runner_item_on_* events)
+    assert m['sync_loop'] == {
+        'tasks_total': 1,
+        'collected_events_total': 11,
+        'runner_on_ok_total': 1,
+        'runner_on_failed_total': 2,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 6,
+        'runner_item_on_failed_total': 2,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 2,
+    }
+    assert 'sync_task' not in m
+    assert 'async_poll_task' not in m
 
 
 def test_ansible_posix_firewalld(modules):
@@ -1200,6 +1239,24 @@ def test_ansible_posix_firewalld(modules):
     assert m['deprecations_total'] == 1  # h3 module-level deprecation
     assert m['collected_events_total'] == 3  # h5 runner_on_skipped excluded
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t003 is a sync task
+    assert m['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 3,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 1,
+    }
+    assert 'sync_loop' not in m
+    assert 'async_poll_task' not in m
 
 
 def test_ansible_builtin_systemd(modules):
@@ -1218,6 +1275,25 @@ def test_ansible_builtin_systemd(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 3
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t004 has runner_on_async_* events → async_poll_task
+    assert m['async_poll_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 3,
+        'runner_on_ok_total': 0,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 1,
+        'runner_on_async_failed_total': 2,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 1,
+    }
+    assert 'sync_task' not in m
+    assert 'sync_loop' not in m
+    assert 'async_fire_forget_task' not in m
 
 
 def test_community_mongodb_mongodb_replicaset(modules):
@@ -1239,6 +1315,24 @@ def test_community_mongodb_mongodb_replicaset(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 2
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.17.0']
+    # task type breakdown – t005 has runner_on_async_ok events → async_poll_task
+    assert m['async_poll_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 2,
+        'runner_on_ok_total': 0,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 2,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_task' not in m
+    assert 'sync_loop' not in m
 
 
 def test_community_general_ini_file(modules):
@@ -1258,6 +1352,24 @@ def test_community_general_ini_file(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 6
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.17.0']
+    # task type breakdown – t006 is a sync loop (has runner_item_on_* events)
+    assert m['sync_loop'] == {
+        'tasks_total': 1,
+        'collected_events_total': 6,
+        'runner_on_ok_total': 1,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 3,
+        'runner_item_on_failed_total': 1,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 2,
+    }
+    assert 'sync_task' not in m
+    assert 'async_poll_task' not in m
 
 
 def test_ansible_builtin_template(modules):
@@ -1275,6 +1387,24 @@ def test_ansible_builtin_template(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 2
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.17.0']
+    # task type breakdown – t007 is a sync task
+    assert m['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 2,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_loop' not in m
+    assert 'async_poll_task' not in m
 
 
 def test_ansible_builtin_file(modules):
@@ -1295,6 +1425,24 @@ def test_ansible_builtin_file(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 3
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t008 is a sync task
+    assert m['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 3,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 1,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_loop' not in m
+    assert 'async_poll_task' not in m
 
 
 def test_ansible_builtin_debug(modules):
@@ -1312,6 +1460,24 @@ def test_ansible_builtin_debug(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 2
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t010 is a sync task
+    assert m['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 2,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_loop' not in m
+    assert 'async_poll_task' not in m
 
 
 def test_community_general_yum(modules):
@@ -1331,6 +1497,24 @@ def test_community_general_yum(modules):
     assert m['deprecations_total'] == 0
     assert m['collected_events_total'] == 6  # h4 runner_on_skipped excluded
     assert m['event_data_size_total'] == 10 * m['collected_events_total']
+    # ansible versions
+    assert m['ansible_versions'] == ['2.16.0']
+    # task type breakdown – t009 is a sync loop (has runner_item_on_* events)
+    assert m['sync_loop'] == {
+        'tasks_total': 1,
+        'collected_events_total': 6,
+        'runner_on_ok_total': 1,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 3,
+        'runner_item_on_failed_total': 1,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_task' not in m
+    assert 'async_poll_task' not in m
 
 
 # ---------------------------------------------------------------------------
@@ -1371,6 +1555,51 @@ def test_ansible_builtin_collection(collections):
     assert c['deprecations_total'] == 0
     assert c['collected_events_total'] == 28  # 7+11+3+2+3+2(debug)
     assert c['event_data_size_total'] == 10 * c['collected_events_total']
+    # ansible versions – spans jobs 1 (2.16.0), 2 (2.17.0), 3 (2.16.0)
+    assert c['ansible_versions'] == ['2.16.0', '2.17.0']
+    # task type breakdowns – sync_task (copy/template/file/debug), sync_loop (package), async_poll_task (systemd)
+    assert c['sync_task'] == {
+        'tasks_total': 4,
+        'collected_events_total': 14,
+        'runner_on_ok_total': 10,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 2,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 1,
+        'ignore_errors_total': 0,
+    }
+    assert c['sync_loop'] == {
+        'tasks_total': 1,
+        'collected_events_total': 11,
+        'runner_on_ok_total': 1,
+        'runner_on_failed_total': 2,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 6,
+        'runner_item_on_failed_total': 2,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 2,
+    }
+    assert c['async_poll_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 3,
+        'runner_on_ok_total': 0,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 1,
+        'runner_on_async_failed_total': 2,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 1,
+    }
+    assert 'async_poll_loop' not in c
+    assert 'async_fire_forget_task' not in c
+    assert 'async_fire_forget_loop' not in c
 
 
 def test_ansible_posix_collection(collections):
@@ -1391,6 +1620,24 @@ def test_ansible_posix_collection(collections):
     assert c['deprecations_total'] == 1
     assert c['collected_events_total'] == 3
     assert c['event_data_size_total'] == 10 * c['collected_events_total']
+    # ansible versions
+    assert c['ansible_versions'] == ['2.16.0']
+    # task type breakdown – only sync_task (firewalld t003)
+    assert c['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 3,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 1,
+    }
+    assert 'sync_loop' not in c
+    assert 'async_poll_task' not in c
 
 
 def test_community_mongodb_collection(collections):
@@ -1410,6 +1657,24 @@ def test_community_mongodb_collection(collections):
     assert c['deprecations_total'] == 0
     assert c['collected_events_total'] == 2
     assert c['event_data_size_total'] == 10 * c['collected_events_total']
+    # ansible versions
+    assert c['ansible_versions'] == ['2.17.0']
+    # task type breakdown – only async_poll_task (mongodb_replicaset t005)
+    assert c['async_poll_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 2,
+        'runner_on_ok_total': 0,
+        'runner_on_failed_total': 0,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 2,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_task' not in c
+    assert 'sync_loop' not in c
 
 
 def test_community_general_collection(collections):
@@ -1433,6 +1698,24 @@ def test_community_general_collection(collections):
     assert c['deprecations_total'] == 0
     assert c['collected_events_total'] == 12  # 6+6
     assert c['event_data_size_total'] == 10 * c['collected_events_total']
+    # ansible versions – job 2 (2.17.0) and job 3 (2.16.0)
+    assert c['ansible_versions'] == ['2.16.0', '2.17.0']
+    # task type breakdown – both ini_file (t006) and yum (t009) are sync loops
+    assert c['sync_loop'] == {
+        'tasks_total': 2,
+        'collected_events_total': 12,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 2,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 6,
+        'runner_item_on_failed_total': 2,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 2,
+    }
+    assert 'sync_task' not in c
+    assert 'async_poll_task' not in c
 
 
 # ---------------------------------------------------------------------------
@@ -1468,6 +1751,24 @@ def test_role_web(roles):
     assert r['deprecations_total'] == 0
     assert r['collected_events_total'] == 7
     assert r['event_data_size_total'] == 10 * r['collected_events_total']
+    # ansible versions
+    assert r['ansible_versions'] == ['2.16.0']
+    # task type breakdown – copy t001 is a sync task
+    assert r['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 7,
+        'runner_on_ok_total': 4,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 1,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 1,
+        'ignore_errors_total': 0,
+    }
+    assert 'sync_loop' not in r
+    assert 'async_poll_task' not in r
     # copy task: h1, h2 (failed/retry/ok), h3, h4, h5 → 5 distinct hosts
 
 
@@ -1486,6 +1787,24 @@ def test_role_firewall(roles):
     assert r['deprecations_total'] == 1
     assert r['collected_events_total'] == 3
     assert r['event_data_size_total'] == 10 * r['collected_events_total']
+    # ansible versions
+    assert r['ansible_versions'] == ['2.16.0']
+    # task type breakdown – firewalld t003 is a sync task
+    assert r['sync_task'] == {
+        'tasks_total': 1,
+        'collected_events_total': 3,
+        'runner_on_ok_total': 2,
+        'runner_on_failed_total': 1,
+        'runner_on_unreachable_total': 0,
+        'runner_on_async_ok_total': 0,
+        'runner_on_async_failed_total': 0,
+        'runner_item_on_ok_total': 0,
+        'runner_item_on_failed_total': 0,
+        'runner_retry_total': 0,
+        'ignore_errors_total': 1,
+    }
+    assert 'sync_loop' not in r
+    assert 'async_poll_task' not in r
     # firewalld task: h1, h2, h3 → 3 distinct hosts
 
 
@@ -1502,3 +1821,10 @@ def test_role_local_cleanup(roles):
     assert r['runner_on_failed_total'] == 0
     assert r['collected_events_total'] == 2
     assert r['event_data_size_total'] == 10 * r['collected_events_total']
+    # ansible versions
+    assert r['ansible_versions'] == ['2.16.0']
+    # Task type breakdowns are NOT attached for roles with None collection_name
+    # because _compute_task_type_breakdown's groupby drops NaN keys (no dropna=False).
+    assert 'sync_task' not in r
+    assert 'sync_loop' not in r
+    assert 'async_poll_task' not in r
