@@ -192,7 +192,7 @@ class StorageSegment:
             'context': {},
         }
         properties = self._build_properties(artifact_name, {}, 0, 0, 0)
-        header = {**segment_envelope, 'properties': properties, **segment_meta}
+        header = {**segment_envelope, 'properties': properties}
         overhead = self._calculate_size(header)
         max_size = self.REGULAR_MESSAGE_LIMIT - overhead
         chunks = self._split_into_chunks(dict, max_size)
