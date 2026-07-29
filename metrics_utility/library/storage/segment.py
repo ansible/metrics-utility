@@ -221,7 +221,11 @@ class StorageSegment:
                 anonymous_id=anonymous_id,
                 event=event_name,
                 properties=self._build_properties(
-                    artifact_name, chunk, i, total_chunks, chunk_size,
+                    artifact_name,
+                    chunk,
+                    i,
+                    total_chunks,
+                    chunk_size,
                 ),
                 **segment_meta,
             )
