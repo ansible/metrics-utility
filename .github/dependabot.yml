@@ -4,8 +4,38 @@ updates:
     directory: '/'
     schedule:
       interval: 'monthly'
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
 
   - package-ecosystem: 'uv'
     directory: '/'
     schedule:
       interval: 'monthly'
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'gomod'
+    directories:
+      - '/tools/mock-segment-server'
+      - '/tools/mock-prometheus-server'
+    schedule:
+      interval: 'monthly'
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
+
+  - package-ecosystem: 'docker'
+    directories:
+      - '/tools/mock-segment-server'
+      - '/tools/mock-prometheus-server'
+    schedule:
+      interval: 'monthly'
+    groups:
+      monthly-batch:
+        patterns:
+          - '*'
