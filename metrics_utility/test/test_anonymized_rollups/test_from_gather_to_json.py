@@ -316,29 +316,13 @@ _RUNNER_EVENT_COUNTERS = (
     'jobs_never_started_total',
 )
 
-_TASK_TYPE_NAMES = (
-    'sync_task',
-    'sync_loop',
-    'async_poll_task',
-    'async_poll_loop',
-    'async_fire_forget_task',
-    'async_fire_forget_loop',
-)
-
-_TASK_TYPE_BREAKDOWN_KEYS = frozenset(
-    {
-        'tasks_total',
-        'collected_events_total',
-        'runner_on_ok_total',
-        'runner_on_failed_total',
-        'runner_on_unreachable_total',
-        'runner_on_async_ok_total',
-        'runner_on_async_failed_total',
-        'runner_item_on_ok_total',
-        'runner_item_on_failed_total',
-        'runner_retry_total',
-        'ignore_errors_total',
-    }
+_TASK_TYPE_COUNT_COLS = (
+    'sync_tasks_total',
+    'sync_loop_tasks_total',
+    'async_poll_tasks_total',
+    'async_poll_loop_tasks_total',
+    'async_fire_forget_tasks_total',
+    'async_fire_forget_loop_tasks_total',
 )
 
 
@@ -376,8 +360,8 @@ def _validate_role_stats(json_data):
         assert role['collection'] == collection
         assert role['collection_source'] == source
         assert role['jobs_total'] == 3
-        assert role['runner_on_ok_total'] == 7
-        assert role['collected_events_total'] == 17
+        assert role['runner_on_ok_total'] == 9
+        assert role['collected_events_total'] == 22
         assert 'tasks_total' in role, f'{role_name} should have tasks_total'
         assert isinstance(role['tasks_total'], int)
         assert role['tasks_total'] > 0, f'{role_name} tasks_total should be > 0'
@@ -391,13 +375,12 @@ def _validate_role_stats(json_data):
 
 
 def _validate_task_type_breakdowns(json_data):
-    """Validate task type breakdown dicts in module_stats, collection_stats, and role_stats.
+    """Validate task type count fields in module_stats, collection_stats, and role_stats.
 
-    Each stat entry may have one or more task_type keys (sync_task, sync_loop, etc.)
-    containing sub-breakdowns of event counters. Validates:
-      - Structure: each breakdown dict has the expected keys with integer values
-      - Consistency: sum of collected_events_total across task types == total collected_events_total
-      - Coverage: at least some entries have task type breakdowns
+    Each stat entry has integer count columns for each task type (e.g.
+    sync_tasks_total, sync_loop_tasks_total). Validates:
+      - All count columns are present and are non-negative integers
+      - The fixture exercises all 6 task types (each > 0 in at least one module_stats entry)
     """
     print('--- Validating task type breakdowns ---')
 
@@ -406,40 +389,16 @@ def _validate_task_type_breakdowns(json_data):
         if not stats_list:
             continue
 
-        entries_with_breakdowns = 0
         for stat in stats_list:
-            present_types = [tt for tt in _TASK_TYPE_NAMES if tt in stat]
-            if not present_types:
-                continue
-            entries_with_breakdowns += 1
+            for col in _TASK_TYPE_COUNT_COLS:
+                assert col in stat, f'{stats_key}: missing {col}'
+                assert isinstance(stat[col], int), f'{stats_key}: {col} should be int, got {type(stat[col])}'
+                assert stat[col] >= 0, f'{stats_key}: {col} should be >= 0, got {stat[col]}'
 
-            breakdown_events_sum = 0
-            for tt in present_types:
-                breakdown = stat[tt]
-                assert isinstance(breakdown, dict), f'{stats_key}: task_type {tt!r} should be a dict, got {type(breakdown)}'
-                missing_keys = _TASK_TYPE_BREAKDOWN_KEYS - set(breakdown)
-                assert not missing_keys, f'{stats_key}: task_type {tt!r} missing keys {sorted(missing_keys)}'
-                for key in _TASK_TYPE_BREAKDOWN_KEYS:
-                    assert isinstance(breakdown[key], int), f'{stats_key}: {tt}.{key} should be int, got {type(breakdown[key])}'
-                    assert breakdown[key] >= 0, f'{stats_key}: {tt}.{key} should be >= 0, got {breakdown[key]}'
-                assert breakdown['tasks_total'] > 0, f'{stats_key}: {tt}.tasks_total should be > 0'
-                assert breakdown['collected_events_total'] > 0, f'{stats_key}: {tt}.collected_events_total should be > 0'
-                breakdown_events_sum += breakdown['collected_events_total']
-
-            total_events = stat.get('collected_events_total', 0)
-            assert breakdown_events_sum == total_events, (
-                f'{stats_key}: sum of task_type collected_events_total ({breakdown_events_sum}) != total collected_events_total ({total_events})'
-            )
-
-        assert entries_with_breakdowns > 0, f'{stats_key}: expected at least one entry with task type breakdowns'
-
-    # The fixture exercises sync_task, sync_loop, and async events so at least
-    # sync_task and sync_loop should appear in module_stats.
     module_stats = json_data.get('module_stats', [])
-    has_sync_task = any('sync_task' in m for m in module_stats)
-    has_sync_loop = any('sync_loop' in m for m in module_stats)
-    assert has_sync_task, 'module_stats should have at least one entry with sync_task breakdown'
-    assert has_sync_loop, 'module_stats should have at least one entry with sync_loop breakdown'
+    for col in _TASK_TYPE_COUNT_COLS:
+        has_nonzero = any(m.get(col, 0) > 0 for m in module_stats)
+        assert has_nonzero, f'module_stats should have at least one entry with {col} > 0'
 
 
 def _validate_jobs_by_installed_collections_versions(json_data):
@@ -618,9 +577,10 @@ def _validate_module_stats_values_multi_hour(json_data):
         module = module_stats_dict.get(module_name)
         assert module is not None, f'Should have {module_name} module'
         assert module['jobs_total'] == 6, f'{module_name} should have 6 jobs'
-        # Base ok events (18) + 1 diversified ok-with-warnings on job 1
-        assert module['runner_on_ok_total'] == 19, f'{module_name} runner_on_ok_total'
-        assert module['collected_events_total'] == 29, f'{module_name} collected_events_total'
+        # Base ok events (18) + 1 ok-with-warnings + 1 ff_task + 1 ff_loop = 21
+        assert module['runner_on_ok_total'] == 21, f'{module_name} runner_on_ok_total'
+        # 29 original + 5 new diversified (ff_task, apl async_ok, apl item_ok, ffl ok, ffl item_ok)
+        assert module['collected_events_total'] == 34, f'{module_name} collected_events_total'
         assert module['tasks_total'] > 0, f'{module_name} tasks_total should be > 0'
         assert module['tasks_total'] <= module['collected_events_total'], (
             f'{module_name} tasks_total ({module["tasks_total"]}) should be <= collected_events_total ({module["collected_events_total"]})'
@@ -640,8 +600,8 @@ def _validate_collection_stats_values_multi_hour(json_data):
         assert collection is not None, f'Should have {collection_name} collection'
         assert collection['collection_source'] == source
         assert collection['jobs_total'] == 6
-        assert collection['runner_on_ok_total'] == 19
-        assert collection['collected_events_total'] == 29
+        assert collection['runner_on_ok_total'] == 21
+        assert collection['collected_events_total'] == 34
         assert collection['unique_hosts_total'] == 2, f'{collection_name} should have 2 unique hosts'
         _assert_runner_event_counters_populated(collection, collection_name)
         for version in collection['ansible_versions']:
@@ -1027,8 +987,8 @@ def _validate_warnings_deprecations_values_multi_hour(json_data, statistics):
     assert 'playbook_events' not in json_data
     assert statistics['rollup_period_warnings_total'] == 4
     assert statistics['rollup_period_deprecations_total'] == 2
-    # 58 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
-    assert statistics['rollup_period_collected_events_total'] == 64
+    # 68 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
+    assert statistics['rollup_period_collected_events_total'] == 74
 
 
 def _validate_all_data(json_data, statistics):
