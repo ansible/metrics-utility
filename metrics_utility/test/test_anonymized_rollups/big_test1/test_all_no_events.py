@@ -313,9 +313,6 @@ def validate_events_statistics_no_events(statistics):
     assert 'rollup_period_warnings_total' not in statistics, 'rollup_period_warnings_total should be missing when there are no events'
     assert 'rollup_period_deprecations_total' not in statistics, 'rollup_period_deprecations_total should be missing when there are no events'
     assert 'rollup_period_modules_total' not in statistics, 'rollup_period_modules_total should be missing when there are no events'
-    assert 'rollup_period_unique_hosts_automated_total' not in statistics, (
-        'rollup_period_unique_hosts_automated_total should be missing when there are no events'
-    )
     assert 'rollup_period_playbooks_total' not in statistics, 'rollup_period_playbooks_total should be missing when there are no events'
 
 

@@ -257,18 +257,12 @@ def _validate_job_host_summary(jobs_list, result):
 
 def _validate_events_modules(result):
     """Validate events modules section."""
-    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs'
-    assert result['statistics']['rollup_period_unique_hosts_automated_total'] == 9, 'Should have 9 unique hosts from all tarballs'
-    assert 'rollup_period_warnings_total' in result['statistics'], 'Should have warnings_total in statistics'
-    assert result['statistics']['rollup_period_warnings_total'] == 2, (
-        f'Expected 2 warnings, got {result["statistics"]["rollup_period_warnings_total"]}'
-    )
-    assert 'rollup_period_deprecations_total' in result['statistics'], 'Should have deprecations_total in statistics'
-    assert result['statistics']['rollup_period_deprecations_total'] == 1, (
-        f'Expected 1 deprecated event, got {result["statistics"]["rollup_period_deprecations_total"]}'
-    )
+    assert result['statistics']['rollup_period_modules_total'] == 7, 'Should have 7 unique modules from all tarballs (including Custom)'
+    assert result['statistics']['rollup_period_warnings_total'] == 2
+    assert result['statistics']['rollup_period_deprecations_total'] == 1
+    assert 'playbook_events' not in result
 
-    module_names = [m['module_name'] for m in result['module_stats'] if 'module_name' in m]
+    module_names = [m['module'] for m in result['module_stats'] if 'module' in m]
     for module_name in [
         'ansible.netcommon.cli_config',
         'ansible.posix.firewalld',
@@ -283,42 +277,39 @@ def _validate_events_modules(result):
     assert isinstance(module_stats, list), 'module_stats should be a list'
     assert len(module_stats) == 6, 'Should have stats for all 6 non-Custom modules'
 
-    win_copy_stats = [m for m in module_stats if m.get('module_name') == 'ansible.windows.win_copy']
+    win_copy_stats = [m for m in module_stats if m.get('module') == 'ansible.windows.win_copy']
     assert len(win_copy_stats) == 1, 'Should have exactly one entry for ansible.windows.win_copy'
     win_copy = win_copy_stats[0]
     assert win_copy['collection_source'] == 'certified'
-    assert win_copy['collection_name'] == 'ansible.windows'
+    assert win_copy['collection'] == 'ansible.windows'
     assert win_copy['jobs_total'] == 3
-    assert win_copy['unique_hosts_total'] == 3
-    assert win_copy['task_ok_total'] == 1
-    assert win_copy['task_ok_with_retries_total'] == 2
-    assert win_copy['task_failed_total'] == 0
+    assert win_copy['runner_on_ok_total'] == 3  # Job1/H1 ok, Job2/H3 ok, Job4/H5 ok
+    assert win_copy['runner_on_failed_total'] == 2  # Job1/H1 failed, Job4/H5 failed
     assert win_copy['jobs_duration_total_seconds'] == pytest.approx(2100.0)
-    assert win_copy['processed_events_total'] == 5
+    assert win_copy['collected_events_total'] == 5
 
-    yum_stats = [m for m in module_stats if m.get('module_name') == 'community.general.yum']
+    yum_stats = [m for m in module_stats if m.get('module') == 'community.general.yum']
     assert len(yum_stats) == 1, 'Should have exactly one entry for community.general.yum'
     yum = yum_stats[0]
     assert yum['collection_source'] == 'community'
     assert yum['jobs_total'] == 3
     assert yum['jobs_never_started_total'] == 1
-    assert yum['task_failed_total'] == 3
-    assert yum['jobs_failed_because_of_module_failure_total'] == 3
-    assert yum['processed_events_total'] == 3
+    assert yum['runner_on_failed_total'] == 2  # Job1/H2, Job5/H9
+    assert yum['runner_on_async_failed_total'] == 1  # Job2/H2
+    assert yum['collected_events_total'] == 3
 
     collection_stats = result['collection_stats']
     assert isinstance(collection_stats, list), 'collection_stats should be a list'
     assert len(collection_stats) == 6, 'Should have stats for all 6 non-Custom collections'
 
-    windows_collection = [c for c in collection_stats if c.get('collection_name') == 'ansible.windows']
+    windows_collection = [c for c in collection_stats if c.get('collection') == 'ansible.windows']
     assert len(windows_collection) == 1, 'Should have exactly one entry for ansible.windows collection'
     windows_coll = windows_collection[0]
     assert windows_coll['collection_source'] == 'certified'
     assert windows_coll['jobs_total'] == 3
-    assert windows_coll['unique_hosts_total'] == 3
-    assert windows_coll['task_ok_total'] == 1
-    assert windows_coll['task_ok_with_retries_total'] == 2
-    assert windows_coll['processed_events_total'] == 5
+    assert windows_coll['runner_on_ok_total'] == 3
+    assert windows_coll['runner_on_failed_total'] == 2
+    assert windows_coll['collected_events_total'] == 5
 
     assert result['statistics']['rollup_period_playbooks_total'] == 5, 'Should have 5 total playbooks'
 
@@ -804,6 +795,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Event-related fields should be missing when there are no events
     assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
     assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
+    assert 'playbook_events' not in result, 'playbook_events should be missing when there are no events'
     assert 'jobs_by_installed_collections_versions' in result
 
     # Verify statistics contains all fields (with null values for empty data)
@@ -811,9 +803,6 @@ def test_empty_csv_files_handling(cleanup_test_data):
     assert isinstance(statistics, dict), 'statistics should be a dict'
     # Event-related fields should be missing when there are no events
     assert 'rollup_period_modules_total' not in statistics, 'rollup_period_modules_total should be missing when there are no events'
-    assert 'rollup_period_unique_hosts_automated_total' not in statistics, (
-        'rollup_period_unique_hosts_automated_total should be missing when there are no events'
-    )
     assert 'rollup_period_warnings_total' not in statistics, 'rollup_period_warnings_total should be missing when there are no events'
     assert 'rollup_period_deprecations_total' not in statistics, 'rollup_period_deprecations_total should be missing when there are no events'
     assert 'rollup_period_execution_environments_total' in statistics
@@ -910,6 +899,7 @@ def test_empty_csv_files_handling(cleanup_test_data):
     # Event-related arrays should be missing when there are no events
     assert 'module_stats' not in result, 'module_stats should be missing when there are no events'
     assert 'collection_stats' not in result, 'collection_stats should be missing when there are no events'
+    assert 'playbook_events' not in result, 'playbook_events should be missing when there are no events'
 
     # modules_used_per_playbook is computed but not included in final output
 

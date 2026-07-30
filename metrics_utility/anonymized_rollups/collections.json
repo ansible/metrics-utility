@@ -178,6 +178,7 @@
     "anophelesgreyhoe.solarwinds": "community",
     "ans2dev.general": "community",
     "ansible.automation_services_catalog_client": "community",
+    "ansible.builtin": "certified",
     "ansible.controller": "certified",
     "ansible.eda": "certified",
     "ansible.galaxy_collection": "community",
