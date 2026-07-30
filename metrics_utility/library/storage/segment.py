@@ -26,9 +26,10 @@ class StorageSegment:
     per-message size limit.
     """
 
-    # Max JSON size of each `data` chunk. Segment enforces ~32KB per `track` message
-    # including `properties` wrapper, event name, and segment_meta; keep this conservative.
-    REGULAR_MESSAGE_LIMIT = 24 * 1024
+    # Total budget for each Segment track message (JSON bytes). The SDK enforces a
+    # hard 32KB limit; in the `put` in this file, we subtract the header (and all
+    # other properties in the packet) from this number, and chunk accordingly
+    REGULAR_MESSAGE_LIMIT = 32 * 1024
 
     def __init__(self, **settings):
         """Initialise the Segment storage backend.
@@ -48,6 +49,18 @@ class StorageSegment:
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
+    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size):
+        return {
+            'artifact_name': artifact_name,
+            'data': data,
+            'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'chunk_info': {
+                'chunk_number': chunk_number,
+                'total_chunks': total_chunks,
+                'chunk_size': chunk_size,
+            },
+        }
+
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
         return len(json.dumps(data).encode('utf-8'))
@@ -60,7 +73,7 @@ class StorageSegment:
         If a top-level key's value is a list, it is split in order: the next item is
         considered appended to the current chunk; if ``json.dumps`` of that chunk
         would exceed max_size, the current chunk is finalized and a new one is started
-        (or a single oversize item is emitted alone).
+        (or a single oversize item is emitted alone with a warning).
 
         Args:
             data: Dictionary to split, dictionary contains key : value pairs
@@ -71,7 +84,14 @@ class StorageSegment:
 
         Returns:
             List of data chunks
+
+        Raises:
+            ValueError: If max_size is not positive.
         """
+        if max_size <= 0:
+            msg = f'max_size must be positive, got {max_size}'
+            raise ValueError(msg)
+
         chunks = []
 
         if data is not None and not isinstance(data, dict):
@@ -80,8 +100,11 @@ class StorageSegment:
 
         for key, value in data.items():
             if isinstance(value, dict):
-                # always add to chunks, each key in main dict is a separate chunk
-                chunks.append({key: value})
+                chunk = {key: value}
+                chunk_size = self._calculate_size(chunk)
+                if chunk_size > max_size:
+                    logger.warning('Oversized dict chunk for key %r: %d bytes exceeds %d limit', key, chunk_size, max_size)
+                chunks.append(chunk)
 
             elif isinstance(value, list):
                 active_chunk = {key: []}
@@ -93,7 +116,7 @@ class StorageSegment:
                             chunks.append(active_chunk)
                             active_chunk = {key: [item]}
                         else:
-                            # single item does not fit max_size; emit it alone
+                            logger.warning('Single list item in key %r exceeds %d byte limit', key, max_size)
                             chunks.append({key: [item]})
                     else:
                         active_chunk[key].append(item)
@@ -155,7 +178,28 @@ class StorageSegment:
         # Setting to None restores the SDK default (https://api.segment.io).
         analytics.host = self.host or None
 
-        max_size = self.REGULAR_MESSAGE_LIMIT
+        if not segment_meta:
+            segment_meta = {}
+        message_id = segment_meta.get('message_id')
+
+        segment_envelope = {
+            'type': 'track',
+            'messageId': 'a' * 64 if message_id else str(uuid.uuid4()),
+            'timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'integrations': {},
+            'context': {},
+        }
+        properties = self._build_properties(artifact_name, {}, 0, 0, 0)
+        serializable_meta = {k: v.isoformat() if isinstance(v, datetime.datetime) else v for k, v in segment_meta.items()}
+        header = {
+            **segment_envelope,
+            **serializable_meta,
+            'properties': properties,
+            'anonymousId': anonymous_id,
+            'event': event_name,
+        }
+        overhead = self._calculate_size(header)
+        max_size = self.REGULAR_MESSAGE_LIMIT - overhead
         chunks = self._split_into_chunks(dict, max_size)
 
         total_chunks = len(chunks)
@@ -163,10 +207,6 @@ class StorageSegment:
         if self.debug:
             msg = f'Split data into {total_chunks} chunks'
             print(msg, file=sys.stderr)
-
-        if not segment_meta:
-            segment_meta = {}
-        message_id = segment_meta.get('message_id')
 
         # Send each chunk
         for i, chunk in enumerate(chunks, 1):
@@ -185,16 +225,13 @@ class StorageSegment:
             analytics.track(
                 anonymous_id=anonymous_id,
                 event=event_name,
-                properties={
-                    'artifact_name': artifact_name,
-                    'data': chunk,
-                    'upload_timestamp': (datetime.datetime.now(tz=datetime.UTC).isoformat()),
-                    'chunk_info': {
-                        'chunk_number': i,
-                        'total_chunks': total_chunks,
-                        'chunk_size': chunk_size,
-                    },
-                },
+                properties=self._build_properties(
+                    artifact_name,
+                    chunk,
+                    i,
+                    total_chunks,
+                    chunk_size,
+                ),
                 **segment_meta,
             )
 
