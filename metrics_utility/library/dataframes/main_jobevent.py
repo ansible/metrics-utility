@@ -68,7 +68,15 @@ class DataframeMainJobevent(BaseTraditional):
 
     @staticmethod
     def extract_collection_name(x):
-        if x is None:
+        """Extract the ``namespace.collection`` prefix from a fully-qualified module name.
+
+        Args:
+            x: Module name string or None.
+
+        Returns:
+            Two-part collection name string, or None.
+        """
+        if not isinstance(x, str):
             return None
 
         if m := re.match(COLLECTION_REGEXP, x):
@@ -78,7 +86,15 @@ class DataframeMainJobevent(BaseTraditional):
 
     @staticmethod
     def extract_role_name(x):
-        if x is None:
+        """Extract a normalised role name from a fully-qualified or standalone role string.
+
+        Args:
+            x: Role name string or None.
+
+        Returns:
+            Normalised role name (collection or standalone), or None.
+        """
+        if not isinstance(x, str):
             return None
 
         if collection_role := re.match(COLLECTION_REGEXP, x):

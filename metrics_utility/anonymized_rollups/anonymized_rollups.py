@@ -77,8 +77,9 @@ def anonymize_data(data):
     Anonymizes sensitive data in the flattened report structure.
     This function expects data to be already flattened by flatten_json_report().
 
-    For items with collection_source == 'Custom', replaces module names, collection names,
-    and role names with the string "Custom" instead of hashing them.
+    For items with collection_source == 'Custom', removes their entries from
+    module_stats, collection_stats, and role_stats entirely so private names
+    never appear in the outbound payload.
 
     Args:
         data: Flattened data structure with keys:
@@ -320,10 +321,9 @@ def _build_statistics(
             {
                 # from events_modules
                 'rollup_period_modules_total': events_modules.get('modules_used_to_automate_total'),
-                'rollup_period_unique_hosts_automated_total': events_modules.get('hosts_automated_total'),
                 'rollup_period_collected_events_total': events_modules.get('collected_events_total'),
-                'rollup_period_warnings_total': events_modules.get('warnings_total'),
-                'rollup_period_deprecations_total': events_modules.get('deprecations_total'),
+                'rollup_period_warnings_total': events_modules.get('warnings_total') or 0,
+                'rollup_period_deprecations_total': events_modules.get('deprecations_total') or 0,
                 'rollup_period_playbooks_total': playbooks_total,
             }
         )

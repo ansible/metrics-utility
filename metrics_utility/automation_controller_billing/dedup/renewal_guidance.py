@@ -47,7 +47,7 @@ class BaseDedupRenewal:
 
     def stringify(self, value):
         """Convert a set of values to a comma-separated string, filtering out None."""
-        return ', '.join([v for v in list(value) if v is not None])
+        return ', '.join([v for v in list(value) if isinstance(v, str)])
 
     def run(self):
         """Abstract method to be implemented by subclasses."""
