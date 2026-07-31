@@ -24,7 +24,7 @@ def load_known_collections():
     """
     collections_path = os.path.join(os.path.dirname(__file__), 'collections.json')
     try:
-        with open(collections_path, 'r') as f:
+        with open(collections_path) as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}

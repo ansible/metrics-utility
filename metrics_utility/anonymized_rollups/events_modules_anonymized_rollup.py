@@ -235,9 +235,9 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _merge_stats_json(self, stats_all, stats_new, groupby_cols):
         """Merge two stats JSON lists by summing numeric columns and unioning lists."""
         if not stats_all:
-            return stats_new if stats_new else []
+            return stats_new or []
         if not stats_new:
-            return stats_all if stats_all else []
+            return stats_all or []
 
         all_dict = self._create_lookup_dict(stats_all, groupby_cols)
         new_dict = self._create_lookup_dict(stats_new, groupby_cols)
@@ -258,7 +258,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
         """Merge unique_modules lists (union and sort)."""
         unique_modules_all = set(data_all.get('unique_modules', []))
         unique_modules_new = set(data_new.get('unique_modules', []))
-        return sorted(list(unique_modules_all.union(unique_modules_new)))
+        return sorted(unique_modules_all.union(unique_modules_new))
 
     def _merge_modules_per_playbook(self, data_all, data_new):
         """Merge modules_per_playbook dicts (union lists per playbook)."""
@@ -271,7 +271,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
             list_new = modules_per_playbook_new.get(playbook, []) or []
             set_all = set(list_all) if isinstance(list_all, list) else set()
             set_new = set(list_new) if isinstance(list_new, list) else set()
-            modules_per_playbook[playbook] = sorted(list(set_all.union(set_new)))
+            modules_per_playbook[playbook] = sorted(set_all.union(set_new))
         return modules_per_playbook
 
     def merge(self, data_all, data_new):
@@ -609,7 +609,7 @@ class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     def _convert_set_or_list_to_sorted_list(value):
         """Convert set or list to sorted list, return empty list for other types."""
         if isinstance(value, set):
-            return sorted(list(value))
+            return sorted(value)
         if isinstance(value, list):
             return value
         return []

@@ -69,7 +69,7 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
         credential_types_new = set(data_new.get('credential_types', []))
 
         # Union the sets and convert back to sorted list
-        credential_types_merged = sorted(list(credential_types_all.union(credential_types_new)))
+        credential_types_merged = sorted(credential_types_all.union(credential_types_new))
 
         return {
             'credential_types': credential_types_merged,

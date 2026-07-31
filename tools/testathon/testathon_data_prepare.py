@@ -4,6 +4,7 @@ import os
 import random
 import string
 import subprocess
+import sys
 import time
 
 import requests
@@ -37,11 +38,11 @@ if not INV_PREFIX:
 
 if SSH_URL and ENVIRONMENT is None:
     print('ENVIRONMENT are not set, exiting')
-    exit(1)
+    sys.exit(1)
 
 if OC_LOGIN_COMMAND and ENVIRONMENT is None:
     print('ENVIRONMENT are not set, exiting')
-    exit(1)
+    sys.exit(1)
 
 print(f'API_URL: {API_URL}')
 print(f'USERNAME: {USERNAME}')
@@ -337,7 +338,7 @@ def create_inventory_hosts(inv_id, prefix, count, variables, data):
     if not data:
         data = {}
 
-    host_names = data.get('host_names', None)
+    host_names = data.get('host_names')
 
     for i in range(count):
         if not host_names:
@@ -798,7 +799,7 @@ def main():
     first_job_id = None
     first_inventory_id = None
     for r in res:
-        for i in range(jobs_count):
+        for _i in range(jobs_count):
             id = launch_job_template(r['job_template_id'])
             if first_job_id is None:
                 first_job_id = id
@@ -820,14 +821,14 @@ def main():
 
     jobs_and_inv_count = jobs_count * len(res)
 
-    for i in range(0, int(jobs_and_inv_count / 2)):
+    for _i in range(int(jobs_and_inv_count / 2)):
         dates.append(basic_date)
         basic_date = (datetime.datetime.strptime(basic_date, '%Y-%m-%d %H:%M:%S') + datetime.timedelta(days=13)).strftime('%Y-%m-%d %H:%M:%S')
 
     basic_date = '2024-01-05 01:00:00'
 
     # make division integer
-    for i in range(0, int(jobs_and_inv_count / 2) + 1):
+    for _i in range(int(jobs_and_inv_count / 2) + 1):
         dates.append(basic_date)
         basic_date = (datetime.datetime.strptime(basic_date, '%Y-%m-%d %H:%M:%S') + datetime.timedelta(days=13)).strftime('%Y-%m-%d %H:%M:%S')
 

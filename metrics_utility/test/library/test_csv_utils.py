@@ -21,7 +21,7 @@ def test_dataframe_to_csv_files_empty():
         assert 'test_table_table.csv' in files[0]
 
         # Verify file has headers only
-        with open(files[0], 'r') as f:
+        with open(files[0]) as f:
             content = f.read()
             lines = content.strip().split('\n')
             assert len(lines) == 1

@@ -25,11 +25,11 @@ class CsvFileSplitter(io.StringIO):
             self.currentfile.close()
 
         self.counter = 0
-        fname = '{}_split{}'.format(self.filespec, len(self.files))
+        fname = f'{self.filespec}_split{len(self.files)}'
         self.currentfile = open(fname, 'w', encoding='utf-8')
         self.files.append(fname)
         if self.header:
-            self.counter += self.currentfile.write('{}\n'.format(self.header))
+            self.counter += self.currentfile.write(f'{self.header}\n')
 
     def file_list(self, keep_empty=False):
         """Returns list of written files"""

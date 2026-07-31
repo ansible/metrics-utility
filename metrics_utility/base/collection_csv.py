@@ -56,10 +56,7 @@ class CollectionCSV(Collection):
         Collection with sub-collections looks for any non-empty sub-collection
         """
         if len(self.sub_collections):
-            for collection in self.sub_collections:
-                if not collection.is_empty():
-                    return False
-            return True
+            return all(collection.is_empty() for collection in self.sub_collections)
         else:
             return self.data_filepath is None
 

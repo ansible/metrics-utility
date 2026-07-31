@@ -6,9 +6,9 @@ from .package import Package
 
 
 __all__ = [
-    'Collector',
-    'Package',
     'CollectionCSV',
     'CollectionJSON',
+    'Collector',
+    'Package',
     'register',
 ]

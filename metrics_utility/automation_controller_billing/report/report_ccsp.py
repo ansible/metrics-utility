@@ -232,10 +232,7 @@ class ReportCCSP(Base):
                 bottom=Side(border_style='thin', color=self.BLACK_COLOR_HEX),
             )
             value_font = Font(name=self.FONT, size=11, color=self.BLACK_COLOR_HEX)
-            col_counter = 0
-            for col_value in header_row:
-                col_counter += 1
-
+            for col_counter, col_value in enumerate(header_row, start=1):
                 cell = ws.cell(row=current_row + row_counter, column=col_counter)
                 cell.value = col_value
 

@@ -123,6 +123,6 @@ def assert_common_files(files):
     Args:
         files: Dict (or dict-like) of filename → content mappings from a tarball.
     """
-    assert './config.json' in files.keys()
-    assert './manifest.json' in files.keys()
-    assert './data_collection_status.csv' in files.keys()
+    assert './config.json' in files
+    assert './manifest.json' in files
+    assert './data_collection_status.csv' in files

@@ -811,13 +811,13 @@ def parse_date_param(value, help_texts={None: ''}, name=None):
 
         # actual date
         if not parsed:
-            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.timezone.utc)
+            parsed = datetime.datetime.fromisoformat(value).astimezone(datetime.UTC)
     except Exception as e:
         raise UnparsableParameter(f'{str(e)}: {help_text}')
 
     # Set timezone to UTC when missing
     if parsed and parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=datetime.timezone.utc)
+        parsed = parsed.replace(tzinfo=datetime.UTC)
 
     return parsed
 
@@ -947,7 +947,7 @@ def parse_number_of_days(date_option):
     if not date_option:
         return None
 
-    if date_option.endswith('d') or date_option.endswith('day') or date_option.endswith('days'):
+    if date_option.endswith(('d', 'day', 'days')):
         if date_option.endswith('d'):
             suffix_length = len('d')
         elif date_option.endswith('day'):
@@ -956,7 +956,7 @@ def parse_number_of_days(date_option):
             suffix_length = len('days')
 
         days = int(date_option[0:-suffix_length])
-    elif date_option.endswith('mo') or date_option.endswith('month') or date_option.endswith('months'):
+    elif date_option.endswith(('mo', 'month', 'months')):
         if date_option.endswith('mo'):
             suffix_length = len('mo')
         elif date_option.endswith('month'):

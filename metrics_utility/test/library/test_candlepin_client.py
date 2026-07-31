@@ -9,7 +9,6 @@ material is leaked after each call.
 import datetime
 import os
 
-from datetime import timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -31,7 +30,7 @@ from metrics_utility.library.candlepin.client import CandlepinClient
 def _generate_cert_and_key():
     """Return (cert_pem, key_pem) for a self-signed cert valid for 365 days."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    now = datetime.datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     cert = (
         x509.CertificateBuilder()
         .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'test-consumer')]))
@@ -189,9 +188,8 @@ class TestCheckin:
     def test_logs_warning_on_failure(self, cert_and_key):
         cert_pem, key_pem = cert_and_key
         client = CandlepinClient()
-        with patch('requests.put', side_effect=Exception('oops')):
-            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
-                client.checkin(CONSUMER_UUID, cert_pem, key_pem)
+        with patch('requests.put', side_effect=Exception('oops')), patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+            client.checkin(CONSUMER_UUID, cert_pem, key_pem)
         mock_log.warning.assert_called_once()
 
     def test_url_contains_consumer_uuid(self, cert_and_key):
@@ -257,9 +255,8 @@ class TestRegenerateCert:
         resp.ok = False
         resp.status_code = 500
         resp.text = 'Internal Server Error'
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='500'):
-                client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='500'):
+            client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
 
     def test_raises_on_network_error(self, cert_and_key):
         cert_pem, key_pem = cert_and_key
@@ -274,9 +271,8 @@ class TestRegenerateCert:
         resp = MagicMock()
         resp.ok = True
         resp.json.return_value = {'uuid': CONSUMER_UUID}
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='idCert'):
-                client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='idCert'):
+            client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
 
     def test_url_contains_consumer_uuid(self, cert_and_key):
         cert_pem, key_pem = cert_and_key
@@ -310,9 +306,8 @@ class TestRegenerateCert:
             seen_paths.extend(list(cert))
             raise requests.exceptions.ConnectionError('refused')
 
-        with patch('requests.post', side_effect=capturing_post):
-            with pytest.raises(RuntimeError):
-                client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
+        with patch('requests.post', side_effect=capturing_post), pytest.raises(RuntimeError):
+            client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
 
         for path in seen_paths:
             assert not os.path.exists(path), f'Temp file not cleaned up: {path}'
@@ -407,9 +402,8 @@ class TestRegisterConsumer:
         resp.ok = False
         resp.status_code = 401
         resp.text = 'Unauthorized'
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='401'):
-                client.register_consumer('bad', 'creds', 'org')
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='401'):
+            client.register_consumer('bad', 'creds', 'org')
 
     def test_raises_on_network_error(self):
         client = CandlepinClient()
@@ -422,18 +416,16 @@ class TestRegisterConsumer:
         resp = MagicMock()
         resp.ok = True
         resp.json.return_value = {'idCert': {'cert': self.SAMPLE_CERT, 'key': self.SAMPLE_KEY}}
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='uuid'):
-                client.register_consumer('user', 'pass', 'org')
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='uuid'):
+            client.register_consumer('user', 'pass', 'org')
 
     def test_raises_when_idcert_missing(self):
         client = CandlepinClient()
         resp = MagicMock()
         resp.ok = True
         resp.json.return_value = {'uuid': self.SAMPLE_UUID}
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='idCert'):
-                client.register_consumer('user', 'pass', 'org')
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='idCert'):
+            client.register_consumer('user', 'pass', 'org')
 
     def test_logs_info_on_success(self):
         client = CandlepinClient()
@@ -544,16 +536,14 @@ class TestRegisterConsumerJsonError:
         resp = MagicMock()
         resp.ok = True
         resp.json.side_effect = ValueError('not json')
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='could not parse response JSON'):
-                client.register_consumer('user', 'pass', 'org')
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='could not parse response JSON'):
+            client.register_consumer('user', 'pass', 'org')
 
     def test_raises_runtime_error_when_uuid_missing_from_response(self):
         client = CandlepinClient()
         resp = self._ok_response({'idCert': {'cert': 'c', 'key': 'k'}})
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='response missing uuid'):
-                client.register_consumer('user', 'pass', 'org')
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='response missing uuid'):
+            client.register_consumer('user', 'pass', 'org')
 
 
 # ---------------------------------------------------------------------------
@@ -568,9 +558,8 @@ class TestRegenerateCertJsonError:
         resp = MagicMock()
         resp.ok = True
         resp.json.side_effect = ValueError('bad json')
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='could not parse response JSON'):
-                client.regenerate_cert('uuid', cert_pem, key_pem)
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='could not parse response JSON'):
+            client.regenerate_cert('uuid', cert_pem, key_pem)
 
     def test_raises_runtime_error_when_cert_missing_from_response(self):
         cert_pem, key_pem = _generate_cert_and_key()
@@ -578,9 +567,8 @@ class TestRegenerateCertJsonError:
         resp = MagicMock()
         resp.ok = True
         resp.json.return_value = {'idCert': {}}
-        with patch('requests.post', return_value=resp):
-            with pytest.raises(RuntimeError, match='did not contain idCert'):
-                client.regenerate_cert('uuid', cert_pem, key_pem)
+        with patch('requests.post', return_value=resp), pytest.raises(RuntimeError, match='did not contain idCert'):
+            client.regenerate_cert('uuid', cert_pem, key_pem)
 
 
 # ---------------------------------------------------------------------------
@@ -590,9 +578,8 @@ class TestRegenerateCertJsonError:
 
 class TestWriteTempPemErrorCleanup:
     def test_cleans_up_file_when_chmod_fails(self):
-        with patch('os.chmod', side_effect=OSError('permission denied')):
-            with pytest.raises(OSError):
-                CandlepinClient._write_temp_pem('-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n')
+        with patch('os.chmod', side_effect=OSError('permission denied')), pytest.raises(OSError):
+            CandlepinClient._write_temp_pem('-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----\n')
 
     def test_closes_fd_when_chmod_fails(self):
         # Ensure the fd is closed even if chmod raises so we don't leak file descriptors.
@@ -603,10 +590,9 @@ class TestWriteTempPemErrorCleanup:
             closed.append(fd)
             original_close(fd)
 
-        with patch('os.chmod', side_effect=OSError('permission denied')):
-            with patch('os.close', side_effect=tracking_close):
-                with pytest.raises(OSError):
-                    CandlepinClient._write_temp_pem('content')
+        with patch('os.chmod', side_effect=OSError('permission denied')), patch('os.close', side_effect=tracking_close):
+            with pytest.raises(OSError):
+                CandlepinClient._write_temp_pem('content')
         assert len(closed) == 1
 
 
@@ -617,10 +603,9 @@ class TestWriteTempPemErrorCleanup:
 
 class TestUnlinkSafe:
     def test_logs_warning_when_unlink_raises(self):
-        with patch('os.path.exists', return_value=True):
-            with patch('os.unlink', side_effect=OSError('busy')):
-                with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
-                    CandlepinClient._unlink_safe('/tmp/test.pem')
+        with patch('os.path.exists', return_value=True), patch('os.unlink', side_effect=OSError('busy')):
+            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+                CandlepinClient._unlink_safe('/tmp/test.pem')
         mock_log.warning.assert_called_once()
         assert 'Could not remove' in mock_log.warning.call_args[0][0]
 
@@ -642,7 +627,6 @@ class TestTempCertFilesKeyWriteFailure:
                 raise OSError('disk full')
             return original_write_temp_pem(content)
 
-        with patch.object(CandlepinClient, '_write_temp_pem', side_effect=fail_on_second_write):
-            with pytest.raises(OSError, match='disk full'):
-                with CandlepinClient._temp_cert_files(cert_pem, key_pem):
-                    pass
+        with patch.object(CandlepinClient, '_write_temp_pem', side_effect=fail_on_second_write), pytest.raises(OSError, match='disk full'):
+            with CandlepinClient._temp_cert_files(cert_pem, key_pem):
+                pass

@@ -1362,7 +1362,7 @@ def _extract_ansible_versions_from_jobs(jobs_by_job_type):
         ansible_versions = job.get('ansible_versions', [])
         if isinstance(ansible_versions, list):
             expected_versions_set.update(ansible_versions)
-    return sorted(list(expected_versions_set))
+    return sorted(expected_versions_set)
 
 
 def _validate_ansible_versions(result, expected_versions):

@@ -97,7 +97,7 @@ class TestInfrastructureSummaryBrokenData:
                 infra_type = None
                 for check_row in range(row, 0, -1):  # Look backwards from current row
                     infra_type_candidate = self.get_cell_value(check_row, 1)
-                    if infra_type_candidate and infra_type_candidate not in ['Infrastructure']:
+                    if infra_type_candidate and infra_type_candidate != 'Infrastructure':
                         infra_type = infra_type_candidate
                         break
 

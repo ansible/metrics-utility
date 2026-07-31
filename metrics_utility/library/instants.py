@@ -1,6 +1,6 @@
 """Datetime helper functions for common time boundary calculations."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def now():
@@ -9,7 +9,7 @@ def now():
     Returns:
         timezone-aware :class:`datetime.datetime` in UTC.
     """
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 def this_minute():

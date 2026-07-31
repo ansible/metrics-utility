@@ -31,4 +31,4 @@ class AnalyticsCollector(Collector):
         Args:
             last_gathered_entries: Ignored.
         """
-        return None
+        return

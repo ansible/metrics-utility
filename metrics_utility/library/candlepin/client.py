@@ -2,7 +2,7 @@ import os
 import tempfile
 import uuid as _uuid_mod
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import requests
 
@@ -164,7 +164,7 @@ class CandlepinClient:
                 resp = requests.put(
                     url,
                     cert=(cert_path, key_path),
-                    json={'facts': {'aap.last_checkin': datetime.now(timezone.utc).isoformat()}},
+                    json={'facts': {'aap.last_checkin': datetime.now(UTC).isoformat()}},
                     headers={'Content-Type': 'application/json'},
                     verify=self.verify,
                     proxies=self.proxies,

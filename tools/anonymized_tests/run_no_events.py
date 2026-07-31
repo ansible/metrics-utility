@@ -8,4 +8,4 @@ from pathlib import Path
 
 
 run_py = Path(__file__).resolve().parent / 'run.py'
-sys.exit(subprocess.call([sys.executable, str(run_py), '--no-events'] + sys.argv[1:]))
+sys.exit(subprocess.call([sys.executable, str(run_py), '--no-events', *sys.argv[1:]]))

@@ -2,7 +2,6 @@ import datetime
 import os
 import tempfile
 
-from datetime import timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,10 +21,10 @@ def _generate_cert(expired=False):
     """Generate a self-signed X.509 certificate for testing."""
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     if expired:
-        not_before = datetime.datetime(2020, 1, 1, tzinfo=timezone.utc)
-        not_after = datetime.datetime(2021, 1, 1, tzinfo=timezone.utc)
+        not_before = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+        not_after = datetime.datetime(2021, 1, 1, tzinfo=datetime.UTC)
     else:
-        now = datetime.datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         not_before = now
         not_after = now + datetime.timedelta(days=365)
     cert = (
@@ -275,9 +274,8 @@ class TestShip:
             seen_modes[path] = mode
             original_chmod(path, mode)
 
-        with patch('os.chmod', side_effect=tracking_chmod):
-            with patch.object(base_package.Package, 'ship', return_value=True):
-                package.ship()
+        with patch('os.chmod', side_effect=tracking_chmod), patch.object(base_package.Package, 'ship', return_value=True):
+            package.ship()
 
         assert len(seen_modes) == 2
         for mode in seen_modes.values():
@@ -327,11 +325,10 @@ class TestShip:
         package = _make_package(cert_pem=cert_pem, key_pem=key_pem)
         ssl_error = requests.exceptions.SSLError('handshake failed')
 
-        with patch.object(base_package.Package, 'ship', side_effect=ssl_error):
-            with patch.object(PackageCRC, '_get_rh_user', return_value=None):
-                with patch.object(PackageCRC, '_get_rh_password', return_value=None):
-                    with pytest.raises(FailedToUploadPayload) as exc_info:
-                        package.ship()
+        with patch.object(base_package.Package, 'ship', side_effect=ssl_error), patch.object(PackageCRC, '_get_rh_user', return_value=None):
+            with patch.object(PackageCRC, '_get_rh_password', return_value=None):
+                with pytest.raises(FailedToUploadPayload) as exc_info:
+                    package.ship()
 
         assert exc_info.value.__cause__ is ssl_error
 

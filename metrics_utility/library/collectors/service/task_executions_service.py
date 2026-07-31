@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from ..util import DataframeOutput, collector
 
@@ -23,7 +23,7 @@ def task_executions_service(*, db=None, since=None, until=None, output=Dataframe
         DataFrame with columns: started_at, completed_at, collector_type
     """
     if since is None or until is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         since = since if since is not None else today_midnight - timedelta(days=1)
         until = until if until is not None else today_midnight

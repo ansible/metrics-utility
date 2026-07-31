@@ -132,7 +132,7 @@ class TestTokenAndCertificateHandling:
         with (
             patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get,
             patch('metrics_utility.automation_controller_billing.collectors.os.path.exists') as mock_exists,
-            patch('builtins.open', side_effect=IOError('Permission denied')),
+            patch('builtins.open', side_effect=OSError('Permission denied')),
         ):
             mock_get.return_value = ['total_workers_vcpu']
             mock_exists.return_value = True

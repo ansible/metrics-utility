@@ -157,12 +157,7 @@ class BaseAnonymizedRollup:
                 df.to_csv(csv_buffer, index=False)
                 tar_files[f'{key}.csv'] = csv_buffer.getvalue().encode('utf-8')
 
-            elif isinstance(value, list):
-                # Sanitize and store JSON data in memory for tar
-                sanitized_value = sanitize_json(value)
-                tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')
-
-            elif isinstance(value, dict):
+            elif isinstance(value, (list, dict)):
                 # Sanitize and store JSON data in memory for tar
                 sanitized_value = sanitize_json(value)
                 tar_files[f'{filename}.json'] = json.dumps(sanitized_value, indent=2).encode('utf-8')

@@ -164,7 +164,7 @@ def _validate_ansible_versions_top_level(result):
         ansible_versions = job.get('ansible_versions', [])
         if isinstance(ansible_versions, list):
             expected_versions_set.update(ansible_versions)
-    expected_versions = sorted(list(expected_versions_set))
+    expected_versions = sorted(expected_versions_set)
     assert statistics_ansible_versions == expected_versions, (
         f'Expected ansible_versions {expected_versions} in statistics, got {statistics_ansible_versions}'
     )
