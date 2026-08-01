@@ -18,7 +18,7 @@ dependencies = [
     "psycopg==3.3.4",
     "requests==2.34.2",
     "segment-analytics-python>=2.3.6",
-    "setuptools==80.9.0",
+    "setuptools==83.0.0",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
