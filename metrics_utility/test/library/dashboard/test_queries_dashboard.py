@@ -19,11 +19,11 @@ class TestQueriesDashboard:
     def test_where_clause_defaults_to_modified(self):
         result, params = get_where_clause(self.since, self.until)
         assert 'WHERE' in result
-        assert 'uj.launch_type != %s' in result
+        assert 'uj.launch_type NOT IN (%s, %s)' in result
         assert 'AND (uj.status= %s OR uj.status = %s)' in result
         assert 'AND uj.modified >= %s' in result
         assert 'AND uj.modified < %s' in result
-        expected_params = ['sync', 'failed', 'successful', '2024-01-01T00:00:00+00:00', '2024-02-01T23:59:59+00:00']
+        expected_params = ['sync', 'workflow', 'failed', 'successful', '2024-01-01T00:00:00+00:00', '2024-02-01T23:59:59+00:00']
         assert params == expected_params
 
     def test_where_clause_finished(self):
@@ -97,10 +97,10 @@ class TestQueriesDashboard:
         # Must join main_job so bounds match the INNER JOIN in get_jobs_batch_query
         assert 'JOIN main_job mj ON mj.unifiedjob_ptr_id = uj.id' in result
         # Same base filter as get_where_clause
-        assert 'uj.launch_type != %s' in result
+        assert 'uj.launch_type NOT IN (%s, %s)' in result
         assert 'uj.status' in result
         assert 'uj.modified' in result
-        expected_params = ['sync', 'failed', 'successful', '2024-01-01T00:00:00+00:00', '2024-02-01T23:59:59+00:00']
+        expected_params = ['sync', 'workflow', 'failed', 'successful', '2024-01-01T00:00:00+00:00', '2024-02-01T23:59:59+00:00']
         assert params == expected_params
 
     def test_get_jobs_batch_query(self):
@@ -117,7 +117,7 @@ class TestQueriesDashboard:
         assert 'uj.status' in result
         assert 'mj.project_id' in result
         # Same base filter
-        assert 'uj.launch_type != %s' in result
+        assert 'uj.launch_type NOT IN (%s, %s)' in result
 
     def test_get_jobs_batch_query_zero_after_id(self):
         result, params = get_jobs_batch_query(self.since, self.until, after_id=0, batch_size=500)

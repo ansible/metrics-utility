@@ -38,7 +38,12 @@ def get_min_max_job_id_query(since: datetime, until: datetime, date_field: str =
 def get_where_clause(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:
     """
     Generate SQL WHERE clause for filtering jobs by a date range.
-    Excludes sync jobs and includes only jobs with status 'failed' or 'successful'.
+    Excludes sync and workflow jobs and includes only jobs with status 'failed' or 'successful'.
+
+    Workflow child jobs (``launch_type = 'workflow'``) are excluded because they have no
+    reliable user attribution (``launched_by_id`` is NULL for them in ``_JOBS_BASE_SQL``),
+    which caused the Successful/Failed totals to be inflated relative to the Top 5 Users
+    breakdown (AAP-74848 / AAP-85129).
 
     Args:
         since: Start of date range (inclusive)
@@ -53,12 +58,12 @@ def get_where_clause(since: datetime, until: datetime, date_field: str = 'modifi
     """
     _validate_date_field(date_field)
     where_clause = f"""
-    WHERE uj.launch_type != %s
+    WHERE uj.launch_type NOT IN (%s, %s)
     AND (uj.status= %s OR uj.status = %s)
     AND uj.{date_field} >= %s
     AND uj.{date_field} < %s
     """
-    params = ['sync', 'failed', 'successful', since.isoformat(), until.isoformat()]
+    params = ['sync', 'workflow', 'failed', 'successful', since.isoformat(), until.isoformat()]
     return where_clause, params
 
 
