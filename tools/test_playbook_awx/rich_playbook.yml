@@ -1,0 +1,287 @@
+---
+# rich_playbook.yml — exercises a wide variety of Ansible task patterns
+# for metrics-utility event collector testing.
+#
+# Covers every counter in EventModulesAnonymizedRollup:
+#   runner_on_ok, runner_on_failed, runner_on_unreachable,
+#   runner_on_async_ok, runner_on_async_failed,
+#   runner_item_on_ok, runner_item_on_failed,
+#   runner_retry, ignore_errors,
+#   warnings, deprecations,
+#   role_stats, collection diversity, modules_per_playbook.
+
+- name: Rich playbook — diverse task patterns
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  vars:
+    loop_items:
+      - alpha
+      - bravo
+      - charlie
+
+  tasks:
+    # ------------------------------------------------------------------
+    # 1. Basic sync tasks (ok / changed / skipped)
+    #    → runner_on_ok_total
+    # ------------------------------------------------------------------
+    - name: "Sync — debug message (ok)"
+      ansible.builtin.debug:
+        msg: "Hello from a simple sync task"
+
+    - name: "Sync — set a fact (ok)"
+      ansible.builtin.set_fact:
+        my_var: "hello"
+
+    - name: "Sync — create temp file (changed)"
+      ansible.builtin.tempfile:
+        state: file
+        suffix: .rich_test
+      register: temp_result
+
+    - name: "Sync — remove temp file (changed)"
+      ansible.builtin.file:
+        path: "{{ temp_result.path }}"
+        state: absent
+
+    - name: "Sync — skipped task (when: false)"
+      ansible.builtin.debug:
+        msg: "This should never run"
+      when: false
+
+    # ------------------------------------------------------------------
+    # 2. Async tasks — polled (wait for completion)
+    #    → runner_on_async_ok_total
+    # ------------------------------------------------------------------
+    - name: "Async polled — sleep 2s"
+      ansible.builtin.command: sleep 2
+      async: 30
+      poll: 5
+
+    - name: "Async polled — echo result"
+      ansible.builtin.command: echo "async polled done"
+      async: 10
+      poll: 2
+      register: async_polled
+
+    - name: "Verify async polled result"
+      ansible.builtin.debug:
+        msg: "{{ async_polled.stdout }}"
+
+    # ------------------------------------------------------------------
+    # 3. Async fire-and-forget (poll: 0)
+    #    → runner_on_async_ok_total, runner_retry_total (until loop)
+    # ------------------------------------------------------------------
+    - name: "Async fire-and-forget — background sleep"
+      ansible.builtin.command: sleep 1
+      async: 60
+      poll: 0
+      register: fire_forget_job
+
+    - name: "Check fire-and-forget status"
+      ansible.builtin.async_status:
+        jid: "{{ fire_forget_job.ansible_job_id }}"
+      register: ff_result
+      until: ff_result.finished
+      retries: 10
+      delay: 1
+
+    # ------------------------------------------------------------------
+    # 4. Async task that FAILS
+    #    → runner_on_async_failed_total
+    # ------------------------------------------------------------------
+    - name: "Async polled — command that fails (ignored)"
+      ansible.builtin.command: /bin/false
+      async: 10
+      poll: 2
+      ignore_errors: true
+
+    # ------------------------------------------------------------------
+    # 5. Loop tasks
+    #    → runner_item_on_ok_total
+    # ------------------------------------------------------------------
+    - name: "Loop — debug each item"
+      ansible.builtin.debug:
+        msg: "Item: {{ item }}"
+      loop: "{{ loop_items }}"
+
+    - name: "Loop — command per item"
+      ansible.builtin.command: "echo processing {{ item }}"
+      loop:
+        - file1
+        - file2
+        - file3
+      register: loop_cmd_results
+
+    - name: "Loop — dict items"
+      ansible.builtin.debug:
+        msg: "{{ item.key }}={{ item.value }}"
+      loop:
+        - { key: "color", value: "red" }
+        - { key: "size", value: "large" }
+
+    # ------------------------------------------------------------------
+    # 6. Failures — ignored
+    #    → runner_on_failed_total, runner_item_on_failed_total,
+    #      ignore_errors_total
+    # ------------------------------------------------------------------
+    - name: "Ignored failure — command exits 1"
+      ansible.builtin.command: /bin/false
+      ignore_errors: true
+
+    - name: "Ignored failure — in a loop (partial)"
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - "echo ok_item"
+        - "/bin/false"
+        - "echo another_ok"
+      ignore_errors: true
+
+    - name: "Ignored failure — fail module"
+      ansible.builtin.fail:
+        msg: "Intentional fail (ignored)"
+      ignore_errors: true
+
+    # ------------------------------------------------------------------
+    # 7. Block / rescue / always (try/catch/finally)
+    #    → runner_on_failed_total (non-ignored, caught by rescue)
+    # ------------------------------------------------------------------
+    - name: "Block/rescue — catch a failure"
+      block:
+        - name: "Block — task that fails"
+          ansible.builtin.command: /bin/false
+
+        - name: "Block — this is skipped after failure"
+          ansible.builtin.debug:
+            msg: "Should not appear"
+
+      rescue:
+        - name: "Rescue — handle the failure"
+          ansible.builtin.debug:
+            msg: "Caught the failure from block"
+
+        - name: "Rescue — log recovery action"
+          ansible.builtin.command: echo "recovered"
+
+      always:
+        - name: "Always — runs regardless"
+          ansible.builtin.debug:
+            msg: "Always block executed"
+
+    - name: "Block/rescue — nested with loop"
+      block:
+        - name: "Block — loop with one bad item"
+          ansible.builtin.command: "{{ item }}"
+          loop:
+            - "echo good"
+            - "/bin/false"
+      rescue:
+        - name: "Rescue — after loop failure"
+          ansible.builtin.debug:
+            msg: "Loop had a failing item"
+
+    # ------------------------------------------------------------------
+    # 8. Retry pattern (explicit retries/until on sync task)
+    #    → runner_retry_total
+    # ------------------------------------------------------------------
+    - name: "Retry — command that fails then succeeds"
+      ansible.builtin.shell: |
+        FLAG="/tmp/rich_retry_{{ inventory_hostname }}"
+        if [ ! -f "$FLAG" ]; then
+          touch "$FLAG"
+          exit 1
+        fi
+        rm -f "$FLAG"
+      retries: 3
+      delay: 1
+      register: retry_result
+      until: retry_result.rc == 0
+
+    # ------------------------------------------------------------------
+    # 9. Assertions
+    # ------------------------------------------------------------------
+    - name: "Assert — passing assertion"
+      ansible.builtin.assert:
+        that:
+          - 1 == 1
+        success_msg: "Assertion passed"
+
+    - name: "Assert — failing assertion (ignored)"
+      ansible.builtin.assert:
+        that:
+          - 1 == 2
+        fail_msg: "Intentional assertion failure"
+      ignore_errors: true
+
+    # ------------------------------------------------------------------
+    # 10. Mixed module usage (module_stats diversity)
+    # ------------------------------------------------------------------
+    - name: "URI — fetch httpbin (ignored on failure)"
+      ansible.builtin.uri:
+        url: "https://httpbin.org/get"
+        method: GET
+        timeout: 5
+      ignore_errors: true
+      register: uri_result
+
+    - name: "Copy content to file"
+      ansible.builtin.copy:
+        content: "test data for rich playbook"
+        dest: "/tmp/rich_playbook_test.txt"
+
+    - name: "Stat the file"
+      ansible.builtin.stat:
+        path: "/tmp/rich_playbook_test.txt"
+      register: stat_result
+
+    - name: "Lineinfile — add a line"
+      ansible.builtin.lineinfile:
+        path: "/tmp/rich_playbook_test.txt"
+        line: "appended line"
+
+    - name: "Shell — pipe commands"
+      ansible.builtin.shell: "echo hello | tr h H"
+      register: shell_result
+
+    - name: "Raw — low-level command"
+      ansible.builtin.raw: "echo raw_output"
+      register: raw_result
+
+    - name: "Ping — connectivity check"
+      ansible.builtin.ping:
+
+    - name: "Cleanup — remove test file"
+      ansible.builtin.file:
+        path: "/tmp/rich_playbook_test.txt"
+        state: absent
+
+    # ------------------------------------------------------------------
+    # 11. Role usage (role_stats coverage)
+    #     Uses FQCN roles from local collections/ so the role names
+    #     match the collections.json whitelist and survive anonymization.
+    #     (bare role names like "my_role" get collection_source=Custom
+    #      and are stripped by anonymize_data.)
+    # ------------------------------------------------------------------
+    - name: "Role — include redhat.rhel_system_roles role"
+      ansible.builtin.include_role:
+        name: redhat.rhel_system_roles.rich_test_role
+
+    - name: "Role — include ansible.network role"
+      ansible.builtin.include_role:
+        name: ansible.network.rich_test_role
+
+    # ------------------------------------------------------------------
+    # 12. Final summary
+    # ------------------------------------------------------------------
+    - name: "Summary — all scenarios completed"
+      ansible.builtin.debug:
+        msg: >-
+          Rich playbook finished. Exercised: sync, async polled,
+          async fire-and-forget, async failure, loops, ignore_errors,
+          block/rescue/always, retries, assertions, roles,
+          multiple modules (debug, command, shell, raw, ping, tempfile,
+          file, set_fact, copy, stat, lineinfile, uri, assert, fail,
+          async_status, include_role).
+          Roles: redhat.rhel_system_roles.rich_test_role,
+          ansible.network.rich_test_role.

@@ -51,6 +51,7 @@ metrics_utility/test/test_data/data/**/*.json
 /tools/perf/generated/
 /tools/anonymized_db_perf_data/out/
 /tools/anonymized_db_perf_data/out_*/
+/tools/test_playbook_awx/out/
 
 # AI
 /.claude/*

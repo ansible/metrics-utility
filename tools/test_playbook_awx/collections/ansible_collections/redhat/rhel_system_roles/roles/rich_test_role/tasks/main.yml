@@ -1,0 +1,12 @@
+---
+- name: "RHEL system role — debug"
+  ansible.builtin.debug:
+    msg: "Running inside redhat.rhel_system_roles.rich_test_role"
+
+- name: "RHEL system role — gather system info"
+  ansible.builtin.command: uname -a
+  register: sysinfo_result
+
+- name: "RHEL system role — show system info"
+  ansible.builtin.debug:
+    msg: "System: {{ sysinfo_result.stdout }}"

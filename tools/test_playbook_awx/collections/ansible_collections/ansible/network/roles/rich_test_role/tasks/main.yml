@@ -1,0 +1,13 @@
+---
+- name: "Network role — debug"
+  ansible.builtin.debug:
+    msg: "Running inside ansible.network.rich_test_role"
+
+- name: "Network role — echo config"
+  ansible.builtin.command: echo "network config applied"
+
+- name: "Network role — verify"
+  ansible.builtin.assert:
+    that:
+      - true
+    success_msg: "Network role verification passed"
