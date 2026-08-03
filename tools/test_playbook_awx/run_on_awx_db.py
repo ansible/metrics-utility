@@ -11,7 +11,10 @@ All run.py arguments (--since, --until, --no-events, --max-events,
 --max-jobs) are forwarded unchanged.
 
 Defaults match the AWX docker-compose dev setup (awx/tools/docker-compose):
-  host=localhost  port=5441  name=awx  user=awx  password=<from compose>
+  host=localhost  port=5441  name=awx  user=awx
+
+The DB password must be supplied via --db-password or METRICS_UTILITY_DB_PASSWORD
+environment variable (the docker-compose default is documented in the compose file).
 
 Override via CLI flags or the corresponding environment variables
 (METRICS_UTILITY_DB_HOST, etc.) — CLI flags take precedence.
@@ -20,7 +23,7 @@ Usage:
   python run_on_awx_db.py [DB options] [-- run.py options]
 
 Examples:
-  python run_on_awx_db.py
+  python run_on_awx_db.py --db-password awxpass
   python run_on_awx_db.py -- --since 2025-06-13 --until 2025-06-14
   python run_on_awx_db.py --db-host 10.0.0.5 --db-port 15432 -- --no-events
   python run_on_awx_db.py --db-name automationcontroller --db-user automationcontroller
@@ -42,7 +45,7 @@ def main() -> int:
         '--db-port': ('METRICS_UTILITY_DB_PORT', '5441'),
         '--db-name': ('METRICS_UTILITY_DB_NAME', 'awx'),
         '--db-user': ('METRICS_UTILITY_DB_USER', 'awx'),
-        '--db-password': ('METRICS_UTILITY_DB_PASSWORD', 'ZIeeKvuiyiXioAlvQUWn'),
+        '--db-password': ('METRICS_UTILITY_DB_PASSWORD', None),
     }
 
     db_values: dict[str, str] = {}
@@ -79,11 +82,14 @@ def main() -> int:
         if env_var in db_values:
             env[env_var] = db_values[env_var]
         elif env_var not in env:
+            if default is None:
+                print(f'Error: {env_var} is required. Set it via environment or --db-password.', file=sys.stderr)
+                return 2
             env[env_var] = default
 
     # Default to last 24 hours if --since/--until not provided by the user.
-    has_since = any(a == '--since' for a in run_py_args)
-    has_until = any(a == '--until' for a in run_py_args)
+    has_since = any(a == '--since' or a.startswith('--since=') for a in run_py_args)
+    has_until = any(a == '--until' or a.startswith('--until=') for a in run_py_args)
     if not has_since and not has_until:
         now = datetime.now(tz=UTC)
         since = (now - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')

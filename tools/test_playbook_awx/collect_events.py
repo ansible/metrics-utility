@@ -4,9 +4,11 @@ Collect job events from the real AWX database using main_jobevent_service
 and save the raw DataFrame to out/collected_events.csv.
 
 Defaults to the last 24 hours and the AWX docker-compose dev DB (port 5441).
+The DB password must be supplied via --db-password or METRICS_UTILITY_DB_PASSWORD
+environment variable.
 
 Usage:
-  python collect_events.py
+  python collect_events.py --db-password awxpass
   python collect_events.py --since "2025-07-23" --until "2025-07-24"
   python collect_events.py --db-port 5432 --db-password awx
 """
@@ -31,7 +33,7 @@ _DB_DEFAULTS = {
     'METRICS_UTILITY_DB_PORT': '5441',
     'METRICS_UTILITY_DB_NAME': 'awx',
     'METRICS_UTILITY_DB_USER': 'awx',
-    'METRICS_UTILITY_DB_PASSWORD': 'ZIeeKvuiyiXioAlvQUWn',
+    'METRICS_UTILITY_DB_PASSWORD': None,
 }
 
 
@@ -73,6 +75,9 @@ def main() -> int:
         if cli_overrides[env_var] is not None:
             os.environ[env_var] = cli_overrides[env_var]
         elif env_var not in os.environ:
+            if default is None:
+                print(f'Error: {env_var} is required. Set it via environment or --db-password.', file=sys.stderr)
+                return 2
             os.environ[env_var] = default
 
     from metrics_utility import prepare

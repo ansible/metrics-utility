@@ -21,6 +21,7 @@ Usage:
 """
 
 import argparse
+import re
 import subprocess
 import sys
 
@@ -35,7 +36,7 @@ def run_sql(container: str, sql: str) -> str:
         text=True,
     )
     if result.returncode != 0:
-        print(f'SQL error: {result.stderr.strip()}', file=sys.stderr)
+        raise RuntimeError(f'SQL failed (exit {result.returncode}): {result.stderr.strip()}')
     return result.stdout.strip()
 
 
@@ -87,21 +88,29 @@ def main() -> int:
     if args.dry_run:
         return 0
 
-    if args.job_ids:
-        ids_str = ','.join(str(j) for j in args.job_ids)
-        print(f'Deleting events for job_id IN ({ids_str})...')
-        out = run_sql(args.container, f'DELETE FROM main_jobevent WHERE job_id IN ({ids_str});')
-        print(out or 'Done')
+    if args.before and not re.match(r'^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$', args.before):
+        print(f'Error: invalid --before format: {args.before!r} (use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)', file=sys.stderr)
+        return 2
 
-    elif args.before:
-        print(f'Deleting events created before {args.before}...')
-        out = run_sql(args.container, f"DELETE FROM main_jobevent WHERE created < '{args.before}'::timestamptz;")
-        print(out or 'Done')
+    try:
+        if args.job_ids:
+            ids_str = ','.join(str(j) for j in args.job_ids)
+            print(f'Deleting events for job_id IN ({ids_str})...')
+            out = run_sql(args.container, f'DELETE FROM main_jobevent WHERE job_id IN ({ids_str});')
+            print(out or 'Done')
 
-    else:
-        print('Deleting ALL events...')
-        out = run_sql(args.container, 'DELETE FROM main_jobevent;')
-        print(out or 'Done')
+        elif args.before:
+            print(f'Deleting events created before {args.before}...')
+            out = run_sql(args.container, f"DELETE FROM main_jobevent WHERE created < '{args.before}'::timestamptz;")
+            print(out or 'Done')
+
+        else:
+            print('Deleting ALL events...')
+            out = run_sql(args.container, 'DELETE FROM main_jobevent;')
+            print(out or 'Done')
+    except RuntimeError as e:
+        print(str(e), file=sys.stderr)
+        return 1
 
     print()
     print('After:')

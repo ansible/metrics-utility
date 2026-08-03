@@ -13,14 +13,20 @@ Steps:
 All resources are prefixed with "rich_test_" so they can be identified and
 cleaned up. Re-running the script reuses existing resources by name.
 
+Password resolution order:
+  1. --password CLI flag
+  2. AWX_PASSWORD environment variable
+  3. Default "admin" (local dev only)
+
 Usage:
   python run_rich_playbook.py
   python run_rich_playbook.py --hosts 10
-  python run_rich_playbook.py --url https://awx.example.com --user admin --password secret
+  python run_rich_playbook.py --url https://awx.example.com --user admin --insecure
   python run_rich_playbook.py --cleanup
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -28,14 +34,14 @@ import time
 import requests
 
 
-requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
-
 DEFAULT_URL = 'https://localhost:8043'
 DEFAULT_USER = 'admin'
 DEFAULT_PASSWORD = 'admin'
 DEFAULT_CONTAINER = 'tools_awx_1'
 DEFAULT_NUM_HOSTS = 5
 POLL_INTERVAL = 3
+REQUEST_TIMEOUT = 30
+MAX_POLL_TIME = 1800
 
 PREFIX = 'rich_test'
 PROJECT_NAME = f'{PREFIX}_project'
@@ -46,25 +52,38 @@ PLAYBOOK_FILE = 'rich_playbook.yml'
 
 
 class AWXClient:
-    def __init__(self, base_url: str, user: str, password: str):
+    def __init__(self, base_url: str, user: str, password: str, *, verify: bool = False):
         self.base_url = base_url.rstrip('/')
         self.auth = (user, password)
+        self.verify = verify
 
     def _url(self, path: str) -> str:
         return f'{self.base_url}/api/v2/{path}'
 
     def get(self, path: str, **params) -> dict:
-        resp = requests.get(self._url(path), params=params, auth=self.auth, verify=False)  # noqa: S501
+        resp = requests.get(
+            self._url(path),
+            params=params,
+            auth=self.auth,
+            verify=self.verify,
+            timeout=REQUEST_TIMEOUT,
+        )
         resp.raise_for_status()
         return resp.json()
 
     def post(self, path: str, data: dict) -> dict:
-        resp = requests.post(self._url(path), json=data, auth=self.auth, verify=False)  # noqa: S501
+        resp = requests.post(
+            self._url(path),
+            json=data,
+            auth=self.auth,
+            verify=self.verify,
+            timeout=REQUEST_TIMEOUT,
+        )
         resp.raise_for_status()
         return resp.json()
 
     def delete(self, path: str) -> int:
-        resp = requests.delete(self._url(path), auth=self.auth, verify=False)  # noqa: S501
+        resp = requests.delete(self._url(path), auth=self.auth, verify=self.verify, timeout=REQUEST_TIMEOUT)
         return resp.status_code
 
     def find_by_name(self, path: str, name: str) -> dict | None:
@@ -81,11 +100,14 @@ class AWXClient:
         return self.post(path, payload), True
 
     def wait_for_job(self, job_id: int) -> dict:
+        deadline = time.monotonic() + MAX_POLL_TIME
         while True:
             job = self.get(f'jobs/{job_id}/')
             status = job['status']
             if status in ('successful', 'failed', 'error', 'canceled'):
                 return job
+            if time.monotonic() > deadline:
+                raise TimeoutError(f'Job {job_id} did not finish within {MAX_POLL_TIME}s (last status: {status})')
             print(f'  job {job_id}: {status}...')
             time.sleep(POLL_INTERVAL)
 
@@ -94,9 +116,11 @@ class AWXClient:
             self._url(f'jobs/{job_id}/stdout/'),
             params={'format': 'txt'},
             auth=self.auth,
-            verify=False,  # noqa: S501
+            verify=self.verify,
+            timeout=REQUEST_TIMEOUT,
         )
-        return resp.text if resp.ok else ''
+        resp.raise_for_status()
+        return resp.text
 
 
 def copy_playbook_to_container(container: str, project_dir: str) -> None:
@@ -224,14 +248,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description='Deploy and run rich_playbook.yml on AWX.')
     parser.add_argument('--url', default=DEFAULT_URL, help=f'AWX base URL (default: {DEFAULT_URL})')
     parser.add_argument('--user', default=DEFAULT_USER)
-    parser.add_argument('--password', default=DEFAULT_PASSWORD)
+    parser.add_argument('--password', default=None, help='AWX password (default: AWX_PASSWORD env var, or "admin")')
+    parser.add_argument('--insecure', action='store_true', help='Skip TLS certificate verification')
     parser.add_argument('--container', default=DEFAULT_CONTAINER, help=f'AWX container name (default: {DEFAULT_CONTAINER})')
     parser.add_argument('--hosts', type=int, default=DEFAULT_NUM_HOSTS, help=f'Number of localhost hosts (default: {DEFAULT_NUM_HOSTS})')
     parser.add_argument('--cleanup', action='store_true', help='Delete all rich_test_ resources and exit')
     parser.add_argument('--no-wait', action='store_true', help='Launch and exit without waiting')
     args = parser.parse_args()
 
-    client = AWXClient(args.url, args.user, args.password)
+    password = args.password or os.environ.get('AWX_PASSWORD', DEFAULT_PASSWORD)
+    verify = not (args.insecure or args.url == DEFAULT_URL)
+
+    if not verify:
+        requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+    client = AWXClient(args.url, args.user, password, verify=verify)
 
     if args.cleanup:
         cleanup(client)
