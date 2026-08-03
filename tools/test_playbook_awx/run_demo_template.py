@@ -32,7 +32,7 @@ def find_template(base_url: str, auth: tuple, name: str) -> dict | None:
         f'{base_url}/api/v2/job_templates/',
         params={'search': name, 'page_size': 50},
         auth=auth,
-        verify=False,
+        verify=False,  # noqa: S501
     )
     resp.raise_for_status()
     for t in resp.json()['results']:
@@ -45,7 +45,7 @@ def launch(base_url: str, auth: tuple, template_id: int) -> dict:
     resp = requests.post(
         f'{base_url}/api/v2/job_templates/{template_id}/launch/',
         auth=auth,
-        verify=False,
+        verify=False,  # noqa: S501
     )
     resp.raise_for_status()
     return resp.json()
@@ -54,7 +54,7 @@ def launch(base_url: str, auth: tuple, template_id: int) -> dict:
 def wait_for_job(base_url: str, auth: tuple, job_id: int) -> dict:
     url = f'{base_url}/api/v2/jobs/{job_id}/'
     while True:
-        resp = requests.get(url, auth=auth, verify=False)
+        resp = requests.get(url, auth=auth, verify=False)  # noqa: S501
         resp.raise_for_status()
         job = resp.json()
         status = job['status']
@@ -69,7 +69,7 @@ def print_job_stdout(base_url: str, auth: tuple, job_id: int) -> None:
         f'{base_url}/api/v2/jobs/{job_id}/stdout/',
         params={'format': 'txt'},
         auth=auth,
-        verify=False,
+        verify=False,  # noqa: S501
     )
     if resp.ok:
         print(resp.text)

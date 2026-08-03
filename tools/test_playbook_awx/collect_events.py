@@ -16,7 +16,7 @@ import os
 import sys
 import time
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
@@ -38,7 +38,7 @@ _DB_DEFAULTS = {
 def parse_datetime(dt_str: str) -> datetime:
     for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
         try:
-            return datetime.strptime(dt_str, fmt).replace(tzinfo=timezone.utc)
+            return datetime.strptime(dt_str, fmt).replace(tzinfo=UTC)
         except ValueError:
             pass
     raise ValueError(f'Cannot parse datetime: {dt_str!r}. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS')
@@ -75,15 +75,15 @@ def main() -> int:
         elif env_var not in os.environ:
             os.environ[env_var] = default
 
-    from metrics_utility import prepare  # noqa: E402
+    from metrics_utility import prepare
 
     prepare()
 
-    from django.db import connection  # noqa: E402
+    from django.db import connection
 
-    from metrics_utility.library.collectors.controller import main_jobevent_service  # noqa: E402
+    from metrics_utility.library.collectors.controller import main_jobevent_service
 
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     since = parse_datetime(args.since) if args.since else now - timedelta(hours=24)
     until = parse_datetime(args.until) if args.until else now
 

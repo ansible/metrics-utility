@@ -30,7 +30,7 @@ import os
 import subprocess
 import sys
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
@@ -75,7 +75,7 @@ def main() -> int:
             i += 1
 
     env = os.environ.copy()
-    for flag, (env_var, default) in db_flags.items():
+    for _flag, (env_var, default) in db_flags.items():
         if env_var in db_values:
             env[env_var] = db_values[env_var]
         elif env_var not in env:
@@ -85,10 +85,10 @@ def main() -> int:
     has_since = any(a == '--since' for a in run_py_args)
     has_until = any(a == '--until' for a in run_py_args)
     if not has_since and not has_until:
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
         since = (now - timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
         until = now.strftime('%Y-%m-%d %H:%M:%S')
-        run_py_args = ['--since', since, '--until', until] + run_py_args
+        run_py_args = ['--since', since, '--until', until, *run_py_args]
 
     run_py = Path(__file__).resolve().parent.parent / 'anonymized_tests' / 'run.py'
     if not run_py.exists():
@@ -106,7 +106,7 @@ def main() -> int:
 
     # Run in this script's directory so run.py's ./out/ lands in test_playbook_awx/out/
     script_dir = str(Path(__file__).resolve().parent)
-    return subprocess.call([sys.executable, str(run_py)] + run_py_args, env=env, cwd=script_dir)
+    return subprocess.call([sys.executable, str(run_py), *run_py_args], env=env, cwd=script_dir)
 
 
 if __name__ == '__main__':

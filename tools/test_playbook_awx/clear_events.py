@@ -91,17 +91,17 @@ def main() -> int:
         ids_str = ','.join(str(j) for j in args.job_ids)
         print(f'Deleting events for job_id IN ({ids_str})...')
         out = run_sql(args.container, f'DELETE FROM main_jobevent WHERE job_id IN ({ids_str});')
-        print(out if out else 'Done')
+        print(out or 'Done')
 
     elif args.before:
         print(f'Deleting events created before {args.before}...')
         out = run_sql(args.container, f"DELETE FROM main_jobevent WHERE created < '{args.before}'::timestamptz;")
-        print(out if out else 'Done')
+        print(out or 'Done')
 
     else:
         print('Deleting ALL events...')
         out = run_sql(args.container, 'DELETE FROM main_jobevent;')
-        print(out if out else 'Done')
+        print(out or 'Done')
 
     print()
     print('After:')

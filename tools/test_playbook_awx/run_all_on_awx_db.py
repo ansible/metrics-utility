@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
@@ -43,7 +43,7 @@ def banner(step: int, title: str) -> None:
 
 def run_script(name: str, args: list[str]) -> int:
     script = SCRIPT_DIR / name
-    cmd = [sys.executable, str(script)] + args
+    cmd = [sys.executable, str(script), *args]
     print(f'$ {" ".join(cmd)}')
     print()
     return subprocess.call(cmd)
@@ -82,7 +82,7 @@ def main() -> int:
     # ------------------------------------------------------------------
     # Capture a window slightly wider than the actual run so we don't
     # miss events due to clock skew between host and AWX container.
-    since = datetime.now(tz=timezone.utc) - timedelta(seconds=5)
+    since = datetime.now(tz=UTC) - timedelta(seconds=5)
 
     if not args.skip_playbook:
         banner(2, 'Run rich playbook')
@@ -107,7 +107,7 @@ def main() -> int:
     else:
         print('\nStep 2: Run rich playbook — SKIPPED (--skip-playbook)')
 
-    until = datetime.now(tz=timezone.utc) + timedelta(seconds=5)
+    until = datetime.now(tz=UTC) + timedelta(seconds=5)
 
     since_str = since.strftime('%Y-%m-%d %H:%M:%S')
     until_str = until.strftime('%Y-%m-%d %H:%M:%S')

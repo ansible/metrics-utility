@@ -54,17 +54,17 @@ class AWXClient:
         return f'{self.base_url}/api/v2/{path}'
 
     def get(self, path: str, **params) -> dict:
-        resp = requests.get(self._url(path), params=params, auth=self.auth, verify=False)
+        resp = requests.get(self._url(path), params=params, auth=self.auth, verify=False)  # noqa: S501
         resp.raise_for_status()
         return resp.json()
 
     def post(self, path: str, data: dict) -> dict:
-        resp = requests.post(self._url(path), json=data, auth=self.auth, verify=False)
+        resp = requests.post(self._url(path), json=data, auth=self.auth, verify=False)  # noqa: S501
         resp.raise_for_status()
         return resp.json()
 
     def delete(self, path: str) -> int:
-        resp = requests.delete(self._url(path), auth=self.auth, verify=False)
+        resp = requests.delete(self._url(path), auth=self.auth, verify=False)  # noqa: S501
         return resp.status_code
 
     def find_by_name(self, path: str, name: str) -> dict | None:
@@ -94,7 +94,7 @@ class AWXClient:
             self._url(f'jobs/{job_id}/stdout/'),
             params={'format': 'txt'},
             auth=self.auth,
-            verify=False,
+            verify=False,  # noqa: S501
         )
         return resp.text if resp.ok else ''
 
