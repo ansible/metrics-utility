@@ -571,6 +571,7 @@ def anonymize_rollups(
     feature_flags_rollup=None,
     task_executions_rollup=None,
     indirect_managed_nodes_rollup=None,
+    **kwargs,
 ):
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
