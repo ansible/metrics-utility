@@ -7,8 +7,7 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import connection
 
-import metrics_utility.base as base
-
+from metrics_utility import base
 from metrics_utility.automation_controller_billing.helpers import get_last_entries_from_db
 from metrics_utility.automation_controller_billing.package.factory import Factory as PackageFactory
 from metrics_utility.base.utils import bool_from_env
@@ -47,7 +46,7 @@ class Collector(base.Collector):
         self.ship_target = ship_target
         self.billing_provider_params = billing_provider_params
 
-        super(Collector, self).__init__(collection_type=collection_type, collector_module=collector_module)
+        super().__init__(collection_type=collection_type, collector_module=collector_module)
 
     # TODO: extract advisory lock name in the superclass and log message, so we can change it here and then use
     # this method from superclass

@@ -9,7 +9,7 @@ run_candlepin_lifecycle — orchestrate check-in + proactive renewal per gather 
 
 import os
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cryptography import x509
 
@@ -38,7 +38,7 @@ def parse_cert(pem_text):
         raise ValueError(f'Could not parse PEM certificate: {e}') from e
 
     expiry = cert.not_valid_after_utc
-    remaining = expiry - datetime.now(timezone.utc)
+    remaining = expiry - datetime.now(UTC)
 
     subject = {attr.oid._name: attr.value for attr in cert.subject}
     issuer = {attr.oid._name: attr.value for attr in cert.issuer}
@@ -69,7 +69,7 @@ def is_cert_valid(cert_pem: str) -> bool:
     try:
         data = cert_pem.encode('utf-8') if isinstance(cert_pem, str) else cert_pem
         cert = x509.load_pem_x509_certificate(data)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         if now < cert.not_valid_before_utc:
             logger.warning(
                 f'Candlepin cert is not yet valid (not_before={cert.not_valid_before_utc.isoformat()}); falling back to service account auth'

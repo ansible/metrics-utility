@@ -29,7 +29,7 @@ def lock(
     """
 
     if not isinstance(key, str):
-        raise ValueError('Cannot use %s as a lock id' % key)
+        raise ValueError(f'Cannot use {key} as a lock id')
 
     function_name = 'pg_advisory_lock'
     if not wait:
@@ -41,7 +41,7 @@ def lock(
         pos = cursor.fetchone()[0]
         base = 'SELECT %s(%d)'
         params = (pos % (2**63),)
-        acquire_params = (function_name,) + params
+        acquire_params = (function_name, *params)
         command = base % acquire_params
 
         cursor.execute(command)
@@ -55,7 +55,7 @@ def lock(
             yield acquired
         finally:
             if acquired:
-                release_params = (release_function_name,) + params
+                release_params = (release_function_name, *params)
 
                 command = base % release_params
                 cursor.execute(command)

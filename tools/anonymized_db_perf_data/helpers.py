@@ -223,7 +223,7 @@ def _res_command(rng, noise_level):
         'stderr': '',
         'stdout_lines': lines,
         'stderr_lines': [],
-        'delta': '0:00:00.{:06d}'.format(rng.randint(10000, 999999)),
+        'delta': f'0:00:00.{rng.randint(10000, 999999):06d}',
         'start': '2024-01-15 10:00:00.000000',
         'end': '2024-01-15 10:00:00.500000',
     }
@@ -247,7 +247,7 @@ def _res_package(rng, noise_level):
 
 
 def _res_file(rng):
-    checksum = ''.join(['{:02x}'.format(rng.randint(0, 255)) for _ in range(20)])
+    checksum = ''.join([f'{rng.randint(0, 255):02x}' for _ in range(20)])
     return {
         'dest': f'/etc/app/config-{rng.randint(1, 100)}.conf',
         'src': f'/tmp/ansible-tmp-{rng.randint(100000, 999999)}/source',
@@ -300,7 +300,7 @@ def _res_cloud(rng, noise_level):
     for _ in range(count):
         instances.append(
             {
-                'instance_id': 'i-{:017x}'.format(rng.randint(0, 2**64)),
+                'instance_id': f'i-{rng.randint(0, 2**64):017x}',
                 'instance_type': rng.choice(['t3.micro', 't3.small', 'm5.large', 'c5.xlarge', 'r5.2xlarge']),
                 'state': rng.choice(['running', 'stopped', 'terminated', 'pending']),
                 'private_ip_address': '{}.{}.{}.{}'.format(*[rng.randint(10, 254) for _ in range(4)]),
@@ -311,8 +311,8 @@ def _res_cloud(rng, noise_level):
                     'Owner': 'ansible-automation',
                 },
                 'launch_time': '2024-01-15T10:00:00+00:00',
-                'vpc_id': 'vpc-{:08x}'.format(rng.randint(0, 2**32)),
-                'subnet_id': 'subnet-{:08x}'.format(rng.randint(0, 2**32)),
+                'vpc_id': f'vpc-{rng.randint(0, 2**32):08x}',
+                'subnet_id': f'subnet-{rng.randint(0, 2**32):08x}',
             }
         )
     return {'instances': instances, 'changed': True}
@@ -333,7 +333,7 @@ def _res_container(rng, noise_level):
     count = max(1, count)
     return {
         'container': {
-            'Id': '{:064x}'.format(rng.randint(0, 2**256)),
+            'Id': f'{rng.randint(0, 2**256):064x}',
             'Name': f'/app-container-{rng.randint(1, 999)}',
             'State': {
                 'Status': rng.choice(['running', 'exited', 'created']),
@@ -882,8 +882,8 @@ def create_job(
     started_str = started.strftime('%Y-%m-%d %H:%M:%S+00')
     finished_str = finished.strftime('%Y-%m-%d %H:%M:%S+00')
 
-    ujt_value = job_template_id if job_template_id else 'NULL'
-    ee_value = execution_environment_id if execution_environment_id else 'NULL'
+    ujt_value = job_template_id or 'NULL'
+    ee_value = execution_environment_id or 'NULL'
     collections_sql = f"'{json.dumps(installed_collections)}'::jsonb" if installed_collections else "'[]'::jsonb"
 
     # First create the unified job entry and get its ID
@@ -1134,12 +1134,11 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
                     ('runner_on_failed', True, False),
                     ('runner_on_ok', False, changed),
                 ]
+            # Failed or unreachable (no retry)
+            elif rng.random() < 0.7:
+                events_for_host = [('runner_on_failed', True, False)]
             else:
-                # Failed or unreachable (no retry)
-                if rng.random() < 0.7:
-                    events_for_host = [('runner_on_failed', True, False)]
-                else:
-                    events_for_host = [('runner_on_unreachable', True, False)]
+                events_for_host = [('runner_on_unreachable', True, False)]
 
             # Create events for this host — res is patched to match each outcome
             for event_type, failed, changed in events_for_host:

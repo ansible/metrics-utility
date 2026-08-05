@@ -40,22 +40,20 @@ class ExtractorControllerDB:
             if since.tzinfo is None:
                 since = since.replace(tzinfo=datetime.UTC)
 
-            marker_cond = ''
+            marker = None
             while True:
-                cursor.execute(self.host_metric_query(since, marker_cond))
+                query, params = self.host_metric_query(since, marker)
+                cursor.execute(query, params)
                 host_metric = self.dict_fetchall(cursor)
 
                 # Marker based pagination
                 if len(host_metric) <= 0:
                     break
 
-                marker_cond = f"""
-                    AND CONCAT(main_hostmetric.hostname , '___', COALESCE(main_host.id, 0)) >
-                        '{list(host_metric)[-1]['hostname']}___{list(host_metric)[-1]['host_id']}'
-                    -- TODO wrong query, has to use several or conditions, but will it help with usage of index?
-                    -- AND main_hostmetric.hostname >= '{list(host_metric)[-1]['hostname']}'
-                    -- AND COALESCE(main_host.id, 0) > {list(host_metric)[-1]['host_id']}
-                """
+                # Advance the keyset marker to the last row of this batch. Values are
+                # carried as query parameters (never interpolated) on the next iteration.
+                last_row = host_metric[-1]
+                marker = (last_row['hostname'], last_row['host_id'])
 
                 host_metric = pd.DataFrame(host_metric)
 
@@ -111,17 +109,39 @@ class ExtractorControllerDB:
         """
         return query
 
-    def host_metric_query(self, since, marker_cond=''):
-        """Build the host_metric SQL query with an optional keyset-pagination marker.
+    def host_metric_query(self, since, marker=None):
+        """Build the host_metric SQL query and bind parameters, with optional keyset pagination.
+
+        All caller-influenced values (``since``, the pagination marker, and the row
+        limit) are passed as query parameters rather than interpolated into the SQL
+        text, so the returned query is safe to hand to ``cursor.execute(query, params)``.
 
         Args:
             since: Inclusive lower bound timestamp (timezone-aware datetime).
-            marker_cond: Optional SQL fragment appended to the WHERE clause for
-                keyset pagination (default ``''`` returns all rows).
+            marker: Optional ``(hostname, host_id)`` tuple from the last row of the
+                previous batch. When provided, only rows ordered strictly after the
+                marker are returned (keyset pagination). ``None`` returns from the start.
 
         Returns:
-            SQL query string.
+            Tuple ``(query, params)`` suitable for ``cursor.execute``.
         """
+        params = [since]
+
+        marker_cond = ''
+        if marker is not None:
+            # Multi-column keyset comparison matching the ORDER BY below. Expanded
+            # explicitly (rather than a row-value comparison) because the second
+            # sort key is COALESCE(main_host.id, 0), not a bare column.
+            marker_cond = """
+                AND (main_hostmetric.hostname > %s
+                     OR (main_hostmetric.hostname = %s
+                         AND COALESCE(main_host.id, 0) > %s))
+            """
+            last_hostname, last_host_id = marker
+            params.extend([last_hostname, last_hostname, last_host_id])
+
+        # marker_cond contains only static SQL with %s placeholders (no interpolated
+        # values); the surrounding f-string only injects that fixed fragment.
         query = f"""
             SELECT main_hostmetric.hostname,
                    COALESCE(main_host.id, 0) AS host_id,
@@ -146,13 +166,13 @@ class ExtractorControllerDB:
 
             FROM main_hostmetric
             LEFT JOIN main_host ON main_host.name = main_hostmetric.hostname
-            WHERE (main_hostmetric.last_automation >= '{since.isoformat()}' {marker_cond})
-            ORDER BY CONCAT(main_hostmetric.hostname , '___', COALESCE(main_host.id, 0)) ASC
-            -- ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
-            LIMIT {self.limit()}
+            WHERE (main_hostmetric.last_automation >= %s {marker_cond})
+            ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
+            LIMIT %s
         """
+        params.append(self.limit())
 
-        return query
+        return query, params
 
     @staticmethod
     def limit():

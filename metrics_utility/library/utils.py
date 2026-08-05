@@ -24,7 +24,7 @@ def tempdir(prefix=None, cleanup=True):
         Absolute path to the temporary directory.
     """
     # Generate timestamp using the codebase convention: '%Y-%m-%d-%H%M%S%z'
-    timestamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d-%H%M%S%z')
+    timestamp = datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%d-%H%M%S%z')
 
     # Combine prefix with timestamp
     if prefix:
@@ -52,7 +52,6 @@ def last_gather(db=None, key=None):
         None (not yet implemented).
     """
     log('library.utils last_gather')
-    return None
 
 
 def save_last_gather(db=None, key=None, value=None):

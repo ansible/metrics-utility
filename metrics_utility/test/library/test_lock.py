@@ -31,6 +31,5 @@ class TestCollectorLocks:
     def test_acquire_lock(self):
         with lock('test', wait=False, db=connection) as acquired:
             assert acquired is not None
-            with pytest.raises(Exception):
-                with lock('test', wait=False, db=connection):
-                    assert False, 'this should be unreachable'
+            with pytest.raises(Exception), lock('test', wait=False, db=connection):
+                assert False, 'this should be unreachable'

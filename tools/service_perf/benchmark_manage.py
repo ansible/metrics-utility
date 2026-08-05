@@ -1,4 +1,4 @@
-# ruff: noqa: T201, E402
+# ruff: noqa: E402
 import os
 import sys
 import threading
@@ -17,12 +17,12 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'metrics_service.settings')
 django.setup()
 
-import psutil  # noqa: E402
+import psutil
 
-from apps.tasks.collectors import collect_hourly_metrics, collect_snapshot_metrics, daily_metrics_rollup  # noqa: E402
-from apps.tasks.models import DailyMetricsSummary, HourlyMetricsCollection  # noqa: E402
-from django.core import serializers  # noqa: E402
-from django.db.models import Count  # noqa: E402
+from apps.tasks.collectors import collect_hourly_metrics, collect_snapshot_metrics, daily_metrics_rollup
+from apps.tasks.models import DailyMetricsSummary, HourlyMetricsCollection
+from django.core import serializers
+from django.db.models import Count
 
 
 _TABLE_COUNT_QUERIES = {

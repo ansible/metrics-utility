@@ -2,7 +2,6 @@
 
 import datetime
 
-from datetime import timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -42,7 +41,7 @@ SAMPLE_NEW_KEY = '-----BEGIN RSA PRIVATE KEY-----\nnewkey==\n-----END RSA PRIVAT
 
 def _generate_cert(expired=False, days_until_expiry=365):
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    now = datetime.datetime.now(timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     if expired:
         not_before = now - datetime.timedelta(days=400)
         not_after = now - datetime.timedelta(days=1)
@@ -206,7 +205,7 @@ class TestRunCandlepinLifecycle:
         with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = False
-            result_cert, result_key = run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
+            result_cert, _result_key = run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
         assert result_cert == cert_pem
 
     def test_regeneration_failure_raises(self, expiring_cert_and_key):
@@ -391,7 +390,7 @@ class TestHandleCrcShipTargetLifecycleWiring:
 class TestIsCertValidNotYetValid:
     def test_returns_false_for_future_cert(self):
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        now = datetime.datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         cert = (
             x509.CertificateBuilder()
             .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'future')]))
@@ -407,7 +406,7 @@ class TestIsCertValidNotYetValid:
 
     def test_logs_warning_for_future_cert(self):
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        now = datetime.datetime.now(timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         cert = (
             x509.CertificateBuilder()
             .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'future')]))
@@ -440,7 +439,7 @@ class TestRunLifecycleRenewalSuccessLog:
             instance.checkin.return_value = True
             instance.regenerate_cert.return_value = (new_cert_pem, new_key_pem)
             with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
-                result_cert, result_key = run_candlepin_lifecycle(cert_pem, key_pem, 'uuid', renewal_days=30)
+                result_cert, _result_key = run_candlepin_lifecycle(cert_pem, key_pem, 'uuid', renewal_days=30)
 
         assert result_cert == new_cert_pem
         info_calls = ' '.join(str(c) for c in mock_log.info.call_args_list)

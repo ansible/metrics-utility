@@ -78,7 +78,7 @@ class DedupRenewal(BaseDedupRenewal):
 
             # Iterative search to cover indirect relationships
             iterations = int(self.extra_params['report_renewal_guidance_dedup_iterations'])
-            for i in range(iterations):
+            for _i in range(iterations):
                 # Hostname dupe lookup
                 dupes = self.find_dupes(dupes, 'hostname', dupes['hostname'])
 
@@ -314,7 +314,7 @@ class DedupRenewalExperimental(BaseDedupRenewal):
             if row['hostname_group'] not in processed_hostname_groups:
                 for serial in row['individual_serials']:
                     if serial:
-                        serial_matches = expanded_df[expanded_df['individual_serials'].apply(lambda x: serial in x if x else False)]
+                        serial_matches = expanded_df[expanded_df['individual_serials'].apply(lambda x, s=serial: s in x if x else False)]
                         hostname_groups_in_serial = serial_matches['hostname_group'].unique()
                         if len(hostname_groups_in_serial) > 1:
                             canonical_group = hostname_groups_in_serial[0]

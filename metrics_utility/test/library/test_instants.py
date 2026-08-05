@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from metrics_utility.library.instants import (
     days_ago,
@@ -26,14 +26,14 @@ def test_now_returns_datetime_with_timezone():
     result = now()
     assert isinstance(result, datetime)
     assert result.tzinfo is not None
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
 
 
 def test_this_minute_returns_start_of_minute():
     """Test that this_minute() returns the start of the current minute."""
     result = this_minute()
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.second == 0
     assert result.microsecond == 0
 
@@ -42,7 +42,7 @@ def test_this_hour_returns_start_of_hour():
     """Test that this_hour() returns the start of the current hour."""
     result = this_hour()
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.minute == 0
     assert result.second == 0
     assert result.microsecond == 0
@@ -52,7 +52,7 @@ def test_this_day_returns_start_of_day():
     """Test that this_day() returns the start of the current day (midnight)."""
     result = this_day()
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.hour == 0
     assert result.minute == 0
     assert result.second == 0
@@ -63,7 +63,7 @@ def test_this_week_returns_start_of_week():
     """Test that this_week() returns the start of the current week (Monday at midnight)."""
     result = this_week()
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.weekday() == 0  # Monday
     assert result.hour == 0
     assert result.minute == 0
@@ -75,7 +75,7 @@ def test_this_month_returns_start_of_month():
     """Test that this_month() returns the start of the current month (1st at midnight)."""
     result = this_month()
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.day == 1
     assert result.hour == 0
     assert result.minute == 0
@@ -88,7 +88,7 @@ def test_last_hour_without_relative_to():
     result = last_hour()
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.minute == 0
     assert result.second == 0
     assert result.microsecond == 0
@@ -103,7 +103,7 @@ def test_last_hour_with_relative_to():
     result = last_hour(relative_to=utcdt('2025-01-15T12:00:00'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result == utcdt('2025-01-15T11:00:00')
 
 
@@ -112,7 +112,7 @@ def test_last_day_without_relative_to():
     result = last_day()
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.hour == 0
     assert result.minute == 0
     assert result.second == 0
@@ -128,7 +128,7 @@ def test_last_day_with_relative_to():
     result = last_day(relative_to=utcdt('2025-01-15'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result == utcdt('2025-01-14')
 
 
@@ -137,7 +137,7 @@ def test_last_week_without_relative_to():
     result = last_week()
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.weekday() == 0  # Monday
     assert result.hour == 0
     assert result.minute == 0
@@ -155,7 +155,7 @@ def test_last_week_with_relative_to():
     result = last_week(relative_to=utcdt('2025-01-13'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     # Should be Monday, Jan 6, 2025 at midnight
     assert result == utcdt('2025-01-06')
     assert result.weekday() == 0  # Monday
@@ -166,7 +166,7 @@ def test_last_month_without_relative_to():
     result = last_month()
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.day == 1
     assert result.hour == 0
     assert result.minute == 0
@@ -188,7 +188,7 @@ def test_last_month_with_relative_to():
     result = last_month(relative_to=utcdt('2025-03-01'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     # Should be February 1, 2025 at midnight
     assert result == utcdt('2025-02-01')
 
@@ -199,7 +199,7 @@ def test_last_month_year_boundary():
     result = last_month(relative_to=utcdt('2025-01-01'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     # Should be December 1, 2024 at midnight
     assert result == utcdt('2024-12-01')
 
@@ -209,7 +209,7 @@ def test_hours_ago():
     result = hours_ago(3)
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.minute == 0
     assert result.second == 0
     assert result.microsecond == 0
@@ -224,7 +224,7 @@ def test_hours_ago_with_relative_to():
     result = hours_ago(3, relative_to=utcdt('2025-01-15T12:00:00'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result == utcdt('2025-01-15T09:00:00')
 
 
@@ -233,7 +233,7 @@ def test_days_ago():
     result = days_ago(5)
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.hour == 0
     assert result.minute == 0
     assert result.second == 0
@@ -249,7 +249,7 @@ def test_days_ago_with_relative_to():
     result = days_ago(5, relative_to=utcdt('2025-01-15'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result == utcdt('2025-01-10')
 
 
@@ -258,7 +258,7 @@ def test_weeks_ago():
     result = weeks_ago(2)
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.weekday() == 0  # Monday
     assert result.hour == 0
     assert result.minute == 0
@@ -276,7 +276,7 @@ def test_weeks_ago_with_relative_to():
     result = weeks_ago(2, relative_to=utcdt('2025-01-20'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     # Should be Monday, Jan 6, 2025 at midnight
     assert result == utcdt('2025-01-06')
     assert result.weekday() == 0  # Monday
@@ -287,7 +287,7 @@ def test_months_ago():
     result = months_ago(2)
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.day == 1
     assert result.hour == 0
     assert result.minute == 0
@@ -311,7 +311,7 @@ def test_months_ago_with_relative_to():
     result = months_ago(2, relative_to=utcdt('2025-05-01'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     # Should be exactly March 1, 2025
     assert result == utcdt('2025-03-01')
 
@@ -322,7 +322,7 @@ def test_months_ago_year_boundary():
     result = months_ago(3, relative_to=utcdt('2025-02-01'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     # Should be November 1, 2024
     assert result == utcdt('2024-11-01')
 
@@ -332,7 +332,7 @@ def test_minutes_ago():
     result = minutes_ago(10)
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result.second == 0
     assert result.microsecond == 0
 
@@ -346,7 +346,7 @@ def test_minutes_ago_with_relative_to():
     result = minutes_ago(10, relative_to=utcdt('2025-01-15T12:30:00'))
 
     assert isinstance(result, datetime)
-    assert result.tzinfo == timezone.utc
+    assert result.tzinfo == UTC
     assert result == utcdt('2025-01-15T12:20:00')
 
 

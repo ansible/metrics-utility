@@ -122,7 +122,7 @@ class Collector:
 
     def all_tar_paths(self):
         tar_paths = []
-        for _, packages in self.packages.items():
+        for packages in self.packages.values():
             new_paths = [package.tar_path for package in packages if package.tar_path is not None]
             tar_paths += new_paths
         return tar_paths or []
@@ -296,7 +296,7 @@ class Collector:
             self._process_package(package)
 
     def _process_packages(self):
-        for group, packages in self.packages.items():
+        for packages in self.packages.values():
             for package in packages:
                 self._process_package(package)
 
@@ -340,12 +340,11 @@ class Collector:
         Complement to the _save_last_gathered_entries()
         :return dict
         """
-        pass
 
     def _update_last_gathered_entries(self):
         last_gathered_updates = {'keys': {}, 'locked': set()}
 
-        for _, packages in self.packages.items():
+        for packages in self.packages.values():
             for package in packages:
                 package.update_last_gathered_entries(last_gathered_updates)
 
@@ -364,7 +363,6 @@ class Collector:
         Complement to the _load_last_gathered_entries()
         :param last_gathered_entries: dict
         """
-        pass
 
     def _create_collections(self, subset=None):
         """Creates Collections from decorated functions (by @register) from self.collector_module
@@ -380,10 +378,10 @@ class Collector:
         """
         for name, fnc in inspect.getmembers(self.collector_module):
             if (
-                inspect.isfunction(fnc)  # noqa
-                and hasattr(fnc, '__insights_analytics_key__')  # noqa
-                and hasattr(fnc, '__insights_analytics_type__')  # noqa
-                and (not subset or name in subset)  # noqa
+                inspect.isfunction(fnc)
+                and hasattr(fnc, '__insights_analytics_key__')
+                and hasattr(fnc, '__insights_analytics_type__')
+                and (not subset or name in subset)
             ):
                 # Create collection by type
                 collection = self._create_collection(fnc)

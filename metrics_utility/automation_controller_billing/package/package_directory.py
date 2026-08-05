@@ -5,8 +5,7 @@ import shutil
 
 from django.conf import settings
 
-import metrics_utility.base as base
-
+from metrics_utility import base
 from metrics_utility.logger import logger
 
 

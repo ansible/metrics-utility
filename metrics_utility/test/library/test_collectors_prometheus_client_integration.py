@@ -67,7 +67,7 @@ class TestPrometheusClientIntegration:
         values = result['data']['result'][0]['values']
         # 1 hour / 5 min = 12 intervals + 1 = 13 data points
         assert len(values) == 13
-        for ts, val in values:
+        for _ts, val in values:
             assert float(val) == pytest.approx(16.0)
 
         captured = get_captured_requests()
@@ -108,7 +108,7 @@ class TestVcpuHelpersIntegration:
         configure_mock(empty_result=True)
 
         client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
-        vcpu_val, query = get_total_workers_cpu(client, 1700000000.0)
+        vcpu_val, _query = get_total_workers_cpu(client, 1700000000.0)
 
         assert vcpu_val is None
 

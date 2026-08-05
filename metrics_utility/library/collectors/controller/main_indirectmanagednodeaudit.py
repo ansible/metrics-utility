@@ -48,6 +48,7 @@ def main_indirectmanagednodeaudit(*, db=None, since=None, until=None, output=Dat
         LEFT JOIN main_unifiedjobtemplate AS main_unifiedjobtemplate_project ON main_unifiedjobtemplate_project.id = main_job.project_id
         WHERE
             {date_where('main_unifiedjob.finished', since, until)}
+        ORDER BY main_indirectmanagednodeaudit.created ASC
     """
 
     return output.sql(db, query)

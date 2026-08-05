@@ -367,7 +367,7 @@ def _validate_role_stats(json_data):
 
 def _validate_jobs_by_installed_collections_versions(json_data):
     """Validate jobs_by_installed_collections_versions."""
-    if not ('jobs_by_installed_collections_versions' in json_data and json_data['jobs_by_installed_collections_versions']):
+    if not (json_data.get('jobs_by_installed_collections_versions')):
         return
     print('--- Validating jobs_by_installed_collections_versions data values ---')
     jobs_by_installed_collections_versions = json_data['jobs_by_installed_collections_versions']
@@ -689,7 +689,7 @@ def _validate_table_metadata_structure(json_data):
 
         # Group keys by table name (extract table name from key)
         table_names = set()
-        for key in table_metadata.keys():
+        for key in table_metadata:
             # Key format: {table_name}_{field_name}
             # Find the last underscore to split table name from field name
             parts = key.rsplit('_', 1)

@@ -22,7 +22,6 @@ Scale reference table (90-day period, 2024-01-01 → 2024-03-31):
 See FILL_DATA.md for full usage instructions and examples.
 """
 
-# ruff: noqa: T201, S603, S607
 import argparse
 import os
 import subprocess
@@ -67,7 +66,7 @@ def _run(cmd: list[str], cwd: Path, env: dict) -> None:
     print(f'  → done in {elapsed:.1f}s\n')
 
 
-def main() -> None:  # noqa: PLR0915
+def main() -> None:
     """Fill the AWX DB for each day in the given period."""
     parser = argparse.ArgumentParser(
         description='Fill AWX DB for a date range.',

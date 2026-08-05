@@ -228,11 +228,7 @@ class Base:
                 return True
 
             # match against collections
-            for key in collections:
-                if s.find(f'-{key}.') != -1:
-                    return True
-
-            return False
+            return any(s.find(f'-{key}.') != -1 for key in collections)
 
         paths = filter(match, paths)
         return list(paths)
@@ -285,9 +281,8 @@ def _safe_extract(tar_path, extract_path, max_files=100, max_size=1024 * 1024 * 
 
             # Only files from enabled_set (+ extension)
             basename = os.path.basename(member.name)
-            if enabled_set:
-                if not any(basename.startswith(item + '.') for item in enabled_set):
-                    continue
+            if enabled_set and not any(basename.startswith(item + '.') for item in enabled_set):
+                continue
 
             # Build a fully qualified path for this member and ensure it stays within extract_path
             member_path = os.path.abspath(os.path.join(extract_path, member.name))

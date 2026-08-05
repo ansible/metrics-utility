@@ -10,8 +10,8 @@ from metrics_utility.library.collectors.controller.unified_jobs_dashboard import
 class TestUnifiedJobsDashboard:
     def setup_method(self):
         self.mock_db = None  # sql output adapter, not used directly in query tests
-        self.since = datetime.datetime(2024, 1, 1, tzinfo=datetime.timezone.utc)
-        self.until = datetime.datetime(2024, 2, 1, tzinfo=datetime.timezone.utc)
+        self.since = datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC)
+        self.until = datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC)
 
     def _get_query(self, mock_copy_pandas):
         return mock_copy_pandas.call_args[0][1]

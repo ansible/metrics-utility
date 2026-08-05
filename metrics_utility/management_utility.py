@@ -6,7 +6,7 @@ import sys
 from importlib import import_module
 from importlib.metadata import version
 
-import django.core.management as management
+from django.core import management
 
 from metrics_utility.exceptions import MetricsException
 from metrics_utility.logger import logger
@@ -98,7 +98,7 @@ class ManagementUtility(management.ManagementUtility):
             module = import_module(f'metrics_utility.management.commands.{subcommand}')
         except Exception as ex:
             sys.stdout.write(f"Failed to import command '{subcommand}': {ex}")
-            raise ex
+            raise
 
         return module.Command()
 
@@ -125,7 +125,7 @@ class ManagementUtility(management.ManagementUtility):
             self.fetch_command(subcommand).run_from_argv(argv)
         except MetricsException as e:
             logger.error(e.name)
-            exit(1)
+            sys.exit(1)
         except Exception as e:
             logger.exception(e)
-            exit(1)
+            sys.exit(1)

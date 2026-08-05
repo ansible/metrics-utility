@@ -218,7 +218,7 @@ if __name__ == '__main__':
         if site_packages:
             sys.path.insert(0, str(site_packages[0]))
 
-    from metrics_utility import prepare  # noqa: E402
+    from metrics_utility import prepare
 
     # Initialize Django and database connection
     prepare()

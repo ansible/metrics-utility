@@ -292,8 +292,8 @@ def _create_ansible_versions():
     """
     ansible_versions = []
     for major in range(2, 5):  # Major versions 2, 3, 4
-        for minor in range(0, 100):  # Minor versions 0-99
-            for patch in range(0, 10):  # Patch versions 0-9
+        for minor in range(100):  # Minor versions 0-99
+            for patch in range(10):  # Patch versions 0-9
                 version = f'{major}.{minor}.{patch}'
                 ansible_versions.append(version)
     return ansible_versions

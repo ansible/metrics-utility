@@ -100,7 +100,7 @@ class S3Handler:
             if code == 404:
                 status = False
             else:
-                raise e
+                raise
 
         return status
 
