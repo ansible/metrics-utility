@@ -26,15 +26,13 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
     query = f"""
         WITH
             filtered_hosts AS (
-                SELECT DISTINCT main_jobhostsummary.host_id,
-                    main_jobhostsummary.host_name
+                SELECT DISTINCT main_jobhostsummary.host_id
                 FROM main_jobhostsummary
                 WHERE {where}
             ),
             hosts_variables AS (
                 SELECT
                     filtered_hosts.host_id,
-                    filtered_hosts.host_name,
                     CASE
                         WHEN (metrics_utility_is_valid_json(main_host.variables))
                         THEN main_host.variables::jsonb->>'ansible_host'
@@ -46,10 +44,7 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
                         ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
                     END AS ansible_connection_variable
                 FROM filtered_hosts
-                LEFT JOIN main_host ON (
-                    (filtered_hosts.host_id IS NOT NULL AND main_host.id = filtered_hosts.host_id)
-                    OR (filtered_hosts.host_id IS NULL AND main_host.name = filtered_hosts.host_name)
-                )
+                LEFT JOIN main_host ON main_host.id = filtered_hosts.host_id
             )
         SELECT
             main_jobhostsummary.id,
@@ -90,10 +85,7 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
         -- get organization name from main_organization
         LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
         -- get variables from precomputed hosts_variables
-        LEFT JOIN hosts_variables ON (
-            (main_jobhostsummary.host_id IS NOT NULL AND hosts_variables.host_id = main_jobhostsummary.host_id)
-            OR (main_jobhostsummary.host_id IS NULL AND hosts_variables.host_name = main_jobhostsummary.host_name)
-        )
+        LEFT JOIN hosts_variables ON hosts_variables.host_id = main_jobhostsummary.host_id
         WHERE {where}
         ORDER BY main_jobhostsummary.modified ASC
     """
