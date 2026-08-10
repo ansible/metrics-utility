@@ -7,6 +7,7 @@ from .feature_flags_service import feature_flags_service
 from .job_host_summary import job_host_summary
 from .job_host_summary_service import job_host_summary_service
 from .main_host import main_host, main_host_daily
+from .main_hostmetric import main_hostmetric
 from .main_indirectmanagednodeaudit import main_indirectmanagednodeaudit
 from .main_jobevent import main_jobevent
 from .main_jobevent_service import main_jobevent_service
@@ -26,6 +27,7 @@ __all__ = [
     'job_host_summary_service',
     'main_host',
     'main_host_daily',
+    'main_hostmetric',
     'main_indirectmanagednodeaudit',
     'main_jobevent',
     'main_jobevent_service',

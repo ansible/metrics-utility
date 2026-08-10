@@ -81,7 +81,7 @@ class TestDataframeOutput:
         query = 'SELECT id FROM users'
         output.sql(mock_db, query)
 
-        mock_cursor.execute.assert_called_once_with(query)
+        mock_cursor.execute.assert_called_once_with(query, None)
 
     def test_sql_returns_correct_columns(self):
         """Test that DataFrame has correct columns from cursor description."""

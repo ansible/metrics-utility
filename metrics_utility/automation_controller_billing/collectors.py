@@ -19,6 +19,7 @@ from metrics_utility.library.collectors.controller import (
     job_host_summary_service,
     main_host,
     main_host_daily,
+    main_hostmetric,
     main_indirectmanagednodeaudit,
     main_jobevent,
     main_jobevent_service,
@@ -161,6 +162,15 @@ def cli_main_host_daily(since, until, output):
         return None
 
     collector = main_host_daily(db=connection, since=since, until=until)
+    return output.as_files(collector)
+
+
+@register('main_hostmetric', '1.0', format='csv', fnc_slicing=daily_slicing)
+def cli_main_hostmetric(since, until, output):
+    if 'main_hostmetric' not in get_optional_collectors():
+        return None
+
+    collector = main_hostmetric(db=connection, since=since, until=until)
     return output.as_files(collector)
 
 

@@ -453,6 +453,43 @@ WHERE main_indirectmanagednodeaudit.created >= 'since'
 
 ---
 
+### 11. `main_hostmetric`
+
+**File**: `metrics_utility/library/collectors/controller/main_hostmetric.py`
+
+**Purpose**: Collects host metric data (automation history, deletion status) joined with host facts. Used by the Renewal Guidance report.
+
+**Tables Accessed**:
+- `main_hostmetric` (READ) - Filtered by `last_automation` timestamp
+- `main_host` (READ) - LEFT JOIN for host variables and ansible facts
+
+**Partition Information**:
+- ❌ **Not partitioned** (all tables are non-partitioned)
+
+**Query Pattern**:
+```sql
+SELECT main_hostmetric.hostname, COALESCE(main_host.id, 0) AS host_id,
+       main_hostmetric.first_automation, main_hostmetric.last_automation,
+       main_hostmetric.automated_counter, main_hostmetric.deleted_counter,
+       main_hostmetric.last_deleted, main_hostmetric.deleted, ...
+FROM main_hostmetric
+LEFT JOIN main_host ON main_host.name = main_hostmetric.hostname
+WHERE main_hostmetric.last_automation >= 'since'
+ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
+```
+
+**Time Range Support**:
+- ✅ **Supports `since`/`until` parameters**
+- Filters by `last_automation` timestamp (the Renewal Guidance report passes `since` only)
+
+**Pagination**:
+- Keyset pagination on `(hostname, host_id)` when materialised into a DataFrame; COPY-based (CSV) output streams the whole result set in one query
+
+**Frequency**:
+- Run per collection window (typically daily)
+
+---
+
 ## Partition Pruning Strategies
 
 ### How Partition Pruning Works
