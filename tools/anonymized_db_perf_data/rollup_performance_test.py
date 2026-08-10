@@ -36,6 +36,7 @@ from metrics_utility.library.collectors.controller import (  # noqa: E402
     main_indirectmanagednodeaudit,
     main_jobevent_service,
     unified_jobs,
+    unified_jobs_dashboard,
 )
 
 # Import rollup computation
@@ -133,11 +134,16 @@ def main():
         all_metrics.append(metrics)
         collector_data['execution_environments'] = data
 
-    # Test unified_jobs
+    # Test unified_jobs (CLI collector)
     metrics, data = run_task('unified_jobs', lambda: unified_jobs(db=connection, since=since, until=until).gather())
     if metrics:
         all_metrics.append(metrics)
         collector_data['unified_jobs'] = data
+
+    # Test unified_jobs_dashboard (metrics service collector)
+    metrics, data = run_task('unified_jobs_dashboard', lambda: unified_jobs_dashboard(db=connection, since=since, until=until).gather())
+    if metrics:
+        all_metrics.append(metrics)
 
     # Test job_host_summary_service
     metrics, data = run_task('job_host_summary_service', lambda: job_host_summary_service(db=connection, since=since, until=until).gather())

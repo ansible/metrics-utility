@@ -34,6 +34,7 @@ from metrics_utility.library.collectors.controller.job_host_summary_service impo
 from metrics_utility.library.collectors.controller.main_jobevent import main_jobevent  # noqa: E402
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service  # noqa: E402
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs  # noqa: E402
+from metrics_utility.library.collectors.controller.unified_jobs_dashboard import unified_jobs_dashboard  # noqa: E402
 
 
 def count_csv_rows(file_paths):
@@ -422,7 +423,8 @@ def main():
 
     # Collectors to test
     collectors = [
-        {'func': unified_jobs, 'name': 'unified_jobs', 'explain': False},
+        {'func': unified_jobs, 'name': 'unified_jobs (CLI)', 'explain': False},
+        {'func': unified_jobs_dashboard, 'name': 'unified_jobs_dashboard (metrics service)', 'explain': False},
         {'func': job_host_summary, 'name': 'job_host_summary (OLD)', 'explain': False},
         {'func': job_host_summary_service, 'name': 'job_host_summary_service (NEW)', 'explain': False},
         {'func': main_jobevent, 'name': 'main_jobevent (OLD)', 'explain': True},

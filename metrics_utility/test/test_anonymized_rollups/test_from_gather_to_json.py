@@ -18,6 +18,7 @@ from metrics_utility.library.collectors.controller import (
     main_jobevent_service,
     table_metadata,
     unified_jobs,
+    unified_jobs_dashboard,
 )
 from metrics_utility.library.storage.segment import StorageSegment
 from metrics_utility.test.test_anonymized_rollups.helpers import compute_anonymized_rollup_from_raw_data
@@ -1015,7 +1016,8 @@ def _validate_all_data(json_data, statistics):
 MOCK_SEGMENT_URL = os.getenv('MOCK_SEGMENT_URL', 'http://localhost:8765')
 
 
-def test_from_gather_to_json(cleanup_glob):
+@pytest.mark.parametrize('unified_jobs_func', [unified_jobs, unified_jobs_dashboard], ids=['unified_jobs', 'unified_jobs_dashboard'])
+def test_from_gather_to_json(cleanup_glob, unified_jobs_func):
     """
     Full integration test: gather data from the DB, compute an anonymized rollup,
     validate the JSON structure, then ship it to a mock Segment server and assert
@@ -1024,7 +1026,7 @@ def test_from_gather_to_json(cleanup_glob):
     # Define collectors similar to run_no_events.py
     COLLECTORS = {
         'unified_jobs': {
-            'func': unified_jobs,
+            'func': unified_jobs_func,
             'needs_since_until': True,
         },
         'job_host_summary_service': {

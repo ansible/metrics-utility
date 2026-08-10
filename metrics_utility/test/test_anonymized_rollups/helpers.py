@@ -35,7 +35,7 @@ from metrics_utility.library.collectors.controller import (
     main_indirectmanagednodeaudit,
     main_jobevent_service,
     table_metadata,
-    unified_jobs,
+    unified_jobs_dashboard,
 )
 from metrics_utility.library.collectors.service import task_executions_service
 from metrics_utility.logger import logger
@@ -148,7 +148,10 @@ def compute_anonymized_rollup_from_raw_data(input_data):
     return anonymized_rollup
 
 
-def compute_anonymized_rollup(db, since, until, service_db=None):
+def compute_anonymized_rollup(db, since, until, service_db=None, unified_jobs_collector=None):
+    if unified_jobs_collector is None:
+        unified_jobs_collector = unified_jobs_dashboard
+
     # This will contain list of files that belongs to particular collector
     execution_environments_data = []
     try:
@@ -158,7 +161,7 @@ def compute_anonymized_rollup(db, since, until, service_db=None):
 
     unified_jobs_data = []
     try:
-        unified_jobs_data = unified_jobs(db=db, since=since, until=until).gather()
+        unified_jobs_data = unified_jobs_collector(db=db, since=since, until=until).gather()
     except Exception as e:
         logger.error(f'Failed to gather unified_jobs data: {e}')
 
