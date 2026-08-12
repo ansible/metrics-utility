@@ -13,6 +13,7 @@ from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import 
 from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
 from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
 from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
+from metrics_utility.anonymized_rollups.types import AnonymizedPayload
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
 
@@ -439,7 +440,7 @@ def _as_list(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
-def flatten_json_report(data: dict[str, Any]) -> dict[str, Any]:
+def flatten_json_report(data: dict[str, Any]) -> AnonymizedPayload:
     """
     Manually flattens the given nested report into:
       - statistics: object of primitive totals (includes credentials)
@@ -572,7 +573,7 @@ def anonymize_rollups(
     task_executions_rollup=None,
     indirect_managed_nodes_rollup=None,
     **kwargs,
-):
+) -> AnonymizedPayload:
     """
     Combines rollup data, flattens it, and anonymizes sensitive fields.
 
