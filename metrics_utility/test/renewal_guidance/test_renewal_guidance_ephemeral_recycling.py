@@ -21,6 +21,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
+from openpyxl import Workbook
+
 from metrics_utility.automation_controller_billing.report.report_renewal_guidance import ReportRenewalGuidance
 
 
@@ -216,3 +218,46 @@ def test_flag_suspect_merges_defensive_without_plural_columns(report_instance):
     mask = report_instance._flag_suspect_merges(df)
     assert not mask.any()
     assert len(mask) == len(df)
+
+
+def test_flag_suspect_merges_tolerates_non_string_aggregate_values(report_instance):
+    """Non-string aggregate cells (e.g. NaN) count as zero rather than raising."""
+    df = _frame(
+        [
+            # A genuine false-collapse whose serial cell is NaN (not ''): the
+            # non-string branch of the counter must treat it as zero serials so
+            # the record is still flagged.
+            _row('nan-serial-collapse', _OLD, dt_actual.datetime(2025, 6, 1), hostnames='a, b', serials='', mids='shared'),
+        ]
+    )
+    df.loc[df['hostname'] == 'nan-serial-collapse', 'ansible_product_serials'] = float('nan')
+
+    mask = report_instance._flag_suspect_merges(df)
+
+    assert df[mask]['hostname'].tolist() == ['nan-serial-collapse']
+
+
+def test_build_data_section_emits_merge_suspect_row(report_instance):
+    """Defects 2-4: the CCSP summary section writes a merge-suspect row (and the
+    deleted-inclusive ephemeral total) into the worksheet when ephemeral_days is set."""
+    df = _frame(
+        [
+            _row('stable-prod', dt_actual.datetime(2025, 1, 1), dt_actual.datetime(2025, 4, 11)),
+            _row('live-ephemeral', _OLD, _OLD + dt_actual.timedelta(days=3)),
+            _row('gone-ephemeral', _OLD, _OLD + dt_actual.timedelta(days=3), deleted=True, deleted_counter=1),
+            # False collapse -> one merge-suspect record.
+            _row(
+                'ee-collapsed', _OLD, dt_actual.datetime(2025, 6, 1), deleted=True, deleted_counter=6, hostnames='a, b, c', serials='', mids='shared'
+            ),
+        ]
+    )
+    ephemeral_usage = pd.DataFrame({'ephemeral_hosts': [1, 2]})
+    ws = Workbook().active
+
+    next_row = report_instance._build_data_section(1, ws, df, ephemeral_usage)
+
+    # The section returns the next free row and renders the new summary lines.
+    assert next_row > 1
+    descriptions = {row[0].value for row in ws.iter_rows(min_col=1, max_col=1) if row[0].value}
+    assert any('Merge-suspect host records' in d for d in descriptions)
+    assert 'Ephemeral automated hosts total' in descriptions
