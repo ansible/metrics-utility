@@ -10,5 +10,8 @@
 
   - `METRICS_UTILITY_CLUSTER_NAME`: Contains the cluster name which is part of the collection payload.
   - `METRICS_UTILITY_USAGE_BASED_METERING_ENABLED`: [true/false] In case of true, the payload will contain the actual number of total vcpu accross all workers otherwise the total will be set to 1.
+  - `METRICS_UTILITY_PROMETHEUS_URL`: Prometheus base url (defaults to the in-cluster openshift-monitoring endpoint).
+  - `METRICS_UTILITY_PROMETHEUS_TOKEN`: Bearer token for Prometheus. Overrides the in-cluster service-account token, mainly for local testing (see `./run-vcpu`).
+  - `METRICS_UTILITY_PROMETHEUS_CA_CERT_PATH`: Path to the CA certificate used to verify Prometheus TLS. Overrides the in-cluster service CA; set to an empty string to skip verification (e.g. plain `http` mock).
 
 N.B.: The SaaS solution runs on ROSA HCP so all nodes are workers, if this collector is used for another solution then the filtering must be implemented.

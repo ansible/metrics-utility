@@ -1,0 +1,33 @@
+#!/bin/sh
+set -e
+cd "`dirname "$0"`"
+
+export METRICS_UTILITY_CLUSTER_NAME="aap-dev"
+export METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR="true"
+export METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES="true"
+export METRICS_UTILITY_OPTIONAL_COLLECTORS="total_workers_vcpu"
+export METRICS_UTILITY_SHIP_PATH="./out/vcpu"
+export METRICS_UTILITY_SHIP_TARGET="directory"
+export METRICS_UTILITY_USAGE_BASED_METERING_ENABLED="true"
+
+# talk to the mock-prometheus container from `make compose` (see tools/mock-prometheus-server)
+export METRICS_UTILITY_PROMETHEUS_URL="http://localhost:9090"
+export METRICS_UTILITY_PROMETHEUS_TOKEN="dev"        # override the in-cluster service-account token
+export METRICS_UTILITY_PROMETHEUS_CA_CERT_PATH=""     # skip TLS verification for the plain-http mock
+
+if ! pg_isready -h localhost; then
+  echo "run-vcpu: DB not ready, run make compose first"
+  exit 1
+fi
+
+if ! curl -sf "$METRICS_UTILITY_PROMETHEUS_URL/api/v1/query?query=up" >/dev/null; then
+  echo "run-vcpu: Prometheus not reachable at $METRICS_UTILITY_PROMETHEUS_URL, run make compose first"
+  exit 1
+fi
+
+TIME=`command -v gtime >/dev/null 2>&1 && echo 'gtime' || echo '/usr/bin/time'`
+$TIME --format='\n\nmemory %MK\ncpu %P\ntime %es\n\n' \
+uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force "$@"
+
+set -x
+ls -lR out/vcpu/data/`date +%Y`/

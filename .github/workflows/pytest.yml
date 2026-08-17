@@ -92,7 +92,7 @@ jobs:
           METRICS_UTILITY_DB_USER: "awx"
           METRICS_UTILITY_DB_PASSWORD: "awx"
           MOCK_SEGMENT_URL: "http://localhost:8765"
-          MOCK_PROMETHEUS_URL: "http://localhost:9090"
+          METRICS_UTILITY_PROMETHEUS_URL: "http://localhost:9090"
         run: |
           uv run pytest -s -v --cov=. --cov-branch --cov-report=xml
 
