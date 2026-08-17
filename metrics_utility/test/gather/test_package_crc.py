@@ -89,13 +89,13 @@ class TestIsCertValid:
         assert _is_cert_valid('') is False
 
     def test_expired_cert_logs_warning(self, expired_cert_pem):
-        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_logger:
+        with patch('metrics_utility.candlepin.lifecycle.logger') as mock_logger:
             _is_cert_valid(expired_cert_pem)
         mock_logger.warning.assert_called_once()
         assert 'expired' in mock_logger.warning.call_args[0][0]
 
     def test_invalid_pem_logs_warning(self):
-        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_logger:
+        with patch('metrics_utility.candlepin.lifecycle.logger') as mock_logger:
             _is_cert_valid('not-a-cert')
         mock_logger.warning.assert_called_once()
         assert 'Could not parse' in mock_logger.warning.call_args[0][0]

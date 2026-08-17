@@ -7,7 +7,7 @@ This document describes the current architecture of `metrics-utility` for mainta
 `metrics-utility` has two related interfaces:
 
 - The management commands provide the end-to-end gather and report workflows.
-- The `metrics_utility.library` package exposes reusable collectors, storage, dataframe, rollup, and report primitives.
+- The `metrics_utility.library` package exposes reusable collectors, a Segment storage backend, and a DB locking helper. Its sibling `metrics_utility.anonymized_rollups` covers rollup and anonymization. Both are shared with the external metrics-service.
 
 The main data path is:
 
@@ -135,14 +135,15 @@ Large collections can be divided across packages. A collection that produces sub
 
 ### Storage
 
-Storage adapters provide a common `put`, `get`, `exists`, `remove`, and `glob` interface where the backend supports the operation. Current implementations are:
+Shipping of collection artifacts lives with the billing package classes in `metrics_utility/automation_controller_billing/package/`, selected by the package `Factory` from the configured ship target:
 
-- `StorageDirectory` for local files
-- `StorageS3` for S3-compatible object storage
-- `StorageCRC` and `StorageCRCMutual` for console.redhat.com ingress
-- `StorageSegment` for put-only analytics events
+- `PackageDirectory` for local files
+- `PackageS3` for S3-compatible object storage (via `base/s3_handler.py`)
+- `PackageCRC` for console.redhat.com ingress
 
-The billing package classes select the appropriate adapter and are responsible for shipping collection artifacts. Report saver classes perform the analogous operation for generated XLSX files. See [the library guide](../metrics_utility/library/README.md) for callable-level examples.
+Report saver classes perform the analogous operation for generated XLSX files.
+
+The library keeps a single put-only storage backend, `StorageSegment` (`metrics_utility/library/storage/`), used to push anonymized analytics events. See [the library guide](../metrics_utility/library/README.md) for callable-level examples.
 
 ## Dataframes, rollups, and reports
 

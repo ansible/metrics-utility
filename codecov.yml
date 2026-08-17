@@ -25,7 +25,6 @@ flags:
     carryforward: true
     paths:
       - metrics_utility/
-      - workers/
 
 comment:
   layout: "reach,diff,flags,files"

@@ -1,4 +1,4 @@
-"""Tests for metrics_utility.library.candlepin.lifecycle and the validation.py orchestration wrapper."""
+"""Tests for metrics_utility.candlepin.lifecycle and the validation.py orchestration wrapper."""
 
 import datetime
 
@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
-from metrics_utility.library.candlepin.lifecycle import (
+from metrics_utility.candlepin.lifecycle import (
     get_candlepin_ca,
     get_renewal_days,
     is_cert_valid,
@@ -171,7 +171,7 @@ class TestNeedsRenewal:
 class TestRunCandlepinLifecycle:
     def test_healthy_cert_does_checkin_but_no_renewal(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = True
             result_cert, result_key = run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
@@ -182,7 +182,7 @@ class TestRunCandlepinLifecycle:
 
     def test_expiring_cert_triggers_renewal(self, expiring_cert_and_key):
         cert_pem, key_pem = expiring_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = True
             instance.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
@@ -193,7 +193,7 @@ class TestRunCandlepinLifecycle:
 
     def test_expired_cert_triggers_renewal(self, expired_cert_and_key):
         cert_pem, key_pem = expired_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = True
             instance.regenerate_cert.return_value = (SAMPLE_NEW_CERT, SAMPLE_NEW_KEY)
@@ -202,7 +202,7 @@ class TestRunCandlepinLifecycle:
 
     def test_checkin_failure_does_not_abort(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = False
             result_cert, _result_key = run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID)
@@ -210,7 +210,7 @@ class TestRunCandlepinLifecycle:
 
     def test_regeneration_failure_raises(self, expiring_cert_and_key):
         cert_pem, key_pem = expiring_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = True
             instance.regenerate_cert.side_effect = RuntimeError('Candlepin 500')
@@ -218,21 +218,21 @@ class TestRunCandlepinLifecycle:
                 run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, renewal_days=30)
 
     def test_unparseable_cert_returns_originals(self):
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             result = run_candlepin_lifecycle('not-a-cert', 'not-a-key', CONSUMER_UUID)
         MockClient.return_value.checkin.assert_not_called()
         assert result == ('not-a-cert', 'not-a-key')
 
     def test_client_receives_correct_candlepin_url(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             MockClient.return_value.checkin.return_value = True
             run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, candlepin_url='https://sub.example.com')
         MockClient.assert_called_once_with(base_url='https://sub.example.com', candlepin_ca=None, proxy=None)
 
     def test_client_receives_candlepin_ca(self, valid_cert_and_key):
         cert_pem, key_pem = valid_cert_and_key
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             MockClient.return_value.checkin.return_value = True
             run_candlepin_lifecycle(cert_pem, key_pem, CONSUMER_UUID, candlepin_ca='/etc/rhsm/ca/redhat-uep.pem')
         _, kwargs = MockClient.call_args
@@ -418,7 +418,7 @@ class TestIsCertValidNotYetValid:
             .sign(key, hashes.SHA256())
         )
         cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode('utf-8')
-        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+        with patch('metrics_utility.candlepin.lifecycle.logger') as mock_log:
             is_cert_valid(cert_pem)
         mock_log.warning.assert_called_once()
         assert 'not yet valid' in mock_log.warning.call_args[0][0]
@@ -434,11 +434,11 @@ class TestRunLifecycleRenewalSuccessLog:
         cert_pem, key_pem = expiring_cert_and_key
         # Generate a real cert so parse_cert succeeds and line 148 (success log) is hit.
         new_cert_pem, new_key_pem = _generate_cert(expired=False, days_until_expiry=365)
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient') as MockClient:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient') as MockClient:
             instance = MockClient.return_value
             instance.checkin.return_value = True
             instance.regenerate_cert.return_value = (new_cert_pem, new_key_pem)
-            with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+            with patch('metrics_utility.candlepin.lifecycle.logger') as mock_log:
                 result_cert, _result_key = run_candlepin_lifecycle(cert_pem, key_pem, 'uuid', renewal_days=30)
 
         assert result_cert == new_cert_pem
@@ -453,8 +453,8 @@ class TestRunLifecycleRenewedCertUnparseable:
         mock_client.checkin.return_value = True
         mock_client.regenerate_cert.return_value = ('not-a-cert', 'not-a-key')
 
-        with patch('metrics_utility.library.candlepin.lifecycle.CandlepinClient', return_value=mock_client):
-            with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+        with patch('metrics_utility.candlepin.lifecycle.CandlepinClient', return_value=mock_client):
+            with patch('metrics_utility.candlepin.lifecycle.logger') as mock_log:
                 run_candlepin_lifecycle(cert_pem, key_pem, 'uuid', renewal_days=400)
 
         warning_calls = [str(call) for call in mock_log.warning.call_args_list]
@@ -477,21 +477,21 @@ class TestGetRenewalDays:
 
     def test_returns_default_and_logs_warning_for_non_integer(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', 'abc')
-        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+        with patch('metrics_utility.candlepin.lifecycle.logger') as mock_log:
             result = get_renewal_days()
         assert result == 30
         mock_log.warning.assert_called_once()
 
     def test_returns_default_and_logs_warning_for_zero(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', '0')
-        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+        with patch('metrics_utility.candlepin.lifecycle.logger') as mock_log:
             result = get_renewal_days()
         assert result == 30
         mock_log.warning.assert_called_once()
 
     def test_returns_default_and_logs_warning_for_negative(self, monkeypatch):
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS', '-5')
-        with patch('metrics_utility.library.candlepin.lifecycle.logger') as mock_log:
+        with patch('metrics_utility.candlepin.lifecycle.logger') as mock_log:
             result = get_renewal_days()
         assert result == 30
         mock_log.warning.assert_called_once()

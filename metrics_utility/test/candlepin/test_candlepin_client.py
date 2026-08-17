@@ -1,5 +1,5 @@
 """
-Unit tests for metrics_utility.library.candlepin.client.CandlepinClient.
+Unit tests for metrics_utility.candlepin.client.CandlepinClient.
 
 All HTTP calls are mocked with unittest.mock so no real Candlepin server is
 needed.  Temp-file creation and cleanup are also verified to ensure no PEM
@@ -19,7 +19,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
-from metrics_utility.library.candlepin.client import CandlepinClient
+from metrics_utility.candlepin.client import CandlepinClient
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ class TestCheckin:
     def test_logs_warning_on_failure(self, cert_and_key):
         cert_pem, key_pem = cert_and_key
         client = CandlepinClient()
-        with patch('requests.put', side_effect=Exception('oops')), patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+        with patch('requests.put', side_effect=Exception('oops')), patch('metrics_utility.candlepin.client.logger') as mock_log:
             client.checkin(CONSUMER_UUID, cert_pem, key_pem)
         mock_log.warning.assert_called_once()
 
@@ -316,7 +316,7 @@ class TestRegenerateCert:
         cert_pem, key_pem = cert_and_key
         client = CandlepinClient()
         with patch('requests.post', return_value=self._mock_success_response()):
-            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+            with patch('metrics_utility.candlepin.client.logger') as mock_log:
                 client.regenerate_cert(CONSUMER_UUID, cert_pem, key_pem)
         mock_log.info.assert_called_once()
 
@@ -430,7 +430,7 @@ class TestRegisterConsumer:
     def test_logs_info_on_success(self):
         client = CandlepinClient()
         with patch('requests.post', return_value=self._mock_success_response()):
-            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+            with patch('metrics_utility.candlepin.client.logger') as mock_log:
                 client.register_consumer('user', 'pass', 'org')
         mock_log.info.assert_called_once()
         assert self.SAMPLE_UUID in mock_log.info.call_args[0][0]
@@ -461,7 +461,7 @@ class TestDiscoverOrg:
         client = CandlepinClient()
         owners = [{'key': 'first-org'}, {'key': 'second-org'}]
         with patch('requests.get', return_value=self._mock_owners_response(owners)):
-            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+            with patch('metrics_utility.candlepin.client.logger') as mock_log:
                 client.discover_org('user', 'pass')
         mock_log.warning.assert_called_once()
         assert 'first-org' in mock_log.warning.call_args[0][0]
@@ -514,7 +514,7 @@ class TestDiscoverOrg:
         client = CandlepinClient()
         owners = [{'key': 'discovered-org'}]
         with patch('requests.get', return_value=self._mock_owners_response(owners)):
-            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+            with patch('metrics_utility.candlepin.client.logger') as mock_log:
                 client.discover_org('user', 'pass')
         mock_log.info.assert_called_once()
 
@@ -604,7 +604,7 @@ class TestWriteTempPemErrorCleanup:
 class TestUnlinkSafe:
     def test_logs_warning_when_unlink_raises(self):
         with patch('os.path.exists', return_value=True), patch('os.unlink', side_effect=OSError('busy')):
-            with patch('metrics_utility.library.candlepin.client.logger') as mock_log:
+            with patch('metrics_utility.candlepin.client.logger') as mock_log:
                 CandlepinClient._unlink_safe('/tmp/test.pem')
         mock_log.warning.assert_called_once()
         assert 'Could not remove' in mock_log.warning.call_args[0][0]
