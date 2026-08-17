@@ -1,15 +1,17 @@
 ## `metrics-utility.library`
 
-This is a Python library for metrics-utility, exposing all the functionality in the form of python callables.
+This is a Python library for metrics-utility, exposing the data collection functionality in the form of python callables.
 
-It provides an abstraction over collectors, packaging and storage, extraction, rollups, dataframes and reports, as well as helper functions for tempdirs, locking, and datetime handling.
+It provides an abstraction over collectors, plus a segment.com storage backend and a DB locking helper. It is shared with the external metrics-service, which is its main consumer, so it uses no env variables and doesn't rely on the Controller environment - everything is passed in via params.
+
+Anonymization and rollup of the collected data lives in the sibling [`metrics_utility.anonymized_rollups`](../anonymized_rollups/) package.
 
 
 ### Abstractions
 
 #### Collector
 
-Collector is python function which accepts params, gathers data, and returns it in one of the supported formats.
+Collector is a python function which accepts params, gathers data, and returns it in one of the supported formats.
 
 It either returns a python dict (for snapshot collectors like config),
 or a pandas DataFrame (for SQL-based collectors).
@@ -17,18 +19,22 @@ or a pandas DataFrame (for SQL-based collectors).
 It's exported decorated to wrap calls into BaseCollector subclass instances, so that param passing can happen separately from .gather().
 The wrapper ensures that any calls to `my_collector(db=connection).gather()` do the same thing as an undecorated `my_collector(db=connection)` - this is so that initialization can happen before db locks are acquired.
 
-When a collector accepts timestamp boundaries, they are passeda in in the form of `since=` and `until=` params, using datetime object with timezone, where `since` is the first moment of the collected interval (and therefore included), while `until` is the first moment *outside* the collected interval (and therefore excluded) - this is so that we never omit the 1-2 seconds between 23:59:59 and 00:00:00 by accident.
+When a collector accepts timestamp boundaries, they are passed in in the form of `since=` and `until=` params, using datetime object with timezone, where `since` is the first moment of the collected interval (and therefore included), while `until` is the first moment *outside* the collected interval (and therefore excluded) - this is so that we never omit the 1-2 seconds between 23:59:59 and 00:00:00 by accident.
 
 A collector should never depend on anything that's not passed in via params (except for randomness for tempfile names),
 should raise an exception when passed invalid values or a bad DB connection, but just return None, or an empty list/dict when no new data is present. (Any logic such as "since the last time" should be implemented *outside* the collector function.)
 
-Files created by collectors are only cleaned up when called by Package, otherwise rely on having been created inside a per-job tempdir (see helpers), which then gets cleaned up.
+Files created by collectors rely on having been created inside a per-job tempdir, which then gets cleaned up by the caller.
 
 Currently supported:
 
 Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `config(db, billing_provider_params).gather() -> Dict`
+* `config_django(...).gather() -> Dict`
+* `controller_version_service(db).gather() -> DataFrame`
+* `credentials_service(db).gather() -> DataFrame`
 * `execution_environments(db).gather() -> DataFrame`
+* `feature_flags_service(db).gather() -> DataFrame`
 * `job_host_summary(db, since, until).gather() -> DataFrame`
 * `job_host_summary_service(db, since, until).gather() -> DataFrame`
 * `main_host(db).gather() -> DataFrame`
@@ -37,180 +43,52 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `main_indirectmanagednodeaudit(db, since, until).gather() -> DataFrame`
 * `main_jobevent(db, since, until).gather() -> DataFrame`
 * `main_jobevent_service(db, since, until).gather() -> DataFrame`
+* `table_metadata(db).gather() -> DataFrame`
 * `unified_jobs(db, since, until).gather() -> DataFrame`
+* `unified_jobs_dashboard(db, since, until).gather() -> DataFrame`
+
+Dashboard collectors (in `metrics_utility.library.collectors.dashboard`):
+* `dashboard_jobs(...)` - plus the `AWXJobType`, `AWXJobHostSummaryType`, `DashboardJobsResultType` types and the `get_min_max_job_id_query` query helper
+
+Service collectors (in `metrics_utility.library.collectors.service`):
+* `task_executions_service(...)`
 
 Other collectors (in `metrics_utility.library.collectors.others`):
 * `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`
 
-For CLI usage or when CSV files are needed, use the `dataframe_to_csv_files()` helper from `metrics_utility.library.csv_utils`:
-
-```python
-from metrics_utility.library.csv_utils import dataframe_to_csv_files
-
-df = execution_environments(db=db).gather()
-csv_files = dataframe_to_csv_files(df, 'main_executionenvironment', '/tmp/output')
-# Returns: ['/tmp/output/main_executionenvironment_table.csv']
-# or ['.._split0.csv', '.._split1.csv', ...] for large datasets
-```
-
-
-#### Package
-
-When multiple collectors are called, or the same collector is called multiple times, they are independent of each other.
-Such artifact can still be stored in Storage, but only independently.
-
-For grouping things together, we have a Package class, which takes a list of initialized collectors, plus configuration for size constraints and naming files, and produces a stream of `.tar.gz` files, each containing:
-
-* `config.json` - produced by the `config` collector, saved in each tarball
-* `manifest.json` - produced internally by Package, contains version info for each used collector
-* `data_collection_status.csv` - produced internally by Package, contains start/stop & success info for each collector run
-* 1 or more `*.json` and `*.csv` files, obtained by running the next collector while there are any - a collector can produce multiple files, ending up accross multiple tarballs
-
-Such tarball can then be passed to a Storage class, and gets cleaned up afterwards.
-
 
 #### Storage
 
-Storage objects serve to provide a shared interface for various storage modes. Each can be initialized with an appropriate configuration, and can retrieve or save objects from/to long-term storage.
+`StorageSegment` (in `metrics_utility.library.storage`) provides a put-only interface for pushing data to [segment analytics](https://segment.com/docs/connections/sources/catalog/libraries/server/python/).
 
-Mainly S3 and local directories are supported,
-but the Storage mechanism can also be used to push the data to cloud APIs or to save it in a local DB.
+```python
+from metrics_utility.library.storage import StorageSegment
 
-Common API:
-
-* `storage.put(name, ...)` - should upload to storage, and retry/raise on failure.
-    * `storage.put(name, dict=data)` - uploads a dict, likely as json data, or a .json file
-    * `storage.put(name, filename=path)` - uploads a local file (by name)
-    * `storage.put(name, fileobj=handle)` - uploads an opened local file or a compatible object (by a file-like handle)
-* `storage.get(name)` - (context manager) should download from storage into a temporary file, yield the temporary filename, and remove the file again.
-
-Also supported - `exists(name) -> Bool`, `remove(name)`, `glob(pattern) -> [filenames]`.
-
-Implemented storage classes:
-
-```
-# StorageDirectory - local directory structure under base_path
-#
-# base_path = METRICS_UTILITY_SHIP_PATH
-
-StorageDirectory(
-    base_path='./',
-)
-```
-
-```
-# StorageS3 - S3 or S3-compatible (e.g. SeaweedFS)
-#
-# bucket = METRICS_UTILITY_BUCKET_NAME
-# endpoint = METRICS_UTILITY_BUCKET_ENDPOINT
-# region = METRICS_UTILITY_BUCKET_REGION
-# access_key = METRICS_UTILITY_BUCKET_ACCESS_KEY
-# secret_key = METRICS_UTILITY_BUCKET_SECRET_KEY
-
-StorageS3(
-    bucket='name',
-    endpoint='http://localhost:8333', # or 'https://s3.us-east.example.com'
-    region='us-east-1', # optional
-    access_key='...',
-    secret_key='...',
-)
-```
-
-```
-# StorageSegment - segment analytics (put-only)
-#
 # debug = bool
 # user_id = string, passed to analytics.track
-# write_key = https://segment.com/docs/connections/sources/catalog/libraries/server/python/#getting-started
+# write_key = segment.com source write key
 
-StorageSegment(
+storage = StorageSegment(
     debug=False,
     user_id='unknown',
     write_key='...',
 )
 ```
 
-```
-# StorageCRC - console.redhat.com, using service accounts (put-only)
-#
-# client_id = METRICS_UTILITY_SERVICE_ACCOUNT_ID
-# client_secret = METRICS_UTILITY_SERVICE_ACCOUNT_SECRET
-# ingress_url = METRICS_UTILITY_CRC_INGRESS_URL
-# proxy_url = METRICS_UTILITY_PROXY_URL
-# sso_url = METRICS_UTILITY_CRC_SSO_URL
-# verify_cert_path = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
-
-StorageCRC(
-    client_id='00000000-0000-0000-0000-000000000000',
-    client_secret='...',
-    ingress_url='https://console.redhat.com/api/ingress/v1/upload',
-    proxy_url=None,
-    sso_url='https://sso.redhat.com/auth/realms/redhat-external/protocol/openid-connect/token',
-    verify_cert_path='/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
-)
-```
-
-```
-# StorageCRCMutual - console.redhat.com, using mutual tls (put-only)
-#
-# ingress_url = METRICS_UTILITY_CRC_INGRESS_URL
-# proxy_url = METRICS_UTILITY_PROXY_URL
-# session_cert = ('/etc/pki/consumer/cert.pem', '/etc/pki/consumer/key.pem')
-# verify_cert_path = '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
-
-StorageCRCMutual(
-    ingress_url='https://console.redhat.com/api/ingress/v1/upload',
-    proxy_url=None,
-    session_cert=('/etc/pki/consumer/cert.pem', '/etc/pki/consumer/key.pem'),
-    verify_cert_path='/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
-)
-```
-
-
-#### Extractors
-
-The opposite of `Package`, an extractor can take a set of files (obtained from storage.get), and read a set of dataframes from them, optionally filtered to select a subset of dataframes to load.
-
-The returned dataframes are raw, but compatible with the `add_*` methods of our named Dataframe classes.
-
-
-#### Dataframes
-
-A pandas dataframe object with extras - a dataframe always knows about its fields and indexes even when empty,
-has an `add_csv` method that accepts pre-rollup dataframes, has a `group` method to convert them to post-rollup dataframes,
-has an `add_parquet` method that accepts rollup dataframes, has a `regroup` method to reaggregate,
-and a `to_csv` / `to_parquet` / `to_json` set of methods to convert to storable artifacts again.
-
-A rollup is the process of building a dataframe from raw csv files, and saving the grouped/aggregated result back into a parquet file.
-
-
-#### Reports
-
-Reports are predefined classes which take a set of dataframes, along with additional config, and create a XLSX file with a specific report. ReportCCSP, ReportCCSPv2 and ReportRenewalGuidance are implemented.
-
-The xlsx file can again be passed to storage.
+The CLI keeps its own storage backends for filesystem, S3 and console.redhat.com under `metrics_utility.automation_controller_billing`.
 
 
 ### Helpers
 
-#### Datetime helpers (`library.instants`)
+#### DB locking (`library.lock`)
 
-The `instants` module provides helper functions for working with datetime values. All functions return `datetime.datetime` objects with timezone set to UTC. These helpers are designed to work with the collector convention where `since` is the first moment of the collected interval (inclusive), while `until` is the first moment outside the interval (exclusive).
-
-Available helpers:
-
-* `now()` - current moment in UTC
-* `this_minute()`, `this_hour`, `this_day`, `this_week`, `this_month` - start of the current time period
-* `last_hour(relative_to=this_hour())`, `last_day`, `last_week`, `last_month` - start of the previous time period (relative to the provided datetime or current time)
-* `minutes_ago(n, relative_to=this_minute())`, `hours_ago`, `days_ago`, `weeks_ago`, `months_ago` - start of the time period n periods ago
-* `iso(dt)` - convert datetime to ISO 8601 string format
-
-Example usage:
+`lock` (in `metrics_utility.library.lock`) is a context manager wrapping a PostgreSQL advisory lock, used to prevent concurrent collection runs from stepping on each other.
 
 ```python
-from metrics_utility.library.instants import now, days_ago
+from metrics_utility.library import lock
 
-# Get data for the last 30 days
-since = days_ago(30)
-until = now()
+with lock('my-unique-key', wait=False, db=db) as acquired:
+    if not acquired:
+        raise 'too bad'  # or use wait=True instead
+    ...
 ```

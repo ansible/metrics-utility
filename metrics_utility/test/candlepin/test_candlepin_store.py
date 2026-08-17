@@ -1,10 +1,10 @@
-"""Tests for metrics_utility.library.candlepin.store — both LocalCandlepinStore and DBCandlepinStore."""
+"""Tests for metrics_utility.candlepin.store — both LocalCandlepinStore and DBCandlepinStore."""
 
 import sys
 
 from unittest.mock import MagicMock, patch
 
-from metrics_utility.library.candlepin.store import (
+from metrics_utility.candlepin.store import (
     _DB_CERT_KEY,
     _DB_KEY_KEY,
     _DB_UUID_KEY,
@@ -268,7 +268,7 @@ class TestDBCandlepinStoreSaveRegistration:
         assert ok is False
 
     def test_logs_warning_not_implemented(self):
-        with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+        with patch('metrics_utility.candlepin.store.logger') as mock_log:
             DBCandlepinStore().save_registration(SAMPLE_CERT, SAMPLE_KEY, SAMPLE_UUID)
         mock_log.warning.assert_called_once()
         assert 'not implemented' in mock_log.warning.call_args[0][0]
@@ -280,7 +280,7 @@ class TestDBCandlepinStoreSaveCert:
         assert ok is False
 
     def test_logs_warning_not_implemented(self):
-        with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+        with patch('metrics_utility.candlepin.store.logger') as mock_log:
             DBCandlepinStore().save_cert(SAMPLE_CERT, SAMPLE_KEY)
         mock_log.warning.assert_called_once()
         assert 'not implemented' in mock_log.warning.call_args[0][0]
@@ -328,7 +328,7 @@ class TestLocalStoreWriteFileError:
         store = LocalCandlepinStore(cert_dir=str(tmp_path))
         target = tmp_path / 'cert.pem'
         with patch('pathlib.Path.write_text', side_effect=OSError('disk full')):
-            with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+            with patch('metrics_utility.candlepin.store.logger') as mock_log:
                 result = store._write_file(target, 'content')
         assert result is False
         mock_log.error.assert_called_once()
@@ -344,7 +344,7 @@ class TestLocalStoreIsWritableException:
     def test_returns_false_and_logs_debug_when_mkdir_fails(self, tmp_path):
         store = LocalCandlepinStore(cert_dir=str(tmp_path / 'noaccess'))
         with patch('pathlib.Path.mkdir', side_effect=PermissionError('denied')):
-            with patch('metrics_utility.library.candlepin.store.logger') as mock_log:
+            with patch('metrics_utility.candlepin.store.logger') as mock_log:
                 result = store.is_writable()
         assert result is False
         mock_log.debug.assert_called_once()
