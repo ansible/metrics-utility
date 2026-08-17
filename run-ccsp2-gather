@@ -9,7 +9,7 @@ export METRICS_UTILITY_SHIP_TARGET="directory"
 export METRICS_UTILITY_OPTIONAL_COLLECTORS="execution_environments,job_host_summary_service,main_host,main_hostmetric,main_indirectmanagednodeaudit,main_jobevent,main_jobevent_service,unified_jobs"
 
 if ! pg_isready -h localhost; then
-  echo "run-s3-gather-build: DB not ready, run make compose first"
+  echo "run-ccsp2-gather: DB not ready, run make compose first"
   exit 1
 fi
 
