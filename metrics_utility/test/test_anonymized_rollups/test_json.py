@@ -1,6 +1,7 @@
 import json
 
 import pandas as pd
+import pytest
 
 from django.db import connection
 
@@ -23,6 +24,7 @@ from metrics_utility.library.collectors.controller import (
     main_jobevent_service,
     table_metadata,
     unified_jobs,
+    unified_jobs_dashboard,
 )
 from metrics_utility.test.util import utcdt
 
@@ -84,7 +86,8 @@ def _deep_compare(obj1, obj2, path=''):
     return True, None
 
 
-def test_json_serialization_roundtrip():
+@pytest.mark.parametrize('unified_jobs_func', [unified_jobs, unified_jobs_dashboard], ids=['unified_jobs', 'unified_jobs_dashboard'])
+def test_json_serialization_roundtrip(unified_jobs_func):
     """
     Test that calling all collectors, then calling rollup prepare,
     serializing to JSON and parsing back results in matching data.
@@ -101,7 +104,7 @@ def test_json_serialization_roundtrip():
     # Map collectors to their rollup classes
     collector_rollup_map = [
         ('execution_environments', execution_environments, ExecutionEnvironmentsAnonymizedRollup, {}),
-        ('unified_jobs', unified_jobs, JobsAnonymizedRollup, {'since': since, 'until': until}),
+        ('unified_jobs', unified_jobs_func, JobsAnonymizedRollup, {'since': since, 'until': until}),
         ('job_host_summary_service', job_host_summary_service, JobHostSummaryAnonymizedRollup, {'since': since, 'until': until}),
         ('main_jobevent_service', main_jobevent_service, EventModulesAnonymizedRollup, {'since': since, 'until': until}),
         ('credentials_service', credentials_service, CredentialsAnonymizedRollup, {'since': since, 'until': until}),

@@ -11,6 +11,7 @@ from metrics_utility.library.collectors.controller.credentials_service import cr
 from metrics_utility.library.collectors.controller.job_host_summary_service import job_host_summary_service
 from metrics_utility.library.collectors.controller.main_jobevent_service import main_jobevent_service
 from metrics_utility.library.collectors.controller.unified_jobs import unified_jobs
+from metrics_utility.library.collectors.controller.unified_jobs_dashboard import unified_jobs_dashboard
 from metrics_utility.test.gather.test_jobhostsummary_gather import SafeTarFile
 from metrics_utility.test.util import cleanup_glob as _cleanup_glob
 from metrics_utility.test.util import run_gather_ext, utcdt
@@ -282,18 +283,108 @@ json_lines_skip_ids_columns = [
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_unified_jobs_command(cleanup_glob):
-    """Build and validate unified_jobs output from new library collector."""
+    """Build and validate unified_jobs output from library collector."""
     since = utcdt('2025-06-12')
     until = utcdt('2025-06-14')
 
-    # Run the new collector directly
     collector_instance = unified_jobs(db=connection, since=since, until=until)
     df = collector_instance.gather()
 
     assert df is not None, 'unified_jobs returned None'
 
-    # Validate DataFrame content
     validate_dataframe(df, jobs_lines, json_lines_skip_ids_columns)
+
+
+jobs_dashboard_lines = [
+    (
+        'id,polymorphic_ctype_id,model,organization_id,organization_name,'
+        'execution_environment_image,inventory_id,inventory_name,execution_environment_id,created,'
+        'modified,name,unified_job_template_id,launch_type,schedule_id,execution_node,'
+        'controller_node,cancel_flag,status,failed,started,finished,elapsed,'
+        'job_explanation,instance_group_id,installed_collections,ansible_version,forks,'
+        'job_template_name,scm_type,project_id,project_name,launched_by_id,launched_by_username,'
+        'label_ids,num_hosts'
+    ),
+    (
+        '1,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
+        '2025-06-13 10:00:00+00:00,2025-06-13 10:02:10+00:00,default_unified_job_2025-06-13,1,manual,,auto,'
+        'controller1,f,pending,f,,2025-06-13 10:02:10+00:00,120.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+    ),
+    (
+        '2,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
+        '2025-06-13 10:00:00+00:00,2025-06-13 10:03:20+00:00,default_unified_job_2025-06-13,1,scheduled,,auto,'
+        'controller1,f,pending,f,2025-06-13 10:00:20+00:00,2025-06-13 10:03:20+00:00,180.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+    ),
+    (
+        '3,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
+        '2025-06-13 10:00:00+00:00,2025-06-13 10:02:00+00:00,default_unified_job_2025-06-13,1,workflow,,auto,'
+        'controller1,f,failed,t,2025-06-13 10:00:30+00:00,2025-06-13 10:02:00+00:00,90.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}, '
+        '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,20,'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+    ),
+    (
+        '4,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
+        '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,default_unified_job_11_2025-06-13,1,manual,,auto,'
+        'controller1,f,pending,f,2025-06-13 11:00:10+00:00,2025-06-13 11:01:50+00:00,100.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}, '
+        '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,8,'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+    ),
+    (
+        '5,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
+        '2025-06-13 11:00:00+00:00,2025-06-13 11:02:50+00:00,default_unified_job_11_2025-06-13,1,scheduled,,auto,'
+        'controller1,f,pending,f,2025-06-13 11:00:20+00:00,2025-06-13 11:02:50+00:00,150.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}, '
+        '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,15,'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+    ),
+    (
+        '6,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
+        '2025-06-13 11:00:00+00:00,2025-06-13 11:01:50+00:00,default_unified_job_11_2025-06-13,1,workflow,,auto,'
+        'controller1,f,pending,f,2025-06-13 11:00:30+00:00,2025-06-13 11:01:50+00:00,80.000,,,'
+        '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
+        '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,25,'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+    ),
+]
+
+json_dashboard_lines_skip_ids_columns = [
+    'id',
+    'polymorphic_ctype_id',
+    'organization_id',
+    'inventory_id',
+    'execution_environment_id',
+    'unified_job_template_id',
+    'schedule_id',
+    'instance_group_id',
+    'modified',
+    'project_id',
+    'launched_by_id',
+]
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+def test_unified_jobs_dashboard_command(cleanup_glob):
+    """Build and validate unified_jobs_dashboard output from library collector."""
+    since = utcdt('2025-06-12')
+    until = utcdt('2025-06-14')
+
+    collector_instance = unified_jobs_dashboard(db=connection, since=since, until=until)
+    df = collector_instance.gather()
+
+    assert df is not None, 'unified_jobs_dashboard returned None'
+
+    validate_dataframe(df, jobs_dashboard_lines, json_dashboard_lines_skip_ids_columns)
 
 
 jobs_host_summary_service_lines = [
