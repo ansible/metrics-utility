@@ -11,14 +11,14 @@ dependencies = [
     "cryptography>=44.0.1",
     "botocore==1.35.96",
     "distro==1.9.0",
-    "django==5.2.17",
+    "django==6.1",
     "kubernetes>=33.1.0",
     "openpyxl~=3.1.5",
     "pandas~=3.0",
     "psycopg==3.3.4",
     "requests==2.34.2",
     "segment-analytics-python>=2.3.6",
-    "setuptools==80.9.0",
+    "setuptools==84.0.0",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
