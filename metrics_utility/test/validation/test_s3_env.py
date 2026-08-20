@@ -2,7 +2,9 @@ from unittest.mock import patch
 
 import pytest
 
+from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
 from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.library.storage import StorageS3
 from metrics_utility.test.util import run_build_int, run_gather_int
 
 
@@ -155,14 +157,11 @@ def test_build_s3():
         },
         MissingRequiredEnvVar,
     )
-    assert (
-        e.name == 'Missing some required env variables for S3 configuration, namely: '
-        'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, '
-        'METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, '
-        'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, '
-        'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, '
-        'METRICS_UTILITY_SHIP_PATH - place for collected data and built reports.'
-    )
+    assert 'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket' in e.name
+    assert 'METRICS_UTILITY_BUCKET_ENDPOINT' in e.name
+    assert 'METRICS_UTILITY_SHIP_PATH' in e.name
+    assert 'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key' not in e.name
+    assert 'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key' not in e.name
 
     e = expect_build_error(
         {
@@ -190,6 +189,36 @@ def test_build_s3():
         MissingRequiredEnvVar,
     )
     assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
+
+
+def test_build_s3_implicit_credentials():
+    """S3 without explicit credentials should pass validation (IRSA, instance profiles)."""
+    e = expect_build_error(
+        {
+            'METRICS_UTILITY_SHIP_TARGET': 's3',
+            'METRICS_UTILITY_SHIP_PATH': 'wherever',
+            'METRICS_UTILITY_BUCKET_NAME': 'something',
+            'METRICS_UTILITY_BUCKET_ENDPOINT': 'https://s3.us-east.example.com',
+        },
+        MissingRequiredEnvVar,
+    )
+    assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
+
+
+def test_build_s3_mismatched_credentials():
+    """Setting only one of access_key/secret_key should fail."""
+    e = expect_build_error(
+        {
+            'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
+            'METRICS_UTILITY_SHIP_TARGET': 's3',
+            'METRICS_UTILITY_SHIP_PATH': 'wherever',
+            'METRICS_UTILITY_BUCKET_NAME': 'something',
+            'METRICS_UTILITY_BUCKET_ENDPOINT': 'https://s3.us-east.example.com',
+            'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'only-access-key',
+        },
+        MissingRequiredEnvVar,
+    )
+    assert 'must both be set or both be omitted' in e.name
 
 
 def test_gather_s3():
@@ -199,14 +228,11 @@ def test_gather_s3():
         },
         MissingRequiredEnvVar,
     )
-    assert (
-        e.name == 'Missing some required env variables for S3 configuration, namely: '
-        'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket, '
-        'METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com, '
-        'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key, '
-        'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key, '
-        'METRICS_UTILITY_SHIP_PATH - place for collected data and built reports.'
-    )
+    assert 'METRICS_UTILITY_BUCKET_NAME - name of S3 bucket' in e.name
+    assert 'METRICS_UTILITY_BUCKET_ENDPOINT' in e.name
+    assert 'METRICS_UTILITY_SHIP_PATH' in e.name
+    assert 'METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key' not in e.name
+    assert 'METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key' not in e.name
 
     run_gather_int(
         {
@@ -238,3 +264,134 @@ def test_gather_s3():
             'dry-run': True,
         },
     )
+
+
+def test_gather_s3_implicit_credentials():
+    """S3 without explicit credentials should pass validation (IRSA, instance profiles)."""
+    run_gather_int(
+        {
+            **unset,
+            'METRICS_UTILITY_SHIP_TARGET': 's3',
+            'METRICS_UTILITY_SHIP_PATH': 'wherever',
+            'METRICS_UTILITY_BUCKET_NAME': 'something',
+            'METRICS_UTILITY_BUCKET_ENDPOINT': 'https://s3.us-east.example.com',
+        },
+        {
+            'dry-run': True,
+        },
+    )
+
+
+def test_gather_s3_mismatched_credentials():
+    """Setting only one of access_key/secret_key should fail."""
+    e = expect_gather_error(
+        {
+            'METRICS_UTILITY_SHIP_TARGET': 's3',
+            'METRICS_UTILITY_SHIP_PATH': 'wherever',
+            'METRICS_UTILITY_BUCKET_NAME': 'something',
+            'METRICS_UTILITY_BUCKET_ENDPOINT': 'https://s3.us-east.example.com',
+            'METRICS_UTILITY_BUCKET_SECRET_KEY': 'only-secret-key',
+        },
+        MissingRequiredEnvVar,
+    )
+    assert 'must both be set or both be omitted' in e.name
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_session_with_explicit_credentials(mock_session):
+    """S3Handler should pass credentials to boto3.Session when both are provided."""
+    handler = S3Handler(
+        {
+            'bucket_access_key': 'AKIA_TEST',
+            'bucket_secret_key': 'secret123',
+            'bucket_region': 'us-east-1',
+        }
+    )
+    _ = handler.session
+    mock_session.assert_called_once_with(
+        region_name='us-east-1',
+        aws_access_key_id='AKIA_TEST',
+        aws_secret_access_key='secret123',
+    )
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_session_with_implicit_credentials(mock_session):
+    """S3Handler should not pass credentials to boto3.Session when both are absent."""
+    handler = S3Handler(
+        {
+            'bucket_region': 'us-west-2',
+        }
+    )
+    _ = handler.session
+    mock_session.assert_called_once_with(region_name='us-west-2')
+
+
+@patch('metrics_utility.library.storage.s3.boto3.Session')
+def test_storage_s3_client_with_explicit_credentials(mock_session):
+    """StorageS3 should pass credentials to boto3.Session when both are provided."""
+    storage = StorageS3(
+        bucket='test-bucket',
+        endpoint='https://s3.example.com',
+        region='eu-west-1',
+        access_key='AKIA_TEST',
+        secret_key='secret123',
+    )
+    _ = storage.client
+    mock_session.assert_called_once_with(
+        region_name='eu-west-1',
+        aws_access_key_id='AKIA_TEST',
+        aws_secret_access_key='secret123',
+    )
+
+
+@patch('metrics_utility.library.storage.s3.boto3.Session')
+def test_storage_s3_client_with_implicit_credentials(mock_session):
+    """StorageS3 should not pass credentials to boto3.Session when both are absent."""
+    storage = StorageS3(
+        bucket='test-bucket',
+        endpoint='https://s3.example.com',
+        region='ap-southeast-2',
+    )
+    _ = storage.client
+    mock_session.assert_called_once_with(region_name='ap-southeast-2')
+
+
+def test_s3handler_rejects_mismatched_credentials():
+    """S3Handler should reject a one-sided credential pair at construction time."""
+    with pytest.raises(ValueError, match='must both be provided or both be omitted'):
+        S3Handler({'bucket_access_key': 'AKIA_TEST'})
+
+    with pytest.raises(ValueError, match='must both be provided or both be omitted'):
+        S3Handler({'bucket_secret_key': 'secret123'})
+
+
+def test_storage_s3_rejects_mismatched_credentials():
+    """StorageS3 should reject a one-sided credential pair at construction time."""
+    with pytest.raises(ValueError, match='must both be provided or both be omitted'):
+        StorageS3(bucket='test-bucket', access_key='AKIA_TEST')
+
+    with pytest.raises(ValueError, match='must both be provided or both be omitted'):
+        StorageS3(bucket='test-bucket', secret_key='secret123')
+
+
+@patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
+def test_s3handler_implicit_credentials_not_found(mock_session_cls):
+    """S3Handler should raise a clear error mentioning env vars when implicit credentials are absent."""
+    mock_session = mock_session_cls.return_value
+    mock_session.get_credentials.return_value = None
+
+    handler = S3Handler({'bucket_region': 'us-east-1'})
+    with pytest.raises(ValueError, match=r'METRICS_UTILITY_BUCKET_ACCESS_KEY.*METRICS_UTILITY_BUCKET_SECRET_KEY'):
+        _ = handler.session
+
+
+@patch('metrics_utility.library.storage.s3.boto3.Session')
+def test_storage_s3_implicit_credentials_not_found(mock_session_cls):
+    """StorageS3 should raise a clear error mentioning env vars when implicit credentials are absent."""
+    mock_session = mock_session_cls.return_value
+    mock_session.get_credentials.return_value = None
+
+    storage = StorageS3(bucket='test-bucket', endpoint='https://s3.example.com', region='us-east-1')
+    with pytest.raises(ValueError, match=r'METRICS_UTILITY_BUCKET_ACCESS_KEY.*METRICS_UTILITY_BUCKET_SECRET_KEY'):
+        _ = storage.client
