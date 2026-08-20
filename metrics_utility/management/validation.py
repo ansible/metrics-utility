@@ -102,13 +102,16 @@ def handle_s3_ship_target():
         missing += ['METRICS_UTILITY_BUCKET_NAME - name of S3 bucket']
     if not bucket_endpoint:
         missing += ['METRICS_UTILITY_BUCKET_ENDPOINT - S3 endpoint, eg. https://s3.us-east.example.com']
-    if not bucket_access_key:
-        missing += ['METRICS_UTILITY_BUCKET_ACCESS_KEY - S3 access key']
-    if not bucket_secret_key:
-        missing += ['METRICS_UTILITY_BUCKET_SECRET_KEY - S3 secret key']
+    if bool(bucket_access_key) != bool(bucket_secret_key):
+        missing += [
+            (
+                'METRICS_UTILITY_BUCKET_ACCESS_KEY and METRICS_UTILITY_BUCKET_SECRET_KEY must both be set or both be omitted'
+                ' (omit both to use implicit credentials such as IRSA or EC2 instance profiles)'
+            )
+        ]
     if not ship_path:
         missing += [f'METRICS_UTILITY_SHIP_PATH - {ship_path_description}']
-    # bucket_region is optional
+    # bucket_region, bucket_access_key, bucket_secret_key are optional
 
     if missing:
         raise MissingRequiredEnvVar(f'Missing some required env variables for S3 configuration, namely: {", ".join(missing)}.')

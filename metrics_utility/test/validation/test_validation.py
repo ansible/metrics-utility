@@ -6,6 +6,7 @@ from metrics_utility.exceptions import MissingRequiredEnvVar
 from metrics_utility.management.validation import (
     handle_directory_ship_target,
     handle_env_validation,
+    handle_s3_ship_target,
     validate_ccsp_report_sheets,
     validate_collectors,
     validate_max_gather_period_days,
@@ -341,3 +342,43 @@ def test_report_type_ignored_in_gather(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'whatever')
     # Only "controller_db" is allowed for "RENEWAL_GUIDANCE" .. but only in build_report
     handle_env_validation('gather')
+
+
+def test_handle_s3_ship_target_implicit_credentials(monkeypatch):
+    """Omitting both access_key and secret_key should succeed (implicit credential chain)."""
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/tmp')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_NAME', 'my-bucket')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'https://s3.example.com')
+    monkeypatch.delenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', raising=False)
+    monkeypatch.delenv('METRICS_UTILITY_BUCKET_SECRET_KEY', raising=False)
+
+    result = handle_s3_ship_target()
+    assert result['bucket_name'] == 'my-bucket'
+    assert result['bucket_access_key'] is None
+    assert result['bucket_secret_key'] is None
+
+
+def test_handle_s3_ship_target_explicit_credentials(monkeypatch):
+    """Providing both access_key and secret_key should succeed."""
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/tmp')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_NAME', 'my-bucket')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'https://s3.example.com')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', 'AKIA_TEST')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_SECRET_KEY', 'secret123')
+
+    result = handle_s3_ship_target()
+    assert result['bucket_access_key'] == 'AKIA_TEST'
+    assert result['bucket_secret_key'] == 'secret123'
+
+
+def test_handle_s3_ship_target_mismatched_credentials(monkeypatch):
+    """Providing only access_key without secret_key should fail."""
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', '/tmp')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_NAME', 'my-bucket')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_ENDPOINT', 'https://s3.example.com')
+    monkeypatch.setenv('METRICS_UTILITY_BUCKET_ACCESS_KEY', 'AKIA_TEST')
+    monkeypatch.delenv('METRICS_UTILITY_BUCKET_SECRET_KEY', raising=False)
+
+    with pytest.raises(MissingRequiredEnvVar) as excinfo:
+        handle_s3_ship_target()
+    assert 'must both be set or both be omitted' in str(excinfo.value)
