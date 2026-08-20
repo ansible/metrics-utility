@@ -30,6 +30,12 @@ class StorageS3:
         self.access_key = settings.get('access_key')
         self.secret_key = settings.get('secret_key')
 
+        if bool(self.access_key) != bool(self.secret_key):
+            raise ValueError(
+                'access_key and secret_key must both be provided or both be omitted'
+                ' (omit both to use implicit credentials such as IRSA or EC2 instance profiles)'
+            )
+
         if not self.bucket:
             raise Exception('StorageS3: bucket not set')
 
@@ -40,11 +46,22 @@ class StorageS3:
         if self._client is not None:
             return self._client
 
-        self._client = boto3.Session(
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-            region_name=self.region,
-        ).client('s3', endpoint_url=self.endpoint)
+        session_kwargs = {'region_name': self.region}
+        if self.access_key and self.secret_key:
+            session_kwargs['aws_access_key_id'] = self.access_key
+            session_kwargs['aws_secret_access_key'] = self.secret_key
+
+        session = boto3.Session(**session_kwargs)
+
+        if not self.access_key and session.get_credentials() is None:
+            raise ValueError(
+                'Unable to locate AWS credentials. '
+                'Set the METRICS_UTILITY_BUCKET_ACCESS_KEY and METRICS_UTILITY_BUCKET_SECRET_KEY '
+                'environment variables, or configure implicit credentials '
+                '(IRSA, EC2 instance profile, ~/.aws/credentials, etc.).'
+            )
+
+        self._client = session.client('s3', endpoint_url=self.endpoint)
 
         return self._client
 

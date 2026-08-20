@@ -25,6 +25,12 @@ class S3Handler:
         self.bucket_access_key = params.get('bucket_access_key')
         self.bucket_secret_key = params.get('bucket_secret_key')
 
+        if bool(self.bucket_access_key) != bool(self.bucket_secret_key):
+            raise ValueError(
+                'bucket_access_key and bucket_secret_key must both be provided or both be omitted'
+                ' (omit both to use implicit credentials such as IRSA or EC2 instance profiles)'
+            )
+
         self._session = None
 
     @property
@@ -32,11 +38,22 @@ class S3Handler:
         if self._session is not None:
             return self._session
 
-        self._session = boto3.Session(
-            aws_access_key_id=self.bucket_access_key,
-            aws_secret_access_key=self.bucket_secret_key,
-            region_name=self.bucket_region,
-        )
+        session_kwargs = {'region_name': self.bucket_region}
+        if self.bucket_access_key and self.bucket_secret_key:
+            session_kwargs['aws_access_key_id'] = self.bucket_access_key
+            session_kwargs['aws_secret_access_key'] = self.bucket_secret_key
+
+        session = boto3.Session(**session_kwargs)
+
+        if not self.bucket_access_key and session.get_credentials() is None:
+            raise ValueError(
+                'Unable to locate AWS credentials. '
+                'Set the METRICS_UTILITY_BUCKET_ACCESS_KEY and METRICS_UTILITY_BUCKET_SECRET_KEY '
+                'environment variables, or configure implicit credentials '
+                '(IRSA, EC2 instance profile, ~/.aws/credentials, etc.).'
+            )
+
+        self._session = session
         return self._session
 
     def get_s3_resource(self):
