@@ -44,15 +44,15 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql
-      - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql
-      - ./functions.sql:/docker-entrypoint-initdb.d/init-2-functions.sql
-      - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-3-conf_setting.sql
-      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-4-main_hostmetric.sql
-      - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql
-      - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-6-main_jobhostsummary.sql
-      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-7-dab_feature_flags.sql
-      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-8-main_indirectmanagednodeaudit.sql
+      - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql:z
+      - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql:z
+      - ./functions.sql:/docker-entrypoint-initdb.d/init-2-functions.sql:z
+      - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-3-conf_setting.sql:z
+      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-4-main_hostmetric.sql:z
+      - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql:z
+      - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-6-main_jobhostsummary.sql:z
+      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-7-dab_feature_flags.sql:z
+      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-8-main_indirectmanagednodeaudit.sql:z
 
   postgres-wait:
     image: "mirror.gcr.io/postgres"
@@ -79,7 +79,7 @@ services:
       mock-prometheus:
         condition: service_started
     volumes:
-      - ../..:/app_ro
+      - ../..:/app_ro:z
     tmpfs:
       - /app:rw,exec,mode=0755
     working_dir: /app
@@ -139,7 +139,7 @@ services:
       postgres-wait:
         condition: service_completed_successfully
     volumes:
-      - ../../:/app         # Mount the current local directory to /app in the container
+      - ../../:/app:z         # Mount the current local directory to /app in the container
     working_dir: /app
     profiles: ["env"] # makes this service non-default, except when --profile=env
     environment:
