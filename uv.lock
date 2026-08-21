@@ -345,7 +345,7 @@ requires-dist = [
     { name = "psycopg", specifier = "==3.3.0" },
     { name = "requests", specifier = "==2.32.5" },
     { name = "segment-analytics-python", specifier = ">=2.3.6" },
-    { name = "setuptools", specifier = "==80.9.0" },
+    { name = "setuptools", specifier = ">=80.9.0" },
 ]
 
 [package.metadata.requires-dev]
