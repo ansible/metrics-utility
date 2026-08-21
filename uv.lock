@@ -335,15 +335,15 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "boto3", specifier = "==1.35.96" },
-    { name = "botocore", specifier = "==1.35.96" },
-    { name = "distro", specifier = "==1.9.0" },
-    { name = "django", specifier = "==5.2.17" },
+    { name = "boto3", specifier = "~=1.35" },
+    { name = "botocore", specifier = "~=1.35" },
+    { name = "distro", specifier = "~=1.9" },
+    { name = "django", specifier = "~=5.2" },
     { name = "kubernetes", specifier = ">=33.1.0" },
-    { name = "openpyxl", specifier = "~=3.1.5" },
+    { name = "openpyxl", specifier = "~=3.1" },
     { name = "pandas", specifier = "~=3.0" },
-    { name = "psycopg", specifier = "==3.3.0" },
-    { name = "requests", specifier = "==2.32.5" },
+    { name = "psycopg", specifier = "~=3.3" },
+    { name = "requests", specifier = "~=2.32" },
     { name = "segment-analytics-python", specifier = ">=2.3.6" },
     { name = "setuptools", specifier = ">=80.9.0" },
 ]
