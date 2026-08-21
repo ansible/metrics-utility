@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -762,7 +762,7 @@ requires-dist = [
     { name = "psycopg", specifier = "==3.3.4" },
     { name = "requests", specifier = "==2.34.2" },
     { name = "segment-analytics-python", specifier = ">=2.3.6" },
-    { name = "setuptools", specifier = "==80.9.0" },
+    { name = "setuptools", specifier = ">=80.9.0" },
 ]
 
 [package.metadata.requires-dev]
