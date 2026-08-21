@@ -17,6 +17,14 @@ updates:
       monthly-batch:
         patterns:
           - '*'
+    # Never propose major version bumps for Python deps. Runtime pins are
+    # compatible-release (~=) ranges and major upgrades are deliberate,
+    # human-driven changes (e.g. Django LTS bumps must stay in sync with
+    # metrics-service, which pins the same major).
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - 'version-update:semver-major'
 
   - package-ecosystem: 'gomod'
     directories:
