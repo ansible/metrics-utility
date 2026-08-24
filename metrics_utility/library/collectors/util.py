@@ -51,11 +51,18 @@ class DataframeOutput:
         while True:
             query, params = build_page(marker, page_size)
             df = _copy_table_pandas(db, query, params)
-            frames.append(df)
+            # Skip empty pages: concatenating an all-object empty frame would
+            # downgrade every column's dtype to object. A trailing empty page
+            # happens whenever the row count is an exact multiple of page_size.
+            if not df.empty:
+                frames.append(df)
             if len(df) < page_size:
                 break
             marker = next_marker(df.iloc[-1])
 
+        if not frames:
+            # No rows at all: return the last (empty) frame so callers still get the columns.
+            return df
         return frames[0] if len(frames) == 1 else pd.concat(frames, ignore_index=True)
 
 

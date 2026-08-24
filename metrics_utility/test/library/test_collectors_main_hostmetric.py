@@ -90,6 +90,23 @@ def test_main_hostmetric_keyset_pagination(mock_copy_pandas):
     assert second_params == ['b', 'b', 2, 2]
 
 
+@patch('metrics_utility.library.collectors.controller.main_hostmetric.PAGE_SIZE', 2)
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_hostmetric_exact_multiple_preserves_dtypes(mock_copy_pandas):
+    """A row count that is an exact multiple of the page size fetches a trailing empty
+    page; it must be skipped so concatenation does not downgrade column dtypes to object."""
+    page1 = pd.DataFrame({'hostname': ['a', 'b'], 'host_id': [1, 2], 'deleted': [True, False]})
+    # trailing empty page (all-object dtypes) - must not corrupt the result
+    empty = pd.DataFrame({'hostname': [], 'host_id': [], 'deleted': []}, dtype=object)
+    mock_copy_pandas.side_effect = [page1, empty]
+
+    result = main_hostmetric(db=MagicMock(), since=SINCE).gather()
+
+    assert list(result['hostname']) == ['a', 'b']
+    assert result['host_id'].dtype == page1['host_id'].dtype
+    assert result['deleted'].dtype == page1['deleted'].dtype
+
+
 @patch('metrics_utility.library.collectors.util._copy_table_files')
 def test_main_hostmetric_csv_output_single_copy(mock_copy_files, tmp_path):
     """The CSV (gather) path streams via a single COPY: no LIMIT, no keyset marker."""
