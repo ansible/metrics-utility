@@ -9329,6 +9329,18 @@ CREATE INDEX main_workflowjobtemplatenode_workflow_job_template_id_2fd591f0 ON p
 CREATE UNIQUE INDEX ujt_hard_name_constraint ON public.main_unifiedjobtemplate USING btree (polymorphic_ctype_id, name, organization_id) WHERE org_unique;
 
 --
+-- Name: unique_global_team_assignment; Type: INDEX; Schema: public; Owner: awx
+--
+
+CREATE UNIQUE INDEX unique_global_team_assignment ON public.dab_rbac_roleteamassignment USING btree (team_id, role_definition_id) WHERE (object_role_id IS NULL);
+
+--
+-- Name: unique_global_user_assignment; Type: INDEX; Schema: public; Owner: awx
+--
+
+CREATE UNIQUE INDEX unique_global_user_assignment ON public.dab_rbac_roleuserassignment USING btree (user_id, role_definition_id) WHERE (object_role_id IS NULL);
+
+--
 -- Name: unique_ip_address_not_empty; Type: INDEX; Schema: public; Owner: awx
 --
 
