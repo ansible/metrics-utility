@@ -52,10 +52,10 @@ class TestExtractRoleName:
         result = DataframeContentUsage.extract_role_name('community.general.git_config')
         assert result == 'community.general.git_config'
 
-    def test_four_part_fqcn_uses_last_segment(self):
-        """For a.b.c.d the regex captures the last repeated segment (d)."""
+    def test_four_part_fqcn_uses_role_segment(self):
+        """For a.b.c.d the role is the third segment (c), not the trailing one."""
         result = DataframeContentUsage.extract_role_name('ansible.builtin.copy.something')
-        assert result == 'ansible.builtin.something'
+        assert result == 'ansible.builtin.copy'
 
     def test_three_part_fqcn_correct(self):
         result = DataframeContentUsage.extract_role_name('ansible.builtin.copy')
@@ -79,6 +79,15 @@ class TestExtractRoleName:
     def test_redhat_namespace_role(self):
         result = DataframeContentUsage.extract_role_name('redhat.rhel_system_roles.selinux')
         assert result == 'redhat.rhel_system_roles.selinux'
+
+    def test_deeply_nested_fqcn_uses_role_segment(self):
+        """Extra trailing segments are ignored; the role stays the third segment."""
+        result = DataframeContentUsage.extract_role_name('a.b.c.d.e')
+        assert result == 'a.b.c'
+
+    def test_trailing_junk_returns_none(self):
+        """A malformed FQCN with non-word trailing junk no longer matches."""
+        assert DataframeContentUsage.extract_role_name('ansible.builtin.copy.more extra') is None
 
 
 # ---------------------------------------------------------------------------
