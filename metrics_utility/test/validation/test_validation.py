@@ -2,8 +2,12 @@ import tempfile
 
 import pytest
 
+import metrics_utility.automation_controller_billing.collectors as controller_collectors
+
+from metrics_utility.base import Collector
 from metrics_utility.exceptions import MissingRequiredEnvVar
 from metrics_utility.management.validation import (
+    VALID_COLLECTORS,
     handle_directory_ship_target,
     handle_env_validation,
     handle_s3_ship_target,
@@ -18,6 +22,23 @@ from metrics_utility.management.validation import (
 
 # Error message constants
 MAX_GATHER_DAYS_ERROR_MSG = 'Value must be number between 0 to 3650'
+
+# Collectors that are always gathered and so are not toggled via
+# METRICS_UTILITY_OPTIONAL_COLLECTORS (hence intentionally absent from VALID_COLLECTORS).
+ALWAYS_ON_COLLECTORS = {'config', 'job_host_summary'}
+
+
+def test_valid_collectors_matches_registered_optional_collectors():
+    """Every optional (togglable) registered collector must be in VALID_COLLECTORS.
+
+    Guards against registering a collector gated on METRICS_UTILITY_OPTIONAL_COLLECTORS
+    without allowlisting it -- which would make it impossible to enable (validation
+    rejects it), and against stale allowlist entries for collectors that no longer exist.
+    """
+    registered = set(Collector.registered_collectors(controller_collectors))
+    optional = registered - ALWAYS_ON_COLLECTORS
+
+    assert optional == VALID_COLLECTORS
 
 
 @pytest.fixture(autouse=True)

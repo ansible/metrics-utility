@@ -12,17 +12,58 @@ from ..csv_file_splitter import CsvFileSplitter
 class DataframeOutput:
     """Output adapter used by DB-backed library collectors to return a pandas DataFrame."""
 
-    def sql(self, db, query):
+    def sql(self, db, query, params=None):
         """Execute *query* and return a pandas DataFrame.
 
         Args:
             db: Django database connection.
             query: SQL query string.
+            params: Optional sequence of bound query parameters.
 
         Returns:
             pandas DataFrame with the query results.
         """
-        return _copy_table_pandas(db, query)
+        return _copy_table_pandas(db, query, params)
+
+    def sql_keyset(self, db, build_page, next_marker, page_size=10000):
+        """Fetch a keyset-paginated result set and return it as a single DataFrame.
+
+        Pages of at most *page_size* rows are fetched in order, advancing a marker to
+        the last row of each page, until a short (or empty) page is reached. This
+        streams large result sets without a single giant query/sort.
+
+        Args:
+            db: Django database connection.
+            build_page: Callable ``(marker, limit) -> (query, params)`` building the
+                query for one page. Must apply ``limit`` and, when *marker* is not
+                None, only return rows ordered strictly after it.
+            next_marker: Callable ``(row) -> marker`` extracting the keyset marker
+                from the last row of a page (a pandas Series).
+            page_size: Maximum number of rows fetched per page.
+
+        Returns:
+            pandas DataFrame with all pages concatenated (empty with columns if no rows).
+        """
+        import pandas as pd
+
+        marker = None
+        frames = []
+        while True:
+            query, params = build_page(marker, page_size)
+            df = _copy_table_pandas(db, query, params)
+            # Skip empty pages: concatenating an all-object empty frame would
+            # downgrade every column's dtype to object. A trailing empty page
+            # happens whenever the row count is an exact multiple of page_size.
+            if not df.empty:
+                frames.append(df)
+            if len(df) < page_size:
+                break
+            marker = next_marker(df.iloc[-1])
+
+        if not frames:
+            # No rows at all: return the last (empty) frame so callers still get the columns.
+            return df
+        return frames[0] if len(frames) == 1 else pd.concat(frames, ignore_index=True)
 
 
 # default in dict collectors
@@ -114,9 +155,31 @@ class CollectionOutput(DictOutput):
         """
         return self.files(collector.gather(output=self))
 
-    def sql(self, db, query):
+    def sql(self, db, query, params=None):
         filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created
-        return _copy_table_files(db, query, filespec)
+        return _copy_table_files(db, query, filespec, params)
+
+    def sql_keyset(self, db, build_page, next_marker, page_size=10000):
+        """Stream the full result set to CSV files via a single COPY.
+
+        COPY streams rows server-side without materialising them, so keyset
+        pagination is unnecessary here: the whole result set is requested in one
+        query (no marker, no LIMIT). *next_marker* and *page_size* are accepted for
+        interface parity with :meth:`DataframeOutput.sql_keyset` and ignored.
+
+        Args:
+            db: Django database connection.
+            build_page: Callable ``(marker, limit) -> (query, params)``; called once
+                as ``build_page(None, None)`` for the full result set.
+            next_marker: Unused (accepted for interface parity).
+            page_size: Unused (accepted for interface parity).
+
+        Returns:
+            List of CSV file paths.
+        """
+        query, params = build_page(None, None)
+        filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created
+        return _copy_table_files(db, query, filespec, params)
 
 
 def date_where(field, since, until):
@@ -186,13 +249,13 @@ def ensure_functions(db):
         cursor.execute(_yaml_json_functions())
 
 
-def _copy_table_files(db, query, filespec):
+def _copy_table_files(db, query, filespec, params=None):
     file = CsvFileSplitter(filespec=filespec)
 
     with db.cursor() as cursor:
         copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
 
-        with cursor.copy(copy_query) as copy:
+        with cursor.copy(copy_query, params) as copy:
             while data := copy.read():
                 byte_data = bytes(data)
                 file.write(byte_data.decode())
@@ -200,13 +263,13 @@ def _copy_table_files(db, query, filespec):
     return file.file_list(keep_empty=True)
 
 
-def _copy_table_pandas(db, query):
+def _copy_table_pandas(db, query, params=None):
     import pandas as pd
 
     # Execute query and create DataFrame from results
     # Using cursor approach since pd.read_sql doesn't work well with psycopg3
     with db.cursor() as cursor:
-        cursor.execute(query)
+        cursor.execute(query, params)
 
         # Get column names from cursor description
         columns = [desc[0] for desc in cursor.description]

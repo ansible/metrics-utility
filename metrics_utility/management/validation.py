@@ -71,6 +71,7 @@ VALID_COLLECTORS = {
     # job_host_summary is on by default
     'main_host',
     'main_host_daily',
+    'main_hostmetric',
     'main_indirectmanagednodeaudit',
     'main_jobevent',
     ## vcpu
