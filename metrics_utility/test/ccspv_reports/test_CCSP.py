@@ -208,6 +208,18 @@ expected_sheets = {
             ]
         },
     ],
+    'Indirectly Managed nodes': [
+        {'Host name': []},
+        {'Automated by\norganizations': []},
+        {'Job runs': []},
+        {'Number of task\nruns': []},
+        {'First\nautomation': []},
+        {'Last\nautomation': []},
+        {'Canonical\nFacts': []},
+        {'Facts': []},
+        {'Manage\nNode\nTypes': []},
+        {'Events': []},
+    ],
     'Usage by collections': [
         {'Collection name': []},
         {'Unique managed nodes\nautomated': []},

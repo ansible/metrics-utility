@@ -65,6 +65,13 @@ def test_validate_report_type_build_valid(monkeypatch):
     assert not errors
 
 
+def test_validate_report_type_build_defaults_to_ccspv2_when_unset(monkeypatch):
+    errors = []
+    result = validate_report_type(errors, 'build')
+    assert result == 'CCSPv2'
+    assert not errors
+
+
 def test_validate_report_type_gather(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'ignored')
     errors = []
@@ -95,6 +102,23 @@ def test_validate_ccsp_report_sheets_invalid(monkeypatch):
     validate_ccsp_report_sheets(errors, 'CCSP')
     assert errors
     assert 'Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' in errors[0]
+
+
+def test_validate_ccsp_report_sheets_infrastructure_summary_allowed_under_ccsp(monkeypatch):
+    """infrastructure_summary is CCSPv2-only but allowed in the shared default sheet list;
+
+    report_ccsp.py warns and skips it under CCSPv1 instead of failing validation.
+    """
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary,infrastructure_summary')
+    errors = []
+    validate_ccsp_report_sheets(errors, 'CCSP')
+    assert not errors
+
+
+def test_validate_ccsp_report_sheets_defaults_include_indirect_sheets(monkeypatch):
+    errors = []
+    validate_ccsp_report_sheets(errors, 'CCSPv2')
+    assert not errors
 
 
 def test_validate_collectors_valid(monkeypatch):

@@ -8,6 +8,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.logger import logger
 from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
@@ -134,6 +135,12 @@ class ReportCCSP(Base):
             scope = scope_dataframe
             self._build_data_section_scope(1, ws, scope)
             sheet_index += 1
+
+        if 'infrastructure_summary' in self.optional_report_sheets():
+            logger.warning(
+                "The 'infrastructure_summary' sheet is only available for CCSPv2 reports and is not "
+                'included in this CCSP report. Set METRICS_UTILITY_REPORT_TYPE=CCSPv2 to include it.'
+            )
 
         if events_dataframe is not None:
             if 'usage_by_collections' in self.optional_report_sheets():

@@ -10,7 +10,7 @@ from metrics_utility.automation_controller_billing.dedup.factory import Factory 
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
-from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget
 from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
     date_format_text,
@@ -86,7 +86,7 @@ class Command(BaseCommand):
                     'ENVIRONMENT',
                     '',
                     '  Core Configuration:',
-                    "    METRICS_UTILITY_REPORT_TYPE (required): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE' - determines which kind of report we're generating",
+                    "    METRICS_UTILITY_REPORT_TYPE (optional): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE' - determines which kind of report we're generating (default: CCSPv2)",
                     "    METRICS_UTILITY_SHIP_TARGET (required): one of 'directory', 's3', 'controller_db' - input/output mechanism",
                     '    METRICS_UTILITY_SHIP_PATH (required): local or s3 directory path, input tarballs in path/data/, output xlsx in path/reports/',
                     '',
@@ -251,18 +251,13 @@ class Command(BaseCommand):
             and report-saver factories.
 
         Raises:
-            :exc:`~metrics_utility.exceptions.MissingRequiredEnvVar`: If
-                METRICS_UTILITY_REPORT_TYPE is missing.
             :exc:`~metrics_utility.exceptions.BadRequiredEnvVar`: If
                 METRICS_UTILITY_REPORT_TYPE has an unsupported value.
         """
         base = self._handle_ship_target(ship_target)
 
-        report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
+        report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE') or 'CCSPv2'
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
-
-        if not report_type:
-            raise MissingRequiredEnvVar('Missing required env variable METRICS_UTILITY_REPORT_TYPE.')
 
         if report_type not in ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']:
             raise BadRequiredEnvVar(
@@ -293,7 +288,8 @@ class Command(BaseCommand):
                 # optional bits
                 'optional_sheets': os.getenv(
                     'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-                    'ccsp_summary,managed_nodes,usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
+                    'ccsp_summary,managed_nodes,indirectly_managed_nodes,infrastructure_summary,'
+                    'usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
                 )
                 .rstrip(',')
                 .split(','),
