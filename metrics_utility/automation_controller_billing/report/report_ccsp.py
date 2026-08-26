@@ -139,7 +139,10 @@ class ReportCCSP(Base):
             if 'usage_by_collections' in self.optional_report_sheets():
                 # Sheet with usage by collections
                 ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
-                self._build_data_section_usage_by_collections(1, ws, events_dataframe)
+                # Include indirect managed nodes only when indirect reporting is enabled,
+                # matching the 'Usage by organizations' sheet behavior.
+                collections_indirects = indirects if 'indirectly_managed_nodes' in self.optional_report_sheets() else None
+                self._build_data_section_usage_by_collections(1, ws, events_dataframe, indirects=collections_indirects)
                 sheet_index += 1
 
             if 'usage_by_roles' in self.optional_report_sheets():
