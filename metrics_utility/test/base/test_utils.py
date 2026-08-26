@@ -4,7 +4,12 @@ from unittest.mock import patch
 
 import pytest
 
-from metrics_utility.base.utils import bool_from_env, get_max_gather_period_days, get_optional_collectors
+from metrics_utility.base.utils import (
+    bool_from_env,
+    get_max_gather_period_days,
+    get_optional_ccsp_report_sheets,
+    get_optional_collectors,
+)
 
 
 class TestBoolFromEnv:
@@ -127,3 +132,18 @@ class TestGetOptionalCollectors:
             result = get_optional_collectors()
             assert '' not in result
             assert 'main_host' in result
+
+
+class TestGetOptionalCcspReportSheets:
+    """Test get_optional_ccsp_report_sheets utility function."""
+
+    def test_returns_default_sheets_when_env_not_set(self):
+        with patch.dict('os.environ', {}, clear=True):
+            sheets = get_optional_ccsp_report_sheets()
+            assert 'indirectly_managed_nodes' in sheets
+            assert 'infrastructure_summary' in sheets
+            assert 'ccsp_summary' in sheets
+
+    def test_env_override(self):
+        with patch.dict('os.environ', {'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary'}):
+            assert get_optional_ccsp_report_sheets() == ['ccsp_summary']

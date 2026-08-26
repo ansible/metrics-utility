@@ -26,6 +26,23 @@ def get_optional_collectors():
     return list(filter(bool, os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t').split(',')))
 
 
+def get_optional_ccsp_report_sheets():
+    """
+    Get the list of optional CCSP report sheets from environment variable.
+    Defaults to 'ccsp_summary,managed_nodes,indirectly_managed_nodes,infrastructure_summary,
+    usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules' if not set.
+    """
+    return (
+        os.getenv(
+            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
+            'ccsp_summary,managed_nodes,indirectly_managed_nodes,infrastructure_summary,'
+            'usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
+        )
+        .rstrip(',')
+        .split(',')
+    )
+
+
 def bool_from_env(name, default=None):
     """
     Convert environment variable to boolean.

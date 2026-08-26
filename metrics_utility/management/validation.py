@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.base.utils import bool_from_env
+from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.library.candlepin.client import CandlepinClient
 from metrics_utility.library.candlepin.lifecycle import (
@@ -558,15 +558,7 @@ def validate_ccsp_report_sheets(errors, report_type):
         - If 'ccsp_sheets' is not set or 'report_type' is None, no validation is performed.
         - The set of valid sheets for each report type is defined in the global 'VALID_SHEETS' dictionary.
     """
-    ccsp_sheets = (
-        os.getenv(
-            'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-            'ccsp_summary,managed_nodes,indirectly_managed_nodes,infrastructure_summary,'
-            'usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-        )
-        .rstrip(',')
-        .split(',')
-    )
+    ccsp_sheets = get_optional_ccsp_report_sheets()
     if ccsp_sheets and report_type:
         ccsp_sheets_set = set(ccsp_sheets)
         if report_type in VALID_SHEETS:

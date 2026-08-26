@@ -10,6 +10,7 @@ from metrics_utility.automation_controller_billing.dedup.factory import Factory 
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
+from metrics_utility.base.utils import get_optional_ccsp_report_sheets
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget
 from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
@@ -286,13 +287,7 @@ class Command(BaseCommand):
                 'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
                 'report_organization_filter': get_organization_filter(),
                 # optional bits
-                'optional_sheets': os.getenv(
-                    'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS',
-                    'ccsp_summary,managed_nodes,indirectly_managed_nodes,infrastructure_summary,'
-                    'usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules',
-                )
-                .rstrip(',')
-                .split(','),
+                'optional_sheets': get_optional_ccsp_report_sheets(),
             }
         )
         return base
