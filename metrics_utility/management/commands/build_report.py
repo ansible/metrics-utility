@@ -287,7 +287,7 @@ class Command(BaseCommand):
                 'report_renewal_guidance_dedup_iterations': os.getenv('REPORT_RENEWAL_GUIDANCE_DEDUP_ITERATIONS', '3'),
                 'report_organization_filter': get_organization_filter(),
                 # optional bits
-                'optional_sheets': get_optional_ccsp_report_sheets(),
+                'optional_sheets': get_optional_ccsp_report_sheets(report_type),
             }
         )
         return base

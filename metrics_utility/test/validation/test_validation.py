@@ -104,12 +104,23 @@ def test_validate_ccsp_report_sheets_invalid(monkeypatch):
     assert 'Invalid METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS' in errors[0]
 
 
-def test_validate_ccsp_report_sheets_infrastructure_summary_allowed_under_ccsp(monkeypatch):
-    """infrastructure_summary is CCSPv2-only but allowed in the shared default sheet list;
+def test_validate_ccsp_report_sheets_infrastructure_summary_allowed_under_ccsp_when_explicit(monkeypatch):
+    """infrastructure_summary is CCSPv2-only and never part of the CCSP default, but a customer
 
-    report_ccsp.py warns and skips it under CCSPv1 instead of failing validation.
+    who explicitly requests it under CCSP shouldn't hard-fail validation - report_ccsp.py warns
+    and skips it instead.
     """
     monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary,infrastructure_summary')
+    errors = []
+    validate_ccsp_report_sheets(errors, 'CCSP')
+    assert not errors
+
+
+def test_validate_ccsp_report_sheets_ccsp_default_is_valid(monkeypatch):
+    """CCSP's default sheet list never includes infrastructure_summary in the first place
+
+    (see get_optional_ccsp_report_sheets), so it should validate cleanly with no env override.
+    """
     errors = []
     validate_ccsp_report_sheets(errors, 'CCSP')
     assert not errors

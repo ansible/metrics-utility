@@ -42,9 +42,6 @@ VALID_SHEETS = {
         'managed_nodes',
         'indirectly_managed_nodes',
         'inventory_scope',
-        # infrastructure_summary is CCSPv2-only, but allowed here so the shared
-        # default sheet list doesn't fail validation for CCSPv1 - report_ccsp.py
-        # logs a warning and skips it instead.
         'infrastructure_summary',
         'usage_by_collections',
         'usage_by_roles',
@@ -558,7 +555,7 @@ def validate_ccsp_report_sheets(errors, report_type):
         - If 'ccsp_sheets' is not set or 'report_type' is None, no validation is performed.
         - The set of valid sheets for each report type is defined in the global 'VALID_SHEETS' dictionary.
     """
-    ccsp_sheets = get_optional_ccsp_report_sheets()
+    ccsp_sheets = get_optional_ccsp_report_sheets(report_type)
     if ccsp_sheets and report_type:
         ccsp_sheets_set = set(ccsp_sheets)
         if report_type in VALID_SHEETS:
