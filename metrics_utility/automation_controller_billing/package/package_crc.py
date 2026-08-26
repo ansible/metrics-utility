@@ -11,9 +11,9 @@ from awx.main.utils import get_awx_http_client_headers
 from django.conf import settings
 
 from metrics_utility import base
+from metrics_utility.candlepin.client import CandlepinClient
+from metrics_utility.candlepin.lifecycle import is_cert_valid as _is_cert_valid
 from metrics_utility.exceptions import FailedToUploadPayload
-from metrics_utility.library.candlepin.client import CandlepinClient
-from metrics_utility.library.candlepin.lifecycle import is_cert_valid as _is_cert_valid
 from metrics_utility.logger import logger
 
 

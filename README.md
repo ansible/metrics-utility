@@ -57,30 +57,23 @@ See [docs/awx.md](./docs/awx.md) for more on running against an awx dev env.
 
 ### Python library
 
-The `metrics_utility.library` library provides a lower-level python API exposing the same functionality using these abstractions:
+The `metrics_utility.library` library provides a lower-level python API exposing the collection functionality using these abstractions:
 
 * collectors - functions that collect specific data, from database to a `.csv`, or from elsewhere into a python dict
-* packagers - packages multiple related `.csv` & `.json` into `.tar.gz` daily tarballs
-* extractors - extracts these tarballs, loading specific data into dicts or Pandas dataframe
-* rollups - group and aggregate dataframes, compute stats and optionally save them
-* reports - builds a xlsx report from a set of dataframes
-* storage - unified storage backend for filesystem, s3, segment, crc and db
-* instants - associated datetime-related helpers
-* tempdir & db locking helpers
+* storage - the segment.com storage backend (`StorageSegment`), used to push anonymized data
+* db locking helper (`lock`)
 
-The library uses no env variables, and doesn't rely on Controller environment.
-The CLI is expected to use the library where possible, but is not limited to it.
+It is complemented by the sibling `metrics_utility.anonymized_rollups` package, which rolls up and anonymizes collected data before shipping.
+
+Both are shared with the external metrics-service, which is their main consumer. The library uses no env variables, and doesn't rely on Controller environment, taking everything via params. The CLI uses the library where possible, but is not limited to it, and keeps its own packaging/storage/report implementations under `automation_controller_billing/`.
 
 Example use:
 
 ```python
 from metrics_utility.library.collectors.controller import config, main_jobevent
-from metrics_utility.library.instants import last_day, this_day
-from metrics_utility.library import lock, storage
+from metrics_utility.library import lock
 
 db = ...  # django.db.connection / psycopg 3
-
-dir_storage = storage.StorageDirectory(base_path='./out')
 
 with lock('my-unique-key', wait=False, db=db) as acquired:
     if not acquired:
@@ -90,17 +83,10 @@ with lock('my-unique-key', wait=False, db=db) as acquired:
     config_dict = config(db=db).gather()
 
     # list of .csv filenames; since is included, until is excluded
-    job_csvs = main_jobevent(db=db, since=last_day(), until=this_day()).gather()
-
-# save in storage
-dir_storage.put('config.json', dict=config_dict)
-for index, file in enumerate(job_csvs):
-    dir_storage.put(f'main_jobevent.{index}.csv', filename=file)
-    os.remove(file)
+    job_csvs = main_jobevent(db=db, since=since, until=until).gather()
 ```
 
-See [library README](./metrics_utility/library/README.md) for details.  
-See [workers/](./workers/) for more library usage examples.
+See [library README](./metrics_utility/library/README.md) for details.
 
 
 ## Developer setup

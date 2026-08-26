@@ -5,15 +5,15 @@ from argparse import RawDescriptionHelpFormatter
 
 from django.core.management.base import BaseCommand
 
-from metrics_utility.library.candlepin.client import CandlepinClient
-from metrics_utility.library.candlepin.lifecycle import (
+from metrics_utility.candlepin.client import CandlepinClient
+from metrics_utility.candlepin.lifecycle import (
     get_candlepin_ca,
     get_candlepin_url,
     get_renewal_days,
     needs_renewal,
     parse_cert,
 )
-from metrics_utility.library.candlepin.store import get_candlepin_store
+from metrics_utility.candlepin.store import get_candlepin_store
 from metrics_utility.management.validation import (
     CANDLEPIN_UUID_PLACEHOLDER,
     _resolve_registration_credentials,

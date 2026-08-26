@@ -7,9 +7,8 @@ import re
 from dateutil.relativedelta import relativedelta
 
 from metrics_utility.base.utils import bool_from_env
-from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
-from metrics_utility.library.candlepin.client import CandlepinClient
-from metrics_utility.library.candlepin.lifecycle import (
+from metrics_utility.candlepin.client import CandlepinClient
+from metrics_utility.candlepin.lifecycle import (
     get_candlepin_ca,
     get_candlepin_url,
     get_renewal_days,
@@ -17,7 +16,8 @@ from metrics_utility.library.candlepin.lifecycle import (
     parse_cert,
     run_candlepin_lifecycle,
 )
-from metrics_utility.library.candlepin.store import DBCandlepinStore, LocalCandlepinStore, get_candlepin_store
+from metrics_utility.candlepin.store import DBCandlepinStore, LocalCandlepinStore, get_candlepin_store
+from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.logger import logger
 
 
