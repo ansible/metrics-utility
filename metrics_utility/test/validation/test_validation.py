@@ -126,6 +126,13 @@ def test_validate_collectors_invalid(monkeypatch):
     assert 'Invalid METRICS_UTILITY_OPTIONAL_COLLECTORS' in errors[0]
 
 
+def test_validate_collectors_default_when_unset(monkeypatch):
+    """Default collectors (including main_indirectmanagednodeaudit) must stay valid."""
+    errors = []
+    validate_collectors(errors)
+    assert not errors
+
+
 def test_validate_max_gather_period_days_valid(monkeypatch):
     monkeypatch.setenv('METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS', '30')
     errors = []
