@@ -11,6 +11,7 @@ from metrics_utility.management.validation import (
     handle_directory_ship_target,
     handle_env_validation,
     handle_s3_ship_target,
+    validate_build_params,
     validate_ccsp_report_sheets,
     validate_collectors,
     validate_max_gather_period_days,
@@ -70,6 +71,17 @@ def test_validate_report_type_build_defaults_to_ccspv2_when_unset(monkeypatch):
     result = validate_report_type(errors, 'build')
     assert result == 'CCSPv2'
     assert not errors
+
+
+def test_validate_build_params_parses_since_until_when_report_type_unset(monkeypatch):
+    """With no METRICS_UTILITY_REPORT_TYPE set (now the supported CCSPv2 default), since/until
+
+    must still be parsed - validate_build_params previously short-circuited to (None, None)
+    whenever the env var was unset, silently dropping --since/--until.
+    """
+    since, until = validate_build_params({'since': '2024-01-01', 'until': '2024-01-02'}, {})
+    assert since is not None
+    assert until is not None
 
 
 def test_validate_report_type_gather(monkeypatch):

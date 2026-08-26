@@ -138,8 +138,9 @@ class ReportCCSP(Base):
 
         if 'infrastructure_summary' in self.optional_report_sheets():
             logger.warning(
-                "The 'infrastructure_summary' sheet is only available for CCSPv2 reports and is not "
-                'included in this CCSP report. Set METRICS_UTILITY_REPORT_TYPE=CCSPv2 to include it.'
+                "The 'infrastructure_summary' sheet is enabled but is only available in CCSPv2 reports; "
+                'skipping it. Set METRICS_UTILITY_REPORT_TYPE=CCSPv2 to include it, or remove '
+                "'infrastructure_summary' from METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS."
             )
 
         if events_dataframe is not None:

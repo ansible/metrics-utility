@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets
+from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_report_type
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.library.candlepin.client import CandlepinClient
 from metrics_utility.library.candlepin.lifecycle import (
@@ -527,7 +527,7 @@ def validate_report_type(errors, method):
     if method == 'gather':
         return None
 
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE') or 'CCSPv2'
+    report_type = get_report_type()
     if report_type not in VALID_REPORT_TYPES:
         errors.append(
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
@@ -825,7 +825,7 @@ def validate_ccsp_params(options):
     Raises:
         :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
     """
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
+    report_type = get_report_type()
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
@@ -912,9 +912,7 @@ def validate_build_params(options, help_texts):
     Returns:
         Tuple of ``(since, until)`` datetimes (either may be None).
     """
-    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
-    if not report_type:
-        return None, None
+    report_type = get_report_type()
 
     if report_type in {'CCSP', 'CCSPv2'}:
         validate_ccsp_params(options)

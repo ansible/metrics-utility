@@ -10,7 +10,7 @@ from metrics_utility.automation_controller_billing.dedup.factory import Factory 
 from metrics_utility.automation_controller_billing.extract.factory import Factory as ExtractorFactory
 from metrics_utility.automation_controller_billing.report.factory import Factory as ReportFactory
 from metrics_utility.automation_controller_billing.report_saver.factory import Factory as ReportSaverFactory
-from metrics_utility.base.utils import get_optional_ccsp_report_sheets
+from metrics_utility.base.utils import get_optional_ccsp_report_sheets, get_report_type
 from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget
 from metrics_utility.logger import debug, logger
 from metrics_utility.management.validation import (
@@ -257,7 +257,7 @@ class Command(BaseCommand):
         """
         base = self._handle_ship_target(ship_target)
 
-        report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE') or 'CCSPv2'
+        report_type = get_report_type()
         price_per_node = float(os.getenv('METRICS_UTILITY_PRICE_PER_NODE', 0))
 
         if report_type not in ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']:
