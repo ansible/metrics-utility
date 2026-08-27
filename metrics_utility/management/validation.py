@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_report_type
+from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_optional_collectors, get_report_type
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.library.candlepin.client import CandlepinClient
 from metrics_utility.library.candlepin.lifecycle import (
