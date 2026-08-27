@@ -53,6 +53,7 @@ ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xls
 See [docs/cli.md](./docs/cli.md) and [docs/old-readme.md](./docs/old-readme.md) for details on the usage,  
 See [docs/environment.md](./docs/environment.md) for a full list of environment variables,  
 See [docs/awx.md](./docs/awx.md) for more on running against an awx dev env.
+See [docs/architecture.md](./docs/architecture.md) for the system architecture and maintainer extension points.
 
 
 ### Python library
