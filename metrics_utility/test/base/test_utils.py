@@ -104,9 +104,9 @@ class TestGetMaxGatherPeriodDays:
 class TestGetOptionalCollectors:
     """Test get_optional_collectors utility function."""
 
-    def test_returns_default_main_jobevent_when_env_not_set(self):
+    def test_returns_default_main_jobevent_and_indirect_when_env_not_set(self):
         with patch.dict('os.environ', {}, clear=True):
-            assert get_optional_collectors() == ['main_jobevent']
+            assert get_optional_collectors() == ['main_jobevent', 'main_indirectmanagednodeaudit']
 
     def test_returns_single_value(self):
         with patch.dict('os.environ', {'METRICS_UTILITY_OPTIONAL_COLLECTORS': 'main_host'}):

@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_report_type
+from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_optional_collectors, get_report_type
 from metrics_utility.exceptions import BadParameter, DateFormatError, MissingRequiredEnvVar, MissingRequiredParameter, UnparsableParameter
 from metrics_utility.library.candlepin.client import CandlepinClient
 from metrics_utility.library.candlepin.lifecycle import (
@@ -583,16 +583,14 @@ def validate_collectors(errors):
 
     Environment Variables:
         METRICS_UTILITY_OPTIONAL_COLLECTORS (str, optional): Comma-separated
-            list of collector names. Defaults to 'main_jobevent' if not set.
+            list of collector names. See get_optional_collectors() for the default.
 
     Notes:
         - The set of valid optional collectors is defined by the global variable VALID_COLLECTORS.
         - Error messages include the invalid collector names and the list ofvalid values.
     """
 
-    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t')
-    if collectors:
-        collectors = collectors.split(',')
+    collectors = get_optional_collectors()
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:

@@ -21,9 +21,14 @@ def get_max_gather_period_days():
 def get_optional_collectors():
     """
     Get the list of optional collectors from environment variable.
-    Defaults to 'main_jobevent' if not set.
+    Defaults to 'main_jobevent,main_indirectmanagednodeaudit' if not set.
     """
-    return list(filter(bool, os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t').split(',')))
+    return list(
+        filter(
+            bool,
+            os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent,main_indirectmanagednodeaudit').strip(', \t').split(','),
+        )
+    )
 
 
 def get_report_type():

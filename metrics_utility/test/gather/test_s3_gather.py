@@ -43,7 +43,7 @@ def test_full():
     assert 'Final since-until: 2025-06-13 00:00:00+00:00 to 2025-06-14 00:00:00+00:00' in rg.stderr
     assert 'Progress info: Now gathering job_host_summary' in rg.stderr
     assert 'Progress info: Skipping main_host because it is not enabled.' in rg.stderr
-    assert 'Progress info: Skipping main_indirectmanagednodeaudit because it is not enabled.' in rg.stderr
+    assert 'Progress info: Now gathering main_indirectmanagednodeaudit' in rg.stderr
     assert 'Progress info: Now gathering main_jobevent' in rg.stderr
     assert 'Analytics collected' in rg.stderr
 
