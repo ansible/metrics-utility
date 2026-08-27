@@ -31,6 +31,38 @@ def get_optional_collectors():
     )
 
 
+def get_report_type():
+    """
+    Get the report type from environment variable.
+    Defaults to 'CCSPv2' if not set.
+    """
+    return os.getenv('METRICS_UTILITY_REPORT_TYPE') or 'CCSPv2'
+
+
+def get_optional_ccsp_report_sheets(report_type=None):
+    """
+    Get the list of optional CCSP report sheets from environment variable.
+
+    Defaults to 'ccsp_summary,managed_nodes,indirectly_managed_nodes,
+    usage_by_organizations,usage_by_collections,usage_by_roles,usage_by_modules'
+    if not set. 'infrastructure_summary' is added to that default only when
+    report_type is 'CCSPv2', since it is the only report type that renders it.
+    """
+    default_sheets = [
+        'ccsp_summary',
+        'managed_nodes',
+        'indirectly_managed_nodes',
+        'usage_by_organizations',
+        'usage_by_collections',
+        'usage_by_roles',
+        'usage_by_modules',
+    ]
+    if report_type == 'CCSPv2':
+        default_sheets.insert(3, 'infrastructure_summary')
+
+    return os.getenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', ','.join(default_sheets)).rstrip(',').split(',')
+
+
 def bool_from_env(name, default=None):
     """
     Convert environment variable to boolean.

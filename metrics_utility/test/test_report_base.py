@@ -612,6 +612,29 @@ def _collections_df():
     )
 
 
+def _indirects_df(**extra):
+    # events is the merged, already-parsed list of fully-qualified content names per row
+    data = {
+        'host_name': ['h1', 'ind_h2'],
+        'install_uuid': ['u1', 'u1'],
+        'job_remote_id': ['j9', 'j10'],
+        'task_runs': [4, 6],
+        'events': [['col.a.some_module'], ['col.c.other_module', 'col.a.another_module']],
+    }
+    data.update(extra)
+    return pd.DataFrame(data)
+
+
+def _sheet_rows(ws, ncols):
+    """Read a built worksheet into a list of row tuples, until the first empty first-column cell."""
+    rows = []
+    r_idx = 1
+    while ws.cell(row=r_idx, column=1).value is not None:
+        rows.append(tuple(ws.cell(row=r_idx, column=c).value for c in range(1, ncols + 1)))
+        r_idx += 1
+    return rows
+
+
 class TestBuildDataSectionUsageByCollections:
     def test_returns_advanced_row_number(self):
         r = _report()
@@ -631,6 +654,75 @@ class TestBuildDataSectionUsageByCollections:
         r._build_data_section_usage_by_collections(1, ws, _collections_df())
         headers = [ws.cell(row=1, column=c).value for c in range(1, 6)]
         assert 'Collection name' in headers
+
+    def test_indirect_none_matches_direct_only(self):
+        r_direct = _report()
+        ws_direct = _make_ws(r_direct)
+        r_direct._build_data_section_usage_by_collections(1, ws_direct, _collections_df())
+
+        r_none = _report()
+        ws_none = _make_ws(r_none)
+        r_none._build_data_section_usage_by_collections(1, ws_none, _collections_df(), indirects=None)
+
+        assert _sheet_rows(ws_direct, 5) == _sheet_rows(ws_none, 5)
+
+    def test_indirect_empty_adds_no_collections(self):
+        r = _report()
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_collections(1, ws, _collections_df(), indirects=_indirects_df().iloc[0:0])
+        collection_names = {row[0] for row in _sheet_rows(ws, 5)[1:]}
+        assert collection_names == {'col.a', 'col.b'}
+
+    def test_indirect_merges_and_adds_collections(self):
+        r = _report()
+        ws = _make_ws(r)
+        r._build_data_section_usage_by_collections(1, ws, _collections_df(), indirects=_indirects_df())
+
+        by_collection = {row[0]: row for row in _sheet_rows(ws, 5)[1:]}
+
+        # col.a gains indirect h1 (same name, new composite id) and ind_h2: unique host
+        # names {h1, h3, ind_h2}=3, non-unique composite ids=4, task_runs 10+8+4+6=28
+        assert by_collection['col.a'] == ('col.a', 3, 4, 28, 180.0)
+        assert by_collection['col.b'] == ('col.b', 1, 1, 5, 50.0)
+        # col.c is indirect-only (ind_h2), no duration recorded for indirect
+        assert by_collection['col.c'] == ('col.c', 1, 1, 6, 0.0)
+
+
+class TestBuildIndirectCollectionsLong:
+    def test_returns_none_when_indirects_none(self):
+        assert _report()._build_indirect_collections_long(None) is None
+
+    def test_returns_none_when_indirects_empty(self):
+        assert _report()._build_indirect_collections_long(_indirects_df().iloc[0:0]) is None
+
+    def test_returns_none_when_no_events_resolve_to_collections(self):
+        df = _indirects_df(events=[['not_a_fqcn'], []])
+        assert _report()._build_indirect_collections_long(df) is None
+
+    def test_returns_none_when_events_empty(self):
+        df = _indirects_df(events=[[], None])
+        assert _report()._build_indirect_collections_long(df) is None
+
+    def test_explodes_events_into_one_row_per_collection(self):
+        result = _report()._build_indirect_collections_long(_indirects_df())
+        # h1 -> col.a ; ind_h2 -> col.c, col.a
+        assert len(result) == 3
+        assert set(result['collection_name']) == {'col.a', 'col.c'}
+
+    def test_computes_composite_id_and_zero_duration(self):
+        df = _indirects_df(events=[['col.a.mod'], []])
+        result = _report()._build_indirect_collections_long(df)
+        assert list(result['host_composite_id']) == ['h1__u1__j9']
+        assert list(result['duration']) == [0]
+
+    def test_task_runs_attributed_to_each_collection_in_row(self):
+        df = _indirects_df(host_name=['ind_h2'], install_uuid=['u1'], job_remote_id=['j10'], task_runs=[6], events=[['col.a.m1', 'col.c.m2']])
+        result = _report()._build_indirect_collections_long(df)
+        assert sorted(zip(result['collection_name'], result['task_runs'])) == [('col.a', 6), ('col.c', 6)]
+
+    def test_output_columns_match_long_schema(self):
+        result = _report()._build_indirect_collections_long(_indirects_df())
+        assert list(result.columns) == Base.COLLECTIONS_LONG_COLUMNS
 
 
 # ---------------------------------------------------------------------------

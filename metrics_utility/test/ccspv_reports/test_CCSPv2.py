@@ -118,11 +118,28 @@ expected_sheets = {
             ]
         },
     ],
+    'Indirectly Managed nodes': [
+        {'Host name': []},
+        {'Automated by\norganizations': []},
+        {'Job runs': []},
+        {'Number of task\nruns': []},
+        {'First\nautomation': []},
+        {'Last\nautomation': []},
+        {'Canonical\nFacts': []},
+        {'Facts': []},
+        {'Manage\nNode\nTypes': []},
+        {'Events': []},
+    ],
+    'Infrastructure Summary': [
+        {'No indirect nodes found': []},
+    ],
     'Usage by organizations': [
         {'Organization name': ['Default', 'test organization']},
         {'Job runs': [2, 2]},
         {'Unique managed nodes automated': [1, 2]},
         {'Non-unique managed nodes automated': [2, 4]},
+        {'Unique indirect managed nodes\nautomated': [0, 0]},
+        {'Non-unique indirect managed\nnodes automated': [0, 0]},
         {'Number of task runs': [4, 8]},
     ],
     'Usage by collections': [

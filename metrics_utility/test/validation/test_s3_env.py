@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from metrics_utility.automation_controller_billing.base.s3_handler import S3Handler
-from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
+from metrics_utility.exceptions import BadRequiredEnvVar, BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.library.storage import StorageS3
 from metrics_utility.test.util import run_build_int, run_gather_int
 
@@ -78,15 +78,6 @@ def test_build_controller_db():
     )
     assert e.name == 'Missing required env variable METRICS_UTILITY_SHIP_PATH - place for collected data and built reports'
 
-    e = expect_build_error(
-        {
-            'METRICS_UTILITY_SHIP_TARGET': 'controller_db',
-            'METRICS_UTILITY_SHIP_PATH': 'wherever',
-        },
-        MissingRequiredEnvVar,
-    )
-    assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
-
 
 def test_gather_crc(caplog):
     run_gather_int(
@@ -116,14 +107,15 @@ def test_build_directory(caplog):
 
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'INVALID',
             'METRICS_UTILITY_SHIP_TARGET': 'directory',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
             'METRICS_UTILITY_BUCKET_NAME': 'unexpected',
             'METRICS_UTILITY_BILLING_PROVIDER': 'unexpected',
         },
-        MissingRequiredEnvVar,
+        BadRequiredEnvVar,
     )
-    assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
+    assert e.name == "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']"
     assert caplog.messages[-1] == 'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="s3": METRICS_UTILITY_BUCKET_NAME'
     assert caplog.messages[-2] == 'Ignoring env variables used without METRICS_UTILITY_SHIP_TARGET="crc": METRICS_UTILITY_BILLING_PROVIDER'
 
@@ -165,6 +157,7 @@ def test_build_s3():
 
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'INVALID',
             'METRICS_UTILITY_SHIP_TARGET': 's3',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
             'METRICS_UTILITY_BUCKET_NAME': 'something',
@@ -172,12 +165,13 @@ def test_build_s3():
             'METRICS_UTILITY_BUCKET_ACCESS_KEY': 'S3 access key',
             'METRICS_UTILITY_BUCKET_SECRET_KEY': 'S3 secret key',
         },
-        MissingRequiredEnvVar,
+        BadRequiredEnvVar,
     )
-    assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
+    assert e.name == "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']"
 
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'INVALID',
             'METRICS_UTILITY_SHIP_TARGET': 's3',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
             'METRICS_UTILITY_BUCKET_NAME': 'something',
@@ -186,23 +180,24 @@ def test_build_s3():
             'METRICS_UTILITY_BUCKET_SECRET_KEY': 'S3 secret key',
             'METRICS_UTILITY_BUCKET_REGION': 'optional',
         },
-        MissingRequiredEnvVar,
+        BadRequiredEnvVar,
     )
-    assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
+    assert e.name == "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']"
 
 
 def test_build_s3_implicit_credentials():
     """S3 without explicit credentials should pass validation (IRSA, instance profiles)."""
     e = expect_build_error(
         {
+            'METRICS_UTILITY_REPORT_TYPE': 'INVALID',
             'METRICS_UTILITY_SHIP_TARGET': 's3',
             'METRICS_UTILITY_SHIP_PATH': 'wherever',
             'METRICS_UTILITY_BUCKET_NAME': 'something',
             'METRICS_UTILITY_BUCKET_ENDPOINT': 'https://s3.us-east.example.com',
         },
-        MissingRequiredEnvVar,
+        BadRequiredEnvVar,
     )
-    assert e.name == 'Missing required env variable METRICS_UTILITY_REPORT_TYPE.'
+    assert e.name == "Bad value for required env variable METRICS_UTILITY_REPORT_TYPE, allowed values are: ['CCSP', 'CCSPv2', 'RENEWAL_GUIDANCE']"
 
 
 def test_build_s3_mismatched_credentials():

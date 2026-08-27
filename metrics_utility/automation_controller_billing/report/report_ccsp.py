@@ -8,6 +8,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.logger import logger
 from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
@@ -135,11 +136,21 @@ class ReportCCSP(Base):
             self._build_data_section_scope(1, ws, scope)
             sheet_index += 1
 
+        if 'infrastructure_summary' in self.optional_report_sheets():
+            logger.warning(
+                "The 'infrastructure_summary' sheet is enabled but is only available in CCSPv2 reports; "
+                'skipping it. Set METRICS_UTILITY_REPORT_TYPE=CCSPv2 to include it, or remove '
+                "'infrastructure_summary' from METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS."
+            )
+
         if events_dataframe is not None:
             if 'usage_by_collections' in self.optional_report_sheets():
                 # Sheet with usage by collections
                 ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
-                self._build_data_section_usage_by_collections(1, ws, events_dataframe)
+                # Include indirect managed nodes only when indirect reporting is enabled,
+                # matching the 'Usage by organizations' sheet behavior.
+                collections_indirects = indirects if 'indirectly_managed_nodes' in self.optional_report_sheets() else None
+                self._build_data_section_usage_by_collections(1, ws, events_dataframe, indirects=collections_indirects)
                 sheet_index += 1
 
             if 'usage_by_roles' in self.optional_report_sheets():

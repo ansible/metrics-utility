@@ -64,11 +64,11 @@ def test_handle_extra_params_missing_ship_path(monkeypatch, command_instance):
         command_instance._handle_extra_params('directory')
 
 
-def test_handle_extra_params_missing_report_type(monkeypatch, command_instance):
+def test_handle_extra_params_missing_report_type_defaults_to_ccspv2(monkeypatch, command_instance):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
     monkeypatch.delenv('METRICS_UTILITY_REPORT_TYPE', raising=False)
-    with pytest.raises(MissingRequiredEnvVar):
-        command_instance._handle_extra_params('directory')
+    params = command_instance._handle_extra_params('directory')
+    assert params['report_type'] == 'CCSPv2'
 
 
 def test_handle_extra_params_bad_report_type(monkeypatch, command_instance):
@@ -84,6 +84,23 @@ def test_handle_extra_params_all_valid(monkeypatch, command_instance):
     params = command_instance._handle_extra_params('directory')
     assert params['ship_path'] == 'directory'
     assert params['report_type'] == 'CCSP'
+
+
+def test_handle_extra_params_default_optional_sheets(monkeypatch, command_instance):
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
+    monkeypatch.delenv('METRICS_UTILITY_REPORT_TYPE', raising=False)
+    monkeypatch.delenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', raising=False)
+    params = command_instance._handle_extra_params('directory')
+    assert 'indirectly_managed_nodes' in params['optional_sheets']
+    assert 'infrastructure_summary' in params['optional_sheets']
+
+
+def test_handle_extra_params_optional_sheets_env_override(monkeypatch, command_instance):
+    monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
+    monkeypatch.setenv('METRICS_UTILITY_REPORT_TYPE', 'CCSPv2')
+    monkeypatch.setenv('METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS', 'ccsp_summary')
+    params = command_instance._handle_extra_params('directory')
+    assert params['optional_sheets'] == ['ccsp_summary']
 
 
 @pytest.mark.parametrize(

@@ -5,11 +5,14 @@
 ######################################
 import json
 
+import pandas as pd
+
 from openpyxl.styles import Alignment, Font
 from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import merge_sets
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
 from metrics_utility.metric_utils import INDIRECT
 
@@ -460,9 +463,77 @@ class Base:
 
         return current_row + row_counter
 
-    def _build_data_section_usage_by_collections(self, current_row, ws, dataframe):
+    # Columns used to merge direct and indirect collection usage into one frame
+    COLLECTIONS_LONG_COLUMNS = ['collection_name', 'host_name', 'host_composite_id', 'task_runs', 'duration']
+
+    def _build_indirect_collections_long(self, indirects):
+        """Normalize indirect managed node rows into per-collection "long" rows.
+
+        Each indirect job-host-summary row carries an ``events`` list of
+        fully-qualified content names (e.g. ``["cisco.ios.ios_command"]``). We
+        explode that list into one row per collection so indirect host counts
+        merge naturally with the direct content-usage frame in the
+        'Usage by collections' sheet.
+
+        Note: an indirect row's ``task_runs`` is attributed to every collection
+        in its ``events`` list (the audit data does not break task counts down
+        per collection). This is imprecise for task counts but preserves the
+        host counts, which is what this sheet is primarily about. Indirect rows
+        have no duration, so ``duration`` is set to 0.
+
+        Args:
+            indirects: DataFrame of INDIRECT job-host-summary rows, or None.
+
+        Returns:
+            A DataFrame with :attr:`COLLECTIONS_LONG_COLUMNS`, or None when
+            there is no indirect collection data to add.
+        """
+        if indirects is None or indirects.empty:
+            return None
+
+        records = []
+        for row in indirects.itertuples(index=False):
+            events = getattr(row, 'events', None)
+            if not events:
+                continue
+
+            collection_names = set()
+            for fqcn in events:
+                collection_name = DataframeContentUsage.extract_collection_name(fqcn)
+                if collection_name is not None:
+                    collection_names.add(collection_name)
+
+            if not collection_names:
+                continue
+
+            host_composite_id = f'{row.host_name}__{row.install_uuid}__{row.job_remote_id}'
+            for collection_name in collection_names:
+                records.append(
+                    {
+                        'collection_name': collection_name,
+                        'host_name': row.host_name,
+                        'host_composite_id': host_composite_id,
+                        'task_runs': row.task_runs,
+                        'duration': 0,
+                    }
+                )
+
+        if not records:
+            return None
+
+        return pd.DataFrame.from_records(records, columns=self.COLLECTIONS_LONG_COLUMNS)
+
+    def _build_data_section_usage_by_collections(self, current_row, ws, dataframe, indirects=None):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
+
+        # Merge indirect managed node usage into the direct content-usage frame so
+        # collection-level host counts include indirect nodes. No-op when there is
+        # no indirect data (default None), preserving the direct-only behavior.
+        indirect_long = self._build_indirect_collections_long(indirects)
+        if indirect_long is not None:
+            direct_long = dataframe[self.COLLECTIONS_LONG_COLUMNS]
+            dataframe = pd.concat([direct_long, indirect_long], ignore_index=True)
 
         # Take the content explorer dataframe and extract specific group by
         agg_dict = {
