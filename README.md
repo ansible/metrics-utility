@@ -19,7 +19,7 @@ A `metrics-utility` CLI tool for collecting and reporting metrics from Controlle
 It can run either standalone (against a specified postgres instance),
 or inside the Controller's python virtual environment. The controller mode allows the `config` collector to collect more settings and takes DB connection details from there.
 
-It provides two subcommands:
+The billing workflow provides two primary commands:
   - `gather_automation_controller_billing_data`
     - collects data from controller, saves daily tarballs with `.csv` / `.json` inside
     - saves tarballs in specified storage
@@ -29,6 +29,8 @@ It provides two subcommands:
       - 3 report types - `CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`
       - the ccsp* reports use the collected tarballs as the source
       - the renewal* report reads from controller db
+
+The `candlepin_manage` command is an auxiliary management command for Candlepin consumer registration and certificate renewal; see `python manage.py candlepin_manage --help`.
 
 Example invocation:
 
@@ -65,7 +67,7 @@ The `metrics_utility.library` library provides a lower-level python API exposing
 * extractors - extracts these tarballs, loading specific data into dicts or Pandas dataframe
 * rollups - group and aggregate dataframes, compute stats and optionally save them
 * reports - builds a xlsx report from a set of dataframes
-* storage - unified storage backend for filesystem, s3, segment, crc and db
+* storage - unified storage backend for filesystem, S3, Segment, and CRC
 * instants - associated datetime-related helpers
 * tempdir & db locking helpers
 
