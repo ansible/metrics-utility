@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import openpyxl
 import pytest
 
 from conftest import validate_sheet_columns, validate_sheet_tab_names
@@ -208,6 +209,18 @@ expected_sheets = {
             ]
         },
     ],
+    'Indirectly Managed nodes': [
+        {'Host name': []},
+        {'Automated by\norganizations': []},
+        {'Job runs': []},
+        {'Number of task\nruns': []},
+        {'First\nautomation': []},
+        {'Last\nautomation': []},
+        {'Canonical\nFacts': []},
+        {'Facts': []},
+        {'Manage\nNode\nTypes': []},
+        {'Events': []},
+    ],
     'Usage by collections': [
         {'Collection name': []},
         {'Unique managed nodes\nautomated': []},
@@ -269,3 +282,31 @@ def test_import(cleanup):
 
     validate_sheet_columns(file_path, expected_sheets, 14)
     validate_sheet_tab_names(file_path, expected_sheets)
+
+
+@pytest.mark.filterwarnings('ignore::ResourceWarning')
+@pytest.mark.parametrize(
+    'cleanup',
+    [
+        file_path,
+    ],
+    indirect=True,
+)
+def test_infrastructure_summary_explicitly_requested_under_ccsp_warns_and_is_skipped(cleanup, caplog):
+    """infrastructure_summary is CCSPv2-only; requesting it explicitly under CCSP should warn
+
+    and skip the sheet rather than fail the build or silently drop it without explanation.
+    """
+    env = {
+        **env_vars,
+        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,infrastructure_summary',
+    }
+    run_build_int(env, {'month': '2024-02', 'force': True})
+
+    assert any("'infrastructure_summary' sheet is enabled but is only available in CCSPv2 reports" in message for message in caplog.messages)
+
+    wb = openpyxl.load_workbook(file_path)
+    try:
+        assert 'Infrastructure Summary' not in wb.sheetnames
+    finally:
+        wb.close()
