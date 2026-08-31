@@ -99,7 +99,7 @@ S3 access and secret keys are optional when the runtime can resolve credentials 
 
 * `METRICS_UTILITY_CRC_INGRESS_URL` - upload url
 * `METRICS_UTILITY_CRC_SSO_URL` - login url
-* `METRICS_UTILITY_PROXY_URL` - upload proxy
+* `METRICS_UTILITY_PROXY_URL` - HTTP/HTTPS proxy for CRC uploads and Candlepin calls
 * `METRICS_UTILITY_SERVICE_ACCOUNT_ID` - account id
 * `METRICS_UTILITY_SERVICE_ACCOUNT_SECRET` - secret
 
@@ -110,13 +110,12 @@ S3 access and secret keys are optional when the runtime can resolve credentials 
 * `METRICS_UTILITY_CANDLEPIN_CERT_DIR` - local certificate directory; defaults to `/var/lib/awx/candlepin-certs`
 * `METRICS_UTILITY_CANDLEPIN_ENABLED` - enables Candlepin certificate handling during CRC gathering; defaults to `false`
 * `METRICS_UTILITY_CANDLEPIN_REGISTRATION_ENABLED` - enables initial consumer registration; defaults to `false`
-* `METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED` - enables check-in and proactive certificate renewal during CRC gathering
+* `METRICS_UTILITY_CANDLEPIN_LIFECYCLE_ENABLED` - enables check-in and proactive certificate renewal during CRC gathering; defaults to `false`
 * `METRICS_UTILITY_CANDLEPIN_RENEWAL_DAYS` - renewal threshold in days; defaults to `30`
 * `METRICS_UTILITY_CANDLEPIN_URL` - Candlepin base URL; defaults to `https://subscription.rhsm.redhat.com/subscription`
 * `METRICS_UTILITY_CANDLEPIN_CA` - optional CA certificate path; otherwise RHSM CA paths or the system CA store are used
 * `METRICS_UTILITY_CANDLEPIN_ORG` - optional explicit Candlepin owner/org key; otherwise it is discovered from the subscription account
 * `METRICS_UTILITY_RH_USERNAME` / `METRICS_UTILITY_RH_PASSWORD` - subscription credentials used for registration; CLI flags override these values
-* `METRICS_UTILITY_PROXY_URL` - HTTP/HTTPS proxy used for Candlepin calls
 
 When `METRICS_UTILITY_CANDLEPIN_STORAGE=db`, registration may fall back to the Controller `conf_setting` credentials. Certificate and private-key material is not written into gathered `config.json` payloads.
 
