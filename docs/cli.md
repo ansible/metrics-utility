@@ -37,7 +37,7 @@ The standalone mode is currently used only for development & testing. It does no
 
 1. Use `--help` to see any other params
   - `build_report` also supports `--ephemeral`, `--force` and `--verbose`
-  - `gather_automation_controller_billing_data` also supports `--dry-run` and `--ship`
+  - `gather_automation_controller_billing_data` also supports `--dry-run`, `--ship`, and `--verbose`
 
 1. Set any other necessary environmental variable
   - see [`docs/environment.md`](./environment.md) for a full list of the environment variables
@@ -66,7 +66,7 @@ export METRICS_UTILITY_REPORT_SKU="MCT3752MO"
 export METRICS_UTILITY_REPORT_SKU_DESCRIPTION="EX: Red Hat Ansible Automation Platform, Full Support (1 Managed Node, Dedicated, Monthly)"
 
 # collect data
-uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m --force
+uv run ./manage.py gather_automation_controller_billing_data --ship --until=10m
 
 # collected tarballs somewhere here (by date and instance uuid)
 ls metrics_utility/test/test_data/data/2024/04/*

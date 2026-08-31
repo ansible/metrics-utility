@@ -1,10 +1,10 @@
 # Metrics Utility Collectors: Database Tables and Partition Analysis
 
-**Last Updated**: February 2026
+**Last Updated**: August 2026
 
 ## Overview
 
-This document provides comprehensive documentation on all collectors in the metrics-utility library, including:
+This document provides detailed documentation on the Controller collectors used by the billing workflow, including:
 - Which database tables each collector queries
 - Whether tables are partitioned
 - Partition key columns and structure
@@ -31,6 +31,8 @@ The following tables in Ansible Automation Platform Controller are partitioned b
 | `main_jobevent` | `job_created` (TIMESTAMPTZ) | RANGE (hourly) | `main_jobevent_YYYYMMDD_HH` |
 
 **Note**: While other event tables (`main_adhoccommandevent`, `main_inventoryupdateevent`, `main_projectupdateevent`, `main_systemjobevent`) are also partitioned in the Controller database, **metrics-utility collectors do not currently access these tables**, so they are not documented here.
+
+The library also contains dashboard, metrics-service, and Prometheus collectors. They are outside the scope of this database-partition analysis because they use different inputs or are not part of the billing collector's registered Controller dataset.
 
 ### Partition Structure
 
@@ -202,6 +204,7 @@ WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19
   - Using literal timestamp values (not joins) in WHERE clause
   - Grouping consecutive hours into ranges
   - Filtering by both `job_created` (partition key) and `job_id`
+- It prioritizes the densest `job_created` partitions and caps selection at 1,000 jobs and 200,000 event rows by default. These limits can affect completeness for very large windows.
 
 ---
 
@@ -209,10 +212,10 @@ WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19
 
 **File**: `metrics_utility/library/collectors/controller/unified_jobs.py`
 
-**Purpose**: Collects unified job data (jobs created or finished within a time window).
+**Purpose**: Collects unified job data for jobs finished within a time window.
 
 **Tables Accessed**:
-- `main_unifiedjob` (READ) - Filtered by `created` OR `finished` timestamp
+- `main_unifiedjob` (READ) - Filtered by `finished` timestamp
 - `main_unifiedjobtemplate` (READ) - LEFT JOIN
 - `django_content_type` (READ) - LEFT JOIN for polymorphic type
 - `main_job` (READ) - LEFT JOIN
@@ -228,18 +231,17 @@ WHERE (e.job_created >= '2024-12-19 17:00:00+00' AND e.job_created < '2024-12-19
 ```sql
 SELECT main_unifiedjob.*, ...
 FROM main_unifiedjob
-WHERE (main_unifiedjob.created >= 'since' AND main_unifiedjob.created < 'until')
-   OR (main_unifiedjob.finished >= 'since' AND main_unifiedjob.finished < 'until')
-  AND main_unifiedjob.launch_type != 'sync'
+WHERE main_unifiedjob.finished >= 'since'
+  AND main_unifiedjob.finished < 'until'
 ```
 
 **Time Range Support**:
 - ✅ **Supports `since`/`until` parameters**
-- Filters by `created` OR `finished` timestamp (OR condition)
+- Filters by `finished` timestamp
 
 **Frequency**:
 - Run per collection window (typically daily)
-- Accesses jobs that were either created or finished in the time window
+- Accesses jobs that finished in the time window
 
 ---
 
@@ -490,6 +492,21 @@ ORDER BY main_hostmetric.hostname ASC, COALESCE(main_host.id, 0) ASC
 
 ---
 
+## Other registered billing collectors
+
+The billing collector also registers the following current collectors. They use non-partitioned tables and therefore do not add a partition-pruning case to this document:
+
+| Collector | Source table(s) | Time range | Role |
+|-----------|-----------------|------------|------|
+| `controller_version_service` | `main_instance` | Snapshot | Controller version metadata |
+| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | `since` / `until` | Managed credential usage |
+| `execution_environments` | `main_executionenvironment` | Snapshot | Execution environment metadata |
+| `table_metadata` | PostgreSQL catalog tables | Snapshot | Table row and size metadata |
+
+The library-only `feature_flags_service` reads enabled flags from `dab_feature_flags_aapflag`; it is not currently registered by the billing workflow.
+
+`task_executions_service` is a metrics-service database collector rather than a Controller database collector and is outside this partition analysis.
+
 ## Partition Pruning Strategies
 
 ### How Partition Pruning Works
@@ -557,6 +574,10 @@ All collectors leverage indexes where available:
 | `main_host` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ❌ | Daily snapshot |
 | `main_host_daily` | `main_host`, `main_inventory`, `main_organization`, `main_unifiedjob` | ❌ | N/A | ✅ | Incremental |
 | `main_indirectmanagednodeaudit` | `main_indirectmanagednodeaudit`, `main_job`, `main_unifiedjob`, `main_inventory`, `main_organization`, `main_unifiedjobtemplate` | ❌ | N/A | ✅ | Incremental |
+| `main_hostmetric` | `main_hostmetric`, `main_host` | ❌ | N/A | ✅ | Renewal guidance / incremental |
+| `controller_version_service` | `main_instance` | ❌ | N/A | ❌ | Snapshot |
+| `credentials_service` | `main_unifiedjob_credentials`, `main_unifiedjob`, `main_credential`, `main_credentialtype` | ❌ | N/A | ✅ | Incremental |
+| `table_metadata` | PostgreSQL catalog tables | ❌ | N/A | ❌ | Snapshot |
 
 ---
 

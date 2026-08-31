@@ -1,4 +1,6 @@
-# AAP metrics-utility
+# AAP metrics-utility (legacy)
+
+> This page contains historical pre-0.5 examples. For current installation, CLI, environment, and architecture documentation, start with the [README](../README.md), [CLI guide](cli.md), and [environment reference](environment.md). Current command flags and defaults take precedence over examples on this page.
 
 The AAP metrics utility tool is a standalone CLI utility called `metrics-utility` which is intended to be installed to
 the system containing instance of the [Automation Controller](https://www.ansible.com/products/controller).

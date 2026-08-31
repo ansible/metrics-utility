@@ -39,6 +39,8 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `main_jobevent_service(db, since, until).gather() -> DataFrame`
 * `unified_jobs(db, since, until).gather() -> DataFrame`
 
+Additional library collectors are available for dashboard data, filter options, metrics-service task execution data, Controller credentials, feature flags, Controller versions, table metadata, and worker vCPU data. The billing CLI registers only the collectors listed in its own `automation_controller_billing/collectors.py` module; check each collector's module docstring for its input database and time-window contract.
+
 Other collectors (in `metrics_utility.library.collectors.others`):
 * `total_workers_vcpu(cluster_name, metering_enabled, prometheus_url, ca_cert_path, token) -> Dict`
 
@@ -74,7 +76,7 @@ Such tarball can then be passed to a Storage class, and gets cleaned up afterwar
 Storage objects serve to provide a shared interface for various storage modes. Each can be initialized with an appropriate configuration, and can retrieve or save objects from/to long-term storage.
 
 Mainly S3 and local directories are supported,
-but the Storage mechanism can also be used to push the data to cloud APIs or to save it in a local DB.
+but the Storage mechanism can also be used to push the data to cloud APIs. Database-backed report inputs use the extractor/report layers rather than a generic database Storage adapter.
 
 Common API:
 
