@@ -367,7 +367,8 @@ SELECT version FROM main_instance WHERE enabled = true AND version IS NOT NULL O
 - `main_host` (READ) - Filtered by `enabled='t'`
 - `main_inventory` (READ) - LEFT JOIN
 - `main_organization` (READ) - LEFT JOIN
-- `main_unifiedjob` (READ) - LEFT JOIN for `last_job_id`
+- `main_jobhostsummary` (READ) - LEFT JOIN LATERAL for the latest summary per host
+- `main_unifiedjob` (READ) - LEFT JOIN through the latest job host summary
 
 **Partition Information**:
 - ❌ **Not partitioned** (all tables are non-partitioned)
@@ -376,6 +377,11 @@ SELECT version FROM main_instance WHERE enabled = true AND version IS NOT NULL O
 ```sql
 SELECT main_host.*, main_inventory.*, main_organization.*, ...
 FROM main_host
+LEFT JOIN LATERAL (
+  SELECT job_id FROM main_jobhostsummary
+  WHERE main_jobhostsummary.host_id = main_host.id
+  ORDER BY main_jobhostsummary.id DESC LIMIT 1
+) latest_summary ON TRUE
 WHERE enabled='t'
 ```
 
@@ -398,7 +404,8 @@ WHERE enabled='t'
 - `main_host` (READ) - Filtered by `created` OR `modified` timestamp
 - `main_inventory` (READ) - LEFT JOIN
 - `main_organization` (READ) - LEFT JOIN
-- `main_unifiedjob` (READ) - LEFT JOIN
+- `main_jobhostsummary` (READ) - LEFT JOIN LATERAL for the latest summary per host
+- `main_unifiedjob` (READ) - LEFT JOIN through the latest job host summary
 
 **Partition Information**:
 - ❌ **Not partitioned** (all tables are non-partitioned)
@@ -407,6 +414,11 @@ WHERE enabled='t'
 ```sql
 SELECT main_host.*, ...
 FROM main_host
+LEFT JOIN LATERAL (
+  SELECT job_id FROM main_jobhostsummary
+  WHERE main_jobhostsummary.host_id = main_host.id
+  ORDER BY main_jobhostsummary.id DESC LIMIT 1
+) latest_summary ON TRUE
 WHERE enabled='t'
   AND (main_host.created >= 'since' AND main_host.created < 'until'
     OR main_host.modified >= 'since' AND main_host.modified < 'until')
