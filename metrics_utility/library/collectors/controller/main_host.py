@@ -90,7 +90,14 @@ def _main_host_query(where):
         FROM main_host
         LEFT JOIN main_inventory ON main_inventory.id = main_host.inventory_id
         LEFT JOIN main_organization ON main_organization.id = main_inventory.organization_id
-        LEFT JOIN main_unifiedjob ON main_unifiedjob.id = main_host.last_job_id
+        LEFT JOIN LATERAL (
+            SELECT main_jobhostsummary.job_id
+            FROM main_jobhostsummary
+            WHERE main_jobhostsummary.host_id = main_host.id
+            ORDER BY main_jobhostsummary.id DESC
+            LIMIT 1
+        ) AS latest_job_host_summary ON TRUE
+        LEFT JOIN main_unifiedjob ON main_unifiedjob.id = latest_job_host_summary.job_id
         WHERE {where}
         ORDER BY main_host.id ASC
     """
