@@ -97,7 +97,7 @@ class DataframeContentUsage(Base):
         Returns:
             Regex pattern string.
         """
-        return r'^(\w+)\.(\w+)\.((\w+)(\.|$))+'
+        return r'^(\w+)\.(\w+)\.(\w+)(?:\.\w+)*$'
 
     @staticmethod
     def standalone_role_regexp():
