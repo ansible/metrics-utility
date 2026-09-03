@@ -129,6 +129,8 @@ When `METRICS_UTILITY_CANDLEPIN_STORAGE=db`, registration may fall back to the C
 * `METRICS_UTILITY_MAX_GATHER_PERIOD_DAYS` - maximum length of a collection interval in days, default 28; see `get_max_gather_period_days`
 * `METRICS_UTILITY_OPTIONAL_COLLECTORS` - optional collectors, comma-separated list
 * `METRICS_UTILITY_PROMETHEUS_URL` - Prometheus base url
+* `METRICS_UTILITY_PROMETHEUS_TOKEN` - Prometheus bearer token, overrides the in-cluster service-account token (local testing, see `./run-vcpu`)
+* `METRICS_UTILITY_PROMETHEUS_CA_CERT_PATH` - CA cert for Prometheus TLS, overrides the in-cluster service CA; empty string skips verification
 * `METRICS_UTILITY_USAGE_BASED_METERING_ENABLED` - `total_workers_vcpu` collector toggle - skips kubernetes when disabled (=false, default)
 
 

@@ -238,18 +238,28 @@ def cli_total_workers_vcpu(since, until, output):
     token = None
     ca_cert_path = None
     if metering_enabled:
+        # METRICS_UTILITY_PROMETHEUS_TOKEN / _CA_CERT_PATH override the in-cluster
+        # service-account paths, so we can gather against a local/mock Prometheus
+        # (see ./run-vcpu). Set _CA_CERT_PATH to an empty string to skip TLS verification.
+        token = os.getenv('METRICS_UTILITY_PROMETHEUS_TOKEN')
+        ca_cert_path = os.getenv('METRICS_UTILITY_PROMETHEUS_CA_CERT_PATH')
+
         token_path = '/var/run/secrets/kubernetes.io/serviceaccount/token'
-        if not os.path.exists(token_path):
+        if not token and not os.path.exists(token_path):
             raise MetricsException(f'Service account token not found at {token_path}')
 
-        ca_cert_path = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
-        if not os.path.exists(ca_cert_path):
+        if ca_cert_path is None:
+            ca_cert_path = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+            if not os.path.exists(ca_cert_path):
+                raise MetricsException(f'CA_CERT not found at {ca_cert_path}')
+        elif ca_cert_path and not os.path.exists(ca_cert_path):
             raise MetricsException(f'CA_CERT not found at {ca_cert_path}')
 
-        with open(token_path) as f:
-            token = f.read().strip()
         if not token:
-            raise MetricsException(f'Unable to retrieve the token for the current service account from {token_path}')
+            with open(token_path) as f:
+                token = f.read().strip()
+            if not token:
+                raise MetricsException(f'Unable to retrieve the token for the current service account from {token_path}')
 
     def log_info_data(info):
         # This message must always appear in the log regardless of the log level.
