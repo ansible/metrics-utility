@@ -7,7 +7,10 @@ on:
     types:
       - completed
 
-permissions: read-all
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
 
 jobs:
   sonarcloud:
@@ -64,12 +67,22 @@ jobs:
           echo "PR_BASE=$PR_BASE" >> $GITHUB_ENV
           echo "PR_HEAD=$PR_HEAD" >> $GITHUB_ENV
 
-      - name: Checkout Code for PR
+      - name: Checkout the commit coverage was generated against
+        # Analyse the exact commit pytest measured coverage against (the fake
+        # merge commit, on a pull_request event). gh pr checkout would give the
+        # PR head instead; if devel has since changed a file's length, the
+        # coverage line numbers fall out of range and SonarCloud drops the
+        # ENTIRE coverage report -> new-code coverage wrongly reads 0%.
+        # Note: the merge commit is ephemeral - if devel moves before this job
+        # runs (e.g. a manual re-run much later), GitHub may have GC'd it and
+        # the fetch fails loudly. That is preferable to the silent 0% above.
         run: |
-          gh pr checkout "$PR_NUMBER"
+          COVERAGE_SHA=$(cat pr-artifact/coverage_sha.txt)
+          echo "Analysing coverage commit $COVERAGE_SHA"
+          git fetch origin "$COVERAGE_SHA"
+          git checkout "$COVERAGE_SHA"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ env.PR_NUMBER }}
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0

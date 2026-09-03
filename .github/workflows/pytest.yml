@@ -5,6 +5,9 @@ on:
     branches: ['devel']
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   pytest:
     runs-on: ubuntu-latest
@@ -111,16 +114,24 @@ jobs:
           name: coverage-report
           path: coverage.xml
 
-      - name: "Save off PR number"
+      - name: "Save off PR number and analysed commit"
         if: github.event_name == 'pull_request'
-        run: echo "PR ${{ github.event.pull_request.number }}" > pr_number.txt
+        # HEAD here is the commit coverage.xml was generated against (on a
+        # pull_request event actions/checkout checks out the fake merge commit).
+        # sonar_checks.yml must analyse this exact commit, otherwise coverage
+        # line numbers won't match the source and the whole report is dropped.
+        run: |
+          echo "PR ${{ github.event.pull_request.number }}" > pr_number.txt
+          git rev-parse HEAD > coverage_sha.txt
 
-      - name: "Upload PR number"
+      - name: "Upload PR number and analysed commit"
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: pr_number
-          path: pr_number.txt
+          path: |
+            pr_number.txt
+            coverage_sha.txt
 
       - name: "Send code coverage report to Sonar Cloud (on push)"
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
