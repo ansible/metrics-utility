@@ -1,3 +1,10 @@
+# 0.6 End of life
+
+The 0.6 branch is no longer maintained.
+AAP 2.6 has moved on to use the 0.7 branch.
+
+---
+
 # AAP metrics-utility
 
 A standalone CLI utility for collecting and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances. This tool allows users to:
