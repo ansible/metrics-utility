@@ -1031,6 +1031,99 @@ $yaml$,
         TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
       );
       diversify_counter := diversify_counter + 1;
+
+      -- async_fire_forget_task: runner_on_ok with async_job_id in res (not async_status)
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_ff_task", "res": {"ansible_job_id": "ff_' || diversify_idx || '"}}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify ff task', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- async_poll_loop: runner_on_async_ok + runner_item_on_ok sharing task_uuid
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_async_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_apl"}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify async poll loop', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_item_on_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_apl"}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify async poll loop item', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      -- async_fire_forget_loop: runner_on_ok with async_job_id + runner_item_on_ok sharing task_uuid
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_on_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_ffl", "res": {"ansible_job_id": "ffl_' || diversify_idx || '"}}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify ff loop', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
+
+      INSERT INTO public.main_jobevent (
+        created, modified, event, event_data, failed, changed,
+        host_name, play, role, task, counter,
+        host_id, job_id, uuid, parent_uuid, end_line, playbook,
+        start_line, stdout, verbosity, job_created
+      ) VALUES (
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00',
+        'runner_item_on_ok',
+        ('{"task_action": "' || diversify_mod || '", "task_uuid": "div_' || diversify_idx || '_ffl"}')::text,
+        false, false,
+        host_name, 'default_play', diversify_role, 'diversify ff loop item', diversify_counter,
+        host_id, unified_job_id, gen_random_uuid()::text, '', diversify_counter, 'default_playbook.yml',
+        diversify_counter, '', 0,
+        TIMESTAMP WITH TIME ZONE '2025-06-13 10:00:00+00'
+      );
+      diversify_counter := diversify_counter + 1;
     END LOOP;
 
     -- Clear started on job 1 so jobs_never_started_total is non-zero in rollups.

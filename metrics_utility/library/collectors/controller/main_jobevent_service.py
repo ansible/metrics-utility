@@ -215,6 +215,9 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             e.host_id,
             e.host_name,
 
+            -- Fire-and-forget async detection: present when task uses async+poll:0
+            ed.event_data->'res'->>'ansible_job_id' AS async_job_id,
+
             -- Warnings and deprecations (json arrays)
             ed.event_data->'res'->'warnings'     AS warnings,
             ed.event_data->'res'->'deprecations' AS deprecations,
