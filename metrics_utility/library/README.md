@@ -77,6 +77,8 @@ storage = StorageSegment(
 )
 ```
 
+Also allows optional `host='http://example.com:12345'` for testing.
+
 The CLI keeps its own storage backends for filesystem, S3 and console.redhat.com under `metrics_utility.automation_controller_billing`.
 
 
@@ -91,6 +93,6 @@ from metrics_utility.library import lock
 
 with lock('my-unique-key', wait=False, db=db) as acquired:
     if not acquired:
-        raise 'too bad'  # or use wait=True instead
+        raise ...  # or use wait=True instead
     ...
 ```

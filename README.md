@@ -86,6 +86,7 @@ with lock('my-unique-key', wait=False, db=db) as acquired:
     config_dict = config(db=db).gather()
 
     # list of .csv filenames; since is included, until is excluded
+    # both datetime with timezone, or None
     job_csvs = main_jobevent(db=db, since=since, until=until).gather()
 ```
 
