@@ -211,8 +211,8 @@ class StorageSegment:
             event_name = 'Metrics Artifact Upload'
         segment_meta = {**(segment_meta or {})}
         has_message_id = bool(segment_meta.get('message_id'))
-        if (anonymous_id is None) != (not has_message_id):
-            raise ValueError("anonymous_id and segment_meta['message_id'] must be provided together for retry-safe sends")
+        if has_message_id and anonymous_id is None:
+            raise ValueError("segment_meta['message_id'] requires anonymous_id for retry-safe sends")
         if 'timestamp' not in segment_meta:
             segment_meta['timestamp'] = datetime.datetime.now(tz=datetime.UTC)
         if anonymous_id is None:

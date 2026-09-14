@@ -270,12 +270,12 @@ class TestStorageSegmentAvailable:
         with pytest.raises(ValueError, match='requires dict='):
             storage_segment.put(artifact_name='test_artifact')
 
-    def test_put_requires_both_retry_identifiers(self):
-        """Require anonymous and message IDs together for retry-safe sends."""
+    def test_put_requires_anonymous_id_for_message_id(self):
+        """Require an anonymous ID when a stable message ID is supplied."""
         storage_segment = StorageSegment(write_key='test_write_key')
 
-        with pytest.raises(ValueError, match='must be provided together'):
-            storage_segment.put(artifact_name='test_artifact', dict={'statistics': {}}, anonymous_id='anonymous-only')
+        with pytest.raises(ValueError, match='requires anonymous_id'):
+            storage_segment.put(artifact_name='test_artifact', dict={'statistics': {}}, segment_meta={'message_id': 'message-only'})
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_logs_and_raises_network_errors_in_debug_mode(self, mock_post):
