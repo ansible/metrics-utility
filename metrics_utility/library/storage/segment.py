@@ -279,7 +279,8 @@ class StorageSegment:
         parsed_url = urlsplit(base_url)
         if parsed_url.scheme != 'https':
             is_loopback = parsed_url.hostname in {'localhost', '127.0.0.1', '::1'}
-            if parsed_url.scheme != 'http' or not is_loopback or not self.allow_insecure_host:
+            explicit_test_host = self.host is not None and (self.allow_insecure_host or is_loopback)
+            if parsed_url.scheme != 'http' or not is_loopback or not explicit_test_host:
                 raise ValueError('Segment host must use HTTPS; HTTP is restricted to explicit loopback test hosts')
         if not parsed_url.netloc:
             raise ValueError('Segment host must include a valid hostname')
