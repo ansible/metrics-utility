@@ -1018,6 +1018,7 @@ MOCK_SEGMENT_URL = os.getenv('MOCK_SEGMENT_URL', 'http://localhost:8765')
 
 @pytest.mark.parametrize('unified_jobs_func', [unified_jobs, unified_jobs_dashboard], ids=['unified_jobs', 'unified_jobs_dashboard'])
 def test_from_gather_to_json(cleanup_glob, unified_jobs_func):
+    """Validate that generated rollup chunks arrive in gzip batch requests."""
     """
     Full integration test: gather data from the DB, compute an anonymized rollup,
     validate the JSON structure, then ship it to a mock Segment server and assert

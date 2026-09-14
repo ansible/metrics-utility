@@ -51,6 +51,7 @@ class StorageSegment:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
     def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size):
+        """Build the Segment properties object for one artifact chunk."""
         return {
             'artifact_name': artifact_name,
             'data': data,
@@ -68,15 +69,18 @@ class StorageSegment:
 
     @staticmethod
     def _json_bytes(data):
+        """Serialize a payload using compact JSON and UTF-8 bytes."""
         return json.dumps(data, separators=(',', ':')).encode('utf-8')
 
     @staticmethod
     def _serialize_value(value):
+        """Convert date and datetime values to Segment-compatible strings."""
         if isinstance(value, (datetime.datetime, datetime.date)):
             return value.isoformat()
         return value
 
     def _build_event(self, artifact_name, event_name, anonymous_id, chunk, chunk_number, total_chunks, segment_meta):
+        """Build one deterministic Segment track event from an artifact chunk."""
         chunk_size = self._calculate_size(chunk)
         timestamp = segment_meta.get('timestamp')
         base_message_id = segment_meta.get('message_id') or f'{artifact_name}:{event_name}:{anonymous_id}:{timestamp}'
@@ -125,27 +129,21 @@ class StorageSegment:
         return batches
 
     def _split_into_chunks(self, data, max_size):
-        """
-        Split data into chunks based on max_size.
+        """Split an artifact into top-level chunks below the requested size.
 
-        Always splits by top-level keys - each top-level key gets its own chunk(s).
-        If a top-level key's value is a list, it is split in order: the next item is
-        considered appended to the current chunk; if ``json.dumps`` of that chunk
-        would exceed max_size, the current chunk is finalized and a new one is started
-        (or a single oversize item is emitted alone with a warning).
+        Lists are split in order when appending another item would exceed the
+        limit. Dictionaries and individual oversized list items are preserved
+        as single chunks and reported through the logger.
 
         Args:
-            data: Dictionary to split, dictionary contains key : value pairs
-            Those key value pairs are either dicts or list
-            only lists are split into chunks, dicts are not split, thus dicts can not
-            be larger than max_size
-            max_size: Maximum size in bytes for each chunk (JSON of top-level {key: ...})
+            data: Dictionary containing the artifact data to split.
+            max_size: Maximum JSON size in bytes for a regular chunk.
 
         Returns:
-            List of data chunks
+            The ordered list of artifact chunks.
 
         Raises:
-            ValueError: If max_size is not positive.
+            ValueError: If ``max_size`` is not positive.
         """
         if max_size <= 0:
             msg = f'max_size must be positive, got {max_size}'
@@ -185,6 +183,88 @@ class StorageSegment:
 
         return chunks or [data]
 
+    def _validate_put_args(self, artifact_name, filename, fileobj, data):
+        """Validate supported input arguments and whether uploads are enabled."""
+        if filename or fileobj or data is None:
+            msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
+            raise Exception(msg)
+
+        if self.write_key:
+            return True
+        if self.debug:
+            logger.debug('Segment write_key not set, skipping analytics upload for: %s', artifact_name)
+        return False
+
+    def _prepare_batches(self, artifact_name, data, event_name, segment_meta, anonymous_id):
+        """Build bounded Segment batches and return them with their chunks."""
+        if event_name is None:
+            event_name = 'Metrics Artifact Upload'
+        segment_meta = {**(segment_meta or {})}
+        if 'timestamp' not in segment_meta:
+            segment_meta['timestamp'] = datetime.datetime.now(tz=datetime.UTC)
+        if anonymous_id is None:
+            anonymous_id = str(uuid.uuid4())
+        chunks = self._split_into_chunks(data, self.REGULAR_MESSAGE_LIMIT)
+        total_chunks = len(chunks)
+
+        if self.debug:
+            print(f'Split data into {total_chunks} chunks', file=sys.stderr)
+
+        events = [
+            self._build_event(artifact_name, event_name, anonymous_id, chunk, i, total_chunks, segment_meta) for i, chunk in enumerate(chunks, 1)
+        ]
+        sent_at = datetime.datetime.now(tz=datetime.UTC).isoformat()
+        return chunks, self._split_into_batches(events, sent_at), sent_at
+
+    def _send_batch(self, endpoint, batch, batch_number, total_batches, sent_at):
+        """Send one batch and log or re-raise transport failures."""
+        payload = {'batch': batch, 'sentAt': sent_at}
+        body = self._json_bytes(payload)
+        wire_body = gzip.compress(body) if self.gzip else body
+        headers = {'Content-Type': 'application/json'}
+        if self.gzip:
+            headers['Content-Encoding'] = 'gzip'
+
+        response = None
+        try:
+            response = requests.post(
+                endpoint,
+                data=wire_body,
+                headers=headers,
+                auth=(self.write_key, ''),
+                timeout=self.REQUEST_TIMEOUT,
+            )
+            response.raise_for_status()
+        except requests.RequestException as error:
+            if self.debug:
+                logger.debug(
+                    'Segment batch %d/%d failed: status=%s, response=%s, error=%s',
+                    batch_number,
+                    total_batches,
+                    response.status_code if response is not None else None,
+                    response.text if response is not None else None,
+                    error,
+                )
+            raise
+
+        if self.debug:
+            logger.debug(
+                'Segment batch %d/%d: events=%d, json_bytes=%d, wire_bytes=%d, status=%d, response=%s',
+                batch_number,
+                total_batches,
+                len(batch),
+                len(body),
+                len(wire_body),
+                response.status_code,
+                response.text,
+            )
+
+    def _send_batches(self, batches, sent_at):
+        """Send all prepared batches to Segment's batch endpoint."""
+        endpoint = f'{(self.host or "https://api.segment.io").rstrip("/")}{self.SEGMENT_BATCH_PATH}'
+        for batch_number, batch in enumerate(batches, 1):
+            self._send_batch(endpoint, batch, batch_number, len(batches), sent_at)
+
     def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None, segment_meta=None, anonymous_id=None):
         """
         Send data to Segment, splitting into chunks if necessary.
@@ -204,83 +284,8 @@ class StorageSegment:
         :attr:`REGULAR_MESSAGE_LIMIT` (JSON bytes), with headroom for Segment's
         per-message size limit.
         """
-        chunks = []
-        if filename or fileobj or dict is None:
-            msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
-            raise Exception(msg)
-
-        if not self.write_key:
-            if self.debug:
-                logger.debug('Segment write_key not set, skipping analytics upload for: %s', artifact_name)
+        if not self._validate_put_args(artifact_name, filename, fileobj, dict):
             return
-
-        # Default event name
-        if event_name is None:
-            event_name = 'Metrics Artifact Upload'
-
-        if not segment_meta:
-            segment_meta = {}
-
-        if 'timestamp' not in segment_meta:
-            segment_meta = {**segment_meta, 'timestamp': datetime.datetime.now(tz=datetime.UTC)}
-
-        if anonymous_id is None:
-            anonymous_id = str(uuid.uuid4())
-        chunks = self._split_into_chunks(dict, self.REGULAR_MESSAGE_LIMIT)
-
-        total_chunks = len(chunks)
-
-        if self.debug:
-            msg = f'Split data into {total_chunks} chunks'
-            print(msg, file=sys.stderr)
-
-        events = [
-            self._build_event(artifact_name, event_name, anonymous_id, chunk, i, total_chunks, segment_meta) for i, chunk in enumerate(chunks, 1)
-        ]
-        sent_at = datetime.datetime.now(tz=datetime.UTC).isoformat()
-        batches = self._split_into_batches(events, sent_at)
-        endpoint = f'{(self.host or "https://api.segment.io").rstrip("/")}{self.SEGMENT_BATCH_PATH}'
-
-        for batch_number, batch in enumerate(batches, 1):
-            payload = {'batch': batch, 'sentAt': sent_at}
-            body = self._json_bytes(payload)
-            wire_body = gzip.compress(body) if self.gzip else body
-            headers = {'Content-Type': 'application/json'}
-            if self.gzip:
-                headers['Content-Encoding'] = 'gzip'
-
-            response = None
-            try:
-                response = requests.post(
-                    endpoint,
-                    data=wire_body,
-                    headers=headers,
-                    auth=(self.write_key, ''),
-                    timeout=self.REQUEST_TIMEOUT,
-                )
-                response.raise_for_status()
-            except requests.RequestException as error:
-                if self.debug:
-                    logger.debug(
-                        'Segment batch %d/%d failed: status=%s, response=%s, error=%s',
-                        batch_number,
-                        len(batches),
-                        response.status_code if response is not None else None,
-                        response.text if response is not None else None,
-                        error,
-                    )
-                raise
-
-            if self.debug:
-                logger.debug(
-                    'Segment batch %d/%d: events=%d, json_bytes=%d, wire_bytes=%d, status=%d, response=%s',
-                    batch_number,
-                    len(batches),
-                    len(batch),
-                    len(body),
-                    len(wire_body),
-                    response.status_code,
-                    response.text,
-                )
-
+        chunks, batches, sent_at = self._prepare_batches(artifact_name, dict, event_name, segment_meta, anonymous_id)
+        self._send_batches(batches, sent_at)
         return chunks

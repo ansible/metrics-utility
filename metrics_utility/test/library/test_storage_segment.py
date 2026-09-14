@@ -12,6 +12,7 @@ from metrics_utility.test.library.testing_data_for_segment import segment_data, 
 
 class TestStorageSegmentAvailable:
     def test_correct_splitting_for_small_data(self):
+        """Split the standard fixture into one chunk per top-level section."""
         storage_segment = StorageSegment()
         chunks = storage_segment._split_into_chunks(segment_data, storage_segment.REGULAR_MESSAGE_LIMIT)
         assert len(chunks) == 5
@@ -22,6 +23,7 @@ class TestStorageSegmentAvailable:
         assert 'job_host_summary' in chunks[4]
 
     def test_correct_splitting_for_large_data(self):
+        """Split large list data into ordered chunks at the regular limit."""
         storage_segment = StorageSegment()
         chunks = storage_segment._split_into_chunks(segment_data_large, storage_segment.REGULAR_MESSAGE_LIMIT)
         assert len(chunks) == 7
@@ -37,12 +39,14 @@ class TestStorageSegmentAvailable:
         assert len(chunks[3]['module_stats']) == 12
 
     def test_simple_list_data(self):
+        """Keep a small list in a single artifact chunk."""
         data = {'test_list': ['item1', 'item2']}
         chunks = StorageSegment()._split_into_chunks(data, StorageSegment.REGULAR_MESSAGE_LIMIT)
         assert len(chunks) == 1
         assert chunks[0]['test_list'] == data['test_list']
 
     def test_simple_list_large_data(self):
+        """Split a large list while preserving item counts and ordering."""
         data = {'test_list': [f'item{i}' for i in range(3000)]}
         chunks = StorageSegment()._split_into_chunks(data, StorageSegment.REGULAR_MESSAGE_LIMIT)
         assert len(chunks) == 2
@@ -50,6 +54,7 @@ class TestStorageSegmentAvailable:
         assert len(chunks[1]['test_list']) == 179
 
     def test_rollup_period_string_arrays(self):
+        """Split each rollup-period array into its own chunk."""
         data = {
             'rollup_period_controller_versions': ['2.15.0', '2.16.0', '2.17.0', '2.18.0', '2.19.0'],
             'rollup_period_scm_types': ['git', 'manual'],
@@ -63,6 +68,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_sends_gzipped_batch(self, mock_post):
+        """Send a compressed batch containing valid Segment track fields."""
         mock_post.return_value = Mock(status_code=200, text='{"success":true}')
         storage_segment = StorageSegment(write_key='test_write_key', debug=True)
 
@@ -83,6 +89,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_accepts_anonymous_id(self, mock_post):
+        """Reuse a caller-provided anonymous ID across all events."""
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key')
 
@@ -97,6 +104,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_sends_multiple_chunks_in_one_batch(self, mock_post):
+        """Place multiple artifact chunks in one batch request when it fits."""
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key', debug=True)
 
@@ -111,6 +119,7 @@ class TestStorageSegmentAvailable:
             assert event['properties']['chunk_info']['total_chunks'] == 7
 
     def test_split_into_chunks_rejects_non_positive_max_size(self):
+        """Reject invalid non-positive chunk size limits."""
         storage_segment = StorageSegment()
         with pytest.raises(ValueError, match='max_size must be positive'):
             storage_segment._split_into_chunks({'key': [1, 2, 3]}, 0)
@@ -118,6 +127,7 @@ class TestStorageSegmentAvailable:
             storage_segment._split_into_chunks({'key': [1, 2, 3]}, -100)
 
     def test_split_into_chunks_warns_on_oversized_dict(self, caplog):
+        """Warn but preserve an oversized dictionary chunk."""
         storage_segment = StorageSegment()
         data = {'big': {'a': 'x' * 500}}
         chunks = storage_segment._split_into_chunks(data, 50)
@@ -126,6 +136,7 @@ class TestStorageSegmentAvailable:
         assert 'Oversized dict chunk' in caplog.text
 
     def test_split_into_chunks_warns_on_oversized_single_list_item(self, caplog):
+        """Warn but preserve an oversized individual list item."""
         storage_segment = StorageSegment()
         data = {'items': ['x' * 500]}
         chunks = storage_segment._split_into_chunks(data, 50)
@@ -134,6 +145,7 @@ class TestStorageSegmentAvailable:
         assert 'Single list item' in caplog.text
 
     def test_split_into_batches_rejects_oversized_event_after_flush(self):
+        """Reject an oversized event even after flushing a prior batch."""
         storage_segment = StorageSegment()
         storage_segment.BATCH_SIZE_LIMIT = 100
         small_event = {'messageId': 'small', 'properties': {'value': 'x'}}
@@ -144,6 +156,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_preserves_segment_meta(self, mock_post):
+        """Derive distinct deterministic message IDs for metadata-based sends."""
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key')
 
@@ -160,6 +173,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_reuses_message_ids_for_retryable_metadata(self, mock_post):
+        """Reuse message IDs when retry metadata and event identity are stable."""
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key')
         metadata = {'message_id': 'stable-upload', 'timestamp': '2026-01-01T00:00:00+00:00'}
@@ -174,6 +188,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_splits_oversized_batches(self, mock_post):
+        """Split events across multiple requests when the batch limit is reached."""
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key', debug=False)
         storage_segment.BATCH_SIZE_LIMIT = 40000
@@ -190,6 +205,7 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_can_disable_gzip(self, mock_post):
+        """Allow callers to send an uncompressed JSON request body."""
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key', gzip=False)
 
@@ -201,10 +217,33 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_raises_http_errors(self, mock_post):
+        """Propagate HTTP failures so dispatcherd can retry the task."""
         response = Mock(status_code=400, text='bad request')
         response.raise_for_status.side_effect = requests.HTTPError('bad request')
         mock_post.return_value = response
         storage_segment = StorageSegment(write_key='test_write_key')
 
         with pytest.raises(requests.HTTPError):
+            storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+    def test_put_skips_upload_without_write_key(self):
+        """Skip uploads when Segment credentials are not configured."""
+        storage_segment = StorageSegment(debug=True)
+
+        assert storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}}) is None
+
+    def test_put_rejects_unsupported_file_arguments(self):
+        """Reject filename and file-object inputs unsupported by this backend."""
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        with pytest.raises(Exception, match='not supported'):
+            storage_segment.put(artifact_name='test_artifact', filename='artifact.json', dict={})
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_logs_and_raises_network_errors_in_debug_mode(self, mock_post):
+        """Log transport failures in debug mode while preserving the exception."""
+        mock_post.side_effect = requests.Timeout('request timed out')
+        storage_segment = StorageSegment(write_key='test_write_key', debug=True)
+
+        with pytest.raises(requests.Timeout):
             storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
