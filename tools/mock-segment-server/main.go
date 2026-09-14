@@ -14,6 +14,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,9 +27,10 @@ import (
 )
 
 type record struct {
-	Timestamp string          `json:"timestamp"`
-	Path      string          `json:"path"`
-	Body      json.RawMessage `json:"body"`
+	Timestamp       string          `json:"timestamp"`
+	Path            string          `json:"path"`
+	ContentEncoding string          `json:"content_encoding,omitempty"`
+	Body            json.RawMessage `json:"body"`
 }
 
 var (
@@ -41,11 +44,27 @@ func handlePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to read body", http.StatusInternalServerError)
 		return
 	}
+	if r.Header.Get("Content-Encoding") == "gzip" {
+		reader, err := gzip.NewReader(bytes.NewReader(body))
+		if err != nil {
+			http.Error(w, "failed to open gzip body", http.StatusBadRequest)
+			return
+		}
+		body, err = io.ReadAll(reader)
+		if closeErr := reader.Close(); err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			http.Error(w, "failed to decompress gzip body", http.StatusBadRequest)
+			return
+		}
+	}
 
 	rec := record{
-		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-		Path:      r.URL.Path,
-		Body:      json.RawMessage(body),
+		Timestamp:       time.Now().UTC().Format(time.RFC3339Nano),
+		Path:            r.URL.Path,
+		ContentEncoding: r.Header.Get("Content-Encoding"),
+		Body:            json.RawMessage(body),
 	}
 
 	mu.Lock()

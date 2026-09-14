@@ -61,14 +61,16 @@ Other collectors (in `metrics_utility.library.collectors.others`):
 
 #### Storage
 
-`StorageSegment` (in `metrics_utility.library.storage`) provides a put-only interface for pushing data to [segment analytics](https://segment.com/docs/connections/sources/catalog/libraries/server/python/).
+`StorageSegment` (in `metrics_utility.library.storage`) provides a put-only interface for pushing data to Segment's HTTP Tracking API. It sends bounded `/v1/batch` requests directly, gzip-compressed by default, without starting SDK worker threads.
 
 ```python
 from metrics_utility.library.storage import StorageSegment
 
 # debug = bool
 # user_id = string, passed to analytics.track
-# write_key = segment.com source write key
+# write_key = Segment source write key
+# gzip = bool, defaults to True
+# fallback_to_sdk = bool, optional legacy SDK fallback
 
 storage = StorageSegment(
     debug=False,

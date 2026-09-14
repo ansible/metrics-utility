@@ -1,21 +1,21 @@
 """Storage backend that ships anonymized analytics to Segment."""
 
 import datetime
+import gzip
 import hashlib
 import json
 import sys
 import uuid
+
+import requests
 
 from metrics_utility.logger import logger
 
 
 try:
     from segment import analytics
-
-    SEGMENT_AVAILABLE = True
 except ImportError:
     analytics = None
-    SEGMENT_AVAILABLE = False
 
 
 class StorageSegment:
@@ -26,25 +26,29 @@ class StorageSegment:
     per-message size limit.
     """
 
-    # Total budget for each Segment track message (JSON bytes). The SDK enforces a
-    # hard 32KB limit; in the `put` in this file, we subtract the header (and all
-    # other properties in the packet) from this number, and chunk accordingly
+    # Total budget for each Segment track message (JSON bytes).
     REGULAR_MESSAGE_LIMIT = 32 * 1024
+    # Segment's batch limit is below 500 KB. Leave room for the request envelope.
+    BATCH_SIZE_LIMIT = 475_000
+    REQUEST_TIMEOUT = 30
+    SEGMENT_BATCH_PATH = '/v1/batch'
 
     def __init__(self, **settings):
         """Initialise the Segment storage backend.
 
         Args:
-            **settings: Accepts ``'debug'`` (bool), ``'user_id'`` (str), and
-                ``'write_key'`` (str, required for actual uploads).
+            **settings: Accepts ``'debug'`` (bool), ``'user_id'`` (str),
+                ``'write_key'`` (str, required for actual uploads),
+                ``'host'`` (str, optional base URL override),
+                ``'gzip'`` (bool, default True), and
+                ``'fallback_to_sdk'`` (bool, default False).
         """
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')
         self.host = settings.get('host')
-
-        if not SEGMENT_AVAILABLE:
-            logger.info('StorageSegment: segment module not installed. Analytics will be disabled.')
+        self.gzip = settings.get('gzip', True)
+        self.fallback_to_sdk = settings.get('fallback_to_sdk', False)
 
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
@@ -64,6 +68,89 @@ class StorageSegment:
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
         return len(json.dumps(data).encode('utf-8'))
+
+    @staticmethod
+    def _json_bytes(data):
+        return json.dumps(data, separators=(',', ':')).encode('utf-8')
+
+    @staticmethod
+    def _serialize_value(value):
+        if isinstance(value, (datetime.datetime, datetime.date)):
+            return value.isoformat()
+        return value
+
+    def _build_event(self, artifact_name, event_name, anonymous_id, chunk, chunk_number, total_chunks, segment_meta):
+        chunk_size = self._calculate_size(chunk)
+        base_message_id = segment_meta.get('message_id')
+        if base_message_id:
+            message_id = hashlib.sha256(f'{base_message_id}_{chunk_number}'.encode('utf-8', errors='replace')).hexdigest()
+        else:
+            message_id = str(uuid.uuid4())
+
+        event = {
+            'type': 'track',
+            'anonymousId': anonymous_id,
+            'messageId': message_id,
+            'event': event_name,
+            'timestamp': self._serialize_value(segment_meta.get('timestamp', datetime.datetime.now(tz=datetime.UTC))),
+            'context': segment_meta.get('context', {}),
+            'integrations': segment_meta.get('integrations', {}),
+            'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size),
+        }
+        if 'user_id' in segment_meta:
+            event['userId'] = segment_meta['user_id']
+        return event
+
+    def _split_into_batches(self, events, sent_at):
+        """Group events into request bodies below Segment's batch-size limit."""
+        batches = []
+        active_batch = []
+
+        for event in events:
+            candidate = [*active_batch, event]
+            payload = {'batch': candidate, 'sentAt': sent_at}
+            if len(self._json_bytes(payload)) > self.BATCH_SIZE_LIMIT:
+                if active_batch:
+                    batches.append(active_batch)
+                    active_batch = [event]
+                else:
+                    msg = f'Single Segment event exceeds the {self.BATCH_SIZE_LIMIT}-byte batch limit'
+                    raise ValueError(msg)
+            else:
+                active_batch = candidate
+
+        if active_batch:
+            batches.append(active_batch)
+        return batches
+
+    def _send_batch_with_sdk(self, events):
+        """Send one failed batch through the legacy SDK when explicitly enabled."""
+        if analytics is None:
+            raise RuntimeError('Segment SDK fallback requested but segment-analytics-python is not installed')
+
+        client = analytics.Client(
+            write_key=self.write_key,
+            debug=self.debug,
+            gzip=self.gzip,
+            sync_mode=True,
+            host=self.host or None,
+            on_error=lambda err, batch: logger.error('Segment SDK fallback error: %s', err),
+        )
+        for event in events:
+            timestamp = event.get('timestamp')
+            if isinstance(timestamp, str):
+                timestamp = datetime.datetime.fromisoformat(timestamp)
+            client.track(
+                user_id=event.get('userId'),
+                anonymous_id=event.get('anonymousId'),
+                event=event['event'],
+                properties=event['properties'],
+                context=event.get('context'),
+                integrations=event.get('integrations'),
+                timestamp=timestamp,
+                message_id=event.get('messageId'),
+            )
+        client.flush()
 
     def _split_into_chunks(self, data, max_size):
         """
@@ -148,12 +235,6 @@ class StorageSegment:
             msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
             raise Exception(msg)
 
-        # Check if segment is available and configured
-        if not SEGMENT_AVAILABLE:
-            if self.debug:
-                logger.debug('Segment not available, skipping analytics upload for: %s', artifact_name)
-            return
-
         if not self.write_key:
             if self.debug:
                 logger.debug('Segment write_key not set, skipping analytics upload for: %s', artifact_name)
@@ -163,44 +244,11 @@ class StorageSegment:
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
 
-        # Generate a random anonymous ID for this send
-        anonymous_id = str(uuid.uuid4())
-
-        # Configure Segment client
-        analytics.write_key = self.write_key
-        analytics.debug = self.debug
-        # sync_mode makes each track() a blocking HTTP request instead of queuing to a
-        # background thread. Without it the SDK batches all chunks into one POST which
-        # can silently exceed Segment's 500 KB batch limit and drop events, returning
-        # HTTP 200 with no error callback fired.
-        analytics.sync_mode = True
-        # Allow redirecting to a mock server via the host= kwarg.
-        # Setting to None restores the SDK default (https://api.segment.io).
-        analytics.host = self.host or None
-
         if not segment_meta:
             segment_meta = {}
-        message_id = segment_meta.get('message_id')
 
-        segment_envelope = {
-            'type': 'track',
-            'messageId': 'a' * 64 if message_id else str(uuid.uuid4()),
-            'timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
-            'integrations': {},
-            'context': {},
-        }
-        properties = self._build_properties(artifact_name, {}, 0, 0, 0)
-        serializable_meta = {k: v.isoformat() if isinstance(v, datetime.datetime) else v for k, v in segment_meta.items()}
-        header = {
-            **segment_envelope,
-            **serializable_meta,
-            'properties': properties,
-            'anonymousId': anonymous_id,
-            'event': event_name,
-        }
-        overhead = self._calculate_size(header)
-        max_size = self.REGULAR_MESSAGE_LIMIT - overhead
-        chunks = self._split_into_chunks(dict, max_size)
+        anonymous_id = str(uuid.uuid4())
+        chunks = self._split_into_chunks(dict, self.REGULAR_MESSAGE_LIMIT)
 
         total_chunks = len(chunks)
 
@@ -208,34 +256,57 @@ class StorageSegment:
             msg = f'Split data into {total_chunks} chunks'
             print(msg, file=sys.stderr)
 
-        # Send each chunk
-        for i, chunk in enumerate(chunks, 1):
-            chunk_size = self._calculate_size(chunk)
+        events = [
+            self._build_event(artifact_name, event_name, anonymous_id, chunk, i, total_chunks, segment_meta) for i, chunk in enumerate(chunks, 1)
+        ]
+        sent_at = datetime.datetime.now(tz=datetime.UTC).isoformat()
+        batches = self._split_into_batches(events, sent_at)
+        endpoint = f'{(self.host or "https://api.segment.io").rstrip("/")}{self.SEGMENT_BATCH_PATH}'
 
-            # chunk hash = sha256(message hash + chunk index)
-            if message_id:
-                segment_meta['message_id'] = hashlib.sha256(f'{message_id}_{i}'.encode('utf-8', errors='replace')).hexdigest()
+        for batch_number, batch in enumerate(batches, 1):
+            payload = {'batch': batch, 'sentAt': sent_at}
+            body = self._json_bytes(payload)
+            wire_body = gzip.compress(body) if self.gzip else body
+            headers = {'Content-Type': 'application/json'}
+            if self.gzip:
+                headers['Content-Encoding'] = 'gzip'
+
+            response = None
+            try:
+                response = requests.post(
+                    endpoint,
+                    data=wire_body,
+                    headers=headers,
+                    auth=(self.write_key, ''),
+                    timeout=self.REQUEST_TIMEOUT,
+                )
+                response.raise_for_status()
+            except requests.RequestException as error:
+                if self.debug:
+                    logger.debug(
+                        'Segment batch %d/%d failed: status=%s, response=%s, error=%s',
+                        batch_number,
+                        len(batches),
+                        response.status_code if response is not None else None,
+                        response.text if response is not None else None,
+                        error,
+                    )
+                if not self.fallback_to_sdk:
+                    raise
+                logger.warning('Direct Segment batch %d/%d failed; using SDK fallback', batch_number, len(batches))
+                self._send_batch_with_sdk(batch)
+                continue
 
             if self.debug:
-                msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes)'
-                if message_id:
-                    msg += f'; message_id={segment_meta["message_id"]}'
-                print(msg, file=sys.stderr)
-
-            analytics.track(
-                anonymous_id=anonymous_id,
-                event=event_name,
-                properties=self._build_properties(
-                    artifact_name,
-                    chunk,
-                    i,
-                    total_chunks,
-                    chunk_size,
-                ),
-                **segment_meta,
-            )
-
-        # Flush to ensure all events are sent
-        analytics.flush()
+                logger.debug(
+                    'Segment batch %d/%d: events=%d, json_bytes=%d, wire_bytes=%d, status=%d, response=%s',
+                    batch_number,
+                    len(batches),
+                    len(batch),
+                    len(body),
+                    len(wire_body),
+                    response.status_code,
+                    response.text,
+                )
 
         return chunks
