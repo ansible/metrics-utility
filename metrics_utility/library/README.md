@@ -70,6 +70,7 @@ from metrics_utility.library.storage import StorageSegment
 # user_id = string
 # write_key = Segment source write key
 # gzip = bool, defaults to True
+# anonymous_id = optional ID to reuse across related anonymized sends
 
 storage = StorageSegment(
     debug=False,

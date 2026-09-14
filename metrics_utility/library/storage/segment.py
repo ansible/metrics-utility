@@ -176,7 +176,7 @@ class StorageSegment:
 
         return chunks or [data]
 
-    def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None, segment_meta=None):
+    def put(self, artifact_name, *, filename=None, fileobj=None, dict=None, event_name=None, segment_meta=None, anonymous_id=None):
         """
         Send data to Segment, splitting into chunks if necessary.
 
@@ -187,6 +187,8 @@ class StorageSegment:
             dict: Dictionary or list of data to send
             event_name: Name of the event to track
                        (defaults to 'Metrics Artifact Upload')
+            anonymous_id: Optional anonymized ID to reuse across related sends.
+                          A random UUID is generated when omitted.
 
         This method supports sending anonymized analytics from
         multiple apps. Data is split so each `data` chunk is under
@@ -210,7 +212,8 @@ class StorageSegment:
         if not segment_meta:
             segment_meta = {}
 
-        anonymous_id = str(uuid.uuid4())
+        if anonymous_id is None:
+            anonymous_id = str(uuid.uuid4())
         chunks = self._split_into_chunks(dict, self.REGULAR_MESSAGE_LIMIT)
 
         total_chunks = len(chunks)

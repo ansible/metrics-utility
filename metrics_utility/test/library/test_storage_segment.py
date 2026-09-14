@@ -82,6 +82,20 @@ class TestStorageSegmentAvailable:
         assert event['properties']['chunk_info']['chunk_number'] == 1
 
     @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_accepts_anonymous_id(self, mock_post):
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'first': {'value': 'one'}, 'second': {'value': 'two'}},
+            anonymous_id='daily-anonymous-id',
+        )
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        assert {event['anonymousId'] for event in payload['batch']} == {'daily-anonymous-id'}
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_sends_multiple_chunks_in_one_batch(self, mock_post):
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key', debug=True)
