@@ -210,9 +210,6 @@ class StorageSegment:
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
         segment_meta = {**(segment_meta or {})}
-        has_message_id = bool(segment_meta.get('message_id'))
-        if has_message_id and anonymous_id is None:
-            raise ValueError("segment_meta['message_id'] requires anonymous_id for retry-safe sends")
         if 'timestamp' not in segment_meta:
             segment_meta['timestamp'] = datetime.datetime.now(tz=datetime.UTC)
         if anonymous_id is None:
@@ -289,10 +286,11 @@ class StorageSegment:
             dict: Dictionary or list of data to send
             event_name: Name of the event to track
                        (defaults to 'Metrics Artifact Upload')
-            segment_meta: Optional metadata. For retry-safe sends, provide both
-                          ``message_id`` and ``anonymous_id``.
+            segment_meta: Optional metadata. Provide a stable ``message_id``
+                          for retry-safe sends.
             anonymous_id: Optional anonymized ID to reuse across related sends.
-                          It must be paired with ``segment_meta['message_id']``.
+                          It controls anonymous identity correlation independently
+                          of Segment's message deduplication.
 
         This method supports sending anonymized analytics from
         multiple apps. Data is split so each `data` chunk is under
