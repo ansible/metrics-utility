@@ -171,16 +171,3 @@ class TestStorageSegmentAvailable:
 
         with pytest.raises(requests.HTTPError):
             storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
-
-    @patch('metrics_utility.library.storage.segment.analytics')
-    @patch('metrics_utility.library.storage.segment.requests.post')
-    def test_put_can_fallback_to_sdk(self, mock_post, mock_analytics):
-        mock_post.side_effect = requests.ConnectionError('connection failed')
-        storage_segment = StorageSegment(write_key='test_write_key', fallback_to_sdk=True)
-        mock_client = mock_analytics.Client.return_value
-
-        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
-
-        mock_analytics.Client.assert_called_once()
-        assert mock_client.track.call_count == 1
-        mock_client.flush.assert_called_once()

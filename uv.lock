@@ -721,6 +721,7 @@ wheels = [
 
 [[package]]
 name = "metrics-utility"
+version = "0.8.0.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "boto3" },
@@ -733,7 +734,6 @@ dependencies = [
     { name = "pandas" },
     { name = "psycopg" },
     { name = "requests" },
-    { name = "segment-analytics-python" },
     { name = "setuptools" },
 ]
 
@@ -761,7 +761,6 @@ requires-dist = [
     { name = "pandas", specifier = "~=3.0" },
     { name = "psycopg", specifier = "~=3.3" },
     { name = "requests", specifier = "~=2.32" },
-    { name = "segment-analytics-python", specifier = ">=2.3.6" },
     { name = "setuptools", specifier = ">=80.9.0" },
 ]
 
@@ -1580,21 +1579,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c0/0a/1cdbabf9edd0ea7747efdf6c9ab4e7061b085aa7f9bfc36bb1601563b069/s3transfer-0.10.4.tar.gz", hash = "sha256:29edc09801743c21eb5ecbc617a152df41d3c287f67b615f73e5f750583666a7", size = 145287, upload-time = "2024-11-20T21:06:05.981Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/66/05/7957af15543b8c9799209506df4660cba7afc4cf94bfb60513827e96bed6/s3transfer-0.10.4-py3-none-any.whl", hash = "sha256:244a76a24355363a68164241438de1b72f8781664920260c48465896b712a41e", size = 83175, upload-time = "2024-11-20T21:06:03.961Z" },
-]
-
-[[package]]
-name = "segment-analytics-python"
-version = "2.3.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "backoff" },
-    { name = "pyjwt" },
-    { name = "python-dateutil" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8a/7f/74dd70484cc33eb6b49499ac4afbc1ca9bbac40d0dee5712f75fb77b0c62/segment_analytics_python-2.3.6.tar.gz", hash = "sha256:b07779d90432399fdd08f8cbeb483139cab862b5dca1bb3f0711f415def776a8", size = 35997, upload-time = "2026-04-07T17:16:44.03Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/5f/487b415925aac0f232a8aaae1f372f39ae13ca46207d923c4762efdddae5/segment_analytics_python-2.3.6-py2.py3-none-any.whl", hash = "sha256:a8c5c0f542be3be39aa57cd77e7e6b85b2a3c348174bc1192a296aeb81626594", size = 33477, upload-time = "2026-04-07T17:16:42.853Z" },
 ]
 
 [[package]]

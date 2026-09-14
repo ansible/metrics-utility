@@ -12,12 +12,6 @@ import requests
 from metrics_utility.logger import logger
 
 
-try:
-    from segment import analytics
-except ImportError:
-    analytics = None
-
-
 class StorageSegment:
     """Segment analytics storage backend.
 
@@ -40,15 +34,13 @@ class StorageSegment:
             **settings: Accepts ``'debug'`` (bool), ``'user_id'`` (str),
                 ``'write_key'`` (str, required for actual uploads),
                 ``'host'`` (str, optional base URL override),
-                ``'gzip'`` (bool, default True), and
-                ``'fallback_to_sdk'`` (bool, default False).
+                and ``'gzip'`` (bool, default True).
         """
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')
         self.host = settings.get('host')
         self.gzip = settings.get('gzip', True)
-        self.fallback_to_sdk = settings.get('fallback_to_sdk', False)
 
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
@@ -122,35 +114,6 @@ class StorageSegment:
         if active_batch:
             batches.append(active_batch)
         return batches
-
-    def _send_batch_with_sdk(self, events):
-        """Send one failed batch through the legacy SDK when explicitly enabled."""
-        if analytics is None:
-            raise RuntimeError('Segment SDK fallback requested but segment-analytics-python is not installed')
-
-        client = analytics.Client(
-            write_key=self.write_key,
-            debug=self.debug,
-            gzip=self.gzip,
-            sync_mode=True,
-            host=self.host or None,
-            on_error=lambda err, batch: logger.error('Segment SDK fallback error: %s', err),
-        )
-        for event in events:
-            timestamp = event.get('timestamp')
-            if isinstance(timestamp, str):
-                timestamp = datetime.datetime.fromisoformat(timestamp)
-            client.track(
-                user_id=event.get('userId'),
-                anonymous_id=event.get('anonymousId'),
-                event=event['event'],
-                properties=event['properties'],
-                context=event.get('context'),
-                integrations=event.get('integrations'),
-                timestamp=timestamp,
-                message_id=event.get('messageId'),
-            )
-        client.flush()
 
     def _split_into_chunks(self, data, max_size):
         """
@@ -291,11 +254,7 @@ class StorageSegment:
                         response.text if response is not None else None,
                         error,
                     )
-                if not self.fallback_to_sdk:
-                    raise
-                logger.warning('Direct Segment batch %d/%d failed; using SDK fallback', batch_number, len(batches))
-                self._send_batch_with_sdk(batch)
-                continue
+                raise
 
             if self.debug:
                 logger.debug(

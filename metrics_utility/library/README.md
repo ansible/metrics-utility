@@ -67,10 +67,9 @@ Other collectors (in `metrics_utility.library.collectors.others`):
 from metrics_utility.library.storage import StorageSegment
 
 # debug = bool
-# user_id = string, passed to analytics.track
+# user_id = string
 # write_key = Segment source write key
 # gzip = bool, defaults to True
-# fallback_to_sdk = bool, optional legacy SDK fallback
 
 storage = StorageSegment(
     debug=False,
