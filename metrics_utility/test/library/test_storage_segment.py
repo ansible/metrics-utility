@@ -1,3 +1,4 @@
+import datetime
 import gzip
 import json
 
@@ -97,6 +98,7 @@ class TestStorageSegmentAvailable:
             artifact_name='test_artifact',
             dict={'first': {'value': 'one'}, 'second': {'value': 'two'}},
             anonymous_id='daily-anonymous-id',
+            segment_meta={'message_id': 'daily-upload-id'},
         )
 
         payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
@@ -165,6 +167,7 @@ class TestStorageSegmentAvailable:
             dict={'first': {'value': 'one'}, 'second': {'value': 'two'}},
             event_name='Test',
             segment_meta={'message_id': 'original-id-value'},
+            anonymous_id='stable-anonymous-id',
         )
 
         payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
@@ -185,6 +188,27 @@ class TestStorageSegmentAvailable:
         second_message_id = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))['batch'][0]['messageId']
 
         assert first_message_id == second_message_id
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_serializes_nested_datetime_metadata(self, mock_post):
+        """Serialize datetime values nested in Segment metadata dictionaries."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(
+            artifact_name='test',
+            dict={'first': {'value': 'one'}},
+            anonymous_id='stable-anonymous-id',
+            segment_meta={
+                'message_id': 'stable-upload',
+                'context': {'nested': {'created_at': datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)}},
+                'integrations': {'warehouse': {'updated_at': datetime.date(2026, 1, 2)}},
+            },
+        )
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        assert payload['batch'][0]['context']['nested']['created_at'] == '2026-01-01T00:00:00+00:00'
+        assert payload['batch'][0]['integrations']['warehouse']['updated_at'] == '2026-01-02'
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_splits_oversized_batches(self, mock_post):
@@ -238,6 +262,20 @@ class TestStorageSegmentAvailable:
 
         with pytest.raises(Exception, match='not supported'):
             storage_segment.put(artifact_name='test_artifact', filename='artifact.json', dict={})
+
+    def test_put_requires_dict_data(self):
+        """Report a targeted error when artifact data is omitted."""
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        with pytest.raises(ValueError, match='requires dict='):
+            storage_segment.put(artifact_name='test_artifact')
+
+    def test_put_requires_both_retry_identifiers(self):
+        """Require anonymous and message IDs together for retry-safe sends."""
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        with pytest.raises(ValueError, match='must be provided together'):
+            storage_segment.put(artifact_name='test_artifact', dict={'statistics': {}}, anonymous_id='anonymous-only')
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_logs_and_raises_network_errors_in_debug_mode(self, mock_post):

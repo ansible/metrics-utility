@@ -1018,11 +1018,10 @@ MOCK_SEGMENT_URL = os.getenv('MOCK_SEGMENT_URL', 'http://localhost:8765')
 
 @pytest.mark.parametrize('unified_jobs_func', [unified_jobs, unified_jobs_dashboard], ids=['unified_jobs', 'unified_jobs_dashboard'])
 def test_from_gather_to_json(cleanup_glob, unified_jobs_func):
-    """Validate that generated rollup chunks arrive in gzip batch requests."""
-    """
-    Full integration test: gather data from the DB, compute an anonymized rollup,
-    validate the JSON structure, then ship it to a mock Segment server and assert
-    that the correct number of chunked track events was received.
+    """Gather, validate, and send an anonymized rollup to the mock Segment server.
+
+    The test also asserts that the expected number of gzip-compressed batch
+    requests and chunked track events are received.
     """
     # Define collectors similar to run_no_events.py
     COLLECTORS = {

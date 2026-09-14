@@ -81,6 +81,11 @@ storage = StorageSegment(
 
 Also allows optional `host='http://example.com:12345'` for testing.
 
+For retry-safe sends, pass both `anonymous_id` and
+`segment_meta={'message_id': '<stable-upload-id>'}`. Existing callers that
+omit both values retain the generated-ID behavior, but a task retry can create
+duplicates unless it reuses the same identifiers.
+
 The CLI keeps its own storage backends for filesystem, S3 and console.redhat.com under `metrics_utility.automation_controller_billing`.
 
 

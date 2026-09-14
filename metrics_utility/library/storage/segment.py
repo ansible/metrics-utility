@@ -52,6 +52,7 @@ class StorageSegment:
 
     def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size):
         """Build the Segment properties object for one artifact chunk."""
+        data = self._serialize_value(data)
         return {
             'artifact_name': artifact_name,
             'data': data,
@@ -65,7 +66,7 @@ class StorageSegment:
 
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
-        return len(json.dumps(data).encode('utf-8'))
+        return len(json.dumps(self._serialize_value(data)).encode('utf-8'))
 
     @staticmethod
     def _json_bytes(data):
@@ -77,10 +78,17 @@ class StorageSegment:
         """Convert date and datetime values to Segment-compatible strings."""
         if isinstance(value, (datetime.datetime, datetime.date)):
             return value.isoformat()
+        if isinstance(value, dict):
+            return {key: StorageSegment._serialize_value(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [StorageSegment._serialize_value(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(StorageSegment._serialize_value(item) for item in value)
         return value
 
     def _build_event(self, artifact_name, event_name, anonymous_id, chunk, chunk_number, total_chunks, segment_meta):
         """Build one deterministic Segment track event from an artifact chunk."""
+        chunk = self._serialize_value(chunk)
         chunk_size = self._calculate_size(chunk)
         timestamp = segment_meta.get('timestamp')
         base_message_id = segment_meta.get('message_id') or f'{artifact_name}:{event_name}:{anonymous_id}:{timestamp}'
@@ -92,8 +100,8 @@ class StorageSegment:
             'messageId': message_id,
             'event': event_name,
             'timestamp': self._serialize_value(segment_meta.get('timestamp', datetime.datetime.now(tz=datetime.UTC))),
-            'context': segment_meta.get('context', {}),
-            'integrations': segment_meta.get('integrations', {}),
+            'context': self._serialize_value(segment_meta.get('context', {})),
+            'integrations': self._serialize_value(segment_meta.get('integrations', {})),
             'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size),
         }
         if 'user_id' in segment_meta:
@@ -104,25 +112,26 @@ class StorageSegment:
         """Group events into request bodies below Segment's batch-size limit."""
         batches = []
         active_batch = []
+        batch_base_size = len(self._json_bytes({'batch': [], 'sentAt': sent_at})) - 2
+        active_size = batch_base_size
 
         for event in events:
-            candidate = [*active_batch, event]
-            payload = {'batch': candidate, 'sentAt': sent_at}
-            if len(self._json_bytes(payload)) > self.BATCH_SIZE_LIMIT:
+            event_size = len(self._json_bytes(event))
+            candidate_size = active_size + event_size + bool(active_batch)
+            if candidate_size > self.BATCH_SIZE_LIMIT:
                 if active_batch:
                     batches.append(active_batch)
-                    active_batch = []
-
-                    singleton_payload = {'batch': [event], 'sentAt': sent_at}
-                    if len(self._json_bytes(singleton_payload)) > self.BATCH_SIZE_LIMIT:
+                    active_batch = [event]
+                    active_size = batch_base_size + event_size
+                    if active_size > self.BATCH_SIZE_LIMIT:
                         msg = f'Single Segment event exceeds the {self.BATCH_SIZE_LIMIT}-byte batch limit'
                         raise ValueError(msg)
-                    active_batch = [event]
                 else:
                     msg = f'Single Segment event exceeds the {self.BATCH_SIZE_LIMIT}-byte batch limit'
                     raise ValueError(msg)
             else:
-                active_batch = candidate
+                active_batch.append(event)
+                active_size = candidate_size
 
         if active_batch:
             batches.append(active_batch)
@@ -185,9 +194,10 @@ class StorageSegment:
 
     def _validate_put_args(self, artifact_name, filename, fileobj, data):
         """Validate supported input arguments and whether uploads are enabled."""
-        if filename or fileobj or data is None:
-            msg = 'StorageSegment: filename= & fileobj= not supported, use dict='
-            raise Exception(msg)
+        if data is None:
+            raise ValueError('StorageSegment requires dict= for analytics uploads')
+        if filename or fileobj:
+            raise ValueError('StorageSegment: filename= and fileobj= are not supported; use dict=')
 
         if self.write_key:
             return True
@@ -200,6 +210,9 @@ class StorageSegment:
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
         segment_meta = {**(segment_meta or {})}
+        has_message_id = bool(segment_meta.get('message_id'))
+        if (anonymous_id is None) != (not has_message_id):
+            raise ValueError("anonymous_id and segment_meta['message_id'] must be provided together for retry-safe sends")
         if 'timestamp' not in segment_meta:
             segment_meta['timestamp'] = datetime.datetime.now(tz=datetime.UTC)
         if anonymous_id is None:
@@ -276,8 +289,10 @@ class StorageSegment:
             dict: Dictionary or list of data to send
             event_name: Name of the event to track
                        (defaults to 'Metrics Artifact Upload')
+            segment_meta: Optional metadata. For retry-safe sends, provide both
+                          ``message_id`` and ``anonymous_id``.
             anonymous_id: Optional anonymized ID to reuse across related sends.
-                          A random UUID is generated when omitted.
+                          It must be paired with ``segment_meta['message_id']``.
 
         This method supports sending anonymized analytics from
         multiple apps. Data is split so each `data` chunk is under
