@@ -249,6 +249,26 @@ class TestStorageSegmentAvailable:
         with pytest.raises(requests.HTTPError):
             storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
 
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_rejects_insecure_remote_host(self, mock_post):
+        """Reject remote HTTP hosts before sending credentials or payloads."""
+        storage_segment = StorageSegment(write_key='test_write_key', host='http://segment.example.test', allow_insecure_host=True)
+
+        with pytest.raises(ValueError, match='must use HTTPS'):
+            storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        mock_post.assert_not_called()
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_allows_explicit_loopback_test_host(self, mock_post):
+        """Allow an explicitly opted-in loopback HTTP mock server."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key', host='http://localhost:8765', allow_insecure_host=True)
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        assert mock_post.call_args.args[0] == 'http://localhost:8765/v1/batch'
+
     def test_put_skips_upload_without_write_key(self):
         """Skip uploads when Segment credentials are not configured."""
         storage_segment = StorageSegment(debug=True)

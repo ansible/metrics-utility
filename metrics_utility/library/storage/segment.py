@@ -7,6 +7,8 @@ import json
 import sys
 import uuid
 
+from urllib.parse import urlsplit
+
 import requests
 
 from metrics_utility.logger import logger
@@ -39,13 +41,15 @@ class StorageSegment:
             **settings: Accepts ``'debug'`` (bool), ``'user_id'`` (str),
                 ``'write_key'`` (str, required for actual uploads),
                 ``'host'`` (str, optional base URL override),
-                and ``'gzip'`` (bool, default True).
+                ``'gzip'`` (bool, default True), and ``'allow_insecure_host'``
+                (bool, test-only opt-in for loopback HTTP hosts).
         """
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')
         self.host = settings.get('host')
         self.gzip = settings.get('gzip', True)
+        self.allow_insecure_host = settings.get('allow_insecure_host', self.debug)
 
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
@@ -271,7 +275,15 @@ class StorageSegment:
 
     def _send_batches(self, batches, sent_at):
         """Send all prepared batches to Segment's batch endpoint."""
-        endpoint = f'{(self.host or "https://api.segment.io").rstrip("/")}{self.SEGMENT_BATCH_PATH}'
+        base_url = (self.host or 'https://api.segment.io').rstrip('/')
+        parsed_url = urlsplit(base_url)
+        if parsed_url.scheme != 'https':
+            is_loopback = parsed_url.hostname in {'localhost', '127.0.0.1', '::1'}
+            if parsed_url.scheme != 'http' or not is_loopback or not self.allow_insecure_host:
+                raise ValueError('Segment host must use HTTPS; HTTP is restricted to explicit loopback test hosts')
+        if not parsed_url.netloc:
+            raise ValueError('Segment host must include a valid hostname')
+        endpoint = f'{base_url}{self.SEGMENT_BATCH_PATH}'
         for batch_number, batch in enumerate(batches, 1):
             self._send_batch(endpoint, batch, batch_number, len(batches), sent_at)
 

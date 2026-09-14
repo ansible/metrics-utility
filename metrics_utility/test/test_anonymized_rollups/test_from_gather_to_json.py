@@ -1109,7 +1109,7 @@ def test_from_gather_to_json(cleanup_glob, unified_jobs_func):
     req = urllib.request.Request(f'{MOCK_SEGMENT_URL}/reset', method='POST')
     urllib.request.urlopen(req)
 
-    storage = StorageSegment(write_key='test-key', host=MOCK_SEGMENT_URL)
+    storage = StorageSegment(write_key='test-key', host=MOCK_SEGMENT_URL, allow_insecure_host=True)
     chunks = storage.put('anonymized_rollup', dict=json_data)
 
     assert chunks, 'StorageSegment.put() should return a non-empty list of chunks'

@@ -79,7 +79,9 @@ storage = StorageSegment(
 )
 ```
 
-Also allows optional `host='http://example.com:12345'` for testing.
+Also allows an HTTPS `host` override. Local HTTP mock servers require the
+explicit test-only setting `allow_insecure_host=True` and should use a
+loopback host such as `http://localhost:8765`.
 
 For retry-safe sends, pass
 `segment_meta={'message_id': '<stable-upload-id>'}`. A caller may also pass
