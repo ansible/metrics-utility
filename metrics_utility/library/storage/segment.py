@@ -78,11 +78,9 @@ class StorageSegment:
 
     def _build_event(self, artifact_name, event_name, anonymous_id, chunk, chunk_number, total_chunks, segment_meta):
         chunk_size = self._calculate_size(chunk)
-        base_message_id = segment_meta.get('message_id')
-        if base_message_id:
-            message_id = hashlib.sha256(f'{base_message_id}_{chunk_number}'.encode('utf-8', errors='replace')).hexdigest()
-        else:
-            message_id = str(uuid.uuid4())
+        timestamp = segment_meta.get('timestamp')
+        base_message_id = segment_meta.get('message_id') or f'{artifact_name}:{event_name}:{anonymous_id}:{timestamp}'
+        message_id = hashlib.sha256(f'{base_message_id}_{chunk_number}'.encode('utf-8', errors='replace')).hexdigest()
 
         event = {
             'type': 'track',
@@ -222,6 +220,9 @@ class StorageSegment:
 
         if not segment_meta:
             segment_meta = {}
+
+        if 'timestamp' not in segment_meta:
+            segment_meta = {**segment_meta, 'timestamp': datetime.datetime.now(tz=datetime.UTC)}
 
         if anonymous_id is None:
             anonymous_id = str(uuid.uuid4())

@@ -159,6 +159,20 @@ class TestStorageSegmentAvailable:
         assert len(payload['batch'][0]['messageId']) == 64
 
     @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_reuses_message_ids_for_retryable_metadata(self, mock_post):
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+        metadata = {'message_id': 'stable-upload', 'timestamp': '2026-01-01T00:00:00+00:00'}
+        kwargs = {'artifact_name': 'test', 'dict': {'first': {'value': 'one'}}, 'anonymous_id': 'stable-anonymous-id', 'segment_meta': metadata}
+
+        storage_segment.put(**kwargs)
+        first_message_id = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))['batch'][0]['messageId']
+        storage_segment.put(**kwargs)
+        second_message_id = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))['batch'][0]['messageId']
+
+        assert first_message_id == second_message_id
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_splits_oversized_batches(self, mock_post):
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key', debug=False)
