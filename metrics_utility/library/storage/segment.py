@@ -12,6 +12,11 @@ import requests
 from metrics_utility.logger import logger
 
 
+# Kept as a compatibility marker for metrics-service callers. Segment support
+# now uses the direct HTTP transport and no longer depends on the SDK.
+SEGMENT_AVAILABLE = True
+
+
 class StorageSegment:
     """Segment analytics storage backend.
 
@@ -104,6 +109,12 @@ class StorageSegment:
             if len(self._json_bytes(payload)) > self.BATCH_SIZE_LIMIT:
                 if active_batch:
                     batches.append(active_batch)
+                    active_batch = []
+
+                    singleton_payload = {'batch': [event], 'sentAt': sent_at}
+                    if len(self._json_bytes(singleton_payload)) > self.BATCH_SIZE_LIMIT:
+                        msg = f'Single Segment event exceeds the {self.BATCH_SIZE_LIMIT}-byte batch limit'
+                        raise ValueError(msg)
                     active_batch = [event]
                 else:
                     msg = f'Single Segment event exceeds the {self.BATCH_SIZE_LIMIT}-byte batch limit'

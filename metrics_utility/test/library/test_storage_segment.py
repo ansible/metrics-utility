@@ -133,6 +133,15 @@ class TestStorageSegmentAvailable:
         assert chunks[0]['items'] == ['x' * 500]
         assert 'Single list item' in caplog.text
 
+    def test_split_into_batches_rejects_oversized_event_after_flush(self):
+        storage_segment = StorageSegment()
+        storage_segment.BATCH_SIZE_LIMIT = 100
+        small_event = {'messageId': 'small', 'properties': {'value': 'x'}}
+        oversized_event = {'messageId': 'large', 'properties': {'value': 'x' * 200}}
+
+        with pytest.raises(ValueError, match='Single Segment event exceeds'):
+            storage_segment._split_into_batches([small_event, oversized_event], '2026-01-01T00:00:00+00:00')
+
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_preserves_segment_meta(self, mock_post):
         mock_post.return_value = Mock(status_code=200, text='')
@@ -153,7 +162,7 @@ class TestStorageSegmentAvailable:
     def test_put_splits_oversized_batches(self, mock_post):
         mock_post.return_value = Mock(status_code=200, text='')
         storage_segment = StorageSegment(write_key='test_write_key', debug=False)
-        storage_segment.BATCH_SIZE_LIMIT = 1000
+        storage_segment.BATCH_SIZE_LIMIT = 40000
 
         chunks = storage_segment.put(artifact_name='test_artifact', dict=segment_data_large, event_name='Test Event')
 
