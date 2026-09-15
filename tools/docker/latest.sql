@@ -13,6 +13,44 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: metrics_utility_is_valid_json(text); Type: FUNCTION; Schema: public; Owner: awx
+--
+
+CREATE FUNCTION public.metrics_utility_is_valid_json(p_json text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    BEGIN
+        RETURN (p_json::json IS NOT NULL);
+    EXCEPTION
+        WHEN invalid_text_representation
+        THEN RETURN false;
+    END;
+    $$;
+
+ALTER FUNCTION public.metrics_utility_is_valid_json(p_json text) OWNER TO awx;
+
+--
+-- Name: metrics_utility_parse_yaml_field(text, text); Type: FUNCTION; Schema: public; Owner: awx
+--
+
+CREATE FUNCTION public.metrics_utility_parse_yaml_field(str text, field text) RETURNS text
+    LANGUAGE plpgsql
+    AS $_$
+    DECLARE
+        line_re text;
+        field_re text;
+        escaped_field text;
+    BEGIN
+        field_re := ' *[:=] *(.+?) *$';
+        escaped_field := regexp_replace(field, '[.+*?^${}()|\[\]\\]', '\\&', 'g');
+        line_re := '(?n)^' || escaped_field || field_re;
+        RETURN trim(both '"' from substring(str from line_re));
+    END;
+    $_$;
+
+ALTER FUNCTION public.metrics_utility_parse_yaml_field(str text, field text) OWNER TO awx;
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
