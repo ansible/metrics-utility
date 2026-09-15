@@ -1,7 +1,8 @@
-from . import controller, dashboard, others, service
+from . import awx, controller, dashboard, others, service
 
 
 __all__ = [
+    'awx',
     'controller',
     'dashboard',
     'others',
