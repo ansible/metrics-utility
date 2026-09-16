@@ -259,6 +259,7 @@ services:
     volumes:
       - ../../../awx:/awx_devel:z
       - ./awx/bootstrap.sh:/usr/local/bin/awx-bootstrap:z
+      - ./awx/autoreload.sh:/usr/local/bin/awx-autoreload:z
       - ./awx/supervisord.conf:/etc/supervisord.conf:z
       - ./awx/uwsgi.ini:/etc/tower/uwsgi.ini:z
       - ./awx/database.py:/etc/tower/conf.d/database.py:z

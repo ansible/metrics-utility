@@ -46,6 +46,8 @@ RUN dnf -y install 'dnf-command(config-manager)' && \
       swig \
       xmlsec1-devel \
       xmlsec1-openssl-devel && \
+    dnf -y install epel-release && \
+    dnf -y install inotify-tools && \
     dnf -y clean all
 
 # podman for running jobs in execution environments - no systemd in here, no cgroups

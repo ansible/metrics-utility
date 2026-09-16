@@ -16,4 +16,4 @@ then the rest of the files can go in any order.
 * https://localhost:8043/, `admin:admin` (reset on every start)
 * jobs run in execution environments via podman inside the container, pulled images are kept in the `awx_containers` volume
 * after updating the awx checkout, rebuild when requirements changed - `podman-compose -f tools/docker/docker-compose.yaml --profile awx build awx`
-* after changing awx code - `podman exec awx supervisorctl restart tower-processes:*`
+* awx processes restart automatically when `.py` files in `../awx/awx/` change ([awx/autoreload.sh](./awx/autoreload.sh))
