@@ -249,13 +249,27 @@ def ensure_functions(db):
         cursor.execute(_yaml_json_functions())
 
 
+def _unwrap_debug_cursor(cursor):
+    """Return the psycopg cursor under Django's debug cursor wrapper.
+
+    With ``DEBUG = True`` (e.g. the awx dev environment), Django wraps cursors in a
+    ``CursorDebugWrapper`` whose ``copy()`` only accepts the statement, dropping params.
+    Other cursors are returned unchanged.
+    """
+    from django.db.backends.utils import CursorDebugWrapper
+
+    if isinstance(cursor, CursorDebugWrapper):
+        return cursor.cursor
+    return cursor
+
+
 def _copy_table_files(db, query, filespec, params=None):
     file = CsvFileSplitter(filespec=filespec)
 
     with db.cursor() as cursor:
         copy_query = f'COPY ({query}) TO STDOUT WITH CSV HEADER'
 
-        with cursor.copy(copy_query, params) as copy:
+        with _unwrap_debug_cursor(cursor).copy(copy_query, params) as copy:
             while data := copy.read():
                 byte_data = bytes(data)
                 file.write(byte_data.decode())
