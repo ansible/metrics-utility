@@ -19,10 +19,10 @@ def pgdump_filter(lines):
     prev_blank = False
     for line in lines:
         # strip pg_dump version comments — they change with postgres upgrades
-        if line.startswith('-- Dumped from database version') or line.startswith('-- Dumped by pg_dump version'):
+        if line.startswith(('-- Dumped from database version', '-- Dumped by pg_dump version')):
             continue
         # strip pg18+ security directives and settings not present in older versions
-        if line.startswith('\\restrict ') or line.startswith('\\unrestrict'):
+        if line.startswith(('\\restrict ', '\\unrestrict')):
             continue
         if line.startswith('SET transaction_timeout'):
             continue
