@@ -81,10 +81,12 @@ services:
     volumes:
       - ../..:/app_ro:z
     tmpfs:
-      - /app:rw,exec,mode=0755
+      - /app:rw,exec,mode=1777
+    user: "1000:1000"  # not root, root ignores file permissions some tests rely on
     working_dir: /app
     profiles: ["pytest"] # makes this service non-default, except when --profile=pytest
     environment:
+      HOME: "/app/home"
       METRICS_UTILITY_BUCKET_ACCESS_KEY: "myuseraccesskey"
       METRICS_UTILITY_BUCKET_ENDPOINT: "http://seaweedfs:8333"
       METRICS_UTILITY_BUCKET_NAME: "metricsutilitys3"
@@ -97,12 +99,13 @@ services:
       sh -c '
         set -e
         # mirror.gcr.io/python has no rsync, use tar to copy with excludes
-        mkdir -p /app/metrics-utility
+        mkdir -p /app/metrics-utility "$$HOME"
         tar -c --exclude=.git --exclude=.venv --exclude=.ruff_cache --exclude=build --exclude=dist -C /app_ro . | tar -x -C /app/metrics-utility
 
         cd /app/metrics-utility/
 
-        pip install uv
+        pip install --user uv
+        export PATH="$$HOME/.local/bin:$$PATH"
         uv sync
 
         uv run pytest -s -v
