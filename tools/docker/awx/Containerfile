@@ -4,11 +4,9 @@
 # from the mounted awx checkout requirements; awx code, config, bootstrap and
 # supervisor config are all mounted by docker-compose.yaml.
 
-ARG RECEPTOR_IMAGE=quay.io/ansible/receptor:devel
-
-FROM ${RECEPTOR_IMAGE} AS receptor
-
 FROM quay.io/centos/centos:stream9
+
+ARG RECEPTOR_VERSION=1.6.8
 
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
@@ -58,7 +56,14 @@ RUN printf '[containers]\ncgroups = "disabled"\n\n[engine]\ncgroup_manager = "cg
 RUN pip3.12 install supervisor uv && \
     rm -rf /var/lib/awx/.cache
 
-COPY --from=receptor /usr/bin/receptor /usr/bin/receptor
+RUN arch="$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')" && \
+    tarball="receptor_${RECEPTOR_VERSION}_linux_${arch}.tar.gz" && \
+    cd /tmp && \
+    curl -fsSLO "https://github.com/ansible/receptor/releases/download/v${RECEPTOR_VERSION}/${tarball}" && \
+    curl -fsSLO "https://github.com/ansible/receptor/releases/download/v${RECEPTOR_VERSION}/checksums.txt" && \
+    grep " ${tarball}\$" checksums.txt | sha256sum -c && \
+    tar -xzf "$tarball" -C /usr/bin receptor && \
+    rm "$tarball" checksums.txt
 
 RUN openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
       -keyout /etc/nginx/nginx.key -out /etc/nginx/nginx.crt \
