@@ -243,23 +243,24 @@ services:
     command: ["/usr/local/etc/redis/redis.conf"]
 
   awx:
-    image: "ghcr.io/ansible/awx_devel:devel"
+    build:
+      context: ./awx
+      dockerfile: Containerfile
+      additional_contexts:
+        awx-src: ../../../awx
+    image: "localhost/metrics-utility-awx"
     container_name: awx
     hostname: awx-1
     profiles: ["awx"]
-    command: launch_awx.sh supervisord --pidfile=/tmp/supervisor_pid -n
+    command: /usr/local/bin/awx-bootstrap
     environment:
-      AWX_GROUP_QUEUES: tower
-      MAIN_NODE_TYPE: hybrid
       RECEPTORCTL_SOCKET: /var/run/awx-receptor/receptor.sock
-      CONTROL_PLANE_NODE_COUNT: 1
-      EXECUTION_NODE_COUNT: 0
-      AWX_LOGGING_MODE: stdout
-      DJANGO_SUPERUSER_PASSWORD: admin
-      RUN_MIGRATIONS: 1
     working_dir: /awx_devel
     volumes:
       - ../../../awx:/awx_devel:z
+      - ./awx/bootstrap.sh:/usr/local/bin/awx-bootstrap:z
+      - ./awx/supervisord.conf:/etc/supervisord.conf:z
+      - ./awx/uwsgi.ini:/etc/tower/uwsgi.ini:z
       - ./awx/database.py:/etc/tower/conf.d/database.py:z
       - ./awx/websocket_secret.py:/etc/tower/conf.d/websocket_secret.py:z
       - ./awx/local_settings.py:/etc/tower/conf.d/local_settings.py:z
@@ -267,9 +268,8 @@ services:
       - ./awx/nginx.locations.conf:/etc/nginx/conf.d/nginx.locations.conf:z
       - ./awx/SECRET_KEY:/etc/tower/SECRET_KEY:z
       - ./awx/receptor.conf:/etc/receptor/receptor.conf:z
-      - ../../../awx/tools/docker-compose/supervisor.conf:/etc/supervisord.conf:z
       - redis_socket:/var/run/redis/:rw
-      - /sys/fs/cgroup:/sys/fs/cgroup
+      - awx_containers:/var/lib/containers  # execution environment images, kept across restarts
     privileged: true
     depends_on:
       postgres-wait:
@@ -307,4 +307,5 @@ services:
 
 volumes:
   redis_socket:
+  awx_containers:
   ansible_ui_node_modules:
