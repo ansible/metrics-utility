@@ -252,6 +252,28 @@ COPY public.main_adhoccommand (unifiedjob_ptr_id, job_type, "limit", module_name
 ALTER TABLE public.main_adhoccommand ENABLE TRIGGER ALL;
 
 --
+-- Data for Name: main_host; Type: TABLE DATA; Schema: public; Owner: awx
+--
+
+ALTER TABLE public.main_host DISABLE TRIGGER ALL;
+
+COPY public.main_host (id, created, modified, description, name, enabled, instance_id, variables, created_by_id, inventory_id, modified_by_id, ansible_facts, ansible_facts_modified) FROM stdin;
+\.
+
+ALTER TABLE public.main_host ENABLE TRIGGER ALL;
+
+--
+-- Data for Name: _unpartitioned_main_adhoccommandevent; Type: TABLE DATA; Schema: public; Owner: awx
+--
+
+ALTER TABLE public._unpartitioned_main_adhoccommandevent DISABLE TRIGGER ALL;
+
+COPY public._unpartitioned_main_adhoccommandevent (id, created, modified, host_name, event, event_data, failed, changed, counter, host_id, ad_hoc_command_id, end_line, start_line, stdout, uuid, verbosity) FROM stdin;
+\.
+
+ALTER TABLE public._unpartitioned_main_adhoccommandevent ENABLE TRIGGER ALL;
+
+--
 -- Data for Name: main_unifiedjobtemplate; Type: TABLE DATA; Schema: public; Owner: awx
 --
 
@@ -277,15 +299,15 @@ COPY public.main_project (unifiedjobtemplate_ptr_id, local_path, scm_type, scm_u
 ALTER TABLE public.main_project ENABLE TRIGGER ALL;
 
 --
--- Data for Name: main_jobtemplate; Type: TABLE DATA; Schema: public; Owner: awx
+-- Data for Name: main_inventorysource; Type: TABLE DATA; Schema: public; Owner: awx
 --
 
-ALTER TABLE public.main_jobtemplate DISABLE TRIGGER ALL;
+ALTER TABLE public.main_inventorysource DISABLE TRIGGER ALL;
 
-COPY public.main_jobtemplate (unifiedjobtemplate_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, host_config_key, ask_variables_on_launch, survey_enabled, survey_spec, inventory_id, project_id, admin_role_id, execute_role_id, read_role_id, ask_limit_on_launch, ask_inventory_on_launch, ask_credential_on_launch, ask_job_type_on_launch, ask_tags_on_launch, allow_simultaneous, ask_skip_tags_on_launch, timeout, use_fact_cache, ask_verbosity_on_launch, ask_diff_mode_on_launch, diff_mode, custom_virtualenv, job_slice_count, ask_scm_branch_on_launch, scm_branch, webhook_credential_id, webhook_key, webhook_service, ask_execution_environment_on_launch, ask_forks_on_launch, ask_instance_groups_on_launch, ask_job_slice_count_on_launch, ask_labels_on_launch, ask_timeout_on_launch, prevent_instance_group_fallback, opa_query_path) FROM stdin;
+COPY public.main_inventorysource (unifiedjobtemplate_ptr_id, source, source_path, source_vars, overwrite, overwrite_vars, update_on_launch, update_cache_timeout, inventory_id, timeout, source_project_id, verbosity, custom_virtualenv, enabled_value, enabled_var, host_filter, scm_branch, "limit") FROM stdin;
 \.
 
-ALTER TABLE public.main_jobtemplate ENABLE TRIGGER ALL;
+ALTER TABLE public.main_inventorysource ENABLE TRIGGER ALL;
 
 --
 -- Data for Name: main_projectupdate; Type: TABLE DATA; Schema: public; Owner: awx
@@ -297,50 +319,6 @@ COPY public.main_projectupdate (unifiedjob_ptr_id, local_path, scm_type, scm_url
 \.
 
 ALTER TABLE public.main_projectupdate ENABLE TRIGGER ALL;
-
---
--- Data for Name: main_job; Type: TABLE DATA; Schema: public; Owner: awx
---
-
-ALTER TABLE public.main_job DISABLE TRIGGER ALL;
-
-COPY public.main_job (unifiedjob_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, inventory_id, job_template_id, project_id, survey_passwords_old, allow_simultaneous, artifacts, timeout, scm_revision, project_update_id, use_fact_cache, diff_mode, job_slice_count, job_slice_number, custom_virtualenv, scm_branch, webhook_credential_id, webhook_guid, webhook_service, survey_passwords, event_queries_processed) FROM stdin;
-\.
-
-ALTER TABLE public.main_job ENABLE TRIGGER ALL;
-
---
--- Data for Name: main_host; Type: TABLE DATA; Schema: public; Owner: awx
---
-
-ALTER TABLE public.main_host DISABLE TRIGGER ALL;
-
-COPY public.main_host (id, created, modified, description, name, enabled, instance_id, variables, created_by_id, inventory_id, last_job_host_summary_id, modified_by_id, last_job_id, ansible_facts, ansible_facts_modified) FROM stdin;
-\.
-
-ALTER TABLE public.main_host ENABLE TRIGGER ALL;
-
---
--- Data for Name: _unpartitioned_main_adhoccommandevent; Type: TABLE DATA; Schema: public; Owner: awx
---
-
-ALTER TABLE public._unpartitioned_main_adhoccommandevent DISABLE TRIGGER ALL;
-
-COPY public._unpartitioned_main_adhoccommandevent (id, created, modified, host_name, event, event_data, failed, changed, counter, host_id, ad_hoc_command_id, end_line, start_line, stdout, uuid, verbosity) FROM stdin;
-\.
-
-ALTER TABLE public._unpartitioned_main_adhoccommandevent ENABLE TRIGGER ALL;
-
---
--- Data for Name: main_inventorysource; Type: TABLE DATA; Schema: public; Owner: awx
---
-
-ALTER TABLE public.main_inventorysource DISABLE TRIGGER ALL;
-
-COPY public.main_inventorysource (unifiedjobtemplate_ptr_id, source, source_path, source_vars, overwrite, overwrite_vars, update_on_launch, update_cache_timeout, inventory_id, timeout, source_project_id, verbosity, custom_virtualenv, enabled_value, enabled_var, host_filter, scm_branch, "limit") FROM stdin;
-\.
-
-ALTER TABLE public.main_inventorysource ENABLE TRIGGER ALL;
 
 --
 -- Data for Name: main_inventoryupdate; Type: TABLE DATA; Schema: public; Owner: awx
@@ -363,6 +341,28 @@ COPY public._unpartitioned_main_inventoryupdateevent (id, created, modified, eve
 \.
 
 ALTER TABLE public._unpartitioned_main_inventoryupdateevent ENABLE TRIGGER ALL;
+
+--
+-- Data for Name: main_jobtemplate; Type: TABLE DATA; Schema: public; Owner: awx
+--
+
+ALTER TABLE public.main_jobtemplate DISABLE TRIGGER ALL;
+
+COPY public.main_jobtemplate (unifiedjobtemplate_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, host_config_key, ask_variables_on_launch, survey_enabled, survey_spec, inventory_id, project_id, admin_role_id, execute_role_id, read_role_id, ask_limit_on_launch, ask_inventory_on_launch, ask_credential_on_launch, ask_job_type_on_launch, ask_tags_on_launch, allow_simultaneous, ask_skip_tags_on_launch, timeout, use_fact_cache, ask_verbosity_on_launch, ask_diff_mode_on_launch, diff_mode, custom_virtualenv, job_slice_count, ask_scm_branch_on_launch, scm_branch, webhook_credential_id, webhook_key, webhook_service, ask_execution_environment_on_launch, ask_forks_on_launch, ask_instance_groups_on_launch, ask_job_slice_count_on_launch, ask_labels_on_launch, ask_timeout_on_launch, prevent_instance_group_fallback, opa_query_path) FROM stdin;
+\.
+
+ALTER TABLE public.main_jobtemplate ENABLE TRIGGER ALL;
+
+--
+-- Data for Name: main_job; Type: TABLE DATA; Schema: public; Owner: awx
+--
+
+ALTER TABLE public.main_job DISABLE TRIGGER ALL;
+
+COPY public.main_job (unifiedjob_ptr_id, job_type, playbook, forks, "limit", verbosity, extra_vars, job_tags, force_handlers, skip_tags, start_at_task, become_enabled, inventory_id, job_template_id, project_id, survey_passwords_old, allow_simultaneous, artifacts, timeout, scm_revision, project_update_id, use_fact_cache, diff_mode, job_slice_count, job_slice_number, custom_virtualenv, scm_branch, webhook_credential_id, webhook_guid, webhook_service, survey_passwords, event_queries_processed) FROM stdin;
+\.
+
+ALTER TABLE public.main_job ENABLE TRIGGER ALL;
 
 --
 -- Data for Name: _unpartitioned_main_jobevent; Type: TABLE DATA; Schema: public; Owner: awx
@@ -861,9 +861,8 @@ ALTER TABLE public.conf_setting ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_feature_flags_aapflag DISABLE TRIGGER ALL;
 
 COPY public.dab_feature_flags_aapflag (id, modified, created, name, ui_name, condition, value, required, support_level, visibility, toggle_type, description, support_url, labels, created_by_id, modified_by_id) FROM stdin;
-1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	FEATURE_INDIRECT_NODE_COUNTING_ENABLED	Indirect Node Counting	boolean	True	f	TECHNOLOGY_PREVIEW	t	run-time	Indirect Node Counting parses the event stream of all jobs to identify resources and stores these in the platform database. Example: Job automates VMware, the parser will report back the VMs, Hypervisors that were automated. This feature helps customers and partners report on the automations they are doing beyond an API endpoint.	https://access.redhat.com/articles/7109910	["controller"]	\N	\N
-2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	FEATURE_EDA_ANALYTICS_ENABLED	Event-Driven Ansible Analytics	boolean	False	f	TECHNOLOGY_PREVIEW	f	install-time	Submit Event-Driven Ansible usage analytics to console.redhat.com.	https://access.redhat.com/solutions/7112810	["eda"]	\N	\N
-3	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	FEATURE_OIDC_WORKLOAD_IDENTITY_ENABLED	OIDC Workload Identity	boolean	False	f	TECHNOLOGY_PREVIEW	f	install-time	Enable identity provision of workloads using OIDC		["platform"]	\N	\N
+1	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	FEATURE_EDA_ANALYTICS_ENABLED	Event-Driven Ansible Analytics	boolean	False	f	TECHNOLOGY_PREVIEW	f	install-time	Submit Event-Driven Ansible usage analytics to console.redhat.com.	https://access.redhat.com/solutions/7112810	["eda"]	\N	\N
+2	2000-01-01 00:00:00.000000+00	2000-01-01 00:00:00.000000+00	FEATURE_OIDC_WORKLOAD_IDENTITY_ENABLED	OIDC Workload Identity	boolean	False	f	TECHNOLOGY_PREVIEW	f	install-time	Enable identity provision of workloads using OIDC		["platform"]	\N	\N
 \.
 
 ALTER TABLE public.dab_feature_flags_aapflag ENABLE TRIGGER ALL;
@@ -877,14 +876,14 @@ ALTER TABLE public.dab_rbac_dabcontenttype DISABLE TRIGGER ALL;
 COPY public.dab_rbac_dabcontenttype (id, service, app_label, model, parent_content_type_id, api_slug, pk_field_type) FROM stdin;
 39	awx	main	instancegroup	\N	awx.instancegroup	integer
 22	shared	main	organization	\N	shared.organization	integer
-19	awx	main	inventory	22	awx.inventory	integer
-6	awx	main	workflowjobtemplate	22	awx.workflowjobtemplate	integer
 55	awx	main	executionenvironment	22	awx.executionenvironment	integer
-5	awx	main	project	22	awx.project	integer
+19	awx	main	inventory	22	awx.inventory	integer
+30	awx	main	notificationtemplate	22	awx.notificationtemplate	integer
 25	shared	main	team	22	shared.team	integer
 14	awx	main	credential	22	awx.credential	integer
-30	awx	main	notificationtemplate	22	awx.notificationtemplate	integer
+6	awx	main	workflowjobtemplate	22	awx.workflowjobtemplate	integer
 4	awx	main	jobtemplate	22	awx.jobtemplate	integer
+5	awx	main	project	22	awx.project	integer
 \.
 
 ALTER TABLE public.dab_rbac_dabcontenttype ENABLE TRIGGER ALL;
@@ -956,34 +955,35 @@ ALTER TABLE public.dab_rbac_dabpermission ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_roledefinition DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_roledefinition (id, name, description, managed, created_by_id, created, modified_by_id, modified, content_type_id) FROM stdin;
-1	Inventory Admin	Has all permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-2	Organization Inventory Admin	Has all permissions to inventories within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-3	Inventory Use	Has use permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-4	Inventory Adhoc	Has adhoc permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-5	Inventory Update	Has update permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
-6	InstanceGroup Admin	Has all permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
-7	InstanceGroup Use	Has use permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
-8	Organization Member	Has member permissions to a single organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-9	WorkflowJobTemplate Admin	Has all permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
-10	Organization WorkflowJobTemplate Admin	Has all permissions to workflow job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-11	WorkflowJobTemplate Execute	Has execute permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
-12	WorkflowJobTemplate Approve	Has approve permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
-13	ExecutionEnvironment Admin	Has all permissions to a single execution environment	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	55
-14	Organization ExecutionEnvironment Admin	Has all permissions to execution environments within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-15	Project Admin	Has all permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
-16	Organization Project Admin	Has all permissions to projects within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-17	Project Use	Has use permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
-18	Project Update	Has update permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
-19	Team Admin	Has all permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
-20	Team Member	Has member permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
-21	Credential Admin	Has all permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
-22	Organization Credential Admin	Has all permissions to credentials within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-23	Credential Use	Has use permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
-24	NotificationTemplate Admin	Has all permissions to a single notification template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	30
-25	Organization NotificationTemplate Admin	Has all permissions to notification templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-26	JobTemplate Admin	Has all permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
-27	Organization JobTemplate Admin	Has all permissions to job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
-28	JobTemplate Execute	Has execute permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
+33	Platform Auditor	Migrated singleton role giving read permission to everything	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	\N
+1	ExecutionEnvironment Admin	Has all permissions to a single execution environment	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	55
+2	Organization ExecutionEnvironment Admin	Has all permissions to execution environments within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+3	Inventory Admin	Has all permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+4	Organization Inventory Admin	Has all permissions to inventories within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+5	Inventory Use	Has use permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+6	Inventory Adhoc	Has adhoc permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+7	Inventory Update	Has update permissions to a single inventory	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	19
+8	NotificationTemplate Admin	Has all permissions to a single notification template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	30
+9	Organization NotificationTemplate Admin	Has all permissions to notification templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+10	Team Admin	Has all permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
+11	Team Member	Has member permissions to a single team	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	25
+12	Credential Admin	Has all permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
+13	Organization Credential Admin	Has all permissions to credentials within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+14	Credential Use	Has use permissions to a single credential	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	14
+15	InstanceGroup Admin	Has all permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
+16	InstanceGroup Use	Has use permissions to a single instance group	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	39
+17	WorkflowJobTemplate Admin	Has all permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
+18	Organization WorkflowJobTemplate Admin	Has all permissions to workflow job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+19	WorkflowJobTemplate Execute	Has execute permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
+20	WorkflowJobTemplate Approve	Has approve permissions to a single workflow job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	6
+21	Organization Member	Has member permissions to a single organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+22	JobTemplate Admin	Has all permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
+23	Organization JobTemplate Admin	Has all permissions to job templates within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+24	JobTemplate Execute	Has execute permissions to a single job template	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	4
+25	Project Admin	Has all permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
+26	Organization Project Admin	Has all permissions to projects within an organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
+27	Project Use	Has use permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
+28	Project Update	Has update permissions to a single project	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	5
 29	Organization Admin	Has all permissions to a single organization and all objects inside of it	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
 30	Organization Audit	Has permission to view all objects inside of a single organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
 31	Organization Execute	Has permission to execute all runnable objects in the organization	t	\N	2000-01-01 00:00:00.000000+00	\N	2000-01-01 00:00:00.000000+00	22
@@ -1032,179 +1032,181 @@ ALTER TABLE public.dab_rbac_objectrole_provides_teams ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_rbac_roledefinition_permissions DISABLE TRIGGER ALL;
 
 COPY public.dab_rbac_roledefinition_permissions (id, roledefinition_id, dabpermission_id) FROM stdin;
-1	1	7
-2	1	8
-3	1	9
-4	1	10
-5	1	11
-6	1	12
-7	2	6
-8	2	7
-9	2	8
-10	2	9
-11	2	10
-12	2	11
-13	2	12
-14	2	15
-15	2	16
-16	3	9
-17	3	10
+1	1	48
+2	1	49
+4	2	47
+5	2	48
+6	2	49
+8	2	15
+9	3	7
+10	3	8
+11	3	9
+12	3	10
+13	3	11
+14	3	12
+15	4	6
+16	4	7
+17	4	8
 18	4	9
 19	4	10
 20	4	11
-21	5	9
-22	5	12
-23	6	43
-24	6	44
-25	6	45
-26	6	46
-27	7	45
-28	7	46
-29	8	16
-30	8	15
-31	9	38
-32	9	39
-33	9	40
-34	9	41
-35	9	42
-36	10	37
-37	10	38
-38	10	39
-39	10	40
-40	10	41
-41	10	42
-42	10	15
-43	10	16
-44	11	40
-45	11	41
-46	12	40
-47	12	42
-48	13	48
-49	13	49
-51	14	47
-52	14	48
-53	14	49
-55	14	15
-56	14	16
-57	15	32
-58	15	28
-59	15	29
-60	15	30
-61	15	31
-62	16	32
-63	16	15
-64	16	16
-65	16	27
-66	16	28
-67	16	29
-68	16	30
-69	16	31
-70	17	32
-71	17	30
-72	18	30
-73	18	31
-74	19	19
-75	19	20
-76	19	21
-77	19	22
-78	20	21
-79	20	22
-80	21	2
-81	21	3
-82	21	4
-83	21	5
-84	22	1
-85	22	2
-86	22	3
-87	22	4
-88	22	5
-89	22	15
-90	22	16
-91	23	4
-92	23	5
-93	24	34
-94	24	35
-95	24	36
-96	25	33
-97	25	34
-98	25	35
-99	25	36
-100	25	15
-101	25	16
-102	26	24
-103	26	25
-104	26	26
-105	26	23
-106	27	15
-107	27	16
-108	27	23
-109	27	24
-110	27	25
-111	27	26
-112	28	25
-113	28	26
-114	29	1
-115	29	2
-116	29	3
-117	29	4
-118	29	5
-119	29	6
-120	29	7
-121	29	8
-122	29	9
-123	29	10
-124	29	11
-125	29	12
-126	29	13
-127	29	14
-128	29	15
-129	29	16
-130	29	17
-131	29	18
-132	29	19
-133	29	20
-134	29	21
-135	29	22
-136	29	23
-137	29	24
-138	29	25
-139	29	26
-140	29	27
-141	29	28
-142	29	29
-143	29	30
-144	29	31
-145	29	32
-146	29	33
-147	29	34
-148	29	35
-149	29	36
-150	29	37
-151	29	38
-152	29	39
-153	29	40
-154	29	41
-155	29	42
-156	29	47
-157	29	48
-158	29	49
-160	30	4
-161	30	36
-162	30	40
-163	30	9
-164	30	15
-165	30	17
-167	30	21
-168	30	25
-169	30	30
-170	31	40
-171	31	41
-172	31	15
-173	31	25
-174	31	26
-175	32	40
-176	32	42
-177	32	15
+21	4	12
+22	4	15
+23	5	9
+24	5	10
+25	6	9
+26	6	10
+27	6	11
+28	7	9
+29	7	12
+30	8	34
+31	8	35
+32	8	36
+33	9	33
+34	9	34
+35	9	35
+36	9	36
+37	9	15
+38	10	19
+39	10	20
+40	10	21
+41	10	22
+42	11	21
+43	11	22
+44	12	2
+45	12	3
+46	12	4
+47	12	5
+48	13	1
+49	13	2
+50	13	3
+51	13	4
+52	13	5
+53	13	15
+54	14	4
+55	14	5
+56	15	43
+57	15	44
+58	15	45
+59	15	46
+60	16	45
+61	16	46
+62	17	38
+63	17	39
+64	17	40
+65	17	41
+66	17	42
+67	18	37
+68	18	38
+69	18	39
+70	18	40
+71	18	41
+72	18	42
+73	18	15
+74	19	40
+75	19	41
+76	20	40
+77	20	42
+78	21	16
+79	21	15
+80	22	24
+81	22	25
+82	22	26
+83	22	23
+84	23	15
+85	23	23
+86	23	24
+87	23	25
+88	23	26
+89	24	25
+90	24	26
+91	25	32
+92	25	28
+93	25	29
+94	25	30
+95	25	31
+96	26	32
+97	26	15
+98	26	27
+99	26	28
+100	26	29
+101	26	30
+102	26	31
+103	27	32
+104	27	30
+105	28	30
+106	28	31
+107	29	1
+108	29	2
+109	29	3
+110	29	4
+111	29	5
+112	29	6
+113	29	7
+114	29	8
+115	29	9
+116	29	10
+117	29	11
+118	29	12
+119	29	13
+120	29	14
+121	29	15
+122	29	16
+123	29	17
+124	29	18
+125	29	19
+126	29	20
+127	29	21
+128	29	22
+129	29	23
+130	29	24
+131	29	25
+132	29	26
+133	29	27
+134	29	28
+135	29	29
+136	29	30
+137	29	31
+138	29	32
+139	29	33
+140	29	34
+141	29	35
+142	29	36
+143	29	37
+144	29	38
+145	29	39
+146	29	40
+147	29	41
+148	29	42
+149	29	47
+150	29	48
+151	29	49
+153	30	4
+154	30	36
+155	30	40
+156	30	9
+157	30	15
+158	30	17
+160	30	21
+161	30	25
+162	30	30
+163	31	40
+164	31	41
+165	31	15
+166	31	25
+167	31	26
+168	32	40
+169	32	42
+170	32	15
+171	33	4
+172	33	36
+173	33	40
+174	33	9
+175	33	45
+176	33	15
+178	33	21
+179	33	25
+180	33	30
 \.
 
 ALTER TABLE public.dab_rbac_roledefinition_permissions ENABLE TRIGGER ALL;
@@ -1260,41 +1262,41 @@ ALTER TABLE public.dab_rbac_roleuserassignment ENABLE TRIGGER ALL;
 ALTER TABLE public.dab_resource_registry_resource DISABLE TRIGGER ALL;
 
 COPY public.dab_resource_registry_resource (id, object_id, service_id, ansible_id, name, content_type_id, is_partially_migrated) FROM stdin;
-1	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	82ef7ac4-af48-5c94-a2ff-aac8c11082f5	Inventory Admin	83	f
-2	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	a6cab448-b776-55b8-80a5-7513da538556	Organization Inventory Admin	83	f
-3	3	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	01aa8550-f0e9-597f-95ba-d3d03f766f95	Inventory Use	83	f
-4	4	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	701682d0-76c0-5d85-ba88-116c8ab038d7	Inventory Adhoc	83	f
-5	5	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3eed92e2-01f3-5181-bc3a-fee151827c4a	Inventory Update	83	f
-6	6	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3268c0fc-b4a4-5dc3-9222-3eccbee62e41	InstanceGroup Admin	83	f
-7	7	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	71db26f5-8365-5508-8d21-4a81c1882782	InstanceGroup Use	83	f
-8	8	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	47aaa577-6df7-57b1-be2f-8d9d56206bff	Organization Member	83	f
-9	9	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	083a6c13-2dc9-5189-ae36-d6fed4a6aa5f	WorkflowJobTemplate Admin	83	f
-10	10	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7caf39df-9f4d-58d9-b44e-a2bb656f2393	Organization WorkflowJobTemplate Admin	83	f
-11	11	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	4e7a0674-84fc-53f4-810b-3796b8be0872	WorkflowJobTemplate Execute	83	f
-12	12	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	e9cfeea5-e188-5064-a825-0bf091cad9eb	WorkflowJobTemplate Approve	83	f
-13	13	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2436cd1d-1a77-5a1b-b66b-e22f9f805b31	ExecutionEnvironment Admin	83	f
-14	14	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5ebef0ee-7ebb-521e-8437-bf8bfcf24a31	Organization ExecutionEnvironment Admin	83	f
-15	15	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	c59c3209-a66f-5bcb-b1e5-ba17ad126b5e	Project Admin	83	f
-16	16	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d493a1db-0da7-5107-b7c6-e4090a16922c	Organization Project Admin	83	f
-17	17	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5247c30f-b815-51f1-8922-1be14753362b	Project Use	83	f
-18	18	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	b26b9e1f-08fe-593e-8f8b-d158ec2e7050	Project Update	83	f
-19	19	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d9a2706d-eac2-5f98-b3a3-6a740dcd32a6	Team Admin	83	f
-20	20	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2cc291e5-1270-5165-a937-8c78ef4abe00	Team Member	83	f
-21	21	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	28a7058e-f439-5e34-8125-466280cfe101	Credential Admin	83	f
-22	22	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	79ab51a3-7d2f-5ec8-861e-9c178fe547b7	Organization Credential Admin	83	f
-23	23	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5324169e-9731-553a-9169-c0f7d0a6131c	Credential Use	83	f
-24	24	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3e659418-5a14-5f4c-879e-cd0078a23b95	NotificationTemplate Admin	83	f
-25	25	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7ab6bc08-0f3a-5cd2-bf05-e781a412350c	Organization NotificationTemplate Admin	83	f
-26	26	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	043cd189-aae6-5698-af58-f2253c8e090d	JobTemplate Admin	83	f
-27	27	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	88b4e1cd-928e-51ba-8080-24703641df1a	Organization JobTemplate Admin	83	f
-28	28	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	61e3a26e-1798-569b-8dcd-79754b904201	JobTemplate Execute	83	f
+1	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	82ef7ac4-af48-5c94-a2ff-aac8c11082f5	ExecutionEnvironment Admin	83	f
+2	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	a6cab448-b776-55b8-80a5-7513da538556	Organization ExecutionEnvironment Admin	83	f
+3	3	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	01aa8550-f0e9-597f-95ba-d3d03f766f95	Inventory Admin	83	f
+4	4	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	701682d0-76c0-5d85-ba88-116c8ab038d7	Organization Inventory Admin	83	f
+5	5	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3eed92e2-01f3-5181-bc3a-fee151827c4a	Inventory Use	83	f
+6	6	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3268c0fc-b4a4-5dc3-9222-3eccbee62e41	Inventory Adhoc	83	f
+7	7	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	71db26f5-8365-5508-8d21-4a81c1882782	Inventory Update	83	f
+8	8	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	47aaa577-6df7-57b1-be2f-8d9d56206bff	NotificationTemplate Admin	83	f
+9	9	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	083a6c13-2dc9-5189-ae36-d6fed4a6aa5f	Organization NotificationTemplate Admin	83	f
+10	10	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7caf39df-9f4d-58d9-b44e-a2bb656f2393	Team Admin	83	f
+11	11	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	4e7a0674-84fc-53f4-810b-3796b8be0872	Team Member	83	f
+12	12	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	e9cfeea5-e188-5064-a825-0bf091cad9eb	Credential Admin	83	f
+13	13	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2436cd1d-1a77-5a1b-b66b-e22f9f805b31	Organization Credential Admin	83	f
+14	14	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5ebef0ee-7ebb-521e-8437-bf8bfcf24a31	Credential Use	83	f
+15	15	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	c59c3209-a66f-5bcb-b1e5-ba17ad126b5e	InstanceGroup Admin	83	f
+16	16	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d493a1db-0da7-5107-b7c6-e4090a16922c	InstanceGroup Use	83	f
+17	17	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5247c30f-b815-51f1-8922-1be14753362b	WorkflowJobTemplate Admin	83	f
+18	18	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	b26b9e1f-08fe-593e-8f8b-d158ec2e7050	Organization WorkflowJobTemplate Admin	83	f
+19	19	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	d9a2706d-eac2-5f98-b3a3-6a740dcd32a6	WorkflowJobTemplate Execute	83	f
+20	20	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	2cc291e5-1270-5165-a937-8c78ef4abe00	WorkflowJobTemplate Approve	83	f
+21	21	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	28a7058e-f439-5e34-8125-466280cfe101	Organization Member	83	f
+22	22	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	79ab51a3-7d2f-5ec8-861e-9c178fe547b7	JobTemplate Admin	83	f
+23	23	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	5324169e-9731-553a-9169-c0f7d0a6131c	Organization JobTemplate Admin	83	f
+24	24	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	3e659418-5a14-5f4c-879e-cd0078a23b95	JobTemplate Execute	83	f
+25	25	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	7ab6bc08-0f3a-5cd2-bf05-e781a412350c	Project Admin	83	f
+26	26	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	043cd189-aae6-5698-af58-f2253c8e090d	Organization Project Admin	83	f
+27	27	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	88b4e1cd-928e-51ba-8080-24703641df1a	Project Use	83	f
+28	28	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	61e3a26e-1798-569b-8dcd-79754b904201	Project Update	83	f
 29	29	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	47f057a2-d722-561a-b7da-d88e5974d14e	Organization Admin	83	f
 30	30	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	173d348b-e1dc-57da-b2c4-23d108ad35ec	Organization Audit	83	f
 31	31	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	721b42e2-a169-503d-81e0-2fcece93c2c8	Organization Execute	83	f
 32	32	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	aabd625a-2e4b-58f9-8a61-c60f5e380586	Organization Approval	83	f
-34	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	164679b9-04ed-5b35-b438-9677104067fc	FEATURE_INDIRECT_NODE_COUNTING_ENABLED	84	f
-35	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	9c472490-7391-5cd7-aeac-4f2173a0bb5f	FEATURE_EDA_ANALYTICS_ENABLED	84	f
-36	3	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	1245eca9-4d48-51b6-8901-b663da504cf4	FEATURE_OIDC_WORKLOAD_IDENTITY_ENABLED	84	f
+33	33	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	164679b9-04ed-5b35-b438-9677104067fc	Platform Auditor	83	f
+34	1	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	9c472490-7391-5cd7-aeac-4f2173a0bb5f	FEATURE_EDA_ANALYTICS_ENABLED	84	f
+35	2	6a8ddfbb-fd47-5320-a6bd-a3b4ab26e9d5	1245eca9-4d48-51b6-8901-b663da504cf4	FEATURE_OIDC_WORKLOAD_IDENTITY_ENABLED	84	f
 \.
 
 ALTER TABLE public.dab_resource_registry_resource ENABLE TRIGGER ALL;
@@ -1417,234 +1419,242 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 81	dab_feature_flags	0006_manual_20260515	2000-01-01 00:00:00.000000+00
 82	dab_feature_flags	0007_manual_20260615	2000-01-01 00:00:00.000000+00
 83	dab_feature_flags	0008_manual_20260618	2000-01-01 00:00:00.000000+00
-84	sessions	0001_initial	2000-01-01 00:00:00.000000+00
-85	main	0014_v330_saved_launchtime_configs	2000-01-01 00:00:00.000000+00
-86	main	0015_v330_blank_start_args	2000-01-01 00:00:00.000000+00
-87	main	0016_v330_non_blank_workflow	2000-01-01 00:00:00.000000+00
-88	main	0017_v330_move_deprecated_stdout	2000-01-01 00:00:00.000000+00
-89	main	0018_v330_add_additional_stdout_events	2000-01-01 00:00:00.000000+00
-90	main	0019_v330_custom_virtualenv	2000-01-01 00:00:00.000000+00
-91	main	0020_v330_instancegroup_policies	2000-01-01 00:00:00.000000+00
-92	main	0021_v330_declare_new_rbac_roles	2000-01-01 00:00:00.000000+00
-93	main	0022_v330_create_new_rbac_roles	2000-01-01 00:00:00.000000+00
-94	main	0023_v330_inventory_multicred	2000-01-01 00:00:00.000000+00
-95	main	0024_v330_create_user_session_membership	2000-01-01 00:00:00.000000+00
-96	main	0025_v330_add_oauth_activity_stream_registrar	2000-01-01 00:00:00.000000+00
-97	main	0026_v330_delete_authtoken	2000-01-01 00:00:00.000000+00
-98	main	0027_v330_emitted_events	2000-01-01 00:00:00.000000+00
-99	main	0028_v330_add_tower_verify	2000-01-01 00:00:00.000000+00
-100	main	0030_v330_modify_application	2000-01-01 00:00:00.000000+00
-101	main	0031_v330_encrypt_oauth2_secret	2000-01-01 00:00:00.000000+00
-102	main	0032_v330_polymorphic_delete	2000-01-01 00:00:00.000000+00
-103	main	0033_v330_oauth_help_text	2000-01-01 00:00:00.000000+00
-104	main	0034_v330_delete_user_role	2000-01-01 00:00:00.000000+00
-105	main	0035_v330_more_oauth2_help_text	2000-01-01 00:00:00.000000+00
-106	main	0036_v330_credtype_remove_become_methods	2000-01-01 00:00:00.000000+00
-107	main	0037_v330_remove_legacy_fact_cleanup	2000-01-01 00:00:00.000000+00
-108	main	0038_v330_add_deleted_activitystream_actor	2000-01-01 00:00:00.000000+00
-109	main	0039_v330_custom_venv_help_text	2000-01-01 00:00:00.000000+00
-110	main	0040_v330_unifiedjob_controller_node	2000-01-01 00:00:00.000000+00
-111	main	0041_v330_update_oauth_refreshtoken	2000-01-01 00:00:00.000000+00
-112	main	0042_v330_org_member_role_deparent	2000-01-01 00:00:00.000000+00
-113	main	0043_v330_oauth2accesstoken_modified	2000-01-01 00:00:00.000000+00
-114	main	0044_v330_add_inventory_update_inventory	2000-01-01 00:00:00.000000+00
-115	main	0045_v330_instance_managed_by_policy	2000-01-01 00:00:00.000000+00
-116	main	0046_v330_remove_client_credentials_grant	2000-01-01 00:00:00.000000+00
-117	main	0047_v330_activitystream_instance	2000-01-01 00:00:00.000000+00
-118	main	0048_v330_django_created_modified_by_model_name	2000-01-01 00:00:00.000000+00
-119	main	0049_v330_validate_instance_capacity_adjustment	2000-01-01 00:00:00.000000+00
-120	main	0050_v340_drop_celery_tables	2000-01-01 00:00:00.000000+00
-121	main	0051_v340_job_slicing	2000-01-01 00:00:00.000000+00
-122	main	0052_v340_remove_project_scm_delete_on_next_update	2000-01-01 00:00:00.000000+00
-123	main	0053_v340_workflow_inventory	2000-01-01 00:00:00.000000+00
-124	main	0054_v340_workflow_convergence	2000-01-01 00:00:00.000000+00
-125	main	0055_v340_add_grafana_notification	2000-01-01 00:00:00.000000+00
-126	main	0056_v350_custom_venv_history	2000-01-01 00:00:00.000000+00
-127	main	0057_v350_remove_become_method_type	2000-01-01 00:00:00.000000+00
-128	main	0058_v350_remove_limit_limit	2000-01-01 00:00:00.000000+00
-129	main	0059_v350_remove_adhoc_limit	2000-01-01 00:00:00.000000+00
-130	main	0060_v350_update_schedule_uniqueness_constraint	2000-01-01 00:00:00.000000+00
-131	main	0061_v350_track_native_credentialtype_source	2000-01-01 00:00:00.000000+00
-132	main	0062_v350_new_playbook_stats	2000-01-01 00:00:00.000000+00
-133	main	0063_v350_org_host_limits	2000-01-01 00:00:00.000000+00
-134	main	0064_v350_analytics_state	2000-01-01 00:00:00.000000+00
-135	main	0065_v350_index_job_status	2000-01-01 00:00:00.000000+00
-136	main	0066_v350_inventorysource_custom_virtualenv	2000-01-01 00:00:00.000000+00
-137	main	0067_v350_credential_plugins	2000-01-01 00:00:00.000000+00
-138	main	0068_v350_index_event_created	2000-01-01 00:00:00.000000+00
-139	main	0069_v350_generate_unique_install_uuid	2000-01-01 00:00:00.000000+00
-140	main	0070_v350_gce_instance_id	2000-01-01 00:00:00.000000+00
-141	main	0071_v350_remove_system_tracking	2000-01-01 00:00:00.000000+00
-142	main	0072_v350_deprecate_fields	2000-01-01 00:00:00.000000+00
-143	main	0073_v360_create_instance_group_m2m	2000-01-01 00:00:00.000000+00
-144	main	0074_v360_migrate_instance_group_relations	2000-01-01 00:00:00.000000+00
-145	main	0075_v360_remove_old_instance_group_relations	2000-01-01 00:00:00.000000+00
-146	main	0076_v360_add_new_instance_group_relations	2000-01-01 00:00:00.000000+00
-147	main	0077_v360_add_default_orderings	2000-01-01 00:00:00.000000+00
-148	main	0078_v360_clear_sessions_tokens_jt	2000-01-01 00:00:00.000000+00
-149	main	0079_v360_rm_implicit_oauth2_apps	2000-01-01 00:00:00.000000+00
-150	main	0080_v360_replace_job_origin	2000-01-01 00:00:00.000000+00
-151	main	0081_v360_notify_on_start	2000-01-01 00:00:00.000000+00
-152	main	0082_v360_webhook_http_method	2000-01-01 00:00:00.000000+00
-153	main	0083_v360_job_branch_override	2000-01-01 00:00:00.000000+00
-154	main	0084_v360_token_description	2000-01-01 00:00:00.000000+00
-155	main	0085_v360_add_notificationtemplate_messages	2000-01-01 00:00:00.000000+00
-156	main	0086_v360_workflow_approval	2000-01-01 00:00:00.000000+00
-157	main	0087_v360_update_credential_injector_help_text	2000-01-01 00:00:00.000000+00
-158	main	0088_v360_dashboard_optimizations	2000-01-01 00:00:00.000000+00
-159	main	0089_v360_new_job_event_types	2000-01-01 00:00:00.000000+00
-160	main	0090_v360_WFJT_prompts	2000-01-01 00:00:00.000000+00
-161	main	0091_v360_approval_node_notifications	2000-01-01 00:00:00.000000+00
-162	main	0092_v360_webhook_mixin	2000-01-01 00:00:00.000000+00
-163	main	0093_v360_personal_access_tokens	2000-01-01 00:00:00.000000+00
-164	main	0094_v360_webhook_mixin2	2000-01-01 00:00:00.000000+00
-165	main	0095_v360_increase_instance_version_length	2000-01-01 00:00:00.000000+00
-166	main	0096_v360_container_groups	2000-01-01 00:00:00.000000+00
-167	main	0097_v360_workflowapproval_approved_or_denied_by	2000-01-01 00:00:00.000000+00
-168	main	0098_v360_rename_cyberark_aim_credential_type	2000-01-01 00:00:00.000000+00
-169	main	0099_v361_license_cleanup	2000-01-01 00:00:00.000000+00
-170	main	0100_v370_projectupdate_job_tags	2000-01-01 00:00:00.000000+00
-171	main	0101_v370_generate_new_uuids_for_iso_nodes	2000-01-01 00:00:00.000000+00
-172	main	0102_v370_unifiedjob_canceled	2000-01-01 00:00:00.000000+00
-173	main	0103_v370_remove_computed_fields	2000-01-01 00:00:00.000000+00
-174	main	0104_v370_cleanup_old_scan_jts	2000-01-01 00:00:00.000000+00
-175	main	0105_v370_remove_jobevent_parent_and_hosts	2000-01-01 00:00:00.000000+00
-176	main	0106_v370_remove_inventory_groups_with_active_failures	2000-01-01 00:00:00.000000+00
-177	main	0107_v370_workflow_convergence_api_toggle	2000-01-01 00:00:00.000000+00
-178	main	0108_v370_unifiedjob_dependencies_processed	2000-01-01 00:00:00.000000+00
-179	main	0109_v370_job_template_organization_field	2000-01-01 00:00:00.000000+00
-180	main	0110_v370_instance_ip_address	2000-01-01 00:00:00.000000+00
-181	main	0111_v370_delete_channelgroup	2000-01-01 00:00:00.000000+00
-182	main	0112_v370_workflow_node_identifier	2000-01-01 00:00:00.000000+00
-183	main	0113_v370_event_bigint	2000-01-01 00:00:00.000000+00
-184	main	0114_v370_remove_deprecated_manual_inventory_sources	2000-01-01 00:00:00.000000+00
-185	main	0115_v370_schedule_set_null	2000-01-01 00:00:00.000000+00
-186	main	0116_v400_remove_hipchat_notifications	2000-01-01 00:00:00.000000+00
-187	main	0117_v400_remove_cloudforms_inventory	2000-01-01 00:00:00.000000+00
-188	main	0118_add_remote_archive_scm_type	2000-01-01 00:00:00.000000+00
-189	main	0119_inventory_plugins	2000-01-01 00:00:00.000000+00
-190	main	0120_galaxy_credentials	2000-01-01 00:00:00.000000+00
-191	main	0121_delete_toweranalyticsstate	2000-01-01 00:00:00.000000+00
-192	main	0122_really_remove_cloudforms_inventory	2000-01-01 00:00:00.000000+00
-193	main	0123_drop_hg_support	2000-01-01 00:00:00.000000+00
-194	main	0124_execution_environments	2000-01-01 00:00:00.000000+00
-195	main	0125_more_ee_modeling_changes	2000-01-01 00:00:00.000000+00
-196	main	0126_executionenvironment_container_options	2000-01-01 00:00:00.000000+00
-197	main	0127_reset_pod_spec_override	2000-01-01 00:00:00.000000+00
-198	main	0128_organiaztion_read_roles_ee_admin	2000-01-01 00:00:00.000000+00
-199	main	0129_unifiedjob_installed_collections	2000-01-01 00:00:00.000000+00
-200	main	0130_ee_polymorphic_set_null	2000-01-01 00:00:00.000000+00
-201	main	0131_undo_org_polymorphic_ee	2000-01-01 00:00:00.000000+00
-202	main	0132_instancegroup_is_container_group	2000-01-01 00:00:00.000000+00
-203	main	0133_centrify_vault_credtype	2000-01-01 00:00:00.000000+00
-204	main	0134_unifiedjob_ansible_version	2000-01-01 00:00:00.000000+00
-205	main	0135_schedule_sort_fallback_to_id	2000-01-01 00:00:00.000000+00
-206	main	0136_scm_track_submodules	2000-01-01 00:00:00.000000+00
-207	main	0137_custom_inventory_scripts_removal_data	2000-01-01 00:00:00.000000+00
-208	main	0138_custom_inventory_scripts_removal	2000-01-01 00:00:00.000000+00
-209	main	0139_isolated_removal	2000-01-01 00:00:00.000000+00
-210	main	0140_rename	2000-01-01 00:00:00.000000+00
-211	main	0141_remove_isolated_instances	2000-01-01 00:00:00.000000+00
-212	main	0142_update_ee_image_field_description	2000-01-01 00:00:00.000000+00
-213	main	0143_hostmetric	2000-01-01 00:00:00.000000+00
-214	main	0144_event_partitions	2000-01-01 00:00:00.000000+00
-215	main	0145_deregister_managed_ee_objs	2000-01-01 00:00:00.000000+00
-216	main	0146_add_insights_inventory	2000-01-01 00:00:00.000000+00
-217	main	0147_validate_ee_image_field	2000-01-01 00:00:00.000000+00
-218	main	0148_unifiedjob_receptor_unit_id	2000-01-01 00:00:00.000000+00
-219	main	0149_remove_inventory_insights_credential	2000-01-01 00:00:00.000000+00
-220	main	0150_rename_inv_sources_inv_updates	2000-01-01 00:00:00.000000+00
-221	main	0151_rename_managed_by_tower	2000-01-01 00:00:00.000000+00
-222	main	0152_instance_node_type	2000-01-01 00:00:00.000000+00
-223	main	0153_instance_last_seen	2000-01-01 00:00:00.000000+00
-224	main	0154_set_default_uuid	2000-01-01 00:00:00.000000+00
-225	main	0155_improved_health_check	2000-01-01 00:00:00.000000+00
-226	main	0156_capture_mesh_topology	2000-01-01 00:00:00.000000+00
-227	main	0157_inventory_labels	2000-01-01 00:00:00.000000+00
-228	main	0158_make_instance_cpu_decimal	2000-01-01 00:00:00.000000+00
-229	main	0159_deprecate_inventory_source_UoPU_field	2000-01-01 00:00:00.000000+00
-230	main	0160_alter_schedule_rrule	2000-01-01 00:00:00.000000+00
-231	main	0161_unifiedjob_host_status_counts	2000-01-01 00:00:00.000000+00
-232	main	0162_alter_unifiedjob_dependent_jobs	2000-01-01 00:00:00.000000+00
-233	main	0163_convert_job_tags_to_textfield	2000-01-01 00:00:00.000000+00
-234	main	0164_remove_inventorysource_update_on_project_update	2000-01-01 00:00:00.000000+00
-235	main	0165_task_manager_refactor	2000-01-01 00:00:00.000000+00
-236	main	0166_alter_jobevent_host	2000-01-01 00:00:00.000000+00
-237	main	0167_project_signature_validation_credential	2000-01-01 00:00:00.000000+00
-238	main	0168_inventoryupdate_scm_revision	2000-01-01 00:00:00.000000+00
-239	main	0169_jt_prompt_everything_on_launch	2000-01-01 00:00:00.000000+00
-240	main	0170_node_and_link_state	2000-01-01 00:00:00.000000+00
-241	main	0171_add_health_check_started	2000-01-01 00:00:00.000000+00
-242	main	0172_prevent_instance_fallback	2000-01-01 00:00:00.000000+00
-243	main	0173_instancegroup_max_limits	2000-01-01 00:00:00.000000+00
-244	main	0174_ensure_org_ee_admin_roles	2000-01-01 00:00:00.000000+00
-245	main	0175_workflowjob_is_bulk_job	2000-01-01 00:00:00.000000+00
-246	main	0176_inventorysource_scm_branch	2000-01-01 00:00:00.000000+00
-247	main	0177_instance_group_role_addition	2000-01-01 00:00:00.000000+00
-248	main	0178_instance_group_admin_migration	2000-01-01 00:00:00.000000+00
-249	main	0179_change_cyberark_plugin_names	2000-01-01 00:00:00.000000+00
-250	main	0180_add_hostmetric_fields	2000-01-01 00:00:00.000000+00
-251	main	0181_hostmetricsummarymonthly	2000-01-01 00:00:00.000000+00
-252	main	0182_constructed_inventory	2000-01-01 00:00:00.000000+00
-253	main	0183_pre_django_upgrade	2000-01-01 00:00:00.000000+00
-254	main	0184_django_indexes	2000-01-01 00:00:00.000000+00
-255	main	0185_move_JSONBlob_to_JSONField	2000-01-01 00:00:00.000000+00
-256	main	0186_drop_django_taggit	2000-01-01 00:00:00.000000+00
-257	main	0187_hop_nodes	2000-01-01 00:00:00.000000+00
-258	main	0188_add_bitbucket_dc_webhook	2000-01-01 00:00:00.000000+00
-259	main	0189_inbound_hop_nodes	2000-01-01 00:00:00.000000+00
-260	main	0190_alter_inventorysource_source_and_more	2000-01-01 00:00:00.000000+00
-261	dab_rbac	0001_initial	2000-01-01 00:00:00.000000+00
-262	main	0191_add_django_permissions	2000-01-01 00:00:00.000000+00
-263	main	0192_custom_roles	2000-01-01 00:00:00.000000+00
-264	main	0193_alter_notification_notification_type_and_more	2000-01-01 00:00:00.000000+00
-265	main	0194_alter_inventorysource_source_and_more	2000-01-01 00:00:00.000000+00
-266	main	0195_EE_permissions	2000-01-01 00:00:00.000000+00
-267	main	0196_indirect_managed_node_audit	2000-01-01 00:00:00.000000+00
-268	main	0197_add_opa_query_path	2000-01-01 00:00:00.000000+00
-269	main	0198_alter_inventorysource_source_and_more	2000-01-01 00:00:00.000000+00
-270	main	0199_inventorygroupvariableswithhistory_and_more	2000-01-01 00:00:00.000000+00
-271	main	0200_template_name_constraint	2000-01-01 00:00:00.000000+00
-272	main	0201_create_managed_creds	2000-01-01 00:00:00.000000+00
-273	main	0202_convert_controller_role_definitions	2000-01-01 00:00:00.000000+00
-274	main	0203_remove_team_of_teams	2000-01-01 00:00:00.000000+00
-275	dab_rbac	0002_alter_objectrole_provides_teams_and_more	2000-01-01 00:00:00.000000+00
-276	dab_rbac	0003_alter_dabpermission_codename_and_more	2000-01-01 00:00:00.000000+00
-277	dab_rbac	0004_remote_permissions_additions	2000-01-01 00:00:00.000000+00
-278	dab_rbac	0005_remote_permissions_data	2000-01-01 00:00:00.000000+00
-279	dab_rbac	0006_remote_data_reverse	2000-01-01 00:00:00.000000+00
-280	dab_rbac	0007_remote_permissions_removals	2000-01-01 00:00:00.000000+00
-281	dab_rbac	0008_remote_permissions_cleanup	2000-01-01 00:00:00.000000+00
-282	dab_resource_registry	0001_initial	2000-01-01 00:00:00.000000+00
-283	dab_resource_registry	0002_remove_resource_id	2000-01-01 00:00:00.000000+00
-284	dab_resource_registry	0003_alter_resource_object_id	2000-01-01 00:00:00.000000+00
-285	dab_resource_registry	0004_remove_resourcetype_migrated	2000-01-01 00:00:00.000000+00
-286	dab_resource_registry	0005_resource_is_partially_migrated_and_more	2000-01-01 00:00:00.000000+00
-287	dab_resource_registry	0006_alter_resource_service_id	2000-01-01 00:00:00.000000+00
-288	dab_resource_registry	0007_alter_resource_ansible_id_and_more	2000-01-01 00:00:00.000000+00
-289	flags	0001_initial	2000-01-01 00:00:00.000000+00
-290	flags	0002_auto_20151030_1401	2000-01-01 00:00:00.000000+00
-291	flags	0003_flag_hidden	2000-01-01 00:00:00.000000+00
-292	flags	0004_remove_flag_hidden	2000-01-01 00:00:00.000000+00
-293	flags	0005_flag_enabled_by_default	2000-01-01 00:00:00.000000+00
-294	flags	0006_auto_20151217_2003	2000-01-01 00:00:00.000000+00
-295	flags	0007_unique_flag_site	2000-01-01 00:00:00.000000+00
-296	flags	0008_add_state_conditions	2000-01-01 00:00:00.000000+00
-297	flags	0009_migrate_to_conditional_state	2000-01-01 00:00:00.000000+00
-298	flags	0010_delete_flag_site_fk	2000-01-01 00:00:00.000000+00
-299	flags	0011_migrate_path_data_startswith_to_matches	2000-01-01 00:00:00.000000+00
-300	flags	0013_add_required_field	2000-01-01 00:00:00.000000+00
-301	main	0204_squashed_deletions	2000-01-01 00:00:00.000000+00
-302	main	0205_add_ordering_to_instancegroup_and_workflow_nodes	2000-01-01 00:00:00.000000+00
-303	main	0206_jobhostsummary_host_id_idx	2000-01-01 00:00:00.000000+00
-304	main	0207_alter_skip_tags_to_textfield	2000-01-01 00:00:00.000000+00
-305	sites	0001_initial	2000-01-01 00:00:00.000000+00
-306	sites	0002_alter_domain_unique	2000-01-01 00:00:00.000000+00
-307	main	0002_squashed_v300_release	2000-01-01 00:00:00.000000+00
-308	main	0003_squashed_v300_v303_updates	2000-01-01 00:00:00.000000+00
-309	main	0004_squashed_v310_release	2000-01-01 00:00:00.000000+00
-310	main	0005_squashed_v310_v313_updates	2000-01-01 00:00:00.000000+00
-311	flags	0012_replace_migrations_for_wagtail_independence	2000-01-01 00:00:00.000000+00
+84	dab_feature_flags	0009_manual_20260902	2000-01-01 00:00:00.000000+00
+85	sessions	0001_initial	2000-01-01 00:00:00.000000+00
+86	main	0014_v330_saved_launchtime_configs	2000-01-01 00:00:00.000000+00
+87	main	0015_v330_blank_start_args	2000-01-01 00:00:00.000000+00
+88	main	0016_v330_non_blank_workflow	2000-01-01 00:00:00.000000+00
+89	main	0017_v330_move_deprecated_stdout	2000-01-01 00:00:00.000000+00
+90	main	0018_v330_add_additional_stdout_events	2000-01-01 00:00:00.000000+00
+91	main	0019_v330_custom_virtualenv	2000-01-01 00:00:00.000000+00
+92	main	0020_v330_instancegroup_policies	2000-01-01 00:00:00.000000+00
+93	main	0021_v330_declare_new_rbac_roles	2000-01-01 00:00:00.000000+00
+94	main	0022_v330_create_new_rbac_roles	2000-01-01 00:00:00.000000+00
+95	main	0023_v330_inventory_multicred	2000-01-01 00:00:00.000000+00
+96	main	0024_v330_create_user_session_membership	2000-01-01 00:00:00.000000+00
+97	main	0025_v330_add_oauth_activity_stream_registrar	2000-01-01 00:00:00.000000+00
+98	main	0026_v330_delete_authtoken	2000-01-01 00:00:00.000000+00
+99	main	0027_v330_emitted_events	2000-01-01 00:00:00.000000+00
+100	main	0028_v330_add_tower_verify	2000-01-01 00:00:00.000000+00
+101	main	0030_v330_modify_application	2000-01-01 00:00:00.000000+00
+102	main	0031_v330_encrypt_oauth2_secret	2000-01-01 00:00:00.000000+00
+103	main	0032_v330_polymorphic_delete	2000-01-01 00:00:00.000000+00
+104	main	0033_v330_oauth_help_text	2000-01-01 00:00:00.000000+00
+105	main	0034_v330_delete_user_role	2000-01-01 00:00:00.000000+00
+106	main	0035_v330_more_oauth2_help_text	2000-01-01 00:00:00.000000+00
+107	main	0036_v330_credtype_remove_become_methods	2000-01-01 00:00:00.000000+00
+108	main	0037_v330_remove_legacy_fact_cleanup	2000-01-01 00:00:00.000000+00
+109	main	0038_v330_add_deleted_activitystream_actor	2000-01-01 00:00:00.000000+00
+110	main	0039_v330_custom_venv_help_text	2000-01-01 00:00:00.000000+00
+111	main	0040_v330_unifiedjob_controller_node	2000-01-01 00:00:00.000000+00
+112	main	0041_v330_update_oauth_refreshtoken	2000-01-01 00:00:00.000000+00
+113	main	0042_v330_org_member_role_deparent	2000-01-01 00:00:00.000000+00
+114	main	0043_v330_oauth2accesstoken_modified	2000-01-01 00:00:00.000000+00
+115	main	0044_v330_add_inventory_update_inventory	2000-01-01 00:00:00.000000+00
+116	main	0045_v330_instance_managed_by_policy	2000-01-01 00:00:00.000000+00
+117	main	0046_v330_remove_client_credentials_grant	2000-01-01 00:00:00.000000+00
+118	main	0047_v330_activitystream_instance	2000-01-01 00:00:00.000000+00
+119	main	0048_v330_django_created_modified_by_model_name	2000-01-01 00:00:00.000000+00
+120	main	0049_v330_validate_instance_capacity_adjustment	2000-01-01 00:00:00.000000+00
+121	main	0050_v340_drop_celery_tables	2000-01-01 00:00:00.000000+00
+122	main	0051_v340_job_slicing	2000-01-01 00:00:00.000000+00
+123	main	0052_v340_remove_project_scm_delete_on_next_update	2000-01-01 00:00:00.000000+00
+124	main	0053_v340_workflow_inventory	2000-01-01 00:00:00.000000+00
+125	main	0054_v340_workflow_convergence	2000-01-01 00:00:00.000000+00
+126	main	0055_v340_add_grafana_notification	2000-01-01 00:00:00.000000+00
+127	main	0056_v350_custom_venv_history	2000-01-01 00:00:00.000000+00
+128	main	0057_v350_remove_become_method_type	2000-01-01 00:00:00.000000+00
+129	main	0058_v350_remove_limit_limit	2000-01-01 00:00:00.000000+00
+130	main	0059_v350_remove_adhoc_limit	2000-01-01 00:00:00.000000+00
+131	main	0060_v350_update_schedule_uniqueness_constraint	2000-01-01 00:00:00.000000+00
+132	main	0061_v350_track_native_credentialtype_source	2000-01-01 00:00:00.000000+00
+133	main	0062_v350_new_playbook_stats	2000-01-01 00:00:00.000000+00
+134	main	0063_v350_org_host_limits	2000-01-01 00:00:00.000000+00
+135	main	0064_v350_analytics_state	2000-01-01 00:00:00.000000+00
+136	main	0065_v350_index_job_status	2000-01-01 00:00:00.000000+00
+137	main	0066_v350_inventorysource_custom_virtualenv	2000-01-01 00:00:00.000000+00
+138	main	0067_v350_credential_plugins	2000-01-01 00:00:00.000000+00
+139	main	0068_v350_index_event_created	2000-01-01 00:00:00.000000+00
+140	main	0069_v350_generate_unique_install_uuid	2000-01-01 00:00:00.000000+00
+141	main	0070_v350_gce_instance_id	2000-01-01 00:00:00.000000+00
+142	main	0071_v350_remove_system_tracking	2000-01-01 00:00:00.000000+00
+143	main	0072_v350_deprecate_fields	2000-01-01 00:00:00.000000+00
+144	main	0073_v360_create_instance_group_m2m	2000-01-01 00:00:00.000000+00
+145	main	0074_v360_migrate_instance_group_relations	2000-01-01 00:00:00.000000+00
+146	main	0075_v360_remove_old_instance_group_relations	2000-01-01 00:00:00.000000+00
+147	main	0076_v360_add_new_instance_group_relations	2000-01-01 00:00:00.000000+00
+148	main	0077_v360_add_default_orderings	2000-01-01 00:00:00.000000+00
+149	main	0078_v360_clear_sessions_tokens_jt	2000-01-01 00:00:00.000000+00
+150	main	0079_v360_rm_implicit_oauth2_apps	2000-01-01 00:00:00.000000+00
+151	main	0080_v360_replace_job_origin	2000-01-01 00:00:00.000000+00
+152	main	0081_v360_notify_on_start	2000-01-01 00:00:00.000000+00
+153	main	0082_v360_webhook_http_method	2000-01-01 00:00:00.000000+00
+154	main	0083_v360_job_branch_override	2000-01-01 00:00:00.000000+00
+155	main	0084_v360_token_description	2000-01-01 00:00:00.000000+00
+156	main	0085_v360_add_notificationtemplate_messages	2000-01-01 00:00:00.000000+00
+157	main	0086_v360_workflow_approval	2000-01-01 00:00:00.000000+00
+158	main	0087_v360_update_credential_injector_help_text	2000-01-01 00:00:00.000000+00
+159	main	0088_v360_dashboard_optimizations	2000-01-01 00:00:00.000000+00
+160	main	0089_v360_new_job_event_types	2000-01-01 00:00:00.000000+00
+161	main	0090_v360_WFJT_prompts	2000-01-01 00:00:00.000000+00
+162	main	0091_v360_approval_node_notifications	2000-01-01 00:00:00.000000+00
+163	main	0092_v360_webhook_mixin	2000-01-01 00:00:00.000000+00
+164	main	0093_v360_personal_access_tokens	2000-01-01 00:00:00.000000+00
+165	main	0094_v360_webhook_mixin2	2000-01-01 00:00:00.000000+00
+166	main	0095_v360_increase_instance_version_length	2000-01-01 00:00:00.000000+00
+167	main	0096_v360_container_groups	2000-01-01 00:00:00.000000+00
+168	main	0097_v360_workflowapproval_approved_or_denied_by	2000-01-01 00:00:00.000000+00
+169	main	0098_v360_rename_cyberark_aim_credential_type	2000-01-01 00:00:00.000000+00
+170	main	0099_v361_license_cleanup	2000-01-01 00:00:00.000000+00
+171	main	0100_v370_projectupdate_job_tags	2000-01-01 00:00:00.000000+00
+172	main	0101_v370_generate_new_uuids_for_iso_nodes	2000-01-01 00:00:00.000000+00
+173	main	0102_v370_unifiedjob_canceled	2000-01-01 00:00:00.000000+00
+174	main	0103_v370_remove_computed_fields	2000-01-01 00:00:00.000000+00
+175	main	0104_v370_cleanup_old_scan_jts	2000-01-01 00:00:00.000000+00
+176	main	0105_v370_remove_jobevent_parent_and_hosts	2000-01-01 00:00:00.000000+00
+177	main	0106_v370_remove_inventory_groups_with_active_failures	2000-01-01 00:00:00.000000+00
+178	main	0107_v370_workflow_convergence_api_toggle	2000-01-01 00:00:00.000000+00
+179	main	0108_v370_unifiedjob_dependencies_processed	2000-01-01 00:00:00.000000+00
+180	main	0109_v370_job_template_organization_field	2000-01-01 00:00:00.000000+00
+181	main	0110_v370_instance_ip_address	2000-01-01 00:00:00.000000+00
+182	main	0111_v370_delete_channelgroup	2000-01-01 00:00:00.000000+00
+183	main	0112_v370_workflow_node_identifier	2000-01-01 00:00:00.000000+00
+184	main	0113_v370_event_bigint	2000-01-01 00:00:00.000000+00
+185	main	0114_v370_remove_deprecated_manual_inventory_sources	2000-01-01 00:00:00.000000+00
+186	main	0115_v370_schedule_set_null	2000-01-01 00:00:00.000000+00
+187	main	0116_v400_remove_hipchat_notifications	2000-01-01 00:00:00.000000+00
+188	main	0117_v400_remove_cloudforms_inventory	2000-01-01 00:00:00.000000+00
+189	main	0118_add_remote_archive_scm_type	2000-01-01 00:00:00.000000+00
+190	main	0119_inventory_plugins	2000-01-01 00:00:00.000000+00
+191	main	0120_galaxy_credentials	2000-01-01 00:00:00.000000+00
+192	main	0121_delete_toweranalyticsstate	2000-01-01 00:00:00.000000+00
+193	main	0122_really_remove_cloudforms_inventory	2000-01-01 00:00:00.000000+00
+194	main	0123_drop_hg_support	2000-01-01 00:00:00.000000+00
+195	main	0124_execution_environments	2000-01-01 00:00:00.000000+00
+196	main	0125_more_ee_modeling_changes	2000-01-01 00:00:00.000000+00
+197	main	0126_executionenvironment_container_options	2000-01-01 00:00:00.000000+00
+198	main	0127_reset_pod_spec_override	2000-01-01 00:00:00.000000+00
+199	main	0128_organiaztion_read_roles_ee_admin	2000-01-01 00:00:00.000000+00
+200	main	0129_unifiedjob_installed_collections	2000-01-01 00:00:00.000000+00
+201	main	0130_ee_polymorphic_set_null	2000-01-01 00:00:00.000000+00
+202	main	0131_undo_org_polymorphic_ee	2000-01-01 00:00:00.000000+00
+203	main	0132_instancegroup_is_container_group	2000-01-01 00:00:00.000000+00
+204	main	0133_centrify_vault_credtype	2000-01-01 00:00:00.000000+00
+205	main	0134_unifiedjob_ansible_version	2000-01-01 00:00:00.000000+00
+206	main	0135_schedule_sort_fallback_to_id	2000-01-01 00:00:00.000000+00
+207	main	0136_scm_track_submodules	2000-01-01 00:00:00.000000+00
+208	main	0137_custom_inventory_scripts_removal_data	2000-01-01 00:00:00.000000+00
+209	main	0138_custom_inventory_scripts_removal	2000-01-01 00:00:00.000000+00
+210	main	0139_isolated_removal	2000-01-01 00:00:00.000000+00
+211	main	0140_rename	2000-01-01 00:00:00.000000+00
+212	main	0141_remove_isolated_instances	2000-01-01 00:00:00.000000+00
+213	main	0142_update_ee_image_field_description	2000-01-01 00:00:00.000000+00
+214	main	0143_hostmetric	2000-01-01 00:00:00.000000+00
+215	main	0144_event_partitions	2000-01-01 00:00:00.000000+00
+216	main	0145_deregister_managed_ee_objs	2000-01-01 00:00:00.000000+00
+217	main	0146_add_insights_inventory	2000-01-01 00:00:00.000000+00
+218	main	0147_validate_ee_image_field	2000-01-01 00:00:00.000000+00
+219	main	0148_unifiedjob_receptor_unit_id	2000-01-01 00:00:00.000000+00
+220	main	0149_remove_inventory_insights_credential	2000-01-01 00:00:00.000000+00
+221	main	0150_rename_inv_sources_inv_updates	2000-01-01 00:00:00.000000+00
+222	main	0151_rename_managed_by_tower	2000-01-01 00:00:00.000000+00
+223	main	0152_instance_node_type	2000-01-01 00:00:00.000000+00
+224	main	0153_instance_last_seen	2000-01-01 00:00:00.000000+00
+225	main	0154_set_default_uuid	2000-01-01 00:00:00.000000+00
+226	main	0155_improved_health_check	2000-01-01 00:00:00.000000+00
+227	main	0156_capture_mesh_topology	2000-01-01 00:00:00.000000+00
+228	main	0157_inventory_labels	2000-01-01 00:00:00.000000+00
+229	main	0158_make_instance_cpu_decimal	2000-01-01 00:00:00.000000+00
+230	main	0159_deprecate_inventory_source_UoPU_field	2000-01-01 00:00:00.000000+00
+231	main	0160_alter_schedule_rrule	2000-01-01 00:00:00.000000+00
+232	main	0161_unifiedjob_host_status_counts	2000-01-01 00:00:00.000000+00
+233	main	0162_alter_unifiedjob_dependent_jobs	2000-01-01 00:00:00.000000+00
+234	main	0163_convert_job_tags_to_textfield	2000-01-01 00:00:00.000000+00
+235	main	0164_remove_inventorysource_update_on_project_update	2000-01-01 00:00:00.000000+00
+236	main	0165_task_manager_refactor	2000-01-01 00:00:00.000000+00
+237	main	0166_alter_jobevent_host	2000-01-01 00:00:00.000000+00
+238	main	0167_project_signature_validation_credential	2000-01-01 00:00:00.000000+00
+239	main	0168_inventoryupdate_scm_revision	2000-01-01 00:00:00.000000+00
+240	main	0169_jt_prompt_everything_on_launch	2000-01-01 00:00:00.000000+00
+241	main	0170_node_and_link_state	2000-01-01 00:00:00.000000+00
+242	main	0171_add_health_check_started	2000-01-01 00:00:00.000000+00
+243	main	0172_prevent_instance_fallback	2000-01-01 00:00:00.000000+00
+244	main	0173_instancegroup_max_limits	2000-01-01 00:00:00.000000+00
+245	main	0174_ensure_org_ee_admin_roles	2000-01-01 00:00:00.000000+00
+246	main	0175_workflowjob_is_bulk_job	2000-01-01 00:00:00.000000+00
+247	main	0176_inventorysource_scm_branch	2000-01-01 00:00:00.000000+00
+248	main	0177_instance_group_role_addition	2000-01-01 00:00:00.000000+00
+249	main	0178_instance_group_admin_migration	2000-01-01 00:00:00.000000+00
+250	main	0179_change_cyberark_plugin_names	2000-01-01 00:00:00.000000+00
+251	main	0180_add_hostmetric_fields	2000-01-01 00:00:00.000000+00
+252	main	0181_hostmetricsummarymonthly	2000-01-01 00:00:00.000000+00
+253	main	0182_constructed_inventory	2000-01-01 00:00:00.000000+00
+254	main	0183_pre_django_upgrade	2000-01-01 00:00:00.000000+00
+255	main	0184_django_indexes	2000-01-01 00:00:00.000000+00
+256	main	0185_move_JSONBlob_to_JSONField	2000-01-01 00:00:00.000000+00
+257	main	0186_drop_django_taggit	2000-01-01 00:00:00.000000+00
+258	main	0187_hop_nodes	2000-01-01 00:00:00.000000+00
+259	main	0188_add_bitbucket_dc_webhook	2000-01-01 00:00:00.000000+00
+260	main	0189_inbound_hop_nodes	2000-01-01 00:00:00.000000+00
+261	main	0190_alter_inventorysource_source_and_more	2000-01-01 00:00:00.000000+00
+262	dab_rbac	0001_initial	2000-01-01 00:00:00.000000+00
+263	main	0191_add_django_permissions	2000-01-01 00:00:00.000000+00
+264	main	0192_custom_roles	2000-01-01 00:00:00.000000+00
+265	main	0193_alter_notification_notification_type_and_more	2000-01-01 00:00:00.000000+00
+266	main	0194_alter_inventorysource_source_and_more	2000-01-01 00:00:00.000000+00
+267	main	0195_EE_permissions	2000-01-01 00:00:00.000000+00
+268	main	0196_indirect_managed_node_audit	2000-01-01 00:00:00.000000+00
+269	main	0197_add_opa_query_path	2000-01-01 00:00:00.000000+00
+270	main	0198_alter_inventorysource_source_and_more	2000-01-01 00:00:00.000000+00
+271	main	0199_inventorygroupvariableswithhistory_and_more	2000-01-01 00:00:00.000000+00
+272	main	0200_template_name_constraint	2000-01-01 00:00:00.000000+00
+273	main	0201_create_managed_creds	2000-01-01 00:00:00.000000+00
+274	main	0202_convert_controller_role_definitions	2000-01-01 00:00:00.000000+00
+275	main	0203_remove_team_of_teams	2000-01-01 00:00:00.000000+00
+276	dab_rbac	0002_alter_objectrole_provides_teams_and_more	2000-01-01 00:00:00.000000+00
+277	dab_rbac	0003_alter_dabpermission_codename_and_more	2000-01-01 00:00:00.000000+00
+278	dab_rbac	0004_remote_permissions_additions	2000-01-01 00:00:00.000000+00
+279	dab_rbac	0005_remote_permissions_data	2000-01-01 00:00:00.000000+00
+280	dab_rbac	0006_remote_data_reverse	2000-01-01 00:00:00.000000+00
+281	dab_rbac	0007_remote_permissions_removals	2000-01-01 00:00:00.000000+00
+282	dab_rbac	0008_remote_permissions_cleanup	2000-01-01 00:00:00.000000+00
+283	dab_rbac	0009_unique_global_assignments	2000-01-01 00:00:00.000000+00
+284	dab_rbac	0010_roleteamassignment_unique_global_team_assignment_and_more	2000-01-01 00:00:00.000000+00
+285	dab_resource_registry	0001_initial	2000-01-01 00:00:00.000000+00
+286	dab_resource_registry	0002_remove_resource_id	2000-01-01 00:00:00.000000+00
+287	dab_resource_registry	0003_alter_resource_object_id	2000-01-01 00:00:00.000000+00
+288	dab_resource_registry	0004_remove_resourcetype_migrated	2000-01-01 00:00:00.000000+00
+289	dab_resource_registry	0005_resource_is_partially_migrated_and_more	2000-01-01 00:00:00.000000+00
+290	dab_resource_registry	0006_alter_resource_service_id	2000-01-01 00:00:00.000000+00
+291	dab_resource_registry	0007_alter_resource_ansible_id_and_more	2000-01-01 00:00:00.000000+00
+292	dab_resource_registry	0008_resource_covering_index_ansible_id	2000-01-01 00:00:00.000000+00
+293	flags	0001_initial	2000-01-01 00:00:00.000000+00
+294	flags	0002_auto_20151030_1401	2000-01-01 00:00:00.000000+00
+295	flags	0003_flag_hidden	2000-01-01 00:00:00.000000+00
+296	flags	0004_remove_flag_hidden	2000-01-01 00:00:00.000000+00
+297	flags	0005_flag_enabled_by_default	2000-01-01 00:00:00.000000+00
+298	flags	0006_auto_20151217_2003	2000-01-01 00:00:00.000000+00
+299	flags	0007_unique_flag_site	2000-01-01 00:00:00.000000+00
+300	flags	0008_add_state_conditions	2000-01-01 00:00:00.000000+00
+301	flags	0009_migrate_to_conditional_state	2000-01-01 00:00:00.000000+00
+302	flags	0010_delete_flag_site_fk	2000-01-01 00:00:00.000000+00
+303	flags	0011_migrate_path_data_startswith_to_matches	2000-01-01 00:00:00.000000+00
+304	flags	0013_add_required_field	2000-01-01 00:00:00.000000+00
+305	main	0206_jobhostsummary_host_id_idx	2000-01-01 00:00:00.000000+00
+306	main	0204_squashed_deletions	2000-01-01 00:00:00.000000+00
+307	main	0205_add_ordering_to_instancegroup_and_workflow_nodes	2000-01-01 00:00:00.000000+00
+308	main	0207_merge_0205_0206	2000-01-01 00:00:00.000000+00
+309	main	0208_alter_skip_tags_to_textfield	2000-01-01 00:00:00.000000+00
+310	main	0209_fix_system_auditor_migration	2000-01-01 00:00:00.000000+00
+311	main	0210_remove_host_last_job_fields	2000-01-01 00:00:00.000000+00
+312	main	0211_create_metrics_utility_functions	2000-01-01 00:00:00.000000+00
+313	sites	0001_initial	2000-01-01 00:00:00.000000+00
+314	sites	0002_alter_domain_unique	2000-01-01 00:00:00.000000+00
+315	main	0003_squashed_v300_v303_updates	2000-01-01 00:00:00.000000+00
+316	main	0004_squashed_v310_release	2000-01-01 00:00:00.000000+00
+317	main	0005_squashed_v310_v313_updates	2000-01-01 00:00:00.000000+00
+318	main	0002_squashed_v300_release	2000-01-01 00:00:00.000000+00
+319	flags	0012_replace_migrations_for_wagtail_independence	2000-01-01 00:00:00.000000+00
 \.
 
 ALTER TABLE public.django_migrations ENABLE TRIGGER ALL;
@@ -2884,7 +2894,7 @@ SELECT pg_catalog.setval('public.conf_setting_id_seq', 1, true);
 -- Name: dab_feature_flags_aapflag_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_feature_flags_aapflag_id_seq', 3, true);
+SELECT pg_catalog.setval('public.dab_feature_flags_aapflag_id_seq', 2, true);
 
 --
 -- Name: dab_rbac_dabcontenttype_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -2920,7 +2930,7 @@ SELECT pg_catalog.setval('public.dab_rbac_roledefinition_id_seq', 33, true);
 -- Name: dab_rbac_roledefinition_permissions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_rbac_roledefinition_permissions_id_seq', 187, true);
+SELECT pg_catalog.setval('public.dab_rbac_roledefinition_permissions_id_seq', 180, true);
 
 --
 -- Name: dab_rbac_roleevaluation_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -2950,7 +2960,7 @@ SELECT pg_catalog.setval('public.dab_rbac_roleuserassignment_id_seq', 1, false);
 -- Name: dab_resource_registry_resource_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.dab_resource_registry_resource_id_seq', 36, true);
+SELECT pg_catalog.setval('public.dab_resource_registry_resource_id_seq', 35, true);
 
 --
 -- Name: dab_resource_registry_resourcetype_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
@@ -2968,7 +2978,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 92, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 311, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 319, true);
 
 --
 -- Name: django_site_id_seq; Type: SEQUENCE SET; Schema: public; Owner: awx
