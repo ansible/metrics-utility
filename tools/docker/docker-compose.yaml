@@ -259,6 +259,7 @@ services:
     working_dir: /awx_devel
     volumes:
       - ../../../awx:/awx_devel:z
+      - ../..:/metrics-utility:z  # for running in controller mode, see docs/awx.md
       - ./awx/bootstrap.sh:/usr/local/bin/awx-bootstrap:z
       - ./awx/autoreload.sh:/usr/local/bin/awx-autoreload:z
       - ./awx/supervisord.conf:/etc/supervisord.conf:z
