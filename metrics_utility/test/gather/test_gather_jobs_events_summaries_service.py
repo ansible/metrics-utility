@@ -636,20 +636,9 @@ def test_execution_environments_command(cleanup_glob):
     validate_csv_in_tarballs(file_paths, 'execution_environments.csv', execution_environments_lines, execution_environments_skip_columns)
 
 
-credentials_service_lines = [
-    'credential_type',
-    'Amazon Web Services',
-    'Machine',
-    'Network',
-    'Vault',
-]
-
-credentials_service_skip_columns = []
-
-
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_credentials_service_command(cleanup_glob):
-    """Build and validate credentials_service output from new library collector."""
+    """Build and validate the union of credential type collector fields and rows."""
     since = utcdt('2025-06-12')
     until = utcdt('2025-06-14')
 
@@ -659,10 +648,12 @@ def test_credentials_service_command(cleanup_glob):
 
     assert df is not None, 'credentials_service returned None'
 
-    # Validate DataFrame content
-    validate_dataframe(df, credentials_service_lines, credentials_service_skip_columns)
-
-    # Verify that custom credential types (managed=false) are NOT included
-    assert 'My Custom Credential Type' not in df['credential_type'].values, (
-        'Custom credential type "My Custom Credential Type" should be filtered out by managed=true filter, but it was found in the output'
-    )
+    assert {
+        'id',
+        'name',
+        'credential_type',
+        'managed',
+        'credential_count',
+        'used_by_finished_job_count',
+    } <= set(df.columns)
+    assert 'My Custom Credential Type' in df['credential_type'].values

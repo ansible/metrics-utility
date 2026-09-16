@@ -43,7 +43,7 @@ def test_unified_jobs_calls_copy_table(mock_copy_pandas):
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_unified_jobs_query_contains_time_range(mock_copy_pandas):
-    """Test that the query includes the time range for finished timestamp."""
+    """Test that the query includes the time range for created and finished timestamps."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 6, 1, 12, 0, tzinfo=datetime.UTC)
     until = datetime.datetime(2024, 6, 2, 14, 30, tzinfo=datetime.UTC)
@@ -55,16 +55,18 @@ def test_unified_jobs_query_contains_time_range(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Query should contain time boundaries for finished timestamp
+    # Query should contain time boundaries for both row-selection timestamps.
     assert '2024-06-01' in query
     assert '2024-06-02' in query
+    assert 'main_unifiedjob.created >=' in query
+    assert 'main_unifiedjob.created <' in query
     assert 'main_unifiedjob.finished >=' in query
     assert 'main_unifiedjob.finished <' in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-def test_unified_jobs_uses_finished_filter(mock_copy_pandas):
-    """Test that query filters by finished timestamp only."""
+def test_unified_jobs_uses_created_or_finished_filter(mock_copy_pandas):
+    """Test that query filters by created or finished timestamp."""
     mock_db = MagicMock()
     since = datetime.datetime(2024, 1, 1, tzinfo=datetime.UTC)
     until = datetime.datetime(2024, 2, 1, tzinfo=datetime.UTC)
@@ -76,9 +78,12 @@ def test_unified_jobs_uses_finished_filter(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Should filter by finished timestamp only (no OR logic)
+    # Controller keeps all job types and selects rows changed by either timestamp.
+    assert 'main_unifiedjob.created >=' in query
+    assert 'main_unifiedjob.created <' in query
     assert 'main_unifiedjob.finished >=' in query
     assert 'main_unifiedjob.finished <' in query
+    assert ' OR ' in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')

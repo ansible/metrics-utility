@@ -12,23 +12,25 @@ def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
 
     Args:
         db: Django database connection.
-        since: Inclusive start datetime for the ``finished`` filter.
-        until: Exclusive end datetime for the ``finished`` filter.
+        since: Inclusive start datetime for the ``created`` or ``finished`` filter.
+        until: Exclusive end datetime for the ``created`` or ``finished`` filter.
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
     Returns:
         pandas DataFrame or list of CSV file paths depending on *output*.
     """
+    created_where = date_where('main_unifiedjob.created', since, until)
+    finished_where = date_where('main_unifiedjob.finished', since, until)
     query = f"""
         SELECT
             main_unifiedjob.id,
             main_unifiedjob.polymorphic_ctype_id,
             django_content_type.model,
             main_unifiedjob.organization_id,
-            main_organization.name as organization_name,
-            main_executionenvironment.image as execution_environment_image,
+            main_organization.name AS organization_name,
+            main_executionenvironment.image AS execution_environment_image,
             main_job.inventory_id,
-            main_inventory.name as inventory_name,
+            main_inventory.name AS inventory_name,
             main_unifiedjob.execution_environment_id,
             main_unifiedjob.created,
             main_unifiedjob.name,
@@ -51,16 +53,22 @@ def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
             mut.name AS job_template_name,
             main_project.scm_type
         FROM main_unifiedjob
-        LEFT JOIN main_unifiedjobtemplate ON main_unifiedjobtemplate.id = main_unifiedjob.unified_job_template_id
-        LEFT JOIN django_content_type ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
-        LEFT JOIN main_job ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
-        LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
-        LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
-        LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
-        LEFT JOIN main_project ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
-        LEFT JOIN main_unifiedjobtemplate AS mut ON mut.id = main_unifiedjob.unified_job_template_id
+        LEFT JOIN django_content_type
+            ON main_unifiedjob.polymorphic_ctype_id = django_content_type.id
+        LEFT JOIN main_job
+            ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
+        LEFT JOIN main_inventory
+            ON main_job.inventory_id = main_inventory.id
+        LEFT JOIN main_organization
+            ON main_organization.id = main_unifiedjob.organization_id
+        LEFT JOIN main_executionenvironment
+            ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
+        LEFT JOIN main_project
+            ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
+        LEFT JOIN main_unifiedjobtemplate AS mut
+            ON mut.id = main_unifiedjob.unified_job_template_id
         WHERE
-            {date_where('main_unifiedjob.finished', since, until)}
+            ({created_where} OR {finished_where})
         ORDER BY main_unifiedjob.id ASC
     """
 

@@ -192,6 +192,9 @@ def test_config_collector_basic():
     assert 'install_uuid' in result
     assert 'instance_uuid' in result
     assert 'controller_url_base' in result
+    assert 'tower_url_base' in result
+    assert 'controller_version' in result
+    assert 'tower_version' in result
     assert 'metrics_utility_version' in result
     assert 'platform' in result
 
@@ -287,3 +290,18 @@ def test_config_collector_default_values():
     assert result['total_licensed_instances'] == 0
     assert result['free_instances'] == 0
     assert result['license_expiry'] == 0
+
+
+def test_config_collector_returns_controller_and_tower_aliases():
+    """Controller config retains both historical URL and version names."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_cursor.fetchall.return_value = [('TOWER_URL_BASE', '"https://controller.example.com"')]
+    mock_cursor.fetchone.return_value = ('4.5.0',)
+
+    result = config(db=mock_db).gather()
+
+    assert result['controller_url_base'] == result['tower_url_base'] == 'https://controller.example.com'
+    assert result['controller_version'] == result['tower_version'] == '4.5.0'
