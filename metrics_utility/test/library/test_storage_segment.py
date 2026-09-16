@@ -2,6 +2,8 @@ import datetime
 import gzip
 import json
 
+from decimal import Decimal
+from enum import Enum
 from unittest.mock import Mock, patch
 
 import pytest
@@ -35,9 +37,9 @@ class TestStorageSegmentAvailable:
         assert 'collection_stats' in chunks[4]
         assert 'jobs_by_job_type' in chunks[5]
         assert 'job_host_summary' in chunks[6]
-        assert len(chunks[1]['module_stats']) == 50
-        assert len(chunks[2]['module_stats']) == 50
-        assert len(chunks[3]['module_stats']) == 12
+        assert len(chunks[1]['module_stats']) == 54
+        assert len(chunks[2]['module_stats']) == 53
+        assert len(chunks[3]['module_stats']) == 5
 
     def test_simple_list_data(self):
         """Keep a small list in a single artifact chunk."""
@@ -50,9 +52,8 @@ class TestStorageSegmentAvailable:
         """Split a large list while preserving item counts and ordering."""
         data = {'test_list': [f'item{i}' for i in range(3000)]}
         chunks = StorageSegment()._split_into_chunks(data, StorageSegment.REGULAR_MESSAGE_LIMIT)
-        assert len(chunks) == 2
-        assert len(chunks[0]['test_list']) == 2821
-        assert len(chunks[1]['test_list']) == 179
+        assert len(chunks) == 1
+        assert len(chunks[0]['test_list']) == 3000
 
     def test_rollup_period_string_arrays(self):
         """Split each rollup-period array into its own chunk."""
@@ -87,6 +88,7 @@ class TestStorageSegmentAvailable:
         assert event['event'] == 'Test Event'
         assert event['properties']['artifact_name'] == 'test_artifact'
         assert event['properties']['chunk_info']['chunk_number'] == 1
+        assert event['properties']['chunk_info']['chunk_size'] == len(storage_segment._json_bytes(event['properties']['data']))
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_accepts_anonymous_id(self, mock_post):
@@ -145,6 +147,51 @@ class TestStorageSegmentAvailable:
         assert len(chunks) == 1
         assert chunks[0]['items'] == ['x' * 500]
         assert 'Single list item' in caplog.text
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_serializes_sdk_compatible_values(self, mock_post):
+        """Serialize Decimal, Enum, and set values before sending JSON."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'metrics': {'value': Decimal('1.25'), 'labels': {'red', 'blue'}, 'state': Enum('State', {'READY': 'ready'}).READY}},
+        )
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        data = payload['batch'][0]['properties']['data']['metrics']
+        assert data['value'] == 1.25
+        assert set(data['labels']) == {'red', 'blue'}
+        assert data['state'] == 'ready'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_canonicalizes_timestamp_for_generated_message_ids(self, mock_post):
+        """Equivalent datetime and ISO timestamps produce the same fallback ID."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+        common = {
+            'artifact_name': 'test_artifact',
+            'dict': {'statistics': {'count': 1}},
+            'anonymous_id': 'stable-anonymous-id',
+        }
+
+        storage_segment.put(**common, segment_meta={'timestamp': datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)})
+        first_payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        storage_segment.put(**common, segment_meta={'timestamp': '2026-01-01T00:00:00Z'})
+        second_payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+
+        assert first_payload['batch'][0]['messageId'] == second_payload['batch'][0]['messageId']
+        assert first_payload['batch'][0]['timestamp'] == second_payload['batch'][0]['timestamp'] == '2026-01-01T00:00:00+00:00'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', False)
+    def test_put_skips_upload_when_transport_is_unavailable(self, mock_post):
+        """Preserve the service compatibility marker when requests is absent."""
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        assert storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}}) is None
+        mock_post.assert_not_called()
 
     def test_split_into_batches_rejects_oversized_event_after_flush(self):
         """Reject an oversized event even after flushing a prior batch."""
@@ -251,13 +298,23 @@ class TestStorageSegmentAvailable:
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_rejects_insecure_remote_host(self, mock_post):
-        """Reject remote HTTP hosts before sending credentials or payloads."""
+        """Reject dotted-hostname HTTP hosts even when allow_insecure_host is set."""
         storage_segment = StorageSegment(write_key='test_write_key', host='http://segment.example.test', allow_insecure_host=True)
 
         with pytest.raises(ValueError, match='must use HTTPS'):
             storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
 
         mock_post.assert_not_called()
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_allows_docker_compose_test_host(self, mock_post):
+        """Allow a Docker Compose service hostname when allow_insecure_host is set."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key', host='http://mock-segment:5000', allow_insecure_host=True)
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        assert mock_post.call_args.args[0] == 'http://mock-segment:5000/v1/batch'
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_allows_explicit_loopback_test_host(self, mock_post):
@@ -268,6 +325,26 @@ class TestStorageSegmentAvailable:
         storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
 
         assert mock_post.call_args.args[0] == 'http://localhost:8765/v1/batch'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_allows_loopback_host_without_internal_host_opt_in(self, mock_post):
+        """Keep existing loopback integration callers working without extra settings."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key', host='http://localhost:8765', allow_insecure_host=False)
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        assert mock_post.call_args.args[0] == 'http://localhost:8765/v1/batch'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_rejects_internal_test_host_without_opt_in(self, mock_post):
+        """Require the opt-in for non-loopback compose-style HTTP hosts."""
+        storage_segment = StorageSegment(write_key='test_write_key', host='http://mock-segment:5000', allow_insecure_host=False)
+
+        with pytest.raises(ValueError, match='HTTPS'):
+            storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        mock_post.assert_not_called()
 
     def test_put_skips_upload_without_write_key(self):
         """Skip uploads when Segment credentials are not configured."""
@@ -297,3 +374,73 @@ class TestStorageSegmentAvailable:
 
         with pytest.raises(requests.Timeout):
             storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_event_stays_within_segment_message_limit(self, mock_post):
+        """Each built Segment event must fit within the 32 KB per-message limit."""
+        mock_post.return_value = Mock(status_code=200, text='{"success":true}')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(artifact_name='test_artifact', dict=segment_data_large, event_name='Test Event')
+
+        for call in mock_post.call_args_list:
+            payload = json.loads(gzip.decompress(call.kwargs['data']))
+            for event in payload['batch']:
+                event_bytes = len(json.dumps(event, separators=(',', ':')).encode('utf-8'))
+                assert event_bytes <= StorageSegment.REGULAR_MESSAGE_LIMIT, (
+                    f'Event exceeded limit: {event_bytes} > {StorageSegment.REGULAR_MESSAGE_LIMIT}'
+                )
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_handles_separator_light_data_without_oversized_events(self, mock_post):
+        """Use wire-size accounting for data with few JSON separators."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'items': ['x' * 200] * 1000},
+            segment_meta={'context': {'deployment': 'c' * 1000}},
+        )
+
+        events = []
+        for call in mock_post.call_args_list:
+            events.extend(json.loads(gzip.decompress(call.kwargs['data']))['batch'])
+        assert events
+        assert all(len(storage_segment._json_bytes(event)) <= storage_segment.REGULAR_MESSAGE_LIMIT for event in events)
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_rejects_indivisible_oversized_event_before_post(self, mock_post):
+        """Reject a single oversized list item before sending any batch."""
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        with pytest.raises(ValueError, match='message limit'):
+            storage_segment.put(artifact_name='test_artifact', dict={'items': ['x' * 32375]})
+
+        mock_post.assert_not_called()
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_falls_back_to_constructor_user_id(self, mock_post):
+        """Include the constructor-level user_id when segment_meta omits it."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key', user_id='my-user-id')
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        assert payload['batch'][0]['userId'] == 'my-user-id'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_segment_meta_user_id_overrides_constructor(self, mock_post):
+        """Let segment_meta user_id override the constructor-level value."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key', user_id='constructor-id')
+
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'statistics': {'count': 1}},
+            segment_meta={'user_id': 'meta-id'},
+        )
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        assert payload['batch'][0]['userId'] == 'meta-id'

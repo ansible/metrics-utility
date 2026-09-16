@@ -79,9 +79,10 @@ storage = StorageSegment(
 )
 ```
 
-Also allows an HTTPS `host` override. Local HTTP mock servers require the
-explicit test-only setting `allow_insecure_host=True` and should use a
-loopback host such as `http://localhost:8765`.
+Also allows an HTTPS `host` override. Loopback HTTP mock servers such as
+`http://localhost:8765` are accepted; single-label internal test hosts such as
+`http://mock-segment:8765` require the explicit test-only setting
+`allow_insecure_host=True`. Dotted remote HTTP hosts are always rejected.
 
 For retry-safe sends, pass
 `segment_meta={'message_id': '<stable-upload-id>'}`. A caller may also pass

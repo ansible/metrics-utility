@@ -7,16 +7,20 @@ import json
 import sys
 import uuid
 
+from decimal import Decimal
+from enum import Enum
 from urllib.parse import urlsplit
 
-import requests
+
+try:
+    import requests
+except ImportError:  # pragma: no cover - exercised by downstream import checks
+    requests = None
+    SEGMENT_AVAILABLE = False
+else:
+    SEGMENT_AVAILABLE = True
 
 from metrics_utility.logger import logger
-
-
-# Kept as a compatibility marker for metrics-service callers. Segment support
-# now uses the direct HTTP transport and no longer depends on the SDK.
-SEGMENT_AVAILABLE = True
 
 
 class StorageSegment:
@@ -31,6 +35,9 @@ class StorageSegment:
     REGULAR_MESSAGE_LIMIT = 32 * 1024
     # Segment's batch limit is below 500 KB. Leave room for the request envelope.
     BATCH_SIZE_LIMIT = 475_000
+    # Reserve room for variable-width chunk metadata after the data limit is
+    # calculated from a minimal event envelope.
+    EVENT_SIZE_SAFETY_MARGIN = 128
     REQUEST_TIMEOUT = 30
     SEGMENT_BATCH_PATH = '/v1/batch'
 
@@ -42,7 +49,7 @@ class StorageSegment:
                 ``'write_key'`` (str, required for actual uploads),
                 ``'host'`` (str, optional base URL override),
                 ``'gzip'`` (bool, default True), and ``'allow_insecure_host'``
-                (bool, test-only opt-in for loopback HTTP hosts).
+                (bool, test-only opt-in for internal HTTP hosts).
         """
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
@@ -50,6 +57,9 @@ class StorageSegment:
         self.host = settings.get('host')
         self.gzip = settings.get('gzip', True)
         self.allow_insecure_host = settings.get('allow_insecure_host', self.debug)
+
+        if not SEGMENT_AVAILABLE:
+            logger.info('StorageSegment: requests module not installed. Analytics will be disabled.')
 
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
@@ -70,7 +80,7 @@ class StorageSegment:
 
     def _calculate_size(self, data):
         """Calculate the size of data in bytes."""
-        return len(json.dumps(self._serialize_value(data)).encode('utf-8'))
+        return len(self._json_bytes(self._serialize_value(data)))
 
     @staticmethod
     def _json_bytes(data):
@@ -79,22 +89,47 @@ class StorageSegment:
 
     @staticmethod
     def _serialize_value(value):
-        """Convert date and datetime values to Segment-compatible strings."""
+        """Convert values to the JSON-compatible forms used by the SDK."""
         if isinstance(value, (datetime.datetime, datetime.date)):
             return value.isoformat()
+        if isinstance(value, Decimal):
+            return float(value)
+        if isinstance(value, Enum):
+            return StorageSegment._serialize_value(value.value)
         if isinstance(value, dict):
             return {key: StorageSegment._serialize_value(item) for key, item in value.items()}
-        if isinstance(value, list):
+        if isinstance(value, (set, frozenset, list, tuple)):
             return [StorageSegment._serialize_value(item) for item in value]
-        if isinstance(value, tuple):
-            return tuple(StorageSegment._serialize_value(item) for item in value)
         return value
+
+    @staticmethod
+    def _canonicalize_timestamp(value):
+        """Return one stable string representation for a timestamp value."""
+        if value is None:
+            value = datetime.datetime.now(tz=datetime.UTC)
+
+        if isinstance(value, datetime.datetime):
+            timestamp = value
+        elif isinstance(value, str):
+            candidate = value[:-1] + '+00:00' if value.endswith(('Z', 'z')) else value
+            try:
+                timestamp = datetime.datetime.fromisoformat(candidate)
+            except ValueError:
+                return value
+        elif isinstance(value, datetime.date):
+            return value.isoformat()
+        else:
+            return str(value)
+
+        if timestamp.tzinfo is not None:
+            timestamp = timestamp.astimezone(datetime.UTC)
+        return timestamp.isoformat()
 
     def _build_event(self, artifact_name, event_name, anonymous_id, chunk, chunk_number, total_chunks, segment_meta):
         """Build one deterministic Segment track event from an artifact chunk."""
         chunk = self._serialize_value(chunk)
         chunk_size = self._calculate_size(chunk)
-        timestamp = segment_meta.get('timestamp')
+        timestamp = self._canonicalize_timestamp(segment_meta['timestamp'])
         base_message_id = segment_meta.get('message_id') or f'{artifact_name}:{event_name}:{anonymous_id}:{timestamp}'
         message_id = hashlib.sha256(f'{base_message_id}_{chunk_number}'.encode('utf-8', errors='replace')).hexdigest()
 
@@ -103,13 +138,14 @@ class StorageSegment:
             'anonymousId': anonymous_id,
             'messageId': message_id,
             'event': event_name,
-            'timestamp': self._serialize_value(segment_meta.get('timestamp', datetime.datetime.now(tz=datetime.UTC))),
+            'timestamp': timestamp,
             'context': self._serialize_value(segment_meta.get('context', {})),
             'integrations': self._serialize_value(segment_meta.get('integrations', {})),
             'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size),
         }
-        if 'user_id' in segment_meta:
-            event['userId'] = segment_meta['user_id']
+        user_id = segment_meta.get('user_id') or self.user_id
+        if user_id and user_id != 'unknown':
+            event['userId'] = user_id
         return event
 
     def _split_into_batches(self, events, sent_at):
@@ -196,6 +232,19 @@ class StorageSegment:
 
         return chunks or [data]
 
+    def _calculate_event_overhead(self, artifact_name, event_name, anonymous_id, segment_meta):
+        """Measure the JSON byte overhead of one Segment track event envelope."""
+        dummy = self._build_event(artifact_name, event_name, anonymous_id, {}, 1, 1, segment_meta)
+        return len(self._json_bytes(dummy))
+
+    def _validate_event_sizes(self, events):
+        """Reject oversized complete events before any request is sent."""
+        for event_number, event in enumerate(events, 1):
+            event_size = len(self._json_bytes(event))
+            if event_size > self.REGULAR_MESSAGE_LIMIT:
+                msg = f'Segment event {event_number} is {event_size} bytes, exceeding the {self.REGULAR_MESSAGE_LIMIT}-byte message limit'
+                raise ValueError(msg)
+
     def _validate_put_args(self, artifact_name, filename, fileobj, data):
         """Validate supported input arguments and whether uploads are enabled."""
         if data is None:
@@ -203,6 +252,10 @@ class StorageSegment:
         if filename or fileobj:
             raise ValueError('StorageSegment: filename= and fileobj= are not supported; use dict=')
 
+        if not SEGMENT_AVAILABLE:
+            if self.debug:
+                logger.debug('Segment transport unavailable, skipping analytics upload for: %s', artifact_name)
+            return False
         if self.write_key:
             return True
         if self.debug:
@@ -214,11 +267,15 @@ class StorageSegment:
         if event_name is None:
             event_name = 'Metrics Artifact Upload'
         segment_meta = {**(segment_meta or {})}
-        if 'timestamp' not in segment_meta:
-            segment_meta['timestamp'] = datetime.datetime.now(tz=datetime.UTC)
+        segment_meta['timestamp'] = self._canonicalize_timestamp(segment_meta.get('timestamp'))
         if anonymous_id is None:
             anonymous_id = str(uuid.uuid4())
-        chunks = self._split_into_chunks(data, self.REGULAR_MESSAGE_LIMIT)
+        overhead = self._calculate_event_overhead(artifact_name, event_name, anonymous_id, segment_meta)
+        chunk_limit = self.REGULAR_MESSAGE_LIMIT - overhead - self.EVENT_SIZE_SAFETY_MARGIN
+        if chunk_limit <= 0:
+            msg = 'Segment event metadata leaves no room for event data under the message limit'
+            raise ValueError(msg)
+        chunks = self._split_into_chunks(data, chunk_limit)
         total_chunks = len(chunks)
 
         if self.debug:
@@ -227,6 +284,7 @@ class StorageSegment:
         events = [
             self._build_event(artifact_name, event_name, anonymous_id, chunk, i, total_chunks, segment_meta) for i, chunk in enumerate(chunks, 1)
         ]
+        self._validate_event_sizes(events)
         sent_at = datetime.datetime.now(tz=datetime.UTC).isoformat()
         return chunks, self._split_into_batches(events, sent_at), sent_at
 
@@ -279,9 +337,10 @@ class StorageSegment:
         parsed_url = urlsplit(base_url)
         if parsed_url.scheme != 'https':
             is_loopback = parsed_url.hostname in {'localhost', '127.0.0.1', '::1'}
-            explicit_test_host = self.host is not None and (self.allow_insecure_host or is_loopback)
-            if parsed_url.scheme != 'http' or not is_loopback or not explicit_test_host:
-                raise ValueError('Segment host must use HTTPS; HTTP is restricted to explicit loopback test hosts')
+            is_internal_hostname = parsed_url.hostname is not None and '.' not in parsed_url.hostname
+            explicit_test_host = self.host is not None and self.allow_insecure_host and (is_loopback or is_internal_hostname)
+            if parsed_url.scheme != 'http' or not (is_loopback or explicit_test_host):
+                raise ValueError('Segment host must use HTTPS; HTTP is restricted to loopback and internal test hosts')
         if not parsed_url.netloc:
             raise ValueError('Segment host must include a valid hostname')
         endpoint = f'{base_url}{self.SEGMENT_BATCH_PATH}'
