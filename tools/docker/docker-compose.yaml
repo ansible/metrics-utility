@@ -47,13 +47,12 @@ services:
       - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql:z
       - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql:z
       - ./initial.sql:/docker-entrypoint-initdb.d/init-2-initial.sql:z
-      - ./functions.sql:/docker-entrypoint-initdb.d/init-3-functions.sql:z
-      - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-4-conf_setting.sql:z
-      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-5-main_hostmetric.sql:z
-      - ./main_instance.sql:/docker-entrypoint-initdb.d/init-6-main_instance.sql:z
-      - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-7-main_jobhostsummary.sql:z
-      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-8-dab_feature_flags.sql:z
-      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-9-main_indirectmanagednodeaudit.sql:z
+      - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-3-conf_setting.sql:z
+      - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-4-main_hostmetric.sql:z
+      - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql:z
+      - ./main_jobhostsummary.sql:/docker-entrypoint-initdb.d/init-6-main_jobhostsummary.sql:z
+      - ./dab_feature_flags.sql:/docker-entrypoint-initdb.d/init-7-dab_feature_flags.sql:z
+      - ./main_indirectmanagednodeaudit.sql:/docker-entrypoint-initdb.d/init-8-main_indirectmanagednodeaudit.sql:z
 
   postgres-wait:
     image: "mirror.gcr.io/postgres"
