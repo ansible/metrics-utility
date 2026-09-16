@@ -93,22 +93,19 @@ jobs:
           AWX_LOGGING_MODE=stdout \
           /tmp/awx-venv/bin/awx-manage migrate --noinput
 
-      - name: "Extract schema"
+      - name: "Extract schema and initial data"
         id: extract
         run: |
           AWX_SHA="$(git -C awx rev-parse --short HEAD)"
+
           sudo -u postgres pg_dump -s awx \
-            `# strip pg_dump version comments — they change with postgres upgrades` \
-            | sed '/^-- Dumped from database version/d; /^-- Dumped by pg_dump version/d' \
-            `# strip pg18+ security directives and settings not present in older versions` \
-            | sed '/^\\restrict /d; /^\\unrestrict/d; /^SET transaction_timeout/d' \
-            `# strip pg18+ named NOT NULL constraints back to plain NOT NULL` \
-            | sed 's/ CONSTRAINT [a-z_]*_not_null[0-9]* NOT NULL/ NOT NULL/g' \
-            `# collapse consecutive blank lines left by the above removals` \
-            | cat -s \
-            `# strip trailing blank lines` \
-            | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' \
+            | python3 tools/docker/filter_pgdump.py \
             > tools/docker/latest.sql
+
+          sudo -u postgres pg_dump --data-only --disable-triggers awx \
+            | python3 tools/docker/filter_pgdump.py --normalize \
+            > tools/docker/initial.sql
+
           echo "awx_sha=$AWX_SHA" >> "$GITHUB_OUTPUT"
 
       - name: "Validate schema"
@@ -117,17 +114,21 @@ jobs:
             echo "::error::Schema dump is empty or invalid — expected CREATE TABLE statements"
             exit 1
           fi
+          if ! grep -q '^COPY ' tools/docker/initial.sql; then
+            echo "::error::Initial data dump is empty or invalid — expected COPY statements"
+            exit 1
+          fi
 
       - name: "Check for changes"
         id: diff
         run: |
-          if git diff --quiet tools/docker/latest.sql; then
+          if git diff --quiet tools/docker/latest.sql tools/docker/initial.sql; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No schema changes detected."
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "Schema changes detected:"
-            git diff --stat tools/docker/latest.sql
+            git diff --stat tools/docker/latest.sql tools/docker/initial.sql
           fi
 
       - name: "Notify Slack (no changes)"
@@ -149,7 +150,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: awx-schema
-          path: tools/docker/latest.sql
+          path: |
+            tools/docker/latest.sql
+            tools/docker/initial.sql
 
   push-branch:
     needs: extract-schema
@@ -172,7 +175,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B awx-schema-update
-          git add tools/docker/latest.sql
+          git add tools/docker/latest.sql tools/docker/initial.sql
           git commit -m "update AWX schema dump (${{ needs.extract-schema.outputs.awx_sha }})"
           git push -f origin awx-schema-update
 

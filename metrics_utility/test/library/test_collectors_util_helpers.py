@@ -193,6 +193,26 @@ class TestCopyTableFiles:
             # Verify keep_empty=True was passed
             mock_splitter_instance.file_list.assert_called_once_with(keep_empty=True)
 
+    def test_passes_params_through_django_debug_cursor(self, tmp_path):
+        """Test that params reach psycopg when Django wraps the cursor for DEBUG = True."""
+        from django.db.backends.postgresql.base import CursorDebugWrapper
+
+        mock_db = MagicMock()
+        raw_cursor = MagicMock()
+        mock_copy = MagicMock()
+
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=CursorDebugWrapper(raw_cursor, MagicMock()))
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        raw_cursor.copy.return_value.__enter__ = MagicMock(return_value=mock_copy)
+        raw_cursor.copy.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_copy.read.return_value = None
+
+        params = {'since': '2025-06-12'}
+        _copy_table_files(mock_db, 'SELECT * FROM test WHERE created >= %(since)s', str(tmp_path / 'test'), params)
+
+        raw_cursor.copy.assert_called_once_with('COPY (SELECT * FROM test WHERE created >= %(since)s) TO STDOUT WITH CSV HEADER', params)
+
 
 class TestCopyTablePandas:
     """Test _copy_table_pandas function."""

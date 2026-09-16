@@ -1,79 +1,85 @@
-# Running against awx dev env - within the awx docker compose virtualenv
+# Running against a real awx - compose `awx` profile
+
+The compose environment can run a real AWX next to the mock data, using the same postgres.
+See [tools/docker/README.md](../tools/docker/README.md#awx) for how the awx container is put together.
+
 
 ### setup
 
+Clone awx next to metrics-utility:
+
 ```bash
+cd ..
 git clone https://github.com/ansible/awx
-cd awx
+cd metrics-utility
 
-make docker-compose
+make compose-awx  # or compose-awx-service, compose-ui, compose-ui-service
 ```
 
-
-### install deps
-
-```bash
-docker exec -it tools_awx_1 pip install pandas==2.2.3 openpyxl==3.1.2
-```
-
-and then *either* install metrics-utility from pip, or from source
-
-
-### metrics-utility from source
-
-checkout metrics-utility *inside* `awx/`:
+The first start installs awx python dependencies into a volume, which takes a few minutes.
 
 ```bash
-cd awx
-git clone https://github.com/ansible/metrics-utility
-```
-
-then run as `./manage.py` inside the container dir
-
-```bash
-docker exec -it tools_awx_1 /bin/bash
-    # inside the container
-    cd metrics-utility
-    ./manage.py --help
-```
-
-
-### metrics-utility from pip
-
-May fail with dependency conflicts. If so, the from source variant should still work.
-
-```bash
-docker exec -it tools_awx_1 pip install metrics-utility
-```
-
-then
-
-```bash
-docker exec -it tools_awx_1 metrics-utility --version
-```
-
-
-### access awx
-
-```bash
-open https://localhost:8043/api/v2/
+open https://localhost:8043/api/v2/  # admin:admin
 open https://localhost:8043/api/docs/
 ```
+
+Jobs run for real - create a project, inventory & job template (or use the UI profile), launch, and the job data ends up in the same postgres metrics-utility collects from.
+The first job pulls the `quay.io/ansible/awx-ee` execution environment inside the awx container, which also takes a few minutes.
+
+
+### metrics-utility in standalone mode
+
+Nothing changes - the compose postgres is the awx database, so run metrics-utility from the host as usual:
+
+```bash
+export METRICS_UTILITY_SHIP_TARGET=directory
+export METRICS_UTILITY_SHIP_PATH=./out
+
+uv run python manage.py gather_automation_controller_billing_data --dry-run --since=2d
+```
+
+
+### metrics-utility in controller mode
+
+The metrics-utility checkout is mounted into the awx container as `/metrics-utility`,
+install it into the awx virtualenv (on `PATH` already) and run it there:
+
+```bash
+podman exec -it awx /bin/bash
+    # inside the container
+    pip install -e /metrics-utility
+    cd /metrics-utility
+
+    export METRICS_UTILITY_SHIP_TARGET=directory
+    export METRICS_UTILITY_SHIP_PATH=/tmp/out
+    python manage.py gather_automation_controller_billing_data --dry-run --since=2d
+```
+
+The awx virtualenv is recreated whenever awx requirements change, so the install may need repeating after updating awx.
 
 
 ### update
 
 ```bash
-cd awx
+cd ../awx
 git pull --ff-only origin devel
-docker compose -f tools/docker-compose/_sources/docker-compose.yml down -v
 ```
+
+Python code changes restart the awx processes automatically, requirement changes get installed on the next container start.
+Git-based requirements (`requirements_git.txt`, `@devel` branches) are only reinstalled when a requirements file changes - to pick up newer commits, remove the venv volume:
+
+```bash
+podman rm -f awx && podman volume rm docker_awx_venv
+```
+
+New awx migrations are applied on start, [update the schema dump](#extract-schema) to get them into the mock data too.
 
 
 ### psql
 
 ```bash
-docker exec tools_postgres_1 psql -n awx -c 'select app, max(name) from django_migrations group by app order by app;' --csv
+make psql
+    select app, max(name) from django_migrations group by app order by app;
 ```
 
 
@@ -88,18 +94,3 @@ tools/docker/extract-awx-schema.sh [AWX_DIR] [--force]
 Defaults to `../awx` relative to the metrics-utility repo root. Requires the awx repo to be on `devel` and up to date with `origin/devel` (use `--force` to override).
 
 The script strips pg-version-dependent output (version comments, `\restrict`, `transaction_timeout`, named NOT NULL constraints) to keep diffs stable across postgres upgrades.
-
-Manual alternative (inside awx docker compose):
-
-```bash
-cd metrics-utility/tools/docker
-docker exec tools_postgres_1 pg_dump -s awx > latest.sql
-```
-
-
-### misc
-
-* `/usr/bin/pip3.11 install --user ...` -> `/var/lib/awx/.local/bin`
-* pytest might not run without `SETUPTOOLS_USE_DISTUTILS=true`
-* root - `docker exec -u0`
-* unnecessary - `. /var/lib/awx/venv/awx/bin/activate`
