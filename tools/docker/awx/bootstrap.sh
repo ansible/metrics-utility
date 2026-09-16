@@ -4,6 +4,28 @@ set -euo pipefail
 
 cd /awx_devel
 
+# (re)create the awx venv whenever the checkout requirements change
+VENV=/var/lib/awx/venv/awx
+REQUIREMENTS=(requirements/requirements.txt requirements/requirements_git.txt requirements/requirements_dev.txt requirements/requirements_tower_uninstall.txt)
+hash="$(cat "${REQUIREMENTS[@]}" | sha256sum | cut -d' ' -f1)"
+if [ "$(cat "$VENV/.requirements-hash" 2> /dev/null)" != "$hash" ]; then
+  echo "Installing awx requirements into $VENV ..."
+  rm -rf "$VENV"
+  uv venv --seed --python /usr/bin/python3.12 "$VENV"
+  uv pip install --python "$VENV/bin/python" \
+    -r requirements/requirements.txt \
+    -r requirements/requirements_git.txt \
+    -r requirements/requirements_dev.txt
+  uv pip uninstall --python "$VENV/bin/python" -r requirements/requirements_tower_uninstall.txt
+
+  # awx code comes from the /awx_devel mount, not installed, so no console scripts either
+  echo /awx_devel > "$("$VENV/bin/python" -c 'import site; print(site.getsitepackages()[0])')/awx.pth"
+  printf '#!%s\nimport sys\nfrom awx import manage\n\nif __name__ == "__main__":\n    sys.exit(manage())\n' "$VENV/bin/python" > "$VENV/bin/awx-manage"
+  chmod +x "$VENV/bin/awx-manage"
+
+  echo "$hash" > "$VENV/.requirements-hash"
+fi
+
 # register the mounted checkout as the "awx" distribution (entry points, version)
 if [ ! -d awx.egg-info ]; then
   python3 - << 'EOF'

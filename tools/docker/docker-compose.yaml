@@ -246,8 +246,6 @@ services:
     build:
       context: ./awx
       dockerfile: Containerfile
-      additional_contexts:
-        awx-src: ../../../awx
     image: "localhost/metrics-utility-awx"
     container_name: awx
     hostname: awx-1
@@ -270,6 +268,7 @@ services:
       - ./awx/SECRET_KEY:/etc/tower/SECRET_KEY:z
       - ./awx/receptor.conf:/etc/receptor/receptor.conf:z
       - redis_socket:/var/run/redis/:rw
+      - awx_venv:/var/lib/awx/venv  # awx python dependencies, reinstalled when ../awx/requirements change
       - awx_containers:/var/lib/containers  # execution environment images, kept across restarts
     privileged: true
     depends_on:
@@ -308,5 +307,6 @@ services:
 
 volumes:
   redis_socket:
+  awx_venv:
   awx_containers:
   ansible_ui_node_modules:

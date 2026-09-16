@@ -1,10 +1,8 @@
-# AWX dev image, built from the ../awx checkout requirements
+# AWX dev image - system packages only
 #
-# Only dependencies live in the image - awx code, config, bootstrap and supervisor
-# config are all mounted by docker-compose.yaml, so the image only needs a rebuild
-# when awx requirements change.
-#
-# build context "awx-src" is the awx checkout (see additional_contexts in compose)
+# awx python dependencies are installed by bootstrap.sh into the awx_venv volume,
+# from the mounted awx checkout requirements; awx code, config, bootstrap and
+# supervisor config are all mounted by docker-compose.yaml.
 
 ARG RECEPTOR_IMAGE=quay.io/ansible/receptor:devel
 
@@ -18,6 +16,7 @@ ENV LC_ALL=en_US.UTF-8
 ENV AWX_LOGGING_MODE=stdout
 ENV HOME=/var/lib/awx
 ENV PATH=/var/lib/awx/venv/awx/bin:${PATH}
+ENV UV_CACHE_DIR=/var/lib/awx/venv/.uv-cache
 
 RUN dnf -y install 'dnf-command(config-manager)' && \
     dnf config-manager --set-enabled crb && \
@@ -56,25 +55,10 @@ RUN dnf -y install 'dnf-command(config-manager)' && \
 RUN printf '[containers]\ncgroups = "disabled"\n\n[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\n' > /etc/containers/containers.conf && \
     echo 'unqualified-search-registries = []' > /etc/containers/registries.conf.d/force-fully-qualified-images.conf
 
+RUN pip3.12 install supervisor uv && \
+    rm -rf /var/lib/awx/.cache
+
 COPY --from=receptor /usr/bin/receptor /usr/bin/receptor
-
-RUN pip3.12 install uv
-
-COPY --from=awx-src requirements/requirements.txt requirements/requirements_git.txt requirements/requirements_dev.txt requirements/requirements_tower_uninstall.txt /tmp/requirements/
-
-RUN uv venv --seed --python /usr/bin/python3.12 /var/lib/awx/venv/awx && \
-    uv pip install --python /var/lib/awx/venv/awx/bin/python \
-      -r /tmp/requirements/requirements.txt \
-      -r /tmp/requirements/requirements_git.txt \
-      -r /tmp/requirements/requirements_dev.txt \
-      supervisor && \
-    uv pip uninstall --python /var/lib/awx/venv/awx/bin/python -r /tmp/requirements/requirements_tower_uninstall.txt && \
-    rm -rf /tmp/requirements /var/lib/awx/.cache
-
-# awx code comes from the /awx_devel mount, not installed, so no console scripts either
-RUN echo /awx_devel > /var/lib/awx/venv/awx/lib/python3.12/site-packages/awx.pth && \
-    printf '#!/var/lib/awx/venv/awx/bin/python\nimport sys\nfrom awx import manage\n\nif __name__ == "__main__":\n    sys.exit(manage())\n' > /var/lib/awx/venv/awx/bin/awx-manage && \
-    chmod +x /var/lib/awx/venv/awx/bin/awx-manage
 
 RUN openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
       -keyout /etc/nginx/nginx.key -out /etc/nginx/nginx.crt \
@@ -83,6 +67,7 @@ RUN openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
 RUN mkdir -p \
       /var/lib/awx/projects \
       /var/lib/awx/public/static \
+      /var/lib/awx/venv \
       /var/run/awx-receptor \
       /var/run/supervisor
 
