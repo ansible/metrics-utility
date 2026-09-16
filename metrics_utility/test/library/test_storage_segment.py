@@ -55,6 +55,16 @@ class TestStorageSegmentAvailable:
         assert len(chunks) == 1
         assert len(chunks[0]['test_list']) == 3000
 
+    def test_preserves_other_top_level_values(self):
+        """Keep scalar and set values when another key already made a chunk."""
+        data = {'section': {'value': 1}, 'count': 2, 'labels': {'red', 'blue'}}
+
+        chunks = StorageSegment()._split_into_chunks(data, StorageSegment.REGULAR_MESSAGE_LIMIT)
+
+        assert chunks[0] == {'section': {'value': 1}}
+        assert chunks[1] == {'count': 2}
+        assert chunks[2]['labels'] == {'red', 'blue'}
+
     def test_rollup_period_string_arrays(self):
         """Split each rollup-period array into its own chunk."""
         data = {

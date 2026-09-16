@@ -181,8 +181,9 @@ class StorageSegment:
         """Split an artifact into top-level chunks below the requested size.
 
         Lists are split in order when appending another item would exceed the
-        limit. Dictionaries and individual oversized list items are preserved
-        as single chunks and reported through the logger.
+        limit. Dictionaries, other top-level values, and individual oversized
+        list items are preserved as single chunks and reported through the
+        logger.
 
         Args:
             data: Dictionary containing the artifact data to split.
@@ -229,6 +230,13 @@ class StorageSegment:
 
                 if len(active_chunk[key]) > 0:
                     chunks.append(active_chunk)
+
+            else:
+                chunk = {key: value}
+                chunk_size = self._calculate_size(chunk)
+                if chunk_size > max_size:
+                    logger.warning('Oversized value chunk for key %r: %d bytes exceeds %d limit', key, chunk_size, max_size)
+                chunks.append(chunk)
 
         return chunks or [data]
 
