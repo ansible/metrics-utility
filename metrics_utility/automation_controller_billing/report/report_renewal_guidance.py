@@ -93,8 +93,12 @@ class ReportRenewalGuidance(Base):
                 self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=False))
                 sheet_index += 1
 
+                # with_deleted=True so the listed ephemeral nodes match the
+                # "Ephemeral automated hosts total" figure and the high-water
+                # mark, which both already account for soft-deleted ephemerals
+                # (AAP-88193, defect 4).
                 ws = self.add_sheet('Managed nodes ephemeral', sheet_index, self.config['data_column_widths'])
-                self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True))
+                self._build_data_section_host_metrics(1, ws, self.df_managed_nodes_query(host_metric_dataframe, ephemeral=True, with_deleted=True))
                 sheet_index += 1
 
                 ws = self.add_sheet('Managed nodes ephemeral usage', sheet_index, self.config['uniform_column_widths'])
@@ -115,19 +119,82 @@ class ReportRenewalGuidance(Base):
         if not with_deleted:
             dataframe = dataframe[~dataframe['deleted']]
 
-        # Ephemeral threshold, host's first automation must be older than ephemeral threshold
-        # to be considered as ephemeral
+        # ephemeral=True and ephemeral=False partition the (optionally
+        # deleted-inclusive) set into exact complements via a single mask, so
+        # the "Automated hosts" and "Ephemeral automated hosts" figures always
+        # agree on the same classification.
+        mask = self._ephemeral_mask(dataframe)
+        if ephemeral is True:
+            return dataframe[mask]
+        if ephemeral is False:
+            return dataframe[~mask]
+
+    def _ephemeral_mask(self, dataframe):
+        """Boolean mask selecting ephemeral hosts.
+
+        A host is ephemeral when its automation lifespan is short *and* it
+        first automated long enough ago to have been observed for a full
+        ephemeral window.
+
+        Immutable-infrastructure fleets recycle a hostname (or share a single
+        machine_id / connection:local identity) so the whole fleet collapses to
+        one HostMetric record whose first/last automation span the entire
+        year, even though each incarnation lived only days. Dividing the total
+        automated span by the number of incarnations (one soft-deletion each,
+        plus the currently-live instance) recovers the true per-incarnation
+        lifespan, so these hosts are classified as ephemeral instead of being
+        mis-billed as long-lived standard nodes (AAP-88193, defect 1).
+        """
+        # Host's first automation must be older than the ephemeral threshold
+        # to be considered ephemeral.
         ephemeral_threshold = (
             pd.to_datetime(datetime.datetime.now() - datetime.timedelta(days=self.ephemeral_days - 1), format='ISO8601')
             .replace(hour=0, minute=0, second=0, microsecond=0)
             .tz_localize(None)
         )
 
-        # Filter ephemeral based on number of automated days
-        if ephemeral is True:
-            return dataframe[(dataframe['days_automated'] <= self.ephemeral_days) & (dataframe['first_automation'] <= ephemeral_threshold)]
-        if ephemeral is False:
-            return dataframe[(dataframe['days_automated'] > self.ephemeral_days) | (dataframe['first_automation'] > ephemeral_threshold)]
+        days_automated = dataframe['days_automated']
+
+        # Incarnations = number of times the identity was (re)created: one per
+        # soft-deletion, plus one for the currently-live instance.
+        incarnations = dataframe['deleted_counter'].fillna(0).astype('int64')
+        incarnations = incarnations + (~dataframe['deleted']).astype('int64')
+        incarnations = incarnations.clip(lower=1)
+        per_incarnation_days = days_automated / incarnations
+
+        short_lived = days_automated <= self.ephemeral_days
+        recycled_short = per_incarnation_days <= self.ephemeral_days
+        old_enough = dataframe['first_automation'] <= ephemeral_threshold
+
+        return (short_lived | recycled_short) & old_enough
+
+    def _flag_suspect_merges(self, dataframe):
+        """Boolean mask flagging deduped records that look like *false* collapses.
+
+        The renewal deduplicator merges HostMetric rows sharing an
+        ansible_machine_id (or connection:local identity). When several
+        distinct hostnames fold into one record with no product serial to
+        justify the merge and at most one shared machine_id, the collapse is
+        almost certainly a documented false positive (shared execution
+        environment / connection:local) rather than a genuine duplicate.
+        Flagging these lets the report surface how many host identities may
+        have been under-counted without changing deduplication itself
+        (AAP-88193, defects 2 & 3).
+        """
+        required = {'hostnames', 'ansible_product_serials', 'ansible_machine_ids'}
+        if dataframe.empty or not required.issubset(dataframe.columns):
+            return pd.Series(False, index=dataframe.index)
+
+        def _count(value):
+            if not isinstance(value, str):
+                return 0
+            return len([v for v in value.split(', ') if v])
+
+        n_names = dataframe['hostnames'].apply(_count)
+        n_serials = dataframe['ansible_product_serials'].apply(_count)
+        n_mids = dataframe['ansible_machine_ids'].apply(_count)
+
+        return (n_names > 1) & (n_serials == 0) & (n_mids <= 1)
 
     def df_deleted_managed_nodes_query(self, dataframe):
         return dataframe[dataframe['deleted']]
@@ -208,10 +275,12 @@ class ReportRenewalGuidance(Base):
             }
             ccsp_report.append(ccsp_report_item)
 
-            # Automated hosts ephemeral total
+            # Automated hosts ephemeral total. with_deleted=True so soft-deleted
+            # ephemeral hosts are counted here too, keeping the total consistent
+            # with the high-water mark below (AAP-88193, defect 4).
             ccsp_report_item = {
                 'description': 'Ephemeral automated hosts total',
-                'quantity_consumed': self.df_managed_nodes_query(dataframe, ephemeral=True)['hostname'].nunique(),
+                'quantity_consumed': self.df_managed_nodes_query(dataframe, ephemeral=True, with_deleted=True)['hostname'].nunique(),
             }
             ccsp_report.append(ccsp_report_item)
 
@@ -219,6 +288,16 @@ class ReportRenewalGuidance(Base):
             ccsp_report_item = {
                 'description': 'Ephemeral automated hosts maximum\nconcurrent usage in defined interval',
                 'quantity_consumed': ephemeral_usage_dataframe['ephemeral_hosts'].max(),
+            }
+            ccsp_report.append(ccsp_report_item)
+
+            # Merge-suspect host records: deduped records where several distinct
+            # hostnames collapsed with no serial and <=1 shared machine_id. Each
+            # may hide multiple distinct ephemeral hosts under-counted by
+            # deduplication (AAP-88193, defects 2 & 3).
+            ccsp_report_item = {
+                'description': 'Merge-suspect host records\n(may hide distinct ephemeral hosts)',
+                'quantity_consumed': int(self._flag_suspect_merges(dataframe).sum()),
             }
             ccsp_report.append(ccsp_report_item)
 
