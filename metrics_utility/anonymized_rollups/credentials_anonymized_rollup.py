@@ -44,6 +44,13 @@ class CredentialsAnonymizedRollup(BaseAnonymizedRollup):
                 }
             )
 
+        # Newer credentials_service data includes custom credential types. Keep
+        # those out of anonymized output while retaining compatibility with
+        # legacy data that has no managed column.
+        if 'managed' in dataframe.columns:
+            managed = dataframe['managed'].astype('string').str.strip().str.lower()
+            dataframe = dataframe[managed.isin({'t', 'true'})]
+
         # Get unique credential types in this batch
         unique_credential_types = dataframe['credential_type'].dropna().unique()
         # Convert to sorted list of strings
