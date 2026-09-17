@@ -123,6 +123,9 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     assert 'octet_length(e.event_data)' in query
     assert 'event_data_length' in query
 
+    # Fire-and-forget async detection field
+    assert 'async_job_id' in query
+
     # Should have ansible_version from unified_job
     assert 'uj.ansible_version' in query or 'ansible_version' in query
 
