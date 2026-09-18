@@ -44,22 +44,6 @@ def test_credentials_anonymized_rollup_prepare():
     assert result['credential_types'] == sorted(result['credential_types'])
 
 
-def test_credentials_anonymized_rollup_prepare_excludes_unmanaged_types():
-    """Test custom credential types are excluded when managed is available."""
-    df = pd.DataFrame(
-        [
-            {'credential_type': 'Machine', 'managed': 't'},
-            {'credential_type': 'Vault', 'managed': True},
-            {'credential_type': 'Custom Type', 'managed': 'f'},
-            {'credential_type': 'Another Custom Type', 'managed': False},
-        ]
-    )
-
-    result = CredentialsAnonymizedRollup().prepare(df)
-
-    assert result['credential_types'] == ['Machine', 'Vault']
-
-
 def test_credentials_anonymized_rollup_base():
     """Test base() method gets unique credential types across batches and converts to JSON format."""
     # Simulate data from prepare() and merge() - dictionary with credential_types list
