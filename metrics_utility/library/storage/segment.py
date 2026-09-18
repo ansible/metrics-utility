@@ -49,11 +49,12 @@ class StorageSegment:
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
-    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size):
+    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size, version='v1'):
         return {
             'artifact_name': artifact_name,
             'data': data,
             'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'version': version,
             'chunk_info': {
                 'chunk_number': chunk_number,
                 'total_chunks': total_chunks,
@@ -137,6 +138,9 @@ class StorageSegment:
             dict: Dictionary or list of data to send
             event_name: Name of the event to track
                        (defaults to 'Metrics Artifact Upload')
+            segment_meta: Optional metadata. The ``version`` value identifies
+                          the event schema in Segment properties and defaults
+                          to ``'v1'`` when omitted.
 
         This method supports sending anonymized analytics from
         multiple apps. Data is split so each `data` chunk is under
@@ -181,6 +185,8 @@ class StorageSegment:
         if not segment_meta:
             segment_meta = {}
         message_id = segment_meta.get('message_id')
+        version = segment_meta.get('version') or 'v1'
+        transport_meta = {key: value for key, value in segment_meta.items() if key != 'version'}
 
         segment_envelope = {
             'type': 'track',
@@ -189,8 +195,8 @@ class StorageSegment:
             'integrations': {},
             'context': {},
         }
-        properties = self._build_properties(artifact_name, {}, 0, 0, 0)
-        serializable_meta = {k: v.isoformat() if isinstance(v, datetime.datetime) else v for k, v in segment_meta.items()}
+        properties = self._build_properties(artifact_name, {}, 0, 0, 0, version)
+        serializable_meta = {k: v.isoformat() if isinstance(v, datetime.datetime) else v for k, v in transport_meta.items()}
         header = {
             **segment_envelope,
             **serializable_meta,
@@ -214,12 +220,12 @@ class StorageSegment:
 
             # chunk hash = sha256(message hash + chunk index)
             if message_id:
-                segment_meta['message_id'] = hashlib.sha256(f'{message_id}_{i}'.encode('utf-8', errors='replace')).hexdigest()
+                transport_meta['message_id'] = hashlib.sha256(f'{message_id}_{i}'.encode('utf-8', errors='replace')).hexdigest()
 
             if self.debug:
                 msg = f'Sending chunk {i}/{total_chunks} (size: {chunk_size} bytes)'
                 if message_id:
-                    msg += f'; message_id={segment_meta["message_id"]}'
+                    msg += f'; message_id={transport_meta["message_id"]}'
                 print(msg, file=sys.stderr)
 
             analytics.track(
@@ -231,8 +237,9 @@ class StorageSegment:
                     i,
                     total_chunks,
                     chunk_size,
+                    version,
                 ),
-                **segment_meta,
+                **transport_meta,
             )
 
         # Flush to ensure all events are sent
