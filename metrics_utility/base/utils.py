@@ -31,7 +31,7 @@ def get_optional_collectors():
     )
 
 
-def get_optional_ccsp_report_sheets(report_type=None):
+def get_optional_ccsp_report_sheets():
     """
     Get the list of optional CCSP report sheets from environment variable.
 
