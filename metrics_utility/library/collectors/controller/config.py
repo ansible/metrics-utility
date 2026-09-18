@@ -49,7 +49,6 @@ def config(*, db=None, billing_provider_params={}, output=DictOutput()):
             # settings
             'authentication_backends': settings.get('AUTHENTICATION_BACKENDS'),
             'controller_url_base': settings.get('TOWER_URL_BASE'),
-            'tower_url_base': settings.get('TOWER_URL_BASE'),
             'external_logger_enabled': settings.get('LOG_AGGREGATOR_ENABLED'),
             'external_logger_type': settings.get('LOG_AGGREGATOR_TYPE'),
             'install_uuid': settings.get('INSTALL_UUID'),
@@ -84,9 +83,13 @@ def config(*, db=None, billing_provider_params={}, output=DictOutput()):
             # versions & config
             'billing_provider_params': billing_provider_params,
             'controller_version': controller_version,
-            'tower_version': controller_version,
             'metrics_utility_version': _version('metrics-utility'),  # version from setup.cfg
-            'platform': _get_platform(distro.linux_distribution()),
+            'platform': {
+                'dist': distro.linux_distribution(),
+                'release': platform.release(),
+                'system': platform.system(),
+                'type': _get_install_type(),
+            },
         }
     )
 
@@ -179,13 +182,3 @@ def _version(package):
         return version(package)
     except PackageNotFoundError:
         return None
-
-
-def _get_platform(distribution):
-    """Return platform details for the Controller configuration snapshot."""
-    return {
-        'system': platform.system(),
-        'dist': distribution,
-        'release': platform.release(),
-        'type': _get_install_type(),
-    }
