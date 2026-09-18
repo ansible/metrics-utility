@@ -133,9 +133,7 @@ def test_host_metric_query_since_only():
     query, params = _host_metric_query(since=SINCE)
 
     assert f"main_hostmetric.last_automation >= '{SINCE.isoformat()}'" in query
-    assert f"main_hostmetric.last_deleted >= '{SINCE.isoformat()}'" in query
     assert 'main_hostmetric.last_automation <' not in query
-    assert 'main_hostmetric.last_deleted <' not in query
     assert 'LIMIT' not in query
     assert params == []
 

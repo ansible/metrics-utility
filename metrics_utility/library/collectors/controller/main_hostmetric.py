@@ -10,11 +10,7 @@ PAGE_SIZE = 10000
 
 def _host_metric_query(*, since=None, until=None, marker=None, limit=None):
     """Build the Controller host-metric query and its bound parameters."""
-    conditions = [
-        date_where('main_hostmetric.last_automation', since, until),
-        date_where('main_hostmetric.last_deleted', since, until),
-    ]
-    where_sql = 'true' if conditions[0] == conditions[1] == 'true' else f'({conditions[0]} OR {conditions[1]})'
+    where_sql = date_where('main_hostmetric.last_automation', since, until)
     params = []
 
     if marker is not None:
@@ -74,15 +70,15 @@ def main_hostmetric(*, db=None, since=None, until=None, output=DataframeOutput()
     """Collect host metric records from the Controller database.
 
     Reads ``main_hostmetric`` LEFT JOIN ``main_host``, filtered by
-    ``last_automation`` or ``last_deleted``. Used by the Renewal Guidance report.
+    ``last_automation``. Used by the Renewal Guidance report.
 
     Uses keyset pagination on ``(hostname, host_id)`` when materialising into a
     DataFrame; COPY-based outputs stream the whole result set in one query.
 
     Args:
         db: Django database connection.
-        since: Inclusive start datetime for the host-metric change filter.
-        until: Exclusive end datetime for the host-metric change filter (pass None
+        since: Inclusive start datetime for the ``last_automation`` filter.
+        until: Exclusive end datetime for the ``last_automation`` filter (pass None
             to avoid an upper bound, as the Renewal Guidance report does).
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
