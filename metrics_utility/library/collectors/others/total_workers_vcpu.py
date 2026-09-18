@@ -4,6 +4,8 @@ from datetime import UTC, datetime
 
 import requests
 
+from metrics_utility.logger import logger
+
 from ..util import DictOutput, collector
 
 
@@ -150,6 +152,8 @@ class PrometheusClient:
             token: Optional Bearer token for authentication.
             ca_cert_path: Optional path to a CA certificate file for TLS
                 verification; if provided, overrides the default trust store.
+                An empty string disables TLS verification entirely - only for
+                local/mock Prometheus over plain http (see ./run-vcpu).
         """
         self.url = url.rstrip('/')  # no trailing slash
         self.timeout = timeout
@@ -163,6 +167,10 @@ class PrometheusClient:
         if ca_cert_path:
             # Use service CA certificate for SSL verification
             self.session.verify = ca_cert_path
+        elif ca_cert_path is not None:
+            # Explicit empty string - opt out of TLS verification, never the default.
+            logger.warning('PrometheusClient: TLS verification is DISABLED (empty ca_cert_path). Do not use in production.')
+            self.session.verify = False
 
     def _get(self, url, params):
         """Perform a GET request and return the parsed JSON response.

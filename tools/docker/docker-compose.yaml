@@ -92,7 +92,7 @@ services:
       METRICS_UTILITY_BUCKET_SECRET_KEY: "myusersecretkey"
       METRICS_UTILITY_DB_HOST: "postgres"
       MOCK_SEGMENT_URL: "http://mock-segment:8765"
-      MOCK_PROMETHEUS_URL: "http://mock-prometheus:9090"
+      METRICS_UTILITY_PROMETHEUS_URL: "http://mock-prometheus:9090"
     entrypoint: |
       sh -c '
         set -e

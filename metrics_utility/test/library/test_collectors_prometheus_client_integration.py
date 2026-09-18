@@ -13,23 +13,23 @@ from metrics_utility.library.collectors.others.total_workers_vcpu import (
 )
 
 
-MOCK_PROMETHEUS_URL = os.getenv('MOCK_PROMETHEUS_URL', 'http://localhost:9090')
+PROMETHEUS_URL = os.getenv('METRICS_UTILITY_PROMETHEUS_URL', 'http://localhost:9090')
 
 
 def reset_mock():
-    req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/reset', method='POST')
+    req = urllib.request.Request(f'{PROMETHEUS_URL}/reset', method='POST')
     urllib.request.urlopen(req)
 
 
 def configure_mock(**kwargs):
     data = json.dumps(kwargs).encode()
-    req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/config', data=data, method='POST')
+    req = urllib.request.Request(f'{PROMETHEUS_URL}/config', data=data, method='POST')
     req.add_header('Content-Type', 'application/json')
     urllib.request.urlopen(req)
 
 
 def get_captured_requests():
-    with urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/requests') as resp:
+    with urllib.request.urlopen(f'{PROMETHEUS_URL}/requests') as resp:
         return json.loads(resp.read())
 
 
@@ -39,7 +39,7 @@ class TestPrometheusClientIntegration:
         configure_mock(cpu_value='16', empty_result=False)
 
     def test_instant_query(self):
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         result = client.query('sum(machine_cpu_cores)')
 
         assert len(result) == 1
@@ -51,14 +51,14 @@ class TestPrometheusClientIntegration:
         assert captured[0]['params']['query'] == 'sum(machine_cpu_cores)'
 
     def test_instant_query_with_time_param(self):
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         result = client.query('up', time_param=1700000000.0)
 
         assert len(result) == 1
         assert float(result[0]['value'][0]) == pytest.approx(1700000000.0)
 
     def test_range_query(self):
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         start = 1700000000.0
         end = 1700003600.0  # 1 hour later
         result = client.query_range('sum(machine_cpu_cores)', start_time=start, end_time=end, step='5m')
@@ -76,7 +76,7 @@ class TestPrometheusClientIntegration:
         assert captured[0]['params']['step'] == '5m'
 
     def test_get_current_value(self):
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         value = client.get_current_value('sum(machine_cpu_cores)')
 
         assert value == pytest.approx(16.0)
@@ -84,7 +84,7 @@ class TestPrometheusClientIntegration:
     def test_get_current_value_empty_result(self):
         configure_mock(empty_result=True)
 
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         value = client.get_current_value('sum(machine_cpu_cores)')
 
         assert value is None
@@ -96,7 +96,7 @@ class TestVcpuHelpersIntegration:
         configure_mock(cpu_value='16', empty_result=False)
 
     def test_get_total_workers_cpu(self):
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         base_ts = 1700000000.0
         vcpu_val, query = get_total_workers_cpu(client, base_ts)
 
@@ -107,13 +107,13 @@ class TestVcpuHelpersIntegration:
     def test_get_total_workers_cpu_no_data(self):
         configure_mock(empty_result=True)
 
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         vcpu_val, _query = get_total_workers_cpu(client, 1700000000.0)
 
         assert vcpu_val is None
 
     def test_get_cpu_timeline(self):
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         start = 1700000000.0
         end = 1700003600.0
 
@@ -127,7 +127,7 @@ class TestVcpuHelpersIntegration:
     def test_get_cpu_timeline_empty(self):
         configure_mock(empty_result=True)
 
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         timeline = get_cpu_timeline(client, 1700000000.0, 1700003600.0)
 
         assert timeline == []
@@ -135,7 +135,7 @@ class TestVcpuHelpersIntegration:
     def test_dynamic_cpu_value(self):
         configure_mock(cpu_value='32')
 
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         value = client.get_current_value('sum(machine_cpu_cores)')
 
         assert value == pytest.approx(32.0)
@@ -143,7 +143,7 @@ class TestVcpuHelpersIntegration:
     def test_range_query_varying_values(self):
         configure_mock(cpu_value=['8', '16', '24'])
 
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         start = 1700000000.0
         end = 1700000600.0  # 10 minutes later
         result = client.query_range('sum(machine_cpu_cores)', start_time=start, end_time=end, step='5m')
@@ -157,7 +157,7 @@ class TestVcpuHelpersIntegration:
     def test_instant_query_returns_last_value_from_list(self):
         configure_mock(cpu_value=['8', '16', '24'])
 
-        client = PrometheusClient(url=MOCK_PROMETHEUS_URL)
+        client = PrometheusClient(url=PROMETHEUS_URL)
         value = client.get_current_value('sum(machine_cpu_cores)')
 
         assert value == pytest.approx(24.0)

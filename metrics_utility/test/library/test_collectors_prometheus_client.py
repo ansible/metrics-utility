@@ -36,6 +36,20 @@ def test_prometheus_client_init_with_ca_cert():
     assert client.session.verify == '/path/to/ca.crt'
 
 
+def test_prometheus_client_init_with_empty_ca_cert():
+    """An empty ca_cert_path means "skip TLS verification" (plain-http mock, see ./run-vcpu)."""
+    client = PrometheusClient(url='http://localhost:9090', ca_cert_path='')
+
+    assert client.session.verify is False
+
+
+def test_prometheus_client_init_without_ca_cert():
+    """No ca_cert_path at all keeps requests' default trust store and verification."""
+    client = PrometheusClient(url='https://localhost:9090')
+
+    assert client.session.verify is True
+
+
 def test_prometheus_client_init_custom_timeout():
     """Test PrometheusClient initialization with custom timeout."""
     client = PrometheusClient(url='http://localhost:9090', timeout=60)
