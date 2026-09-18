@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_optional_collectors, get_report_type
+from metrics_utility.base.utils import bool_from_env, get_optional_ccsp_report_sheets, get_optional_collectors
 from metrics_utility.candlepin.client import CandlepinClient
 from metrics_utility.candlepin.lifecycle import (
     get_candlepin_ca,
@@ -515,22 +515,26 @@ def validate_report_type(errors, method):
     Validates the 'METRICS_UTILITY_REPORT_TYPE' environment variable against a set of valid report types.
 
     If the environment variable is set and its value is not in the list of valid report types,
-    an error message is appended to the provided errors list. If unset, it defaults to 'CCSPv2'.
+    an error message is appended to the provided errors list.
 
     Args:
         errors (list): A list to which error messages will be appended if validation fails.
 
     Returns:
-        str or None: The value of the 'METRICS_UTILITY_REPORT_TYPE' environment variable if set,
-            'CCSPv2' if unset, or None for the 'gather' method.
+        str or None: The value of the 'METRICS_UTILITY_REPORT_TYPE' environment variable if set, otherwise None.
     """
     if method == 'gather':
         return None
 
-    report_type = get_report_type()
-    if report_type not in VALID_REPORT_TYPES:
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
+    if report_type and report_type not in VALID_REPORT_TYPES:
         errors.append(
             f'Invalid METRICS_UTILITY_REPORT_TYPE: {report_type}. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
+            f'Please note these values are case sensitive'
+        )
+    if report_type is None:
+        errors.append(
+            f'Invalid METRICS_UTILITY_REPORT_TYPE is Empty. Valid values: {", ".join(VALID_REPORT_TYPES)}. '
             f'Please note these values are case sensitive'
         )
     return report_type
@@ -823,7 +827,7 @@ def validate_ccsp_params(options):
     Raises:
         :exc:`~metrics_utility.exceptions.BadParameter`: On invalid combinations.
     """
-    report_type = get_report_type()
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
     opt_month = options.get('month', None)
     opt_since = options.get('since', None)
     opt_until = options.get('until', None)
@@ -910,7 +914,9 @@ def validate_build_params(options, help_texts):
     Returns:
         Tuple of ``(since, until)`` datetimes (either may be None).
     """
-    report_type = get_report_type()
+    report_type = os.getenv('METRICS_UTILITY_REPORT_TYPE')
+    if not report_type:
+        return None, None
 
     if report_type in {'CCSP', 'CCSPv2'}:
         validate_ccsp_params(options)

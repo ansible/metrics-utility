@@ -64,11 +64,11 @@ def test_handle_extra_params_missing_ship_path(monkeypatch, command_instance):
         command_instance._handle_extra_params('directory')
 
 
-def test_handle_extra_params_missing_report_type_defaults_to_ccspv2(monkeypatch, command_instance):
+def test_handle_extra_params_missing_report_type(monkeypatch, command_instance):
     monkeypatch.setenv('METRICS_UTILITY_SHIP_PATH', 'directory')
     monkeypatch.delenv('METRICS_UTILITY_REPORT_TYPE', raising=False)
-    params = command_instance._handle_extra_params('directory')
-    assert params['report_type'] == 'CCSPv2'
+    with pytest.raises(MissingRequiredEnvVar):
+        command_instance._handle_extra_params('directory')
 
 
 def test_handle_extra_params_bad_report_type(monkeypatch, command_instance):

@@ -31,14 +31,6 @@ def get_optional_collectors():
     )
 
 
-def get_report_type():
-    """
-    Get the report type from environment variable.
-    Defaults to 'CCSPv2' if not set.
-    """
-    return os.getenv('METRICS_UTILITY_REPORT_TYPE') or 'CCSPv2'
-
-
 def get_optional_ccsp_report_sheets(report_type=None):
     """
     Get the list of optional CCSP report sheets from environment variable.
