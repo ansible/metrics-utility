@@ -125,17 +125,14 @@ def test_validate_ccsp_report_sheets_infrastructure_summary_allowed_under_ccsp_w
     assert not errors
 
 
-def test_validate_ccsp_report_sheets_ccsp_default_is_valid(monkeypatch):
-    """CCSP's default sheet list never includes infrastructure_summary in the first place
-
-    (see get_optional_ccsp_report_sheets), so it should validate cleanly with no env override.
-    """
+def test_validate_ccsp_report_sheets_default_is_valid(monkeypatch):
+    """The opt-in default sheet list validates for CCSP."""
     errors = []
     validate_ccsp_report_sheets(errors, 'CCSP')
     assert not errors
 
 
-def test_validate_ccsp_report_sheets_defaults_include_indirect_sheets(monkeypatch):
+def test_validate_ccsp_report_sheets_default_is_valid_for_ccspv2(monkeypatch):
     errors = []
     validate_ccsp_report_sheets(errors, 'CCSPv2')
     assert not errors
