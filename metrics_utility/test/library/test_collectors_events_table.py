@@ -4,10 +4,10 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from metrics_utility.library.collectors.awx.events_table import (
+from metrics_utility.library.collectors.controller.events_table import (
     _window as events_window,
 )
-from metrics_utility.library.collectors.awx.events_table import (
+from metrics_utility.library.collectors.controller.events_table import (
     events_table,
 )
 
@@ -39,7 +39,7 @@ def _mock_db():
         (SINCE, None, ValueError),
     ],
 )
-def test_awx_windows_validate_bounds(window, since, until, error):
+def test_events_windows_validate_bounds(window, since, until, error):
     with pytest.raises(error):
         window(since, until)
 

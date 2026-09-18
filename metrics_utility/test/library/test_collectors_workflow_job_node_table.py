@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from metrics_utility.library.collectors.awx.workflow_job_node_table import workflow_job_node_table
+from metrics_utility.library.collectors.controller.workflow_job_node_table import workflow_job_node_table
 
 
 def test_workflow_job_node_table_basic():
