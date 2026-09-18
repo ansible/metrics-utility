@@ -174,7 +174,7 @@ def test_validate_collectors_invalid(monkeypatch):
 
 
 def test_validate_collectors_default_when_unset(monkeypatch):
-    """Default collectors (including main_indirectmanagednodeaudit) must stay valid."""
+    """The default collector set must remain valid when no override is supplied."""
     errors = []
     validate_collectors(errors)
     assert not errors

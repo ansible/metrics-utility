@@ -583,7 +583,7 @@ def validate_collectors(errors):
 
     Environment Variables:
         METRICS_UTILITY_OPTIONAL_COLLECTORS (str, optional): Comma-separated
-            list of collector names. See get_optional_collectors() for the default.
+            list of collector names. Defaults to 'main_jobevent' if not set.
 
     Notes:
         - The set of valid optional collectors is defined by the global variable VALID_COLLECTORS.
