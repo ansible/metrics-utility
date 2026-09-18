@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from metrics_utility.library.collectors.awx.org_counts import org_counts
+from metrics_utility.library.collectors.controller.org_counts import org_counts
 
 
 def test_org_counts_basic():
