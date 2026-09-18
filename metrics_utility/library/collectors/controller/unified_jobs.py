@@ -12,15 +12,13 @@ def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
 
     Args:
         db: Django database connection.
-        since: Inclusive start datetime for the ``created`` or ``finished`` filter.
-        until: Exclusive end datetime for the ``created`` or ``finished`` filter.
+        since: Inclusive start datetime for the ``finished`` filter.
+        until: Exclusive end datetime for the ``finished`` filter.
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
     Returns:
         pandas DataFrame or list of CSV file paths depending on *output*.
     """
-    created_where = date_where('main_unifiedjob.created', since, until)
-    finished_where = date_where('main_unifiedjob.finished', since, until)
     query = f"""
         SELECT
             main_unifiedjob.id,
@@ -68,7 +66,7 @@ def unified_jobs(*, db=None, since=None, until=None, output=DataframeOutput()):
         LEFT JOIN main_unifiedjobtemplate AS mut
             ON mut.id = main_unifiedjob.unified_job_template_id
         WHERE
-            ({created_where} OR {finished_where})
+            {date_where('main_unifiedjob.finished', since, until)}
         ORDER BY main_unifiedjob.id ASC
     """
 
