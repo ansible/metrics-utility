@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from metrics_utility.library.collectors.awx.inventory_counts import inventory_counts
+from metrics_utility.library.collectors.controller.inventory_counts import inventory_counts
 
 
 def _make_mock_db():

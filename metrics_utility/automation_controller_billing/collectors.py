@@ -165,7 +165,7 @@ def cli_main_host_daily(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_hostmetric', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_hostmetric', '1.1', format='csv', fnc_slicing=daily_slicing)
 def cli_main_hostmetric(since, until, output):
     if 'main_hostmetric' not in get_optional_collectors():
         return None
@@ -335,7 +335,7 @@ def cli_table_metadata(since, until, output):
     return output.as_files(collector)
 
 
-@register('unified_jobs', '1.4', format='csv', fnc_slicing=daily_slicing)
+@register('unified_jobs', '1.5', format='csv', fnc_slicing=daily_slicing)
 def cli_unified_jobs(since, until, output):
     if 'unified_jobs' not in get_optional_collectors():
         return None

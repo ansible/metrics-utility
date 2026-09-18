@@ -55,7 +55,7 @@ def test_unified_jobs_query_contains_time_range(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Query should contain time boundaries for finished timestamp
+    # Query should contain time boundaries for finished timestamp.
     assert '2024-06-01' in query
     assert '2024-06-02' in query
     assert 'main_unifiedjob.finished >=' in query
@@ -76,7 +76,7 @@ def test_unified_jobs_uses_finished_filter(mock_copy_pandas):
     call_args = mock_copy_pandas.call_args
     query = call_args[0][1]
 
-    # Should filter by finished timestamp only (no OR logic)
+    # Controller selects rows by finished timestamp only.
     assert 'main_unifiedjob.finished >=' in query
     assert 'main_unifiedjob.finished <' in query
 
