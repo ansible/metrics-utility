@@ -104,7 +104,27 @@ class TestStorageSegmentAvailable:
         assert call_args['properties']['artifact_name'] == 'test_artifact'
         assert 'data' in call_args['properties']
         assert 'upload_timestamp' in call_args['properties']
+        assert call_args['properties']['version'] == 'v1'
         assert 'chunk_info' in call_args['properties']
+
+    @patch('metrics_utility.library.storage.segment.analytics')
+    @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
+    def test_put_uses_explicit_version_in_properties(self, mock_analytics):
+        """Use an explicitly supplied schema version in Segment properties."""
+        mock_analytics.track = Mock()
+        mock_analytics.flush = Mock()
+
+        storage_segment = StorageSegment(write_key='test_write_key')
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'first': {'value': 'one'}},
+            event_name='Test Event',
+            segment_meta={'version': 'v2'},
+        )
+
+        call_args = mock_analytics.track.call_args[1]
+        assert call_args['properties']['version'] == 'v2'
+        assert 'version' not in call_args
 
     @patch('metrics_utility.library.storage.segment.analytics')
     @patch('metrics_utility.library.storage.segment.SEGMENT_AVAILABLE', True)
