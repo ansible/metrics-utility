@@ -638,7 +638,7 @@ def test_execution_environments_command(cleanup_glob):
 
 @pytest.mark.filterwarnings('ignore::ResourceWarning')
 def test_credentials_service_command(cleanup_glob):
-    """Build and validate the union of credential type collector fields and rows."""
+    """Build and validate credentials_service output from library collector."""
     since = utcdt('2025-06-12')
     until = utcdt('2025-06-14')
 
@@ -648,12 +648,5 @@ def test_credentials_service_command(cleanup_glob):
 
     assert df is not None, 'credentials_service returned None'
 
-    assert {
-        'id',
-        'name',
-        'credential_type',
-        'managed',
-        'credential_count',
-        'used_by_finished_job_count',
-    } <= set(df.columns)
-    assert 'My Custom Credential Type' in df['credential_type'].values
+    validate_dataframe(df, ['credential_type', 'Amazon Web Services', 'Machine', 'Network', 'Vault'], [])
+    assert 'My Custom Credential Type' not in df['credential_type'].values
