@@ -66,19 +66,22 @@ def test_validate_report_type_build_valid(monkeypatch):
     assert not errors
 
 
-def test_validate_report_type_build_requires_report_type(monkeypatch):
+def test_validate_report_type_build_defaults_to_ccspv2_when_unset(monkeypatch):
     errors = []
     result = validate_report_type(errors, 'build')
-    assert result is None
-    assert errors
-    assert 'Invalid METRICS_UTILITY_REPORT_TYPE is Empty' in errors[0]
+    assert result == 'CCSPv2'
+    assert not errors
 
 
-def test_validate_build_params_returns_none_when_report_type_unset(monkeypatch):
-    """Build parameter validation cannot select a report-specific parser without a report type."""
+def test_validate_build_params_parses_since_until_when_report_type_unset(monkeypatch):
+    """With no METRICS_UTILITY_REPORT_TYPE set (now the supported CCSPv2 default), since/until
+
+    must still be parsed - validate_build_params previously short-circuited to (None, None)
+    whenever the env var was unset, silently dropping --since/--until.
+    """
     since, until = validate_build_params({'since': '2024-01-01', 'until': '2024-01-02'}, {})
-    assert since is None
-    assert until is None
+    assert since is not None
+    assert until is not None
 
 
 def test_validate_report_type_gather(monkeypatch):
@@ -125,14 +128,17 @@ def test_validate_ccsp_report_sheets_infrastructure_summary_allowed_under_ccsp_w
     assert not errors
 
 
-def test_validate_ccsp_report_sheets_default_is_valid(monkeypatch):
-    """The opt-in default sheet list validates for CCSP."""
+def test_validate_ccsp_report_sheets_ccsp_default_is_valid(monkeypatch):
+    """CCSP's default sheet list never includes infrastructure_summary in the first place
+
+    (see get_optional_ccsp_report_sheets), so it should validate cleanly with no env override.
+    """
     errors = []
     validate_ccsp_report_sheets(errors, 'CCSP')
     assert not errors
 
 
-def test_validate_ccsp_report_sheets_default_is_valid_for_ccspv2(monkeypatch):
+def test_validate_ccsp_report_sheets_defaults_include_indirect_sheets(monkeypatch):
     errors = []
     validate_ccsp_report_sheets(errors, 'CCSPv2')
     assert not errors
@@ -168,7 +174,7 @@ def test_validate_collectors_invalid(monkeypatch):
 
 
 def test_validate_collectors_default_when_unset(monkeypatch):
-    """The default collector set must remain valid when no override is supplied."""
+    """Default collectors (including main_indirectmanagednodeaudit) must stay valid."""
     errors = []
     validate_collectors(errors)
     assert not errors
