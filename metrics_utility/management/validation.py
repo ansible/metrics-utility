@@ -42,6 +42,7 @@ VALID_SHEETS = {
         'managed_nodes',
         'indirectly_managed_nodes',
         'inventory_scope',
+        'infrastructure_summary',
         'usage_by_collections',
         'usage_by_roles',
         'usage_by_modules',
