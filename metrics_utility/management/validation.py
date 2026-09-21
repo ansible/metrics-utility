@@ -6,7 +6,7 @@ import re
 
 from dateutil.relativedelta import relativedelta
 
-from metrics_utility.base.utils import bool_from_env, get_optional_collectors
+from metrics_utility.base.utils import bool_from_env
 from metrics_utility.candlepin.client import CandlepinClient
 from metrics_utility.candlepin.lifecycle import (
     get_candlepin_ca,
@@ -593,14 +593,16 @@ def validate_collectors(errors):
 
     Environment Variables:
         METRICS_UTILITY_OPTIONAL_COLLECTORS (str, optional): Comma-separated
-            list of collector names. See get_optional_collectors() for the default.
+            list of collector names. Defaults to 'main_jobevent' if not set.
 
     Notes:
         - The set of valid optional collectors is defined by the global variable VALID_COLLECTORS.
         - Error messages include the invalid collector names and the list ofvalid values.
     """
 
-    collectors = get_optional_collectors()
+    collectors = os.getenv('METRICS_UTILITY_OPTIONAL_COLLECTORS', 'main_jobevent').strip(', \t')
+    if collectors:
+        collectors = collectors.split(',')
     if collectors:
         invalid = set(collectors) - VALID_COLLECTORS
         if invalid:
