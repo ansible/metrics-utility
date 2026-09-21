@@ -104,9 +104,9 @@ class TestGetMaxGatherPeriodDays:
 class TestGetOptionalCollectors:
     """Test get_optional_collectors utility function."""
 
-    def test_returns_default_main_jobevent_when_env_not_set(self):
+    def test_returns_default_main_jobevent_and_indirect_when_env_not_set(self):
         with patch.dict('os.environ', {}, clear=True):
-            assert get_optional_collectors() == ['main_jobevent']
+            assert get_optional_collectors() == ['main_jobevent', 'main_indirectmanagednodeaudit']
 
     def test_returns_single_value(self):
         with patch.dict('os.environ', {'METRICS_UTILITY_OPTIONAL_COLLECTORS': 'main_host'}):
@@ -137,24 +137,25 @@ class TestGetOptionalCollectors:
 class TestGetOptionalCcspReportSheets:
     """Test get_optional_ccsp_report_sheets utility function."""
 
-    def test_default_sheets_exclude_indirect_sheets(self):
+    def test_default_sheets_for_ccspv2_include_infrastructure_summary(self):
         with patch.dict('os.environ', {}, clear=True):
-            sheets = get_optional_ccsp_report_sheets()
-            assert 'indirectly_managed_nodes' not in sheets
-            assert 'infrastructure_summary' not in sheets
+            sheets = get_optional_ccsp_report_sheets('CCSPv2')
+            assert 'indirectly_managed_nodes' in sheets
+            assert 'infrastructure_summary' in sheets
             assert 'ccsp_summary' in sheets
 
-    def test_default_sheets(self):
+    def test_default_sheets_for_ccsp_exclude_infrastructure_summary(self):
+        """infrastructure_summary is CCSPv2-only, so it must not appear in CCSP's default."""
         with patch.dict('os.environ', {}, clear=True):
-            assert get_optional_ccsp_report_sheets() == [
-                'ccsp_summary',
-                'managed_nodes',
-                'usage_by_organizations',
-                'usage_by_collections',
-                'usage_by_roles',
-                'usage_by_modules',
-            ]
+            sheets = get_optional_ccsp_report_sheets('CCSP')
+            assert 'indirectly_managed_nodes' in sheets
+            assert 'infrastructure_summary' not in sheets
+
+    def test_default_sheets_without_report_type_exclude_infrastructure_summary(self):
+        with patch.dict('os.environ', {}, clear=True):
+            sheets = get_optional_ccsp_report_sheets()
+            assert 'infrastructure_summary' not in sheets
 
     def test_env_override(self):
         with patch.dict('os.environ', {'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary'}):
-            assert get_optional_ccsp_report_sheets() == ['ccsp_summary']
+            assert get_optional_ccsp_report_sheets('CCSPv2') == ['ccsp_summary']
