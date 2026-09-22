@@ -7,9 +7,15 @@ import pandas as pd
 from metrics_utility.library.collectors.controller.main_host import main_host, main_host_daily
 
 
+def _mock_db():
+    mock_db = MagicMock()
+    mock_db.cursor.return_value.__enter__.return_value.fetchone.return_value = (False, False)
+    return mock_db
+
+
 def test_main_host_basic():
     """Test main_host collector basic functionality."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
 
     instance = main_host(db=mock_db)
 
@@ -21,7 +27,7 @@ def test_main_host_basic():
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_host_calls_copy_table(mock_copy_pandas):
     """Test that main_host calls copy_table with correct parameters."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
     mock_copy_pandas.return_value = pd.DataFrame({'id': [1, 2, 3], 'name': ['host1', 'host2', 'host3']})
 
     instance = main_host(db=mock_db)
@@ -38,7 +44,7 @@ def test_main_host_calls_copy_table(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_host_query_structure(mock_copy_pandas):
     """Test that the SQL query has expected structure."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
@@ -67,7 +73,7 @@ def test_main_host_query_structure(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_host_filters_enabled_hosts(mock_copy_pandas):
     """Test that query filters for enabled hosts."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
@@ -83,7 +89,7 @@ def test_main_host_filters_enabled_hosts(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_host_uses_yaml_json_functions(mock_copy_pandas):
     """Test that query uses metrics_utility helper functions."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
     mock_copy_pandas.return_value = pd.DataFrame()
 
     instance = main_host(db=mock_db)
@@ -103,7 +109,7 @@ def test_main_host_daily_uses_latest_summary_query(mock_copy_pandas):
     mock_copy_pandas.return_value = pd.DataFrame()
 
     main_host_daily(
-        db=MagicMock(),
+        db=_mock_db(),
         since=datetime.datetime(2025, 1, 1, tzinfo=datetime.UTC),
         until=datetime.datetime(2025, 1, 2, tzinfo=datetime.UTC),
     ).gather()
