@@ -28,6 +28,9 @@ env:
 jobs:
   sync:
     name: "Sync → ${{ github.event.repository.name }}"
+    # This workflow is mirrored into the downstream organization, but its
+    # GitHub App credentials are available only in the upstream organization.
+    if: github.repository_owner == 'ansible'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
