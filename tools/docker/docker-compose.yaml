@@ -46,7 +46,6 @@ services:
     volumes:
       - ./roles.sql:/docker-entrypoint-initdb.d/init-0-roles.sql:z
       - ./latest.sql:/docker-entrypoint-initdb.d/init-1-schema.sql:z
-      - ./functions.sql:/docker-entrypoint-initdb.d/init-2-functions.sql:z
       - ./conf_setting.sql:/docker-entrypoint-initdb.d/init-3-conf_setting.sql:z
       - ./main_hostmetric.sql:/docker-entrypoint-initdb.d/init-4-main_hostmetric.sql:z
       - ./main_instance.sql:/docker-entrypoint-initdb.d/init-5-main_instance.sql:z

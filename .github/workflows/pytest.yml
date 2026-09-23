@@ -39,7 +39,15 @@ jobs:
 
       - name: "Import SQL dump"
         run: |
-          cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
+          cat tools/docker/{roles,latest,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql \
+            | sudo su - postgres -c psql \
+              2> >(while IFS= read -r line; do
+                if [[ "$line" == ERROR:* ]]; then
+                  echo "::error title=PostgreSQL import::$line"
+                else
+                  echo "$line" >&2
+                fi
+              done)
 
       - name: "Pull SeaweedFS"
         run: |
@@ -179,7 +187,15 @@ jobs:
 
       - name: "Import SQL dump"
         run: |
-          cat tools/docker/{roles,latest,functions,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql | sudo su - postgres -c psql
+          cat tools/docker/{roles,latest,conf_setting,main_hostmetric,main_instance,main_jobhostsummary,dab_feature_flags,main_indirectmanagednodeaudit}.sql \
+            | sudo su - postgres -c psql \
+              2> >(while IFS= read -r line; do
+                if [[ "$line" == ERROR:* ]]; then
+                  echo "::error title=PostgreSQL import::$line"
+                else
+                  echo "$line" >&2
+                fi
+              done)
 
       - name: "Set up Go"
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
