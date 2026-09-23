@@ -1,0 +1,81 @@
+# AWX dev image - system packages only
+#
+# awx python dependencies are installed by bootstrap.sh into the awx_venv volume,
+# from the mounted awx checkout requirements; awx code, config, bootstrap and
+# supervisor config are all mounted by docker-compose.yaml.
+
+FROM quay.io/centos/centos:stream9
+
+ARG RECEPTOR_VERSION=1.6.8
+
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+ENV AWX_LOGGING_MODE=stdout
+ENV HOME=/var/lib/awx
+ENV PATH=/var/lib/awx/venv/awx/bin:${PATH}
+ENV UV_CACHE_DIR=/var/lib/awx/venv/.uv-cache
+
+RUN dnf -y install 'dnf-command(config-manager)' && \
+    dnf config-manager --set-enabled crb && \
+    dnf -y install \
+      crun \
+      gcc \
+      gcc-c++ \
+      git-core \
+      glibc-langpack-en \
+      libffi-devel \
+      libtool-ltdl-devel \
+      make \
+      nginx \
+      openssh-clients \
+      openssl \
+      patch \
+      podman \
+      postgresql \
+      postgresql-devel \
+      procps-ng \
+      python3.12 \
+      python3.12-devel \
+      python3.12-pip \
+      rsync \
+      slirp4netns \
+      swig \
+      xmlsec1-devel \
+      xmlsec1-openssl-devel && \
+    dnf -y install epel-release && \
+    dnf -y install inotify-tools && \
+    dnf -y clean all
+
+# podman for running jobs in execution environments - no systemd in here, no cgroups
+# (not writable when nested in rootless podman), and only fully qualified image names
+# (an unqualified one would hang on a prompt)
+RUN printf '[containers]\ncgroups = "disabled"\n\n[engine]\ncgroup_manager = "cgroupfs"\nevents_logger = "file"\n' > /etc/containers/containers.conf && \
+    echo 'unqualified-search-registries = []' > /etc/containers/registries.conf.d/force-fully-qualified-images.conf
+
+RUN pip3.12 install supervisor uv && \
+    rm -rf /var/lib/awx/.cache
+
+RUN arch="$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/')" && \
+    tarball="receptor_${RECEPTOR_VERSION}_linux_${arch}.tar.gz" && \
+    cd /tmp && \
+    curl -fsSLO "https://github.com/ansible/receptor/releases/download/v${RECEPTOR_VERSION}/${tarball}" && \
+    curl -fsSLO "https://github.com/ansible/receptor/releases/download/v${RECEPTOR_VERSION}/checksums.txt" && \
+    grep " ${tarball}\$" checksums.txt | sha256sum -c && \
+    tar -xzf "$tarball" -C /usr/bin receptor && \
+    rm "$tarball" checksums.txt
+
+RUN openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
+      -keyout /etc/nginx/nginx.key -out /etc/nginx/nginx.crt \
+      -subj "/CN=awx.localhost"
+
+RUN mkdir -p \
+      /var/lib/awx/projects \
+      /var/lib/awx/public/static \
+      /var/lib/awx/venv \
+      /var/run/awx-receptor \
+      /var/run/supervisor
+
+WORKDIR /awx_devel
+
+EXPOSE 8013 8043
