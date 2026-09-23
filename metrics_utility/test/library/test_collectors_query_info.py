@@ -54,3 +54,11 @@ def test_query_info_none_defaults():
 
     assert result['last_run'] == 'None'
     assert result['current_time'] == 'None'
+
+
+def test_query_info_accepts_database_connection():
+    instance = query_info(db=object(), since='2024-01-01', until='2024-01-02')
+    result = instance.gather()
+
+    assert result['last_run'] == '2024-01-01'
+    assert result['current_time'] == '2024-01-02'
