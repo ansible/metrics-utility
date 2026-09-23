@@ -14,10 +14,10 @@ jobs:
         run: |
           if [[ "$BASE_REPO" == "ansible/metrics-utility" && "$BASE_BRANCH" == "devel" ]]; then
             echo "✓ PR targets devel on upstream"
-          elif [[ "$BASE_BRANCH" == stable-* ]]; then
+          elif [[ "$BASE_BRANCH" == stable-2.* ]]; then
             echo "✓ PR targets $BASE_BRANCH"
           else
-            echo "::error::PRs should target devel on ansible/metrics-utility or a stable-* branch"
+            echo "::error::PRs should target devel on ansible/metrics-utility or a stable-2.x branch"
             exit 1
           fi
 
