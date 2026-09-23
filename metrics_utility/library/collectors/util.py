@@ -301,11 +301,8 @@ _YAML_JSON_FUNCTIONS = (
 )
 
 
-def _yaml_json_functions(missing=None):
+def _yaml_json_functions(missing):
     """Return definitions for the missing custom PostgreSQL helper functions."""
-    if missing is None:
-        missing = _YAML_JSON_FUNCTIONS
-
     definitions = []
     if 'metrics_utility_parse_yaml_field' in missing:
         definitions.append(
