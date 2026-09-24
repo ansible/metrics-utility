@@ -80,6 +80,7 @@ class TestCollectorsDashboard:
             ('created',),
             ('modified',),
             ('organization_name',),
+            ('organization_ansible_id',),
         ]
         rows = [
             (
@@ -98,6 +99,7 @@ class TestCollectorsDashboard:
                 datetime(2024, 1, 10),
                 datetime(2024, 1, 10),
                 'Default',
+                '11111111-1111-1111-1111-111111111111',
             ),
             (
                 2,
@@ -115,6 +117,7 @@ class TestCollectorsDashboard:
                 datetime(2024, 1, 15),
                 datetime(2024, 1, 15),
                 'Org 3',
+                '33333333-3333-3333-3333-333333333333',
             ),
             (
                 3,
@@ -131,6 +134,7 @@ class TestCollectorsDashboard:
                 None,
                 datetime(2024, 1, 20),
                 datetime(2024, 1, 20),
+                None,
                 None,
             ),
         ]
@@ -149,6 +153,7 @@ class TestCollectorsDashboard:
                 'unified_job_template_id': 1,
                 'organization_id': 1,
                 'organization_name': 'Default',
+                'organization_ansible_id': '11111111-1111-1111-1111-111111111111',
                 'started': datetime(2024, 1, 10),
                 'finished': datetime(2024, 1, 10, 0, 5),
                 'status': 'successful',
@@ -169,6 +174,7 @@ class TestCollectorsDashboard:
                 'unified_job_template_id': 2,
                 'organization_id': 3,
                 'organization_name': 'Org 3',
+                'organization_ansible_id': '33333333-3333-3333-3333-333333333333',
                 'started': datetime(2024, 1, 15),
                 'finished': datetime(2024, 1, 15, 0, 10),
                 'status': 'failed',
@@ -189,6 +195,7 @@ class TestCollectorsDashboard:
                 'unified_job_template_id': None,
                 'organization_id': None,
                 'organization_name': None,
+                'organization_ansible_id': None,
                 'started': datetime(2024, 1, 20),
                 'finished': datetime(2024, 1, 20, 0, 15),
                 'status': 'successful',
@@ -246,6 +253,7 @@ class TestCollectorsDashboard:
             ('created',),
             ('modified',),
             ('organization_name',),
+            ('organization_ansible_id',),
         ]
         mock_cursor.__iter__.return_value = iter(
             [
@@ -265,6 +273,7 @@ class TestCollectorsDashboard:
                     datetime(2024, 1, 10),
                     datetime(2024, 1, 10),
                     'Default',
+                    '11111111-1111-1111-1111-111111111111',
                 ),
             ]
         )
@@ -303,6 +312,7 @@ class TestCollectorsDashboard:
             ('created',),
             ('modified',),
             ('organization_name',),
+            ('organization_ansible_id',),
         ]
         # Provide one row so the early-return guard doesn't fire
         mock_cursor.__iter__.return_value = iter(
@@ -323,6 +333,7 @@ class TestCollectorsDashboard:
                     datetime(2024, 1, 10),
                     datetime(2024, 1, 10),
                     'Default',
+                    '11111111-1111-1111-1111-111111111111',
                 ),
             ]
         )

@@ -38,6 +38,7 @@ class AWXJobType(TypedDict):
     unified_job_template_id: int | None
     organization_id: int | None
     organization_name: str | None
+    organization_ansible_id: str | None
     started: datetime | None
     finished: datetime | None
     elapsed: decimal.Decimal
@@ -187,6 +188,7 @@ def dashboard_jobs(
                 unified_job_template_id: int | None,
                 organization_id: int | None,
                 organization_name: str | None,
+                organization_ansible_id: str | None,
                 started: datetime | None,
                 finished: datetime | None,
                 status: str,
@@ -268,6 +270,7 @@ def dashboard_jobs(
                 'unified_job_template_id': data['unified_job_template_id'],
                 'organization_id': data['organization_id'],
                 'organization_name': data['organization_name'],
+                'organization_ansible_id': str(data['organization_ansible_id']) if data['organization_ansible_id'] else None,
                 'started': data['started'],
                 'finished': data['finished'],
                 'status': data['status'],
