@@ -84,6 +84,15 @@ class TestUnifiedJobsDashboard:
         assert 'LEFT JOIN main_unifiedjobtemplate AS ujp' in query
 
     @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+    def test_includes_shared_organization_ansible_id(self, mock_copy_pandas):
+        mock_copy_pandas.return_value = pd.DataFrame()
+        unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until).gather()
+        query = self._get_query(mock_copy_pandas)
+        assert 'dab_resource.ansible_id AS organization_ansible_id' in query
+        assert 'dab_resource_registry_resource AS dab_resource' in query
+        assert 'dab_resource.object_id = main_organization.id::text' in query
+
+    @patch('metrics_utility.library.collectors.util._copy_table_pandas')
     def test_includes_base_unified_jobs_columns(self, mock_copy_pandas):
         mock_copy_pandas.return_value = pd.DataFrame()
         unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until).gather()
