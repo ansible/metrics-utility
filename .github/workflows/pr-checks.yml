@@ -49,6 +49,11 @@ jobs:
         run: |
           uv run ruff format --check
 
+      - name: "Check Segment payload schema is up to date"
+        run: |
+          uv run python tools/generate_segment_schema.py --output /tmp/metrics-utility-segment-schema.yaml
+          diff --unified=3 tools/segment-schema/metrics-utility.yaml /tmp/metrics-utility-segment-schema.yaml
+
       - name: "One logger to rule them all"
         run: |
           if rgrep "logging.getLogger(" metrics_utility | cut -d: -f1 | grep -v logger.py | grep . ; then
