@@ -32,6 +32,7 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeO
             django_content_type.model,
             main_unifiedjob.organization_id,
             main_organization.name AS organization_name,
+            dab_resource.ansible_id AS organization_ansible_id,
             main_executionenvironment.image AS execution_environment_image,
             main_job.inventory_id,
             main_inventory.name AS inventory_name,
@@ -74,6 +75,12 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeO
         LEFT JOIN main_job ON main_unifiedjob.id = main_job.unifiedjob_ptr_id
         LEFT JOIN main_inventory ON main_job.inventory_id = main_inventory.id
         LEFT JOIN main_organization ON main_organization.id = main_unifiedjob.organization_id
+        LEFT JOIN django_content_type AS organization_content_type
+            ON organization_content_type.app_label = 'main'
+            AND organization_content_type.model = 'organization'
+        LEFT JOIN dab_resource_registry_resource AS dab_resource
+            ON dab_resource.content_type_id = organization_content_type.id
+            AND dab_resource.object_id = main_organization.id::text
         LEFT JOIN main_executionenvironment ON main_executionenvironment.id = main_unifiedjob.execution_environment_id
         LEFT JOIN main_project ON main_job.project_id = main_project.unifiedjobtemplate_ptr_id
         LEFT JOIN main_unifiedjobtemplate AS mut ON mut.id = main_unifiedjob.unified_job_template_id
