@@ -4,7 +4,7 @@ from ..util import DictOutput, collector
 
 
 @collector
-def query_info(*, since=None, until=None, collection_type='metrics-service', output=DictOutput()):
+def query_info(*, db=None, since=None, until=None, collection_type='metrics-service', output=DictOutput()):
     """Return metadata about this analytics collection run."""
     return output.dict(
         {
