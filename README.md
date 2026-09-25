@@ -1,3 +1,10 @@
+# 0.7 End of life
+
+The 0.7 branch is no longer maintained.
+The 2.6 / 2.7 stable branches live downstream.
+
+---
+
 # metrics-utility
 
 metrics-utility deals with collecting, analyzing and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances.
