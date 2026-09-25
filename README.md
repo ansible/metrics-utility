@@ -1,3 +1,13 @@
+# 0.7 End of life
+
+The 0.7 branch is no longer maintained.
+
+Upstream development continues on `devel`. Fixes that need to ship in AAP 2.6 or 2.7 go to
+the `stable-2.6` and `stable-2.7` branches of
+[ansible-automation-platform/metrics-utility](https://github.com/ansible-automation-platform/metrics-utility).
+
+---
+
 # metrics-utility
 
 metrics-utility deals with collecting, analyzing and reporting metrics from [Ansible Automation Platform (AAP)](https://www.ansible.com/products/automation-platform) Controller instances.

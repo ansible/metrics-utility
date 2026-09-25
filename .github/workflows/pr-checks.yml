@@ -4,6 +4,27 @@ on:
   pull_request:
 
 jobs:
+  eol-notice:
+    name: "0.7 end of life"
+    # Guarded on the base ref so the warning stays put if this file is ever carried to
+    # another branch. A PR runs the workflows of the branch it targets.
+    if: github.base_ref == 'stable-0.7'
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Warn that stable-0.7 is no longer maintained"
+        run: |
+          echo "::warning title=stable-0.7 is end of life::The 0.7 branch is no longer maintained. Open this against devel, or against stable-2.6/stable-2.7 in ansible-automation-platform/metrics-utility if it needs to ship in AAP."
+          {
+            echo "## stable-0.7 is end of life"
+            echo
+            echo "The \`0.7\` branch is no longer maintained, and this pull request targets it."
+            echo
+            echo "- Upstream development continues on \`devel\`."
+            echo "- Fixes that need to ship in AAP 2.6 or 2.7 go to \`stable-2.6\` or \`stable-2.7\` in [ansible-automation-platform/metrics-utility](https://github.com/ansible-automation-platform/metrics-utility)."
+            echo
+            echo "This is a warning only and does not block the pull request."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   pr-checks:
     runs-on: ubuntu-latest
     steps:
