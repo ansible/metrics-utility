@@ -5,16 +5,15 @@ coverage:
   precision: 2
   round: down
   range: "50...100"
-
-status:
-  project:
-    default:
-      target: auto
-      threshold: 1%
-  patch:
-    default:
-      target: auto
-      threshold: 1%
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+        threshold: 1%
 
 # Ignore files/directories that tests won't cover
 ignore:
