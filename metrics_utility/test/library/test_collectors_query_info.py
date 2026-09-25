@@ -1,4 +1,4 @@
-from metrics_utility.library.collectors.awx.query_info import query_info
+from metrics_utility.library.collectors.controller.query_info import query_info
 
 
 def test_query_info_basic():

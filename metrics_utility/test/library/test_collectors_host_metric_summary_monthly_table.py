@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from metrics_utility.library.collectors.awx.host_metric_summary_monthly_table import (
+from metrics_utility.library.collectors.controller.host_metric_summary_monthly_table import (
     host_metric_summary_monthly_table,
 )
 

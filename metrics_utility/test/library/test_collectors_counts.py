@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from metrics_utility.library.collectors.awx.counts import _MODEL_TABLES, counts
+from metrics_utility.library.collectors.controller.counts import _MODEL_TABLES, counts
 
 
 def _make_mock_db(fetchone_values, fetchall_values):

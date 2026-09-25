@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from metrics_utility.library.collectors.awx.projects_by_scm_type import projects_by_scm_type
+from metrics_utility.library.collectors.controller.projects_by_scm_type import projects_by_scm_type
 
 
 def test_projects_by_scm_type_basic():

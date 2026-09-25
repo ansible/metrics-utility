@@ -48,6 +48,22 @@ def test_main_hostmetric_calls_copy_table(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_hostmetric_includes_deleted_only_host(mock_copy_pandas):
+    """Raw collection includes hosts changed by deletion in the requested window."""
+    mock_db = MagicMock()
+    mock_db.cursor().__enter__().fetchone.return_value = (True, True)
+    mock_copy_pandas.return_value = pd.DataFrame({'hostname': ['deleted-only'], 'host_id': [0]})
+
+    result = main_hostmetric(db=mock_db, since=SINCE, until=UNTIL).gather()
+
+    assert list(result['hostname']) == ['deleted-only']
+    query = mock_copy_pandas.call_args[0][1]
+    assert 'main_hostmetric.last_automation' in query
+    assert 'main_hostmetric.last_deleted' in query
+    assert ' OR ' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_hostmetric_query_columns(mock_copy_pandas):
     """The SQL selects all expected host_metric/host columns."""
     mock_copy_pandas.return_value = pd.DataFrame()
@@ -64,6 +80,8 @@ def test_main_hostmetric_query_columns(mock_copy_pandas):
         'deleted_counter',
         'last_deleted',
         'deleted',
+        'id',
+        'used_in_inventories',
         'ansible_product_serial',
         'ansible_machine_id',
         'ansible_host_variable',
@@ -137,7 +155,9 @@ def test_host_metric_query_since_only():
     query, params = _host_metric_query(since=SINCE)
 
     assert f"main_hostmetric.last_automation >= '{SINCE.isoformat()}'" in query
+    assert f"main_hostmetric.last_deleted >= '{SINCE.isoformat()}'" in query
     assert 'main_hostmetric.last_automation <' not in query
+    assert 'main_hostmetric.last_deleted <' not in query
     assert 'LIMIT' not in query
     assert params == []
 

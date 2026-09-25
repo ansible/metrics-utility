@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 
-from metrics_utility.library.collectors.awx.unified_job_template_table import unified_job_template_table
+from metrics_utility.library.collectors.controller.unified_job_template_table import unified_job_template_table
 
 
 def test_unified_job_template_table_basic():

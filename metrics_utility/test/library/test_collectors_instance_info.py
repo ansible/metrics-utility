@@ -1,9 +1,13 @@
 from unittest.mock import MagicMock
 
-from metrics_utility.library.collectors.awx.instance_info import (
-    _get_control_task_impact,
-    instance_info,
-)
+from metrics_utility.library.collectors.controller.instance_info import _get_control_task_impact, instance_info
+
+
+def test_instance_info_is_exported_by_controller_package():
+    """Controller package exports the Controller-owned collector."""
+    from metrics_utility.library.collectors.controller import instance_info as exported_instance_info
+
+    assert exported_instance_info is instance_info
 
 
 def test_instance_info_basic():
