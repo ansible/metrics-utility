@@ -50,9 +50,11 @@ def test_main_hostmetric_calls_copy_table(mock_copy_pandas):
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_hostmetric_includes_deleted_only_host(mock_copy_pandas):
     """Raw collection includes hosts changed by deletion in the requested window."""
+    mock_db = MagicMock()
+    mock_db.cursor().__enter__().fetchone.return_value = (True, True)
     mock_copy_pandas.return_value = pd.DataFrame({'hostname': ['deleted-only'], 'host_id': [0]})
 
-    result = main_hostmetric(db=MagicMock(), since=SINCE, until=UNTIL).gather()
+    result = main_hostmetric(db=mock_db, since=SINCE, until=UNTIL).gather()
 
     assert list(result['hostname']) == ['deleted-only']
     query = mock_copy_pandas.call_args[0][1]
