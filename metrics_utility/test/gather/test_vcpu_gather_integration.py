@@ -16,7 +16,7 @@ import pytest
 from metrics_utility.test.util import run_gather_int
 
 
-MOCK_PROMETHEUS_URL = os.getenv('MOCK_PROMETHEUS_URL', 'http://localhost:9090')
+PROMETHEUS_URL = os.getenv('METRICS_UTILITY_PROMETHEUS_URL', 'http://localhost:9090')
 
 K8S_TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
 K8S_CERT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
@@ -42,7 +42,7 @@ env_vars = {
     'METRICS_UTILITY_DISABLE_JOB_HOST_SUMMARY_COLLECTOR': 'true',
     'METRICS_UTILITY_DISABLE_SAVE_LAST_GATHERED_ENTRIES': 'true',
     'METRICS_UTILITY_OPTIONAL_COLLECTORS': 'total_workers_vcpu',
-    'METRICS_UTILITY_PROMETHEUS_URL': MOCK_PROMETHEUS_URL,
+    'METRICS_UTILITY_PROMETHEUS_URL': PROMETHEUS_URL,
     'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
     'METRICS_UTILITY_SHIP_PATH': './metrics_utility/test/test_data',
     'METRICS_UTILITY_SHIP_TARGET': 'directory',
@@ -60,13 +60,13 @@ def _load_schema(filename):
 
 def _configure_mock(**kwargs):
     data = json.dumps(kwargs).encode()
-    req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/config', data=data, method='POST')
+    req = urllib.request.Request(f'{PROMETHEUS_URL}/config', data=data, method='POST')
     req.add_header('Content-Type', 'application/json')
     urllib.request.urlopen(req)
 
 
 def _reset_mock():
-    req = urllib.request.Request(f'{MOCK_PROMETHEUS_URL}/reset', method='POST')
+    req = urllib.request.Request(f'{PROMETHEUS_URL}/reset', method='POST')
     urllib.request.urlopen(req)
 
 
@@ -133,7 +133,7 @@ def test_vcpu_gather_validates_against_schema(mock_exists, mock_open, cleanup_gl
     assert 'total_workers_vcpu.json' in manifest_data
 
     # verify Prometheus was actually called (instant + range query)
-    with urllib.request.urlopen(f'{MOCK_PROMETHEUS_URL}/requests') as resp:
+    with urllib.request.urlopen(f'{PROMETHEUS_URL}/requests') as resp:
         captured = json.loads(resp.read())
     paths = [r['path'] for r in captured]
     assert '/api/v1/query' in paths
