@@ -132,6 +132,8 @@ _JOBS_BASE_SQL = """SELECT
     COALESCE(ujt.name, uj.name) as name,
     uj.unified_job_template_id,
     uj.organization_id,
+    main_organization.name AS organization_name,
+    dab_resource.ansible_id AS organization_ansible_id,
     uj.started,
     uj.finished,
     uj.status,
@@ -151,6 +153,13 @@ _JOBS_BASE_SQL = """SELECT
     FROM main_unifiedjob uj
     JOIN main_job mj on mj.unifiedjob_ptr_id = uj.id
     LEFT JOIN main_unifiedjobtemplate ujt ON ujt.id = uj.unified_job_template_id
+    LEFT JOIN main_organization ON main_organization.id = uj.organization_id
+    LEFT JOIN django_content_type organization_content_type
+        ON organization_content_type.app_label = 'main'
+        AND organization_content_type.model = 'organization'
+    LEFT JOIN dab_resource_registry_resource dab_resource
+        ON dab_resource.content_type_id = organization_content_type.id
+        AND dab_resource.object_id = main_organization.id::text
     LEFT JOIN auth_user u on u.id = uj.created_by_id
     LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id"""
 

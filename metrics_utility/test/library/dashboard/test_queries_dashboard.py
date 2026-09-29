@@ -69,6 +69,13 @@ class TestQueriesDashboard:
         assert 'COALESCE(ujt.name, uj.name) as name' in result
         assert 'uj.unified_job_template_id' in result
         assert 'uj.organization_id' in result
+        assert 'main_organization.ansible_id AS organization_ansible_id' not in result
+        assert 'dab_resource.ansible_id AS organization_ansible_id' in result
+        assert 'LEFT JOIN django_content_type organization_content_type' in result
+        assert "organization_content_type.app_label = 'main'" in result
+        assert "organization_content_type.model = 'organization'" in result
+        assert 'LEFT JOIN dab_resource_registry_resource dab_resource' in result
+        assert 'dab_resource.object_id = main_organization.id::text' in result
         assert 'uj.started' in result
         assert 'uj.finished' in result
         assert 'uj.status' in result
