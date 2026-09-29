@@ -138,6 +138,11 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     assert "CASE WHEN lower(ed.event_data->>'ignore_errors')" in query
     assert "CASE WHEN lower(ed.event_data->'res'->>'_ansible_ignore_errors')" in query
 
+    # The allowlist must cover all PostgreSQL boolean input literals:
+    # true/false, t/f, y/n, 1/0, yes/no, on/off (case-insensitive).
+    for literal in ("'true'", "'false'", "'t'", "'f'", "'y'", "'n'", "'1'", "'0'", "'yes'", "'no'", "'on'", "'off'"):
+        assert literal in query, f'boolean literal {literal} missing from ignore_errors allowlist'
+
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pandas):

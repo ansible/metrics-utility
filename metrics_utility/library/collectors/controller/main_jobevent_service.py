@@ -203,9 +203,9 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             -- unrendered Jinja templates like '{{ some_var }}') that would
             -- crash a bare ::boolean cast with InvalidTextRepresentation.
             COALESCE(
-                CASE WHEN lower(ed.event_data->>'ignore_errors') IN ('true','false','t','f','1','0','yes','no','on','off')
+                CASE WHEN lower(ed.event_data->>'ignore_errors') IN ('true','false','t','f','y','n','1','0','yes','no','on','off')
                      THEN (ed.event_data->>'ignore_errors')::boolean END,
-                CASE WHEN lower(ed.event_data->'res'->>'_ansible_ignore_errors') IN ('true','false','t','f','1','0','yes','no','on','off')
+                CASE WHEN lower(ed.event_data->'res'->>'_ansible_ignore_errors') IN ('true','false','t','f','y','n','1','0','yes','no','on','off')
                      THEN (ed.event_data->'res'->>'_ansible_ignore_errors')::boolean END,
                 false
             ) AS ignore_errors,
