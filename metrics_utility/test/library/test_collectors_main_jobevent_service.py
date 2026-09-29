@@ -135,8 +135,8 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     # The boolean cast must be guarded by a CASE expression to avoid
     # InvalidTextRepresentation when the value is a non-boolean string
     # (e.g. an unrendered Jinja template like '{{ some_var }}').
-    assert "CASE WHEN lower(ed.event_data->>'ignore_errors')" in query
-    assert "CASE WHEN lower(ed.event_data->'res'->>'_ansible_ignore_errors')" in query
+    assert "CASE WHEN btrim(lower(ed.event_data->>'ignore_errors'))" in query
+    assert "CASE WHEN btrim(lower(ed.event_data->'res'->>'_ansible_ignore_errors'))" in query
 
     # The allowlist must cover all PostgreSQL boolean input literals:
     # true/false, t/f, y/n, 1/0, yes/no, on/off (case-insensitive).
