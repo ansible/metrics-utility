@@ -198,9 +198,17 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             -- fall back to that. runner_on_async_failed carries neither --
             -- ansible-core does not expose ignore_errors anywhere in the
             -- async result -- so it will still resolve to false there.
+            --
+            -- The CASE guards protect against non-boolean strings (e.g.
+            -- unrendered Jinja templates like '{{ some_var }}') that would
+            -- crash a bare ::boolean cast with InvalidTextRepresentation.
             COALESCE(
-                (ed.event_data->>'ignore_errors')::boolean,
-                (ed.event_data->'res'->>'_ansible_ignore_errors')::boolean,
+                CASE WHEN btrim(lower(ed.event_data->>'ignore_errors'))
+                          IN ('true','false','t','f','y','n','1','0','yes','no','on','off')
+                     THEN (ed.event_data->>'ignore_errors')::boolean END,
+                CASE WHEN btrim(lower(ed.event_data->'res'->>'_ansible_ignore_errors'))
+                          IN ('true','false','t','f','y','n','1','0','yes','no','on','off')
+                     THEN (ed.event_data->'res'->>'_ansible_ignore_errors')::boolean END,
                 false
             ) AS ignore_errors,
             e.failed,
