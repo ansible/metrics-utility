@@ -132,6 +132,12 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     assert "event_data->>'ignore_errors'" in query
     assert "event_data->'res'->>'_ansible_ignore_errors'" in query
 
+    # The boolean cast must be guarded by a CASE expression to avoid
+    # InvalidTextRepresentation when the value is a non-boolean string
+    # (e.g. an unrendered Jinja template like '{{ some_var }}').
+    assert "CASE WHEN lower(ed.event_data->>'ignore_errors')" in query
+    assert "CASE WHEN lower(ed.event_data->'res'->>'_ansible_ignore_errors')" in query
+
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_jobevent_service_builds_temp_table_and_hourly_ranges(mock_copy_pandas):
