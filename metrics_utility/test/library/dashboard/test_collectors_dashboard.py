@@ -79,6 +79,7 @@ class TestCollectorsDashboard:
             ('project_name',),
             ('created',),
             ('modified',),
+            ('organization_name',),
         ]
         rows = [
             (
@@ -96,6 +97,7 @@ class TestCollectorsDashboard:
                 'test_project',
                 datetime(2024, 1, 10),
                 datetime(2024, 1, 10),
+                'Default',
             ),
             (
                 2,
@@ -112,6 +114,7 @@ class TestCollectorsDashboard:
                 None,
                 datetime(2024, 1, 15),
                 datetime(2024, 1, 15),
+                'Org 3',
             ),
             (
                 3,
@@ -128,6 +131,7 @@ class TestCollectorsDashboard:
                 None,
                 datetime(2024, 1, 20),
                 datetime(2024, 1, 20),
+                None,
             ),
         ]
         mock_cursor.__iter__.return_value = iter(rows)
@@ -144,6 +148,7 @@ class TestCollectorsDashboard:
                 'name': 'Job 1',
                 'unified_job_template_id': 1,
                 'organization_id': 1,
+                'organization_name': 'Default',
                 'started': datetime(2024, 1, 10),
                 'finished': datetime(2024, 1, 10, 0, 5),
                 'status': 'successful',
@@ -163,6 +168,7 @@ class TestCollectorsDashboard:
                 'name': 'Job 2',
                 'unified_job_template_id': 2,
                 'organization_id': 3,
+                'organization_name': 'Org 3',
                 'started': datetime(2024, 1, 15),
                 'finished': datetime(2024, 1, 15, 0, 10),
                 'status': 'failed',
@@ -182,6 +188,7 @@ class TestCollectorsDashboard:
                 'name': 'Job 3',
                 'unified_job_template_id': None,
                 'organization_id': None,
+                'organization_name': None,
                 'started': datetime(2024, 1, 20),
                 'finished': datetime(2024, 1, 20, 0, 15),
                 'status': 'successful',
@@ -238,6 +245,7 @@ class TestCollectorsDashboard:
             ('project_name',),
             ('created',),
             ('modified',),
+            ('organization_name',),
         ]
         mock_cursor.__iter__.return_value = iter(
             [
@@ -256,6 +264,7 @@ class TestCollectorsDashboard:
                     'proj',
                     datetime(2024, 1, 10),
                     datetime(2024, 1, 10),
+                    'Default',
                 ),
             ]
         )
@@ -293,6 +302,7 @@ class TestCollectorsDashboard:
             ('project_name',),
             ('created',),
             ('modified',),
+            ('organization_name',),
         ]
         # Provide one row so the early-return guard doesn't fire
         mock_cursor.__iter__.return_value = iter(
@@ -312,6 +322,7 @@ class TestCollectorsDashboard:
                     None,
                     datetime(2024, 1, 10),
                     datetime(2024, 1, 10),
+                    'Default',
                 ),
             ]
         )
