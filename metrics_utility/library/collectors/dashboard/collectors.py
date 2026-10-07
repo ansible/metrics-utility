@@ -186,6 +186,7 @@ def dashboard_jobs(
                 name: str,
                 unified_job_template_id: int | None,
                 organization_id: int | None,
+                organization_name: str | None,
                 started: datetime | None,
                 finished: datetime | None,
                 status: str,
