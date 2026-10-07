@@ -317,6 +317,15 @@ _RUNNER_EVENT_COUNTERS = (
     'jobs_never_started_total',
 )
 
+_TASK_TYPE_COUNT_COLS = (
+    'sync_tasks_total',
+    'sync_loop_tasks_total',
+    'async_poll_tasks_total',
+    'async_poll_loop_tasks_total',
+    'async_fire_forget_tasks_total',
+    'async_fire_forget_loop_tasks_total',
+)
+
 
 def _assert_runner_event_counters_populated(stat, label):
     """Fail if any tracked runner/module counter is still zero (fixture must exercise them)."""
@@ -352,8 +361,8 @@ def _validate_role_stats(json_data):
         assert role['collection'] == collection
         assert role['collection_source'] == source
         assert role['jobs_total'] == 3
-        assert role['runner_on_ok_total'] == 7
-        assert role['collected_events_total'] == 17
+        assert role['runner_on_ok_total'] == 9
+        assert role['collected_events_total'] == 22
         assert 'tasks_total' in role, f'{role_name} should have tasks_total'
         assert isinstance(role['tasks_total'], int)
         assert role['tasks_total'] > 0, f'{role_name} tasks_total should be > 0'
@@ -364,6 +373,33 @@ def _validate_role_stats(json_data):
 
     custom_roles = [r for r in role_stats if r.get('collection_source') == 'Custom']
     assert len(custom_roles) == 0, f'Should have 0 Custom roles after anonymization, got {len(custom_roles)}'
+
+
+def _validate_task_type_breakdowns(json_data):
+    """Validate task type count fields in module_stats, collection_stats, and role_stats.
+
+    Each stat entry has integer count columns for each task type (e.g.
+    sync_tasks_total, sync_loop_tasks_total). Validates:
+      - All count columns are present and are non-negative integers
+      - The fixture exercises all 6 task types (each > 0 in at least one module_stats entry)
+    """
+    print('--- Validating task type breakdowns ---')
+
+    for stats_key in ('module_stats', 'collection_stats', 'role_stats'):
+        stats_list = json_data.get(stats_key, [])
+        if not stats_list:
+            continue
+
+        for stat in stats_list:
+            for col in _TASK_TYPE_COUNT_COLS:
+                assert col in stat, f'{stats_key}: missing {col}'
+                assert isinstance(stat[col], int), f'{stats_key}: {col} should be int, got {type(stat[col])}'
+                assert stat[col] >= 0, f'{stats_key}: {col} should be >= 0, got {stat[col]}'
+
+    module_stats = json_data.get('module_stats', [])
+    for col in _TASK_TYPE_COUNT_COLS:
+        has_nonzero = any(m.get(col, 0) > 0 for m in module_stats)
+        assert has_nonzero, f'module_stats should have at least one entry with {col} > 0'
 
 
 def _validate_jobs_by_installed_collections_versions(json_data):
@@ -542,9 +578,10 @@ def _validate_module_stats_values_multi_hour(json_data):
         module = module_stats_dict.get(module_name)
         assert module is not None, f'Should have {module_name} module'
         assert module['jobs_total'] == 6, f'{module_name} should have 6 jobs'
-        # Base ok events (18) + 1 diversified ok-with-warnings on job 1
-        assert module['runner_on_ok_total'] == 19, f'{module_name} runner_on_ok_total'
-        assert module['collected_events_total'] == 29, f'{module_name} collected_events_total'
+        # Base ok events (18) + 1 ok-with-warnings + 1 ff_task + 1 ff_loop = 21
+        assert module['runner_on_ok_total'] == 21, f'{module_name} runner_on_ok_total'
+        # 29 original + 5 new diversified (ff_task, apl async_ok, apl item_ok, ffl ok, ffl item_ok)
+        assert module['collected_events_total'] == 34, f'{module_name} collected_events_total'
         assert module['tasks_total'] > 0, f'{module_name} tasks_total should be > 0'
         assert module['tasks_total'] <= module['collected_events_total'], (
             f'{module_name} tasks_total ({module["tasks_total"]}) should be <= collected_events_total ({module["collected_events_total"]})'
@@ -564,8 +601,8 @@ def _validate_collection_stats_values_multi_hour(json_data):
         assert collection is not None, f'Should have {collection_name} collection'
         assert collection['collection_source'] == source
         assert collection['jobs_total'] == 6
-        assert collection['runner_on_ok_total'] == 19
-        assert collection['collected_events_total'] == 29
+        assert collection['runner_on_ok_total'] == 21
+        assert collection['collected_events_total'] == 34
         assert collection['unique_hosts_total'] == 2, f'{collection_name} should have 2 unique hosts'
         _assert_runner_event_counters_populated(collection, collection_name)
         for version in collection['ansible_versions']:
@@ -951,8 +988,8 @@ def _validate_warnings_deprecations_values_multi_hour(json_data, statistics):
     assert 'playbook_events' not in json_data
     assert statistics['rollup_period_warnings_total'] == 4
     assert statistics['rollup_period_deprecations_total'] == 2
-    # 58 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
-    assert statistics['rollup_period_collected_events_total'] == 64
+    # 68 runner + 4 warning + 2 deprecated (no playbook_on_* lifecycle events)
+    assert statistics['rollup_period_collected_events_total'] == 74
 
 
 def _validate_all_data(json_data, statistics):
@@ -981,6 +1018,7 @@ def _validate_all_data(json_data, statistics):
     _validate_module_stats_values_multi_hour(json_data)
     _validate_collection_stats_values_multi_hour(json_data)
     _validate_role_stats_and_jobs_by_installed_collections_versions(json_data)
+    _validate_task_type_breakdowns(json_data)
     _validate_warnings_deprecations_values_multi_hour(json_data, statistics)
 
     print('--- Validating playbooks_total ---')
