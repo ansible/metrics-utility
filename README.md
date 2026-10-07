@@ -92,6 +92,19 @@ with lock('my-unique-key', wait=False, db=db) as acquired:
 
 See [library README](./metrics_utility/library/README.md) for details.
 
+### Segment payload schema
+
+The anonymized payload contract used by the Segment storage path is defined by
+`metrics_utility.anonymized_rollups.types.AnonymizedPayload`. Its generated
+OpenAPI schema is committed to
+`tools/segment-schema/metrics-utility.yaml`; pull-request checks regenerate the
+file and fail if it is stale.
+
+```bash
+uv run python tools/generate_segment_schema.py --output /tmp/metrics-utility-segment-schema.yaml
+uv run python tools/validate_segment_contract.py path/to/rollup.json
+```
+
 
 ## Developer setup
 

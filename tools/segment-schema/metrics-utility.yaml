@@ -1,0 +1,1279 @@
+openapi: 3.1.0
+info:
+  title: Segment Anonymized Payload
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    AnonymizedPayload:
+      additionalProperties: false
+      properties:
+        statistics:
+          $ref: '#/components/schemas/Statistics'
+        rollup_period_ansible_versions:
+          items:
+            type: string
+          title: Rollup Period Ansible Versions
+          type: array
+        rollup_period_scm_types:
+          items:
+            type: string
+          title: Rollup Period Scm Types
+          type: array
+        rollup_period_credential_types:
+          items:
+            type: string
+          title: Rollup Period Credential Types
+          type: array
+        jobs_by_job_type:
+          items:
+            $ref: '#/components/schemas/JobsByJobType'
+          title: Jobs By Job Type
+          type: array
+        jobs_by_launch_type:
+          items:
+            $ref: '#/components/schemas/JobsByLaunchType'
+          title: Jobs By Launch Type
+          type: array
+        jobs_by_ansible_version:
+          items:
+            $ref: '#/components/schemas/JobsByAnsibleVersion'
+          title: Jobs By Ansible Version
+          type: array
+        jobs_by_controller_version:
+          items:
+            $ref: '#/components/schemas/JobsByControllerVersion'
+          title: Jobs By Controller Version
+          type: array
+        jobs_by_installed_collections_versions:
+          items:
+            $ref: '#/components/schemas/JobsByInstalledCollection'
+          title: Jobs By Installed Collections Versions
+          type: array
+        table_metadata:
+          additionalProperties:
+            type: integer
+          title: Table Metadata
+          type: object
+        controller_versions:
+          items:
+            type: string
+          title: Controller Versions
+          type: array
+        feature_flags:
+          items:
+            type: string
+          title: Feature Flags
+          type: array
+        observability_by_tasks:
+          items:
+            $ref: '#/components/schemas/ObservabilityByTask'
+          title: Observability By Tasks
+          type: array
+        indirect_nodes_by_collection:
+          items:
+            $ref: '#/components/schemas/IndirectNodesByCollection'
+          title: Indirect Nodes By Collection
+          type: array
+        indirect_nodes_by_module:
+          items:
+            $ref: '#/components/schemas/IndirectNodesByModule'
+          title: Indirect Nodes By Module
+          type: array
+        module_stats:
+          items:
+            $ref: '#/components/schemas/ModuleStats'
+          title: Module Stats
+          type: array
+        collection_stats:
+          items:
+            $ref: '#/components/schemas/CollectionStats'
+          title: Collection Stats
+          type: array
+        role_stats:
+          items:
+            $ref: '#/components/schemas/RoleStats'
+          title: Role Stats
+          type: array
+      required:
+      - statistics
+      - rollup_period_ansible_versions
+      - rollup_period_scm_types
+      - rollup_period_credential_types
+      - jobs_by_job_type
+      - jobs_by_launch_type
+      - jobs_by_ansible_version
+      - jobs_by_controller_version
+      - jobs_by_installed_collections_versions
+      - table_metadata
+      - controller_versions
+      - feature_flags
+      - observability_by_tasks
+      - indirect_nodes_by_collection
+      - indirect_nodes_by_module
+      title: AnonymizedPayload
+      type: object
+    CollectionStats:
+      additionalProperties: false
+      properties:
+        collection_source:
+          title: Collection Source
+          type: string
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Waiting Time Total Seconds
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        tasks_total:
+          title: Tasks Total
+          type: integer
+        runner_on_ok_total:
+          title: Runner On Ok Total
+          type: integer
+        runner_on_failed_total:
+          title: Runner On Failed Total
+          type: integer
+        runner_on_unreachable_total:
+          title: Runner On Unreachable Total
+          type: integer
+        runner_on_async_ok_total:
+          title: Runner On Async Ok Total
+          type: integer
+        runner_on_async_failed_total:
+          title: Runner On Async Failed Total
+          type: integer
+        runner_item_on_ok_total:
+          title: Runner Item On Ok Total
+          type: integer
+        runner_item_on_failed_total:
+          title: Runner Item On Failed Total
+          type: integer
+        runner_retry_total:
+          title: Runner Retry Total
+          type: integer
+        ignore_errors_total:
+          title: Ignore Errors Total
+          type: integer
+        warnings_total:
+          title: Warnings Total
+          type: integer
+        deprecations_total:
+          title: Deprecations Total
+          type: integer
+        collected_events_total:
+          title: Collected Events Total
+          type: integer
+        event_data_size_total:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Event Data Size Total
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+        collection:
+          title: Collection
+          type: string
+        unique_hosts_total:
+          title: Unique Hosts Total
+          type: integer
+      required:
+      - collection_source
+      - jobs_total
+      - jobs_successful_total
+      - jobs_failed_total
+      - jobs_duration_total_seconds
+      - jobs_waiting_time_total_seconds
+      - jobs_never_started_total
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - tasks_total
+      - runner_on_ok_total
+      - runner_on_failed_total
+      - runner_on_unreachable_total
+      - runner_on_async_ok_total
+      - runner_on_async_failed_total
+      - runner_item_on_ok_total
+      - runner_item_on_failed_total
+      - runner_retry_total
+      - ignore_errors_total
+      - warnings_total
+      - deprecations_total
+      - collected_events_total
+      - event_data_size_total
+      - ansible_versions
+      - collection
+      - unique_hosts_total
+      title: CollectionStats
+      type: object
+    IndirectNodesByCollection:
+      additionalProperties: false
+      properties:
+        collection:
+          title: Collection
+          type: string
+        host_count:
+          title: Host Count
+          type: integer
+      required:
+      - collection
+      - host_count
+      title: IndirectNodesByCollection
+      type: object
+    IndirectNodesByModule:
+      additionalProperties: false
+      properties:
+        module:
+          title: Module
+          type: string
+        host_count:
+          title: Host Count
+          type: integer
+      required:
+      - module
+      - host_count
+      title: IndirectNodesByModule
+      type: object
+    JobsByAnsibleVersion:
+      additionalProperties: false
+      properties:
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        job_duration_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Maximum Seconds
+        job_duration_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Minimum Seconds
+        job_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Job Waiting Time Total Seconds
+        job_waiting_time_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Maximum Seconds
+        job_waiting_time_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Minimum Seconds
+        templates_total:
+          title: Templates Total
+          type: integer
+        inventories_total:
+          title: Inventories Total
+          type: integer
+        unreachable_total:
+          title: Unreachable Total
+          type: integer
+        failed_total:
+          title: Failed Total
+          type: integer
+        ok_total:
+          title: Ok Total
+          type: integer
+        skipped_total:
+          title: Skipped Total
+          type: integer
+        ignored_total:
+          title: Ignored Total
+          type: integer
+        rescued_total:
+          title: Rescued Total
+          type: integer
+        successful_hosts_total:
+          title: Successful Hosts Total
+          type: integer
+        failed_hosts_total:
+          title: Failed Hosts Total
+          type: integer
+        unreachable_hosts_total:
+          title: Unreachable Hosts Total
+          type: integer
+        ansible_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ansible Version
+        controller_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Controller Version
+      required:
+      - jobs_total
+      - jobs_failed_total
+      - jobs_successful_total
+      - jobs_never_started_total
+      - jobs_duration_total_seconds
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - job_duration_maximum_seconds
+      - job_duration_minimum_seconds
+      - job_waiting_time_total_seconds
+      - job_waiting_time_maximum_seconds
+      - job_waiting_time_minimum_seconds
+      - templates_total
+      - inventories_total
+      - unreachable_total
+      - failed_total
+      - ok_total
+      - skipped_total
+      - ignored_total
+      - rescued_total
+      - successful_hosts_total
+      - failed_hosts_total
+      - unreachable_hosts_total
+      - ansible_version
+      - controller_version
+      title: JobsByAnsibleVersion
+      type: object
+    JobsByControllerVersion:
+      additionalProperties: false
+      properties:
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        job_duration_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Maximum Seconds
+        job_duration_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Minimum Seconds
+        job_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Job Waiting Time Total Seconds
+        job_waiting_time_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Maximum Seconds
+        job_waiting_time_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Minimum Seconds
+        templates_total:
+          title: Templates Total
+          type: integer
+        inventories_total:
+          title: Inventories Total
+          type: integer
+        controller_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Controller Version
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+      required:
+      - jobs_total
+      - jobs_failed_total
+      - jobs_successful_total
+      - jobs_never_started_total
+      - jobs_duration_total_seconds
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - job_duration_maximum_seconds
+      - job_duration_minimum_seconds
+      - job_waiting_time_total_seconds
+      - job_waiting_time_maximum_seconds
+      - job_waiting_time_minimum_seconds
+      - templates_total
+      - inventories_total
+      - controller_version
+      - ansible_versions
+      title: JobsByControllerVersion
+      type: object
+    JobsByInstalledCollection:
+      additionalProperties: false
+      properties:
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        job_duration_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Maximum Seconds
+        job_duration_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Minimum Seconds
+        job_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Job Waiting Time Total Seconds
+        job_waiting_time_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Maximum Seconds
+        job_waiting_time_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Minimum Seconds
+        templates_total:
+          title: Templates Total
+          type: integer
+        inventories_total:
+          title: Inventories Total
+          type: integer
+        collection:
+          title: Collection
+          type: string
+        version:
+          title: Version
+          type: string
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+      required:
+      - jobs_total
+      - jobs_failed_total
+      - jobs_successful_total
+      - jobs_never_started_total
+      - jobs_duration_total_seconds
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - job_duration_maximum_seconds
+      - job_duration_minimum_seconds
+      - job_waiting_time_total_seconds
+      - job_waiting_time_maximum_seconds
+      - job_waiting_time_minimum_seconds
+      - templates_total
+      - inventories_total
+      - collection
+      - version
+      - ansible_versions
+      title: JobsByInstalledCollection
+      type: object
+    JobsByJobType:
+      additionalProperties: false
+      properties:
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        job_duration_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Maximum Seconds
+        job_duration_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Minimum Seconds
+        job_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Job Waiting Time Total Seconds
+        job_waiting_time_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Maximum Seconds
+        job_waiting_time_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Minimum Seconds
+        templates_total:
+          title: Templates Total
+          type: integer
+        inventories_total:
+          title: Inventories Total
+          type: integer
+        unreachable_total:
+          title: Unreachable Total
+          type: integer
+        failed_total:
+          title: Failed Total
+          type: integer
+        ok_total:
+          title: Ok Total
+          type: integer
+        skipped_total:
+          title: Skipped Total
+          type: integer
+        ignored_total:
+          title: Ignored Total
+          type: integer
+        rescued_total:
+          title: Rescued Total
+          type: integer
+        successful_hosts_total:
+          title: Successful Hosts Total
+          type: integer
+        failed_hosts_total:
+          title: Failed Hosts Total
+          type: integer
+        unreachable_hosts_total:
+          title: Unreachable Hosts Total
+          type: integer
+        job_type:
+          title: Job Type
+          type: string
+        controller_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Controller Version
+        is_automation:
+          title: Is Automation
+          type: boolean
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+      required:
+      - jobs_total
+      - jobs_failed_total
+      - jobs_successful_total
+      - jobs_never_started_total
+      - jobs_duration_total_seconds
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - job_duration_maximum_seconds
+      - job_duration_minimum_seconds
+      - job_waiting_time_total_seconds
+      - job_waiting_time_maximum_seconds
+      - job_waiting_time_minimum_seconds
+      - templates_total
+      - inventories_total
+      - unreachable_total
+      - failed_total
+      - ok_total
+      - skipped_total
+      - ignored_total
+      - rescued_total
+      - successful_hosts_total
+      - failed_hosts_total
+      - unreachable_hosts_total
+      - job_type
+      - controller_version
+      - is_automation
+      - ansible_versions
+      title: JobsByJobType
+      type: object
+    JobsByLaunchType:
+      additionalProperties: false
+      properties:
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        job_duration_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Maximum Seconds
+        job_duration_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Duration Minimum Seconds
+        job_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Job Waiting Time Total Seconds
+        job_waiting_time_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Maximum Seconds
+        job_waiting_time_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Job Waiting Time Minimum Seconds
+        templates_total:
+          title: Templates Total
+          type: integer
+        inventories_total:
+          title: Inventories Total
+          type: integer
+        unreachable_total:
+          title: Unreachable Total
+          type: integer
+        failed_total:
+          title: Failed Total
+          type: integer
+        ok_total:
+          title: Ok Total
+          type: integer
+        skipped_total:
+          title: Skipped Total
+          type: integer
+        ignored_total:
+          title: Ignored Total
+          type: integer
+        rescued_total:
+          title: Rescued Total
+          type: integer
+        successful_hosts_total:
+          title: Successful Hosts Total
+          type: integer
+        failed_hosts_total:
+          title: Failed Hosts Total
+          type: integer
+        unreachable_hosts_total:
+          title: Unreachable Hosts Total
+          type: integer
+        launch_type:
+          title: Launch Type
+          type: string
+        controller_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Controller Version
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+      required:
+      - jobs_total
+      - jobs_failed_total
+      - jobs_successful_total
+      - jobs_never_started_total
+      - jobs_duration_total_seconds
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - job_duration_maximum_seconds
+      - job_duration_minimum_seconds
+      - job_waiting_time_total_seconds
+      - job_waiting_time_maximum_seconds
+      - job_waiting_time_minimum_seconds
+      - templates_total
+      - inventories_total
+      - unreachable_total
+      - failed_total
+      - ok_total
+      - skipped_total
+      - ignored_total
+      - rescued_total
+      - successful_hosts_total
+      - failed_hosts_total
+      - unreachable_hosts_total
+      - launch_type
+      - controller_version
+      - ansible_versions
+      title: JobsByLaunchType
+      type: object
+    ModuleStats:
+      additionalProperties: false
+      properties:
+        collection_source:
+          title: Collection Source
+          type: string
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Waiting Time Total Seconds
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        tasks_total:
+          title: Tasks Total
+          type: integer
+        runner_on_ok_total:
+          title: Runner On Ok Total
+          type: integer
+        runner_on_failed_total:
+          title: Runner On Failed Total
+          type: integer
+        runner_on_unreachable_total:
+          title: Runner On Unreachable Total
+          type: integer
+        runner_on_async_ok_total:
+          title: Runner On Async Ok Total
+          type: integer
+        runner_on_async_failed_total:
+          title: Runner On Async Failed Total
+          type: integer
+        runner_item_on_ok_total:
+          title: Runner Item On Ok Total
+          type: integer
+        runner_item_on_failed_total:
+          title: Runner Item On Failed Total
+          type: integer
+        runner_retry_total:
+          title: Runner Retry Total
+          type: integer
+        ignore_errors_total:
+          title: Ignore Errors Total
+          type: integer
+        warnings_total:
+          title: Warnings Total
+          type: integer
+        deprecations_total:
+          title: Deprecations Total
+          type: integer
+        collected_events_total:
+          title: Collected Events Total
+          type: integer
+        event_data_size_total:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Event Data Size Total
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+        module:
+          title: Module
+          type: string
+        collection:
+          title: Collection
+          type: string
+      required:
+      - collection_source
+      - jobs_total
+      - jobs_successful_total
+      - jobs_failed_total
+      - jobs_duration_total_seconds
+      - jobs_waiting_time_total_seconds
+      - jobs_never_started_total
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - tasks_total
+      - runner_on_ok_total
+      - runner_on_failed_total
+      - runner_on_unreachable_total
+      - runner_on_async_ok_total
+      - runner_on_async_failed_total
+      - runner_item_on_ok_total
+      - runner_item_on_failed_total
+      - runner_retry_total
+      - ignore_errors_total
+      - warnings_total
+      - deprecations_total
+      - collected_events_total
+      - event_data_size_total
+      - ansible_versions
+      - module
+      - collection
+      title: ModuleStats
+      type: object
+    ObservabilityByTask:
+      additionalProperties: false
+      properties:
+        collector_type:
+          title: Collector Type
+          type: string
+        executions_total:
+          title: Executions Total
+          type: integer
+        executions_missing_total:
+          title: Executions Missing Total
+          type: integer
+        execution_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Execution Duration Total Seconds
+        execution_duration_minimum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Execution Duration Minimum Seconds
+        execution_duration_maximum_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          - type: 'null'
+          title: Execution Duration Maximum Seconds
+      required:
+      - collector_type
+      - executions_total
+      - executions_missing_total
+      - execution_duration_total_seconds
+      - execution_duration_minimum_seconds
+      - execution_duration_maximum_seconds
+      title: ObservabilityByTask
+      type: object
+    RoleStats:
+      additionalProperties: false
+      properties:
+        collection_source:
+          title: Collection Source
+          type: string
+        jobs_total:
+          title: Jobs Total
+          type: integer
+        jobs_successful_total:
+          title: Jobs Successful Total
+          type: integer
+        jobs_failed_total:
+          title: Jobs Failed Total
+          type: integer
+        jobs_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Duration Total Seconds
+        jobs_waiting_time_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Waiting Time Total Seconds
+        jobs_never_started_total:
+          title: Jobs Never Started Total
+          type: integer
+        jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Successful Duration Total Seconds
+        jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Jobs Failed Duration Total Seconds
+        tasks_total:
+          title: Tasks Total
+          type: integer
+        runner_on_ok_total:
+          title: Runner On Ok Total
+          type: integer
+        runner_on_failed_total:
+          title: Runner On Failed Total
+          type: integer
+        runner_on_unreachable_total:
+          title: Runner On Unreachable Total
+          type: integer
+        runner_on_async_ok_total:
+          title: Runner On Async Ok Total
+          type: integer
+        runner_on_async_failed_total:
+          title: Runner On Async Failed Total
+          type: integer
+        runner_item_on_ok_total:
+          title: Runner Item On Ok Total
+          type: integer
+        runner_item_on_failed_total:
+          title: Runner Item On Failed Total
+          type: integer
+        runner_retry_total:
+          title: Runner Retry Total
+          type: integer
+        ignore_errors_total:
+          title: Ignore Errors Total
+          type: integer
+        warnings_total:
+          title: Warnings Total
+          type: integer
+        deprecations_total:
+          title: Deprecations Total
+          type: integer
+        collected_events_total:
+          title: Collected Events Total
+          type: integer
+        event_data_size_total:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Event Data Size Total
+        ansible_versions:
+          items:
+            type: string
+          title: Ansible Versions
+          type: array
+        role:
+          title: Role
+          type: string
+        collection:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Collection
+      required:
+      - collection_source
+      - jobs_total
+      - jobs_successful_total
+      - jobs_failed_total
+      - jobs_duration_total_seconds
+      - jobs_waiting_time_total_seconds
+      - jobs_never_started_total
+      - jobs_successful_duration_total_seconds
+      - jobs_failed_duration_total_seconds
+      - tasks_total
+      - runner_on_ok_total
+      - runner_on_failed_total
+      - runner_on_unreachable_total
+      - runner_on_async_ok_total
+      - runner_on_async_failed_total
+      - runner_item_on_ok_total
+      - runner_item_on_failed_total
+      - runner_retry_total
+      - ignore_errors_total
+      - warnings_total
+      - deprecations_total
+      - collected_events_total
+      - event_data_size_total
+      - ansible_versions
+      - role
+      - collection
+      title: RoleStats
+      type: object
+    Statistics:
+      additionalProperties: false
+      properties:
+        rollup_period_execution_environments_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rollup Period Execution Environments Total
+        rollup_period_EE_default_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rollup Period Ee Default Total
+        rollup_period_EE_custom_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rollup Period Ee Custom Total
+        rollup_period_jobs_total:
+          title: Rollup Period Jobs Total
+          type: integer
+        rollup_period_jobs_successful:
+          title: Rollup Period Jobs Successful
+          type: integer
+        rollup_period_jobs_failed:
+          title: Rollup Period Jobs Failed
+          type: integer
+        rollup_period_jobs_duration_all_statuses_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Rollup Period Jobs Duration All Statuses Seconds
+        rollup_period_jobs_successful_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Rollup Period Jobs Successful Duration Total Seconds
+        rollup_period_jobs_failed_duration_total_seconds:
+          anyOf:
+          - type: integer
+          - type: number
+          title: Rollup Period Jobs Failed Duration Total Seconds
+        rollup_period_organizations_total:
+          title: Rollup Period Organizations Total
+          type: integer
+        rollup_period_forks_total:
+          title: Rollup Period Forks Total
+          type: integer
+        rollup_period_templates_total:
+          title: Rollup Period Templates Total
+          type: integer
+        rollup_period_inventories_total:
+          title: Rollup Period Inventories Total
+          type: integer
+        rollup_period_unique_hosts_total:
+          title: Rollup Period Unique Hosts Total
+          type: integer
+        rollup_period_job_host_pairs_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rollup Period Job Host Pairs Total
+        rollup_period_successful_hosts_total:
+          title: Rollup Period Successful Hosts Total
+          type: integer
+        rollup_period_failed_hosts_total:
+          title: Rollup Period Failed Hosts Total
+          type: integer
+        rollup_period_unreachable_hosts_total:
+          title: Rollup Period Unreachable Hosts Total
+          type: integer
+        rollup_period_indirect_managed_nodes_all_total:
+          title: Rollup Period Indirect Managed Nodes All Total
+          type: integer
+        rollup_period_tasks_total:
+          title: Rollup Period Tasks Total
+          type: integer
+        rollup_period_task_ok_total:
+          title: Rollup Period Task Ok Total
+          type: integer
+        rollup_period_task_failed_total:
+          title: Rollup Period Task Failed Total
+          type: integer
+        rollup_period_task_skipped_total:
+          title: Rollup Period Task Skipped Total
+          type: integer
+        rollup_period_task_unreachable_total:
+          title: Rollup Period Task Unreachable Total
+          type: integer
+        rollup_period_task_ignored_total:
+          title: Rollup Period Task Ignored Total
+          type: integer
+        rollup_period_modules_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Rollup Period Modules Total
+        rollup_period_collected_events_total:
+          title: Rollup Period Collected Events Total
+          type: integer
+        rollup_period_warnings_total:
+          title: Rollup Period Warnings Total
+          type: integer
+        rollup_period_deprecations_total:
+          title: Rollup Period Deprecations Total
+          type: integer
+        rollup_period_playbooks_total:
+          title: Rollup Period Playbooks Total
+          type: integer
+      required:
+      - rollup_period_execution_environments_total
+      - rollup_period_EE_default_total
+      - rollup_period_EE_custom_total
+      - rollup_period_jobs_total
+      - rollup_period_jobs_successful
+      - rollup_period_jobs_failed
+      - rollup_period_jobs_duration_all_statuses_seconds
+      - rollup_period_jobs_successful_duration_total_seconds
+      - rollup_period_jobs_failed_duration_total_seconds
+      - rollup_period_organizations_total
+      - rollup_period_forks_total
+      - rollup_period_templates_total
+      - rollup_period_inventories_total
+      - rollup_period_unique_hosts_total
+      - rollup_period_job_host_pairs_total
+      - rollup_period_successful_hosts_total
+      - rollup_period_failed_hosts_total
+      - rollup_period_unreachable_hosts_total
+      - rollup_period_indirect_managed_nodes_all_total
+      - rollup_period_tasks_total
+      - rollup_period_task_ok_total
+      - rollup_period_task_failed_total
+      - rollup_period_task_skipped_total
+      - rollup_period_task_unreachable_total
+      - rollup_period_task_ignored_total
+      title: Statistics
+      type: object
