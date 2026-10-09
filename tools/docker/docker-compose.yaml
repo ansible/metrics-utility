@@ -199,6 +199,9 @@ services:
       <<: *metrics-service-env
       METRICS_SERVICE_FEATURE__DASHBOARD_COLLECTION: "true"
       METRICS_SERVICE_DASHBOARD_COLLECTION__COLLECTION_SCHEDULE_CRON: "*/5 * * * *"
+      # Daily analytics usage telemetry scrapes the web container's Prometheus endpoint. The
+      # development default is localhost, which here would be the dispatcher's own container.
+      METRICS_SERVICE_INTERNAL_PROMETHEUS_URL: "http://metrics-service-web:8000/api/v1/metrics"
 
   metrics-service-scheduler:
     <<: *metrics-service
