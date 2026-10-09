@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 from metrics_utility.library.collectors.controller.events_table import (
     _window as events_window,
 )
@@ -54,6 +55,16 @@ def test_events_table_uses_direct_modified_exclusive_inclusive_window(copy_table
     assert 'FROM main_jobevent' in query
     assert 'main_jobevent.modified >' in query
     assert 'main_jobevent.modified <=' in query
+    assert 'LEFT JOIN main_unifiedjob uj ON uj.id = main_jobevent.job_id' in query
+    assert 'collection_name' in query
+    assert 'collection_version' in query
+    assert "split_part(x.resolved_action, '.', 1)" in query
+    assert "split_part(x.resolved_action, '.', 2)" in query
+    assert f"x.resolved_action ~ '{DataframeContentUsage.collection_regexp()}'" in query
+    assert "|| '.' || split_part(x.resolved_action, '.', 2)" in query
+    assert 'uj.installed_collections' in query
+    assert 'uj.installed_collections ? collection_fields.collection_name' in query
+    assert "? 'version'" in query
     assert 'AS event_data' not in query
     assert 'playbook_on_stats' in query
     assert 'warnings' in query

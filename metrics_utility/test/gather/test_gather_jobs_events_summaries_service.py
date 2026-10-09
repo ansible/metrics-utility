@@ -566,6 +566,8 @@ def test_main_jobevent_service_row_limit(caplog):
         'event',
         'task_action',
         'resolved_action',
+        'collection_name',
+        'collection_version',
         'resolved_role',
         'duration',
         'start',
