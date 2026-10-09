@@ -122,11 +122,48 @@ class Base:
         # Otherwise, return the cell unchanged.
         return cell
 
+    EXCEL_MAX_SHEET_NAME_LENGTH = 31
+
+    @staticmethod
+    def _safe_sheet_title(title, existing_titles=()):
+        """Truncate a worksheet title to the Excel 31-character limit and
+        disambiguate collisions with a numeric suffix.
+
+        Excel treats sheet names as case-insensitive, so comparisons are
+        performed on lower-cased values.
+
+        Args:
+            title: Desired sheet title (may exceed 31 characters).
+            existing_titles: Iterable of titles already used in the workbook so
+                that truncation-induced duplicates can be resolved.
+
+        Returns:
+            A string of at most 31 characters that does not collide with any
+            entry in *existing_titles* (case-insensitive).
+        """
+        max_len = Base.EXCEL_MAX_SHEET_NAME_LENGTH
+        safe = title[:max_len]
+
+        existing_lower = {t.lower() for t in existing_titles}
+
+        if safe.lower() not in existing_lower:
+            return safe
+
+        n = 2
+        while True:
+            suffix = f'~{n}'
+            candidate = title[: max_len - len(suffix)] + suffix
+            if candidate.lower() not in existing_lower:
+                return candidate
+            n += 1
+
     def add_sheet(self, title, sheet_index, widths=None):
         """Create a new worksheet in the workbook and optionally set column widths.
 
         Args:
-            title: Worksheet tab title.
+            title: Worksheet tab title.  Automatically truncated to 31
+                characters (the Excel/OOXML maximum) and disambiguated if the
+                truncation would create a duplicate of an existing sheet name.
             sheet_index: Position (0-based) in the workbook's sheet list.
             widths: Optional dict mapping 1-based column indices to widths in
                 Excel units.
@@ -134,7 +171,9 @@ class Base:
         Returns:
             The newly created :class:`openpyxl.worksheet.worksheet.Worksheet`.
         """
-        self.wb.create_sheet(title=title)
+        existing = {ws.title for ws in self.wb.worksheets}
+        safe_title = self._safe_sheet_title(title, existing)
+        self.wb.create_sheet(title=safe_title)
         ws = self.wb.worksheets[sheet_index]
         if widths:
             self.set_widths(ws, widths)
