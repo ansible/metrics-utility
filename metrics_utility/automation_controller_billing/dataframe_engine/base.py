@@ -282,7 +282,7 @@ class Base:
         if rollup is None:
             return new_group
 
-        rollup = pd.merge(rollup.loc[:,], new_group.loc[:,], on=self.unique_index_columns(), how='outer')
+        rollup = pd.merge(rollup, new_group, on=self.unique_index_columns(), how='outer')
         rollup = self.summarize_merged_dataframes(rollup, self.data_columns(), operations=self.operations())
         return self.cast_dataframe(rollup, self.cast_types())
 
