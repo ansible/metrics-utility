@@ -184,6 +184,12 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             -- JSON extracted fields
             (ed.event_data->>'task_action')       AS task_action,
             (ed.event_data->>'resolved_action')   AS resolved_action,
+            collection_fields.collection_name,
+            CASE
+                WHEN uj.installed_collections ? collection_fields.collection_name
+                 AND (uj.installed_collections -> collection_fields.collection_name) ? 'version'
+                THEN uj.installed_collections -> collection_fields.collection_name ->> 'version'
+            END AS collection_version,
             (ed.event_data->>'resolved_role')     AS resolved_role,
             (ed.event_data->>'duration')          AS duration,
             (ed.event_data->>'start')::timestamptz AS start,
@@ -234,10 +240,18 @@ def main_jobevent_service(*, db=None, since=None, until=None, row_limit=_DEFAULT
             uj.started as job_started
 
         FROM main_jobevent e
+        LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
         CROSS JOIN LATERAL (
             SELECT replace(e.event_data, '\\u', '\\u005cu')::jsonb AS event_data
         ) AS ed
-        LEFT JOIN main_unifiedjob uj ON uj.id = e.job_id
+        CROSS JOIN LATERAL (
+            SELECT CASE
+                -- Keep this pattern aligned with DataframeContentUsage.collection_regexp().
+                WHEN ed.event_data->>'resolved_action' ~ '^(\\w+)\\.(\\w+)\\.(\\w+)(?:\\.\\w+)*$'
+                THEN split_part(ed.event_data->>'resolved_action', '.', 1)
+                     || '.' || split_part(ed.event_data->>'resolved_action', '.', 2)
+            END AS collection_name
+        ) AS collection_fields
         WHERE {where_clause}
         {limit_clause}
     """
