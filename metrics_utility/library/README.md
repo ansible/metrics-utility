@@ -34,7 +34,7 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `controller_version_service(db).gather() -> DataFrame`
 * `counts(db).gather() -> Dict`
 * `cred_type_counts(db).gather() -> Dict`
-* `credentials_service(db).gather() -> DataFrame`
+* `credentials_service(db, since, until).gather() -> DataFrame`
 * `events_table(db, since, until).gather() -> DataFrame`
 * `execution_environments(db).gather() -> DataFrame`
 * `feature_flags_service(db).gather() -> DataFrame`
