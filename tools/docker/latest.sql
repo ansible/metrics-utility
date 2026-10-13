@@ -654,7 +654,8 @@ CREATE TABLE public.dab_rbac_roleteamassignment (
     created_by_id integer,
     team_id integer NOT NULL,
     object_role_id bigint,
-    content_type_id bigint
+    content_type_id bigint,
+    object_ansible_id uuid
 );
 
 ALTER TABLE public.dab_rbac_roleteamassignment OWNER TO awx;
@@ -684,7 +685,8 @@ CREATE TABLE public.dab_rbac_roleuserassignment (
     created_by_id integer,
     user_id integer NOT NULL,
     object_role_id bigint,
-    content_type_id bigint
+    content_type_id bigint,
+    object_ansible_id uuid
 );
 
 ALTER TABLE public.dab_rbac_roleuserassignment OWNER TO awx;
