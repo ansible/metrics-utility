@@ -1,6 +1,8 @@
 import json
 import os
 
+from urllib.parse import urlsplit
+
 from django.db import connection
 from django.db.utils import ProgrammingError
 from django.utils.timezone import now, timedelta
@@ -204,13 +206,62 @@ def cli_main_jobevent(since, until, output):
 ### vcpu prometheus collector
 
 
+PROMETHEUS_DEFAULT_URL = 'https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091'
+K8S_TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token'
+K8S_CA_CERT_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
+
+
+def prometheus_token():
+    """Bearer token for Prometheus - METRICS_UTILITY_PROMETHEUS_TOKEN overrides the in-cluster
+    service-account token, so we can gather against a local/mock Prometheus (see ./run-vcpu)."""
+    token = os.getenv('METRICS_UTILITY_PROMETHEUS_TOKEN')
+    if token is not None:
+        token = token.strip()
+        if not token:
+            raise MetricsException('Unable to retrieve the token from METRICS_UTILITY_PROMETHEUS_TOKEN')
+        return token
+
+    if not os.path.exists(K8S_TOKEN_PATH):
+        raise MetricsException(f'Service account token not found at {K8S_TOKEN_PATH}')
+
+    with open(K8S_TOKEN_PATH) as f:
+        token = f.read().strip()
+    if not token:
+        raise MetricsException(f'Unable to retrieve the token for the current service account from {K8S_TOKEN_PATH}')
+
+    return token
+
+
+def prometheus_ca_cert_path():
+    """CA cert used to verify Prometheus TLS - METRICS_UTILITY_PROMETHEUS_CA_CERT_PATH overrides
+    the in-cluster service CA. An empty string uses the default trust store."""
+    ca_cert_path = os.getenv('METRICS_UTILITY_PROMETHEUS_CA_CERT_PATH', K8S_CA_CERT_PATH)
+    if ca_cert_path and not os.path.exists(ca_cert_path):
+        raise MetricsException(f'CA_CERT not found at {ca_cert_path}')
+
+    return ca_cert_path
+
+
+def _validate_prometheus_url(url):
+    """Require HTTPS except for loopback and single-label test hosts."""
+    parsed_url = urlsplit(url.rstrip('/'))
+    if not parsed_url.netloc:
+        raise ValueError('Prometheus URL must include a valid hostname')
+
+    if parsed_url.scheme != 'https':
+        hostname = parsed_url.hostname
+        is_loopback = hostname in {'localhost', '127.0.0.1', '::1'}
+        is_internal_hostname = hostname is not None and '.' not in hostname
+        if parsed_url.scheme != 'http' or not (is_loopback or is_internal_hostname):
+            raise ValueError('Prometheus URL must use HTTPS; HTTP is restricted to loopback and internal test hosts')
+
+
 @register('total_workers_vcpu', '1.0', format='json', fnc_slicing=until_slicing)
 def cli_total_workers_vcpu(since, until, output):
     if 'total_workers_vcpu' not in get_optional_collectors():
         return None
 
     cluster_name = os.getenv('METRICS_UTILITY_CLUSTER_NAME')
-    prometheus_url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
     red_hat_org_id = os.getenv('METRICS_UTILITY_RED_HAT_ORG_ID')  # only used for log messages
     metering_enabled = bool_from_env('METRICS_UTILITY_USAGE_BASED_METERING_ENABLED', False)
 
@@ -225,31 +276,13 @@ def cli_total_workers_vcpu(since, until, output):
     def log_info(fmt, *data):
         logger.info(f'%s, {fmt}', log_prefix, *data)
 
-    if not cluster_name:
-        log_error('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
-        raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
+    def resolve_prometheus_url():
+        url = os.getenv('METRICS_UTILITY_PROMETHEUS_URL')
+        if url:
+            return url
 
-    if not prometheus_url:
-        prometheus_default_url = 'https://prometheus-k8s.openshift-monitoring.svc.cluster.local:9091'
-        log_info('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set, default %s will be assigned', prometheus_default_url)
-        prometheus_url = prometheus_default_url
-
-    # only require these when intending to talk to prometheus
-    token = None
-    ca_cert_path = None
-    if metering_enabled:
-        token_path = '/var/run/secrets/kubernetes.io/serviceaccount/token'
-        if not os.path.exists(token_path):
-            raise MetricsException(f'Service account token not found at {token_path}')
-
-        ca_cert_path = '/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt'
-        if not os.path.exists(ca_cert_path):
-            raise MetricsException(f'CA_CERT not found at {ca_cert_path}')
-
-        with open(token_path) as f:
-            token = f.read().strip()
-        if not token:
-            raise MetricsException(f'Unable to retrieve the token for the current service account from {token_path}')
+        log_info('environment variable METRICS_UTILITY_PROMETHEUS_URL is not set, default %s will be assigned', PROMETHEUS_DEFAULT_URL)
+        return PROMETHEUS_DEFAULT_URL
 
     def log_info_data(info):
         # This message must always appear in the log regardless of the log level.
@@ -261,6 +294,20 @@ def cli_total_workers_vcpu(since, until, output):
         }
         log_info('data: %s', json.dumps(data))
         return data
+
+    if not cluster_name:
+        log_error('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
+        raise MissingRequiredEnvVar('environment variable METRICS_UTILITY_CLUSTER_NAME is not set')
+
+    prometheus_url = resolve_prometheus_url()
+
+    # only require credentials when intending to talk to prometheus
+    token = None
+    ca_cert_path = None
+    if metering_enabled:
+        _validate_prometheus_url(prometheus_url)
+        token = prometheus_token()
+        ca_cert_path = prometheus_ca_cert_path()
 
     collector = total_workers_vcpu(
         cluster_name=cluster_name,
