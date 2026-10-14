@@ -106,6 +106,46 @@ class TestEnsureFunctions:
         assert 'CREATE FUNCTION metrics_utility_is_valid_json' in sql_arg
         assert 'CREATE FUNCTION metrics_utility_parse_yaml_field' not in sql_arg
 
+    def test_uses_sql_server_function_definitions(self):
+        """SQL Server connections use catalog checks and separate T-SQL function DDL."""
+        mock_db = MagicMock()
+        mock_db.vendor = 'microsoft'
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (False, False)
+
+        ensure_functions(mock_db)
+
+        assert mock_cursor.execute.call_count == 3
+        check_sql = mock_cursor.execute.call_args_list[0][0][0]
+        assert "OBJECT_ID(N'dbo.metrics_utility_parse_yaml_field', N'FN')" in check_sql
+        yaml_sql = mock_cursor.execute.call_args_list[1][0][0]
+        json_sql = mock_cursor.execute.call_args_list[2][0][0]
+        assert 'CREATE FUNCTION dbo.metrics_utility_parse_yaml_field' in yaml_sql
+        assert 'CREATE FUNCTION dbo.metrics_utility_is_valid_json' in json_sql
+        assert 'ISJSON' in json_sql
+
+    def test_detects_raw_pyodbc_connection(self):
+        """Raw connections passed by metrics-service are identified as SQL Server."""
+
+        class RawPyodbcConnection:
+            __module__ = 'pyodbc'
+
+        from metrics_utility.library.collectors.util import _database_vendor
+
+        assert _database_vendor(RawPyodbcConnection()) == 'microsoft'
+
+    def test_detects_raw_psycopg_connection(self):
+        """Raw PostgreSQL connections continue using the PostgreSQL helpers."""
+
+        class RawPsycopgConnection:
+            __module__ = 'psycopg'
+
+        from metrics_utility.library.collectors.util import _database_vendor
+
+        assert _database_vendor(RawPsycopgConnection()) == 'postgresql'
+
 
 class TestCopyTableFiles:
     """Test _copy_table_files function."""
@@ -227,6 +267,19 @@ class TestCopyTableFiles:
 
 class TestCopyTablePandas:
     """Test _copy_table_pandas function."""
+
+    def test_omits_parameter_argument_when_query_has_no_params(self):
+        """pyodbc needs a one-argument execute call for unparameterized SQL."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.description = [('id',)]
+        mock_cursor.fetchall.return_value = [(1,)]
+
+        _copy_table_pandas(mock_db, 'SELECT 1 AS id')
+
+        mock_cursor.execute.assert_called_once_with('SELECT 1 AS id')
 
     def test_returns_dataframe(self):
         """Test that function returns pandas DataFrame."""
@@ -350,10 +403,10 @@ class TestDateWhere:
         assert '>=' not in result
 
     def test_neither_since_nor_until(self):
-        """Test date_where with neither since nor until returns 'true'."""
+        """Test date_where returns a predicate accepted by both database backends."""
         result = date_where('date_field', None, None)
 
-        assert result == 'true'
+        assert result == '1=1'
 
     def test_rejects_naive_since(self):
         with pytest.raises(ValueError, match='since must be timezone-aware'):
