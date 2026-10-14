@@ -197,9 +197,20 @@ class ReportCCSPv2(Base):
             for organization_name in organization_names:
                 ws = self.add_sheet(organization_name, sheet_index, self.config['data_column_widths'])
 
+                # When the tab title was truncated, write the full organization
+                # name as a bold header so users can always identify the sheet.
+                if ws.title != organization_name:
+                    cell = ws.cell(row=1, column=1)
+                    cell.value = organization_name
+                    cell.data_type = 's'  # Force text to prevent formula injection
+                    cell.font = Font(name=self.FONT, size=11, bold=True)
+                    data_start_row = 2
+                else:
+                    data_start_row = 1
+
                 # Filter the data for a certain organization
                 filtered_job_host_summary_dataframe = job_host_summary_dataframe[job_host_summary_dataframe['organization_name'] == organization_name]
-                self._build_data_section_usage_by_node(1, ws, filtered_job_host_summary_dataframe, mode='by_organization')
+                self._build_data_section_usage_by_node(data_start_row, ws, filtered_job_host_summary_dataframe, mode='by_organization')
                 sheet_index += 1
 
         if 'data_collection_status' in self.optional_report_sheets():
