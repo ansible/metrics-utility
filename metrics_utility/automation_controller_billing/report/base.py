@@ -154,30 +154,42 @@ class Base:
         if destination_dataframe is None:
             return None
 
-        def concatenate_columns_mapping(row):
-            return f'{row["original_host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
+        # Build composite key -> host_name mapping without mutating mapping_dataframe.
+        # Uses vectorized string concatenation instead of row-by-row .apply().
+        mapping_keys = (
+            mapping_dataframe['original_host_name'].astype(str)
+            + '__'
+            + mapping_dataframe['install_uuid'].astype(str)
+            + '__'
+            + mapping_dataframe['job_remote_id'].astype(str)
+        )
+        host_name_map = dict(zip(mapping_keys, mapping_dataframe['host_name'].astype(str)))
 
-        def concatenate_columns_destination(row):
-            return f'{row["host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
+        # Build composite keys for the destination and remap host_name
+        dest_keys = (
+            destination_dataframe['host_name'].astype(str)
+            + '__'
+            + destination_dataframe['install_uuid'].astype(str)
+            + '__'
+            + destination_dataframe['job_remote_id'].astype(str)
+        )
+        mapped = dest_keys.map(host_name_map)
+        destination_dataframe['host_name'] = mapped.fillna(destination_dataframe['host_name'])
 
-        # Apply the function to each row of the DataFrame
-        mapping_dataframe['host_composite_id'] = mapping_dataframe.apply(concatenate_columns_mapping, axis=1)
-        mapping_dataframe = mapping_dataframe.set_index('host_composite_id')
-        mapping_dataframe = mapping_dataframe['host_name'].astype(str).to_dict()
-
-        def apply_mapping(row):
-            return mapping_dataframe.get(f'{row["host_name"]}__{str(row["install_uuid"])}__{row["job_remote_id"]}', row['host_name'])
-
-        destination_dataframe['host_name'] = destination_dataframe.apply(apply_mapping, axis=1)
-        destination_dataframe['host_composite_id'] = destination_dataframe.apply(concatenate_columns_destination, axis=1)
+        # Recompute composite id after remapping
+        destination_dataframe['host_composite_id'] = (
+            destination_dataframe['host_name'].astype(str)
+            + '__'
+            + destination_dataframe['install_uuid'].astype(str)
+            + '__'
+            + destination_dataframe['job_remote_id'].astype(str)
+        )
 
         return destination_dataframe
 
     def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
-
-        ccsp_report_dataframe = dataframe.copy()
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
         convert_cols = ['organizations', 'inventories', 'canonical_facts', 'facts']
@@ -190,8 +202,19 @@ class Base:
             'facts',
         ]
 
-        # Handle deduplication columns if enabled
-        columns, convert_cols = self.handle_dedup_columns_for_scope(ccsp_report_dataframe, columns, convert_cols)
+        # Determine which dedup columns to include (without mutating the original)
+        if self.has_dedup_enabled() and 'host_names_before_dedup' in dataframe.columns:
+            convert_cols.append('host_names_before_dedup')
+            columns += ['host_names_before_dedup']
+
+        # Copy only the columns we need instead of the full DataFrame
+        available_columns = [col for col in columns if col in dataframe.columns]
+        ccsp_report_dataframe = dataframe[available_columns].copy()
+
+        # Compute the dedup count column on the copy
+        if self.has_dedup_enabled() and 'host_names_before_dedup' in ccsp_report_dataframe.columns:
+            self.add_dedup_count_column(ccsp_report_dataframe, 'host_names_before_dedup', 'host_names_before_dedup_count')
+            columns += ['host_names_before_dedup_count']
 
         for col in convert_cols:
             if col in ccsp_report_dataframe.columns:
