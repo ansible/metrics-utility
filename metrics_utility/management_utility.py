@@ -102,18 +102,6 @@ class ManagementUtility(management.ManagementUtility):
 
         return module.Command()
 
-    @staticmethod
-    def get_commands():
-        """Return a dict mapping each command name to ``'metrics_utility'``.
-
-        Returns:
-            Dict of ``{command_name: 'metrics_utility'}`` entries.
-        """
-        commands = {}
-        path = os.path.join(os.path.dirname(__file__), 'management')
-        commands.update({name: 'metrics_utility' for name in management.find_commands(path)})
-        return commands
-
     def run_subcommand(self, subcommand, argv):
         """Execute *subcommand* and handle exceptions gracefully.
 
