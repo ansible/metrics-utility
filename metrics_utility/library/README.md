@@ -32,9 +32,15 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `config(db, billing_provider_params).gather() -> Dict`
 * `config_django(...).gather() -> Dict`
 * `controller_version_service(db).gather() -> DataFrame`
-* `credentials_service(db).gather() -> DataFrame`
+* `counts(db).gather() -> Dict`
+* `cred_type_counts(db).gather() -> Dict`
+* `credentials_service(db, since, until).gather() -> DataFrame`
+* `events_table(db, since, until).gather() -> DataFrame`
 * `execution_environments(db).gather() -> DataFrame`
 * `feature_flags_service(db).gather() -> DataFrame`
+* `host_metric_summary_monthly_table(db).gather() -> DataFrame`
+* `instance_info(db).gather() -> Dict`
+* `inventory_counts(db).gather() -> Dict`
 * `job_host_summary(db, since, until).gather() -> DataFrame`
 * `job_host_summary_service(db, since, until).gather() -> DataFrame`
 * `main_host(db).gather() -> DataFrame`
@@ -43,9 +49,15 @@ Controller collectors (in `metrics_utility.library.collectors.controller`):
 * `main_indirectmanagednodeaudit(db, since, until).gather() -> DataFrame`
 * `main_jobevent(db, since, until).gather() -> DataFrame`
 * `main_jobevent_service(db, since, until).gather() -> DataFrame`
+* `org_counts(db).gather() -> Dict`
+* `projects_by_scm_type(db).gather() -> Dict`
+* `query_info(db, since, until, collection_type).gather() -> Dict`
 * `table_metadata(db).gather() -> DataFrame`
+* `unified_job_template_table(db).gather() -> DataFrame`
 * `unified_jobs(db, since, until).gather() -> DataFrame`
 * `unified_jobs_dashboard(db, since, until).gather() -> DataFrame`
+* `workflow_job_node_table(db, since, until).gather() -> DataFrame`
+* `workflow_job_template_node_table(db).gather() -> DataFrame`
 
 Dashboard collectors (in `metrics_utility.library.collectors.dashboard`):
 * `dashboard_jobs(...)` - plus the `AWXJobType`, `AWXJobHostSummaryType`, `DashboardJobsResultType` types and the `get_min_max_job_id_query` query helper
