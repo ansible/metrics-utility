@@ -57,6 +57,7 @@ def test_main_host_query_structure(mock_copy_pandas):
     assert 'main_host' in query
     assert 'main_inventory' in query
     assert 'main_organization' in query
+    assert 'LEFT JOIN main_hostmetric ON main_hostmetric.hostname = main_host.name' in query
     assert 'main_jobhostsummary' in query
     assert 'main_unifiedjob' in query
     assert 'main_host.last_job_id' not in query
@@ -68,6 +69,20 @@ def test_main_host_query_structure(mock_copy_pandas):
     assert 'canonical_facts' in query
     assert 'facts' in query
     assert 'ansible_host_variable' in query
+    assert 'main_hostmetric.first_automation' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_host_preserves_host_without_hostmetric(mock_copy_pandas):
+    """Hosts without a host-metric row remain in the result with NULL metrics."""
+    mock_copy_pandas.return_value = pd.DataFrame({'host_name': ['host-without-metric'], 'first_automation': [None]})
+
+    result = main_host(db=_mock_db()).gather()
+
+    assert list(result['host_name']) == ['host-without-metric']
+    assert pd.isna(result.iloc[0]['first_automation'])
+    query = mock_copy_pandas.call_args[0][1]
+    assert 'LEFT JOIN main_hostmetric ON main_hostmetric.hostname = main_host.name' in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
