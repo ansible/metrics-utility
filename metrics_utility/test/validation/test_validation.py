@@ -41,6 +41,12 @@ def test_valid_collectors_matches_registered_optional_collectors():
     assert optional == VALID_COLLECTORS
 
 
+def test_unified_jobs_version_remains_1_4():
+    registered = Collector.registered_collectors(controller_collectors)
+
+    assert registered['unified_jobs']['version'] == '1.4'
+
+
 @pytest.fixture(autouse=True)
 def clear_env(monkeypatch):
     # Clear relevant env vars before each test
