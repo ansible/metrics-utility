@@ -44,6 +44,7 @@ def setup_processed_dataframe(fixed_now):
     mock_batches = [{'host_metric': mock_df_for_batch_processed}]
 
     mock_extractor = MagicMock()
+    mock_extractor.extra_params = {'opt_since': fixed_now - dt_actual.timedelta(days=120)}
     mock_extractor.iter_batches.return_value = (batch for batch in mock_batches)
 
     db_host_metric_instance = DBDataframeHostMetric(

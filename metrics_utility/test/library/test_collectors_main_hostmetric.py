@@ -11,9 +11,15 @@ SINCE = datetime(2025, 6, 13, 0, 0, 0, tzinfo=UTC)
 UNTIL = datetime(2025, 6, 14, 0, 0, 0, tzinfo=UTC)
 
 
+def _mock_db():
+    mock_db = MagicMock()
+    mock_db.cursor.return_value.__enter__.return_value.fetchone.return_value = (False, False)
+    return mock_db
+
+
 def test_main_hostmetric_basic():
     """The collector exposes the standard gather()/kwargs interface."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
 
     instance = main_hostmetric(db=mock_db, since=SINCE)
 
@@ -25,7 +31,7 @@ def test_main_hostmetric_basic():
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_hostmetric_calls_copy_table(mock_copy_pandas):
     """gather() fetches via _copy_table_pandas and returns a DataFrame."""
-    mock_db = MagicMock()
+    mock_db = _mock_db()
     mock_copy_pandas.return_value = pd.DataFrame({'hostname': ['a'], 'host_id': [0]})
 
     result = main_hostmetric(db=mock_db, since=SINCE).gather()
@@ -42,11 +48,27 @@ def test_main_hostmetric_calls_copy_table(mock_copy_pandas):
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_main_hostmetric_includes_deleted_only_host(mock_copy_pandas):
+    """Raw collection includes hosts changed by deletion in the requested window."""
+    mock_db = MagicMock()
+    mock_db.cursor().__enter__().fetchone.return_value = (True, True)
+    mock_copy_pandas.return_value = pd.DataFrame({'hostname': ['deleted-only'], 'host_id': [0]})
+
+    result = main_hostmetric(db=mock_db, since=SINCE, until=UNTIL).gather()
+
+    assert list(result['hostname']) == ['deleted-only']
+    query = mock_copy_pandas.call_args[0][1]
+    assert 'main_hostmetric.last_automation' in query
+    assert 'main_hostmetric.last_deleted' in query
+    assert ' OR ' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_hostmetric_query_columns(mock_copy_pandas):
     """The SQL selects all expected host_metric/host columns."""
     mock_copy_pandas.return_value = pd.DataFrame()
 
-    main_hostmetric(db=MagicMock(), since=SINCE).gather()
+    main_hostmetric(db=_mock_db(), since=SINCE).gather()
 
     query = mock_copy_pandas.call_args[0][1]
     for column in [
@@ -58,6 +80,8 @@ def test_main_hostmetric_query_columns(mock_copy_pandas):
         'deleted_counter',
         'last_deleted',
         'deleted',
+        'id',
+        'used_in_inventories',
         'ansible_product_serial',
         'ansible_machine_id',
         'ansible_host_variable',
@@ -74,7 +98,7 @@ def test_main_hostmetric_keyset_pagination(mock_copy_pandas):
     page2 = pd.DataFrame({'hostname': ['c'], 'host_id': [3]})
     mock_copy_pandas.side_effect = [page1, page2]
 
-    result = main_hostmetric(db=MagicMock(), since=SINCE).gather()
+    result = main_hostmetric(db=_mock_db(), since=SINCE).gather()
 
     assert list(result['hostname']) == ['a', 'b', 'c']
     assert mock_copy_pandas.call_count == 2
@@ -100,7 +124,7 @@ def test_main_hostmetric_exact_multiple_preserves_dtypes(mock_copy_pandas):
     empty = pd.DataFrame({'hostname': [], 'host_id': [], 'deleted': []}, dtype=object)
     mock_copy_pandas.side_effect = [page1, empty]
 
-    result = main_hostmetric(db=MagicMock(), since=SINCE).gather()
+    result = main_hostmetric(db=_mock_db(), since=SINCE).gather()
 
     assert list(result['hostname']) == ['a', 'b']
     assert result['host_id'].dtype == page1['host_id'].dtype
@@ -113,7 +137,7 @@ def test_main_hostmetric_csv_output_single_copy(mock_copy_files, tmp_path):
     mock_copy_files.return_value = ['host_metric.csv']
 
     output = CollectionOutput(str(tmp_path))
-    result = main_hostmetric(db=MagicMock(), since=SINCE, until=UNTIL, output=output).gather()
+    result = main_hostmetric(db=_mock_db(), since=SINCE, until=UNTIL, output=output).gather()
 
     assert result == ['host_metric.csv']
     mock_copy_files.assert_called_once()
@@ -131,7 +155,9 @@ def test_host_metric_query_since_only():
     query, params = _host_metric_query(since=SINCE)
 
     assert f"main_hostmetric.last_automation >= '{SINCE.isoformat()}'" in query
+    assert f"main_hostmetric.last_deleted >= '{SINCE.isoformat()}'" in query
     assert 'main_hostmetric.last_automation <' not in query
+    assert 'main_hostmetric.last_deleted <' not in query
     assert 'LIMIT' not in query
     assert params == []
 

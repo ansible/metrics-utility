@@ -147,12 +147,14 @@ _JOBS_BASE_SQL = """SELECT
     mj.project_id,
     ujp.name as project_name,
     uj.created,
-    uj.modified
+    uj.modified,
+    o.name as organization_name
     FROM main_unifiedjob uj
     JOIN main_job mj on mj.unifiedjob_ptr_id = uj.id
     LEFT JOIN main_unifiedjobtemplate ujt ON ujt.id = uj.unified_job_template_id
     LEFT JOIN auth_user u on u.id = uj.created_by_id
-    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id"""
+    LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id
+    LEFT JOIN main_organization o on o.id = uj.organization_id"""
 
 
 def get_jobs_query(since: datetime, until: datetime, date_field: str = 'modified') -> tuple[str, list]:

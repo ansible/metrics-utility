@@ -38,7 +38,7 @@ compose-pytest-svc:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile pytest-svc up
 
 clean:
-	$(COMPOSE_CMD) -f $(COMPOSE_FILE) down -v --rmi local
+	$(COMPOSE_CMD) -f $(COMPOSE_FILE) --profile pytest --profile env --profile service --profile pytest-svc down -v --remove-orphans --rmi local
 
 psql:
 	$(COMPOSE_CMD) -f $(COMPOSE_FILE) exec postgres psql -U awx

@@ -3,7 +3,9 @@ import datetime
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
+from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 from metrics_utility.library.collectors.controller.main_jobevent_service import (
     _build_job_created_ranges,
     _build_timestamp_where,
@@ -11,6 +13,25 @@ from metrics_utility.library.collectors.controller.main_jobevent_service import 
     _select_jobs_by_partition_density,
     main_jobevent_service,
 )
+
+
+@pytest.mark.parametrize(
+    ('resolved_action', 'expected_collection'),
+    [
+        ('community.general.git_config', 'community.general'),
+        (None, None),
+        ('copy', None),
+        ('community.general', None),
+        ('community..git', None),
+        ('community.general.', None),
+        ('.community.general', None),
+        ('community.general.git-foo', None),
+        ('community.general.git config', None),
+    ],
+)
+def test_collection_field_actions_match_canonical_parser(resolved_action, expected_collection):
+    """Collector SQL must follow the canonical FQCN parser's three-segment contract."""
+    assert DataframeContentUsage.extract_collection_name(resolved_action) == expected_collection
 
 
 def test_main_jobevent_service_basic():
@@ -117,6 +138,15 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     assert 'event_data' in query
     assert 'task_action' in query
     assert 'resolved_action' in query
+    assert 'collection_name' in query
+    assert 'collection_version' in query
+    assert "split_part(ed.event_data->>'resolved_action', '.', 1)" in query
+    assert "split_part(ed.event_data->>'resolved_action', '.', 2)" in query
+    assert f"ed.event_data->>'resolved_action' ~ '{DataframeContentUsage.collection_regexp()}'" in query
+    assert "|| '.' || split_part(ed.event_data->>'resolved_action', '.', 2)" in query
+    assert 'uj.installed_collections' in query
+    assert 'uj.installed_collections ? collection_fields.collection_name' in query
+    assert "? 'version'" in query
     assert 'duration' in query
     assert 'warnings' in query
     assert 'deprecations' in query
@@ -131,6 +161,17 @@ def test_main_jobevent_service_query_structure(mock_copy_pandas):
     # and leaves runner_item_on_failed/runner_on_async_failed without it.
     assert "event_data->>'ignore_errors'" in query
     assert "event_data->'res'->>'_ansible_ignore_errors'" in query
+
+    # The boolean cast must be guarded by a CASE expression to avoid
+    # InvalidTextRepresentation when the value is a non-boolean string
+    # (e.g. an unrendered Jinja template like '{{ some_var }}').
+    assert "CASE WHEN btrim(lower(ed.event_data->>'ignore_errors'))" in query
+    assert "CASE WHEN btrim(lower(ed.event_data->'res'->>'_ansible_ignore_errors'))" in query
+
+    # The allowlist must cover all PostgreSQL boolean input literals:
+    # true/false, t/f, y/n, 1/0, yes/no, on/off (case-insensitive).
+    for literal in ("'true'", "'false'", "'t'", "'f'", "'y'", "'n'", "'1'", "'0'", "'yes'", "'no'", "'on'", "'off'"):
+        assert literal in query, f'boolean literal {literal} missing from ignore_errors allowlist'
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')

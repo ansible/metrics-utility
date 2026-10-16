@@ -24,14 +24,15 @@ class TestEnsureFunctions:
         mock_cursor = MagicMock()
         mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (False, False)
 
         ensure_functions(mock_db)
 
-        # Verify cursor.execute was called once
-        assert mock_cursor.execute.call_count == 1
+        # Verify the existence check and function creation were executed.
+        assert mock_cursor.execute.call_count == 2
 
         # Verify the SQL contains function definitions
-        sql_arg = mock_cursor.execute.call_args[0][0]
+        sql_arg = mock_cursor.execute.call_args_list[1][0][0]
         assert 'metrics_utility_parse_yaml_field' in sql_arg
         assert 'metrics_utility_is_valid_json' in sql_arg
 
@@ -41,11 +42,12 @@ class TestEnsureFunctions:
         mock_cursor = MagicMock()
         mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (False, False)
 
         ensure_functions(mock_db)
 
-        sql_arg = mock_cursor.execute.call_args[0][0]
-        assert 'CREATE OR REPLACE FUNCTION metrics_utility_parse_yaml_field' in sql_arg
+        sql_arg = mock_cursor.execute.call_args_list[1][0][0]
+        assert 'CREATE FUNCTION metrics_utility_parse_yaml_field' in sql_arg
         assert 'RETURNS text' in sql_arg
 
     def test_creates_is_valid_json(self):
@@ -54,11 +56,12 @@ class TestEnsureFunctions:
         mock_cursor = MagicMock()
         mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (False, False)
 
         ensure_functions(mock_db)
 
-        sql_arg = mock_cursor.execute.call_args[0][0]
-        assert 'CREATE OR REPLACE FUNCTION metrics_utility_is_valid_json' in sql_arg
+        sql_arg = mock_cursor.execute.call_args_list[1][0][0]
+        assert 'CREATE FUNCTION metrics_utility_is_valid_json' in sql_arg
         assert 'returns boolean' in sql_arg
 
     def test_cursor_cleanup(self):
@@ -67,6 +70,7 @@ class TestEnsureFunctions:
         mock_cursor = MagicMock()
         mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (False, False)
 
         ensure_functions(mock_db)
 
@@ -74,6 +78,33 @@ class TestEnsureFunctions:
         mock_db.cursor.assert_called_once()
         mock_db.cursor.return_value.__enter__.assert_called_once()
         mock_db.cursor.return_value.__exit__.assert_called_once()
+
+    def test_does_not_replace_existing_functions(self):
+        """Existing Controller implementations must not be overwritten."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (True, True)
+
+        ensure_functions(mock_db)
+
+        assert mock_cursor.execute.call_count == 1
+        assert 'CREATE FUNCTION' not in mock_cursor.execute.call_args[0][0]
+
+    def test_only_creates_missing_function(self):
+        """The legacy fallback is installed independently for each helper."""
+        mock_db = MagicMock()
+        mock_cursor = MagicMock()
+        mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_cursor.fetchone.return_value = (True, False)
+
+        ensure_functions(mock_db)
+
+        sql_arg = mock_cursor.execute.call_args_list[1][0][0]
+        assert 'CREATE FUNCTION metrics_utility_is_valid_json' in sql_arg
+        assert 'CREATE FUNCTION metrics_utility_parse_yaml_field' not in sql_arg
 
 
 class TestCopyTableFiles:

@@ -7,7 +7,7 @@ export METRICS_UTILITY_SHIP_PATH="./out"
 export METRICS_UTILITY_SHIP_TARGET="controller_db"
 
 if ! pg_isready -h localhost; then
-  echo "run-s3-gather-build: DB not ready, run make compose first"
+  echo "run-renewal: DB not ready, run make compose first"
   exit 1
 fi
 

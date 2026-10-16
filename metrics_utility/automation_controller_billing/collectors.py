@@ -165,7 +165,7 @@ def cli_main_host_daily(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_hostmetric', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_hostmetric', '1.1', format='csv', fnc_slicing=daily_slicing)
 def cli_main_hostmetric(since, until, output):
     if 'main_hostmetric' not in get_optional_collectors():
         return None

@@ -209,18 +209,6 @@ expected_sheets = {
             ]
         },
     ],
-    'Indirectly Managed nodes': [
-        {'Host name': []},
-        {'Automated by\norganizations': []},
-        {'Job runs': []},
-        {'Number of task\nruns': []},
-        {'First\nautomation': []},
-        {'Last\nautomation': []},
-        {'Canonical\nFacts': []},
-        {'Facts': []},
-        {'Manage\nNode\nTypes': []},
-        {'Events': []},
-    ],
     'Usage by collections': [
         {'Collection name': []},
         {'Unique managed nodes\nautomated': []},
@@ -293,10 +281,6 @@ def test_import(cleanup):
     indirect=True,
 )
 def test_infrastructure_summary_explicitly_requested_under_ccsp_warns_and_is_skipped(cleanup, caplog):
-    """infrastructure_summary is CCSPv2-only; requesting it explicitly under CCSP should warn
-
-    and skip the sheet rather than fail the build or silently drop it without explanation.
-    """
     env = {
         **env_vars,
         'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'ccsp_summary,managed_nodes,infrastructure_summary',

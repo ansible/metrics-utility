@@ -1,12 +1,18 @@
 import json
 
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from metrics_utility.library.collectors.controller.config import (
+    _as_datetime,
     _datetime_hook,
+    _decode,
     _get_controller_settings,
     _get_controller_version,
     _get_install_type,
+    _get_settings,
     _version,
     config,
 )
@@ -47,6 +53,20 @@ def test_get_install_type_traditional():
         assert result == 'traditional'
 
 
+@pytest.mark.parametrize(
+    ('environment', 'expected'),
+    [
+        ({'container': 'oci'}, 'openshift'),
+        ({'KUBERNETES_SERVICE_PORT': '443'}, 'k8s'),
+        ({}, 'traditional'),
+    ],
+)
+def test_get_install_type_environment_branches(environment, expected):
+    """Test each deployment branch with unrelated environment variables removed."""
+    with patch.dict('os.environ', environment, clear=True):
+        assert _get_install_type() == expected
+
+
 def test_datetime_hook_with_datetime():
     """Test _datetime_hook converts datetime strings."""
     from django.utils.dateparse import parse_datetime
@@ -81,6 +101,52 @@ def test_datetime_hook_with_non_datetime_string():
 
     # Non-datetime strings are preserved as-is
     assert result['text'] == 'hello'
+
+
+def test_datetime_hook_converts_and_preserves_mixed_values():
+    """Test _datetime_hook conversion and preservation in one decoded object."""
+    value = '2024-01-15T10:30:00+00:00'
+
+    result = _datetime_hook({'date': value, 'text': 'hello', 'number': 1})
+
+    assert result == {'date': datetime(2024, 1, 15, 10, 30, tzinfo=UTC), 'text': 'hello', 'number': 1}
+
+
+def test_get_settings_without_database():
+    """Test _get_settings returns no settings without a database connection."""
+    assert _get_settings(None, ['SETTING']) == {}
+
+
+@pytest.mark.parametrize('value', [None, 1, {}, []])
+def test_decode_non_string(value):
+    """Test _decode preserves non-string values by identity."""
+    assert _decode(value) is value
+
+
+def test_decode_valid_json():
+    """Test _decode parses valid JSON."""
+    assert _decode('{"enabled": true}') == {'enabled': True}
+
+
+def test_decode_invalid_json():
+    """Test _decode preserves malformed JSON."""
+    value = '{malformed json'
+
+    assert _decode(value) == value
+
+
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        (None, None),
+        (1, 1),
+        ('2024-01-15T10:30:00+00:00', datetime(2024, 1, 15, 10, 30, tzinfo=UTC)),
+        ('not a datetime', 'not a datetime'),
+    ],
+)
+def test_as_datetime(value, expected):
+    """Test _as_datetime handles non-string, valid ISO, and invalid ISO values."""
+    assert _as_datetime(value) == expected
 
 
 def test_get_controller_settings():
@@ -151,6 +217,22 @@ def test_get_controller_version_no_result():
     assert result is None
 
 
+def test_get_controller_version_without_database():
+    """Test _get_controller_version handles a missing database connection."""
+    assert _get_controller_version(None) is None
+
+
+def test_get_controller_version_missing_value():
+    """Test _get_controller_version handles a row without a version value."""
+    mock_db = MagicMock()
+    mock_cursor = MagicMock()
+    mock_db.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+    mock_db.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_cursor.fetchone.return_value = (None,)
+
+    assert _get_controller_version(mock_db) is None
+
+
 def test_get_controller_version_empty_string():
     """Test _get_controller_version when version is empty string."""
     mock_db = MagicMock()
@@ -192,6 +274,7 @@ def test_config_collector_basic():
     assert 'install_uuid' in result
     assert 'instance_uuid' in result
     assert 'controller_url_base' in result
+    assert 'controller_version' in result
     assert 'metrics_utility_version' in result
     assert 'platform' in result
 

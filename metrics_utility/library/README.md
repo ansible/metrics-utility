@@ -61,14 +61,16 @@ Other collectors (in `metrics_utility.library.collectors.others`):
 
 #### Storage
 
-`StorageSegment` (in `metrics_utility.library.storage`) provides a put-only interface for pushing data to [segment analytics](https://segment.com/docs/connections/sources/catalog/libraries/server/python/).
+`StorageSegment` (in `metrics_utility.library.storage`) provides a put-only interface for pushing data to Segment's HTTP Tracking API. It sends bounded `/v1/batch` requests directly, gzip-compressed by default, without starting SDK worker threads.
 
 ```python
 from metrics_utility.library.storage import StorageSegment
 
 # debug = bool
-# user_id = string, passed to analytics.track
-# write_key = segment.com source write key
+# user_id = string
+# write_key = Segment source write key
+# gzip = bool, defaults to True
+# anonymous_id = optional ID to reuse across related anonymized sends
 
 storage = StorageSegment(
     debug=False,
@@ -77,7 +79,17 @@ storage = StorageSegment(
 )
 ```
 
-Also allows optional `host='http://example.com:12345'` for testing.
+Also allows an HTTPS `host` override. Loopback HTTP mock servers such as
+`http://localhost:8765` are accepted; single-label internal test hosts such as
+`http://mock-segment:8765` require the explicit test-only setting
+`allow_insecure_host=True`. Dotted remote HTTP hosts are always rejected.
+
+For retry-safe sends, pass
+`segment_meta={'message_id': '<stable-upload-id>'}`. A caller may also pass
+`anonymous_id` to preserve anonymous identity correlation, but it is separate
+from Segment's message deduplication. Existing callers that omit `message_id`
+retain the generated-ID behavior, but a task retry can create duplicates unless
+it reuses a stable message ID.
 
 The CLI keeps its own storage backends for filesystem, S3 and console.redhat.com under `metrics_utility.automation_controller_billing`.
 
