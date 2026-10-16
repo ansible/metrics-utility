@@ -7,7 +7,7 @@ from ..util import DataframeOutput, collector, date_where
 def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeOutput()):
     """Collect unified job records with additional fields required by the automation-reports dashboard.
 
-    Extends the base ``unified_jobs`` query with project name, launched-by user,
+    Extends the base ``unified_jobs`` query with project name, launched-by ID,
     label IDs, and a host count — columns the dashboard needs to populate
     ``JobData`` and ``JobLabel`` records without a separate DB round-trip.
 
@@ -61,8 +61,6 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeO
             ujp.name AS project_name,
             CASE WHEN main_unifiedjob.launch_type IN ('manual', 'relaunch')
                  THEN auth_user.id ELSE NULL END AS launched_by_id,
-            CASE WHEN main_unifiedjob.launch_type IN ('manual', 'relaunch')
-                 THEN auth_user.username ELSE NULL END AS launched_by_username,
             (SELECT STRING_AGG(l.label_id::text, ',')
              FROM main_unifiedjob_labels l
              WHERE l.unifiedjob_id = main_unifiedjob.id) AS label_ids,

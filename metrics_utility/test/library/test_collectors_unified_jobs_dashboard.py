@@ -41,12 +41,14 @@ class TestUnifiedJobsDashboard:
         assert 'ujp.name AS project_name' in query
 
     @patch('metrics_utility.library.collectors.util._copy_table_pandas')
-    def test_includes_launched_by_fields(self, mock_copy_pandas):
+    def test_excludes_launched_by_username(self, mock_copy_pandas):
         mock_copy_pandas.return_value = pd.DataFrame()
-        unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until).gather()
+        output = unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until).gather()
         query = self._get_query(mock_copy_pandas)
         assert 'launched_by_id' in query
-        assert 'launched_by_username' in query
+        assert 'launched_by_username' not in query
+        assert 'username' not in query
+        assert 'launched_by_username' not in output.columns
         assert 'CASE' in query
         assert "'manual'" in query
         assert "'relaunch'" in query

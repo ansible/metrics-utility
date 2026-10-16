@@ -302,7 +302,7 @@ jobs_dashboard_lines = [
         'modified,name,unified_job_template_id,launch_type,schedule_id,execution_node,'
         'controller_node,cancel_flag,status,failed,started,finished,elapsed,'
         'job_explanation,instance_group_id,installed_collections,ansible_version,forks,'
-        'job_template_name,scm_type,project_id,project_name,launched_by_id,launched_by_username,'
+        'job_template_name,scm_type,project_id,project_name,launched_by_id,'
         'label_ids,num_hosts'
     ),
     (
@@ -311,7 +311,7 @@ jobs_dashboard_lines = [
         'controller1,f,pending,f,,2025-06-13 10:02:10+00:00,120.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,5,'
-        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,2'
     ),
     (
         '2,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
@@ -319,7 +319,7 @@ jobs_dashboard_lines = [
         'controller1,f,pending,f,2025-06-13 10:00:20+00:00,2025-06-13 10:03:20+00:00,180.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,10,'
-        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,2'
     ),
     (
         '3,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
@@ -328,7 +328,7 @@ jobs_dashboard_lines = [
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}, '
         '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,20,'
-        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,2'
     ),
     (
         '4,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
@@ -337,7 +337,7 @@ jobs_dashboard_lines = [
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}, '
         '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,8,'
-        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,2'
     ),
     (
         '5,,job,2,default_org_2025-06-13,registry.example.com/envs/node-backend:20,4,default_inventory_2025-06-13,,'
@@ -346,7 +346,7 @@ jobs_dashboard_lines = [
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}, '
         '""redhat.rhel_system_roles"": {""version"": ""1.23.0""}}",2.9.10,15,'
-        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,2'
     ),
     (
         '6,,job,2,default_org_2025-06-13,registry.example.com/envs/python-ml:3.11,4,default_inventory_2025-06-13,,'
@@ -354,7 +354,7 @@ jobs_dashboard_lines = [
         'controller1,f,pending,f,2025-06-13 11:00:30+00:00,2025-06-13 11:01:50+00:00,80.000,,,'
         '"{""a10.acos_axapi"": {""version"": ""1.0.0""}, '
         '""ansible.builtin"": {""version"": ""2.9.10""}}",2.9.10,25,'
-        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,,2'
+        'default_unified_job_template_2025-06-13,git,1,default_unified_job_template_2025-06-13,,,2'
     ),
 ]
 
