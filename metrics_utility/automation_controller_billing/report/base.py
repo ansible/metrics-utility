@@ -17,6 +17,22 @@ from metrics_utility.automation_controller_billing.helpers import merge_arrays, 
 from metrics_utility.metric_utils import INDIRECT
 
 
+def _composite_id(dataframe, host_column):
+    """Build a composite key Series from host, install_uuid, and job_remote_id columns.
+
+    Uses ``.astype(object).map(str)`` so that null values (None, NaN, NA)
+    are rendered as their string representation rather than propagating NaN
+    through the concatenation.
+    """
+    return (
+        dataframe[host_column].astype(object).map(str)
+        + '__'
+        + dataframe['install_uuid'].astype(object).map(str)
+        + '__'
+        + dataframe['job_remote_id'].astype(object).map(str)
+    )
+
+
 class Base:
     """Shared spreadsheet-building utilities for all billing report types.
 
@@ -156,34 +172,19 @@ class Base:
 
         # Build composite key -> host_name mapping without mutating mapping_dataframe.
         # Uses vectorized string concatenation instead of row-by-row .apply().
-        mapping_keys = (
-            mapping_dataframe['original_host_name'].astype(str)
-            + '__'
-            + mapping_dataframe['install_uuid'].astype(str)
-            + '__'
-            + mapping_dataframe['job_remote_id'].astype(str)
-        )
-        host_name_map = dict(zip(mapping_keys, mapping_dataframe['host_name'].astype(str)))
+        # .astype(object).map(str) renders nulls (None/NaN/NA) as their string
+        # representation rather than propagating NaN through the concatenation,
+        # matching the behavior of the previous f-string .apply() path.
+        mapping_keys = _composite_id(mapping_dataframe, 'original_host_name')
+        host_name_map = dict(zip(mapping_keys, mapping_dataframe['host_name'].astype(object).map(str)))
 
         # Build composite keys for the destination and remap host_name
-        dest_keys = (
-            destination_dataframe['host_name'].astype(str)
-            + '__'
-            + destination_dataframe['install_uuid'].astype(str)
-            + '__'
-            + destination_dataframe['job_remote_id'].astype(str)
-        )
+        dest_keys = _composite_id(destination_dataframe, 'host_name')
         mapped = dest_keys.map(host_name_map)
         destination_dataframe['host_name'] = mapped.fillna(destination_dataframe['host_name'])
 
         # Recompute composite id after remapping
-        destination_dataframe['host_composite_id'] = (
-            destination_dataframe['host_name'].astype(str)
-            + '__'
-            + destination_dataframe['install_uuid'].astype(str)
-            + '__'
-            + destination_dataframe['job_remote_id'].astype(str)
-        )
+        destination_dataframe['host_composite_id'] = _composite_id(destination_dataframe, 'host_name')
 
         return destination_dataframe
 
