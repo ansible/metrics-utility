@@ -100,15 +100,17 @@ class ReportCCSPv2(Base):
         return job_host_summary_dataframe, events_dataframe
 
     def build_spreadsheet(self):
-        job_host_summary_dataframe = self.dataframes['job_host_summary']
-        events_dataframe = self.dataframes['main_jobevent']
-        scope_dataframe = self.dataframes['main_host']
-        status_dataframe = self.dataframes['data_collection_status']
+        # DataFrames are built lazily on first access (see _LazyDataFrameDict).
+        # We unpack them in phases so that only the DataFrames needed for
+        # the current set of sheets are resident in memory at any time.
 
-        # Fix host names in the event data, to take in account the variables
-        events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
-        # TODO: also apply organization filter
-        job_host_summary_dataframe, events_dataframe = self._apply_filter(job_host_summary_dataframe, events_dataframe)
+        # Phase 1: job_host_summary (needed by most sheets)
+        job_host_summary_dataframe = self.dataframes['job_host_summary']
+
+        # Apply organization filter early so directs/indirects use the
+        # filtered data.  The filter does not touch events (see TODO in
+        # _apply_filter), so we can apply it before events are built.
+        job_host_summary_dataframe, _ = self._apply_filter(job_host_summary_dataframe, None)
 
         # Create the workbook and worksheets
         self.wb.remove(self.wb.active)  # delete the default sheet
@@ -152,11 +154,16 @@ class ReportCCSPv2(Base):
             self._build_data_section_usage_by_node(1, ws, indirects, managed_node_type='indirect')
             sheet_index += 1
 
+        # Phase 2: inventory scope (build on demand, release after use)
         if 'inventory_scope' in self.optional_report_sheets():
+            scope_dataframe = self.dataframes['main_host']
+            if 'serials' in scope_dataframe.columns:
+                del scope_dataframe['serials']
             ws = self.add_sheet('Inventory Scope', sheet_index, self.config['data_column_widths'])
-            scope = scope_dataframe
-            self._build_data_section_scope(1, ws, scope)
+            self._build_data_section_scope(1, ws, scope_dataframe)
+            del scope_dataframe
             sheet_index += 1
+        del self.dataframes['main_host']
 
         if 'infrastructure_summary' in self.optional_report_sheets():
             ws = self.add_sheet('Infrastructure Summary', sheet_index, self.config['infrastructure_summary_column_widths'])
@@ -169,27 +176,44 @@ class ReportCCSPv2(Base):
             self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
-        if events_dataframe is not None:
-            if 'usage_by_collections' in self.optional_report_sheets():
-                # Sheet with usage by collections
-                ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
-                # Include indirect managed nodes only when indirect reporting is enabled,
-                # matching the 'Usage by organizations' sheet behavior.
-                collections_indirects = indirects if 'indirectly_managed_nodes' in self.optional_report_sheets() else None
-                self._build_data_section_usage_by_collections(1, ws, events_dataframe, indirects=collections_indirects)
-                sheet_index += 1
+        # Phase 3: events (built on demand, only when content-usage sheets
+        # are requested).  Skipping the build entirely when no events sheets
+        # are enabled avoids reading and aggregating all main_jobevent CSVs.
+        events_sheets = {'usage_by_collections', 'usage_by_roles', 'usage_by_modules'}
+        optional = self.optional_report_sheets() or []
+        has_events_sheets = bool(events_sheets & set(optional))
 
-            if 'usage_by_roles' in self.optional_report_sheets():
-                # Sheet with usage by roles
-                ws = self.add_sheet('Usage by roles', sheet_index, self.config['data_column_widths'])
-                self._build_data_section_usage_by_roles(1, ws, events_dataframe)
-                sheet_index += 1
+        if has_events_sheets:
+            events_dataframe = self.dataframes['main_jobevent']
 
-            if 'usage_by_modules' in self.optional_report_sheets():
-                # Sheet with usage by modules
-                ws = self.add_sheet('Usage by modules', sheet_index, self.config['data_column_widths'])
-                self._build_data_section_usage_by_modules(1, ws, events_dataframe)
-                sheet_index += 1
+            # Fix host names in the event data, to take in account the variables
+            events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
+
+            if events_dataframe is not None:
+                if 'usage_by_collections' in self.optional_report_sheets():
+                    # Sheet with usage by collections
+                    ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
+                    # Include indirect managed nodes only when indirect reporting is enabled,
+                    # matching the 'Usage by organizations' sheet behavior.
+                    collections_indirects = indirects if 'indirectly_managed_nodes' in self.optional_report_sheets() else None
+                    self._build_data_section_usage_by_collections(1, ws, events_dataframe, indirects=collections_indirects)
+                    sheet_index += 1
+
+                if 'usage_by_roles' in self.optional_report_sheets():
+                    # Sheet with usage by roles
+                    ws = self.add_sheet('Usage by roles', sheet_index, self.config['data_column_widths'])
+                    self._build_data_section_usage_by_roles(1, ws, events_dataframe)
+                    sheet_index += 1
+
+                if 'usage_by_modules' in self.optional_report_sheets():
+                    # Sheet with usage by modules
+                    ws = self.add_sheet('Usage by modules', sheet_index, self.config['data_column_widths'])
+                    self._build_data_section_usage_by_modules(1, ws, events_dataframe)
+                    sheet_index += 1
+
+            # Release events after content-usage sheets are written
+            del events_dataframe
+        del self.dataframes['main_jobevent']
 
         if 'managed_nodes_by_organizations' in self.optional_report_sheets():
             # Sheet with list of managed nodes by organization, this will generate multiple tabs
@@ -202,12 +226,15 @@ class ReportCCSPv2(Base):
                 self._build_data_section_usage_by_node(1, ws, filtered_job_host_summary_dataframe, mode='by_organization')
                 sheet_index += 1
 
+        # Phase 4: data collection status (build on demand, release after use)
         if 'data_collection_status' in self.optional_report_sheets():
+            status_dataframe = self.dataframes['data_collection_status']
             ws = self.add_sheet('Data collection status', sheet_index, self.config['status_column_widths'])
             current_row = self._build_data_section_collection_missing(1, ws, status_dataframe)
             current_row += 1  # gap
             self._build_data_section_collection_status(current_row, ws, status_dataframe)
-            sheet_index += 1
+            del status_dataframe
+        del self.dataframes['data_collection_status']
 
         return self.wb
 

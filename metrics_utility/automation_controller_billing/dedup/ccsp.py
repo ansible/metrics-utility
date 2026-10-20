@@ -4,6 +4,47 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 
+class _LazyDataFrameDict(dict):
+    """Dict that builds DataFrames on first ``d[key]`` access.
+
+    Eagerly-built entries are set with ``d[key] = df`` and behave like a
+    normal dict.  Keys that have not been set yet are built from their
+    engine on first access via ``__getitem__``.
+
+    Inherited ``items()``/``keys()``/``values()`` only cover entries that
+    have already been built.  This is intentional: the all-empty guard
+    in ``build_report`` iterates ``items()`` and must not trigger lazy
+    builds just to decide whether to skip the report.
+
+    ``del d[key]`` removes both the built value and the engine so the
+    memory can be reclaimed by the GC.
+    """
+
+    def __init__(self, engines):
+        super().__init__()
+        self._engines = dict(engines)
+
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            if key not in self._engines:
+                raise
+            df = self._engines[key].build_dataframe()
+            super().__setitem__(key, df)
+            return df
+
+    def __contains__(self, key):
+        return key in self._engines or super().__contains__(key)
+
+    def __delitem__(self, key):
+        self._engines.pop(key, None)
+        try:
+            super().__delitem__(key)
+        except KeyError:
+            pass
+
+
 class DedupCCSP:
     """CCSP host deduplication engine.
 
@@ -28,45 +69,59 @@ class DedupCCSP:
         self.experimental = experimental
 
     def run(self):
-        """Build all dataframes and optionally apply serial-based deduplication.
+        """Build dataframes and optionally apply serial-based deduplication.
+
+        Returns a ``_LazyDataFrameDict`` so that callers can access each
+        DataFrame via ``d[key]`` (triggering a build on first access) and
+        ``del d[key]`` to release memory when the DataFrame is no longer
+        needed.
 
         Returns:
-            Dict mapping dataframe names to the (possibly deduplicated) DataFrames.
+            A dict-like mapping dataframe names to DataFrames.
         """
-        new = {}
-        for name, dataframe in self.dataframes.items():
-            new[name] = dataframe.build_dataframe()
-
-        dedup_info = new['main_host']
-        if dedup_info is None or dedup_info.empty:
-            return new
-
         if not self.experimental:
-            if 'serials' in dedup_info.columns:
-                del dedup_info['serials']
-            return new
+            return self._run_standard()
+        return self._run_experimental()
 
-        # each host_name in dedup_info has a list of combined serials
-        # convert to a mapping from any hostname with that serial to a canonical hostname
-        # Make a copy to avoid modifying the original dataframe
+    def _run_standard(self):
+        """Non-experimental: build only ``job_host_summary`` eagerly.
+
+        ``main_host``, ``main_jobevent``, and ``data_collection_status``
+        stay lazy and are only built when the report builder accesses them.
+        """
+        result = _LazyDataFrameDict(self.dataframes)
+        result['job_host_summary'] = self.dataframes['job_host_summary'].build_dataframe()
+        return result
+
+    def _run_experimental(self):
+        """Experimental: build main_host, JHS, events eagerly for dedup."""
+        result = _LazyDataFrameDict(self.dataframes)
+
+        for name in ['main_host', 'job_host_summary', 'main_jobevent']:
+            if name in self.dataframes:
+                result[name] = self.dataframes[name].build_dataframe()
+
+        dedup_info = result.get('main_host')
+        if dedup_info is None or dedup_info.empty:
+            return result
+
         dedup_info_copy = dedup_info.copy()
         mapping = self.df_to_mapping(dedup_info_copy)
         if 'serials' in dedup_info_copy.columns:
             del dedup_info_copy['serials']
 
-        for v in ['job_host_summary', 'main_jobevent', 'main_host']:
-            if v in new and new[v] is not None and not new[v].empty:
-                # Pass main_host dataframe to job_host_summary for canonical facts enrichment
-                if v == 'job_host_summary':
-                    new[v] = self.dataframes[v].dedup(new[v], mapping, scope_dataframe=dedup_info_copy)
+        for name in ['job_host_summary', 'main_jobevent', 'main_host']:
+            df = result.get(name)
+            if df is not None and not df.empty:
+                if name == 'job_host_summary':
+                    result[name] = self.dataframes[name].dedup(df, mapping, scope_dataframe=dedup_info_copy)
                 else:
-                    new[v] = self.dataframes[v].dedup(new[v], mapping)
-        # no dedup on data_collection_status
+                    result[name] = self.dataframes[name].dedup(df, mapping)
 
-        return new
+        return result
 
     def df_to_mapping(self, df):
-        """Build a hostname→canonical-hostname mapping from serial-number grouping.
+        """Build a hostname->canonical-hostname mapping from serial-number grouping.
 
         For each unique hardware serial, the first-seen hostname is chosen as the
         canonical representative.  All other hostnames sharing a serial are mapped
