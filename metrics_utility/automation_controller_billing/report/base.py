@@ -4,6 +4,7 @@
 # Code for building the spreadsheet
 ######################################
 import json
+import re
 
 import pandas as pd
 
@@ -123,25 +124,34 @@ class Base:
         return cell
 
     EXCEL_MAX_SHEET_NAME_LENGTH = 31
+    # Characters forbidden in Excel/OOXML worksheet names.  openpyxl raises
+    # ValueError if any of these appear in the title.
+    _INVALID_SHEET_CHAR_RE = re.compile(r'[\\*?:/\[\]]')
 
     @staticmethod
     def _safe_sheet_title(title, existing_titles=()):
-        """Truncate a worksheet title to the Excel 31-character limit and
-        disambiguate collisions with a numeric suffix.
+        """Sanitize, truncate, and disambiguate a worksheet title.
 
-        Excel treats sheet names as case-insensitive, so comparisons are
-        performed on lower-cased values.
+        Processing order:
+        1. Replace characters invalid in Excel sheet names
+           (``\\ * ? : / [ ]``) with ``_``.
+        2. Truncate to the 31-character OOXML maximum.
+        3. Append a ``~N`` suffix if the result collides (case-insensitive)
+           with an entry in *existing_titles*.
 
         Args:
-            title: Desired sheet title (may exceed 31 characters).
+            title: Desired sheet title (may contain invalid characters and/or
+                exceed 31 characters).
             existing_titles: Iterable of titles already used in the workbook so
                 that truncation-induced duplicates can be resolved.
 
         Returns:
-            A string of at most 31 characters that does not collide with any
-            entry in *existing_titles* (case-insensitive).
+            A string of at most 31 characters, free of invalid characters,
+            that does not collide with any entry in *existing_titles*
+            (case-insensitive).
         """
         max_len = Base.EXCEL_MAX_SHEET_NAME_LENGTH
+        title = Base._INVALID_SHEET_CHAR_RE.sub('_', title)
         safe = title[:max_len]
 
         existing_lower = {t.lower() for t in existing_titles}

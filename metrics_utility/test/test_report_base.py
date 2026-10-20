@@ -375,6 +375,28 @@ class TestSafeSheetTitle:
         assert len(second) <= 31
         assert second.endswith('~2')
 
+    def test_invalid_chars_replaced(self):
+        """Characters forbidden by Excel (\\*?:/[]) are replaced with _."""
+        title = 'org:name/with*bad[chars]?here\\now'
+        result = Base._safe_sheet_title(title)
+        for ch in (':', '/', '*', '[', ']', '?', '\\'):
+            assert ch not in result
+        assert result == 'org_name_with_bad_chars__here_n'
+
+    def test_invalid_chars_with_short_title(self):
+        """Short title with invalid chars is sanitized without truncation."""
+        result = Base._safe_sheet_title('a:b/c*d')
+        assert result == 'a_b_c_d'
+        assert len(result) == 7
+
+    def test_invalid_chars_collision_after_sanitization(self):
+        """Two titles that differ only in invalid chars collide after
+        sanitization and get disambiguated."""
+        first = Base._safe_sheet_title('org:name')
+        second = Base._safe_sheet_title('org/name', existing_titles={first})
+        assert first != second
+        assert second.endswith('~2')
+
 
 # ---------------------------------------------------------------------------
 # add_sheet / set_widths
