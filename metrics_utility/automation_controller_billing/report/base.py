@@ -129,14 +129,30 @@ class Base:
     _INVALID_SHEET_CHAR_RE = re.compile(r'[\\*?:/\[\]]')
 
     @staticmethod
+    def _strip_boundary_apostrophes(value):
+        """Replace leading/trailing apostrophes with underscores.
+
+        Excel rejects worksheet names that start or end with ``'``.
+        openpyxl does not enforce this rule.
+        """
+        if value.startswith("'"):
+            value = '_' + value[1:]
+        if value.endswith("'"):
+            value = value[:-1] + '_'
+        return value
+
+    @staticmethod
     def _safe_sheet_title(title, existing_titles=()):
         """Sanitize, truncate, and disambiguate a worksheet title.
 
         Processing order:
         1. Replace characters invalid in Excel sheet names
            (``\\ * ? : / [ ]``) with ``_``.
-        2. Truncate to the 31-character OOXML maximum.
-        3. Append a ``~N`` suffix if the result collides (case-insensitive)
+        2. Replace leading/trailing apostrophes with ``_``.
+        3. Rename the reserved title ``History`` (case-insensitive).
+        4. Truncate to the 31-character OOXML maximum (re-checking for
+           trailing apostrophes introduced by truncation).
+        5. Append a ``~N`` suffix if the result collides (case-insensitive)
            with an entry in *existing_titles*.
 
         Args:
@@ -152,7 +168,11 @@ class Base:
         """
         max_len = Base.EXCEL_MAX_SHEET_NAME_LENGTH
         title = Base._INVALID_SHEET_CHAR_RE.sub('_', title)
-        safe = title[:max_len]
+        title = Base._strip_boundary_apostrophes(title)
+        # "History" is reserved by Excel for the Track Changes feature.
+        if title.lower() == 'history':
+            title = title + '_'
+        safe = Base._strip_boundary_apostrophes(title[:max_len])
 
         existing_lower = {t.lower() for t in existing_titles}
 

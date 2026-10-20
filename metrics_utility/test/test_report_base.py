@@ -397,6 +397,32 @@ class TestSafeSheetTitle:
         assert first != second
         assert second.endswith('~2')
 
+    def test_leading_apostrophe_replaced(self):
+        """A title starting with ' gets the apostrophe replaced."""
+        result = Base._safe_sheet_title("'Acme Corp'")
+        assert not result.startswith("'")
+        assert not result.endswith("'")
+        assert result == '_Acme Corp_'
+
+    def test_trailing_apostrophe_from_truncation(self):
+        """If truncation leaves a trailing ', it is replaced."""
+        # 30 chars + apostrophe at position 31 after truncation
+        title = 'a' * 30 + "'" + 'bbb'
+        result = Base._safe_sheet_title(title)
+        assert len(result) <= 31
+        assert not result.endswith("'")
+
+    def test_reserved_name_history(self):
+        """The reserved name 'History' (case-insensitive) is renamed."""
+        for name in ('History', 'history', 'HISTORY'):
+            result = Base._safe_sheet_title(name)
+            assert result.lower() != 'history'
+
+    def test_history_with_suffix_not_reserved(self):
+        """'History_dept' is not the reserved name and passes through."""
+        result = Base._safe_sheet_title('History_dept')
+        assert result == 'History_dept'
+
 
 # ---------------------------------------------------------------------------
 # add_sheet / set_widths
