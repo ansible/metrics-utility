@@ -200,6 +200,7 @@ Add a rollup class in `metrics_utility/anonymized_rollups/`, register it in the 
 - [CLI usage](cli.md)
 - [Environment variables](environment.md)
 - [Collectors and database partitions](collectors-and-partitions.md)
+- [Organization-aware collector payloads](org-aware-collectors.md)
 - [Library abstractions](../metrics_utility/library/README.md)
 - [Anonymized rollups](../metrics_utility/anonymized_rollups/anonymized_rollups.md)
 - [Contributor guide](CONTRIBUTING.md)
