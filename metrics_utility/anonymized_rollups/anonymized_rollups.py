@@ -3,16 +3,7 @@ from typing import Any
 
 import pandas as pd
 
-from metrics_utility.anonymized_rollups.controller_version_anonymized_rollup import ControllerVersionAnonymizedRollup
-from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
-from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
-from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
-from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
 from metrics_utility.anonymized_rollups.helpers import load_known_collections
-from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
-from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
-from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
-from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
 from metrics_utility.anonymized_rollups.types import AnonymizedPayload
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 
@@ -38,42 +29,6 @@ def _installed_collection_name_is_unknown(collection_name: Any, known: dict[str,
     if not s:
         return True
     return s not in known
-
-
-def create_anonymized_object(rollup_name: str):
-    """Instantiate and return the rollup object for the given collector name.
-
-    Args:
-        rollup_name: One of ``'jobs'``, ``'job_host_summary'``, ``'events_modules'``,
-            ``'execution_environments'``, ``'credentials'``, ``'table_metadata'``,
-            ``'controller_version'``, ``'feature_flags'``, or ``'task_executions'``.
-
-    Returns:
-        An instance of the corresponding ``*AnonymizedRollup`` class.
-
-    Raises:
-        ValueError: If *rollup_name* is not recognised.
-    """
-    if rollup_name == 'jobs':
-        return JobsAnonymizedRollup()
-    elif rollup_name == 'job_host_summary':
-        return JobHostSummaryAnonymizedRollup()
-    elif rollup_name == 'events_modules':
-        return EventModulesAnonymizedRollup()
-    elif rollup_name == 'execution_environments':
-        return ExecutionEnvironmentsAnonymizedRollup()
-    elif rollup_name == 'credentials':
-        return CredentialsAnonymizedRollup()
-    elif rollup_name == 'table_metadata':
-        return TableMetadataAnonymizedRollup()
-    elif rollup_name == 'controller_version':
-        return ControllerVersionAnonymizedRollup()
-    elif rollup_name == 'feature_flags':
-        return FeatureFlagsAnonymizedRollup()
-    elif rollup_name == 'task_executions':
-        return TaskExecutionsAnonymizedRollup()
-    else:
-        raise ValueError(f'Invalid rollup name: {rollup_name}')
 
 
 def _remove_custom_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
