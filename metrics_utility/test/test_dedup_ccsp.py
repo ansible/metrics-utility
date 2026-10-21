@@ -82,7 +82,7 @@ class TestLazyDataFrameDict:
         d = _LazyDataFrameDict({})
         del d['nope']  # should not raise
 
-    def test_items_only_yields_built_entries(self):
+    def test_items_yields_all_entries(self):
         eng_a = FakeEngine(pd.DataFrame({'v': [1]}))
         eng_b = FakeEngine(pd.DataFrame({'v': [2]}))
         d = _LazyDataFrameDict({'a': eng_a, 'b': eng_b})
@@ -91,9 +91,10 @@ class TestLazyDataFrameDict:
         d['a'] = pd.DataFrame({'v': [10]})
 
         items = dict(d.items())
-        assert set(items.keys()) == {'a'}
+        assert set(items.keys()) == {'a', 'b'}
+        # 'a' was set eagerly, so no build; 'b' was built lazily via items()
         assert eng_a.build_count == 0
-        assert eng_b.build_count == 0
+        assert eng_b.build_count == 1
 
     def test_getitem_on_missing_key_raises(self):
         d = _LazyDataFrameDict({'x': FakeEngine(pd.DataFrame())})
@@ -147,17 +148,23 @@ class TestDedupCCSPStandard:
         result = dedup.run()
         assert isinstance(result, _LazyDataFrameDict)
 
-    def test_items_yields_only_jhs(self):
+    def test_items_yields_all_keys(self):
         engines = self._engines(
             main_host_df=pd.DataFrame({'host_name': ['h1']}),
             jhs_df=pd.DataFrame({'x': [1]}),
             events_df=pd.DataFrame({'y': [2]}),
+            status_df=pd.DataFrame({'status': ['ok']}),
         )
         dedup = DedupCCSP(engines, extra_params={}, experimental=False)
         result = dedup.run()
 
         built_keys = [name for name, _ in result.items()]
-        assert built_keys == ['job_host_summary']
+        assert set(built_keys) == {
+            'job_host_summary',
+            'main_host',
+            'main_jobevent',
+            'data_collection_status',
+        }
 
     def test_all_empty_check_works_with_nonempty_jhs(self):
         engines = self._engines(
@@ -170,16 +177,33 @@ class TestDedupCCSPStandard:
         all_empty = all(df is None or df.empty for _, df in result.items())
         assert all_empty is False
 
-    def test_all_empty_check_works_with_empty_jhs(self):
+    def test_all_empty_check_with_all_empty(self):
         engines = self._engines(
             main_host_df=pd.DataFrame(),
             jhs_df=pd.DataFrame(),
+            events_df=pd.DataFrame(),
+            status_df=pd.DataFrame(),
         )
         dedup = DedupCCSP(engines, extra_params={}, experimental=False)
         result = dedup.run()
 
         all_empty = all(df is None or df.empty for _, df in result.items())
         assert all_empty is True
+
+    def test_empty_jhs_nonempty_status_not_skipped(self):
+        """When JHS is empty but data_collection_status has data, the
+        all_empty check must return False so the report is still generated."""
+        engines = self._engines(
+            main_host_df=pd.DataFrame(),
+            jhs_df=pd.DataFrame(),
+            events_df=pd.DataFrame(),
+            status_df=pd.DataFrame({'status': ['ok']}),
+        )
+        dedup = DedupCCSP(engines, extra_params={}, experimental=False)
+        result = dedup.run()
+
+        all_empty = all(df is None or df.empty for _, df in result.items())
+        assert all_empty is False
 
 
 # ---------------------------------------------------------------------------

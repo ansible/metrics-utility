@@ -107,6 +107,13 @@ class ReportCCSPv2(Base):
         # Phase 1: job_host_summary (needed by most sheets)
         job_host_summary_dataframe = self.dataframes['job_host_summary']
 
+        # Keep a reference to the unfiltered JHS for event host-name
+        # mapping in Phase 3.  _fix_event_host_names must see all orgs
+        # so that composite-key lookups succeed even for events outside
+        # the org filter.  _apply_filter().copy() leaves this reference
+        # pointing at the original DataFrame.
+        jhs_unfiltered = job_host_summary_dataframe
+
         # Apply organization filter early so directs/indirects use the
         # filtered data.  The filter does not touch events (see TODO in
         # _apply_filter), so we can apply it before events are built.
@@ -186,8 +193,10 @@ class ReportCCSPv2(Base):
         if has_events_sheets:
             events_dataframe = self.dataframes['main_jobevent']
 
-            # Fix host names in the event data, to take in account the variables
-            events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
+            # Fix host names in the event data using the *unfiltered* JHS so
+            # that composite-key lookups cover all organizations (matching the
+            # original pre-lazy-loading order of operations).
+            events_dataframe = self._fix_event_host_names(jhs_unfiltered, events_dataframe)
 
             if events_dataframe is not None:
                 if 'usage_by_collections' in self.optional_report_sheets():
@@ -213,6 +222,8 @@ class ReportCCSPv2(Base):
 
             # Release events after content-usage sheets are written
             del events_dataframe
+        # Release unfiltered JHS reference (no-op if events path already used it)
+        jhs_unfiltered = None
         del self.dataframes['main_jobevent']
 
         if 'managed_nodes_by_organizations' in self.optional_report_sheets():

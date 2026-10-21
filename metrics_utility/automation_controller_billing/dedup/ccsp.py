@@ -11,10 +11,9 @@ class _LazyDataFrameDict(dict):
     normal dict.  Keys that have not been set yet are built from their
     engine on first access via ``__getitem__``.
 
-    Inherited ``items()``/``keys()``/``values()`` only cover entries that
-    have already been built.  This is intentional: the all-empty guard
-    in ``build_report`` iterates ``items()`` and must not trigger lazy
-    builds just to decide whether to skip the report.
+    ``items()`` yields every entry (building lazily as needed) so that
+    callers like the ``all_empty`` guard in ``build_report`` see all
+    DataFrames, not only the eagerly-built ones.
 
     ``del d[key]`` removes both the built value and the engine so the
     memory can be reclaimed by the GC.
@@ -36,6 +35,20 @@ class _LazyDataFrameDict(dict):
 
     def __contains__(self, key):
         return key in self._engines or super().__contains__(key)
+
+    def items(self):
+        """Yield all entries, building lazy ones on demand.
+
+        Eagerly-built entries come first (via ``super().items()``),
+        followed by any remaining engines that have not been accessed yet.
+        """
+        seen = set()
+        for key, value in super().items():
+            seen.add(key)
+            yield key, value
+        for key in self._engines:
+            if key not in seen:
+                yield key, self[key]
 
     def __delitem__(self, key):
         self._engines.pop(key, None)
