@@ -147,7 +147,7 @@ def cli_job_host_summary(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_host', '1.0', format='csv', fnc_slicing=until_slicing)
+@register('main_host', '1.1', format='csv', fnc_slicing=until_slicing)
 def cli_main_host(since, until, output):
     if 'main_host' not in get_optional_collectors():
         return None
@@ -156,7 +156,7 @@ def cli_main_host(since, until, output):
     return output.as_files(collector)
 
 
-@register('main_host_daily', '1.0', format='csv', fnc_slicing=daily_slicing)
+@register('main_host_daily', '1.1', format='csv', fnc_slicing=daily_slicing)
 def cli_main_host_daily(since, until, output):
     if 'main_host_daily' not in get_optional_collectors():
         return None

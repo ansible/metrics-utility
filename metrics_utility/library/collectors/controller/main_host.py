@@ -21,6 +21,7 @@ def _main_host_query(where):
             main_organization.id AS organization_remote_id,
             main_organization.name AS organization_name,
             main_unifiedjob.created AS last_automation,
+            main_hostmetric.first_automation,
 
             CASE
                 WHEN (metrics_utility_is_valid_json(main_host.variables))
@@ -90,6 +91,7 @@ def _main_host_query(where):
         FROM main_host
         LEFT JOIN main_inventory ON main_inventory.id = main_host.inventory_id
         LEFT JOIN main_organization ON main_organization.id = main_inventory.organization_id
+        LEFT JOIN main_hostmetric ON main_hostmetric.hostname = main_host.name
         LEFT JOIN LATERAL (
             SELECT main_jobhostsummary.job_id
             FROM main_jobhostsummary
