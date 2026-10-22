@@ -358,8 +358,6 @@ class TestFixEventHostNames:
 
     def test_composite_id_is_string_when_install_uuid_is_null(self):
         """Null install_uuid must render as 'None' in the composite key, not NaN."""
-        import numpy as np
-
         r = _report()
         mapping = _mapping_df('h1', None, 'j1', 'mapped_h1')
         dest = _dest_df('h1', None, 'j1')
@@ -367,7 +365,6 @@ class TestFixEventHostNames:
         cid = result['host_composite_id'].iloc[0]
         assert isinstance(cid, str), f'Expected str, got {type(cid)}'
         assert 'None' in cid
-        assert cid != np.nan
 
     def test_composite_id_is_string_when_job_remote_id_is_nan(self):
         """NaN job_remote_id must render as 'nan' in the composite key, not NaN."""
