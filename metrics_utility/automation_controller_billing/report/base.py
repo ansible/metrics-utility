@@ -65,14 +65,6 @@ class Base:
             dataframe[count_col_name] = self.calculate_dedup_count(dataframe[base_col_name])
         return dataframe
 
-    def handle_dedup_columns_for_scope(self, dataframe, columns, convert_cols):
-        """Handle deduplication columns for inventory scope if experimental dedup is enabled."""
-        if self.has_dedup_enabled() and 'host_names_before_dedup' in dataframe.columns:
-            convert_cols.append('host_names_before_dedup')
-            self.add_dedup_count_column(dataframe, 'host_names_before_dedup', 'host_names_before_dedup_count')
-            columns += ['host_names_before_dedup', 'host_names_before_dedup_count']
-        return columns, convert_cols
-
     def handle_dedup_aggregation(self, agg_dict):
         """Add deduplication aggregation if experimental dedup is enabled."""
         if self.has_dedup_enabled():
@@ -151,33 +143,56 @@ class Base:
             ws.column_dimensions[get_column_letter(key)].width = value
 
     def _fix_event_host_names(self, mapping_dataframe, destination_dataframe):
+        """Remap host names in *destination_dataframe* using *mapping_dataframe* and recompute composite IDs.
+
+        Does not mutate *mapping_dataframe*.  Returns ``None`` when
+        *destination_dataframe* is ``None``.
+        """
         if destination_dataframe is None:
             return None
 
-        def concatenate_columns_mapping(row):
-            return f'{row["original_host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
+        # Build composite key -> host_name mapping without mutating mapping_dataframe.
+        # Uses vectorized string concatenation instead of row-by-row .apply().
+        # .astype(object).map(str) renders nulls (None/NaN/NA) as their string
+        # representation rather than propagating NaN through the concatenation,
+        # matching the behavior of the previous f-string .apply() path.
+        mapping_keys = (
+            mapping_dataframe['original_host_name'].astype(object).map(str)
+            + '__'
+            + mapping_dataframe['install_uuid'].astype(object).map(str)
+            + '__'
+            + mapping_dataframe['job_remote_id'].astype(object).map(str)
+        )
+        host_name_map = dict(zip(mapping_keys, mapping_dataframe['host_name'].astype(object).map(str)))
+        del mapping_keys
 
-        def concatenate_columns_destination(row):
-            return f'{row["host_name"]}__{str(row["install_uuid"])}__{str(row["job_remote_id"])}'
+        # Build the install_uuid + job_remote_id suffix once and reuse it for
+        # both the lookup key and the final host_composite_id column.
+        suffix = (
+            '__'
+            + destination_dataframe['install_uuid'].astype(object).map(str)
+            + '__'
+            + destination_dataframe['job_remote_id'].astype(object).map(str)
+        )
 
-        # Apply the function to each row of the DataFrame
-        mapping_dataframe['host_composite_id'] = mapping_dataframe.apply(concatenate_columns_mapping, axis=1)
-        mapping_dataframe = mapping_dataframe.set_index('host_composite_id')
-        mapping_dataframe = mapping_dataframe['host_name'].astype(str).to_dict()
+        dest_keys = destination_dataframe['host_name'].astype(object).map(str) + suffix
+        mapped = dest_keys.map(host_name_map)
+        destination_dataframe['host_name'] = mapped.fillna(destination_dataframe['host_name'])
+        del dest_keys, mapped, host_name_map
 
-        def apply_mapping(row):
-            return mapping_dataframe.get(f'{row["host_name"]}__{str(row["install_uuid"])}__{row["job_remote_id"]}', row['host_name'])
-
-        destination_dataframe['host_name'] = destination_dataframe.apply(apply_mapping, axis=1)
-        destination_dataframe['host_composite_id'] = destination_dataframe.apply(concatenate_columns_destination, axis=1)
+        # Recompute composite id after remapping, reusing the suffix
+        destination_dataframe['host_composite_id'] = destination_dataframe['host_name'].astype(object).map(str) + suffix
 
         return destination_dataframe
 
     def _build_data_section_scope(self, current_row, ws, dataframe, mode=None):
+        """Write the inventory-scope section into *ws* starting at *current_row*.
+
+        Copies only the columns needed for the sheet, leaving *dataframe*
+        unmodified.  Returns the next available row number.
+        """
         header_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX, bold=True)
         value_font = Font(name=self.FONT, size=10, color=self.BLACK_COLOR_HEX)
-
-        ccsp_report_dataframe = dataframe.copy()
 
         # Convert arrays and dict fields into string, so they can be rendered into xlsx
         convert_cols = ['organizations', 'inventories', 'canonical_facts', 'facts']
@@ -190,16 +205,23 @@ class Base:
             'facts',
         ]
 
-        # Handle deduplication columns if enabled
-        columns, convert_cols = self.handle_dedup_columns_for_scope(ccsp_report_dataframe, columns, convert_cols)
+        # Determine which dedup columns to include (without mutating the original)
+        if self.has_dedup_enabled() and 'host_names_before_dedup' in dataframe.columns:
+            convert_cols.append('host_names_before_dedup')
+            columns += ['host_names_before_dedup']
+
+        # Copy only the columns we need instead of the full DataFrame
+        available_columns = [col for col in columns if col in dataframe.columns]
+        ccsp_report_dataframe = dataframe[available_columns].copy()
+
+        # Compute the dedup count column on the copy
+        if self.has_dedup_enabled() and 'host_names_before_dedup' in ccsp_report_dataframe.columns:
+            self.add_dedup_count_column(ccsp_report_dataframe, 'host_names_before_dedup', 'host_names_before_dedup_count')
+            columns += ['host_names_before_dedup_count']
 
         for col in convert_cols:
             if col in ccsp_report_dataframe.columns:
                 ccsp_report_dataframe[col] = ccsp_report_dataframe[col].apply(self.convert_cell)
-
-        # We're not showing cluster/install_uuid until we support multi-cluster view officially
-        if 'install_uuid' in ccsp_report_dataframe.columns:
-            del ccsp_report_dataframe['install_uuid']
 
         labels = {
             'host_name': self.HOST_NAME,
