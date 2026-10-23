@@ -166,6 +166,12 @@ The intended processing model is hierarchical: raw hourly data is reduced to a s
 
 Sensitive values such as customer-specific names and identifiers must not cross the anonymization boundary. Public collection metadata is allow-listed through `collections.json`; values outside the permitted set are filtered or replaced according to the rollup implementation. See [anonymized rollups](../metrics_utility/anonymized_rollups/anonymized_rollups.md) for the collector-to-rollup mapping and detailed processing notes.
 
+See [collector data lineage](data-lineage.md) for source-field dependency trees,
+the separate raw analytics and dashboard consumers, and the outbound exclusion
+boundary. Absence from a report or anonymized payload does not make a collector
+column unused: metrics-service also exposes raw collector outputs through its
+analytics API.
+
 ## Concurrency, checkpoints, and failure behavior
 
 - Gathering uses PostgreSQL advisory locks to prevent concurrent collection runs. The billing collector uses its own lock and coordinates checkpoint persistence with the upstream analytics lock.

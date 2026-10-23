@@ -176,6 +176,7 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Contributor's guide
 * [docs/awx.md](./docs/awx.md) - running against awx dev env
 * [docs/cli.md](./docs/cli.md) - CLI docs
+* [docs/data-lineage.md](./docs/data-lineage.md) - source fields, anonymized output trees, and dashboard dependencies
 * [docs/collectors-and-partitions.md](./docs/collectors-and-partitions.md) - collectors overview and adding new ones
 * [docs/environment.md](./docs/environment.md) - Environment variables
 * [docs/event-data-unicode-escaping.md](./docs/event-data-unicode-escaping.md) - investigation of event JSON Unicode escaping
