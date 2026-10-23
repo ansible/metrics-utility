@@ -351,8 +351,8 @@ flowchart LR
 ```
 
 Missing fact values display as `Unknown`; this is not derived from direct
-inventory-host hardware facts. This flag alone does **not** enable audit CSV
-loading; see the loading-gate table below.
+inventory-host hardware facts. This flag enables audit CSV loading directly;
+no managed-node sheet is required.
 
 ### `data_collection_status` — CCSPv2
 
@@ -419,9 +419,9 @@ requested collection names and `CSV_SHEETS`:
 
 | File | At least one of these flags enables CSV loading |
 | --- | --- |
-| `job_host_summary.csv` | `ccsp_summary`, `indirectly_managed_nodes`, `inventory_scope`, `managed_nodes`, `managed_nodes_by_organizations`, `usage_by_organizations` |
+| `job_host_summary.csv` | `ccsp_summary`, `indirectly_managed_nodes`, `inventory_scope`, `jobs`, `managed_nodes`, `managed_nodes_by_organizations`, `usage_by_organizations` |
 | `main_host.csv`, `main_host_daily.csv` | `inventory_scope`, `jobs`, `managed_nodes`, `managed_nodes_by_organizations`, `usage_by_collections`, `usage_by_modules`, `usage_by_roles` |
-| `main_indirectmanagednodeaudit.csv` | `indirectly_managed_nodes`, `managed_nodes`, `usage_by_organizations` |
+| `main_indirectmanagednodeaudit.csv` | `indirectly_managed_nodes`, `infrastructure_summary`, `managed_nodes`, `usage_by_organizations` |
 | `main_jobevent.csv` | `usage_by_collections`, `usage_by_modules`, `usage_by_organizations`, `usage_by_roles` |
 | `data_collection_status.csv` | `data_collection_status` |
 
@@ -431,11 +431,9 @@ though Inventory Scope and Indirectly Managed nodes are not rendered.
 Creating/invoking an engine does not mean every CSV is enabled, and disabling
 one sheet does not imply its input is unused by all other paths.
 
-In particular, `jobs` alone is absent from the summary CSV gate, and
-`infrastructure_summary` alone is absent from the audit gate. Custom sheet
-sets must retain a flag enabling their underlying data; a renderer's supported
-flag is not itself a guarantee that its inputs were loaded. These are the
-current gates, not a proposed reporting change.
+`jobs` enables its summary CSV input directly, and `infrastructure_summary`
+enables its audit CSV input directly. Either sheet can be selected without an
+unrelated sheet serving as a workaround to load its required data.
 
 ## Source references
 
