@@ -86,6 +86,9 @@ Successful scheduled or manual collection updates the Controller setting used by
 
 ### Building reports
 
+See [report dependency trees](report-lineage.md) for each report's core/default
+inputs, configurable-sheet dependencies, and the current CSV loading gates.
+
 `build_report` selects the input and output implementations from `METRICS_UTILITY_SHIP_TARGET`, then runs the reporting pipeline:
 
 ```mermaid

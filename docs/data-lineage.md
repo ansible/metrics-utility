@@ -261,20 +261,11 @@ and dashboard dependency.
 
 ## Reports and raw analytics
 
-The existing report inputs remain:
-
-```text
-CCSP / CCSPv2
-├── job_host_summary + config.install_uuid → direct managed-node usage
-├── main_indirectmanagednodeaudit + config → indirect usage / attribution
-├── main_host / main_host_daily + config → inventory scope / optional serial dedup
-├── main_jobevent + config → optional content-usage views
-└── data_collection_status → CCSPv2 collection-status sheet
-
-RENEWAL_GUIDANCE
-└── main_hostmetric LEFT JOIN main_host by hostname
-    └── lifecycle data → selected renewal deduplicator → active/deleted/ephemeral views
-```
+See [report dependency trees](report-lineage.md) for the collect-to-XLSX
+pipeline, separate CCSP/CCSPv2/renewal core and default trees, and smaller
+trees for each configurable sheet. They distinguish output dependencies from
+the current engine/CSV loading gates, and show where optional serial dedup
+adds a cross-dataset dependency.
 
 The analytics API exposes the corresponding Controller collectors as raw,
 collector-specific payloads, not report dataframes or XLSX files. Collector
@@ -285,6 +276,8 @@ metadata are separate contracts too.
 
 For API envelopes and enabled collectors see
 [analytics.md](https://github.com/ansible/metrics-service/blob/devel/docs/analytics.md).
+For reconstruction through those feeds, see the service's
+[report recipes](https://github.com/ansible/metrics-service/blob/devel/docs/report-recipes.md).
 For report aggregation/dedup source see
 [`dataframe_engine/`](../metrics_utility/automation_controller_billing/dataframe_engine/),
 [`dedup/`](../metrics_utility/automation_controller_billing/dedup/), and

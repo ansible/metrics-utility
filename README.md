@@ -181,6 +181,7 @@ More documentation is available in [docs/](./docs/), and elsewhere:
 * [docs/environment.md](./docs/environment.md) - Environment variables
 * [docs/event-data-unicode-escaping.md](./docs/event-data-unicode-escaping.md) - investigation of event JSON Unicode escaping
 * [docs/old-readme.md](./docs/old-readme.md) - pre-0.5 README, with more examples
+* [docs/report-lineage.md](./docs/report-lineage.md) - required/default report data paths and optional-sheet dependency trees
 * [docs/tests-compose.md](./docs/tests-compose.md) - running tests inside docker compose
 * [docs/vcpu.md](./docs/vcpu.md) - docs for the total workers vcpu collector
 * [metrics\_utility/library/](./metrics_utility/library/) - library documentation
