@@ -25,6 +25,9 @@ jobs:
         with:
           python-version-file: "pyproject.toml"
 
+      - name: "Test CI helpers"
+        run: python -m unittest discover -s tools/ci -v
+
       - name: "Set up postgresql"
         run: |
           sudo apt install postgresql postgresql-client
@@ -50,10 +53,17 @@ jobs:
               done)
 
       - name: "Pull SeaweedFS"
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          gh api --paginate --slurp 'repos/seaweedfs/seaweedfs/releases?per_page=100' > "$RUNNER_TEMP/seaweedfs-releases.json"
+          RELEASE=$(jq -er -f tools/ci/select_seaweedfs_release.jq "$RUNNER_TEMP/seaweedfs-releases.json")
+          IFS=$'\t' read -r TAG ARCHIVE_URL CHECKSUM_URL <<< "$RELEASE"
+          echo "Using SeaweedFS $TAG"
+
           mkdir -p ~/.local/bin
-          curl -fL https://github.com/seaweedfs/seaweedfs/releases/latest/download/linux_amd64.tar.gz -o /tmp/seaweedfs.tar.gz
-          curl -fL https://github.com/seaweedfs/seaweedfs/releases/latest/download/linux_amd64.tar.gz.md5 -o /tmp/seaweedfs.md5
+          curl -fL "$ARCHIVE_URL" -o /tmp/seaweedfs.tar.gz
+          curl -fL "$CHECKSUM_URL" -o /tmp/seaweedfs.md5
 
           EXPECTED=$(awk '{print $1}' /tmp/seaweedfs.md5)
           ACTUAL=$(md5sum /tmp/seaweedfs.tar.gz | awk '{print $1}')
