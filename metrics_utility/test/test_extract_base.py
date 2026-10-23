@@ -82,6 +82,15 @@ class TestSheetEnabled:
 
 
 class TestCsvEnabled:
+    @pytest.mark.parametrize(
+        ('sheet', 'collection'),
+        [('jobs', 'job_host_summary'), ('infrastructure_summary', 'main_indirectmanagednodeaudit')],
+    )
+    def test_single_sheet_enables_its_required_collection(self, sheet, collection):
+        ext = _make_extractor({'ship_path': '/d', 'optional_sheets': [sheet]})
+        ext.enabled_set = [collection, 'config']
+        assert ext.csv_enabled(collection) is True
+
     def test_config_always_enabled_when_enabled_set_is_none(self):
         ext = _make_extractor({'ship_path': '/d', 'optional_sheets': None})
         ext.enabled_set = None

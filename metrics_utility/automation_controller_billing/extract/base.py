@@ -27,6 +27,7 @@ CSV_SHEETS = {
         'ccsp_summary',
         'indirectly_managed_nodes',
         'inventory_scope',
+        'jobs',
         'managed_nodes',
         'managed_nodes_by_organizations',
         'usage_by_organizations',
@@ -35,6 +36,7 @@ CSV_SHEETS = {
     'main_host_daily': _main_host_sheets,
     'main_indirectmanagednodeaudit': [
         'indirectly_managed_nodes',
+        'infrastructure_summary',
         'managed_nodes',
         'usage_by_organizations',
     ],
