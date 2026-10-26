@@ -50,17 +50,18 @@ was written; registry entries control whether data is persisted and public.
 | `controller.main_host` | `organization_remote_id`, `organization_name`; one row per enabled host, attributed through its inventory | Enabled when `SERVICE_FUNCTIONS_AVAILABLE` is true, snapshot |
 | `controller.main_host_daily` | `organization_remote_id`, `organization_name`; one row per enabled host changed in the window, attributed through its inventory | Enabled when `SERVICE_FUNCTIONS_AVAILABLE` is true, daily |
 | `controller.org_counts` | Dictionary keyed by org ID; value has `name`, `users`, and `teams` | Enabled, snapshot |
-| `controller.main_indirectmanagednodeaudit` | `organization_remote_id`, `organization_name`; one row per indirect-node audit | Registered but disabled pending the ANSTRAT-2160 path |
+| `controller.main_indirectmanagednodeaudit` | `organization_remote_id`, `organization_name`; one row per indirect-node audit | Enabled, daily |
 
 For `controller.org_counts`, select only the requested key (typically its string form) and retain the
 existing dictionary shape. For the row payloads, keep all matching records; don't reduce them to one
 record just because the URL names one organization.
 
-Other existing metrics-utility outputs contain an org field but are not currently part of the
-analytics API allowlist: `controller.unified_jobs` and `controller.job_host_summary` are excluded
-base/legacy variants. `dashboard.dashboard_jobs` also contains `organization_id`, but belongs to a
-separate dashboard-sync pipeline. Their fields are useful references, but they are not stored by the
-current analytics registry.
+Other existing metrics-utility outputs contain an org field and are also registered analytics
+payloads: `controller.unified_jobs` is the broader unified-job variant, while
+`controller.job_host_summary` is enabled when the service-side PostgreSQL helper functions are
+available. `dashboard.dashboard_jobs` also contains `organization_id`, but belongs to a separate
+dashboard-sync pipeline. The registered analytics variants are preferable as join sources because
+their persistence and availability are explicit in the service registry.
 
 ## New per-organization aggregate collectors (AAP-95739)
 
@@ -90,8 +91,8 @@ organization-bearing payload and a well-defined join key; do not treat them as d
 
 | Collector(s) | Available key(s) | Caveat |
 |---|---|---|
-| `controller.main_jobevent_service`, `controller.events_table` | `job_id`; service events also expose `job_remote_id` | Could join to a job payload on `id`, but the available `unified_jobs_dashboard` payload intentionally excludes workflow and sync jobs. `main_jobevent_service` is also capped by job and row limits, so its rows represent only collected events. Establish coverage for the desired event set before promising complete org results. `events_table` windows on event modification time, not job finish time. |
-| `controller.main_jobevent` | `job_remote_id` | Legacy collector excluded from the analytics registry; same job-payload join caveat. |
+| `controller.main_jobevent_service`, `controller.events_table` | `job_id`; service events also expose `job_remote_id` | Could join to a job payload on `id`, but the dashboard-shaped job payload has a different consumer contract and downstream consumers may apply their own coverage filters. Prefer the registered `unified_jobs` payload when a complete unified-job join source is required. `main_jobevent_service` is also capped by job and row limits, so its rows represent only collected events. Establish coverage for the desired event set before promising complete org results. `events_table` windows on event modification time, not job finish time. |
+| `controller.main_jobevent` | `job_remote_id` | Legacy collector is registered, but the same job-payload join caveat applies; establish coverage for the desired event set. |
 | `controller.workflow_job_node_table` | `workflow_job_id` (also node job/template IDs) | Current `unified_jobs_dashboard` is a `main_job` view and does not provide a complete parent workflow-job lookup. |
 | `controller.workflow_job_template_node_table` | `workflow_job_template_id` | `controller.unified_job_template_table` does not include organization in its raw payload, so the current analytics payloads do not provide a complete org lookup. |
 | `controller.inventory_counts` | Inventory IDs are dictionary keys | No org is included. Joining through `main_host` misses inventories without enabled hosts; use `inventory_counts_org` for complete org-level totals. |
@@ -101,14 +102,14 @@ from the host's current inventory. `controller.unified_job_template_table` simil
 field even though AWX stores it on the parent template model. Do not infer either association from a
 different, incomplete snapshot.
 
-The base `controller.unified_jobs` collector already exists in metrics-utility and carries
-`id` + organization ID/name for all unified-job types, but metrics-service currently excludes it in
-favor of `controller.unified_jobs_dashboard`. A service-only registry/scheduling change could use
-the base payload as a join source for events or workflow records without changing metrics-utility;
-it would persist a second, full job dataset, so account for the extra payload volume. Joining to the
-dashboard variant is smaller in scope but can omit workflow-child and sync jobs. If the current
-persisted payloads cannot cover the required rows, keep that collector out of the org endpoint until
-the service-side source/coverage is explicit.
+The `controller.unified_jobs` collector already exists in metrics-utility and carries `id` plus
+organization ID/name for all unified-job types. It is registered alongside
+`controller.unified_jobs_dashboard` in metrics-service, so a service-side endpoint can use the
+broader payload as a join source without changing metrics-utility. It persists a second job dataset,
+so account for the extra payload volume. The dashboard variant remains useful for dashboard-specific
+fields, but its downstream consumers may apply narrower coverage rules. If the current persisted
+payloads cannot cover the required rows, keep that collector out of the org endpoint until the
+service-side source and coverage are explicit.
 
 ## Global collectors
 
