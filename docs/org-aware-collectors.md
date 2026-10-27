@@ -1,11 +1,10 @@
 # Organization-aware analytics collectors
 
-This is an implementation guide for a future metrics-service endpoint such as
-`GET /api/v1/analytics/organization/<organization_id>/<group.collector>/`. It catalogs the raw
-metrics-utility payloads that can be filtered per organization and distinguishes direct filtering
-from aggregates and cross-collector joins. The five `*_org` collectors below are implemented in the
-metrics-utility change for AAP-95739; they still need a separate metrics-service registry change
-before they can be collected or exposed.
+This is an implementation guide for the organization-aware metrics-service analytics API. It
+catalogs the raw metrics-utility payloads that can be filtered per organization and distinguishes
+direct filtering from aggregates and cross-collector joins. The `*_org` collectors below are
+implemented in the metrics-utility change for AAP-95739 and registered in metrics-service for
+on-demand collection.
 
 ## Payload and identity contract
 
@@ -67,8 +66,8 @@ their persistence and availability are explicit in the service registry.
 
 These are additive collectors, not server-side filters over their similarly named global versions.
 They produce compact payload rows already grouped by organization and preserve null org attribution.
-All five are in the metrics-utility library branch for AAP-95739; none is registered in
-metrics-service yet.
+These collectors are in the metrics-utility library for AAP-95739 and are registered in
+metrics-service for on-demand collection.
 
 | Collector | Output grain and measures | Collection mode |
 |---|---|---|
@@ -122,10 +121,10 @@ total for organizations, not a per-org breakdown, and its other totals must not 
 each org. `controller.main_hostmetric` is not global platform state, but its historical records also
 lack reliable organization attribution.
 
-## Metrics-service follow-up
+## Metrics-service integration
 
-To expose the five new aggregate collectors, the separate metrics-service change must add entries to
-`apps/analytics/registry.py` using their exact public names and function names as `collector_type`:
+The metrics-service registry exposes these aggregate collectors through entries in
+`apps/analytics/registry.py`, using their exact public names and function names as `collector_type`:
 
 - `controller.unified_jobs_org` — windowed/hourly
 - `controller.credentials_service_org` — windowed/hourly
@@ -134,9 +133,8 @@ To expose the five new aggregate collectors, the separate metrics-service change
 - `controller.inventory_counts_org` — snapshot
 
 The service registry is the whitelist for collection persistence and the existing analytics API;
-unregistered collectors are not persisted or exposed. Add the corresponding scheduling/collector
-registration and service tests there as needed. This repository change supplies the collector
-payload contract only.
+unregistered collectors are not persisted or exposed. These collectors are available for on-demand
+collection and do not have recurring cron tasks or anonymized rollups.
 
 For the proposed organization route, keep the existing System Admin/System Auditor authorization;
 the org selector is a BI/reporting convenience, not a new org-scoped RBAC boundary. Preserve
