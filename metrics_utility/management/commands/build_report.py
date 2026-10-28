@@ -72,6 +72,7 @@ class Command(BaseCommand):
             'Example: --ephemeral=3months, or --ephemeral=3days'
         ),
         'force': ('With this option, the existing reports will be overwritten if running this command again.'),
+        'format': 'Report output format: xlsx (default) or ods.',
         'verbose': ('Print debug information to console.'),
     }
 
@@ -88,7 +89,7 @@ class Command(BaseCommand):
                     '  Core Configuration:',
                     "    METRICS_UTILITY_REPORT_TYPE (required): one of 'CCSPv2', 'CCSP', 'RENEWAL_GUIDANCE' - determines which kind of report we're generating",
                     "    METRICS_UTILITY_SHIP_TARGET (required): one of 'directory', 's3', 'controller_db' - input/output mechanism",
-                    '    METRICS_UTILITY_SHIP_PATH (required): local or s3 directory path, input tarballs in path/data/, output xlsx in path/reports/',
+                    '    METRICS_UTILITY_SHIP_PATH (required): local or s3 directory path, input tarballs in path/data/, output reports in path/reports/',
                     '',
                     '  Optional Configuration:',
                     "    METRICS_UTILITY_DEDUPLICATOR (optional): one of 'ccsp', 'renewal', 'ccsp-experimental' - choice of deduplication algorithm",
@@ -130,13 +131,14 @@ class Command(BaseCommand):
         parser.add_argument('--until', dest='until', action='store', help=self.help_texts.get('until'))
         parser.add_argument('--ephemeral', dest='ephemeral', action='store', help=self.help_texts.get('ephemeral'))
         parser.add_argument('--force', dest='force', action='store_true', help=self.help_texts.get('force'))
+        parser.add_argument('--format', dest='format', choices=('xlsx', 'ods'), default='xlsx', help=self.help_texts.get('format'))
         parser.add_argument('--verbose', dest='verbose', action='store_true', help=self.help_texts.get('verbose'))
 
     def handle(self, *args, **options):
         """Execute the build_report management command.
 
         Validates environment, resolves the reporting period, builds the
-        appropriate dataframes, runs deduplication, generates the XLSX report,
+        appropriate dataframes, runs deduplication, generates the report,
         and saves it via the configured report saver.
         """
         if options.get('verbose'):
@@ -149,6 +151,9 @@ class Command(BaseCommand):
         opt_month, month, next_month = handle_month(options.get('month') or None)
         opt_ephemeral = parse_number_of_days(options.get('ephemeral'))
         opt_force = options.get('force')
+        output_format = options.get('format') or 'xlsx'
+        if output_format not in ('xlsx', 'ods'):
+            raise ValueError(f'Unsupported report format: {output_format}')
 
         ship_target = os.getenv('METRICS_UTILITY_SHIP_TARGET')
 
@@ -174,13 +179,13 @@ class Command(BaseCommand):
             extra_params['report_period'] = f'{since_date}, {until_date}'
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
                 get_report_path(ship_path, until_date),
-                f'{report_type}-{since_date}--{until_date}.xlsx',
+                f'{report_type}-{since_date}--{until_date}.{output_format}',
             )
         else:
             extra_params['report_period'] = opt_month
             extra_params['report_spreadsheet_destination_path'] = os.path.join(
                 get_report_path(ship_path, month),
-                f'{report_type}-{opt_month}.xlsx',
+                f'{report_type}-{opt_month}.{output_format}',
             )
 
         report_saver_engine = ReportSaverFactory(ship_target, extra_params=extra_params).create()
@@ -210,7 +215,17 @@ class Command(BaseCommand):
             return
 
         report_engine = ReportFactory(dataframes=dataframes, extra_params=extra_params).create()
-        report_spreadsheet = report_engine.build_spreadsheet()
+        report_definition = report_engine.build_definition()
+        if output_format == 'ods':
+            from metrics_utility.automation_controller_billing.report.renderers.ods import render
+        else:
+            from metrics_utility.automation_controller_billing.report.renderers.xlsx import render
+
+        report_spreadsheet = render(report_definition)
+        if output_format == 'ods':
+            # The rendered document no longer needs the builder or its shared
+            # definition. Release both before serializing the ODS document.
+            del report_engine, report_definition
 
         # Save the report to the configured destination
         report_saver_engine.save(report_spreadsheet)

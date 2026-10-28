@@ -7,6 +7,7 @@ DataFrame – no database or file I/O required.
 import pandas as pd
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.definition import Workbook
 from metrics_utility.metric_utils import INDIRECT as _INDIRECT
 
 
@@ -19,8 +20,6 @@ class ConcreteReport(Base):
     """Instantiable subclass for testing Base helpers."""
 
     def __init__(self, extra_params=None):
-        from openpyxl import Workbook
-
         self.wb = Workbook()
         self.extra_params = extra_params or {}
         self.dataframes = {}
@@ -437,12 +436,10 @@ class TestAddSheet:
         assert r.wb.worksheets[1] is ws
 
     def test_sets_column_widths_when_provided(self):
-        from openpyxl.utils import get_column_letter
-
         r = _report()
         ws = r.add_sheet('Wide', 1, widths={1: 20, 2: 35})
-        assert ws.column_dimensions[get_column_letter(1)].width == 20
-        assert ws.column_dimensions[get_column_letter(2)].width == 35
+        assert ws.column_dimensions[1].width == 20
+        assert ws.column_dimensions[2].width == 35
 
     def test_no_widths_argument_does_not_raise(self):
         r = _report()
@@ -471,14 +468,11 @@ class TestAddSheet:
 
 class TestSetWidths:
     def test_sets_multiple_column_widths(self):
-        from openpyxl import Workbook
-        from openpyxl.utils import get_column_letter
-
         r = _report()
         ws = Workbook().active
         r.set_widths(ws, {1: 15, 3: 25})
-        assert ws.column_dimensions[get_column_letter(1)].width == 15
-        assert ws.column_dimensions[get_column_letter(3)].width == 25
+        assert ws.column_dimensions[1].width == 15
+        assert ws.column_dimensions[3].width == 25
 
 
 # ---------------------------------------------------------------------------

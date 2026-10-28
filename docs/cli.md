@@ -23,7 +23,7 @@ The standalone mode is currently used only for development & testing. It does no
 
 1. Pick a task (goes right after the previous command)
   - `gather_automation_controller_billing_data` - collects metrics from controller db, saves daily tarballs with csv/json inside
-  - `build_report` - builds a XLSX report, either from controller db or collected tarballs
+  - `build_report` - builds an XLSX or ODS report, either from controller db or collected tarballs
 
 1. Pick a report type (`export METRICS_UTILITY_REPORT_TYPE=...`)
   - `CCSPv2` - uses metrics tarballs to produce a usage report
@@ -36,7 +36,7 @@ The standalone mode is currently used only for development & testing. It does no
   - or `--month=2024-06` (only with `build_report`)
 
 1. Use `--help` to see any other params
-  - `build_report` also supports `--ephemeral`, `--force` and `--verbose`
+  - `build_report` also supports `--ephemeral`, `--force`, `--format` and `--verbose`
   - `gather_automation_controller_billing_data` also supports `--dry-run`, `--ship`, and `--verbose`
 
 1. Set any other necessary environmental variable
@@ -74,9 +74,14 @@ ls metrics_utility/test/test_data/data/2024/04/*
 # build report, overwrite existing if necessary
 uv run ./manage.py build_report --month=2024-04 --force
 
-# resulting XLSX
+# Build the same report as ODS (XLSX is the default)
+uv run ./manage.py build_report --month=2024-04 --format=ods
+
+# resulting reports
 ls metrics_utility/test/test_data/reports/2024/04/
 ```
+
+The output extension matches the selected format. Existing-file checks and `--force` apply to each format separately, for directory and S3 destinations. Open ODS reports in a spreadsheet application to calculate their formulas.
 
 
 #### Example RENEWAL\_GUIDANCE run

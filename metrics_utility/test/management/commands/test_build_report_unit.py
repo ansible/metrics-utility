@@ -31,9 +31,17 @@ def test_add_arguments_adds_expected_arguments(parser):
     args = [a.dest for a in parser._actions]
 
     # Check that all expected arguments are present
-    expected_args = ['month', 'since', 'until', 'ephemeral', 'force', 'verbose']
+    expected_args = ['month', 'since', 'until', 'ephemeral', 'force', 'format', 'verbose']
     for arg in expected_args:
         assert arg in args
+
+
+def test_output_format_choices(parser):
+    Command().add_arguments(parser)
+    assert parser.parse_args([]).format == 'xlsx'
+    assert parser.parse_args(['--format', 'ods']).format == 'ods'
+    with pytest.raises(SystemExit):
+        parser.parse_args(['--format', 'invalid'])
 
 
 def test_handle_ship_target_directory(monkeypatch, command_instance):

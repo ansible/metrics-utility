@@ -8,11 +8,10 @@ import time
 
 import pandas as pd
 
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.definition import Alignment, Border, Font, PatternFill, Side, Workbook
 
 
 class ReportRenewalGuidance(Base):
@@ -53,7 +52,7 @@ class ReportRenewalGuidance(Base):
         self.config['data_column_widths'] = default_data_column_widths
         self.config['uniform_column_widths'] = uniform_column_widths
 
-    def build_spreadsheet(self):
+    def build_definition(self):
         # Fix host names in the event data, to take in account the variables
         host_metric_dataframe = self.dataframes['host_metric']
 

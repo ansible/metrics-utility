@@ -8,13 +8,12 @@ import re
 
 import pandas as pd
 
-from openpyxl.styles import Alignment, Font
-from openpyxl.utils import get_column_letter
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import merge_sets
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import DataframeContentUsage
 from metrics_utility.automation_controller_billing.helpers import merge_arrays, merge_json_sets
+from metrics_utility.automation_controller_billing.report.definition import Alignment, Font
 from metrics_utility.metric_utils import INDIRECT
 
 
@@ -42,6 +41,12 @@ class Base:
     HOST_RUNS_UNIQUE = 'Unique managed nodes\nautomated'
     HOST_RUNS = 'Non-unique managed\nnodes automated'
     DURATION = 'Duration of task\nruns [seconds]'
+
+    def build_spreadsheet(self):
+        """Build the existing XLSX workbook for callers of the original interface."""
+        from metrics_utility.automation_controller_billing.report.renderers.xlsx import render
+
+        return render(self.build_definition())
 
     # Deduplication column labels
     DEDUP_COLUMN_LABELS = {
@@ -217,7 +222,7 @@ class Base:
             widths: Dict mapping 1-based column indices to widths in Excel units.
         """
         for key, value in widths.items():
-            ws.column_dimensions[get_column_letter(key)].width = value
+            ws.column_dimensions[key].width = value
 
     def _fix_event_host_names(self, mapping_dataframe, destination_dataframe):
         if destination_dataframe is None:

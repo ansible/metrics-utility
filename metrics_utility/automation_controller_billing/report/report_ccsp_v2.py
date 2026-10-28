@@ -9,11 +9,20 @@ from datetime import timedelta
 
 import pandas as pd
 
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.definition import (
+    Alignment,
+    Border,
+    CellReference,
+    Font,
+    Multiply,
+    PatternFill,
+    Side,
+    Sum,
+    Workbook,
+)
 from metrics_utility.metric_utils import DIRECT, INDIRECT
 
 
@@ -99,7 +108,7 @@ class ReportCCSPv2(Base):
 
         return job_host_summary_dataframe, events_dataframe
 
-    def build_spreadsheet(self):
+    def build_definition(self):
         # DataFrames are built lazily on first access (see _LazyDataFrameDict).
         # We unpack them in phases so that only the DataFrames needed for
         # the current set of sheets are resident in memory at any time.
@@ -799,9 +808,7 @@ class ReportCCSPv2(Base):
                     if c_idx == 10:
                         # Override the value of the extended price (number of nodes X unitp rice)
                         # Multiply columns 3x4 instead of inserting the price per org
-                        cell_m_1 = ws.cell(row=r_idx, column=7).column_letter + str(r_idx)
-                        cell_m_2 = ws.cell(row=r_idx, column=9).column_letter + str(r_idx)
-                        cell.value = f'={cell_m_1}*{cell_m_2}'
+                        cell.value = Multiply(CellReference(r_idx, 7), CellReference(r_idx, 9))
 
             row_counter += 1
 
@@ -826,9 +833,7 @@ class ReportCCSPv2(Base):
                 if c_idx == 10:
                     # Override the value of the extended price (number of nodes X unitp rice)
                     # Multiply columns 3x4 instead of inserting the price per org
-                    cell_m_1 = ws.cell(row=r_idx, column=7).column_letter + str(r_idx)
-                    cell_m_2 = ws.cell(row=r_idx, column=9).column_letter + str(r_idx)
-                    cell.value = f'={cell_m_1}*{cell_m_2}'
+                    cell.value = Multiply(CellReference(r_idx, 7), CellReference(r_idx, 9))
 
             row_counter += 1
 
@@ -844,9 +849,7 @@ class ReportCCSPv2(Base):
 
             # Sum value
             cell = ws.cell(row=2, column=10)
-            cell_sum_start = cell.column_letter + str(first_row)
-            cell_sum_end = cell.column_letter + str(last_row)
-            cell.value = f'=SUM({cell_sum_start}:{cell_sum_end})'
+            cell.value = Sum(CellReference(first_row, 10), CellReference(last_row, 10))
             cell.fill = PatternFill('solid', fgColor=self.LIGHT_BLUE_COLOR_HEX)
             cell.font = Font(name=self.FONT, size=10, color=self.RED_COLOR_HEX)
 

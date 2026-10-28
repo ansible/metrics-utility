@@ -1,4 +1,4 @@
-"""Report saver that uploads the XLSX spreadsheet to an S3-compatible object store."""
+"""Report saver that uploads a spreadsheet to an S3-compatible object store."""
 
 import os
 import tempfile
@@ -8,7 +8,7 @@ from metrics_utility.logger import logger
 
 
 class ReportSaverS3:
-    """Saves the generated XLSX report by uploading it to an S3 bucket."""
+    """Saves the generated report by uploading it to an S3 bucket."""
 
     LOG_PREFIX = '[ReportSaverS3]'
 
@@ -34,10 +34,10 @@ class ReportSaverS3:
         return len(list(self.s3_handler.list_files(self.report_spreadsheet_destination_path))) > 0
 
     def save(self, report_spreadsheet):
-        """Save the openpyxl Workbook to a temporary file and upload it to S3.
+        """Save the rendered spreadsheet to a temporary file and upload it to S3.
 
         Args:
-            report_spreadsheet: An :class:`openpyxl.workbook.workbook.Workbook` instance.
+            report_spreadsheet: A rendered spreadsheet with a ``save`` method.
         """
         with tempfile.TemporaryDirectory(prefix='report_saver_billing_data_') as temp_dir:
             try:

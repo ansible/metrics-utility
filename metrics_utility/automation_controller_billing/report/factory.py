@@ -23,7 +23,7 @@ class Factory:  # ReportFactory
         """Instantiate and return the report builder for the configured report type.
 
         Returns:
-            A report builder instance with a ``build_spreadsheet()`` method.
+            A report builder instance with a ``build_definition()`` method.
 
         Raises:
             :exc:`~metrics_utility.exceptions.NotSupportedFactory`: For unknown
