@@ -208,26 +208,7 @@ class ReportCCSPv2(Base):
             events_dataframe = self._fix_event_host_names(jhs_unfiltered, events_dataframe)
 
             if events_dataframe is not None:
-                if 'usage_by_collections' in self.optional_report_sheets():
-                    # Sheet with usage by collections
-                    ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
-                    # Include indirect managed nodes only when indirect reporting is enabled,
-                    # matching the 'Usage by organizations' sheet behavior.
-                    collections_indirects = indirects if 'indirectly_managed_nodes' in self.optional_report_sheets() else None
-                    self._build_data_section_usage_by_collections(1, ws, events_dataframe, indirects=collections_indirects)
-                    sheet_index += 1
-
-                if 'usage_by_roles' in self.optional_report_sheets():
-                    # Sheet with usage by roles
-                    ws = self.add_sheet('Usage by roles', sheet_index, self.config['data_column_widths'])
-                    self._build_data_section_usage_by_roles(1, ws, events_dataframe)
-                    sheet_index += 1
-
-                if 'usage_by_modules' in self.optional_report_sheets():
-                    # Sheet with usage by modules
-                    ws = self.add_sheet('Usage by modules', sheet_index, self.config['data_column_widths'])
-                    self._build_data_section_usage_by_modules(1, ws, events_dataframe)
-                    sheet_index += 1
+                sheet_index = self._add_event_sheets(sheet_index, events_dataframe, indirects)
 
             # Release events after content-usage sheets are written
             del events_dataframe
@@ -268,6 +249,26 @@ class ReportCCSPv2(Base):
         del self.dataframes['data_collection_status']
 
         return self.wb
+
+    def _add_event_sheets(self, sheet_index, events_dataframe, indirects):
+        if 'usage_by_collections' in self.optional_report_sheets():
+            ws = self.add_sheet('Usage by collections', sheet_index, self.config['data_column_widths'])
+            # Match organization reporting: include indirect nodes only when enabled.
+            collections_indirects = indirects if 'indirectly_managed_nodes' in self.optional_report_sheets() else None
+            self._build_data_section_usage_by_collections(1, ws, events_dataframe, indirects=collections_indirects)
+            sheet_index += 1
+
+        if 'usage_by_roles' in self.optional_report_sheets():
+            ws = self.add_sheet('Usage by roles', sheet_index, self.config['data_column_widths'])
+            self._build_data_section_usage_by_roles(1, ws, events_dataframe)
+            sheet_index += 1
+
+        if 'usage_by_modules' in self.optional_report_sheets():
+            ws = self.add_sheet('Usage by modules', sheet_index, self.config['data_column_widths'])
+            self._build_data_section_usage_by_modules(1, ws, events_dataframe)
+            sheet_index += 1
+
+        return sheet_index
 
     def _build_table(self, current_row, ws, rows):
         row_counter = 0
@@ -374,9 +375,9 @@ class ReportCCSPv2(Base):
 
         # apply styling to highlight unusual collection intervals
 
-        success_background = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
-        warning_background = PatternFill('solid', fgColor=self.YELLOW_COLOR_HEX)
-        danger_background = PatternFill('solid', fgColor=self.RED_COLOR_HEX)
+        success_background = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
+        warning_background = PatternFill('solid', fg_color=self.YELLOW_COLOR_HEX)
+        danger_background = PatternFill('solid', fg_color=self.RED_COLOR_HEX)
 
         threshold_warning = 2 * median_diff
         threshold_danger = 3 * median_diff
@@ -620,7 +621,7 @@ class ReportCCSPv2(Base):
 
     def _build_po_number(self, current_row, ws):
         # Add the h2 heading payment heading
-        green_background = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+        green_background = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
 
         # PO number heading and value with green background
         cell = ws.cell(row=4, column=5)
@@ -646,10 +647,10 @@ class ReportCCSPv2(Base):
             cell = ws.cell(row=current_row, column=2)
             if header_row['label'] == 'Report Period (YYYY-MM)':
                 # Insert dynamic report period into the specific header column
-                cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+                cell.fill = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
                 cell.value = self.report_period
             else:
-                cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+                cell.fill = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
                 cell.value = header_row['value']
             cell.font = header_value_font
             current_row += 1
@@ -801,7 +802,7 @@ class ReportCCSPv2(Base):
                         cell.border = dotted_border
 
                     if c_idx >= 8 and c_idx <= 11:
-                        cell.fill = PatternFill('solid', fgColor=self.LIGHT_BLUE_COLOR_HEX)
+                        cell.fill = PatternFill('solid', fg_color=self.LIGHT_BLUE_COLOR_HEX)
                     if c_idx >= 9 and c_idx <= 10:
                         # Format all price cols
                         cell.number_format = self.PRICE_FORMAT
@@ -826,7 +827,7 @@ class ReportCCSPv2(Base):
                 cell.font = value_font
 
                 if c_idx >= 8 and c_idx <= 11:
-                    cell.fill = PatternFill('solid', fgColor=self.LIGHT_BLUE_COLOR_HEX)
+                    cell.fill = PatternFill('solid', fg_color=self.LIGHT_BLUE_COLOR_HEX)
                 if c_idx >= 9 and c_idx <= 10:
                     # Format all price cols
                     cell.number_format = self.PRICE_FORMAT
@@ -845,12 +846,12 @@ class ReportCCSPv2(Base):
             # Sum description
             cell = ws.cell(row=2, column=9)
             cell.value = 'Grand total'
-            cell.fill = PatternFill('solid', fgColor=self.LIGHT_BLUE_COLOR_HEX)
+            cell.fill = PatternFill('solid', fg_color=self.LIGHT_BLUE_COLOR_HEX)
 
             # Sum value
             cell = ws.cell(row=2, column=10)
             cell.value = Sum(CellReference(first_row, 10), CellReference(last_row, 10))
-            cell.fill = PatternFill('solid', fgColor=self.LIGHT_BLUE_COLOR_HEX)
+            cell.fill = PatternFill('solid', fg_color=self.LIGHT_BLUE_COLOR_HEX)
             cell.font = Font(name=self.FONT, size=10, color=self.RED_COLOR_HEX)
 
         return current_row + row_counter

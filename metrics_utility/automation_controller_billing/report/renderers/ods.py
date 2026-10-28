@@ -17,7 +17,7 @@ from odf.table import CoveredTableCell, Table, TableCell, TableColumn, TableRow
 from odf.text import P
 from openpyxl.utils import get_column_letter
 
-from metrics_utility.automation_controller_billing.report.definition import Multiply, Sum
+from metrics_utility.automation_controller_billing.report.definition import Cell, Multiply, Sum
 
 
 def _reference(ref):
@@ -70,6 +70,41 @@ def _number_styles(document):
     document.automaticstyles.addElement(duration)
 
 
+def _border_properties(border):
+    properties = {}
+    for name in ('left', 'right', 'top', 'bottom'):
+        side = getattr(border, name)
+        if side and side.border_style:
+            width = '1pt' if side.border_style in ('medium', 'thick') else '0.5pt'
+            line = 'dotted' if side.border_style == 'dotted' else 'solid'
+            properties[f'border{name}'] = f'{width} {line} {_color(side.color) or "#000000"}'
+    return properties
+
+
+def _cell_properties(source):
+    properties = {}
+    if source.fill and source.fill.pattern == 'solid':
+        properties['backgroundcolor'] = _color(source.fill.fg_color)
+    if source.alignment and source.alignment.vertical:
+        properties['verticalalign'] = 'middle' if source.alignment.vertical == 'center' else source.alignment.vertical
+    if source.border:
+        properties.update(_border_properties(source.border))
+    return properties
+
+
+def _text_properties(font):
+    properties = {}
+    if font.name:
+        properties['fontfamily'] = font.name
+    if font.size:
+        properties['fontsize'] = f'{font.size}pt'
+    if font.color:
+        properties['color'] = _color(font.color)
+    if font.bold:
+        properties['fontweight'] = 'bold'
+    return properties
+
+
 def _style(document, source, number_style, cache):
     key = (source.font, source.fill, source.border, source.alignment, number_style)
     if key in cache:
@@ -79,32 +114,12 @@ def _style(document, source, number_style, cache):
     if number_style:
         params['datastylename'] = number_style
     style = Style(**params)
-    cell_properties = {}
-    if source.fill and source.fill.pattern == 'solid':
-        cell_properties['backgroundcolor'] = _color(source.fill.fgColor)
-    if source.alignment and source.alignment.vertical:
-        cell_properties['verticalalign'] = 'middle' if source.alignment.vertical == 'center' else source.alignment.vertical
-    if source.border:
-        for name in ('left', 'right', 'top', 'bottom'):
-            side = getattr(source.border, name)
-            if side and side.border_style:
-                width = '1pt' if side.border_style in ('medium', 'thick') else '0.5pt'
-                line = 'dotted' if side.border_style == 'dotted' else 'solid'
-                cell_properties[f'border{name}'] = f'{width} {line} {_color(side.color) or "#000000"}'
+    cell_properties = _cell_properties(source)
     if cell_properties:
         style.addElement(TableCellProperties(**cell_properties))
-    if source.font:
-        text_properties = {}
-        if source.font.name:
-            text_properties['fontfamily'] = source.font.name
-        if source.font.size:
-            text_properties['fontsize'] = f'{source.font.size}pt'
-        if source.font.color:
-            text_properties['color'] = _color(source.font.color)
-        if source.font.bold:
-            text_properties['fontweight'] = 'bold'
-        if text_properties:
-            style.addElement(TextProperties(**text_properties))
+    text_properties = _text_properties(source.font) if source.font else {}
+    if text_properties:
+        style.addElement(TextProperties(**text_properties))
     if source.alignment and source.alignment.horizontal:
         style.addElement(ParagraphProperties(textalign=source.alignment.horizontal))
     document.automaticstyles.addElement(style)
@@ -132,6 +147,32 @@ def _duration(value):
     return f'{sign}PT{seconds}{suffix}S'
 
 
+def _value_attributes(value):
+    """Return the ODF value attributes and any type-specific number style."""
+    if isinstance(value, (Multiply, Sum)):
+        return {'valuetype': 'float', 'formula': _formula(value)}, None
+    if isinstance(value, (bool, np.bool_)):
+        return {'valuetype': 'boolean', 'booleanvalue': str(bool(value)).lower()}, None
+    if isinstance(value, (Real, Decimal)):
+        if not math.isfinite(value):
+            raise ValueError(f'Cannot write non-finite report value: {value}')
+        return {'valuetype': 'float', 'value': str(value)}, None
+    if isinstance(value, datetime.timedelta):
+        return {'valuetype': 'time', 'timevalue': _duration(value)}, 'duration'
+    if isinstance(value, datetime.datetime):
+        return {'valuetype': 'date', 'datevalue': value.isoformat()}, 'datetime'
+    if isinstance(value, datetime.date):
+        return {'valuetype': 'date', 'datevalue': value.isoformat()}, 'date'
+    if isinstance(value, datetime.time):
+        if value.tzinfo is not None:
+            raise ValueError('Timezone-aware times are not supported in reports')
+        duration = datetime.timedelta(hours=value.hour, minutes=value.minute, seconds=value.second, microseconds=value.microsecond)
+        return {'valuetype': 'time', 'timevalue': _duration(duration)}, 'duration'
+    if isinstance(value, str):
+        return {'valuetype': 'string'}, None
+    raise TypeError(f'Unsupported report value: {type(value).__name__}')
+
+
 def _cell(document, source, cache, span=None):
     value = source.value
     if source.number_format and source.number_format != '$#,##0.00':
@@ -145,33 +186,10 @@ def _cell(document, source, cache, span=None):
         if rows > 1:
             attrs['numberrowsspanned'] = rows
     if not _missing(value):
-        if isinstance(value, (Multiply, Sum)):
-            attrs.update(valuetype='float', formula=_formula(value))
-        elif isinstance(value, (bool, np.bool_)):
-            attrs.update(valuetype='boolean', booleanvalue=str(bool(value)).lower())
-        elif isinstance(value, (Real, Decimal)):
-            if not math.isfinite(value):
-                raise ValueError(f'Cannot write non-finite report value: {value}')
-            attrs.update(valuetype='float', value=str(value))
-        elif isinstance(value, datetime.timedelta):
-            attrs.update(valuetype='time', timevalue=_duration(value))
-            number_style = 'duration'
-        elif isinstance(value, datetime.datetime):
-            attrs.update(valuetype='date', datevalue=value.isoformat())
-            number_style = 'datetime'
-        elif isinstance(value, datetime.date):
-            attrs.update(valuetype='date', datevalue=value.isoformat())
-            number_style = 'date'
-        elif isinstance(value, datetime.time):
-            if value.tzinfo is not None:
-                raise ValueError('Timezone-aware times are not supported in reports')
-            duration = datetime.timedelta(hours=value.hour, minutes=value.minute, seconds=value.second, microseconds=value.microsecond)
-            attrs.update(valuetype='time', timevalue=_duration(duration))
-            number_style = 'duration'
-        elif isinstance(value, str):
-            attrs['valuetype'] = 'string'
-        else:
-            raise TypeError(f'Unsupported report value: {type(value).__name__}')
+        value_attrs, value_style = _value_attributes(value)
+        attrs.update(value_attrs)
+        if value_style:
+            number_style = value_style
     attrs['stylename'] = _style(document, source, number_style, cache)
     cell = TableCell(**attrs)
     if isinstance(value, str):
@@ -191,6 +209,57 @@ class Spreadsheet:
         self.document.save(str(destination), addsuffix=False)
 
 
+def _add_columns(document, table, sheet, sheet_index, columns):
+    for column in range(1, columns + 1):
+        dimension = sheet.column_dimensions.get(column)
+        if dimension and dimension.width is not None:
+            style = Style(name=f'column{sheet_index}_{column}', family='table-column')
+            style.addElement(TableColumnProperties(columnwidth=f'{dimension.width * 0.19:.2f}cm'))
+            document.automaticstyles.addElement(style)
+            table.addElement(TableColumn(stylename=style))
+        else:
+            table.addElement(TableColumn())
+
+
+def _merged_cells(sheet):
+    anchors = {}
+    covered = set()
+    for start_row, start_column, end_row, end_column in sheet.merges:
+        anchors[(start_row, start_column)] = (end_column - start_column + 1, end_row - start_row + 1)
+        covered.update(
+            (row, column)
+            for row in range(start_row, end_row + 1)
+            for column in range(start_column, end_column + 1)
+            if (row, column) != (start_row, start_column)
+        )
+    return anchors, covered
+
+
+def _row(document, sheet, sheet_index, row):
+    attrs = {}
+    dimension = sheet.row_dimensions.get(row)
+    if dimension and dimension.height is not None:
+        style = Style(name=f'row{sheet_index}_{row}', family='table-row')
+        style.addElement(TableRowProperties(rowheight=f'{dimension.height}pt'))
+        document.automaticstyles.addElement(style)
+        attrs['stylename'] = style
+    return TableRow(**attrs)
+
+
+def _add_cells(document, target, sheet, row, columns, cache, anchors, covered):
+    for column in range(1, columns + 1):
+        pos = (row, column)
+        if pos in covered:
+            target.addElement(CoveredTableCell())
+        elif pos in sheet.cells:
+            target.addElement(_cell(document, sheet.cells[pos], cache, anchors.get(pos)))
+        elif pos in anchors:
+            # A merged region may have an empty top-left cell.
+            target.addElement(_cell(document, Cell(row, column), cache, anchors[pos]))
+        else:
+            target.addElement(TableCell())
+
+
 def render(definition):
     if not definition.worksheets:
         raise ValueError('A report must have at least one sheet')
@@ -201,48 +270,11 @@ def render(definition):
         table = Table(name=sheet.title)
         rows = max([row for row, _ in sheet.cells] + [merge[2] for merge in sheet.merges] + [0])
         columns = max([column for _, column in sheet.cells] + list(sheet.column_dimensions) + [merge[3] for merge in sheet.merges] + [0])
-        for column in range(1, columns + 1):
-            dimension = sheet.column_dimensions.get(column)
-            if dimension and dimension.width is not None:
-                style = Style(name=f'column{sheet_index}_{column}', family='table-column')
-                style.addElement(TableColumnProperties(columnwidth=f'{dimension.width * 0.19:.2f}cm'))
-                document.automaticstyles.addElement(style)
-                table.addElement(TableColumn(stylename=style))
-            else:
-                table.addElement(TableColumn())
-
-        anchors = {}
-        covered = set()
-        for start_row, start_column, end_row, end_column in sheet.merges:
-            anchors[(start_row, start_column)] = (end_column - start_column + 1, end_row - start_row + 1)
-            covered.update(
-                (row, column)
-                for row in range(start_row, end_row + 1)
-                for column in range(start_column, end_column + 1)
-                if (row, column) != (start_row, start_column)
-            )
+        _add_columns(document, table, sheet, sheet_index, columns)
+        anchors, covered = _merged_cells(sheet)
         for row in range(1, rows + 1):
-            attrs = {}
-            dimension = sheet.row_dimensions.get(row)
-            if dimension and dimension.height is not None:
-                style = Style(name=f'row{sheet_index}_{row}', family='table-row')
-                style.addElement(TableRowProperties(rowheight=f'{dimension.height}pt'))
-                document.automaticstyles.addElement(style)
-                attrs['stylename'] = style
-            target = TableRow(**attrs)
-            for column in range(1, columns + 1):
-                pos = (row, column)
-                if pos in covered:
-                    target.addElement(CoveredTableCell())
-                elif pos in sheet.cells:
-                    target.addElement(_cell(document, sheet.cells[pos], cache, anchors.get(pos)))
-                elif pos in anchors:
-                    # A merged region may have an empty top-left cell.
-                    from metrics_utility.automation_controller_billing.report.definition import Cell
-
-                    target.addElement(_cell(document, Cell(row, column), cache, anchors[pos]))
-                else:
-                    target.addElement(TableCell())
+            target = _row(document, sheet, sheet_index, row)
+            _add_cells(document, target, sheet, row, columns, cache, anchors, covered)
             table.addElement(target)
         document.spreadsheet.addElement(table)
     return Spreadsheet(document)

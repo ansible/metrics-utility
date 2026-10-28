@@ -22,7 +22,7 @@ class Alignment:
 @dataclass(frozen=True)
 class PatternFill:
     pattern: str
-    fgColor: str
+    fg_color: str
 
 
 @dataclass(frozen=True)

@@ -56,7 +56,7 @@ def _definition():
     sheet.cell(2, 3).border = Border(left=Side(border_style='dotted', color='000000'))
     status = book.create_sheet('Collection status')
     status.cell(1, 1).value = 'Warning\nSecond line'
-    status.cell(1, 1).fill = PatternFill('solid', fgColor='ffcc17')
+    status.cell(1, 1).fill = PatternFill('solid', fg_color='ffcc17')
     status.cell(1, 1).alignment = Alignment(horizontal='center', vertical='center')
     status.cell(2, 1).value = datetime.timedelta(hours=36)
     status.cell(3, 1).value = datetime.datetime(2024, 4, 17, 12, 19, 38, 762500)
@@ -65,8 +65,8 @@ def _definition():
     status.cell(6, 1).value = np.bool_(True)
     status.cell(7, 1).value = datetime.date(2024, 4, 17)
     status.cell(8, 1).value = datetime.time(12, 34, 56, 123456)
-    status.cell(9, 1).fill = PatternFill('solid', fgColor='92d050')
-    status.cell(10, 1).fill = PatternFill('solid', fgColor='FF0000')
+    status.cell(9, 1).fill = PatternFill('solid', fg_color='92d050')
+    status.cell(10, 1).fill = PatternFill('solid', fg_color='FF0000')
     return book
 
 
@@ -170,7 +170,8 @@ def test_build_report_writes_xlsx_and_ods_to_separate_paths(tmp_path, report_typ
     report_dir = tmp_path / 'reports/2024/04'
     xlsx = report_dir / f'{report_type}-2024-04.xlsx'
     ods = report_dir / f'{report_type}-2024-04.ods'
-    assert xlsx.is_file() and ods.is_file()
+    assert xlsx.is_file()
+    assert ods.is_file()
     assert load_workbook(xlsx).sheetnames[0] == 'Usage Reporting'
     with ZipFile(ods) as archive:
         document = ElementTree.fromstring(archive.read('content.xml'))

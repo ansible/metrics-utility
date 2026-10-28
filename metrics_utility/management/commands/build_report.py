@@ -53,6 +53,37 @@ def get_organization_filter():
     return os.getenv('METRICS_UTILITY_ORGANIZATION_FILTER').rstrip(';')
 
 
+def _set_report_destination(extra_params, opt_since, opt_until, month, opt_month, output_format):
+    """Set the report period and destination, returning any date range."""
+    report_type = extra_params['report_type']
+    ship_path = extra_params['ship_path']
+    if opt_since is not None:
+        since_date = opt_since.date()
+        until_date = opt_until.date() if opt_until else datetime.date.today()
+        extra_params['since_date'] = since_date
+        extra_params['until_date'] = until_date
+        extra_params['report_period'] = f'{since_date}, {until_date}'
+        extra_params['report_spreadsheet_destination_path'] = os.path.join(
+            get_report_path(ship_path, until_date),
+            f'{report_type}-{since_date}--{until_date}.{output_format}',
+        )
+        return since_date, until_date
+
+    extra_params['report_period'] = opt_month
+    extra_params['report_spreadsheet_destination_path'] = os.path.join(
+        get_report_path(ship_path, month),
+        f'{report_type}-{opt_month}.{output_format}',
+    )
+    return None, None
+
+
+def _log_no_billing_data(opt_since, opt_month, since_date, until_date):
+    if opt_since is not None:
+        logger.info(f'No billing data for input date range {since_date}--{until_date}')
+    else:
+        logger.info(f'No billing data for month {opt_month}')
+
+
 class Command(BaseCommand):
     """
     Build Report
@@ -167,26 +198,7 @@ class Command(BaseCommand):
         extra_params['deduplicator'] = os.getenv('METRICS_UTILITY_DEDUPLICATOR') or None
 
         # Determine destination path for generated report and skip processing if it exists
-        report_type = extra_params['report_type']
-        ship_path = extra_params['ship_path']
-        if opt_since is not None:
-            since_date = opt_since.date()
-            until_date = opt_until.date() if opt_until else datetime.date.today()
-
-            extra_params['since_date'] = since_date
-            extra_params['until_date'] = until_date
-
-            extra_params['report_period'] = f'{since_date}, {until_date}'
-            extra_params['report_spreadsheet_destination_path'] = os.path.join(
-                get_report_path(ship_path, until_date),
-                f'{report_type}-{since_date}--{until_date}.{output_format}',
-            )
-        else:
-            extra_params['report_period'] = opt_month
-            extra_params['report_spreadsheet_destination_path'] = os.path.join(
-                get_report_path(ship_path, month),
-                f'{report_type}-{opt_month}.{output_format}',
-            )
+        since_date, until_date = _set_report_destination(extra_params, opt_since, opt_until, month, opt_month, output_format)
 
         report_saver_engine = ReportSaverFactory(ship_target, extra_params=extra_params).create()
 
@@ -208,10 +220,7 @@ class Command(BaseCommand):
         dataframes = dedup.run()
 
         if all(dataframe is None or dataframe.empty for _name, dataframe in dataframes.items()):
-            if opt_since is not None:
-                logger.info(f'No billing data for input date range {since_date}--{until_date}')
-            else:
-                logger.info(f'No billing data for month {opt_month}')
+            _log_no_billing_data(opt_since, opt_month, since_date, until_date)
             return
 
         report_engine = ReportFactory(dataframes=dataframes, extra_params=extra_params).create()

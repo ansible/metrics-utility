@@ -415,10 +415,10 @@ class ReportRenewalGuidance(Base):
             cell = ws.cell(row=current_row, column=2)
             if header_row['label'] == 'Report Period (YYYY-MM-DD, YYYY-MM-DD)':
                 # Insert dynamic report period into the specific header column
-                cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+                cell.fill = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
                 cell.value = self.report_period
             else:
-                cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+                cell.fill = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
                 cell.value = header_row['value']
             cell.font = header_value_font
             current_row += 1

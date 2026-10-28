@@ -25,6 +25,39 @@ def _border_side(side):
     return Side(border_style=side.border_style, color=side.color)
 
 
+def _apply_styles(cell, source, fonts, fills, borders, alignments):
+    if source.font is not None:
+        if source.font not in fonts:
+            fonts[source.font] = Font(name=source.font.name, size=source.font.size, color=source.font.color, bold=source.font.bold)
+        cell.font = fonts[source.font]
+    if source.fill is not None:
+        if source.fill not in fills:
+            fills[source.fill] = PatternFill(source.fill.pattern, fgColor=source.fill.fg_color)
+        cell.fill = fills[source.fill]
+    if source.border is not None:
+        if source.border not in borders:
+            borders[source.border] = Border(
+                left=_border_side(source.border.left),
+                right=_border_side(source.border.right),
+                top=_border_side(source.border.top),
+                bottom=_border_side(source.border.bottom),
+            )
+        cell.border = borders[source.border]
+    if source.alignment is not None:
+        if source.alignment not in alignments:
+            alignments[source.alignment] = Alignment(horizontal=source.alignment.horizontal, vertical=source.alignment.vertical)
+        cell.alignment = alignments[source.alignment]
+
+
+def _apply_dimensions(ws, sheet):
+    for column, dimension in sheet.column_dimensions.items():
+        if dimension.width is not None:
+            ws.column_dimensions[get_column_letter(column)].width = dimension.width
+    for row, dimension in sheet.row_dimensions.items():
+        if dimension.height is not None:
+            ws.row_dimensions[row].height = dimension.height
+
+
 def render(definition):
     workbook = Workbook()
     workbook.remove(workbook.active)
@@ -37,33 +70,8 @@ def render(definition):
             cell = ws.cell(source.row, source.column)
             if source.value is not None:
                 cell.value = _value(source.value)
-            if source.font is not None:
-                if source.font not in fonts:
-                    fonts[source.font] = Font(name=source.font.name, size=source.font.size, color=source.font.color, bold=source.font.bold)
-                cell.font = fonts[source.font]
-            if source.fill is not None:
-                if source.fill not in fills:
-                    fills[source.fill] = PatternFill(source.fill.pattern, fgColor=source.fill.fgColor)
-                cell.fill = fills[source.fill]
-            if source.border is not None:
-                if source.border not in borders:
-                    borders[source.border] = Border(
-                        left=_border_side(source.border.left),
-                        right=_border_side(source.border.right),
-                        top=_border_side(source.border.top),
-                        bottom=_border_side(source.border.bottom),
-                    )
-                cell.border = borders[source.border]
-            if source.alignment is not None:
-                if source.alignment not in alignments:
-                    alignments[source.alignment] = Alignment(horizontal=source.alignment.horizontal, vertical=source.alignment.vertical)
-                cell.alignment = alignments[source.alignment]
+            _apply_styles(cell, source, fonts, fills, borders, alignments)
             if source.number_format is not None:
                 cell.number_format = source.number_format
-        for column, dimension in sheet.column_dimensions.items():
-            if dimension.width is not None:
-                ws.column_dimensions[get_column_letter(column)].width = dimension.width
-        for row, dimension in sheet.row_dimensions.items():
-            if dimension.height is not None:
-                ws.row_dimensions[row].height = dimension.height
+        _apply_dimensions(ws, sheet)
     return workbook

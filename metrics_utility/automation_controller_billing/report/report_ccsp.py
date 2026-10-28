@@ -182,7 +182,7 @@ class ReportCCSP(Base):
         h1_heading_cell = ws.cell(row=current_row, column=1)
         h1_heading_cell.value = self.config['h1_heading']['value']
 
-        h1_heading_cell.fill = PatternFill('solid', fgColor=self.BLACK_COLOR_HEX)
+        h1_heading_cell.fill = PatternFill('solid', fg_color=self.BLACK_COLOR_HEX)
         h1_heading_cell.font = Font(name=self.FONT, size=17, color=self.WHITE_COLOR_HEX)
 
         h1_heading_cell.alignment = Alignment(horizontal='center')
@@ -192,8 +192,8 @@ class ReportCCSP(Base):
 
     def _build_heading_h2(self, current_row, ws):
         # Add the h2 heading payment heading
-        black_background = PatternFill('solid', fgColor=self.BLACK_COLOR_HEX)
-        green_background = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+        black_background = PatternFill('solid', fg_color=self.BLACK_COLOR_HEX)
+        green_background = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
 
         # black background row
         ws.cell(row=current_row, column=1).fill = black_background
@@ -222,7 +222,7 @@ class ReportCCSP(Base):
         for header_row in self.config['header']:
             header_label_font = Font(name=self.FONT, size=14, color=self.WHITE_COLOR_HEX)
             header_value_font = Font(name=self.FONT, size=14, color=self.BLACK_COLOR_HEX)
-            header_label_fill = PatternFill('solid', fgColor=self.BLUE_COLOR_HEX)
+            header_label_fill = PatternFill('solid', fg_color=self.BLUE_COLOR_HEX)
 
             cell = ws.cell(row=current_row, column=1)
             cell.value = header_row['label']
