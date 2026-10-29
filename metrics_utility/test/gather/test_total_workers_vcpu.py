@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
-from metrics_utility.automation_controller_billing.collectors import cli_total_workers_vcpu
+from metrics_utility.automation_controller_billing.collectors import _validate_prometheus_url, cli_total_workers_vcpu
 from metrics_utility.exceptions import MetricsException, MissingRequiredEnvVar
 from metrics_utility.library.collectors.others.total_workers_vcpu import get_hour_boundaries
 from metrics_utility.library.collectors.util import DictOutput
@@ -115,6 +115,26 @@ class TestTotalWorkersVcpu:
                 result = cli_total_workers_vcpu(None, None, DictOutput())
                 assert result['cluster_name'] == 'test-cluster'
                 assert result['total_workers_vcpu'] == 16
+
+    @pytest.mark.parametrize('url', ['http://prometheus.example.com:9090', 'http://10.0.0.1:9090'])
+    def test_rejects_remote_http_prometheus_url(self, url):
+        with patch('metrics_utility.automation_controller_billing.collectors.get_optional_collectors') as mock_get:
+            mock_get.return_value = ['total_workers_vcpu']
+
+            with temporary_env(
+                {
+                    'METRICS_UTILITY_CLUSTER_NAME': 'test-cluster',
+                    'METRICS_UTILITY_USAGE_BASED_METERING_ENABLED': 'true',
+                    'METRICS_UTILITY_PROMETHEUS_URL': url,
+                }
+            ):
+                output = DictOutput()
+                with pytest.raises(ValueError, match='must use HTTPS'):
+                    cli_total_workers_vcpu(None, None, output)
+
+    @pytest.mark.parametrize('url', ['http://localhost:9090', 'http://mock-prometheus:9090', 'https://prometheus.example.com:9090'])
+    def test_allows_local_http_and_https_prometheus_url(self, url):
+        _validate_prometheus_url(url)
 
 
 class TestGetHourBoundaries:

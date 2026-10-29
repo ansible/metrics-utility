@@ -36,6 +36,21 @@ def test_prometheus_client_init_with_ca_cert():
     assert client.session.verify == '/path/to/ca.crt'
 
 
+@pytest.mark.parametrize('url', ['http://localhost:9090', 'https://localhost:9090'])
+def test_prometheus_client_init_with_empty_ca_cert(url):
+    """An empty ca_cert_path keeps requests' default TLS verification."""
+    client = PrometheusClient(url=url, ca_cert_path='')
+
+    assert client.session.verify is True
+
+
+def test_prometheus_client_init_without_ca_cert():
+    """No ca_cert_path at all keeps requests' default trust store and verification."""
+    client = PrometheusClient(url='https://localhost:9090')
+
+    assert client.session.verify is True
+
+
 def test_prometheus_client_init_custom_timeout():
     """Test PrometheusClient initialization with custom timeout."""
     client = PrometheusClient(url='http://localhost:9090', timeout=60)
