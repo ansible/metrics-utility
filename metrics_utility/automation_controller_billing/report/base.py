@@ -147,6 +147,16 @@ class Base:
         return value
 
     @staticmethod
+    def _truncate_sheet_title(value, limit):
+        """Limit a title by UTF-16 code units without splitting a character."""
+        units = 0
+        for index, character in enumerate(value):
+            units += 2 if ord(character) > 0xFFFF else 1
+            if units > limit:
+                return value[:index]
+        return value
+
+    @staticmethod
     def _safe_sheet_title(title, existing_titles=()):
         """Sanitize, truncate, and disambiguate a worksheet title.
 
@@ -155,7 +165,7 @@ class Base:
            (``\\ * ? : / [ ]``) with ``_``.
         2. Replace leading/trailing apostrophes with ``_``.
         3. Rename the reserved title ``History`` (case-insensitive).
-        4. Truncate to the 31-character OOXML maximum (re-checking for
+        4. Truncate to 31 UTF-16 code units (re-checking for
            trailing apostrophes introduced by truncation).
         5. Append a ``~N`` suffix if the result collides (case-insensitive)
            with an entry in *existing_titles*.
@@ -167,7 +177,7 @@ class Base:
                 that truncation-induced duplicates can be resolved.
 
         Returns:
-            A string of at most 31 characters, free of invalid characters,
+            A string of at most 31 UTF-16 code units, free of invalid characters,
             that does not collide with any entry in *existing_titles*
             (case-insensitive).
         """
@@ -177,7 +187,7 @@ class Base:
         # "History" is reserved by Excel for the Track Changes feature.
         if title.lower() == 'history':
             title = title + '_'
-        safe = Base._strip_boundary_apostrophes(title[:max_len])
+        safe = Base._strip_boundary_apostrophes(Base._truncate_sheet_title(title, max_len))
 
         existing_lower = {t.lower() for t in existing_titles}
 
@@ -187,7 +197,7 @@ class Base:
         n = 2
         while True:
             suffix = f'~{n}'
-            candidate = title[: max_len - len(suffix)] + suffix
+            candidate = Base._truncate_sheet_title(title, max_len - len(suffix)) + suffix
             if candidate.lower() not in existing_lower:
                 return candidate
             n += 1

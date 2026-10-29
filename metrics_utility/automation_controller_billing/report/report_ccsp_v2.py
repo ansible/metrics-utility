@@ -192,51 +192,12 @@ class ReportCCSPv2(Base):
             self._build_data_section_usage_by_org(1, ws, job_host_summary_dataframe)
             sheet_index += 1
 
-        # Phase 3: events (built on demand, only when content-usage sheets
-        # are requested).  Skipping the build entirely when no events sheets
-        # are enabled avoids reading and aggregating all main_jobevent CSVs.
-        events_sheets = {'usage_by_collections', 'usage_by_roles', 'usage_by_modules'}
-        optional = self.optional_report_sheets() or []
-        has_events_sheets = bool(events_sheets & set(optional))
-
-        if has_events_sheets:
-            events_dataframe = self.dataframes['main_jobevent']
-
-            # Fix host names in the event data using the *unfiltered* JHS so
-            # that composite-key lookups cover all organizations (matching the
-            # original pre-lazy-loading order of operations).
-            events_dataframe = self._fix_event_host_names(jhs_unfiltered, events_dataframe)
-
-            if events_dataframe is not None:
-                sheet_index = self._add_event_sheets(sheet_index, events_dataframe, indirects)
-
-            # Release events after content-usage sheets are written
-            del events_dataframe
-        # Release unfiltered JHS reference (no-op if events path already used it)
+        # Phase 3: events are built only when a content-usage sheet is requested.
+        sheet_index = self._add_optional_event_sheets(sheet_index, jhs_unfiltered, indirects)
         jhs_unfiltered = None
-        del self.dataframes['main_jobevent']
 
         if 'managed_nodes_by_organizations' in self.optional_report_sheets():
-            # Sheet with list of managed nodes by organization, this will generate multiple tabs
-            organization_names = sorted(job_host_summary_dataframe['organization_name'].unique())
-            for organization_name in organization_names:
-                ws = self.add_sheet(organization_name, sheet_index, self.config['data_column_widths'])
-
-                # When the tab title was truncated, write the full organization
-                # name as a bold header so users can always identify the sheet.
-                if ws.title != organization_name:
-                    cell = ws.cell(row=1, column=1)
-                    cell.value = organization_name
-                    cell.data_type = 's'  # Force text to prevent formula injection
-                    cell.font = Font(name=self.FONT, size=11, bold=True)
-                    data_start_row = 2
-                else:
-                    data_start_row = 1
-
-                # Filter the data for a certain organization
-                filtered_job_host_summary_dataframe = job_host_summary_dataframe[job_host_summary_dataframe['organization_name'] == organization_name]
-                self._build_data_section_usage_by_node(data_start_row, ws, filtered_job_host_summary_dataframe, mode='by_organization')
-                sheet_index += 1
+            sheet_index = self._add_organization_sheets(sheet_index, job_host_summary_dataframe)
 
         # Phase 4: data collection status (build on demand, release after use)
         if 'data_collection_status' in self.optional_report_sheets():
@@ -249,6 +210,34 @@ class ReportCCSPv2(Base):
         del self.dataframes['data_collection_status']
 
         return self.wb
+
+    def _add_optional_event_sheets(self, sheet_index, jhs_unfiltered, indirects):
+        event_sheets = {'usage_by_collections', 'usage_by_roles', 'usage_by_modules'}
+        if event_sheets.intersection(self.optional_report_sheets() or []):
+            events_dataframe = self.dataframes['main_jobevent']
+            # Mapping must include organizations excluded by the report filter.
+            events_dataframe = self._fix_event_host_names(jhs_unfiltered, events_dataframe)
+            if events_dataframe is not None:
+                sheet_index = self._add_event_sheets(sheet_index, events_dataframe, indirects)
+        del self.dataframes['main_jobevent']
+        return sheet_index
+
+    def _add_organization_sheets(self, sheet_index, job_host_summary_dataframe):
+        organization_names = sorted(job_host_summary_dataframe['organization_name'].unique())
+        for organization_name in organization_names:
+            ws = self.add_sheet(organization_name, sheet_index, self.config['data_column_widths'])
+            if ws.title != organization_name:
+                cell = ws.cell(row=1, column=1)
+                cell.value = organization_name
+                cell.force_text = True
+                cell.font = Font(name=self.FONT, size=11, bold=True)
+                data_start_row = 2
+            else:
+                data_start_row = 1
+            organization_data = job_host_summary_dataframe[job_host_summary_dataframe['organization_name'] == organization_name]
+            self._build_data_section_usage_by_node(data_start_row, ws, organization_data, mode='by_organization')
+            sheet_index += 1
+        return sheet_index
 
     def _add_event_sheets(self, sheet_index, events_dataframe, indirects):
         if 'usage_by_collections' in self.optional_report_sheets():

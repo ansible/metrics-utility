@@ -67,6 +67,7 @@ class Cell:
     border: Border | None = None
     alignment: Alignment | None = None
     number_format: str | None = None
+    force_text: bool = False
 
 
 @dataclass
@@ -110,6 +111,7 @@ class Workbook:
     def create_sheet(self, title):
         # Match spreadsheet title rules and avoid duplicate names as the XLSX
         # writer did before the report definition was introduced.
+        title = title or 'Sheet'
         if any(char in title for char in r'\*?:/[]'):
             raise ValueError(f'Invalid character in sheet title: {title}')
         original = title

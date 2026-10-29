@@ -132,6 +132,20 @@ def test_ods_rejects_report_without_sheets():
         render_ods(definition)
 
 
+def test_empty_sheet_title_has_same_default_name_in_both_formats(tmp_path):
+    definition = Workbook()
+    definition.create_sheet('')
+    xlsx_path, ods_path = tmp_path / 'report.xlsx', tmp_path / 'report.ods'
+    render_xlsx(definition).save(xlsx_path)
+    render_ods(definition).save(ods_path)
+
+    assert load_workbook(xlsx_path).sheetnames == ['Sheet', 'Sheet1']
+    with ZipFile(ods_path) as archive:
+        document = ElementTree.fromstring(archive.read('content.xml'))
+    names = [sheet.attrib[f'{{{TABLE}}}name'] for sheet in document.findall('.//table:table', NS)]
+    assert names == ['Sheet', 'Sheet1']
+
+
 def test_build_report_releases_ods_definition_before_saving(tmp_path, monkeypatch):
     root = Path(__file__).resolve().parents[2]
     (tmp_path / 'data').symlink_to(root / 'metrics_utility/test/test_data/data', target_is_directory=True)

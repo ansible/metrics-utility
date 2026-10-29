@@ -70,6 +70,8 @@ def render(definition):
             cell = ws.cell(source.row, source.column)
             if source.value is not None:
                 cell.value = _value(source.value)
+                if source.force_text:
+                    cell.data_type = 's'
             _apply_styles(cell, source, fonts, fills, borders, alignments)
             if source.number_format is not None:
                 cell.number_format = source.number_format

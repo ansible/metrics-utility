@@ -322,6 +322,15 @@ class TestSafeSheetTitle:
         assert len(result) == 31
         assert result == 'a' * 31
 
+    def test_supplementary_characters_fit_utf16_limit_with_collision_suffix(self):
+        title = '\U0001f680' * 16
+        first = Base._safe_sheet_title(title)
+        second = Base._safe_sheet_title(title, existing_titles={first})
+        assert first == '\U0001f680' * 15
+        assert second == '\U0001f680' * 14 + '~2'
+        assert len(first.encode('utf-16-le')) // 2 <= 31
+        assert len(second.encode('utf-16-le')) // 2 <= 31
+
     def test_truncation_does_not_collide_with_existing(self):
         """When truncation causes a collision, a ~N suffix is appended."""
         long_name_1 = 'cba-v-np-101005454-iac-tst-vmpprdtst1'
@@ -1056,3 +1065,93 @@ class TestCCSPv2LongOrgNameHeader:
         ws = wb.worksheets[0]
         assert ws.cell(row=1, column=1).data_type == 's'
         assert ws.cell(row=1, column=1).value == evil_org
+
+    def test_organization_names_match_across_saved_formats(self, tmp_path):
+        from zipfile import ZipFile
+
+        from defusedxml import ElementTree
+        from openpyxl import load_workbook
+
+        from metrics_utility.automation_controller_billing.report.renderers.ods import render as render_ods
+        from metrics_utility.automation_controller_billing.report.renderers.xlsx import render as render_xlsx
+        from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import ReportCCSPv2
+
+        formula_like = '=organization-' + 'a' * 35
+        names = [formula_like, 'org/name', 'org:name', 'History', 'short', '\U0001f680' * 16]
+        dataframes = {
+            'job_host_summary': pd.concat([_jhs_df_with_org(name) for name in names], ignore_index=True),
+            'main_jobevent': None,
+            'main_host': pd.DataFrame(),
+            'data_collection_status': pd.DataFrame(),
+        }
+        definition = ReportCCSPv2(dataframes, _ccspv2_extra_params(['managed_nodes_by_organizations'])).build_definition()
+        xlsx_path, ods_path = tmp_path / 'report.xlsx', tmp_path / 'report.ods'
+        render_xlsx(definition).save(xlsx_path)
+        render_ods(definition).save(ods_path)
+
+        workbook = load_workbook(xlsx_path)
+        expected_names = [formula_like[:31], 'History_', 'org_name', 'org_name~2', 'short', '\U0001f680' * 15]
+        assert workbook.sheetnames == expected_names
+        assert workbook[formula_like[:31]]['A1'].value == formula_like
+        assert workbook[formula_like[:31]]['A1'].data_type == 's'
+        assert workbook['short']['A1'].value != 'short'
+        assert workbook['org_name']['A1'].value == 'org/name'
+        assert workbook['org_name~2']['A1'].value == 'org:name'
+
+        table_ns = 'urn:oasis:names:tc:opendocument:xmlns:table:1.0'
+        office_ns = 'urn:oasis:names:tc:opendocument:xmlns:office:1.0'
+        with ZipFile(ods_path) as archive:
+            root = ElementTree.fromstring(archive.read('content.xml'))
+        tables = root.findall(f'.//{{{table_ns}}}table')
+        assert [table.get(f'{{{table_ns}}}name') for table in tables] == expected_names
+        first_cell = tables[0].find(f'{{{table_ns}}}table-row/{{{table_ns}}}table-cell')
+        assert first_cell.get(f'{{{office_ns}}}value-type') == 'string'
+        assert ''.join(first_cell.itertext()) == formula_like
+
+
+def test_ccspv2_does_not_load_events_when_no_event_sheets_requested():
+    from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import ReportCCSPv2
+
+    class TrackingDataframes(dict):
+        def __getitem__(self, key):
+            if key == 'main_jobevent':
+                raise AssertionError('Events should not be loaded')
+            return super().__getitem__(key)
+
+    dataframes = TrackingDataframes(
+        job_host_summary=_jhs_df_with_org('short'),
+        main_jobevent=None,
+        main_host=pd.DataFrame(),
+        data_collection_status=pd.DataFrame(),
+    )
+    definition = ReportCCSPv2(dataframes, _ccspv2_extra_params(['managed_nodes_by_organizations'])).build_definition()
+    assert [sheet.title for sheet in definition.worksheets] == ['short']
+
+
+def test_ccspv2_maps_events_using_unfiltered_organizations(monkeypatch):
+    from metrics_utility.automation_controller_billing.report.report_ccsp_v2 import ReportCCSPv2
+
+    allowed = _jhs_df_with_org('allowed')
+    excluded = _jhs_df_with_org('excluded')
+    excluded['original_host_name'] = 'host2'
+    excluded['host_name'] = 'mapped-host2'
+    events = pd.DataFrame({'host_name': ['host2'], 'install_uuid': ['u1'], 'job_remote_id': ['j1']})
+    dataframes = {
+        'job_host_summary': pd.concat([allowed, excluded], ignore_index=True),
+        'main_jobevent': events,
+        'main_host': pd.DataFrame(),
+        'data_collection_status': pd.DataFrame(),
+    }
+    options = _ccspv2_extra_params(['usage_by_roles'])
+    options['report_organization_filter'] = 'allowed'
+    report = ReportCCSPv2(dataframes, options)
+    mapped = []
+
+    def add_event_sheets(sheet_index, frame, indirects):
+        mapped.extend(frame['host_name'])
+        report.add_sheet('Usage by roles', sheet_index)
+        return sheet_index + 1
+
+    monkeypatch.setattr(report, '_add_event_sheets', add_event_sheets)
+    report.build_definition()
+    assert mapped == ['mapped-host2']
