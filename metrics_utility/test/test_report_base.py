@@ -164,40 +164,6 @@ class TestAddDedupCountColumn:
 
 
 # ---------------------------------------------------------------------------
-# handle_dedup_columns_for_scope
-# ---------------------------------------------------------------------------
-
-
-class TestHandleDedupColumnsForScope:
-    def test_adds_dedup_columns_when_enabled_and_column_present(self):
-        r = _report(dedup=True)
-        df = pd.DataFrame({'host_names_before_dedup': [{'h1'}, {'h2'}]})
-        columns = ['host_name']
-        convert_cols = []
-        new_columns, new_convert = r.handle_dedup_columns_for_scope(df, columns, convert_cols)
-        assert 'host_names_before_dedup' in new_columns
-        assert 'host_names_before_dedup_count' in new_columns
-        assert 'host_names_before_dedup' in new_convert
-
-    def test_no_change_when_dedup_disabled(self):
-        r = _report(dedup=False)
-        df = pd.DataFrame({'host_names_before_dedup': [{'h1'}]})
-        columns = ['host_name']
-        convert_cols = []
-        new_columns, new_convert = r.handle_dedup_columns_for_scope(df, columns, convert_cols)
-        assert new_columns == ['host_name']
-        assert new_convert == []
-
-    def test_no_change_when_column_absent_even_if_dedup_enabled(self):
-        r = _report(dedup=True)
-        df = pd.DataFrame({'other': [1]})
-        columns = ['host_name']
-        convert_cols = []
-        new_columns, _ = r.handle_dedup_columns_for_scope(df, columns, convert_cols)
-        assert 'host_names_before_dedup' not in new_columns
-
-
-# ---------------------------------------------------------------------------
 # add_dedup_labels_if_needed
 # ---------------------------------------------------------------------------
 
@@ -390,6 +356,60 @@ class TestFixEventHostNames:
         result = r._fix_event_host_names(mapping, dest)
         assert result['host_name'].iloc[0] == 'unknown_host'
 
+    def test_composite_id_is_string_when_install_uuid_is_null(self):
+        """Null install_uuid must render as 'None' in the composite key, not NaN."""
+        r = _report()
+        mapping = _mapping_df('h1', None, 'j1', 'mapped_h1')
+        dest = _dest_df('h1', None, 'j1')
+        result = r._fix_event_host_names(mapping, dest)
+        cid = result['host_composite_id'].iloc[0]
+        assert isinstance(cid, str), f'Expected str, got {type(cid)}'
+        assert 'None' in cid
+
+    def test_composite_id_is_string_when_job_remote_id_is_nan(self):
+        """NaN job_remote_id must render as 'nan' in the composite key, not NaN."""
+        import numpy as np
+
+        r = _report()
+        mapping = _mapping_df('h1', 'u1', np.nan, 'mapped_h1')
+        dest = _dest_df('h1', 'u1', np.nan)
+        result = r._fix_event_host_names(mapping, dest)
+        cid = result['host_composite_id'].iloc[0]
+        assert isinstance(cid, str), f'Expected str, got {type(cid)}'
+        assert 'nan' in cid
+
+    def test_null_columns_still_counted_by_nunique(self):
+        """Rows with null install_uuid must produce distinct string keys so
+        nunique() counts them instead of silently dropping them as NaN."""
+        r = _report()
+        mapping = pd.DataFrame(
+            {
+                'original_host_name': ['h1', 'h2', 'h3'],
+                'install_uuid': ['u1', None, 'u1'],
+                'job_remote_id': [1, 2, 3],
+                'host_name': ['h1', 'h2', 'h3'],
+            }
+        )
+        dest = pd.DataFrame(
+            {
+                'host_name': ['h1', 'h2', 'h3'],
+                'install_uuid': ['u1', None, 'u1'],
+                'job_remote_id': [1, 2, 3],
+            }
+        )
+        result = r._fix_event_host_names(mapping, dest)
+        assert result['host_composite_id'].nunique() == 3
+
+    def test_does_not_mutate_mapping_dataframe(self):
+        r = _report()
+        mapping = _mapping_df('old_host', 'u1', 'j1', 'new_host')
+        original_cols = list(mapping.columns)
+        original_values = mapping.copy()
+        dest = _dest_df('old_host', 'u1', 'j1')
+        r._fix_event_host_names(mapping, dest)
+        assert list(mapping.columns) == original_cols
+        pd.testing.assert_frame_equal(mapping, original_values)
+
 
 # ---------------------------------------------------------------------------
 # Shared worksheet factory for _build_data_section_* tests
@@ -461,6 +481,19 @@ class TestBuildDataSectionScope:
         end_row = r._build_data_section_scope(1, ws, df)
         # dataframe_to_rows yields 1 header + len(df) data rows = 3 total
         assert end_row == 1 + 3
+
+    def test_does_not_mutate_input_dataframe(self):
+        r = _report(dedup=True)
+        ws = _make_ws(r)
+        df = _scope_df(
+            host_names_before_dedup=[{'h1', 'h2'}, {'h3'}],
+            extra_col=['a', 'b'],
+        )
+        original_cols = list(df.columns)
+        original_values = df.copy()
+        r._build_data_section_scope(1, ws, df)
+        assert list(df.columns) == original_cols
+        pd.testing.assert_frame_equal(df, original_values)
 
 
 # ---------------------------------------------------------------------------
