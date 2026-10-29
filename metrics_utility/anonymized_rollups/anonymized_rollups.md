@@ -2,21 +2,28 @@
 
 ## 1. Collectors and Rollups
 
-Each collector type has an associated anonymized rollup class that processes the collected data. Collectors are located in `metrics_utility/library/collectors/controller/`, and their corresponding rollup classes are in `metrics_utility/anonymized_rollups/`.
+Only the anonymized subset of collectors has associated rollup classes. Other
+collectors remain inputs to the raw analytics API, dashboard, or CLI reports.
+See [collector data lineage](../../docs/data-lineage.md) for the complete current
+mapping, source-column dependency trees, filters, and output boundaries. The
+walkthrough below describes the rollup stages, not the analytics API contract.
 
 ### Collector Types
 
-Collectors fall into two categories:
+Collectors fall into three scheduling categories in metrics-service:
 
 - **Since-until collectors (time-series)**: These collectors require `since` and `until` parameters and collect data for a specific time range. They run hourly to collect incremental data. But they can be configured to run whatever we want.
 - **Snapshot collectors**: These collectors do not require time parameters and collect a point-in-time snapshot of the current state. They run once per day (or whever we want).
+- **Daily window collectors**: Indirect-node audits and service task-execution
+  observations cover a daily interval. See the current mapping in the lineage
+  guide; not every daily analytics collector contributes an anonymized rollup.
 
 ### Collector List
 
 #### Time-Series Collectors (since-until)
 
 1. **`unified_jobs`**
-   - **Collector**: `metrics_utility/library/collectors/controller/unified_jobs.py`
+   - **Collector**: `metrics_utility/library/collectors/controller/unified_jobs_dashboard.py` (metrics-service task key `unified_jobs`)
    - **Rollup**: `metrics_utility/anonymized_rollups/jobs_anonymized_rollup.py` (`JobsAnonymizedRollup`)
    - **Description**: Collects unified job data including job status, duration, execution environment, inventory, organization, ansible version, installed collections, and job template information. Filters jobs by `finished` timestamp within the time range.
 
@@ -51,6 +58,11 @@ Collectors fall into two categories:
    - **Collector**: `metrics_utility/library/collectors/controller/controller_version_service.py`
    - **Rollup**: `metrics_utility/anonymized_rollups/controller_version_anonymized_rollup.py` (`ControllerVersionAnonymizedRollup`)
    - **Description**: Collects controller version information showing which versions of the controller are running.
+
+The remaining anonymized inputs are `controller.feature_flags_service`,
+`service.task_executions_service`, and `controller.main_indirectmanagednodeaudit`.
+Their mappings and output projections are covered in the
+[lineage guide](../../docs/data-lineage.md#snapshots-indirect-nodes-and-service-observations).
 
 ## 2. Rollup Flow
 
@@ -97,11 +109,14 @@ The daily rollup is sent to the analytics team, who is then further aggregating 
 
 After all rollups are merged, the data goes through anonymization:
 
-1. **String Filtering**: Any string value that is not a built-in Python type or part of a public collection (defined in `collections.json`) is either:
-   - Set to `"Unknown"` (for module names, collection names, role names with `collection_source == 'Unknown'`)
-   - Filtered out entirely during collection (e.g., filtered by `manage` DB column or other filters)
+1. **Content filtering**: Entries marked `collection_source == 'Custom'` are
+   removed from module, collection, and role statistics. Installed-collection and
+   indirect-content entries are retained only when their collection is known in
+   `collections.json`. This is an explicit projection/filter, not a generic scrub
+   of all strings. Identifiers used internally for grouping are removed by the
+   individual rollup's final projection.
 
-3. **Sanitization**: NaN and infinity values are replaced with `None` to ensure valid JSON output.
+2. **Sanitization**: NaN and infinity values are replaced with `None` to ensure valid JSON output.
 
 The anonymization ensures that no sensitive customer data (like custom module names, collection names, or job template names) is exposed in the final output.
 
@@ -127,11 +142,7 @@ The splitting logic is implemented in `metrics_utility/library/storage/segment.p
 
 ## 5. Testing
 
-To test the anonymized rollup system, use the `run_no_events.py` script:
-
-**Location**: `tools/anonymized_tests/run_no_events.py`
-
-See more in the file itself
-
-
-
+Tests live in [`metrics_utility/test/test_anonymized_rollups/`](../test/test_anonymized_rollups/).
+Use `uv run pytest metrics_utility/test/test_anonymized_rollups/` for focused
+rollup tests; metrics-service owns integration tests for scheduling, storage,
+and transmission.

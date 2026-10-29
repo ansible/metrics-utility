@@ -86,6 +86,9 @@ Successful scheduled or manual collection updates the Controller setting used by
 
 ### Building reports
 
+See [report dependency trees](report-lineage.md) for each report's core/default
+inputs, configurable-sheet dependencies, and the current CSV loading gates.
+
 `build_report` selects the input and output implementations from `METRICS_UTILITY_SHIP_TARGET`, then runs the reporting pipeline:
 
 ```mermaid
@@ -165,6 +168,12 @@ Anonymized rollups are implemented in `metrics_utility/anonymized_rollups/`. Eac
 The intended processing model is hierarchical: raw hourly data is reduced to a small serializable partial rollup, partial rollups are merged through the day, and the completed daily rollup is combined with the other categories. The final structure is flattened, sanitized, and anonymized before it is split into Segment-compatible messages.
 
 Sensitive values such as customer-specific names and identifiers must not cross the anonymization boundary. Public collection metadata is allow-listed through `collections.json`; values outside the permitted set are filtered or replaced according to the rollup implementation. See [anonymized rollups](../metrics_utility/anonymized_rollups/anonymized_rollups.md) for the collector-to-rollup mapping and detailed processing notes.
+
+See [collector data lineage](data-lineage.md) for source-field dependency trees,
+the separate raw analytics and dashboard consumers, and the outbound exclusion
+boundary. Absence from a report or anonymized payload does not make a collector
+column unused: metrics-service also exposes raw collector outputs through its
+analytics API.
 
 ## Concurrency, checkpoints, and failure behavior
 
