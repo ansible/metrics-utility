@@ -752,6 +752,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "defusedxml" },
     { name = "jsonschema" },
     { name = "pre-commit" },
     { name = "pydantic" },
@@ -780,6 +781,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "pre-commit", specifier = ">=4.0.1" },
     { name = "pydantic", specifier = ">=2.9" },

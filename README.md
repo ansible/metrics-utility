@@ -50,7 +50,7 @@ export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
 
 metrics-utility build_report --month=`date +%Y-%m` # year-month
 metrics-utility build_report --month=`date +%Y-%m` --format=ods
-ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xlsx
+ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xlsx and .ods
 ```
 
 See [docs/cli.md](./docs/cli.md) and [docs/old-readme.md](./docs/old-readme.md) for details on the usage,  
