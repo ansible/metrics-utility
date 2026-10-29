@@ -132,6 +132,33 @@ def test_ods_rejects_report_without_sheets():
         render_ods(definition)
 
 
+@pytest.mark.parametrize(
+    ('value', 'expected'),
+    [
+        ('First\r\nSecond', 'First\nSecond'),
+        ('First\rSecond', 'First\nSecond'),
+        ('First\nSecond', 'First\nSecond'),
+        ('First\r\n\r\nSecond', 'First\n\nSecond'),
+    ],
+)
+def test_ods_preserves_text_line_breaks(tmp_path, value, expected):
+    definition = Workbook()
+    definition.active.cell(1, 1).value = value
+    path = tmp_path / 'report.ods'
+    render_ods(definition).save(path)
+
+    with ZipFile(path) as archive:
+        document = ElementTree.fromstring(archive.read('content.xml'))
+    text_namespace = 'urn:oasis:names:tc:opendocument:xmlns:text:1.0'
+    paragraph = document.find(f'.//{{{TABLE}}}table-cell/{{{text_namespace}}}p')
+    parts = [paragraph.text or '']
+    for child in paragraph:
+        if child.tag == f'{{{text_namespace}}}line-break':
+            parts.append('\n')
+        parts.append(child.tail or '')
+    assert ''.join(parts) == expected
+
+
 def test_empty_sheet_title_has_same_default_name_in_both_formats(tmp_path):
     definition = Workbook()
     definition.create_sheet('')

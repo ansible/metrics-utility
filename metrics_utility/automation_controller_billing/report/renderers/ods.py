@@ -194,7 +194,7 @@ def _cell(document, source, cache, span=None):
     cell = TableCell(**attrs)
     if isinstance(value, str):
         paragraph = P()
-        teletype.addTextToElement(paragraph, value)
+        teletype.addTextToElement(paragraph, value.replace('\r\n', '\n'))
         cell.addElement(paragraph)
     return cell
 
