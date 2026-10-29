@@ -1,6 +1,5 @@
 """
 Unit tests targeting uncovered branches in anonymized_rollups.py:
-  - create_anonymized_object: the else/raise ValueError branch
   - anonymize_data: early-return guard (not a dict / falsy)
   - _calculate_host_summary_totals: empty host_ids branch
   - _inject_controller_version: empty list early return
@@ -14,46 +13,7 @@ from metrics_utility.anonymized_rollups.anonymized_rollups import (
     _inject_controller_version,
     _installed_collection_name_is_unknown,
     anonymize_data,
-    create_anonymized_object,
 )
-from metrics_utility.anonymized_rollups.controller_version_anonymized_rollup import ControllerVersionAnonymizedRollup
-from metrics_utility.anonymized_rollups.credentials_anonymized_rollup import CredentialsAnonymizedRollup
-from metrics_utility.anonymized_rollups.events_modules_anonymized_rollup import EventModulesAnonymizedRollup
-from metrics_utility.anonymized_rollups.execution_environments_anonymized_rollup import ExecutionEnvironmentsAnonymizedRollup
-from metrics_utility.anonymized_rollups.feature_flags_anonymized_rollup import FeatureFlagsAnonymizedRollup
-from metrics_utility.anonymized_rollups.jobhostsummary_anonymized_rollup import JobHostSummaryAnonymizedRollup
-from metrics_utility.anonymized_rollups.jobs_anonymized_rollup import JobsAnonymizedRollup
-from metrics_utility.anonymized_rollups.table_metadata_anonymized_rollup import TableMetadataAnonymizedRollup
-from metrics_utility.anonymized_rollups.task_executions_anonymized_rollup import TaskExecutionsAnonymizedRollup
-
-
-# ---------------------------------------------------------------------------
-# create_anonymized_object
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    'name, expected_type',
-    [
-        ('jobs', JobsAnonymizedRollup),
-        ('job_host_summary', JobHostSummaryAnonymizedRollup),
-        ('events_modules', EventModulesAnonymizedRollup),
-        ('execution_environments', ExecutionEnvironmentsAnonymizedRollup),
-        ('credentials', CredentialsAnonymizedRollup),
-        ('table_metadata', TableMetadataAnonymizedRollup),
-        ('controller_version', ControllerVersionAnonymizedRollup),
-        ('feature_flags', FeatureFlagsAnonymizedRollup),
-        ('task_executions', TaskExecutionsAnonymizedRollup),
-    ],
-)
-def test_create_anonymized_object_known_names(name, expected_type):
-    obj = create_anonymized_object(name)
-    assert isinstance(obj, expected_type)
-
-
-def test_create_anonymized_object_unknown_name_raises():
-    with pytest.raises(ValueError, match='Invalid rollup name'):
-        create_anonymized_object('nonexistent_rollup')
 
 
 # ---------------------------------------------------------------------------

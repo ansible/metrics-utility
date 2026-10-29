@@ -76,26 +76,6 @@ def extract_collection_name(x: str | None) -> str | None:
     return f'{m.group(1)}.{m.group(2)}' if m else None
 
 
-def merge_by_name(obj1, obj2, name_key):
-    """Merge two lists of dicts by a common key, later values overwriting earlier ones.
-
-    Args:
-        obj1: First list of dicts.
-        obj2: Second list of dicts.
-        name_key: The dict key used to identify matching records.
-
-    Returns:
-        A list of merged dicts with one entry per unique key value.
-    """
-    merged = {}
-
-    for entry in obj1 + obj2:
-        key = entry[name_key]
-        merged.setdefault(key, {}).update(entry)
-
-    return list(merged.values())
-
-
 class EventModulesAnonymizedRollup(BaseAnonymizedRollup):
     """
     Event collections rollups operate over main_jobevent_service collector data.
