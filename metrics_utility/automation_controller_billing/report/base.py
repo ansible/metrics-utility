@@ -4,6 +4,7 @@
 # Code for building the spreadsheet
 ######################################
 import json
+import re
 
 import pandas as pd
 
@@ -122,11 +123,77 @@ class Base:
         # Otherwise, return the cell unchanged.
         return cell
 
+    EXCEL_MAX_SHEET_NAME_LENGTH = 31
+    # Characters forbidden in Excel/OOXML worksheet names.  openpyxl raises
+    # ValueError if any of these appear in the title.
+    _INVALID_SHEET_CHAR_RE = re.compile(r'[\\*?:/\[\]]')
+
+    @staticmethod
+    def _strip_boundary_apostrophes(value):
+        """Replace leading/trailing apostrophes with underscores.
+
+        Excel rejects worksheet names that start or end with ``'``.
+        openpyxl does not enforce this rule.
+        """
+        if value.startswith("'"):
+            value = '_' + value[1:]
+        if value.endswith("'"):
+            value = value[:-1] + '_'
+        return value
+
+    @staticmethod
+    def _safe_sheet_title(title, existing_titles=()):
+        """Sanitize, truncate, and disambiguate a worksheet title.
+
+        Processing order:
+        1. Replace characters invalid in Excel sheet names
+           (``\\ * ? : / [ ]``) with ``_``.
+        2. Replace leading/trailing apostrophes with ``_``.
+        3. Rename the reserved title ``History`` (case-insensitive).
+        4. Truncate to the 31-character OOXML maximum (re-checking for
+           trailing apostrophes introduced by truncation).
+        5. Append a ``~N`` suffix if the result collides (case-insensitive)
+           with an entry in *existing_titles*.
+
+        Args:
+            title: Desired sheet title (may contain invalid characters and/or
+                exceed 31 characters).
+            existing_titles: Iterable of titles already used in the workbook so
+                that truncation-induced duplicates can be resolved.
+
+        Returns:
+            A string of at most 31 characters, free of invalid characters,
+            that does not collide with any entry in *existing_titles*
+            (case-insensitive).
+        """
+        max_len = Base.EXCEL_MAX_SHEET_NAME_LENGTH
+        title = Base._INVALID_SHEET_CHAR_RE.sub('_', title)
+        title = Base._strip_boundary_apostrophes(title)
+        # "History" is reserved by Excel for the Track Changes feature.
+        if title.lower() == 'history':
+            title = title + '_'
+        safe = Base._strip_boundary_apostrophes(title[:max_len])
+
+        existing_lower = {t.lower() for t in existing_titles}
+
+        if safe.lower() not in existing_lower:
+            return safe
+
+        n = 2
+        while True:
+            suffix = f'~{n}'
+            candidate = title[: max_len - len(suffix)] + suffix
+            if candidate.lower() not in existing_lower:
+                return candidate
+            n += 1
+
     def add_sheet(self, title, sheet_index, widths=None):
         """Create a new worksheet in the workbook and optionally set column widths.
 
         Args:
-            title: Worksheet tab title.
+            title: Worksheet tab title.  Automatically truncated to 31
+                characters (the Excel/OOXML maximum) and disambiguated if the
+                truncation would create a duplicate of an existing sheet name.
             sheet_index: Position (0-based) in the workbook's sheet list.
             widths: Optional dict mapping 1-based column indices to widths in
                 Excel units.
@@ -134,7 +201,9 @@ class Base:
         Returns:
             The newly created :class:`openpyxl.worksheet.worksheet.Worksheet`.
         """
-        self.wb.create_sheet(title=title)
+        existing = {ws.title for ws in self.wb.worksheets}
+        safe_title = self._safe_sheet_title(title, existing)
+        self.wb.create_sheet(title=safe_title)
         ws = self.wb.worksheets[sheet_index]
         if widths:
             self.set_widths(ws, widths)
