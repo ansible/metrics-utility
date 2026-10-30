@@ -202,10 +202,15 @@ def _duration(value):
     return f'{sign}PT{seconds}{suffix}S'
 
 
-def _value_attributes(value):
+def _value_attributes(source, formula_values):
     """Return the ODF value attributes and any type-specific number style."""
+    value = source.value
     if isinstance(value, (Multiply, Sum)):
-        return {'valuetype': 'float', 'formula': _formula(value)}, None
+        attrs = {'valuetype': 'float', 'formula': _formula(value)}
+        result = formula_values.get(source.row, source.column)
+        if result is not None:
+            attrs['value'] = str(result)
+        return attrs, None
     if isinstance(value, (bool, np.bool_)):
         return {'valuetype': 'boolean', 'booleanvalue': str(bool(value)).lower()}, None
     if isinstance(value, (Real, Decimal)):
@@ -241,11 +246,7 @@ def _cell(document, source, cache, formula_values, span=None):
         if rows > 1:
             attrs['numberrowsspanned'] = rows
     if not _missing(value):
-        value_attrs, value_style = _value_attributes(value)
-        if isinstance(value, (Multiply, Sum)):
-            result = formula_values.get(source.row, source.column)
-            if result is not None:
-                value_attrs['value'] = str(result)
+        value_attrs, value_style = _value_attributes(source, formula_values)
         attrs.update(value_attrs)
         if value_style:
             number_style = value_style
