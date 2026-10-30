@@ -8,11 +8,10 @@ import time
 
 import pandas as pd
 
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.definition import Alignment, Border, Font, PatternFill, Side, Workbook
 
 
 class ReportRenewalGuidance(Base):
@@ -53,7 +52,7 @@ class ReportRenewalGuidance(Base):
         self.config['data_column_widths'] = default_data_column_widths
         self.config['uniform_column_widths'] = uniform_column_widths
 
-    def build_spreadsheet(self):
+    def build_definition(self):
         # Fix host names in the event data, to take in account the variables
         host_metric_dataframe = self.dataframes['host_metric']
 
@@ -416,10 +415,10 @@ class ReportRenewalGuidance(Base):
             cell = ws.cell(row=current_row, column=2)
             if header_row['label'] == 'Report Period (YYYY-MM-DD, YYYY-MM-DD)':
                 # Insert dynamic report period into the specific header column
-                cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+                cell.fill = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
                 cell.value = self.report_period
             else:
-                cell.fill = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+                cell.fill = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
                 cell.value = header_row['value']
             cell.font = header_value_font
             current_row += 1

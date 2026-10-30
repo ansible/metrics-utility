@@ -120,7 +120,7 @@ def test_build_spreadsheet_with_ephemeral_data(
     mocks['mocks_for_instance']['compute_ephemeral_intervals'].return_value = mock_ephemeral_usage_df
     mocks['mocks_for_instance']['optional_report_sheets'].return_value = ['managed_nodes']
 
-    result_wb = report_instance.build_spreadsheet()
+    result_wb = report_instance.build_definition()
 
     mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
 
@@ -182,7 +182,7 @@ def test_build_spreadsheet_without_ephemeral_data(
 
     mocks['mocks_for_instance']['optional_report_sheets'].return_value = ['managed_nodes']
 
-    result_wb = report_instance.build_spreadsheet()
+    result_wb = report_instance.build_definition()
 
     mocks['openpyxl_wb_mock'].remove.assert_called_once_with(mocks['openpyxl_wb_mock'].active)
 

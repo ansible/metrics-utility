@@ -3,11 +3,20 @@
 ######################################
 # Code for building the spreadsheet
 ######################################
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from metrics_utility.automation_controller_billing.report.base import Base
+from metrics_utility.automation_controller_billing.report.definition import (
+    Alignment,
+    Border,
+    CellReference,
+    Font,
+    Multiply,
+    PatternFill,
+    Side,
+    Sum,
+    Workbook,
+)
 from metrics_utility.logger import logger
 from metrics_utility.metric_utils import DIRECT, INDIRECT
 
@@ -96,7 +105,7 @@ class ReportCCSP(Base):
         self.config['column_widths'] = default_column_widths
         self.config['data_column_widths'] = default_data_column_widths
 
-    def build_spreadsheet(self):
+    def build_definition(self):
         job_host_summary_dataframe = self.dataframes['job_host_summary']
         events_dataframe = self.dataframes['main_jobevent']
         events_dataframe = self._fix_event_host_names(job_host_summary_dataframe, events_dataframe)
@@ -173,7 +182,7 @@ class ReportCCSP(Base):
         h1_heading_cell = ws.cell(row=current_row, column=1)
         h1_heading_cell.value = self.config['h1_heading']['value']
 
-        h1_heading_cell.fill = PatternFill('solid', fgColor=self.BLACK_COLOR_HEX)
+        h1_heading_cell.fill = PatternFill('solid', fg_color=self.BLACK_COLOR_HEX)
         h1_heading_cell.font = Font(name=self.FONT, size=17, color=self.WHITE_COLOR_HEX)
 
         h1_heading_cell.alignment = Alignment(horizontal='center')
@@ -183,8 +192,8 @@ class ReportCCSP(Base):
 
     def _build_heading_h2(self, current_row, ws):
         # Add the h2 heading payment heading
-        black_background = PatternFill('solid', fgColor=self.BLACK_COLOR_HEX)
-        green_background = PatternFill('solid', fgColor=self.GREEN_COLOR_HEX)
+        black_background = PatternFill('solid', fg_color=self.BLACK_COLOR_HEX)
+        green_background = PatternFill('solid', fg_color=self.GREEN_COLOR_HEX)
 
         # black background row
         ws.cell(row=current_row, column=1).fill = black_background
@@ -213,7 +222,7 @@ class ReportCCSP(Base):
         for header_row in self.config['header']:
             header_label_font = Font(name=self.FONT, size=14, color=self.WHITE_COLOR_HEX)
             header_value_font = Font(name=self.FONT, size=14, color=self.BLACK_COLOR_HEX)
-            header_label_fill = PatternFill('solid', fgColor=self.BLUE_COLOR_HEX)
+            header_label_fill = PatternFill('solid', fg_color=self.BLUE_COLOR_HEX)
 
             cell = ws.cell(row=current_row, column=1)
             cell.value = header_row['label']
@@ -312,9 +321,7 @@ class ReportCCSP(Base):
                     if c_idx == 5:
                         # Override the value of the extended price (number of nodes X unitp rice)
                         # Multiply columns 3x4 instead of inserting the price per org
-                        cell_m_1 = ws.cell(row=r_idx, column=3).column_letter + str(r_idx)
-                        cell_m_2 = ws.cell(row=r_idx, column=4).column_letter + str(r_idx)
-                        cell.value = f'={cell_m_1}*{cell_m_2}'
+                        cell.value = Multiply(CellReference(r_idx, 3), CellReference(r_idx, 4))
 
             row_counter += 1
 
@@ -330,8 +337,6 @@ class ReportCCSP(Base):
 
             # Sum value
             cell = ws.cell(row=sum_row, column=5)
-            cell_sum_start = cell.column_letter + str(first_row)
-            cell_sum_end = cell.column_letter + str(last_row)
-            cell.value = f'=SUM({cell_sum_start}:{cell_sum_end})'
+            cell.value = Sum(CellReference(first_row, 5), CellReference(last_row, 5))
 
         return current_row + row_counter + 1  # include the sum row after

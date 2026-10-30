@@ -12,7 +12,7 @@ Also see below for [dev setup](#developer-setup), and other [docs](#documentatio
 A `metrics-utility` CLI tool for collecting and reporting metrics from Controller, allowing users to:
 
 - Collect Controller usage data from the database, settings, and prometheus
-- Analyze the data and generate `.xlsx` reports
+- Analyze the data and generate `.xlsx` or `.ods` reports
 - Support multiple storage adapters for data persistence (local directory, S3)
 - Push metrics data to `console.redhat.com`
 
@@ -25,7 +25,7 @@ The billing workflow provides two primary commands:
     - saves tarballs in specified storage
     - optionally sends to console
   - `build_report`
-    - builds a `.xlsx` report
+    - builds an `.xlsx` report by default, or an `.ods` report with `--format=ods`
       - 3 report types - `CCSP`, `CCSPv2`, `RENEWAL_GUIDANCE`
       - the ccsp* reports use the collected tarballs as the source
       - the renewal* report reads from controller db
@@ -49,7 +49,8 @@ ls out/data/`date +%Y/%m/%d`/ # data/<year>/<month>/<day>/<uuid>-<since>-<until>
 export METRICS_UTILITY_REPORT_TYPE="CCSPv2"
 
 metrics-utility build_report --month=`date +%Y-%m` # year-month
-ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xlsx
+metrics-utility build_report --month=`date +%Y-%m` --format=ods
+ls out/reports/`date +%Y/%m`/ # reports/<year>/<month>/<type>-<year>-<month>.xlsx and .ods
 ```
 
 See [docs/cli.md](./docs/cli.md) and [docs/old-readme.md](./docs/old-readme.md) for details on the usage,  
