@@ -136,6 +136,61 @@ def _missing(value):
     return bool(result)
 
 
+class _FormulaValues:
+    """Calculate supported formulas from a sheet without modifying it."""
+
+    def __init__(self, sheet):
+        self.sheet = sheet
+        self.cache = {}
+        self.active = set()
+
+    def get(self, row, column):
+        position = (row, column)
+        cell = self.sheet.cells.get(position)
+        if cell is None or _missing(cell.value):
+            return 0.0
+        if not isinstance(cell.value, (Multiply, Sum)):
+            return self._value(cell.value)
+        if position in self.cache:
+            return self.cache[position]
+        if position in self.active:
+            return None
+        self.active.add(position)
+        try:
+            result = self._value(cell.value)
+            self.cache[position] = result
+            return result
+        finally:
+            self.active.remove(position)
+
+    def _value(self, value):
+        if isinstance(value, Multiply):
+            left = self.get(value.left.row, value.left.column)
+            right = self.get(value.right.row, value.right.column)
+            return self._finite(left * right) if left is not None and right is not None else None
+        if isinstance(value, Sum):
+            return self._sum(value)
+        if isinstance(value, (Real, Decimal)) and not isinstance(value, (bool, np.bool_)):
+            return self._finite(float(value))
+        return None
+
+    @staticmethod
+    def _finite(value):
+        return value if math.isfinite(value) else None
+
+    def _sum(self, value):
+        first_row, last_row = sorted((value.start.row, value.end.row))
+        first_col, last_col = sorted((value.start.column, value.end.column))
+        total = 0.0
+        for row in range(first_row, last_row + 1):
+            for column in range(first_col, last_col + 1):
+                number = self.get(row, column)
+                if number is None:
+                    return None
+                total += number
+        return self._finite(total)
+
+
 def _duration(value):
     if isinstance(value, pd.Timedelta):
         nanoseconds = value.value
@@ -173,7 +228,7 @@ def _value_attributes(value):
     raise TypeError(f'Unsupported report value: {type(value).__name__}')
 
 
-def _cell(document, source, cache, span=None):
+def _cell(document, source, cache, formula_values, span=None):
     value = source.value
     if source.number_format and source.number_format != '$#,##0.00':
         raise ValueError(f'Unsupported report number format: {source.number_format}')
@@ -187,6 +242,10 @@ def _cell(document, source, cache, span=None):
             attrs['numberrowsspanned'] = rows
     if not _missing(value):
         value_attrs, value_style = _value_attributes(value)
+        if isinstance(value, (Multiply, Sum)):
+            result = formula_values.get(source.row, source.column)
+            if result is not None:
+                value_attrs['value'] = str(result)
         attrs.update(value_attrs)
         if value_style:
             number_style = value_style
@@ -246,16 +305,16 @@ def _row(document, sheet, sheet_index, row):
     return TableRow(**attrs)
 
 
-def _add_cells(document, target, sheet, row, columns, cache, anchors, covered):
+def _add_cells(document, target, sheet, row, columns, cache, anchors, covered, formula_values):
     for column in range(1, columns + 1):
         pos = (row, column)
         if pos in covered:
             target.addElement(CoveredTableCell())
         elif pos in sheet.cells:
-            target.addElement(_cell(document, sheet.cells[pos], cache, anchors.get(pos)))
+            target.addElement(_cell(document, sheet.cells[pos], cache, formula_values, anchors.get(pos)))
         elif pos in anchors:
             # A merged region may have an empty top-left cell.
-            target.addElement(_cell(document, Cell(row, column), cache, anchors[pos]))
+            target.addElement(_cell(document, Cell(row, column), cache, formula_values, anchors[pos]))
         else:
             target.addElement(TableCell())
 
@@ -272,9 +331,10 @@ def render(definition):
         columns = max([column for _, column in sheet.cells] + list(sheet.column_dimensions) + [merge[3] for merge in sheet.merges] + [0])
         _add_columns(document, table, sheet, sheet_index, columns)
         anchors, covered = _merged_cells(sheet)
+        formula_values = _FormulaValues(sheet)
         for row in range(1, rows + 1):
             target = _row(document, sheet, sheet_index, row)
-            _add_cells(document, target, sheet, row, columns, cache, anchors, covered)
+            _add_cells(document, target, sheet, row, columns, cache, anchors, covered, formula_values)
             table.addElement(target)
         document.spreadsheet.addElement(table)
     return Spreadsheet(document)

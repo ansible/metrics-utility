@@ -132,6 +132,48 @@ def test_ods_rejects_report_without_sheets():
         render_ods(definition)
 
 
+def test_ods_formula_values_are_cached_and_readable(tmp_path):
+    path = tmp_path / 'report.ods'
+    render_ods(_definition()).save(path)
+
+    with ZipFile(path) as archive:
+        document = ElementTree.fromstring(archive.read('content.xml'))
+    cells = document.findall('.//table:table-cell', NS)
+    formula_cells = {cell.attrib[f'{{{TABLE}}}formula']: cell for cell in cells if f'{{{TABLE}}}formula' in cell.attrib}
+    assert float(formula_cells['of:=[.A2]*[.B2]'].attrib[f'{{{OFFICE}}}value']) == 37.5
+    assert float(formula_cells['of:=SUM([.C2:.C2])'].attrib[f'{{{OFFICE}}}value']) == 37.5
+    values = pd.read_excel(path, sheet_name='Usage', header=None)
+    assert values.iloc[1, 2] == 37.5
+    assert values.iloc[2, 2] == 37.5
+
+
+def test_ods_formula_cache_handles_empty_cells_and_unavailable_results(tmp_path):
+    definition = Workbook()
+    sheet = definition.active
+    sheet.cell(1, 1).value = Sum(CellReference(2, 3), CellReference(4, 3))
+    sheet.cell(2, 1).value = 3
+    sheet.cell(2, 2).value = 12.5
+    sheet.cell(2, 3).value = Multiply(CellReference(2, 1), CellReference(2, 2))
+    sheet.cell(3, 3).value = Multiply(CellReference(3, 1), CellReference(3, 2))
+    sheet.cell(4, 3).value = -2
+    sheet.cell(5, 1).value = 'not a number'
+    sheet.cell(5, 3).value = Multiply(CellReference(5, 1), CellReference(2, 1))
+    sheet.cell(6, 3).value = Sum(CellReference(5, 3), CellReference(5, 3))
+    sheet.cell(7, 3).value = Multiply(CellReference(7, 3), CellReference(2, 1))
+    path = tmp_path / 'report.ods'
+    render_ods(definition).save(path)
+
+    with ZipFile(path) as archive:
+        document = ElementTree.fromstring(archive.read('content.xml'))
+    cells = document.findall('.//table:table-cell', NS)
+    formulas = {cell.attrib[f'{{{TABLE}}}formula']: cell.attrib for cell in cells if f'{{{TABLE}}}formula' in cell.attrib}
+    assert float(formulas['of:=SUM([.C2:.C4])'][f'{{{OFFICE}}}value']) == 35.5
+    assert float(formulas['of:=[.A3]*[.B3]'][f'{{{OFFICE}}}value']) == 0
+    assert f'{{{OFFICE}}}value' not in formulas['of:=[.A5]*[.A2]']
+    assert f'{{{OFFICE}}}value' not in formulas['of:=SUM([.C5:.C5])']
+    assert f'{{{OFFICE}}}value' not in formulas['of:=[.C7]*[.A2]']
+
+
 @pytest.mark.parametrize(
     ('value', 'expected'),
     [
@@ -227,6 +269,28 @@ def test_build_report_writes_xlsx_and_ods_to_separate_paths(tmp_path, report_typ
     run_build_int(env, {'month': '2024-04', 'format': 'ods', 'force': True})
     with ZipFile(ods) as archive:
         assert archive.read('mimetype') == b'application/vnd.oasis.opendocument.spreadsheet'
+
+
+@pytest.mark.parametrize('report_type', ['CCSP', 'CCSPv2'])
+def test_ccsp_ods_formula_results_are_readable_with_pandas(tmp_path, report_type):
+    root = Path(__file__).resolve().parents[2]
+    (tmp_path / 'data').symlink_to(root / 'metrics_utility/test/test_data/data', target_is_directory=True)
+    snapshot = root / f'metrics_utility/test/snapshot_tests/CCSP/data/{report_type}/snapshot_def_2024-04.json'
+    env = json.loads(snapshot.read_text())['env_vars']
+    env['METRICS_UTILITY_SHIP_PATH'] = str(tmp_path)
+    env['METRICS_UTILITY_PRICE_PER_NODE'] = '12.5'
+    run_build_int(env, {'month': '2024-04', 'format': 'ods'})
+
+    path = tmp_path / f'reports/2024/04/{report_type}-2024-04.ods'
+    values = pd.read_excel(path, sheet_name='Usage Reporting', header=None)
+    if report_type == 'CCSP':
+        assert values.iloc[17, 4] == 3212.5
+        assert values.iloc[18, 4] == 12.5
+        assert values.iloc[19, 4] == 3225
+    else:
+        assert values.iloc[6, 9] == 3225
+        assert values.iloc[1, 9] == 3225
+        assert values.iloc[7, 9] == 0
 
 
 def test_ccspv2_ods_includes_optional_sheets_and_status_colors(tmp_path):

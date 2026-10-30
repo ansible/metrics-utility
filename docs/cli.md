@@ -81,7 +81,7 @@ uv run ./manage.py build_report --month=2024-04 --format=ods
 ls metrics_utility/test/test_data/reports/2024/04/
 ```
 
-The output extension matches the selected format. Existing-file checks and `--force` apply to each format separately, for directory and S3 destinations. Open ODS reports in a spreadsheet application to calculate their formulas.
+The output extension matches the selected format. Existing-file checks and `--force` apply to each format separately, for directory and S3 destinations. ODS reports include cached results for the report formulas; use a spreadsheet application to recalculate them after editing inputs.
 
 
 #### Example RENEWAL\_GUIDANCE run
