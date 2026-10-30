@@ -64,13 +64,14 @@ class StorageSegment:
         if not self.write_key:
             logger.info('StorageSegment: write_key not set. Analytics will be disabled.')
 
-    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size):
+    def _build_properties(self, artifact_name, data, chunk_number, total_chunks, chunk_size, version='v1'):
         """Build the Segment properties object for one artifact chunk."""
         data = self._serialize_value(data)
         return {
             'artifact_name': artifact_name,
             'data': data,
             'upload_timestamp': datetime.datetime.now(tz=datetime.UTC).isoformat(),
+            'version': version,
             'chunk_info': {
                 'chunk_number': chunk_number,
                 'total_chunks': total_chunks,
@@ -130,6 +131,7 @@ class StorageSegment:
         chunk = self._serialize_value(chunk)
         chunk_size = self._calculate_size(chunk)
         timestamp = self._canonicalize_timestamp(segment_meta['timestamp'])
+        version = segment_meta.get('version') or 'v1'
         base_message_id = segment_meta.get('message_id') or f'{artifact_name}:{event_name}:{anonymous_id}:{timestamp}'
         message_id = hashlib.sha256(f'{base_message_id}_{chunk_number}'.encode('utf-8', errors='replace')).hexdigest()
 
@@ -141,7 +143,7 @@ class StorageSegment:
             'timestamp': timestamp,
             'context': self._serialize_value(segment_meta.get('context', {})),
             'integrations': self._serialize_value(segment_meta.get('integrations', {})),
-            'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size),
+            'properties': self._build_properties(artifact_name, chunk, chunk_number, total_chunks, chunk_size, version),
         }
         user_id = segment_meta.get('user_id') or self.user_id
         if user_id and user_id != 'unknown':
@@ -367,7 +369,9 @@ class StorageSegment:
             event_name: Name of the event to track
                        (defaults to 'Metrics Artifact Upload')
             segment_meta: Optional metadata. Provide a stable ``message_id``
-                          for retry-safe sends.
+                          for retry-safe sends. The ``version`` value identifies
+                          the event schema in Segment properties and defaults
+                          to ``'v1'`` when omitted.
             anonymous_id: Optional anonymized ID to reuse across related sends.
                           It controls anonymous identity correlation independently
                           of Segment's message deduplication.
