@@ -29,7 +29,10 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6
         with:
-          python-version-file: "pyproject.toml"
+          # Temporary override of python-version-file: "pyproject.toml":
+          # hiredis==3.2.1 is not compatible with Python 3.15 yet.
+          # Remove this override when AWX uses a compatible hiredis release.
+          python-version: "3.14"
 
       - name: "Set up postgresql"
         run: |
