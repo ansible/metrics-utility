@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   publish-to-pypi:
+    if: github.repository_owner == 'ansible'
     runs-on: ubuntu-latest
     
     steps:

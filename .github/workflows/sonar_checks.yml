@@ -15,8 +15,8 @@ permissions:
 jobs:
   sonarcloud:
     name: SonarCloud Static Scans (PR)
+    if: github.repository_owner == 'ansible' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'
 
     steps:
       - name: Checkout Code

@@ -8,6 +8,7 @@ on:
 
 jobs:
   extract-schema:
+    if: github.repository_owner == 'ansible'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.diff.outputs.changed }}
@@ -156,7 +157,7 @@ jobs:
 
   push-branch:
     needs: extract-schema
-    if: needs.extract-schema.outputs.changed == 'true'
+    if: github.repository_owner == 'ansible' && needs.extract-schema.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
