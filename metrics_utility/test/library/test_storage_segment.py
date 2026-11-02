@@ -99,6 +99,41 @@ class TestStorageSegmentAvailable:
         assert event['properties']['artifact_name'] == 'test_artifact'
         assert event['properties']['chunk_info']['chunk_number'] == 1
         assert event['properties']['chunk_info']['chunk_size'] == len(storage_segment._json_bytes(event['properties']['data']))
+        assert event['properties']['version'] == 'v1'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_uses_explicit_version_in_properties(self, mock_post):
+        """Use an explicitly supplied schema version in Segment properties."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'first': {'value': 'one'}, 'second': {'value': 'two'}},
+            event_name='Test Event',
+            segment_meta={'version': 'v2'},
+        )
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        assert len(payload['batch']) == 2
+        for event in payload['batch']:
+            assert event['properties']['version'] == 'v2'
+            assert 'version' not in event
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_falsy_version_falls_back_to_default(self, mock_post):
+        """Treat a falsy segment_meta version as omitted."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(
+            artifact_name='test_artifact',
+            dict={'first': {'value': 'one'}},
+            segment_meta={'version': None},
+        )
+
+        payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
+        assert payload['batch'][0]['properties']['version'] == 'v1'
 
     @patch('metrics_utility.library.storage.segment.requests.post')
     def test_put_accepts_anonymous_id(self, mock_post):
