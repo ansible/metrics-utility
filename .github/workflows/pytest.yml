@@ -11,6 +11,8 @@ permissions:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    env:
+      HAS_SONAR_TOKEN: ${{ secrets.CICD_ORG_SONAR_TOKEN_CICD_BOT != '' }}
     steps:
       - name: "Checkout metrics-utility"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -116,14 +118,14 @@ jobs:
           fail_ci_if_error: false
 
       - name: "Upload code coverage report"
-        if: ${{ github.base_ref }}
+        if: github.base_ref && env.HAS_SONAR_TOKEN == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-report
           path: coverage.xml
 
       - name: "Save off PR number and analysed commit"
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && env.HAS_SONAR_TOKEN == 'true'
         # HEAD here is the commit coverage.xml was generated against (on a
         # pull_request event actions/checkout checks out the fake merge commit).
         # sonar_checks.yml must analyse this exact commit, otherwise coverage
@@ -133,7 +135,7 @@ jobs:
           git rev-parse HEAD > coverage_sha.txt
 
       - name: "Upload PR number and analysed commit"
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && env.HAS_SONAR_TOKEN == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: pr_number
