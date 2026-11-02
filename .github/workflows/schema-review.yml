@@ -8,6 +8,7 @@ on:
 
 jobs:
   request-review:
+    if: github.repository_owner == 'ansible' || startsWith(github.event.pull_request.base.ref, 'stable-2.')
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

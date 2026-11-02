@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   jira-pr-link:
+    if: github.repository_owner == 'ansible' || startsWith(github.event.pull_request.base.ref, 'stable-2.')
     runs-on: ubuntu-latest
 
     steps:
