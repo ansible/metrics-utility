@@ -4,6 +4,30 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 
+# Columns where the number of unique values is tiny compared to row count.
+# Converting them from object (one Python str per row) to categorical
+# collapses the storage to a code array + a small lookup table.
+_CATEGORICAL_COLUMNS = frozenset(
+    [
+        'install_uuid',
+        'organization_name',
+        'job_template_name',
+        'module_name',
+        'collection_name',
+        'role_name',
+    ]
+)
+
+
+def _optimize_dtypes(df):
+    """Convert known low-cardinality string columns to categorical in-place."""
+    if df is None or df.empty:
+        return
+    for col in _CATEGORICAL_COLUMNS:
+        if col in df.columns and df[col].dtype.kind in ('O', 'U'):
+            df[col] = df[col].astype('category')
+
+
 class _LazyDataFrameDict(dict):
     """Dict that builds DataFrames on first ``d[key]`` access.
 
@@ -30,6 +54,7 @@ class _LazyDataFrameDict(dict):
             if key not in self._engines:
                 raise
             df = self._engines[key].build_dataframe()
+            _optimize_dtypes(df)
             super().__setitem__(key, df)
             return df
 
@@ -103,7 +128,13 @@ class DedupCCSP:
         stay lazy and are only built when the report builder accesses them.
         """
         result = _LazyDataFrameDict(self.dataframes)
-        result['job_host_summary'] = self.dataframes['job_host_summary'].build_dataframe()
+        jhs = self.dataframes['job_host_summary'].build_dataframe()
+        _optimize_dtypes(jhs)
+        # host_names_before_dedup is always None in non-experimental mode
+        # and is never displayed in the report.  Dropping it avoids a set
+        # object per row (~216 bytes each) created by the groupby.
+        jhs.drop(columns=['host_names_before_dedup'], inplace=True, errors='ignore')
+        result['job_host_summary'] = jhs
         return result
 
     def _run_experimental(self):
@@ -112,7 +143,9 @@ class DedupCCSP:
 
         for name in ['main_host', 'job_host_summary', 'main_jobevent']:
             if name in self.dataframes:
-                result[name] = self.dataframes[name].build_dataframe()
+                df = self.dataframes[name].build_dataframe()
+                _optimize_dtypes(df)
+                result[name] = df
 
         dedup_info = result.get('main_host')
         if dedup_info is None or dedup_info.empty:
