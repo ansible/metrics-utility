@@ -2,6 +2,7 @@ from datetime import date
 from unittest.mock import MagicMock
 
 import pandas as pd
+import pytest
 
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_jobhost_summary_usage import (
     DataframeJobhostSummaryUsage,
@@ -111,3 +112,46 @@ def test_indirect_hosts_are_grouped_by_hostname_and_organization():
     assert direct.iloc[0]['host_name'] == 'direct-host'
     assert direct.iloc[0]['host_runs'] == 2
     assert direct.iloc[0]['task_runs'] == 2
+
+
+@pytest.mark.parametrize('deduplicator', [None, 'ccsp-experimental'], ids=['standard', 'experimental'])
+def test_host_names_before_dedup_across_batches(deduplicator):
+    """Aggregation retains None in standard mode and hostnames in experimental mode."""
+    row = {
+        'created': '2026-09-23T12:00:00+00:00',
+        'job_created': '2026-09-23T11:59:00+00:00',
+        'host_name': 'node-a',
+        'dark': 0,
+        'failures': 0,
+        'ok': 1,
+        'skipped': 0,
+        'ignored': 0,
+        'rescued': 0,
+        'job_remote_id': 1,
+        'job_template_name': 'template',
+        'organization_name': 'Engineering',
+    }
+    extractor = MagicMock()
+    extractor.iter_batches.return_value = iter(
+        [
+            {
+                'job_host_summary': pd.DataFrame(rows),
+                'main_indirectmanagednodeaudit': pd.DataFrame(),
+                'config': {'install_uuid': 'install-uuid'},
+            }
+            for rows in [
+                [row, {**row, 'host_name': 'node-b'}],
+                [row, {**row, 'host_name': 'node-c'}],
+            ]
+        ]
+    )
+    engine = DataframeJobhostSummaryUsage(
+        extractor=extractor,
+        month=date(2026, 9, 1),
+        extra_params={'since_date': date(2026, 9, 23), 'until_date': date(2026, 9, 23), 'deduplicator': deduplicator},
+    )
+
+    result = engine.build_dataframe().set_index('host_name')
+
+    assert result['host_runs'].to_dict() == {'node-a': 2, 'node-b': 1, 'node-c': 1}
+    assert result['host_names_before_dedup'].to_dict() == {host: {host if deduplicator else None} for host in ['node-a', 'node-b', 'node-c']}

@@ -1,4 +1,4 @@
-"""Exercise single-sheet builds through real tarball extraction, not prebuilt dataframes."""
+"""Exercise report builds through real tarball extraction, not prebuilt dataframes."""
 
 import csv
 import io
@@ -7,8 +7,11 @@ import tarfile
 
 from contextlib import closing
 
+import pytest
+
 from openpyxl import load_workbook
 
+from metrics_utility.automation_controller_billing.dedup import ccsp
 from metrics_utility.test.util import run_build_int, utcdt
 
 
@@ -121,3 +124,106 @@ def test_infrastructure_summary_only_loads_audits_and_renders_node_counts(tmp_pa
             (None, 'Public', None, None, None),
             (None, None, 'VM', 2, 3),
         ]
+
+
+@pytest.mark.parametrize('deduplicator', [None, 'ccsp-experimental'], ids=['standard', 'experimental'])
+@pytest.mark.parametrize('organization_filter', [None, 'Org A'], ids=['all-organizations', 'filtered'])
+def test_categorical_optimization_preserves_report_values(tmp_path, monkeypatch, deduplicator, organization_filter):
+    """Compare real report output with and without categorical conversion."""
+    summary = {
+        'host_name': 'node-a',
+        'ansible_host_variable': None,
+        'organization_name': 'Org A',
+        'job_template_name': 'Template A',
+        'job_remote_id': 100,
+        'created': '2025-06-01T10:01:00Z',
+        'job_created': '2025-06-01T10:00:00Z',
+        'dark': 0,
+        'failures': 0,
+        'ok': 2,
+        'skipped': 0,
+        'ignored': 0,
+        'rescued': 0,
+    }
+    _write_collection(
+        tmp_path,
+        'job_host_summary',
+        [
+            summary,
+            {**summary, 'host_name': 'node-b', 'job_template_name': None, 'job_remote_id': 101, 'ok': 3},
+            {**summary, 'host_name': 'node-b', 'organization_name': 'Org B', 'job_template_name': 'Template B', 'job_remote_id': 102, 'ok': 1},
+        ],
+    )
+    host = {
+        'host_name': 'node-a',
+        'organization_name': 'Org A',
+        'inventory_name': 'Inventory',
+        'last_automation': '2025-06-01T10:01:00Z',
+        'canonical_facts': json.dumps({'ansible_product_serial': 'shared', 'ansible_machine_id': 'machine'}),
+        'facts': '{}',
+    }
+    _write_collection(tmp_path, 'main_host', [host, {**host, 'host_name': 'node-b', 'organization_name': 'Org B'}])
+    event = {
+        'host_name': 'node-a',
+        'job_remote_id': 100,
+        'task_action': 'ping',
+        'resolved_action': 'ansible.builtin.ping',
+        'role': None,
+        'resolved_role': None,
+        'duration': 1.0,
+    }
+    _write_collection(
+        tmp_path,
+        'main_jobevent',
+        [
+            event,
+            {**event, 'host_name': 'node-b', 'job_remote_id': 101},
+            {**event, 'host_name': 'node-b', 'job_remote_id': 102, 'resolved_action': 'ansible.builtin.command'},
+        ],
+    )
+
+    env = {
+        'METRICS_UTILITY_SHIP_TARGET': 'directory',
+        'METRICS_UTILITY_SHIP_PATH': str(tmp_path),
+        'METRICS_UTILITY_REPORT_TYPE': 'CCSPv2',
+        'METRICS_UTILITY_OPTIONAL_CCSP_REPORT_SHEETS': 'jobs,managed_nodes,usage_by_organizations,usage_by_modules',
+        'METRICS_UTILITY_DEDUPLICATOR': deduplicator,
+        'METRICS_UTILITY_ORGANIZATION_FILTER': organization_filter,
+    }
+    options = {'since': '2025-06-01', 'until': '2025-06-01', 'force': True}
+    report = tmp_path / 'reports' / '2025' / '06' / 'CCSPv2-2025-06-01--2025-06-01.xlsx'
+
+    def build_values():
+        run_build_int(env, options)
+        with closing(load_workbook(report)) as workbook:
+            return {sheet.title: list(sheet.values) for sheet in workbook}
+
+    optimized_columns = set()
+    optimize = ccsp._optimize_dtypes
+
+    def record_optimization(df):
+        optimize(df)
+        if df is not None:
+            optimized_columns.update(name for name, dtype in df.dtypes.items() if dtype.name == 'category')
+
+    with monkeypatch.context() as patch:
+        patch.setattr(ccsp, '_optimize_dtypes', record_optimization)
+        actual = build_values()
+    assert {'organization_name', 'job_template_name', 'module_name'} <= optimized_columns
+
+    with monkeypatch.context() as patch:
+        patch.setattr(ccsp, '_optimize_dtypes', lambda df: None)
+        unoptimized = build_values()
+    assert actual == unoptimized
+
+    jobs = actual['Jobs']
+    assert [(row[0], row[1], row[2], row[5]) for row in jobs[1:]] == (
+        [('Template A', 'Org A', 1, 2), (None, 'Org A', 1, 3)] + ([] if organization_filter else [('Template B', 'Org B', 1, 1)])
+    )
+    managed = actual['Managed nodes']
+    expected_hosts = ['node-a'] if deduplicator else ['node-a', 'node-b']
+    assert [row[0] for row in managed[1:]] == expected_hosts
+
+    modules = {row[0]: row[1:] for row in actual['Usage by modules'][1:]}
+    assert modules['ansible.builtin.ping'] == (1 if deduplicator else 2, 2, 2, 2)
+    assert modules['ansible.builtin.command'] == (1, 1, 1, 1)

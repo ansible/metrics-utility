@@ -4,9 +4,8 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 
-# Columns where the number of unique values is tiny compared to row count.
-# Converting them from object (one Python str per row) to categorical
-# collapses the storage to a code array + a small lookup table.
+# Dimensions that often repeat across CCSP rollup rows. This fixed list does
+# not check cardinality, so conversion can cost memory for high-cardinality data.
 _CATEGORICAL_COLUMNS = frozenset(
     [
         'install_uuid',
@@ -20,12 +19,19 @@ _CATEGORICAL_COLUMNS = frozenset(
 
 
 def _optimize_dtypes(df):
-    """Convert known low-cardinality string columns to categorical in-place."""
+    """Convert selected string-like columns to categorical in-place."""
     if df is None or df.empty:
         return
     for col in _CATEGORICAL_COLUMNS:
         if col in df.columns and df[col].dtype.kind in ('O', 'U'):
             df[col] = df[col].astype('category')
+
+
+def _build_dataframe(engine):
+    """Build and optimize a dataframe, whether it is loaded eagerly or lazily."""
+    df = engine.build_dataframe()
+    _optimize_dtypes(df)
+    return df
 
 
 class _LazyDataFrameDict(dict):
@@ -53,8 +59,7 @@ class _LazyDataFrameDict(dict):
         except KeyError:
             if key not in self._engines:
                 raise
-            df = self._engines[key].build_dataframe()
-            _optimize_dtypes(df)
+            df = _build_dataframe(self._engines[key])
             super().__setitem__(key, df)
             return df
 
@@ -86,7 +91,8 @@ class _LazyDataFrameDict(dict):
 class DedupCCSP:
     """CCSP host deduplication engine.
 
-    In standard mode, returns the built dataframes unchanged (no deduplication).
+    In standard mode, optimizes the built dataframes without deduplicating hosts.
+    The unused ``host_names_before_dedup`` column is removed from job summaries.
     In experimental mode, uses hardware serial numbers (``ansible_product_serial``
     combined with ``ansible_machine_id``) to detect duplicate host records and
     map them to a single canonical hostname.
@@ -128,11 +134,9 @@ class DedupCCSP:
         stay lazy and are only built when the report builder accesses them.
         """
         result = _LazyDataFrameDict(self.dataframes)
-        jhs = self.dataframes['job_host_summary'].build_dataframe()
-        _optimize_dtypes(jhs)
-        # host_names_before_dedup is always None in non-experimental mode
-        # and is never displayed in the report.  Dropping it avoids a set
-        # object per row (~216 bytes each) created by the groupby.
+        jhs = _build_dataframe(self.dataframes['job_host_summary'])
+        # Standard-mode aggregation creates sets containing None for this
+        # column, which reports only display when experimental dedup is enabled.
         jhs.drop(columns=['host_names_before_dedup'], inplace=True, errors='ignore')
         result['job_host_summary'] = jhs
         return result
@@ -143,9 +147,7 @@ class DedupCCSP:
 
         for name in ['main_host', 'job_host_summary', 'main_jobevent']:
             if name in self.dataframes:
-                df = self.dataframes[name].build_dataframe()
-                _optimize_dtypes(df)
-                result[name] = df
+                result[name] = _build_dataframe(self.dataframes[name])
 
         dedup_info = result.get('main_host')
         if dedup_info is None or dedup_info.empty:
@@ -156,6 +158,8 @@ class DedupCCSP:
         if 'serials' in dedup_info_copy.columns:
             del dedup_info_copy['serials']
 
+        # Regrouping may convert categories back to ordinary dtypes, so the
+        # optimizations above do not guarantee categorical results in this mode.
         for name in ['job_host_summary', 'main_jobevent', 'main_host']:
             df = result.get(name)
             if df is not None and not df.empty:

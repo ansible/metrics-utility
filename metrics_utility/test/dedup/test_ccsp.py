@@ -483,6 +483,16 @@ class TestOptimizeDtypes:
         _optimize_dtypes(None)
         _optimize_dtypes(pd.DataFrame())
 
+    def test_preserves_values_and_missing_entries(self):
+        df = pd.DataFrame({'job_template_name': pd.Series(['template', None, 'template'], dtype=object)})
+
+        _optimize_dtypes(df)
+
+        assert df['job_template_name'].dtype.name == 'category'
+        assert df['job_template_name'].iloc[0] == 'template'
+        assert df['job_template_name'].iloc[2] == 'template'
+        assert df['job_template_name'].isna().tolist() == [False, True, False]
+
 
 # ---------------------------------------------------------------------------
 # DedupCCSP standard mode (lazy loading)
@@ -592,7 +602,7 @@ class TestDedupCCSPStandardLazy:
             jhs_df=pd.DataFrame(
                 {
                     'x': [1],
-                    'host_names_before_dedup': [None],
+                    'host_names_before_dedup': [{None}],
                 }
             ),
         )
