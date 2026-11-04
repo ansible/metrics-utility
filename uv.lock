@@ -778,7 +778,7 @@ requires-dist = [
     { name = "psycopg", specifier = "~=3.3" },
     { name = "requests", specifier = "~=2.32" },
     { name = "setuptools", specifier = ">=80.9.0" },
-    { name = "sqlparse", specifier = "==0.6.1" },
+    { name = "sqlparse", specifier = ">=0.6.1" },
 ]
 
 [package.metadata.requires-dev]
