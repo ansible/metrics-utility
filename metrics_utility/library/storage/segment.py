@@ -50,7 +50,12 @@ class StorageSegment:
                 ``'host'`` (str, optional base URL override),
                 ``'gzip'`` (bool, default True), and ``'allow_insecure_host'``
                 (bool, test-only opt-in for internal HTTP hosts).
+                ``'headers'`` (dict, optional) supplies extra HTTP headers
+                (e.g. ``X-Request-ID`` / ``traceparent``) forwarded with each
+                Segment upload; the standard ``Content-Type`` and
+                ``Content-Encoding`` headers always take precedence.
         """
+        self.extra_headers = {str(key): str(value) for key, value in dict(settings.get('headers') or {}).items()}
         self.debug = settings.get('debug', False)
         self.user_id = settings.get('user_id', 'unknown')
         self.write_key = settings.get('write_key')
@@ -303,7 +308,9 @@ class StorageSegment:
         payload = {'batch': batch, 'sentAt': sent_at}
         body = self._json_bytes(payload)
         wire_body = gzip.compress(body) if self.gzip else body
-        headers = {'Content-Type': 'application/json'}
+        reserved_headers = {'Content-Type', 'Content-Encoding'}
+        headers = {key: value for key, value in self.extra_headers.items() if key not in reserved_headers}
+        headers['Content-Type'] = 'application/json'
         if self.gzip:
             headers['Content-Encoding'] = 'gzip'
 
