@@ -18,8 +18,7 @@ dependencies = [
     "pandas~=3.0",
     "psycopg~=3.3",
     "requests~=2.32",
-    "setuptools>=80.9.0",
-    "sqlparse==0.6.1",
+    "setuptools>=80.9.0"
 ]
 requires-python = ">=3.12"
 readme = "README.md"
