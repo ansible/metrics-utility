@@ -489,3 +489,58 @@ class TestStorageSegmentAvailable:
 
         payload = json.loads(gzip.decompress(mock_post.call_args.kwargs['data']))
         assert payload['batch'][0]['userId'] == 'meta-id'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_forwards_caller_supplied_headers(self, mock_post):
+        """Forward caller-supplied trace headers on the Segment upload."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(
+            write_key='test_write_key',
+            headers={'X-Request-ID': 'req-123', 'traceparent': '00-abc-def-01'},
+        )
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        headers = mock_post.call_args.kwargs['headers']
+        assert headers['X-Request-ID'] == 'req-123'
+        assert headers['traceparent'] == '00-abc-def-01'
+        assert headers['Content-Type'] == 'application/json'
+        assert headers['Content-Encoding'] == 'gzip'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_standard_headers_win_over_caller_supplied(self, mock_post):
+        """Keep the wire-format headers even when the caller overrides them."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(
+            write_key='test_write_key',
+            headers={'Content-Type': 'text/plain', 'Content-Encoding': 'br'},
+        )
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        headers = mock_post.call_args.kwargs['headers']
+        assert headers['Content-Type'] == 'application/json'
+        assert headers['Content-Encoding'] == 'gzip'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_standard_headers_win_over_caller_supplied_without_gzip(self, mock_post):
+        """Drop a caller-supplied Content-Encoding when gzip is disabled."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key', gzip=False, headers={'Content-Encoding': 'br', 'X-Request-ID': 'req-456'})
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        headers = mock_post.call_args.kwargs['headers']
+        assert 'Content-Encoding' not in headers
+        assert headers['Content-Type'] == 'application/json'
+        assert headers['X-Request-ID'] == 'req-456'
+
+    @patch('metrics_utility.library.storage.segment.requests.post')
+    def test_put_without_headers_keeps_standard_headers(self, mock_post):
+        """Send only the standard headers when none are supplied."""
+        mock_post.return_value = Mock(status_code=200, text='')
+        storage_segment = StorageSegment(write_key='test_write_key')
+
+        storage_segment.put(artifact_name='test_artifact', dict={'statistics': {'count': 1}})
+
+        assert mock_post.call_args.kwargs['headers'] == {'Content-Type': 'application/json', 'Content-Encoding': 'gzip'}
