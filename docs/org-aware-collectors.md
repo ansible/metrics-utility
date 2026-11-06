@@ -19,7 +19,10 @@ metadata, and apply organization filtering before calculating pagination/counts.
 rewrite the stored payload.
 
 Controller organization IDs are local integer `main_organization.id` values. Names are strings and
-may change; the collectors below do not provide an organization UUID. `organization_remote_id` is
+may change. Most collectors below do not provide an organization UUID; the dashboard collectors
+(`dashboard.dashboard_jobs` and `controller.unified_jobs_dashboard`) additionally emit
+`organization_ansible_id`, the stable DAB `Resource.ansible_id`, joined from
+`dab_resource_registry_resource` and `null` when the organization is not registered. `organization_remote_id` is
 also the local integer ID, not a separate UUID. Rows with a null org stay unassigned and must not be
 given a default organization.
 
@@ -43,7 +46,7 @@ was written; registry entries control whether data is persisted and public.
 
 | Collector | Org field and payload grain | Registry status |
 |---|---|---|
-| `controller.unified_jobs_dashboard` | `organization_id`, `organization_name`; one row per job | Enabled, hourly |
+| `controller.unified_jobs_dashboard` | `organization_id`, `organization_name`, `organization_ansible_id`; one row per job | Enabled, hourly |
 | `controller.job_host_summary_service` | `organization_remote_id`, `organization_name`; one row per job/host summary | Enabled, hourly |
 | `controller.execution_environments` | `organization_id` only; one row per execution environment | Enabled, snapshot |
 | `controller.main_host` | `organization_remote_id`, `organization_name`; one row per enabled host, attributed through its inventory | Enabled when `SERVICE_FUNCTIONS_AVAILABLE` is true, snapshot |
@@ -58,8 +61,8 @@ record just because the URL names one organization.
 Other existing metrics-utility outputs contain an org field and are also registered analytics
 payloads: `controller.unified_jobs` is the broader unified-job variant, while
 `controller.job_host_summary` is enabled when the service-side PostgreSQL helper functions are
-available. `dashboard.dashboard_jobs` also contains `organization_id`, but belongs to a separate
-dashboard-sync pipeline. The registered analytics variants are preferable as join sources because
+available. `dashboard.dashboard_jobs` also contains `organization_id` and `organization_ansible_id`,
+but belongs to a separate dashboard-sync pipeline. The registered analytics variants are preferable as join sources because
 their persistence and availability are explicit in the service registry.
 
 ## New per-organization aggregate collectors (AAP-95739)
