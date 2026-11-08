@@ -64,7 +64,7 @@ def test_main_indirectmanagednodeaudit_query_columns_and_joins(mock_copy_pandas)
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
 def test_main_indirectmanagednodeaudit_no_date_filter_when_none(mock_copy_pandas):
-    """Test that omitting since/until produces WHERE true (full-table scan)."""
+    """Omitting since/until produces a portable predicate (full-table scan)."""
     mock_db = MagicMock()
     mock_copy_pandas.return_value = pd.DataFrame()
 
@@ -75,7 +75,7 @@ def test_main_indirectmanagednodeaudit_no_date_filter_when_none(mock_copy_pandas
     query = call_args[0][1]
 
     assert 'WHERE' in query
-    assert 'true' in query
+    assert '1=1' in query
 
 
 @patch('metrics_utility.library.collectors.util._copy_table_pandas')
