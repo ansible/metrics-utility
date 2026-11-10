@@ -3,6 +3,8 @@
 ## 0.8.0dev
 
 - remove django-ansible-base dependency
+- remove unused `setuptools` runtime dependency
+- dev: refresh dev dependency floors
 - `dashboard_jobs`: add `organization_name`
 - TODO
 
