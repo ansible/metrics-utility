@@ -232,6 +232,19 @@ class TestCombineJsonValues:
         result = combine_json_values({'a': 'same'}, {'a': 'same'})
         assert result == {'a': {'same'}}
 
+    def test_nested_dict_values_are_hashable(self):
+        """Nested dict facts must not raise TypeError when combined (AAP-101848)."""
+        from metrics_utility.automation_controller_billing.helpers import HashableDict
+
+        result = combine_json_values(
+            {'tags': {'Name': 'test-instance', 'Env': 'prod'}},
+            {'tags': {'Name': 'test-instance', 'Env': 'prod'}},
+        )
+        assert len(result['tags']) == 1
+        tags_value = next(iter(result['tags']))
+        assert isinstance(tags_value, HashableDict)
+        assert tags_value == {'Name': 'test-instance', 'Env': 'prod'}
+
 
 # ---------------------------------------------------------------------------
 # merge_setdicts
