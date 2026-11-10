@@ -17,8 +17,7 @@ dependencies = [
     "openpyxl~=3.1",
     "pandas~=3.0",
     "psycopg~=3.3",
-    "requests~=2.32",
-    "setuptools>=80.9.0"
+    "requests~=2.32"
 ]
 requires-python = ">=3.12"
 readme = "README.md"
@@ -52,13 +51,13 @@ Changelog = "https://github.com/ansible/metrics-utility/blob/devel/CHANGELOG.md"
 [dependency-groups]
 dev = [
     "defusedxml>=0.7.1",
-    "pre-commit>=4.0.1",
-    "pydantic>=2.9",
-    "pyyaml>=6.0",
-    "pytest-cov>=6.0.0",
-    "pytest-mock>=3.14.0",
-    "pytest>=8.3.4",
-    "ruff>=0.16.0",
+    "pre-commit>=4.7.0",
+    "pydantic>=2.14.3",
+    "pyyaml>=6.0.3",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.17.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
     "jsonschema>=4.26.0",
 ]
 
