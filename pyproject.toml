@@ -12,7 +12,6 @@ dependencies = [
     "botocore~=1.35",
     "distro~=1.9",
     "django~=5.2",
-    "kubernetes>=33.1.0",
     "odfpy~=1.4.1",
     "openpyxl~=3.1",
     "pandas~=3.0",
