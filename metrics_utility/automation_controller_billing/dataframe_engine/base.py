@@ -8,6 +8,8 @@ import pandas as pd
 
 from dateutil.relativedelta import relativedelta
 
+from metrics_utility.automation_controller_billing.helpers import make_hashable
+
 
 def granularity_cast(date, granularity):
     """Truncate *date* to the start of its month or year according to *granularity*.
@@ -127,6 +129,9 @@ def merge_setdicts(x):
 def combine_json_values(val1, val2):
     """Combine two value-dicts by building a set of non-null/non-empty values per key.
 
+    Nested dict/list values are wrapped via :func:`make_hashable` so they can be
+    stored as set members (AAP-101848).
+
     Args:
         val1: First dict (values may be scalars or sets).
         val2: Second dict (values may be scalars or sets).
@@ -140,9 +145,9 @@ def combine_json_values(val1, val2):
             for key, value in d.items():
                 if value is not None and value != '':
                     if isinstance(value, set):
-                        merged.setdefault(key, set()).update(value)
+                        merged.setdefault(key, set()).update(make_hashable(v) for v in value)
                     else:
-                        merged.setdefault(key, set()).add(value)
+                        merged.setdefault(key, set()).add(make_hashable(value))
 
     return merged
 

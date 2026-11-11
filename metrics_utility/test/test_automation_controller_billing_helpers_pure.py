@@ -4,7 +4,11 @@ These functions have no database dependency and can be tested in isolation:
 parse_json, parse_json_array, merge_json_sets, merge_arrays.
 """
 
+import json
+
 from metrics_utility.automation_controller_billing.helpers import (
+    HashableDict,
+    make_hashable,
     merge_arrays,
     merge_json_sets,
     parse_json,
@@ -129,6 +133,43 @@ class TestMergeJsonSets:
         values = ['not json', '{"key": "val"}']
         result = merge_json_sets(values)
         assert result == {'key': {'val'}}
+
+    def test_nested_dict_values_are_hashable(self):
+        """Nested dict facts (e.g. tags) must not raise TypeError (AAP-101848)."""
+        values = [
+            '{"tags": {"Name": "test-instance", "Env": "prod"}}',
+            '{"tags": {"Name": "test-instance", "Env": "prod"}}',
+            '{"cpu": "x86"}',
+        ]
+        result = merge_json_sets(values)
+        assert result['cpu'] == {'x86'}
+        assert len(result['tags']) == 1
+        tags_value = next(iter(result['tags']))
+        assert isinstance(tags_value, HashableDict)
+        assert tags_value == {'Name': 'test-instance', 'Env': 'prod'}
+        # Report rendering sorts set members then json.dumps — must stay native objects.
+        assert json.loads(json.dumps(sorted(result['tags']))) == [{'Env': 'prod', 'Name': 'test-instance'}]
+
+    def test_nested_list_values_are_hashable(self):
+        values = [{'ports': [80, 443]}, {'ports': [80, 443]}]
+        result = merge_json_sets(values)
+        assert result == {'ports': {(80, 443)}}
+
+
+# ---------------------------------------------------------------------------
+# make_hashable / HashableDict
+# ---------------------------------------------------------------------------
+
+
+class TestMakeHashable:
+    def test_dict_becomes_hashable_dict(self):
+        value = make_hashable({'a': 1})
+        assert isinstance(value, HashableDict)
+        assert hash(value) == hash(HashableDict({'a': 1}))
+
+    def test_nested_structures_round_trip_json(self):
+        value = make_hashable({'tags': {'Env': 'prod'}, 'ports': [22]})
+        assert json.loads(json.dumps(value)) == {'tags': {'Env': 'prod'}, 'ports': [22]}
 
 
 # ---------------------------------------------------------------------------
