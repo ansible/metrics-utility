@@ -64,13 +64,15 @@ class TestQueriesDashboard:
         assert 'LEFT JOIN main_unifiedjobtemplate ujt ON ujt.id = uj.unified_job_template_id' in result
         assert 'LEFT JOIN auth_user u on u.id = uj.created_by_id' in result
         assert 'LEFT JOIN main_unifiedjobtemplate ujp on ujp.id = mj.project_id' in result
-        assert 'LEFT JOIN main_organization o on o.id = uj.organization_id' in result
+        assert 'LEFT JOIN main_organization ON main_organization.id = uj.organization_id' in result
+        assert 'LEFT JOIN dab_resource_registry_resource dab_resource' in result
         assert 'order by uj.modified' in result
         assert 'uj.id' in result
         assert 'COALESCE(ujt.name, uj.name) as name' in result
         assert 'uj.unified_job_template_id' in result
         assert 'uj.organization_id' in result
-        assert 'o.name as organization_name' in result
+        assert 'main_organization.name AS organization_name' in result
+        assert 'dab_resource.ansible_id AS organization_ansible_id' in result
         assert 'uj.started' in result
         assert 'uj.finished' in result
         assert 'uj.status' in result
@@ -118,8 +120,9 @@ class TestQueriesDashboard:
         assert 'uj.unified_job_template_id' in result
         assert 'uj.status' in result
         assert 'mj.project_id' in result
-        assert 'o.name as organization_name' in result
-        assert 'LEFT JOIN main_organization o on o.id = uj.organization_id' in result
+        assert 'main_organization.name AS organization_name' in result
+        assert 'dab_resource.ansible_id AS organization_ansible_id' in result
+        assert 'LEFT JOIN main_organization ON main_organization.id = uj.organization_id' in result
         # Same base filter
         assert 'uj.launch_type NOT IN (%s, %s)' in result
 
