@@ -1,10 +1,12 @@
 """Collector for unified_jobs extended with dashboard-specific fields."""
 
+import operator
+
 from ..util import DataframeOutput, collector, date_where
 
 
 @collector
-def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeOutput()):
+def unified_jobs_dashboard(*, db=None, since=None, until=None, after_id=None, batch_size=None, output=DataframeOutput()):
     """Collect unified job records with additional fields required by the automation-reports dashboard.
 
     Extends the base ``unified_jobs`` query with project name, launched-by user,
@@ -20,11 +22,35 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeO
         db: Django database connection.
         since: Inclusive start datetime for the ``finished`` filter.
         until: Exclusive end datetime for the ``finished`` filter.
+        after_id: Optional exclusive lower bound on the job ID. Together with
+            *batch_size* it enables cursor-based pagination: pass the largest ID of
+            the previous page to fetch the next one.
+        batch_size: Optional maximum number of rows to return, ordered by job ID.
+            A page with fewer rows than *batch_size* is the last one.
         output: Output adapter (defaults to :class:`~..util.DataframeOutput`).
 
     Returns:
         pandas DataFrame or list of CSV file paths depending on *output*.
+
+    Raises:
+        ValueError: If *batch_size* is not a positive integer, or *after_id* is not an integer.
     """
+    id_where = ''
+    limit = ''
+    if after_id is not None:
+        if isinstance(after_id, bool):
+            raise ValueError(f'after_id must be an integer, got {after_id!r}')
+        try:
+            # operator.index accepts integer-like values (e.g. numpy integers from a DataFrame) and returns an int
+            after_id = operator.index(after_id)
+        except TypeError:
+            raise ValueError(f'after_id must be an integer, got {after_id!r}') from None
+        id_where = f'AND main_unifiedjob.id > {after_id}'
+    if batch_size is not None:
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size <= 0:
+            raise ValueError(f'batch_size must be a positive integer, got {batch_size!r}')
+        limit = f'LIMIT {batch_size}'
+
     query = f"""
         SELECT
             main_unifiedjob.id,
@@ -81,7 +107,9 @@ def unified_jobs_dashboard(*, db=None, since=None, until=None, output=DataframeO
         LEFT JOIN auth_user ON auth_user.id = main_unifiedjob.created_by_id
         WHERE
             {date_where('main_unifiedjob.finished', since, until)}
+            {id_where}
         ORDER BY main_unifiedjob.id ASC
+        {limit}
     """
 
     return output.sql(db, query)
