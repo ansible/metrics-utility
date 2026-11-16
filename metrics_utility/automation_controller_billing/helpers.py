@@ -93,7 +93,12 @@ class HashableDict(dict):
     def __lt__(self, other):
         if not isinstance(other, dict):
             return NotImplemented
-        return sorted(self.items()) < sorted(other.items())
+        try:
+            return sorted(self.items()) < sorted(other.items())
+        except TypeError:
+            # Mixed/nested values under the same key can be incomparable; keep ordering
+            # deterministic for report sorting (AAP-101848 / CodeRabbit follow-up).
+            return json.dumps(self, sort_keys=True) < json.dumps(other, sort_keys=True)
 
 
 def make_hashable(obj):
