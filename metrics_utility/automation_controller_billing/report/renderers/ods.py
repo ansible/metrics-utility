@@ -203,7 +203,7 @@ def _duration(value):
 
 
 def _value_attributes(source, formula_values):
-    """Return the ODF value attributes and any type-specific number style."""
+    """Return typed ODF attributes, emitting formulas only for explicit formula objects."""
     value = source.value
     if isinstance(value, (Multiply, Sum)):
         attrs = {'valuetype': 'float', 'formula': _formula(value)}

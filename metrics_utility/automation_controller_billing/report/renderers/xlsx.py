@@ -1,5 +1,7 @@
 """Render a report definition as an openpyxl workbook."""
 
+import numpy as np
+
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -16,7 +18,21 @@ def _value(value):
         return f'={_reference(value.left)}*{_reference(value.right)}'
     if isinstance(value, Sum):
         return f'=SUM({_reference(value.start)}:{_reference(value.end)})'
+    if isinstance(value, np.bool_):
+        return bool(value)
     return value
+
+
+def _set_value(cell, value):
+    """Preserve native types without inferring formulas or errors from text."""
+    cell.value = _value(value)
+    if isinstance(value, (Multiply, Sum)):
+        return
+    # Inspect the bound value too: openpyxl decodes bytes into strings.
+    if isinstance(cell.value, str):
+        cell.data_type = 's'
+    elif cell.data_type == 'f':
+        raise TypeError(f'Unsupported report formula: {type(value).__name__}')
 
 
 def _border_side(side):
@@ -69,9 +85,7 @@ def render(definition):
         for source in sheet.cells.values():
             cell = ws.cell(source.row, source.column)
             if source.value is not None:
-                cell.value = _value(source.value)
-                if source.force_text:
-                    cell.data_type = 's'
+                _set_value(cell, source.value)
             _apply_styles(cell, source, fonts, fills, borders, alignments)
             if source.number_format is not None:
                 cell.number_format = source.number_format

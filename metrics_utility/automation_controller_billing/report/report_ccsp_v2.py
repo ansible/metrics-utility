@@ -229,7 +229,6 @@ class ReportCCSPv2(Base):
             if ws.title != organization_name:
                 cell = ws.cell(row=1, column=1)
                 cell.value = organization_name
-                cell.force_text = True
                 cell.font = Font(name=self.FONT, size=11, bold=True)
                 data_start_row = 2
             else:
