@@ -91,6 +91,32 @@ class TestConvertCell:
         parsed = json.loads(result)
         assert parsed['key'] == ['a', 'b']
 
+    def test_dict_with_mixed_nested_and_scalar_set_values(self):
+        """Mixed HashableDict + scalar in one set must not raise TypeError (himdel / AAP-101848)."""
+        import json
+
+        from metrics_utility.automation_controller_billing.helpers import HashableDict
+
+        cell = {'tags': {HashableDict({'Name': 'x'}), 'plain'}}
+        result = _report().convert_cell(cell)
+        parsed = json.loads(result)
+        assert isinstance(parsed['tags'], list)
+        assert len(parsed['tags']) == 2
+        assert 'plain' in parsed['tags']
+        assert {'Name': 'x'} in parsed['tags']
+
+    def test_set_with_mixed_nested_and_scalar_values(self):
+        import json
+
+        from metrics_utility.automation_controller_billing.helpers import HashableDict
+
+        result = _report().convert_cell({HashableDict({'Env': 'prod'}), 'scalar'})
+        parsed = json.loads(result)
+        assert isinstance(parsed, list)
+        assert len(parsed) == 2
+        assert 'scalar' in parsed
+        assert {'Env': 'prod'} in parsed
+
     def test_dict_with_scalar_values_serialised(self):
         import json
 

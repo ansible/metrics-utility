@@ -93,6 +93,20 @@ class Base:
             labels.update({k: v for k, v in self.DEDUP_COLUMN_LABELS.items() if k in column_names})
         return labels
 
+    @staticmethod
+    def _sort_cell_values(values):
+        """Sort set/list members for Excel JSON cells, with a JSON fallback for mixed types.
+
+        Ordinary ``sorted()`` is preferred so comparable scalars keep their natural
+        order. When values are incomparable (e.g. a nested dict and a string in the
+        same set after :func:`merge_json_sets`), fall back to ``json.dumps`` keys so
+        report generation does not raise ``TypeError`` (AAP-101848 follow-up).
+        """
+        try:
+            return sorted(values)
+        except TypeError:
+            return sorted(values, key=json.dumps)
+
     def convert_cell(self, cell):
         """Convert a complex cell value (set/list/dict) to a JSON string for Excel.
 
@@ -105,14 +119,14 @@ class Base:
         """
         # If the cell is a dictionary, convert each set value to a sorted list, then dump as a JSON string.
         if isinstance(cell, dict):
-            new_cell = {k: sorted(v) if isinstance(v, set) else v for k, v in cell.items()}
+            new_cell = {k: self._sort_cell_values(v) if isinstance(v, set) else v for k, v in cell.items()}
             return json.dumps(new_cell)
         # If the cell itself is a set, convert it to a sorted list and then to a JSON string.
         elif isinstance(cell, set):
-            return json.dumps(sorted(cell))
+            return json.dumps(self._sort_cell_values(cell))
         # If the cell is a list, convert any set elements inside to sorted lists and dump as a JSON string.
         elif isinstance(cell, list):
-            new_cell = [sorted(item) if isinstance(item, set) else item for item in cell]
+            new_cell = [self._sort_cell_values(item) if isinstance(item, set) else item for item in cell]
             # Sort the list itself if it contains strings
             if new_cell and all(isinstance(item, str) for item in new_cell):
                 new_cell = sorted(new_cell)
