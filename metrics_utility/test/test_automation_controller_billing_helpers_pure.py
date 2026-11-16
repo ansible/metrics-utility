@@ -171,6 +171,15 @@ class TestMakeHashable:
         value = make_hashable({'tags': {'Env': 'prod'}, 'ports': [22]})
         assert json.loads(json.dumps(value)) == {'tags': {'Env': 'prod'}, 'ports': [22]}
 
+    def test_hashable_dict_lt_handles_incomparable_nested_values(self):
+        left = HashableDict({'tags': HashableDict({'Name': 'x'})})
+        right = HashableDict({'tags': 'plain'})
+        # Must not raise TypeError when nested values under the same key differ in type.
+        _ = left < right
+        ordered = sorted([right, left])
+        assert len(ordered) == 2
+        assert left in ordered and right in ordered
+
 
 # ---------------------------------------------------------------------------
 # merge_arrays

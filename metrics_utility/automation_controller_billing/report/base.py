@@ -105,7 +105,7 @@ class Base:
         try:
             return sorted(values)
         except TypeError:
-            return sorted(values, key=json.dumps)
+            return sorted(values, key=lambda v: json.dumps(v, sort_keys=True))
 
     def convert_cell(self, cell):
         """Convert a complex cell value (set/list/dict) to a JSON string for Excel.
