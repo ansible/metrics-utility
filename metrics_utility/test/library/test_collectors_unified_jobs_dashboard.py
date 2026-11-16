@@ -2,7 +2,9 @@ import datetime
 
 from unittest.mock import patch
 
+import numpy as np
 import pandas as pd
+import pytest
 
 from metrics_utility.library.collectors.controller.unified_jobs_dashboard import unified_jobs_dashboard
 
@@ -120,3 +122,35 @@ class TestUnifiedJobsDashboard:
         unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until).gather()
         query = self._get_query(mock_copy_pandas)
         assert 'ORDER BY main_unifiedjob.id ASC' in query
+
+    @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+    def test_no_pagination_by_default(self, mock_copy_pandas):
+        mock_copy_pandas.return_value = pd.DataFrame()
+        unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until).gather()
+        query = self._get_query(mock_copy_pandas)
+        assert 'main_unifiedjob.id >' not in query
+        assert 'LIMIT' not in query
+
+    @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+    def test_cursor_pagination(self, mock_copy_pandas):
+        mock_copy_pandas.return_value = pd.DataFrame()
+        unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, after_id=41, batch_size=500).gather()
+        query = self._get_query(mock_copy_pandas)
+        assert 'AND main_unifiedjob.id > 41' in query
+        assert query.index('ORDER BY main_unifiedjob.id ASC') < query.index('LIMIT 500')
+
+    @patch('metrics_utility.library.collectors.util._copy_table_pandas')
+    def test_accepts_numpy_integer_after_id(self, mock_copy_pandas):
+        mock_copy_pandas.return_value = pd.DataFrame()
+        unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, after_id=np.int64(41)).gather()
+        assert 'AND main_unifiedjob.id > 41' in self._get_query(mock_copy_pandas)
+
+    @pytest.mark.parametrize('batch_size', [0, -1, '5', True, 1.5])
+    def test_rejects_invalid_batch_size(self, batch_size):
+        with pytest.raises(ValueError, match='batch_size'):
+            unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, batch_size=batch_size).gather()
+
+    @pytest.mark.parametrize('after_id', ['1; DROP TABLE x', True, 1.5])
+    def test_rejects_invalid_after_id(self, after_id):
+        with pytest.raises(ValueError, match='after_id'):
+            unified_jobs_dashboard(db=self.mock_db, since=self.since, until=self.until, after_id=after_id).gather()
