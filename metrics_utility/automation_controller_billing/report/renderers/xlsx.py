@@ -13,21 +13,15 @@ def _reference(ref):
     return f'{get_column_letter(ref.column)}{ref.row}'
 
 
-def _value(value):
-    if isinstance(value, Multiply):
-        return f'={_reference(value.left)}*{_reference(value.right)}'
-    if isinstance(value, Sum):
-        return f'=SUM({_reference(value.start)}:{_reference(value.end)})'
-    if isinstance(value, np.bool_):
-        return bool(value)
-    return value
-
-
 def _set_value(cell, value):
     """Preserve native types without inferring formulas or errors from text."""
-    cell.value = _value(value)
-    if isinstance(value, (Multiply, Sum)):
+    if isinstance(value, Multiply):
+        cell.value = f'={_reference(value.left)}*{_reference(value.right)}'
         return
+    if isinstance(value, Sum):
+        cell.value = f'=SUM({_reference(value.start)}:{_reference(value.end)})'
+        return
+    cell.value = bool(value) if isinstance(value, np.bool_) else value
     # Inspect the bound value too: openpyxl decodes bytes into strings.
     if isinstance(cell.value, str):
         cell.data_type = 's'
