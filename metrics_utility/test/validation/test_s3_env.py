@@ -1,3 +1,5 @@
+import uuid
+
 from unittest.mock import patch
 
 import pytest
@@ -6,6 +8,10 @@ from metrics_utility.automation_controller_billing.base.s3_handler import S3Hand
 from metrics_utility.exceptions import BadShipTarget, MissingRequiredEnvVar
 from metrics_utility.test.util import run_build_int, run_gather_int
 
+
+# Generated per run so no credential literal is stored in the repository.
+TEST_ACCESS_KEY = 'AKIA' + uuid.uuid4().hex[:16].upper()
+TEST_SECRET_KEY = uuid.uuid4().hex
 
 unset = {
     'METRICS_UTILITY_BUCKET_ACCESS_KEY': None,
@@ -301,16 +307,16 @@ def test_s3handler_session_with_explicit_credentials(mock_session):
     """S3Handler should pass credentials to boto3.Session when both are provided."""
     handler = S3Handler(
         {
-            'bucket_access_key': 'AKIA_TEST',
-            'bucket_secret_key': 'secret123',
+            'bucket_access_key': TEST_ACCESS_KEY,
+            'bucket_secret_key': TEST_SECRET_KEY,
             'bucket_region': 'us-east-1',
         }
     )
     _ = handler.session
     mock_session.assert_called_once_with(
         region_name='us-east-1',
-        aws_access_key_id='AKIA_TEST',
-        aws_secret_access_key='secret123',
+        aws_access_key_id=TEST_ACCESS_KEY,
+        aws_secret_access_key=TEST_SECRET_KEY,
     )
 
 
@@ -329,10 +335,10 @@ def test_s3handler_session_with_implicit_credentials(mock_session):
 def test_s3handler_rejects_mismatched_credentials():
     """S3Handler should reject a one-sided credential pair at construction time."""
     with pytest.raises(ValueError, match='must both be provided or both be omitted'):
-        S3Handler({'bucket_access_key': 'AKIA_TEST'})
+        S3Handler({'bucket_access_key': TEST_ACCESS_KEY})
 
     with pytest.raises(ValueError, match='must both be provided or both be omitted'):
-        S3Handler({'bucket_secret_key': 'secret123'})
+        S3Handler({'bucket_secret_key': TEST_SECRET_KEY})
 
 
 @patch('metrics_utility.automation_controller_billing.base.s3_handler.boto3.Session')
