@@ -17,6 +17,8 @@ Required/optional environment variables:
 OpenShift specific variables:
 - OC_LOGIN_COMMAND: oc login command to authenticate to the cluster
   Example: oc login --token=... --server=https://api.example:6443
+  The value is parsed as an argument list (argv) and executed without a shell, so shell
+  operators such as pipes, &&, ; or redirection are not interpreted.
 - NAMESPACE (optional): OpenShift namespace with the controller pod. If not set, it will be auto-detected.
 - POD_NAME (optional): OpenShift controller pod name. If not set, it will be auto-detected.
 
@@ -55,6 +57,7 @@ Report parameters via METRICS_UTILITY_* variables (optional):
 """
 
 import os
+import shlex
 import subprocess
 import sys
 
@@ -234,6 +237,32 @@ def run_build_report_containerized(env_vars, ship_path, ssh_url, ssh_user, user_
     return result
 
 
+def format_env_assignments(env_vars):
+    """Format env vars as safely quoted KEY=value shell assignments."""
+    return [f'{key}={shlex.quote(str(value))}' for key, value in env_vars.items()]
+
+
+def run_oc_login(oc_login_command):
+    """Run the user-supplied oc login command line without a shell.
+
+    The value is parsed as an argument list with shlex.split(), so shell metacharacters
+    (pipes, &&, ;, redirection) are not interpreted.
+    """
+    if not oc_login_command:
+        return None
+
+    try:
+        argv = shlex.split(oc_login_command)
+    except ValueError as e:
+        print(f'WARNING: could not parse OC_LOGIN_COMMAND ({e}); skipping cluster login')
+        return None
+
+    if not argv:
+        return None
+
+    return subprocess.run(argv, check=False, shell=False)
+
+
 def run_build_report_openshift(env_vars, ship_path, user_args, namespace=None, pod_name=None, oc_login_command=''):
     """Run build_report command in OpenShift environment using oc exec."""
     print('Running build_report in OpenShift environment...')
@@ -241,7 +270,7 @@ def run_build_report_openshift(env_vars, ship_path, user_args, namespace=None, p
     # login if command provided
     if oc_login_command:
         print('Logging into OpenShift cluster...')
-        subprocess.run(oc_login_command, shell=True, check=False)
+        run_oc_login(oc_login_command)
 
     # Ensure NAMESPACE and POD_NAME are available
     if not namespace or not pod_name:
@@ -257,19 +286,15 @@ def run_build_report_openshift(env_vars, ship_path, user_args, namespace=None, p
     env_vars_with_path = env_vars.copy()
     env_vars_with_path['METRICS_UTILITY_SHIP_PATH'] = ship_path
 
-    env_list = []
-    for k, v in env_vars_with_path.items():
-        if ' ' in v or '(' in v or ')' in v or ',' in v:
-            env_list.append(f"{k}='{v}'")
-        else:
-            env_list.append(f'{k}={v}')
+    env_list = format_env_assignments(env_vars_with_path)
+    user_args_list = shlex.split(user_args)
+    # Build the command run inside the container from fully quoted argv elements,
+    # joining them into the single string that /bin/bash -c expects.
+    container_cmd = ' '.join([*env_list, shlex.join(['metrics-utility', 'build_report', *user_args_list])])
 
-    env_vars_str = ' '.join(env_list)
-    container_cmd = f'{env_vars_str} metrics-utility build_report {user_args}'
-
-    oc_cmd = f'oc exec -n {namespace} {pod_name} -- /bin/bash -c "{container_cmd}"'
-    print(f'Executing: {oc_cmd}')
-    result = subprocess.run(oc_cmd, shell=True, check=False, capture_output=True, text=True)
+    oc_cmd = ['oc', 'exec', '-n', namespace, pod_name, '--', '/bin/bash', '-c', container_cmd]
+    print(f'Executing: {shlex.join(oc_cmd)}')
+    result = subprocess.run(oc_cmd, shell=False, check=False, capture_output=True, text=True)
 
     return result
 
@@ -341,7 +366,7 @@ def copy_report_from_remote(ssh_url, ssh_user, remote_report_path, local_destina
         oc_login_command = os.getenv('OC_LOGIN_COMMAND', '')
         if oc_login_command:
             print('Logging into OpenShift cluster before copy...')
-            subprocess.run(oc_login_command, shell=True, check=False)
+            run_oc_login(oc_login_command)
 
         namespace = os.getenv('NAMESPACE')
         pod_name = os.getenv('POD_NAME')
