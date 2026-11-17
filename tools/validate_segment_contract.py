@@ -23,7 +23,15 @@ def main():
         print(f'Usage: {sys.argv[0]} path/to/rollup.json')
         sys.exit(1)
 
-    json_path = Path(sys.argv[1])
+    json_path = Path(sys.argv[1]).expanduser().resolve()
+
+    if not json_path.exists():
+        print(f'ERROR: file not found: {json_path}')
+        sys.exit(1)
+
+    if not json_path.is_file():
+        print(f'ERROR: not a regular file: {json_path}')
+        sys.exit(1)
 
     with open(json_path) as f:
         data = json.load(f)

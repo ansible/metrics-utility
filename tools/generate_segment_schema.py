@@ -9,6 +9,8 @@ Usage:
 import argparse
 import sys
 
+from pathlib import Path
+
 import yaml
 
 from pydantic import ConfigDict, TypeAdapter, with_config
@@ -44,7 +46,19 @@ def main():
     output = yaml.dump(openapi, default_flow_style=False, sort_keys=False)
 
     if args.output:
-        with open(args.output, 'w') as f:
+        output_path = Path(args.output).expanduser().resolve()
+
+        if output_path.is_dir():
+            print(f'ERROR: output path is a directory: {output_path}', file=sys.stderr)
+            sys.exit(1)
+
+        try:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            print(f'ERROR: cannot create output directory {output_path.parent}: {e}', file=sys.stderr)
+            sys.exit(1)
+
+        with open(output_path, 'w') as f:
             f.write(output)
         print(f'Schema written to {args.output}', file=sys.stderr)
     else:
