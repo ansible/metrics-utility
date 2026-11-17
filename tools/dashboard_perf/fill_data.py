@@ -39,19 +39,42 @@ _SCALES: dict[int, dict[str, int]] = {
     4: {'job_count': 500, 'host_count': 50, 'task_count': 50},
 }
 
+# Environment variables that are forwarded to the child scripts. Everything else from
+# the parent environment is dropped so that unrelated values cannot reach the
+# subprocess command line or its configuration.
+_ENV_ALLOWLIST: tuple[str, ...] = (
+    'PATH',
+    'HOME',
+    'LANG',
+    'LC_ALL',
+    'PYTHONPATH',
+    'VIRTUAL_ENV',
+    'AWX_PATH',
+)
+
+# Prefixes needed by the child scripts: METRICS_UTILITY_* (including METRICS_UTILITY_DB_*),
+# AWX/Django DATABASE_* settings and libpq PG* fallbacks.
+_ENV_ALLOWED_PREFIXES: tuple[str, ...] = ('METRICS_UTILITY_', 'DATABASE_', 'PG')
+
 
 def _resolve_metrics_utility_path() -> Path:
-    """Return the metrics-utility checkout directory."""
+    """Return the absolute path of the metrics-utility checkout directory."""
     env_path = os.environ.get('METRICS_UTILITY_PATH')
-    if env_path:
-        return Path(env_path).resolve()
-    return Path(__file__).parent.parent.parent.resolve()
+    base = Path(env_path).expanduser() if env_path else Path(__file__).parent.parent.parent
+    return base.resolve()
 
 
 def _find_python(mu_path: Path) -> Path:
     """Return the Python interpreter inside metrics-utility venv, or fall back."""
     venv_python = mu_path / '.venv' / 'bin' / 'python'
-    return venv_python if venv_python.exists() else Path(sys.executable)
+    # Do not resolve() the venv interpreter: it is usually a symlink to the base
+    # interpreter and Python must keep seeing it via the venv path.
+    return venv_python if venv_python.is_file() else Path(sys.executable)
+
+
+def _child_env() -> dict[str, str]:
+    """Return the explicit allowlist of environment variables for child processes."""
+    return {key: value for key, value in os.environ.items() if key in _ENV_ALLOWLIST or key.startswith(_ENV_ALLOWED_PREFIXES)}
 
 
 def _run(cmd: list[str], cwd: Path, env: dict) -> None:
@@ -108,7 +131,7 @@ def main() -> None:
     mu_path = _resolve_metrics_utility_path()
     scripts_dir = mu_path / 'tools' / 'anonymized_db_perf_data'
     python = _find_python(mu_path)
-    env = os.environ.copy()
+    env = _child_env()
 
     db_host = env.get('METRICS_UTILITY_DB_HOST', 'localhost')
     db_name = env.get('METRICS_UTILITY_DB_NAME', '')
@@ -129,8 +152,16 @@ def main() -> None:
     print(f'  mu path:    {mu_path}')
     print()
 
-    if not scripts_dir.exists():
+    if not mu_path.is_dir():
+        print(f'ERROR: {mu_path} not found — set METRICS_UTILITY_PATH')
+        sys.exit(1)
+
+    if not scripts_dir.is_dir():
         print(f'ERROR: {scripts_dir} not found — set METRICS_UTILITY_PATH')
+        sys.exit(1)
+
+    if not python.is_file():
+        print(f'ERROR: Python interpreter not found: {python}')
         sys.exit(1)
 
     # Step 1 — clean
