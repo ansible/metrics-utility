@@ -28,7 +28,11 @@ SAMPLE_KEY_PEM = '-----BEGIN RSA PRIVATE KEY-----\nMIIEtest==\n-----END RSA PRIV
 SAMPLE_NEW_CERT = '-----BEGIN CERTIFICATE-----\nnewcert==\n-----END CERTIFICATE-----\n'
 SAMPLE_NEW_KEY = '-----BEGIN RSA PRIVATE KEY-----\nnewkey==\n-----END RSA PRIVATE KEY-----\n'
 CONSUMER_UUID = 'cccccccc-dddd-eeee-ffff-000000000000'
-SAMPLE_USERNAME = 'rh-user@example.com'
+SAMPLE_USERNAME = f'{uuid.uuid4().hex}@example.com'
+REDHAT_USERNAME = uuid.uuid4().hex
+SUBSCRIPTIONS_USERNAME = uuid.uuid4().hex
+ENV_USERNAME = uuid.uuid4().hex
+DB_USERNAME = uuid.uuid4().hex
 # Generated per run so no credential literal is stored in the repository.
 SAMPLE_PASSWORD = uuid.uuid4().hex
 REDHAT_PASSWORD = uuid.uuid4().hex
@@ -98,15 +102,15 @@ class TestFetchRegistrationCredentialsFromDb:
 
     def test_prefers_redhat_username_over_subscriptions(self):
         settings = [
-            _make_mock_setting('REDHAT_USERNAME', 'rh-user'),
+            _make_mock_setting('REDHAT_USERNAME', REDHAT_USERNAME),
             _make_mock_setting('REDHAT_PASSWORD', REDHAT_PASSWORD),
-            _make_mock_setting('SUBSCRIPTIONS_USERNAME', 'sub-user'),
+            _make_mock_setting('SUBSCRIPTIONS_USERNAME', SUBSCRIPTIONS_USERNAME),
             _make_mock_setting('SUBSCRIPTIONS_PASSWORD', SUBSCRIPTIONS_PASSWORD),
             _make_mock_setting('INSTALL_UUID', SAMPLE_INSTALL_UUID),
         ]
         with patch.dict(sys.modules, _awx_cred_modules(settings=settings)):
             username, password, _ = _fetch_registration_credentials_from_db()
-        assert username == 'rh-user'
+        assert username == REDHAT_USERNAME
         assert password == REDHAT_PASSWORD
 
     def test_falls_back_to_subscriptions_when_redhat_absent(self):
@@ -207,17 +211,17 @@ class TestResolveRegistrationCredentials:
         assert install_uuid == SAMPLE_INSTALL_UUID
 
     def test_env_vars_take_priority_over_db(self, monkeypatch):
-        monkeypatch.setenv('METRICS_UTILITY_RH_USERNAME', 'env-user')
+        monkeypatch.setenv('METRICS_UTILITY_RH_USERNAME', ENV_USERNAME)
         monkeypatch.setenv('METRICS_UTILITY_RH_PASSWORD', ENV_PASSWORD)
         monkeypatch.setenv('METRICS_UTILITY_CANDLEPIN_STORAGE', 'db')
 
         with patch(
             'metrics_utility.management.validation._fetch_registration_credentials_from_db',
-            return_value=('db-user', DB_PASSWORD, None),
+            return_value=(DB_USERNAME, DB_PASSWORD, None),
         ):
             username, password, _ = _resolve_registration_credentials()
 
-        assert username == 'env-user'
+        assert username == ENV_USERNAME
         assert password == ENV_PASSWORD
 
 
