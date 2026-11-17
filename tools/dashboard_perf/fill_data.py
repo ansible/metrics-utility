@@ -64,12 +64,15 @@ def _resolve_metrics_utility_path() -> Path:
     return base.resolve()
 
 
-def _find_python(mu_path: Path) -> Path:
-    """Return the Python interpreter inside metrics-utility venv, or fall back."""
-    venv_python = mu_path / '.venv' / 'bin' / 'python'
-    # Do not resolve() the venv interpreter: it is usually a symlink to the base
-    # interpreter and Python must keep seeing it via the venv path.
-    return venv_python if venv_python.is_file() else Path(sys.executable)
+def _find_python() -> Path:
+    """Return the interpreter running this script.
+
+    The child scripts must use the same interpreter (and therefore the same
+    installed dependencies) as the benchmark runner; under ``uv run`` this is
+    already the metrics-utility venv. Resolving it from the environment would
+    let an environment variable choose the binary that gets executed.
+    """
+    return Path(sys.executable).resolve()
 
 
 def _child_env() -> dict[str, str]:
@@ -130,7 +133,7 @@ def main() -> None:
 
     mu_path = _resolve_metrics_utility_path()
     scripts_dir = mu_path / 'tools' / 'anonymized_db_perf_data'
-    python = _find_python(mu_path)
+    python = _find_python()
     env = _child_env()
 
     db_host = env.get('METRICS_UTILITY_DB_HOST', 'localhost')
