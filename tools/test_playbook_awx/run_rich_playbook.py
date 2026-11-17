@@ -30,6 +30,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.parse
 
 import requests
 
@@ -49,6 +50,40 @@ PROJECT_DIR = f'{PREFIX}_manual'
 INVENTORY_NAME = f'{PREFIX}_inventory'
 TEMPLATE_NAME = f'{PREFIX}_template'
 PLAYBOOK_FILE = 'rich_playbook.yml'
+
+
+def validate_base_url(raw_url: str) -> str:
+    """Validate and normalize a CLI-supplied AWX base URL.
+
+    Only absolute ``http``/``https`` URLs with a hostname are accepted. Embedded
+    credentials and whitespace/control characters are rejected, and the returned
+    value is rebuilt from the parsed components so downstream ``requests`` calls
+    never receive the raw argv string.
+    """
+    if not raw_url or any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in raw_url):
+        raise ValueError(f'Invalid AWX URL (empty, or contains whitespace/control characters): {raw_url!r}')
+
+    parts = urllib.parse.urlsplit(raw_url)
+    scheme = parts.scheme.lower()
+    if scheme not in ('http', 'https'):
+        raise ValueError(f'Invalid AWX URL scheme {parts.scheme!r}: only http and https are supported')
+
+    hostname = parts.hostname
+    if not hostname:
+        raise ValueError(f'Invalid AWX URL (missing hostname): {raw_url!r}')
+    if parts.username is not None or parts.password is not None:
+        raise ValueError('Invalid AWX URL: embedded credentials are not supported, use --user/--password')
+
+    try:
+        port = parts.port
+    except ValueError:
+        raise ValueError(f'Invalid AWX URL (invalid port): {raw_url!r}')
+
+    netloc = f'[{hostname}]' if ':' in hostname else hostname
+    if port is not None:
+        netloc = f'{netloc}:{port}'
+
+    return f'{scheme}://{netloc}{parts.path}'.rstrip('/')
 
 
 class AWXClient:
@@ -257,12 +292,18 @@ def main() -> int:
     args = parser.parse_args()
 
     password = args.password or os.environ.get('AWX_PASSWORD', DEFAULT_PASSWORD)
+    try:
+        base_url = validate_base_url(args.url)
+    except ValueError as exc:
+        print(f'Error: {exc}', file=sys.stderr)
+        return 2
+
     verify = not (args.insecure or args.url == DEFAULT_URL)
 
     if not verify:
         requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
-    client = AWXClient(args.url, args.user, password, verify=verify)
+    client = AWXClient(base_url, args.user, password, verify=verify)
 
     if args.cleanup:
         cleanup(client)
