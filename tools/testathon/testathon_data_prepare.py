@@ -7,6 +7,8 @@ import subprocess
 import sys
 import time
 
+from urllib.parse import urlparse
+
 import requests
 
 from helper_ocp_prepare import create_oc_environs
@@ -59,11 +61,48 @@ if os.getenv('POD_NAME') and os.getenv('NAMESPACE'):
     print(f'NAMESPACE: {os.getenv("NAMESPACE")}')
 
 
-VERIFY_SSL = False  # Set to True if you have valid SSL certificates
+DEFAULT_INSECURE_HOSTS = ('localhost', '127.0.0.1', '::1')
+TRUE_VALUES = ('1', 'true', 'yes', 'on')
+FALSE_VALUES = ('0', 'false', 'no', 'off')
+
+
+def _parse_verify_ssl_env(value):
+    """Return the bool for an AWX_VERIFY_SSL value, or None when it is not recognised."""
+    normalized = value.strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+    return None
+
+
+def _resolve_verify_ssl(api_url):
+    """Resolve TLS verification for the AWX API: secure by default.
+
+    AWX_VERIFY_SSL (true/false/1/0/yes/no/on/off) overrides everything when set.
+    When it is unset, verification stays on, except for the local AWX
+    docker-compose endpoint (localhost/127.0.0.1), which keeps the convenient
+    insecure behaviour used by tools/test_playbook_awx/run_demo_template.py.
+    """
+    override = os.getenv('AWX_VERIFY_SSL')
+    if override and override.strip():
+        parsed = _parse_verify_ssl_env(override)
+        if parsed is not None:
+            return parsed
+        print(f'AWX_VERIFY_SSL={override!r} is not a boolean, ignoring it')
+
+    host = (urlparse(api_url).hostname or '').lower()
+    return host not in DEFAULT_INSECURE_HOSTS
+
+
+VERIFY_SSL = _resolve_verify_ssl(API_URL)
+print(f'VERIFY_SSL: {VERIFY_SSL}')
+
 PAGE_SIZE = 100
 
-# Disable warnings for insecure SSL (if VERIFY_SSL=False)
-requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+# Only silence insecure-request warnings when certificate verification is actually off.
+if not VERIFY_SSL:
+    requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
 
 def run(sql_script):
