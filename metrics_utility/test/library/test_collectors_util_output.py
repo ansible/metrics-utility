@@ -1,6 +1,7 @@
 """Test suite for collector output classes."""
 
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
@@ -81,7 +82,10 @@ class TestDataframeOutput:
         query = 'SELECT id FROM users'
         output.sql(mock_db, query)
 
-        mock_cursor.execute.assert_called_once_with(query, None)
+        args, _kwargs = mock_cursor.execute.call_args
+        # The statement is passed as a psycopg SQL wrapper; the SQL text is unchanged.
+        assert args[0].as_string() == query
+        assert args[1] is None
 
     def test_sql_returns_correct_columns(self):
         """Test that DataFrame has correct columns from cursor description."""
@@ -220,11 +224,11 @@ class TestCollectionOutput:
         test_path = str(tmp_path)
         output = CollectionOutput(test_path)
 
-        # Mock tempfile.mktemp to verify it's called with correct dir
-        with patch('tempfile.mktemp') as mock_mktemp:
-            mock_mktemp.return_value = f'{test_path}/test_file'
-            output.sql(mock_db, 'SELECT * FROM test')
-            mock_mktemp.assert_called_once_with(dir=test_path)
+        files = output.sql(mock_db, 'SELECT * FROM test')
+
+        # The splitter writes its files directly inside full_path.
+        assert files
+        assert all(Path(name).parent == Path(test_path) for name in files)
 
     def test_as_dict_calls_collector(self):
         """Test that as_dict calls collector.gather with output=self."""

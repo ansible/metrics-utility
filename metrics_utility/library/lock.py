@@ -2,6 +2,8 @@
 
 from contextlib import contextmanager
 
+from psycopg import sql
+
 
 @contextmanager
 def lock(
@@ -31,20 +33,18 @@ def lock(
     if not isinstance(key, str):
         raise ValueError(f'Cannot use {key} as a lock id')
 
-    function_name = 'pg_advisory_lock'
-    if not wait:
-        function_name = 'pg_try_advisory_lock'
-    release_function_name = 'pg_advisory_unlock'
+    acquire_function = sql.SQL('pg_advisory_lock' if wait else 'pg_try_advisory_lock')
+    release_function = sql.SQL('pg_advisory_unlock')
 
     with db.cursor() as cursor:
         cursor.execute('SELECT hashtext(%s)::bigint', (key,))
         pos = cursor.fetchone()[0]
-        base = 'SELECT %s(%d)'
-        params = (pos % (2**63),)
-        acquire_params = (function_name, *params)
-        command = base % acquire_params
+        # The advisory lock id is always passed as a bound parameter; only the
+        # hardcoded function name is composed into the statement.
+        lock_id = pos % (2**63)
+        command = sql.SQL('SELECT {}(%s)').format(acquire_function)
 
-        cursor.execute(command)
+        cursor.execute(command, (lock_id,))
 
         if not wait:
             acquired = cursor.fetchone()[0]
@@ -55,7 +55,6 @@ def lock(
             yield acquired
         finally:
             if acquired:
-                release_params = (release_function_name, *params)
+                command = sql.SQL('SELECT {}(%s)').format(release_function)
 
-                command = base % release_params
-                cursor.execute(command)
+                cursor.execute(command, (lock_id,))

@@ -1,8 +1,11 @@
 """Collector output helpers, SQL execution utilities, and the ``@collector`` decorator."""
 
-import tempfile
+import os
+import uuid
 
 from datetime import datetime
+
+from psycopg import sql
 
 from ..csv_file_splitter import CsvFileSplitter
 
@@ -156,7 +159,8 @@ class CollectionOutput(DictOutput):
         return self.files(collector.gather(output=self))
 
     def sql(self, db, query, params=None):
-        filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created
+        # Random prefix only - CsvFileSplitter appends _splitN and creates the files itself.
+        filespec = os.path.join(self.full_path, f'metrics-utility-{uuid.uuid4().hex}')
         return _copy_table_files(db, query, filespec, params)
 
     def sql_keyset(self, db, build_page, next_marker, page_size=10000):
@@ -178,7 +182,8 @@ class CollectionOutput(DictOutput):
             List of CSV file paths.
         """
         query, params = build_page(None, None)
-        filespec = tempfile.mktemp(dir=self.full_path)  # NOT mkstemp - this is a prefix, can't have it get created
+        # Random prefix only - CsvFileSplitter appends _splitN and creates the files itself.
+        filespec = os.path.join(self.full_path, f'metrics-utility-{uuid.uuid4().hex}')
         return _copy_table_files(db, query, filespec, params)
 
 
@@ -279,9 +284,11 @@ def _copy_table_pandas(db, query, params=None):
     import pandas as pd
 
     # Execute query and create DataFrame from results
-    # Using cursor approach since pd.read_sql doesn't work well with psycopg3
+    # Using cursor approach since pd.read_sql doesn't work well with psycopg3.
+    # *query* is built by internal collectors; every runtime value is passed
+    # through *params* rather than interpolated into the statement.
     with db.cursor() as cursor:
-        cursor.execute(query, params)
+        cursor.execute(sql.SQL(query), params)
 
         # Get column names from cursor description
         columns = [desc[0] for desc in cursor.description]
