@@ -1,6 +1,7 @@
 import copy
 
 from datetime import datetime
+from pathlib import Path
 
 from metrics_utility.test.snapshot_tests import snapshot_utils
 
@@ -125,7 +126,9 @@ def generate_since_until_reports(report_type, since_until_pairs, dictionary, cus
 
 
 def generate():
-    entry_point_dir = snapshot_utils.get_entry_point_directory()
+    entry_point_dir = str(Path(snapshot_utils.get_entry_point_directory()).resolve())
+    if not Path(entry_point_dir).is_dir():
+        raise SystemExit(f'Entry point directory does not exist: {entry_point_dir}')
 
     months, since_until_pairs, env_vars_ccspv2, env_vars_ccsp = get_data()
 
@@ -143,7 +146,8 @@ def generate():
         generate_since_until_reports(report_type, since_until_pairs, dictionary, custom_params, entry_point_dir)
 
     # Finally, run all generated definitions
-    snapshot_utils.run_and_generate_snapshot_definitions(entry_point_dir + '/data/')
+    data_dir = (Path(entry_point_dir) / 'data').resolve()
+    snapshot_utils.run_and_generate_snapshot_definitions(str(data_dir))
 
 
 if __name__ == '__main__':

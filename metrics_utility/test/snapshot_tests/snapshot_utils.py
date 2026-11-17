@@ -111,7 +111,13 @@ def find_json_files(directory: str) -> list[Path]:
     Returns:
         List[Path]: A list of Path objects pointing to JSON files.
     """
-    return list(Path(directory).rglob('*.json'))
+    base = Path(directory).resolve()
+    if not base.is_dir():
+        raise NotADirectoryError(f'Snapshot definition directory does not exist: {base}')
+
+    # Only accept regular files that stay inside the requested directory, so a
+    # symlinked or relative path cannot escape it.
+    return [path for path in (p.resolve() for p in base.rglob('*.json')) if path.is_file() and path.is_relative_to(base)]
 
 
 def run_and_generate_snapshot_definitions(directory: str) -> None:
