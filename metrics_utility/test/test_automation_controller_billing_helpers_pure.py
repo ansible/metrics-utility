@@ -167,9 +167,40 @@ class TestMakeHashable:
         assert isinstance(value, HashableDict)
         assert hash(value) == hash(HashableDict({'a': 1}))
 
+    def test_hashable_dict_passthrough_identity(self):
+        original = HashableDict({'a': 1})
+        assert make_hashable(original) is original
+
+    def test_list_becomes_tuple(self):
+        assert make_hashable([1, {'b': 2}]) == (1, HashableDict({'b': 2}))
+
+    def test_tuple_with_nested_dict(self):
+        assert make_hashable(({'a': 1}, 2)) == (HashableDict({'a': 1}), 2)
+
+    def test_set_becomes_frozenset(self):
+        value = make_hashable({1, 2, 3})
+        assert isinstance(value, frozenset)
+        assert value == frozenset({1, 2, 3})
+
+    def test_set_with_nested_dict(self):
+        value = make_hashable([{'x': 1}, {'x': 1}])
+        # Nested dicts become HashableDict so duplicates collapse when used in a set.
+        assert set(value) == {HashableDict({'x': 1})}
+
+    def test_scalar_passthrough(self):
+        assert make_hashable(42) == 42
+        assert make_hashable('host') == 'host'
+        assert make_hashable(None) is None
+
     def test_nested_structures_round_trip_json(self):
         value = make_hashable({'tags': {'Env': 'prod'}, 'ports': [22]})
         assert json.loads(json.dumps(value)) == {'tags': {'Env': 'prod'}, 'ports': [22]}
+
+    def test_hashable_dict_lt_comparable_values(self):
+        left = HashableDict({'a': 1})
+        right = HashableDict({'a': 2})
+        assert left < right
+        assert sorted([right, left]) == [left, right]
 
     def test_hashable_dict_lt_handles_incomparable_nested_values(self):
         left = HashableDict({'tags': HashableDict({'Name': 'x'})})
@@ -179,6 +210,9 @@ class TestMakeHashable:
         ordered = sorted([right, left])
         assert len(ordered) == 2
         assert left in ordered and right in ordered
+
+    def test_hashable_dict_lt_non_dict_returns_not_implemented(self):
+        assert HashableDict({'a': 1}).__lt__(5) is NotImplemented
 
 
 # ---------------------------------------------------------------------------
