@@ -52,14 +52,7 @@ def count_csv_rows(file_paths):
 
 def explain_main_jobevent_old(db, since, until):
     """Run EXPLAIN ANALYZE on the OLD main_jobevent collector query."""
-    where = ' AND '.join(
-        [
-            f"main_jobhostsummary.modified >= '{since.isoformat()}'",
-            f"main_jobhostsummary.modified < '{until.isoformat()}'",
-        ]
-    )
-
-    query = f"""
+    query = """
         EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)
         WITH job_scope AS (
             SELECT
@@ -71,7 +64,8 @@ def explain_main_jobevent_old(db, since, until):
                 main_jobhostsummary.host_name
             FROM main_jobhostsummary
             JOIN main_unifiedjob ON main_unifiedjob.id = main_jobhostsummary.job_id
-            WHERE {where}
+            WHERE main_jobhostsummary.modified >= %s
+              AND main_jobhostsummary.modified < %s
         )
         SELECT
             job_scope.main_jobhostsummary_id,
@@ -90,7 +84,7 @@ def explain_main_jobevent_old(db, since, until):
     """
 
     with db.cursor() as cursor:
-        cursor.execute(query)
+        cursor.execute(query, (since, until))
         result = cursor.fetchone()[0]  # JSON result
 
     # Parse the explain output
@@ -155,16 +149,19 @@ def explain_main_jobevent_service(db, since, until):
                 range_end = hour + timedelta(hours=1)
         ranges.append((range_start, range_end))
 
-    # Build WHERE clause
+    # Build WHERE clause with bound parameters
     or_clauses = []
+    query_params = []
     for range_start, range_end in ranges:
-        or_clauses.append(f"(e.job_created >= '{range_start.isoformat()}'::timestamptz AND e.job_created < '{range_end.isoformat()}'::timestamptz)")
+        or_clauses.append('(e.job_created >= %s::timestamptz AND e.job_created < %s::timestamptz)')
+        query_params.extend([range_start, range_end])
 
     timestamp_where_clause = ' OR '.join(or_clauses) if or_clauses else 'FALSE'
 
     if job_ids_set:
-        job_ids_str = ','.join(str(job_id) for job_id in job_ids_set)
-        job_id_where_clause = f'e.job_id IN ({job_ids_str})'
+        job_id_placeholders = ','.join(['%s'] * len(job_ids_set))
+        job_id_where_clause = f'e.job_id IN ({job_id_placeholders})'
+        query_params.extend(sorted(job_ids_set))
     else:
         job_id_where_clause = 'FALSE'
 
@@ -179,7 +176,7 @@ def explain_main_jobevent_service(db, since, until):
     """
 
     with db.cursor() as cursor:
-        cursor.execute(query)
+        cursor.execute(query, query_params or None)
         result = cursor.fetchone()[0]
 
     # Parse the explain output

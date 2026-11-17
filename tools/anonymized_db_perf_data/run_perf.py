@@ -80,6 +80,34 @@ def print_counts():
     print()
 
 
+def resolve_output_dir(raw_output_dir):
+    """Resolve and validate the output directory.
+
+    The path is expanded and normalized to an absolute path; it is rejected when it
+    exists but is not a directory, and created (with parents) when missing.
+    """
+    if raw_output_dir:
+        output_dir = Path(raw_output_dir).expanduser().resolve()
+    else:
+        output_dir = (Path(__file__).parent / 'out').resolve()
+
+    if output_dir.exists() and not output_dir.is_dir():
+        print(f'Error: Output path exists but is not a directory: {output_dir}')
+        sys.exit(1)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def output_file(output_dir, filename):
+    """Return a normalized path for filename inside output_dir, rejecting traversal."""
+    path = (output_dir / filename).resolve()
+    if not path.is_relative_to(output_dir):
+        print(f'Error: Refusing to write outside the output directory: {path}')
+        sys.exit(1)
+    return path
+
+
 def main():
     """Main function to run performance tests on existing data."""
     parser = argparse.ArgumentParser(description='Run anonymized rollup computation performance tests on existing database data')
@@ -103,11 +131,7 @@ def main():
     args = parser.parse_args()
 
     # Output in same directory as script and create /out subdir
-    if args.output_dir:
-        output_dir = Path(args.output_dir)
-    else:
-        output_dir = Path(__file__).parent / 'out'
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = resolve_output_dir(args.output_dir)
 
     # Parse dates
     since = datetime.strptime(args.since, '%Y-%m-%d')
@@ -146,7 +170,7 @@ def main():
             memory_consumed = memory_after - memory_before
 
         # save into anonymized.json
-        with open(output_dir / 'anonymized.json', 'w') as f:
+        with open(output_file(output_dir, 'anonymized.json'), 'w') as f:
             json.dump(json_data, f, indent=4)
 
         print('\n✓ Rollup computation completed!')
@@ -183,7 +207,7 @@ def main():
     event_count = cursor.fetchone()[0]
 
     # Write performance log
-    log_file = output_dir / 'full_service_performance.log'
+    log_file = output_file(output_dir, 'full_service_performance.log')
     with open(log_file, 'w') as f:
         f.write('ANONYMIZED ROLLUP PERFORMANCE TEST - FULL SERVICE\n')
         f.write('=' * 60 + '\n')
@@ -204,7 +228,7 @@ def main():
 
     # Write markdown report
     test_date = time_start.strftime('%Y-%m-%d')
-    md_file = output_dir / f'perf_test_full_service_{test_date}.md'
+    md_file = output_file(output_dir, f'perf_test_full_service_{test_date}.md')
     with open(md_file, 'w') as f:
         f.write('# Performance Test Results - Full Service\n\n')
         f.write(f'**Test Date:** {time_start.strftime("%Y-%m-%d %H:%M:%S")}\n\n')

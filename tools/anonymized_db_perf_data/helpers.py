@@ -1,10 +1,15 @@
 import json
 import random
+import re
 import uuid
 
 from datetime import timedelta
 
 from modules import MODULES
+
+
+# SQL identifiers that must be interpolated (DDL) are validated against this pattern.
+_IDENTIFIER_RE = re.compile(r'^[a-z_][a-z0-9_]*$')
 
 
 # ---------------------------------------------------------------------------
@@ -463,16 +468,23 @@ def parse_ids(result):
     return [row[0] for row in result if row]
 
 
-def run(sql_script):
+def run(sql_script, params=None):
     """Execute SQL script using Django database connection.
+
+    Args:
+        sql_script: SQL statement(s). Values must be bound with %s placeholders.
+        params: Optional sequence of values to bind to the statement's placeholders.
 
     Returns the fetchall() result for SELECT queries or None for other queries.
     """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # Execute the SQL (may contain multiple statements)
-            cursor.execute(sql_script)
+            # Execute the SQL (may contain multiple statements when no params are bound)
+            if params is None:
+                cursor.execute(sql_script)
+            else:
+                cursor.execute(sql_script, params)
 
             # Try to fetch results if this was a SELECT/RETURNING query
             try:
@@ -682,13 +694,13 @@ def delete_all():
 
 def create_organization(name='Perf Test Organization'):
     """Create an organization and return its auto-generated ID."""
-    sql = f"""
+    sql = """
     INSERT INTO main_organization (created, modified, name, description, max_hosts)
-    VALUES (NOW(), NOW(), '{name}', 'Performance testing organization', 0)
+    VALUES (NOW(), NOW(), %s, 'Performance testing organization', 0)
     RETURNING id;
     """
     print(f'Creating organization: {name}...')
-    output = run(sql)
+    output = run(sql, (name,))
     org_id = parse_id(output)
     print(f'Created organization with ID: {org_id}')
     return org_id
@@ -696,7 +708,7 @@ def create_organization(name='Perf Test Organization'):
 
 def create_inventory(name='Perf Test Inventory', org_id=None):
     """Create an inventory and return its auto-generated ID."""
-    sql = f"""
+    sql = """
     INSERT INTO main_inventory (
         created, modified, name, description, organization_id, kind, host_filter, variables,
         has_active_failures, total_hosts, hosts_with_active_failures, total_groups,
@@ -704,7 +716,7 @@ def create_inventory(name='Perf Test Inventory', org_id=None):
         pending_deletion, prevent_instance_group_fallback
     )
     VALUES (
-        NOW(), NOW(), '{name}', 'Performance testing inventory', {org_id}, '', NULL, '',
+        NOW(), NOW(), %s, 'Performance testing inventory', %s, '', NULL, '',
         FALSE, 0, 0, 0,
         FALSE, 0, 0,
         FALSE, FALSE
@@ -712,7 +724,7 @@ def create_inventory(name='Perf Test Inventory', org_id=None):
     RETURNING id;
     """
     print(f'Creating inventory: {name}...')
-    output = run(sql)
+    output = run(sql, (name, org_id))
     inventory_id = parse_id(output)
     print(f'Created inventory with ID: {inventory_id}')
     return inventory_id
@@ -722,24 +734,24 @@ def create_project(name='Perf Test Project', org_id=None):
     """Create a project (via unified_job_template) and return its auto-generated ID."""
     # First create the unified job template entry and get its ID
     # Note: organization_id is on unifiedjobtemplate, not on project
-    sql_ujt = f"""
+    sql_ujt = """
     INSERT INTO main_unifiedjobtemplate (
         created, modified, name, description, polymorphic_ctype_id,
         last_job_failed, status, organization_id, org_unique
     )
     VALUES (
-        NOW(), NOW(), '{name}', 'Performance testing project',
+        NOW(), NOW(), %s, 'Performance testing project',
         (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'project'),
-        FALSE, 'never updated', {org_id}, FALSE
+        FALSE, 'never updated', %s, FALSE
     )
     RETURNING id;
     """
     print(f'Creating unified job template for project: {name}...')
-    output = run(sql_ujt)
+    output = run(sql_ujt, (name, org_id))
     project_id = parse_id(output)
 
     # Then create the project entry using the same ID
-    sql_project = f"""
+    sql_project = """
     INSERT INTO main_project (
         unifiedjobtemplate_ptr_id, scm_type, scm_url, local_path,
         scm_branch, scm_clean, scm_delete_on_update, scm_update_on_launch,
@@ -747,7 +759,7 @@ def create_project(name='Perf Test Project', org_id=None):
         inventory_files, scm_refspec, allow_override, scm_track_submodules
     )
     VALUES (
-        {project_id}, 'git', 'https://github.com/example/repo.git', '/var/lib/awx/projects/perf_test',
+        %s, 'git', 'https://github.com/example/repo.git', '/var/lib/awx/projects/perf_test',
         'main', FALSE, FALSE, FALSE,
         0, 0, '', '[]'::jsonb,
         '[]'::jsonb, '', FALSE, FALSE
@@ -755,7 +767,7 @@ def create_project(name='Perf Test Project', org_id=None):
     RETURNING unifiedjobtemplate_ptr_id;
     """
     print(f'Creating project: {name}...')
-    run(sql_project)
+    run(sql_project, (project_id,))
     print(f'Created project with ID: {project_id}')
     return project_id
 
@@ -777,23 +789,23 @@ def create_job_templates(project_id, inventory_id, template_count=10, unique_suf
         template_name = f'Perf Test Template {i}{suffix}'
 
         # First create the unified job template entry
-        sql_ujt = f"""
+        sql_ujt = """
         INSERT INTO main_unifiedjobtemplate (
             created, modified, name, description, polymorphic_ctype_id,
             last_job_failed, status, org_unique
         )
         VALUES (
-            NOW(), NOW(), '{template_name}', 'Performance testing job template',
+            NOW(), NOW(), %s, 'Performance testing job template',
             (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'jobtemplate'),
             FALSE, 'never updated', FALSE
         )
         RETURNING id;
         """
-        output = run(sql_ujt)
+        output = run(sql_ujt, (template_name,))
         template_id = parse_id(output)
 
         # Then create the job template entry with all required fields
-        sql_jt = f"""
+        sql_jt = """
         INSERT INTO main_jobtemplate (
             unifiedjobtemplate_ptr_id, job_type, playbook, forks, "limit", verbosity,
             extra_vars, job_tags, force_handlers, skip_tags, start_at_task,
@@ -808,10 +820,10 @@ def create_job_templates(project_id, inventory_id, template_count=10, unique_suf
             ask_labels_on_launch, ask_timeout_on_launch, prevent_instance_group_fallback
         )
         VALUES (
-            {template_id}, 'run', 'site.yml', 5, '', 0,
+            %s, 'run', 'site.yml', 5, '', 0,
             '', '', FALSE, '', '',
             FALSE, '', FALSE, FALSE,
-            '{{}}'::jsonb, {inventory_id}, {project_id}, FALSE,
+            '{}'::jsonb, %s, %s, FALSE,
             FALSE, FALSE, FALSE,
             FALSE, FALSE, FALSE,
             0, FALSE, FALSE, FALSE,
@@ -822,7 +834,7 @@ def create_job_templates(project_id, inventory_id, template_count=10, unique_suf
         )
         RETURNING unifiedjobtemplate_ptr_id;
         """
-        run(sql_jt)
+        run(sql_jt, (template_id, inventory_id, project_id))
         templates[template_id] = template_name
 
     print(f'Created {template_count} job templates with IDs: {list(templates.keys())}')
@@ -840,22 +852,25 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
     print(f'Creating {host_count} hosts for inventory {inventory_id}...')
     suffix = f'-{unique_suffix}' if unique_suffix else ''
 
-    # Generate bulk insert SQL for hosts (let DB auto-generate IDs)
-    values = []
+    # Generate bulk insert params for hosts (let DB auto-generate IDs)
+    # Row shape is constant; only the bound values differ per row.
+    row_placeholder = "(NOW(), NOW(), %s, %s, %s, %s, TRUE, '', '{}'::jsonb)"
+    params = []
     for i in range(1, host_count + 1):
         host_name = f'host-{i}{suffix}.example.com'
 
         # Build variables JSON with ansible_host and ansible_connection
-        variables = json.dumps({'ansible_host': host_name, 'ansible_connection': 'ssh'}).replace("'", "''")  # Escape single quotes for SQL
+        variables = json.dumps({'ansible_host': host_name, 'ansible_connection': 'ssh'})
 
-        values.append(f"(NOW(), NOW(), '{host_name}', 'Performance test host {i}', {inventory_id}, '{variables}', TRUE, '', '{{}}'::jsonb)")
+        params.extend([host_name, f'Performance test host {i}', inventory_id, variables])
 
+    placeholders = ','.join([row_placeholder] * host_count)
     sql = f"""
     INSERT INTO main_host (created, modified, name, description, inventory_id, variables, enabled, instance_id, ansible_facts)
-    VALUES {','.join(values)}
+    VALUES {placeholders}
     RETURNING id;
     """
-    output = run(sql)
+    output = run(sql, params)
     host_ids = parse_ids(output)
     print(f'Created {host_count} hosts')
     return host_ids
@@ -882,12 +897,10 @@ def create_job(
     started_str = started.strftime('%Y-%m-%d %H:%M:%S+00')
     finished_str = finished.strftime('%Y-%m-%d %H:%M:%S+00')
 
-    ujt_value = job_template_id or 'NULL'
-    ee_value = execution_environment_id or 'NULL'
-    collections_sql = f"'{json.dumps(installed_collections)}'::jsonb" if installed_collections else "'[]'::jsonb"
+    collections_json = json.dumps(installed_collections) if installed_collections else '[]'
 
     # First create the unified job entry and get its ID
-    sql_uj = f"""
+    sql_uj = """
     INSERT INTO main_unifiedjob (
         created, modified, name, description, polymorphic_ctype_id,
         launch_type, cancel_flag, status, failed, started, finished, elapsed,
@@ -898,22 +911,36 @@ def create_job(
         execution_environment_id
     )
     VALUES (
-        '{created_str}', '{created_str}', '{name}', 'Performance testing job',
+        %s, %s, %s, 'Performance testing job',
         (SELECT id FROM django_content_type WHERE app_label = 'main' AND model = 'job'),
-        'manual', FALSE, 'successful', FALSE, '{started_str}', '{finished_str}', {elapsed},
+        'manual', FALSE, 'successful', FALSE, %s, %s, %s,
         '', '', '', '', '',
         '', 'localhost', 0, '',
-        TRUE, {org_id}, {collections_sql},
-        '2.15.0', 1, '{{}}'::jsonb, {ujt_value},
-        {ee_value}
+        TRUE, %s, %s::jsonb,
+        '2.15.0', 1, '{}'::jsonb, %s,
+        %s
     )
     RETURNING id;
     """
-    output = run(sql_uj)
+    output = run(
+        sql_uj,
+        (
+            created_str,
+            created_str,
+            name,
+            started_str,
+            finished_str,
+            elapsed,
+            org_id,
+            collections_json,
+            job_template_id,
+            execution_environment_id,
+        ),
+    )
     job_id = parse_id(output)
 
     # Then create the job entry using the same ID
-    sql_job = f"""
+    sql_job = """
     INSERT INTO main_job (
         unifiedjob_ptr_id, job_type, playbook, forks, "limit", verbosity,
         extra_vars, job_tags, force_handlers, skip_tags, start_at_task,
@@ -923,16 +950,16 @@ def create_job(
         webhook_service, survey_passwords, job_template_id, event_queries_processed
     )
     VALUES (
-        {job_id}, 'run', 'site.yml', 5, '', 0,
+        %s, 'run', 'site.yml', 5, '', 0,
         '', '', FALSE, '', '',
-        FALSE, {inventory_id}, {project_id}, FALSE,
+        FALSE, %s, %s, FALSE,
         '', 0, '', FALSE, FALSE,
         1, 0, 'main', '',
-        '', '{{}}'::jsonb, {ujt_value}, FALSE
+        '', '{}'::jsonb, %s, FALSE
     )
     RETURNING unifiedjob_ptr_id;
     """
-    run(sql_job)
+    run(sql_job, (job_id, inventory_id, project_id, job_template_id))
     print(f'Created job {job_index}')
 
     # Return job_id, created timestamp (needed for events), and finished timestamp (needed for job host summaries)
@@ -954,7 +981,9 @@ def create_job_host_summaries(job_id, host_count, job_created, job_finished, uni
     print(f'Creating {host_count} job host summaries for job {job_id}...')
     suffix = f'-{unique_suffix}' if unique_suffix else ''
 
-    values = []
+    # Row shape is constant; only the bound values differ per row.
+    row_placeholder = '(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s, %s)'
+    params = []
     for i in range(1, host_count + 1):
         host_name = f'host-{i}{suffix}.example.com'
         # Generate random task counts
@@ -968,21 +997,34 @@ def create_job_host_summaries(job_id, host_count, job_created, job_finished, uni
         processed = 1
         failed = failures > 0 or dark > 0
 
-        values.append(
-            f"('{job_created}', '{job_finished}', '{host_name}', {changed}, {dark}, {failures}, "
-            f'{ok}, {processed}, {skipped}, {str(failed).upper()}, NULL, '
-            f'{job_id}, {ignored}, {rescued})'
+        params.extend(
+            [
+                job_created,
+                job_finished,
+                host_name,
+                changed,
+                dark,
+                failures,
+                ok,
+                processed,
+                skipped,
+                failed,
+                job_id,
+                ignored,
+                rescued,
+            ]
         )
 
+    placeholders = ','.join([row_placeholder] * host_count)
     sql = f"""
     INSERT INTO main_jobhostsummary (
         created, modified, host_name, changed, dark, failures,
         ok, processed, skipped, failed, host_id,
         job_id, ignored, rescued
     )
-    VALUES {','.join(values)};
+    VALUES {placeholders};
     """
-    run(sql)
+    run(sql, params)
     print(f'Created {host_count} job host summaries')
 
 
@@ -1001,7 +1043,12 @@ def create_jobevent_partitions(start_date, end_date):
     while current < end_date:
         next_hour = current + timedelta(hours=1)
         partition_name = f'main_jobevent_{current.strftime("%Y%m%d_%H")}'
+        # Partition names are identifiers, so they cannot be bound as parameters.
+        # They are derived from datetime.strftime and validated here before use.
+        if not _IDENTIFIER_RE.match(partition_name):
+            raise ValueError(f'Invalid partition name: {partition_name!r}')
 
+        # Boundary timestamps come from datetime.strftime, which only emits digits, '-', ':' and ' '.
         statements.append(
             f'CREATE TABLE IF NOT EXISTS {partition_name} '
             f'PARTITION OF main_jobevent '
@@ -1074,7 +1121,9 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     print(f'Creating job events for job {job_id} ({task_count} tasks x {host_count} hosts)...')
     suffix = f'-{unique_suffix}' if unique_suffix else ''
 
-    values = []
+    # Row shape is constant; only the bound values differ per row.
+    row_placeholder = "(%s, %s, %s, %s, %s, %s, %s, 'Main Play', %s, %s, %s, %s, %s, %s, '', 0, 'site.yml', 0, '', 0, %s)"
+    params = []
     counter = 0
 
     # Task start time for calculating durations
@@ -1145,11 +1194,24 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
                 counter += 1
                 res = _patch_res_for_outcome(task_res_base, event_type, failed, changed)
                 event_data_dict = {**task_event_data_base, 'res': res}
-                event_data = json.dumps(event_data_dict).replace("'", "''")
-                values.append(
-                    f"('{job_created_str}', '{job_created_str}', '{event_type}', '{event_data}', {str(failed).upper()}, "
-                    f"{str(changed).upper()}, '{host_name}', 'Main Play', '{task_role}', '{task_name}', "
-                    f"{counter}, {host_id}, {job_id}, '{task_uuid}', '', 0, 'site.yml', 0, '', 0, '{job_created_str}')"
+                event_data = json.dumps(event_data_dict)
+                params.extend(
+                    [
+                        job_created_str,
+                        job_created_str,
+                        event_type,
+                        event_data,
+                        failed,
+                        changed,
+                        host_name,
+                        task_role,
+                        task_name,
+                        counter,
+                        host_id,
+                        job_id,
+                        task_uuid,
+                        job_created_str,
+                    ]
                 )
 
     # Insert in batches to avoid oversized SQL statements with large JSON payloads
@@ -1163,11 +1225,13 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
     )
     VALUES {rows};
     """
-    for batch_start in range(0, len(values), _INSERT_BATCH_SIZE):
-        batch = values[batch_start : batch_start + _INSERT_BATCH_SIZE]
-        run(insert_sql.format(rows=','.join(batch)))
+    params_per_row = 14
+    for batch_start in range(0, len(params), params_per_row * _INSERT_BATCH_SIZE):
+        batch_params = params[batch_start : batch_start + params_per_row * _INSERT_BATCH_SIZE]
+        rows = ','.join([row_placeholder] * (len(batch_params) // params_per_row))
+        run(insert_sql.format(rows=rows), batch_params)
 
-    print(f'Created {len(values)} job events ({task_count} tasks x {host_count} hosts)')
+    print(f'Created {len(params) // params_per_row} job events ({task_count} tasks x {host_count} hosts)')
 
 
 # Roles in namespace.collection.rolename (collection role) or namespace.rolename (standalone role) format.
@@ -1225,16 +1289,16 @@ def _random_installed_collections(seed, count=50):
 
 def create_execution_environment(name, image):
     """Create an execution environment row and return its ID."""
-    sql = f"""
+    sql = """
     INSERT INTO main_executionenvironment (
         created, modified, name, description, image, managed, pull
     )
     VALUES (
-        NOW(), NOW(), '{name}', '', '{image}', FALSE, 'missing'
+        NOW(), NOW(), %s, '', %s, FALSE, 'missing'
     )
     RETURNING id;
     """
-    output = run(sql)
+    output = run(sql, (name, image))
     ee_id = parse_id(output)
     if ee_id is None:
         raise RuntimeError(f'Failed to create execution environment: {name}')
@@ -1259,12 +1323,12 @@ def create_credentials():
         raise RuntimeError('Failed to fetch built-in credential types')
     credential_ids = []
     for (ct_id,) in result:
-        sql = f"""
+        sql = """
         INSERT INTO main_credential (created, modified, name, description, credential_type_id, inputs, managed)
-        VALUES (NOW(), NOW(), 'Perf Test Credential', '', {ct_id}, '{{}}'::jsonb, FALSE)
+        VALUES (NOW(), NOW(), 'Perf Test Credential', '', %s, '{}'::jsonb, FALSE)
         RETURNING id;
         """
-        cred_id = parse_id(run(sql))
+        cred_id = parse_id(run(sql, (ct_id,)))
         if cred_id is None:
             raise RuntimeError(f'Failed to create credential for type {ct_id}')
         credential_ids.append(cred_id)
@@ -1275,14 +1339,17 @@ def create_job_credentials(job_id, credential_ids):
     """Link credentials to a job."""
     if not credential_ids:
         return
-    values = ', '.join(f'({job_id}, {cred_id})' for cred_id in credential_ids)
-    run(f'INSERT INTO main_unifiedjob_credentials (unifiedjob_id, credential_id) VALUES {values};')
+    placeholders = ', '.join(['(%s, %s)'] * len(credential_ids))
+    params = []
+    for cred_id in credential_ids:
+        params.extend([job_id, cred_id])
+    run(f'INSERT INTO main_unifiedjob_credentials (unifiedjob_id, credential_id) VALUES {placeholders};', params)
 
 
 def create_instance(version='4.5.0', node_type='control'):
     """Create a controller instance row for controller_version_service."""
     instance_uuid = str(uuid.uuid4())
-    sql = f"""
+    sql = """
     INSERT INTO main_instance (
         created, modified, uuid, hostname, version, node_type,
         enabled, managed_by_policy, managed, ip_address,
@@ -1290,14 +1357,14 @@ def create_instance(version='4.5.0', node_type='control'):
         capacity, capacity_adjustment, errors, node_state
     )
     VALUES (
-        NOW(), NOW(), '{instance_uuid}', 'perf-test-controller-{instance_uuid}', '{version}', '{node_type}',
+        NOW(), NOW(), %s, %s, %s, %s,
         TRUE, TRUE, FALSE, '',
         0, 0, 0, 0,
         0, 1.0, '', 'ready'
     )
     RETURNING id;
     """
-    output = run(sql)
+    output = run(sql, (instance_uuid, f'perf-test-controller-{instance_uuid}', version, node_type))
     instance_id = parse_id(output)
     if instance_id is None:
         raise RuntimeError('Failed to create main_instance row')
@@ -1336,17 +1403,16 @@ def create_indirect_managed_node_audits(job_ids, host_ids, inventory_id, org_id,
     suffix = f'-{unique_suffix}' if unique_suffix else ''
     print(f'Creating {indirect_count} indirect managed node audit records across {len(job_ids)} jobs...')
 
-    values = []
+    # Row shape is constant; only the bound values differ per row.
+    row_placeholder = "(NOW(), %s, %s, %s, %s, %s, %s::jsonb, '{}'::jsonb, %s::jsonb, 1)"
+    params = []
     for i in range(indirect_count):
         job_id = job_ids[i % len(job_ids)]
-        host_id_sql = str(host_ids[i % len(host_ids)]) if host_ids else 'NULL'
+        host_id = host_ids[i % len(host_ids)] if host_ids else None
         host_name = f'indirect-host-{i}{suffix}.example.com'
-        canonical_facts = json.dumps({'fqdn': host_name}).replace("'", "''")
-        events = json.dumps(_INDIRECT_NODE_MODULES[i % len(_INDIRECT_NODE_MODULES)]).replace("'", "''")
-        values.append(
-            f'(NOW(), {job_id}, {org_id}, {inventory_id}, {host_id_sql}, '
-            f"'{host_name}', '{canonical_facts}'::jsonb, '{{}}'::jsonb, '{events}'::jsonb, 1)"
-        )
+        canonical_facts = json.dumps({'fqdn': host_name})
+        events = json.dumps(_INDIRECT_NODE_MODULES[i % len(_INDIRECT_NODE_MODULES)])
+        params.extend([job_id, org_id, inventory_id, host_id, host_name, canonical_facts, events])
 
     _INSERT_BATCH_SIZE = 500
     insert_sql = """
@@ -1356,10 +1422,12 @@ def create_indirect_managed_node_audits(job_ids, host_ids, inventory_id, org_id,
     VALUES {rows}
     RETURNING id;
     """
+    params_per_row = 7
     ids = []
-    for batch_start in range(0, len(values), _INSERT_BATCH_SIZE):
-        batch = values[batch_start : batch_start + _INSERT_BATCH_SIZE]
-        output = run(insert_sql.format(rows=','.join(batch)))
+    for batch_start in range(0, len(params), params_per_row * _INSERT_BATCH_SIZE):
+        batch_params = params[batch_start : batch_start + params_per_row * _INSERT_BATCH_SIZE]
+        rows = ','.join([row_placeholder] * (len(batch_params) // params_per_row))
+        output = run(insert_sql.format(rows=rows), batch_params)
         ids.extend(parse_ids(output) if output else [])
     print(f'Created {len(ids)} indirect managed node audit records')
     return ids

@@ -26,12 +26,17 @@ Usage:
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
 import time
 
 from datetime import datetime
 from pathlib import Path
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
 
 
 # Dataset configurations
@@ -69,12 +74,32 @@ DATASETS = [
 ]
 
 
+def get_python_executable():
+    """Return the repo venv interpreter when available, otherwise the current interpreter."""
+    venv_python = REPO_ROOT / '.venv' / 'bin' / 'python'
+    if venv_python.exists():
+        return str(venv_python)
+    return sys.executable
+
+
 def run_command(cmd, description):
-    """Run a command and return success status."""
+    """Run a command (argv list) and return success status."""
     print(f'\n  → {description}...')
-    result = subprocess.run(cmd, shell=True)
+    result = subprocess.run(cmd, check=False)
     if result.returncode != 0:
         print(f'    ✗ Failed with exit code {result.returncode}')
+        return False
+    print('    ✓ Done')
+    return True
+
+
+def copy_results(source_dir, dest_dir, description):
+    """Copy a results directory and return success status."""
+    print(f'\n  → {description}...')
+    try:
+        shutil.copytree(source_dir, dest_dir, dirs_exist_ok=True)
+    except OSError as e:
+        print(f'    ✗ Failed: {e}')
         return False
     print('    ✓ Done')
     return True
@@ -89,43 +114,50 @@ def run_dataset(config, index, total):
     print(f'{"=" * 60}')
 
     start_time = time.time()
+    python_exe = get_python_executable()
 
     # Step 1: Clean database
-    if not run_command('source .venv/bin/activate && python tools/anonymized_db_perf_data/clean_all_data.py --force', 'Cleaning database'):
+    clean_cmd = [python_exe, str(SCRIPT_DIR / 'clean_all_data.py'), '--force']
+    if not run_command(clean_cmd, 'Cleaning database'):
         return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 2: Generate test data
-    cmd = (
-        f'source .venv/bin/activate && '
-        f'python tools/anonymized_db_perf_data/fill_perf_db_data.py '
-        f'--job-count={config["job_count"]} '
-        f'--host-count={config["host_count"]} '
-        f'--task-count={config["task_count"]} '
-        f'--indirect-count={config["indirect_count"]} '
-        f'--since={config["test_since"]} --until={config["test_until"]}'
-    )
-    if not run_command(cmd, f'Generating {name} dataset'):
+    fill_cmd = [
+        python_exe,
+        str(SCRIPT_DIR / 'fill_perf_db_data.py'),
+        f'--job-count={config["job_count"]}',
+        f'--host-count={config["host_count"]}',
+        f'--task-count={config["task_count"]}',
+        f'--indirect-count={config["indirect_count"]}',
+        f'--since={config["test_since"]}',
+        f'--until={config["test_until"]}',
+    ]
+    if not run_command(fill_cmd, f'Generating {name} dataset'):
         return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 3: Run individual task tests
-    test_cmd = (
-        f'source .venv/bin/activate && '
-        f'python tools/anonymized_db_perf_data/rollup_performance_test.py '
-        f'--since={config["test_since"]} --until={config["test_until"]}'
-    )
+    test_cmd = [
+        python_exe,
+        str(SCRIPT_DIR / 'rollup_performance_test.py'),
+        f'--since={config["test_since"]}',
+        f'--until={config["test_until"]}',
+    ]
     if not run_command(test_cmd, 'Running individual task tests'):
         return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 4: Run full service test
-    perf_cmd = (
-        f'source .venv/bin/activate && python tools/anonymized_db_perf_data/run_perf.py --since={config["test_since"]} --until={config["test_until"]}'
-    )
+    perf_cmd = [
+        python_exe,
+        str(SCRIPT_DIR / 'run_perf.py'),
+        f'--since={config["test_since"]}',
+        f'--until={config["test_until"]}',
+    ]
     if not run_command(perf_cmd, 'Running full service test'):
         return {'success': False, 'elapsed': time.time() - start_time}
 
     # Step 5: Save results to dataset-specific directory
-    output_dir = Path(__file__).parent / f'out_{name}'
-    if not run_command(f'cp -r tools/anonymized_db_perf_data/out {output_dir}', f'Saving results to out_{name}'):
+    output_dir = SCRIPT_DIR / f'out_{name}'
+    if not copy_results(SCRIPT_DIR / 'out', output_dir, f'Saving results to out_{name}'):
         return {'success': False, 'elapsed': time.time() - start_time}
 
     elapsed = time.time() - start_time
