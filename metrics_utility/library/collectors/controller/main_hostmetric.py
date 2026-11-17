@@ -64,7 +64,9 @@ def _host_metric_query(*, since=None, until=None, marker=None, limit=None):
 
 def _next_marker(row):
     """Return the keyset marker (``(hostname, host_id)``) for the given result row."""
-    return (row['hostname'], row['host_id'])
+    # Normalize to plain str/int so downstream query parameters are always
+    # primitive values rather than driver-specific result objects.
+    return (str(row['hostname']), int(row['host_id']))
 
 
 @collector

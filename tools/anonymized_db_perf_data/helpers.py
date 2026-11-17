@@ -850,6 +850,7 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
         unique_suffix: Optional unique suffix for host names
     """
     print(f'Creating {host_count} hosts for inventory {inventory_id}...')
+    inventory_id = int(inventory_id) if inventory_id is not None else None
     suffix = f'-{unique_suffix}' if unique_suffix else ''
 
     # Generate bulk insert params for hosts (let DB auto-generate IDs)
@@ -864,7 +865,7 @@ def create_hosts(inventory_id=None, host_count=1000, unique_suffix=None):
 
         params.extend([host_name, f'Performance test host {i}', inventory_id, variables])
 
-    placeholders = ','.join([row_placeholder] * host_count)
+    placeholders = ','.join([row_placeholder] * (len(params) // 4))
     sql = f"""
     INSERT INTO main_host (created, modified, name, description, inventory_id, variables, enabled, instance_id, ansible_facts)
     VALUES {placeholders}
@@ -979,6 +980,7 @@ def create_job_host_summaries(job_id, host_count, job_created, job_finished, uni
         unique_suffix: Optional unique suffix for host names (must match create_hosts suffix)
     """
     print(f'Creating {host_count} job host summaries for job {job_id}...')
+    job_id = int(job_id)
     suffix = f'-{unique_suffix}' if unique_suffix else ''
 
     # Row shape is constant; only the bound values differ per row.
@@ -1015,7 +1017,7 @@ def create_job_host_summaries(job_id, host_count, job_created, job_finished, uni
             ]
         )
 
-    placeholders = ','.join([row_placeholder] * host_count)
+    placeholders = ','.join([row_placeholder] * (len(params) // 13))
     sql = f"""
     INSERT INTO main_jobhostsummary (
         created, modified, host_name, changed, dark, failures,
@@ -1119,6 +1121,8 @@ def create_job_events(job_id, host_ids, task_count=50, job_index=0, job_created=
 
     host_count = len(host_ids)
     print(f'Creating job events for job {job_id} ({task_count} tasks x {host_count} hosts)...')
+    job_id = int(job_id)
+    host_ids = [int(host_id) for host_id in host_ids]
     suffix = f'-{unique_suffix}' if unique_suffix else ''
 
     # Row shape is constant; only the bound values differ per row.
@@ -1339,6 +1343,8 @@ def create_job_credentials(job_id, credential_ids):
     """Link credentials to a job."""
     if not credential_ids:
         return
+    job_id = int(job_id)
+    credential_ids = [int(credential_id) for credential_id in credential_ids]
     placeholders = ', '.join(['(%s, %s)'] * len(credential_ids))
     params = []
     for cred_id in credential_ids:

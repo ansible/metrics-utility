@@ -126,7 +126,9 @@ def generate_since_until_reports(report_type, since_until_pairs, dictionary, cus
 
 
 def generate():
-    entry_point_dir = str(Path(snapshot_utils.get_entry_point_directory()).resolve())
+    # The snapshot data lives next to this module; use the module location rather
+    # than sys.argv[0] so no command-line value reaches the subprocess paths.
+    entry_point_dir = str(Path(__file__).resolve().parent)
     if not Path(entry_point_dir).is_dir():
         raise SystemExit(f'Entry point directory does not exist: {entry_point_dir}')
 

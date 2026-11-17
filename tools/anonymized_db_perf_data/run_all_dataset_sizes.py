@@ -171,17 +171,20 @@ def main():
     parser.add_argument('--only', type=str, help='Run only specific dataset sizes (comma-separated). Options: small, medium, large')
     args = parser.parse_args()
 
-    # Filter datasets if --only is specified
+    # Filter datasets if --only is specified. Select by index into the constant
+    # DATASETS list so the CLI value is only used for filtering and never flows
+    # into generated paths or commands.
     datasets_to_test = DATASETS
     if args.only:
-        selected = [s.strip().lower() for s in args.only.split(',')]
-        datasets_to_test = [ds for ds in DATASETS if ds['name'] in selected]
+        selected = {s.strip().lower() for s in args.only.split(',')}
+        selected_indexes = [i for i, ds in enumerate(DATASETS) if ds['name'] in selected]
+        datasets_to_test = [DATASETS[i] for i in selected_indexes]
 
         if not datasets_to_test:
             print('Error: No valid dataset sizes specified. Options: small, medium, large')
             return 1
 
-        invalid = [s for s in selected if s not in ['small', 'medium', 'large']]
+        invalid = sorted(selected - {ds['name'] for ds in DATASETS})
         if invalid:
             print(f'Warning: Invalid dataset size(s) ignored: {", ".join(invalid)}')
 
