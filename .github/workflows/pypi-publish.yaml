@@ -4,8 +4,8 @@ on:  # yamllint disable-line rule:truthy
   release:
     types: [published]
   # Weekly release: there is no tag, so the tip of the default branch is
-  # published as MAJOR.MINOR.<today's UTC date>. This is the only scheduled
-  # publisher; pypi-release.yml is manual-only.
+  # published as MAJOR.MINOR.<today's UTC date>. This is the only publisher;
+  # authentication is OIDC trusted publishing, with no long-lived API token.
   schedule:
     - cron: '0 2 * * 0'
   workflow_dispatch:
