@@ -3,17 +3,18 @@ name: Publish metrics-utility to PyPI
 on:  # yamllint disable-line rule:truthy
   release:
     types: [published]
-  # Weekly: there is no tag, so the tip of the default branch is published as
-  # MAJOR.MINOR.<today's UTC date>. Do not leave this enabled alongside
-  # pypi-release.yml, which publishes the same version on the same schedule.
+  # Weekly release: there is no tag, so the tip of the default branch is
+  # published as MAJOR.MINOR.<today's UTC date>. This is the only scheduled
+  # publisher; the old weekly pypi-release.yml job is gone.
   schedule:
     - cron: '0 2 * * 0'
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to build and publish (e.g. 0.8.20261116)"
-        required: true
+        description: "Release tag to build and publish (e.g. 2.7.20261116). Leave empty to build the default branch, exactly like the weekly schedule."
+        required: false
         type: string
+        default: ""
       dry_run:
         description: "Build the distribution without publishing to PyPI"
         required: false
@@ -33,7 +34,7 @@ permissions:
 
 concurrency:
   # Never run two publishes at once; a duplicate version cannot be re-uploaded.
-  group: pypi-publish-${{ github.event.release.tag_name || inputs.tag || 'scheduled' }}
+  group: pypi-publish-${{ github.event.release.tag_name || inputs.tag || 'default-branch' }}
   cancel-in-progress: false
 
 jobs:
@@ -46,15 +47,48 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-    env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
+      - name: Resolve target ref
+        id: target
+        env:
+          REQUESTED_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          export GIT_TERMINAL_PROMPT=0
+
+          # No tag (weekly schedule, or a manual run with the tag left blank):
+          # build the tip of the default branch.
+          if [ -z "${REQUESTED_TAG}" ]; then
+            echo "No tag requested; building the tip of ${DEFAULT_BRANCH}."
+            {
+              echo "ref=${DEFAULT_BRANCH}"
+              echo "tag="
+            } >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          # A requested tag must actually exist. Check before checkout so a typo
+          # fails once with a readable message instead of three git retries
+          # against a tag that was never pushed.
+          if ! git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}" \
+            "refs/tags/${REQUESTED_TAG}" > /dev/null 2>&1; then
+            echo "::error::Tag '${REQUESTED_TAG}' does not exist in ${GITHUB_REPOSITORY}. Leave the tag input empty to build ${DEFAULT_BRANCH}, or use one of the most recent tags listed below."
+            git ls-remote --tags --refs "https://github.com/${GITHUB_REPOSITORY}" \
+              | awk -F/ '{print "    " $NF}' | sort -V | tail -n 5 >&2
+            exit 1
+          fi
+
+          echo "Building tag ${REQUESTED_TAG}."
+          {
+            echo "ref=refs/tags/${REQUESTED_TAG}"
+            echo "tag=${REQUESTED_TAG}"
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Checkout metrics-utility
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Release/manual runs build the given tag; a scheduled run has no tag
-          # and builds the default branch tip instead.
-          ref: ${{ env.TAG != '' && format('refs/tags/{0}', env.TAG) || github.event.repository.default_branch }}
+          ref: ${{ steps.target.outputs.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v6
@@ -67,6 +101,9 @@ jobs:
 
       - name: Generate version
         id: version
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+          SOURCE_REF: ${{ steps.target.outputs.ref }}
         run: |
           set -euo pipefail
 
@@ -76,22 +113,21 @@ jobs:
           BASE_SERIES="${BASE_VERSION%.*}"
 
           if [ -n "${TAG:-}" ]; then
-            TAG_NAME="${TAG#v}"
             # Take the date from the tag so rebuilding a tag always yields the
             # same version instead of depending on the day the workflow runs.
-            DATE_SUFFIX="$(printf '%s\n' "${TAG_NAME}" | grep -oE '[0-9]{8}' | tail -1 || true)"
+            DATE_SUFFIX="$(printf '%s\n' "${TAG}" | grep -oE '[0-9]{8}' | tail -1 || true)"
             if [ -z "${DATE_SUFFIX}" ]; then
               # No YYYYMMDD in the tag: fall back to the tagged commit's date.
               DATE_SUFFIX="$(git log -1 --format='%cd' --date=format:'%Y%m%d')"
-              echo "::warning::Tag '${TAG_NAME}' has no YYYYMMDD segment; using tagged commit date ${DATE_SUFFIX}"
+              echo "::warning::Tag '${TAG}' has no YYYYMMDD segment; using tagged commit date ${DATE_SUFFIX}"
             fi
-            SOURCE="${TAG_NAME}"
+            SOURCE="${TAG}"
           else
-            # Scheduled run: no tag exists, so date the release with today's UTC
-            # date, which is the scheme the previous weekly job used.
+            # No tag: date the release with today's UTC date, which is the
+            # scheme the previous weekly job used.
             DATE_SUFFIX="$(date -u +%Y%m%d)"
-            SOURCE="${GITHUB_REF_NAME:-devel} @ $(git rev-parse --short HEAD)"
-            echo "::notice::No tag provided; publishing ${GITHUB_REF_NAME:-devel} dated ${DATE_SUFFIX}"
+            SOURCE="${SOURCE_REF} @ $(git rev-parse --short HEAD)"
+            echo "::notice::No tag requested; publishing ${SOURCE} dated ${DATE_SUFFIX}"
           fi
 
           VERSION="${BASE_SERIES}.${DATE_SUFFIX}"
@@ -177,7 +213,7 @@ jobs:
             echo ""
             echo "| Field | Value |"
             echo "| --- | --- |"
-            echo "| Source | \`${{ github.event.release.tag_name || inputs.tag || format('{0} (scheduled)', github.event.repository.default_branch) }}\` |"
+            echo "| Source | \`${{ github.event.release.tag_name || inputs.tag || format('{0} (default branch)', github.event.repository.default_branch) }}\` |"
             echo "| Environment | \`${{ inputs.environment || 'pypi' }}\` |"
             echo "| Index | \`${{ vars.PYPI_INDEX_URL }}\` |"
             echo "| Trigger | \`${{ github.event_name }}\` |"
