@@ -1,0 +1,184 @@
+---
+name: Publish metrics-utility to PyPI
+on:  # yamllint disable-line rule:truthy
+  release:
+    types: [published]
+  # Weekly: there is no tag, so the tip of the default branch is published as
+  # MAJOR.MINOR.<today's UTC date>. Do not leave this enabled alongside
+  # pypi-release.yml, which publishes the same version on the same schedule.
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build and publish (e.g. 0.8.20261116)"
+        required: true
+        type: string
+      dry_run:
+        description: "Build the distribution without publishing to PyPI"
+        required: false
+        type: boolean
+        default: false
+      environment:
+        description: "Deployment environment to publish from (selects the target index)"
+        required: true
+        type: choice
+        options:
+          - pypi
+          - testpypi
+        default: pypi
+
+permissions:
+  contents: read
+
+concurrency:
+  # Never run two publishes at once; a duplicate version cannot be re-uploaded.
+  group: pypi-publish-${{ github.event.release.tag_name || inputs.tag || 'scheduled' }}
+  cancel-in-progress: false
+
+jobs:
+  build-metrics-utility:
+    name: Build metrics-utility distribution
+    # This workflow is mirrored into ansible-automation-platform/metrics-utility
+    # by repo-sync.yaml; only the upstream repo may publish.
+    if: github.repository_owner == 'ansible'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - name: Checkout metrics-utility
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Release/manual runs build the given tag; a scheduled run has no tag
+          # and builds the default branch tip instead.
+          ref: ${{ env.TAG != '' && format('refs/tags/{0}', env.TAG) || github.event.repository.default_branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install build dependencies
+        run: |
+          python3 -m pip install build==1.5.0 --only-binary :all:
+
+      - name: Generate version
+        id: version
+        run: |
+          set -euo pipefail
+
+          # PyPI scheme is MAJOR.MINOR.YYYYMMDD (e.g. 0.8.20261116), with
+          # MAJOR.MINOR taken from setup.cfg (0.8.0dev -> 0.8).
+          BASE_VERSION="$(grep -m1 '^version = ' setup.cfg | cut -d' ' -f3 | sed 's/dev$//')"
+          BASE_SERIES="${BASE_VERSION%.*}"
+
+          if [ -n "${TAG:-}" ]; then
+            TAG_NAME="${TAG#v}"
+            # Take the date from the tag so rebuilding a tag always yields the
+            # same version instead of depending on the day the workflow runs.
+            DATE_SUFFIX="$(printf '%s\n' "${TAG_NAME}" | grep -oE '[0-9]{8}' | tail -1 || true)"
+            if [ -z "${DATE_SUFFIX}" ]; then
+              # No YYYYMMDD in the tag: fall back to the tagged commit's date.
+              DATE_SUFFIX="$(git log -1 --format='%cd' --date=format:'%Y%m%d')"
+              echo "::warning::Tag '${TAG_NAME}' has no YYYYMMDD segment; using tagged commit date ${DATE_SUFFIX}"
+            fi
+            SOURCE="${TAG_NAME}"
+          else
+            # Scheduled run: no tag exists, so date the release with today's UTC
+            # date, which is the scheme the previous weekly job used.
+            DATE_SUFFIX="$(date -u +%Y%m%d)"
+            SOURCE="${GITHUB_REF_NAME:-devel} @ $(git rev-parse --short HEAD)"
+            echo "::notice::No tag provided; publishing ${GITHUB_REF_NAME:-devel} dated ${DATE_SUFFIX}"
+          fi
+
+          VERSION="${BASE_SERIES}.${DATE_SUFFIX}"
+          if ! printf '%s\n' "${VERSION}" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]{8}$'; then
+            echo "::error::Computed version '${VERSION}' is not MAJOR.MINOR.YYYYMMDD (source: ${SOURCE})"
+            exit 1
+          fi
+
+          echo "Source:         ${SOURCE}"
+          echo "setup.cfg:      ${BASE_VERSION}"
+          echo "Publish as:     ${VERSION}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "source=${SOURCE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Apply version for build
+        run: |
+          set -euo pipefail
+          sed "s/^version = .*/version = ${{ steps.version.outputs.version }}/" setup.cfg > setup.cfg.tmp
+          mv setup.cfg.tmp setup.cfg
+          grep '^version = ' setup.cfg
+
+      - name: Build distribution
+        run: |
+          python3 -m build
+
+      - name: Verify built artifacts match the version
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          VERSION="${{ steps.version.outputs.version }}"
+          ls -l dist/
+
+          dists=(dist/metrics_utility-"${VERSION}".tar.gz dist/metrics_utility-"${VERSION}"-*.whl)
+          if [ "${#dists[@]}" -lt 2 ]; then
+            echo "::error::Did not build both an sdist and a wheel for ${VERSION}"
+            exit 1
+          fi
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: metrics-utility-dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-metrics-utility:
+    name: Publish metrics-utility distribution
+    needs: build-metrics-utility
+    if: ${{ github.repository_owner == 'ansible' && inputs.dry_run != true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: ${{ inputs.environment || 'pypi' }}
+    permissions:
+      id-token: write
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: metrics-utility-dist
+          path: dist/
+
+      - name: Check index URL is configured
+        if: ${{ vars.PYPI_INDEX_URL == '' }}
+        run: |
+          echo "::error::PYPI_INDEX_URL is not set on the '${{ inputs.environment || 'pypi' }}' environment"
+          exit 1
+
+      - name: Publish distribution
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          packages-dir: dist/
+          # Environment-scoped variable, e.g. https://upload.pypi.org/legacy/
+          # on pypi and https://test.pypi.org/legacy/ on testpypi.
+          repository-url: ${{ vars.PYPI_INDEX_URL }}
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## PyPI publish summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "| --- | --- |"
+            echo "| Source | \`${{ github.event.release.tag_name || inputs.tag || format('{0} (scheduled)', github.event.repository.default_branch) }}\` |"
+            echo "| Environment | \`${{ inputs.environment || 'pypi' }}\` |"
+            echo "| Index | \`${{ vars.PYPI_INDEX_URL }}\` |"
+            echo "| Trigger | \`${{ github.event_name }}\` |"
+          } >> "${GITHUB_STEP_SUMMARY}"
