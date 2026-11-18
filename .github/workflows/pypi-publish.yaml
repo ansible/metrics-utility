@@ -5,7 +5,7 @@ on:  # yamllint disable-line rule:truthy
     types: [published]
   # Weekly release: there is no tag, so the tip of the default branch is
   # published as MAJOR.MINOR.<today's UTC date>. This is the only scheduled
-  # publisher; the old weekly pypi-release.yml job is gone.
+  # publisher; pypi-release.yml is manual-only.
   schedule:
     - cron: '0 2 * * 0'
   workflow_dispatch:
