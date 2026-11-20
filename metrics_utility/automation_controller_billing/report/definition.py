@@ -59,6 +59,12 @@ class Sum:
 
 @dataclass
 class Cell:
+    """A typed report value and its presentation.
+
+    Strings are always literal text. Only explicit :class:`Multiply` and
+    :class:`Sum` values are rendered as spreadsheet formulas.
+    """
+
     row: int
     column: int
     value: Any = None
@@ -67,7 +73,6 @@ class Cell:
     border: Border | None = None
     alignment: Alignment | None = None
     number_format: str | None = None
-    force_text: bool = False
 
 
 @dataclass

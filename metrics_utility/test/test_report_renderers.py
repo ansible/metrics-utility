@@ -5,6 +5,7 @@ import gc
 import json
 import weakref
 
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import Mock
 from zipfile import ZipFile
@@ -14,8 +15,14 @@ import pandas as pd
 import pytest
 
 from defusedxml import ElementTree
+from odf import teletype
+from odf.opendocument import load as load_ods
+from odf.table import TableCell
 from openpyxl import load_workbook
+from openpyxl.worksheet.formula import ArrayFormula, DataTableFormula
 
+from metrics_utility.automation_controller_billing.helpers import merge_json_sets
+from metrics_utility.automation_controller_billing.report.base import Base
 from metrics_utility.automation_controller_billing.report.definition import (
     Alignment,
     Border,
@@ -31,6 +38,7 @@ from metrics_utility.automation_controller_billing.report.renderers.ods import r
 from metrics_utility.automation_controller_billing.report.renderers.xlsx import render as render_xlsx
 from metrics_utility.automation_controller_billing.report_saver.report_saver_directory import ReportSaverDirectory
 from metrics_utility.automation_controller_billing.report_saver.report_saver_s3 import ReportSaverS3
+from metrics_utility.metric_utils import INDIRECT
 from metrics_utility.test.util import run_build_int
 
 
@@ -104,6 +112,147 @@ def test_shared_definition_renders_formulas_styles_and_typed_values(tmp_path):
         assert b'#ffcc17' in styles
         assert b'#92d050' in styles
         assert b'#FF0000' in styles
+
+
+@pytest.mark.parametrize(
+    'value',
+    [
+        '=1+1',
+        '=SUM(A1:A2)',
+        '+1+1',
+        '-1+1',
+        '@SUM(1,1)',
+        '\t=1+1',
+        '\n=1+1',
+        ' =1+1',
+        "'=1+1",
+        'of:=SUM([.A1:.A2])',
+        '</t></is><f>1+1</f><is><t>',
+        '#N/A',
+        '#DIV/0!',
+        '#REF!',
+        '00123',
+        '1.25',
+        'true',
+        '2026-11-16',
+    ],
+)
+def test_report_strings_are_literal_text_in_both_formats(tmp_path, value):
+    definition = Workbook()
+    sheet = definition.active
+    sheet.cell(1, 1).value = value
+    sheet.cell(2, 1).value = 2
+    sheet.cell(2, 2).value = 3
+    sheet.cell(2, 3).value = Multiply(CellReference(2, 1), CellReference(2, 2))
+    sheet.cell(3, 3).value = Sum(CellReference(2, 3), CellReference(2, 3))
+    xlsx_path, ods_path = tmp_path / 'report.xlsx', tmp_path / 'report.ods'
+    render_xlsx(definition).save(xlsx_path)
+    render_ods(definition).save(ods_path)
+
+    workbook = load_workbook(xlsx_path)
+    assert workbook.active['A1'].data_type == 's'
+    assert workbook.active['A1'].value == value
+    assert workbook.active['C2'].data_type == 'f'
+    assert workbook.active['C2'].value == '=A2*B2'
+    assert workbook.active['C3'].data_type == 'f'
+    assert workbook.active['C3'].value == '=SUM(C2:C2)'
+
+    cells = load_ods(str(ods_path)).getElementsByType(TableCell)
+    assert cells[0].getAttribute('valuetype') == 'string'
+    assert cells[0].getAttribute('formula') is None
+    assert teletype.extractText(cells[0]) == value
+    formulas = [cell.getAttribute('formula') for cell in cells if cell.getAttribute('formula')]
+    assert formulas == ['of:=[.A2]*[.B2]', 'of:=SUM([.C2:.C2])']
+
+
+@pytest.mark.parametrize(
+    ('value', 'xlsx_type', 'ods_type'),
+    [
+        (True, 'b', 'boolean'),
+        (False, 'b', 'boolean'),
+        (np.bool_(True), 'b', 'boolean'),
+        (np.bool_(False), 'b', 'boolean'),
+        (-7, 'n', 'float'),
+        (np.int64(-7), 'n', 'float'),
+        (1.25, 'n', 'float'),
+        (np.float64(1.25), 'n', 'float'),
+        (Decimal('1.25'), 'n', 'float'),
+        (datetime.date(2026, 11, 16), 'd', 'date'),
+        (datetime.datetime(2026, 11, 16, 12, 30), 'd', 'date'),
+        (datetime.time(12, 30), 'd', 'time'),
+        (datetime.timedelta(hours=36), 'd', 'time'),
+    ],
+)
+def test_report_scalars_keep_native_types_in_both_formats(tmp_path, value, xlsx_type, ods_type):
+    definition = Workbook()
+    definition.active.cell(1, 1).value = value
+    xlsx_path, ods_path = tmp_path / 'report.xlsx', tmp_path / 'report.ods'
+    render_xlsx(definition).save(xlsx_path)
+    render_ods(definition).save(ods_path)
+
+    cell = load_workbook(xlsx_path).active['A1']
+    assert cell.data_type == xlsx_type
+    if xlsx_type == 'n':
+        assert cell.value == pytest.approx(float(value))
+    elif xlsx_type == 'b':
+        assert cell.value is bool(value)
+    elif type(value) is datetime.date:
+        assert cell.value.date() == value
+    else:
+        assert cell.value == value
+
+    with ZipFile(ods_path) as archive:
+        document = ElementTree.fromstring(archive.read('content.xml'))
+    cell = document.find('.//table:table-cell', NS)
+    assert cell.get(f'{{{OFFICE}}}value-type') == ods_type
+    assert cell.get(f'{{{TABLE}}}formula') is None
+    if ods_type == 'float':
+        assert float(cell.get(f'{{{OFFICE}}}value')) == pytest.approx(float(value))
+    elif ods_type == 'boolean':
+        assert cell.get(f'{{{OFFICE}}}boolean-value') == str(bool(value)).lower()
+
+
+def test_xlsx_converted_bytes_are_literal_text(tmp_path):
+    definition = Workbook()
+    definition.active.cell(1, 1).value = b'=1+1'
+    path = tmp_path / 'report.xlsx'
+    render_xlsx(definition).save(path)
+
+    cell = load_workbook(path).active['A1']
+    assert cell.data_type == 's'
+    assert cell.value == '=1+1'
+
+
+@pytest.mark.parametrize('render', [render_xlsx, render_ods])
+@pytest.mark.parametrize('value', [ArrayFormula(ref='A1', text='=1+1'), DataTableFormula(ref='A1')])
+def test_renderers_reject_foreign_formula_objects(render, value):
+    definition = Workbook()
+    definition.active.cell(1, 1).value = value
+
+    with pytest.raises(TypeError, match=r'Unsupported report (formula|value)'):
+        render(definition)
+
+
+def test_infrastructure_facts_are_literal_text_in_both_formats(tmp_path):
+    report = Base()
+    report.wb = Workbook()
+    facts = merge_json_sets([{'infra_type': '=1+1', 'infra_bucket': '=2+2', 'device_type': '=3+3'}])
+    dataframe = pd.DataFrame([{'managed_node_type': INDIRECT, 'host_name': 'node', 'facts': facts}])
+    report._build_data_section_infrastructure_summary(1, report.wb.active, dataframe)
+    xlsx_path, ods_path = tmp_path / 'report.xlsx', tmp_path / 'report.ods'
+    render_xlsx(report.wb).save(xlsx_path)
+    render_ods(report.wb).save(ods_path)
+
+    sheet = load_workbook(xlsx_path).active
+    for address, value in [('A2', '=1+1'), ('B3', '=2+2'), ('C4', '=3+3')]:
+        assert sheet[address].data_type == 's'
+        assert sheet[address].value == value
+    assert all(cell.data_type != 'f' for row in sheet for cell in row)
+
+    cells = load_ods(str(ods_path)).getElementsByType(TableCell)
+    assert not any(cell.getAttribute('formula') for cell in cells)
+    for value in ['=1+1', '=2+2', '=3+3']:
+        assert any(cell.getAttribute('valuetype') == 'string' and teletype.extractText(cell) == value for cell in cells)
 
 
 def test_ods_saver_writes_exact_s3_temporary_path(tmp_path, monkeypatch):
