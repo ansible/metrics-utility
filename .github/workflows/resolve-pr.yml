@@ -1,0 +1,78 @@
+name: Resolve workflow-run pull request
+
+on:
+  workflow_call:
+    outputs:
+      pr_number:
+        value: ${{ jobs.resolve.outputs.pr_number }}
+      allowed:
+        value: ${{ jobs.resolve.outputs.allowed }}
+
+jobs:
+  resolve:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      allowed: ${{ steps.pr.outputs.allowed }}
+    steps:
+      - name: Resolve current pull request
+        id: pr
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const repository = `${context.repo.owner}/${context.repo.repo}`;
+            let number = run.pull_requests?.[0]?.number;
+
+            if (!number && run.head_sha) {
+              const targets = [
+                [run.head_repository?.owner?.login, run.head_repository?.name],
+                [context.repo.owner, context.repo.repo],
+              ].filter(([owner, repo]) => owner && repo);
+              for (const [owner, repo] of targets) {
+                try {
+                  const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                    owner,
+                    repo,
+                    commit_sha: run.head_sha,
+                  });
+                  const pullRequest = response.data.find(
+                    (candidate) => candidate.base?.repo?.full_name === repository,
+                  );
+                  number = pullRequest?.number;
+                } catch (error) {
+                  if (error.status !== 404) {
+                    throw error;
+                  }
+                }
+                if (number) {
+                  break;
+                }
+              }
+            }
+
+            if (number) {
+              const response = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: number,
+              });
+              const pullRequest = response.data;
+              if (
+                pullRequest.state === 'open' &&
+                pullRequest.base.repo.full_name === repository
+              ) {
+                core.setOutput('pr_number', String(pullRequest.number));
+                core.setOutput(
+                  'allowed',
+                  String(
+                    pullRequest.base.repo.owner.login === 'ansible' ||
+                    pullRequest.base.ref.startsWith('stable-2.'),
+                  ),
+                );
+              }
+            }

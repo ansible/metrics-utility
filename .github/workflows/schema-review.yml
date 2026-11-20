@@ -6,97 +6,54 @@ on:
     types: [completed]
 
 jobs:
+  resolve-pr:
+    uses: ./.github/workflows/resolve-pr.yml
+    permissions:
+      contents: read
+      pull-requests: read
+
   request-review:
-    if: github.event.workflow_run.event == 'pull_request'
+    needs: resolve-pr
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      needs.resolve-pr.outputs.pr_number != '' &&
+      needs.resolve-pr.outputs.allowed == 'true'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: read
       issues: write
+    env:
+      PR_NUMBER: ${{ needs.resolve-pr.outputs.pr_number }}
     steps:
-      - name: Resolve current pull request
-        id: pr
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const run = context.payload.workflow_run;
-            const repository = `${context.repo.owner}/${context.repo.repo}`;
-            let numbers = (run.pull_requests || [])
-              .map((pullRequest) => pullRequest.number)
-              .filter((number) => Number.isInteger(number));
-
-            if (numbers.length === 0 && run.head_sha) {
-              const repositories = [];
-              if (run.head_repository?.owner?.login && run.head_repository?.name) {
-                repositories.push({
-                  owner: run.head_repository.owner.login,
-                  repo: run.head_repository.name,
-                });
-              }
-              repositories.push({ owner: context.repo.owner, repo: context.repo.repo });
-
-              for (const target of repositories) {
-                const response = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                  ...target,
-                  commit_sha: run.head_sha,
-                });
-                numbers.push(
-                  ...response.data
-                    .filter((pullRequest) => pullRequest.base?.repo?.full_name === repository)
-                    .map((pullRequest) => pullRequest.number),
-                );
-                if (numbers.length > 0) {
-                  break;
-                }
-              }
-            }
-
-            for (const number of numbers) {
-              const response = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: number,
-              });
-              const pullRequest = response.data;
-              if (
-                pullRequest.state !== 'open' ||
-                pullRequest.base.repo.full_name !== repository
-              ) {
-                continue;
-              }
-
-              const files = await github.paginate(github.rest.pulls.listFiles, {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pullRequest.number,
-                per_page: 100,
-              });
-              const schemaChanged = files.some((file) =>
-                file.filename.startsWith('metrics_utility/schemas/'));
-              const allowed =
-                pullRequest.base.repo.owner.login === 'ansible' ||
-                pullRequest.base.ref.startsWith('stable-2.');
-
-              core.setOutput('number', String(pullRequest.number));
-              core.setOutput('schema_changed', String(schemaChanged));
-              core.setOutput('allowed', String(allowed));
-              core.setOutput('author', pullRequest.user.login);
-              core.setOutput('actor', run.actor?.login || pullRequest.user.login);
-              core.setOutput('url', pullRequest.html_url);
-              core.setOutput('head_ref', pullRequest.head.ref);
-              break;
-            }
-
       - name: Request schema review
-        if: steps.pr.outputs.number != '' && steps.pr.outputs.schema_changed == 'true' && steps.pr.outputs.allowed == 'true'
+        id: schema
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        env:
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-          PR_AUTHOR: ${{ steps.pr.outputs.author }}
         with:
           script: |
+            const pullRequest = (await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(process.env.PR_NUMBER),
+            })).data;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              per_page: 100,
+            });
+            if (!files.some((file) => file.filename.startsWith('metrics_utility/schemas/'))) {
+              core.setOutput('changed', 'false');
+              return;
+            }
+            core.setOutput('changed', 'true');
+            core.setOutput('author', pullRequest.user.login);
+            core.setOutput('actor', context.payload.workflow_run.actor?.login || pullRequest.user.login);
+            core.setOutput('head_ref', pullRequest.head.ref);
+            core.setOutput('url', pullRequest.html_url);
+
             const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'AparnaKarve', 'dmzoneill'];
-            const filteredReviewers = allReviewers.filter((reviewer) => reviewer !== process.env.PR_AUTHOR);
+            const filteredReviewers = allReviewers.filter((reviewer) => reviewer !== pullRequest.user.login);
             await github.rest.pulls.requestReviewers({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -111,13 +68,12 @@ jobs:
             });
 
       - name: Send Slack notification
-        if: steps.pr.outputs.number != '' && steps.pr.outputs.schema_changed == 'true' && steps.pr.outputs.allowed == 'true'
+        if: steps.schema.outputs.changed == 'true'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}
-          PR_ACTOR: ${{ steps.pr.outputs.actor }}
-          PR_HEAD_REF: ${{ steps.pr.outputs.head_ref }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-          PR_URL: ${{ steps.pr.outputs.url }}
+          PR_ACTOR: ${{ steps.schema.outputs.actor }}
+          PR_HEAD_REF: ${{ steps.schema.outputs.head_ref }}
+          PR_URL: ${{ steps.schema.outputs.url }}
         run: |
           payload=$(jq -n \
             --arg repository "$GITHUB_REPOSITORY" \
