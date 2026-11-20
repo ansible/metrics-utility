@@ -1,55 +1,96 @@
 name: Schema Change Review
 
 on:
-  pull_request_target:
-    types: [opened, ready_for_review, synchronize, edited]
-    paths:
-      - 'metrics_utility/schemas/**'
+  workflow_run:
+    workflows: ["Schema review event gate"]
+    types: [completed]
 
 jobs:
+  resolve-pr:
+    uses: ./.github/workflows/resolve-pr.yml
+    permissions:
+      contents: read
+      pull-requests: read
+
   request-review:
-    if: github.repository_owner == 'ansible' || startsWith(github.event.pull_request.base.ref, 'stable-2.')
+    needs: resolve-pr
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      needs.resolve-pr.outputs.pr_number != '' &&
+      needs.resolve-pr.outputs.allowed == 'true'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
       contents: read
       issues: write
+    env:
+      PR_NUMBER: ${{ needs.resolve-pr.outputs.pr_number }}
     steps:
       - name: Request schema review
+        id: schema
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
+            const pullRequest = (await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: Number(process.env.PR_NUMBER),
+            })).data;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              per_page: 100,
+            });
+            if (!files.some((file) => file.filename.startsWith('metrics_utility/schemas/'))) {
+              core.setOutput('changed', 'false');
+              return;
+            }
+            core.setOutput('changed', 'true');
+            core.setOutput('author', pullRequest.user.login);
+            core.setOutput('actor', context.payload.workflow_run.actor?.login || pullRequest.user.login);
+            core.setOutput('head_ref', pullRequest.head.ref);
+            core.setOutput('url', pullRequest.html_url);
+
             const allReviewers = ['hunterkepley', 'himdel', 'MilanPospisil', 'cshiels-ie', 'AparnaKarve', 'dmzoneill'];
-            const author = context.payload.pull_request.user.login;
-            const filtered_reviewers = allReviewers.filter(reviewer => reviewer !== author);
+            const filteredReviewers = allReviewers.filter((reviewer) => reviewer !== pullRequest.user.login);
             await github.rest.pulls.requestReviewers({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              reviewers: filtered_reviewers
+              pull_number: Number(process.env.PR_NUMBER),
+              reviewers: filteredReviewers,
             });
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: "⚠️ This PR modifies files in `metrics-utility/schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved the changes. [Contract here](https://handbook.eng.ansible.com/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)"
+              issue_number: Number(process.env.PR_NUMBER),
+              body: "⚠️ This PR modifies files in `metrics-utility/schemas/`. One person from Emerging Services (@hunterkepley / @himdel / @MilanPospisil / @cshiels-ie), and one person from Analytics HCC (@dmzoneill / @AparnaKarve) must approve. DO NOT merge until both teams have approved. [Contract here](https://handbook.eng.ansible.com/Teams/Emerging-Services-Team/Metrics-Utility/Contracts/billing-analytics-contract)",
             });
 
       - name: Send Slack notification
+        if: steps.schema.outputs.changed == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}
+          PR_ACTOR: ${{ steps.schema.outputs.actor }}
+          PR_HEAD_REF: ${{ steps.schema.outputs.head_ref }}
+          PR_URL: ${{ steps.schema.outputs.url }}
         run: |
-          curl -X POST "${{ secrets.SLACK_CLOUD_WEBHOOK_URL }}" \
-            -H 'Content-Type: application/json' \
-            -d @- <<EOF
-          {
-            "text": "Files changed in \`${{ github.repository }}\` by ${{ github.actor }}",
-            "blocks": [
-              {
-                "type": "section",
-                "text": {
-                  "type": "mrkdwn",
-                  "text": "*Schema files changed* in <${{ github.event.pull_request.html_url }}|PR #${{ github.event.pull_request.number }}>\n*By:* ${{ github.actor }}\n*Branch:* \`${{ github.ref_name }}\`"
+          payload=$(jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg actor "$PR_ACTOR" \
+            --arg branch "$PR_HEAD_REF" \
+            --arg number "$PR_NUMBER" \
+            --arg url "$PR_URL" \
+            '{
+              text: ("Files changed in `" + $repository + "` by " + $actor),
+              blocks: [{
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: ("*Schema files changed* in <" + $url + "|PR #" + $number + ">\n*By:* " + $actor + "\n*Branch:* `" + $branch + "`")
                 }
-              }
-            ]
-          }
-          EOF
+              }]
+            }')
+          curl --fail-with-body -X POST "$SLACK_WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            --data "$payload"
