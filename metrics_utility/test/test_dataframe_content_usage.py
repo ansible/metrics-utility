@@ -1,5 +1,12 @@
 """Unit tests for DataframeContentUsage static regex helper methods."""
 
+import datetime
+
+from unittest.mock import MagicMock
+
+import numpy as np
+import pandas as pd
+
 from metrics_utility.automation_controller_billing.dataframe_engine.dataframe_content_usage import (
     DataframeContentUsage,
 )
@@ -105,3 +112,56 @@ class TestRegexpPatterns:
         pattern = DataframeContentUsage.standalone_role_regexp()
         assert isinstance(pattern, str)
         assert len(pattern) > 0
+
+
+# ---------------------------------------------------------------------------
+# build_dataframe - role_name
+# ---------------------------------------------------------------------------
+
+
+def _event(host, role, resolved_role=np.nan):
+    return {
+        'task_action': 'ansible.builtin.debug',
+        'resolved_action': 'ansible.builtin.debug',
+        'role': role,
+        'resolved_role': resolved_role,
+        'host_name': host,
+        'job_remote_id': 1,
+        'duration': 1.0,
+    }
+
+
+def _role_names(events):
+    extractor = MagicMock()
+    extractor.iter_batches.side_effect = lambda **kwargs: iter([{'main_jobevent': pd.DataFrame(events), 'config': {'install_uuid': 'uuid'}}])
+    engine = DataframeContentUsage(extractor=extractor, month=datetime.date(2025, 2, 1), extra_params={})
+    # one batch is enough, the engine iterates over every day of the month
+    engine.dates = lambda: [datetime.date(2025, 2, 1)]
+    df = engine.build_dataframe()
+    return dict(zip(df['host_name'], df['role_name'], strict=True))
+
+
+class TestBuildDataframeRoleName:
+    def test_bare_local_role_is_kept(self):
+        """A task from a local role ("webserver") must not be reported as "No role used"."""
+        assert _role_names([_event('h1', 'webserver')]) == {'h1': 'webserver'}
+
+    def test_non_identifier_galaxy_role_is_kept(self):
+        """Standalone Galaxy role names may contain dashes (e.g. geerlingguy.php-versions)."""
+        assert _role_names([_event('h1', 'geerlingguy.php-versions')]) == {'h1': 'geerlingguy.php-versions'}
+
+    def test_dotted_and_missing_roles_unchanged(self):
+        result = _role_names(
+            [
+                _event('h1', 'my_ns.my_role'),
+                _event('h2', 'role', 'redhat.rhel_system_roles.selinux'),
+                _event('h3', np.nan),
+                _event('h4', ''),
+            ]
+        )
+        assert result == {
+            'h1': 'my_ns.my_role',
+            'h2': 'redhat.rhel_system_roles.selinux',
+            'h3': 'No role used',
+            'h4': 'No role used',
+        }
