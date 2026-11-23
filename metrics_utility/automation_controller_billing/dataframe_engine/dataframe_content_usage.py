@@ -36,9 +36,15 @@ class DataframeContentUsage(Base):
                 # If resolved_action resolved role are not there, fill them with task action
                 # and role
                 events['task_action'] = events.resolved_action.fillna(events.task_action).astype(str)
-                events['role'] = events.resolved_role.fillna(events.role).astype(str)
+                raw_role = events.resolved_role.fillna(events.role)
                 # Only get valid role names into role name
-                events['role'] = events['role'].apply(lambda x: self.extract_role_name(x))
+                events['role'] = raw_role.astype(str).apply(lambda x: self.extract_role_name(x))
+                # extract_role_name only recognises dotted Galaxy/FQCN names; locally
+                # authored roles (task._role._role_name, e.g. "webserver") have no dot.
+                # Keep the raw name instead of reporting those tasks as "No role used".
+                bare_role = raw_role[events['role'].isna() & raw_role.notna()].astype(str).str.strip()
+                bare_role = bare_role[bare_role != '']
+                events.loc[bare_role.index, 'role'] = bare_role
 
                 # Rename columns to match the reality, they are just names, not normalized cols anymore
                 events.rename(columns={'task_action': 'module_name', 'role': 'role_name'}, inplace=True)
