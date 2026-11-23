@@ -744,13 +744,14 @@ def create_project(name='Perf Test Project', org_id=None):
         unifiedjobtemplate_ptr_id, scm_type, scm_url, local_path,
         scm_branch, scm_clean, scm_delete_on_update, scm_update_on_launch,
         scm_update_cache_timeout, timeout, scm_revision, playbook_files,
-        inventory_files, scm_refspec, allow_override, scm_track_submodules
+        inventory_files, scm_refspec, allow_override, scm_track_submodules,
+        galaxy_update_on_launch
     )
     VALUES (
         {project_id}, 'git', 'https://github.com/example/repo.git', '/var/lib/awx/projects/perf_test',
         'main', FALSE, FALSE, FALSE,
         0, 0, '', '[]'::jsonb,
-        '[]'::jsonb, '', FALSE, FALSE
+        '[]'::jsonb, '', FALSE, FALSE, FALSE
     )
     RETURNING unifiedjobtemplate_ptr_id;
     """

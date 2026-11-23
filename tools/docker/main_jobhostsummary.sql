@@ -254,7 +254,8 @@ $yaml$,
       inventory_files,
       scm_refspec,
       allow_override,
-      scm_track_submodules
+      scm_track_submodules,
+      galaxy_update_on_launch
   ) VALUES (
       default_unified_job_template_id,
       'LOCAL_PATH',                    
@@ -271,7 +272,8 @@ $yaml$,
       '{}'::jsonb,   
       'SCM_REFSPEC',                   
       TRUE,                            
-      FALSE                            
+      FALSE,
+      FALSE                            -- galaxy_update_on_launch
   );
   --
   -- Job Template
