@@ -2,6 +2,7 @@
 
 ## 0.8.0dev
 
+- fix CCSPv2 `merge_json_sets` / `combine_json_values` crash on nested dict facts (AAP-101848)
 - remove django-ansible-base dependency
 - remove unused `kubernetes` dependency
 - `dashboard_jobs`: add `organization_name`
