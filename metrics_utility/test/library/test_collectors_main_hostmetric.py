@@ -174,8 +174,8 @@ def test_host_metric_query_full_params_order():
 
 
 def test_host_metric_query_no_filters():
-    """No bounds produces WHERE true and no bound params."""
+    """No bounds produces a backend-neutral unbounded predicate and no params."""
     query, params = _host_metric_query()
 
-    assert 'WHERE true' in query
+    assert 'WHERE (1=1 OR 1=1)' in query
     assert params == []

@@ -109,3 +109,37 @@ def test_job_host_summary_isoformat(mock_copy_pandas):
     # Should contain isoformat timestamps
     assert '2024-06-15T12:30:45+00:00' in query
     assert '2024-06-16T14:45:30+00:00' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_job_host_summary_uses_sql_server_json_extraction(mock_copy_pandas):
+    """SQL Server query extracts JSON values with JSON_VALUE."""
+    mock_db = _mock_db()
+    mock_db.vendor = 'microsoft'
+    mock_copy_pandas.return_value = pd.DataFrame()
+
+    collector = job_host_summary(db=mock_db)
+    collector.gather()
+
+    query = mock_copy_pandas.call_args[0][1]
+    assert "JSON_VALUE(main_host.variables, '$.ansible_host')" in query
+    assert "JSON_VALUE(main_host.variables, '$.ansible_connection')" in query
+    assert '::jsonb' not in query
+    assert 'WHEN (dbo.metrics_utility_is_valid_json(main_host.variables) = 1)' in query
+    assert 'dbo.metrics_utility_parse_yaml_field' in query
+
+
+@patch('metrics_utility.library.collectors.util._copy_table_pandas')
+def test_job_host_summary_uses_postgresql_json_extraction(mock_copy_pandas):
+    """PostgreSQL keeps its established JSON cast/operator expressions."""
+    mock_db = _mock_db()
+    mock_db.vendor = 'postgresql'
+    mock_copy_pandas.return_value = pd.DataFrame()
+
+    collector = job_host_summary(db=mock_db)
+    collector.gather()
+
+    query = mock_copy_pandas.call_args[0][1]
+    assert "main_host.variables::jsonb->>'ansible_host'" in query
+    assert "main_host.variables::jsonb->>'ansible_connection'" in query
+    assert 'dbo.metrics_utility_is_valid_json' not in query

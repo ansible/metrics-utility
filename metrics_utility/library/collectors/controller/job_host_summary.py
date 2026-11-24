@@ -1,14 +1,14 @@
 """Collector for job_host_summary records from the Controller database."""
 
-from ..util import DataframeOutput, collector, date_where, ensure_functions
+from ..util import DataframeOutput, _database_vendor, collector, date_where, ensure_functions
 
 
 @collector
 def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput()):
     """Collect job-host-summary records including hostname variable enrichment.
 
-    Installs custom PostgreSQL helper functions (``metrics_utility_parse_yaml_field``
-    and ``metrics_utility_is_valid_json``) before querying so that ``ansible_host``
+    Ensures database-specific helper functions (``metrics_utility_parse_yaml_field``
+    and ``metrics_utility_is_valid_json``) exist before querying so that ``ansible_host``
     can be extracted from host variables stored as YAML or JSON text.
 
     Args:
@@ -21,6 +21,21 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
         pandas DataFrame or list of CSV file paths depending on *output*.
     """
     where = date_where('main_jobhostsummary.modified', since, until)
+    vendor = _database_vendor(db)
+    if vendor == 'microsoft':
+        is_valid_json = 'dbo.metrics_utility_is_valid_json(main_host.variables) = 1'
+        parse_yaml_field = 'dbo.metrics_utility_parse_yaml_field'
+        host_variables = {
+            'ansible_host': "JSON_VALUE(main_host.variables, '$.ansible_host')",
+            'ansible_connection': "JSON_VALUE(main_host.variables, '$.ansible_connection')",
+        }
+    else:
+        is_valid_json = 'metrics_utility_is_valid_json(main_host.variables)'
+        parse_yaml_field = 'metrics_utility_parse_yaml_field'
+        host_variables = {
+            'ansible_host': "main_host.variables::jsonb->>'ansible_host'",
+            'ansible_connection': "main_host.variables::jsonb->>'ansible_connection'",
+        }
 
     # TODO: controler needs to have an index on main_jobhostsummary.modified
     query = f"""
@@ -34,14 +49,14 @@ def job_host_summary(*, db=None, since=None, until=None, output=DataframeOutput(
                 SELECT
                     filtered_hosts.host_id,
                     CASE
-                        WHEN (metrics_utility_is_valid_json(main_host.variables))
-                        THEN main_host.variables::jsonb->>'ansible_host'
-                        ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_host' )
+                        WHEN ({is_valid_json})
+                        THEN {host_variables['ansible_host']}
+                        ELSE {parse_yaml_field}(main_host.variables, 'ansible_host' )
                     END AS ansible_host_variable,
                     CASE
-                        WHEN (metrics_utility_is_valid_json(main_host.variables))
-                        THEN main_host.variables::jsonb->>'ansible_connection'
-                        ELSE metrics_utility_parse_yaml_field(main_host.variables, 'ansible_connection' )
+                        WHEN ({is_valid_json})
+                        THEN {host_variables['ansible_connection']}
+                        ELSE {parse_yaml_field}(main_host.variables, 'ansible_connection' )
                     END AS ansible_connection_variable
                 FROM filtered_hosts
                 LEFT JOIN main_host ON main_host.id = filtered_hosts.host_id

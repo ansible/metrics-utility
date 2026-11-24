@@ -192,7 +192,7 @@ def date_where(field, since, until):
 
     Returns:
         SQL fragment string (e.g. ``"( created >= '…' AND created < '…' )"``),
-        or ``'true'`` if neither bound is specified.
+        or ``'1=1'`` if neither bound is specified.
 
     Raises:
         TypeError: If *since* or *until* is not None and not a datetime.
@@ -213,7 +213,7 @@ def date_where(field, since, until):
     if until:
         return f"( {field} < '{until.isoformat()}' )"
 
-    return 'true'
+    return '1=1'
 
 
 def collector(func):
@@ -235,30 +235,63 @@ def collector(func):
     return constructor
 
 
+def _database_vendor(db):
+    """Return the database vendor for a Django wrapper or supported raw connection."""
+    vendor = getattr(db, 'vendor', None)
+    if vendor in {'postgresql', 'microsoft'}:
+        return vendor
+
+    driver_module = type(db).__module__.split('.', maxsplit=1)[0]
+    if driver_module == 'pyodbc':
+        return 'microsoft'
+    if driver_module in {'psycopg', 'psycopg2'}:
+        return 'postgresql'
+
+    # Historically these helpers only ran on PostgreSQL, including with test doubles
+    # and callers that pass a connection without Django's vendor attribute.
+    return 'postgresql'
+
+
 def ensure_functions(db):
-    """Create the custom PostgreSQL helper functions used by collectors if missing.
+    """Create the database-specific helper functions used by collectors if missing.
 
     Installs ``metrics_utility_parse_yaml_field`` and
     ``metrics_utility_is_valid_json`` into the active database connection.
+    SQL Server's function DDL is executed one statement at a time because each
+    ``CREATE FUNCTION`` must start its own batch.
     Existing functions are left untouched so newer Controller implementations
     can provide hardened versions of these helpers.
 
     Args:
         db: Django database connection.
     """
+    vendor = _database_vendor(db)
     with db.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT
-                to_regprocedure('metrics_utility_parse_yaml_field(text,text)') IS NOT NULL,
-                to_regprocedure('metrics_utility_is_valid_json(text)') IS NOT NULL
-            """
-        )
+        if vendor == 'microsoft':
+            cursor.execute(
+                """
+                SELECT
+                    CASE WHEN OBJECT_ID(N'dbo.metrics_utility_parse_yaml_field', N'FN') IS NULL THEN 0 ELSE 1 END,
+                    CASE WHEN OBJECT_ID(N'dbo.metrics_utility_is_valid_json', N'FN') IS NULL THEN 0 ELSE 1 END
+                """
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT
+                    to_regprocedure('metrics_utility_parse_yaml_field(text,text)') IS NOT NULL,
+                    to_regprocedure('metrics_utility_is_valid_json(text)') IS NOT NULL
+                """
+            )
         existing = cursor.fetchone()
         missing = {name for name, present in zip(_YAML_JSON_FUNCTIONS, existing, strict=True) if not present}
 
         if missing:
-            cursor.execute(_yaml_json_functions(missing))
+            if vendor == 'microsoft':
+                for definition in _sql_server_yaml_json_functions(missing):
+                    cursor.execute(definition)
+            else:
+                cursor.execute(_yaml_json_functions(missing))
 
 
 def _copy_table_files(db, query, filespec, params=None):
@@ -281,13 +314,16 @@ def _copy_table_pandas(db, query, params=None):
     # Execute query and create DataFrame from results
     # Using cursor approach since pd.read_sql doesn't work well with psycopg3
     with db.cursor() as cursor:
-        cursor.execute(query, params)
+        if params is None:
+            cursor.execute(query)
+        else:
+            cursor.execute(query, params)
 
         # Get column names from cursor description
         columns = [desc[0] for desc in cursor.description]
 
         # Fetch all rows
-        rows = cursor.fetchall()
+        rows = [tuple(row) for row in cursor.fetchall()]
 
         # Create DataFrame
         df = pd.DataFrame(rows, columns=columns)
@@ -347,3 +383,77 @@ def _yaml_json_functions(missing):
         )
 
     return '\n'.join(definitions)
+
+
+def _sql_server_yaml_json_functions(missing):
+    """Return separate T-SQL function definitions for the requested helpers."""
+    definitions = []
+    if 'metrics_utility_parse_yaml_field' in missing:
+        definitions.append(
+            r"""
+CREATE FUNCTION dbo.metrics_utility_parse_yaml_field(
+    @str NVARCHAR(MAX),
+    @field NVARCHAR(4000)
+)
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @remaining NVARCHAR(MAX) = @str;
+    DECLARE @line NVARCHAR(MAX);
+    DECLARE @line_end INT;
+    DECLARE @separator INT;
+    DECLARE @equals INT;
+    DECLARE @value NVARCHAR(MAX);
+
+    IF @str IS NULL OR @field IS NULL
+        RETURN NULL;
+
+    WHILE LEN(@remaining) > 0
+    BEGIN
+        SET @line_end = CHARINDEX(NCHAR(10), @remaining);
+        IF @line_end > 0
+        BEGIN
+            SET @line = LEFT(@remaining, @line_end - 1);
+            SET @remaining = SUBSTRING(@remaining, @line_end + 1, LEN(@remaining));
+        END
+        ELSE
+        BEGIN
+            SET @line = @remaining;
+            SET @remaining = N'';
+        END;
+
+        SET @line = LTRIM(RTRIM(REPLACE(@line, NCHAR(13), N'')));
+        SET @separator = CHARINDEX(N':', @line);
+        SET @equals = CHARINDEX(N'=', @line);
+        IF @separator = 0 OR (@equals > 0 AND @equals < @separator)
+            SET @separator = @equals;
+
+        IF @separator > 0 AND LTRIM(RTRIM(LEFT(@line, @separator - 1))) = @field
+        BEGIN
+            SET @value = LTRIM(RTRIM(SUBSTRING(@line, @separator + 1, LEN(@line))));
+            WHILE LEN(@value) > 0 AND LEFT(@value, 1) = N'"'
+                SET @value = SUBSTRING(@value, 2, LEN(@value));
+            WHILE LEN(@value) > 0 AND RIGHT(@value, 1) = N'"'
+                SET @value = LEFT(@value, LEN(@value) - 1);
+            RETURN @value;
+        END;
+    END;
+
+    RETURN NULL;
+END;
+"""
+        )
+
+    if 'metrics_utility_is_valid_json' in missing:
+        definitions.append(
+            r"""
+CREATE FUNCTION dbo.metrics_utility_is_valid_json(@p_json NVARCHAR(MAX))
+RETURNS BIT
+AS
+BEGIN
+    RETURN CASE WHEN @p_json IS NOT NULL AND ISJSON(@p_json) = 1 THEN 1 ELSE 0 END;
+END;
+"""
+        )
+
+    return definitions
