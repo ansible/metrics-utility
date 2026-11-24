@@ -1,6 +1,10 @@
 import json
 
+from unittest.mock import patch
+
 import pandas as pd
+
+import metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup as indirect_rollup
 
 from metrics_utility.anonymized_rollups.indirect_managed_nodes_anonymized_rollup import (
     IndirectManagedNodesAnonymizedRollup,
@@ -136,6 +140,46 @@ def test_prepare_handles_events_as_list():
 
     assert 'OrgA||cisco.ios' in result['groups']
     assert result['groups']['OrgA||cisco.ios']['host_count'] == 1
+
+
+def test_prepare_parses_events_once_and_preserves_final_counts():
+    """Mixed events retain collection and module counts without reparsing rows."""
+    rollup = IndirectManagedNodesAnonymizedRollup()
+    data = _make_dataframe(
+        [
+            {
+                'host_name': 'host1',
+                'organization_name': 'OrgA',
+                'events': '["cisco.ios.ios_command", "cisco.ios.ios_command", "invalid", null, {}]',
+            },
+            {'host_name': 'host1', 'organization_name': 'OrgB', 'events': ['cisco.ios.ios_command']},
+            {'host_name': 'host2', 'organization_name': 'OrgA', 'events': 'not json'},
+            {'host_name': 'host3', 'organization_name': 'OrgA', 'events': None},
+            {'host_name': 'host4', 'organization_name': 'OrgB', 'events': 'null'},
+            {'host_name': None, 'organization_name': 'OrgA', 'events': '["cisco.ios.ios_config"]'},
+        ]
+    )
+
+    with patch.object(indirect_rollup, '_parse_events', wraps=indirect_rollup._parse_events) as parse_events:
+        prepared = rollup.prepare(data)
+
+    assert parse_events.call_count == 5
+    assert prepared['groups']['OrgA||cisco.ios']['host_names'] == ['host1']
+    assert prepared['groups']['OrgB||cisco.ios']['host_names'] == ['host1']
+    assert prepared['module_groups']['OrgA||cisco.ios.ios_command']['host_names'] == ['host1']
+    assert rollup.base(prepared) == {
+        'json': {
+            'indirect_nodes_total': 4,
+            'by_collection': [
+                {'collection': '_no_collection', 'host_count': 3},
+                {'collection': 'cisco.ios', 'host_count': 1},
+            ],
+            'by_module': [
+                {'module': '_no_module', 'host_count': 3},
+                {'module': 'cisco.ios.ios_command', 'host_count': 1},
+            ],
+        }
+    }
 
 
 def test_merge_unions_host_names():
