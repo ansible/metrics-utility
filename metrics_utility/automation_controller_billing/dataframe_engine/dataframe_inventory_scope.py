@@ -10,7 +10,7 @@ def compute_serial(row):
     """Compute a compound serial key from a host row's canonical_facts.
 
     Args:
-        row: pandas Series with a ``canonical_facts`` field containing at least
+        row: Mapping or pandas Series with a ``canonical_facts`` field containing
             ``ansible_product_serial`` and ``ansible_machine_id``.
 
     Returns:
@@ -21,6 +21,13 @@ def compute_serial(row):
     if pd.isnull(facts.get('ansible_product_serial')) or pd.isnull(facts.get('ansible_machine_id')):
         return None
     return facts.get('ansible_product_serial', '') + '/' + facts.get('ansible_machine_id', '')
+
+
+def _compute_serials(dataframe):
+    """Compute serials from the facts column, preserving unusual input behavior."""
+    if dataframe.empty or isinstance(dataframe.columns, pd.MultiIndex) or not dataframe.columns.is_unique or 'canonical_facts' not in dataframe:
+        return dataframe.apply(compute_serial, axis=1)
+    return dataframe['canonical_facts'].apply(lambda facts: compute_serial({'canonical_facts': facts}))
 
 
 # dataframe for main_host
@@ -59,7 +66,7 @@ class DataframeInventoryScope(Base):
 
                 billing_data['last_automation'] = pd.to_datetime(billing_data['last_automation'], format='ISO8601').dt.tz_localize(None)
 
-                billing_data['serial'] = billing_data.apply(compute_serial, axis=1)
+                billing_data['serial'] = _compute_serials(billing_data)
 
                 experimental_dedup = self.extra_params.get('deduplicator') == 'ccsp-experimental'
                 if experimental_dedup:
