@@ -250,7 +250,11 @@ class Base:
             elif operations.get(col) == 'max':
                 df[col] = df[[f'{col}_x', f'{col}_y']].max(axis=1)
             elif operations.get(col) == 'combine_set':
-                df[col] = df.apply(lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
+                # Duplicate or multi-level column names may select more than one column.
+                if not isinstance(df.columns, pd.MultiIndex) and df.columns.is_unique and f'{col}_x' in df and f'{col}_y' in df:
+                    df[col] = [combine_set(left, right) for left, right in zip(df[f'{col}_x'], df[f'{col}_y'], strict=True)]
+                else:
+                    df[col] = df.apply(lambda row, c=col: combine_set(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json':
                 df[col] = df.apply(lambda row, c=col: combine_json(row.get(f'{c}_x'), row.get(f'{c}_y')), axis=1)
             elif operations.get(col) == 'combine_json_values':

@@ -3,6 +3,7 @@
 import datetime
 
 import pandas as pd
+import pytest
 
 from metrics_utility.automation_controller_billing.dataframe_engine.base import (
     Base,
@@ -372,6 +373,85 @@ class TestBaseSummarizeMergedDataframes:
         result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
         assert result['tags'][0] == {1, 2, 3}
         assert result['tags'][1] == {3, 4}
+
+    def test_combine_set_with_lists_missing_values_and_duplicate_index(self):
+        base = self._make_base()
+        df = pd.DataFrame(
+            {
+                'tags_x': [{'a', 'b'}, ['c', 'c'], None, pd.NA],
+                'tags_y': [['b', 'd'], None, {'e'}, float('nan')],
+            },
+            index=[2, 1, 2, 1],
+        )
+
+        result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
+
+        expected = pd.DataFrame({'tags': [{'a', 'b', 'd'}, {'c'}, {'e'}, set()]}, index=[2, 1, 2, 1])
+        pd.testing.assert_frame_equal(result, expected)
+
+    def test_combine_set_empty_dataframe_preserves_result_dtype(self):
+        base = self._make_base()
+        df = pd.DataFrame({'tags_x': pd.Series(dtype=object), 'tags_y': pd.Series(dtype=object)})
+
+        result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
+
+        pd.testing.assert_frame_equal(result, pd.DataFrame({'tags': pd.Series(dtype='float64')}))
+
+    def test_combine_set_duplicate_column_names_preserves_existing_behavior(self):
+        base = self._make_base()
+        df = pd.DataFrame([[{'left1'}, {'left2'}, {'right'}]], columns=['tags_x', 'tags_x', 'tags_y'])
+
+        result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
+
+        pd.testing.assert_frame_equal(result, pd.DataFrame({'tags': [{'right'}]}))
+
+    def test_combine_set_multiindex_columns_preserves_existing_behavior(self):
+        base = self._make_base()
+        columns = pd.MultiIndex.from_tuples([('tags_x', 'a'), ('tags_x', 'b'), ('tags_y', 'a')])
+        df = pd.DataFrame([[{'left1'}, {'left2'}, {'right'}]], columns=columns)
+
+        result = base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
+
+        expected = pd.DataFrame([[set()]], columns=pd.MultiIndex.from_tuples([('tags', '')]))
+        pd.testing.assert_frame_equal(result, expected)
+
+    @pytest.mark.parametrize('missing', ['tags_x', 'tags_y'])
+    def test_combine_set_missing_source_column_raises(self, missing):
+        base = self._make_base()
+        df = pd.DataFrame({'tags_x': [{'left'}], 'tags_y': [{'right'}]}).drop(columns=missing)
+
+        with pytest.raises(KeyError, match=missing):
+            base.summarize_merged_dataframes(df, ['tags'], operations={'tags': 'combine_set'})
+
+    def test_combine_set_across_outer_merged_batches(self):
+        class SetBase(ConcreteBase):
+            @staticmethod
+            def data_columns():
+                return ['tags']
+
+            @staticmethod
+            def cast_types():
+                return {'tags': object}
+
+            @staticmethod
+            def operations():
+                return {'tags': 'combine_set'}
+
+        base = SetBase(extractor=None, month=datetime.date(2024, 1, 1), extra_params={})
+        batches = [
+            pd.DataFrame({'host_name': ['a', 'b'], 'tags': [{'one'}, {'two'}]}).set_index('host_name'),
+            pd.DataFrame({'host_name': ['a', 'c'], 'tags': [{'three'}, {'four'}]}).set_index('host_name'),
+            pd.DataFrame({'host_name': ['a', 'b'], 'tags': [{'one'}, ['five']]}).set_index('host_name'),
+        ]
+        result = None
+        for batch in batches:
+            result = base.merge(result, batch)
+
+        expected = pd.DataFrame(
+            {'tags': [{'one', 'three'}, {'two', 'five'}, {'four'}]},
+            index=pd.Index(['a', 'b', 'c'], name='host_name', dtype=object),
+        )
+        pd.testing.assert_frame_equal(result.sort_index(), expected)
 
     def test_combine_json_operation(self):
         base = self._make_base()
