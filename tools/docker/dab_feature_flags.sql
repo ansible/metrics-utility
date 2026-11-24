@@ -70,4 +70,5 @@ INSERT INTO public.dab_feature_flags_aapflag (
     NULL,
     NULL,
     NULL
-);
+)
+ON CONFLICT (name, condition) DO NOTHING;
